@@ -4,9 +4,9 @@
     <td>{{i.amount}}</td>
     {% if i.XactTypeCode.XactTypeCode == 'Dr'%}
     <td><a href="{% url 'dea_ledger_detail' i.ledgerno.id%}">{{i.ledgerno}}</a></td>
-    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
+    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{ i.Account.party.display_name }}</a></td>
     {%else%}
-    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{i.Account.contact.name}}</a></td>
+    <td><a href="{% url 'dea_account_detail' i.Account.id %}">{{ i.Account.party.display_name }}</a></td>
     <td><a href="{% url 'dea_ledger_detail' i.ledgerno.id%}">{{i.ledgerno}}</td>
     {%endif%}
     <td>{{i.XactTypeCode_ext}}</td>

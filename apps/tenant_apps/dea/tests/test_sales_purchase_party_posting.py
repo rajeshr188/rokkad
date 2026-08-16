@@ -16,32 +16,32 @@ from apps.tenant_apps.dea.posting.rules.sales_invoice import SalesInvoiceRule
 
 
 class SalesPurchasePartyResolverTests(SimpleTestCase):
-    @patch("apps.tenant_apps.dea.posting.rules.party_accounts.resolve_customer_account")
+    @patch("apps.tenant_apps.dea.posting.rules.party_accounts.resolve_party_account")
     def test_sales_customer_uses_customer_receivable_purpose(self, mock_resolve):
-        customer = SimpleNamespace(id=1)
-        doc = SimpleNamespace(customer=customer)
-        mock_resolve.return_value = SimpleNamespace(id=91)
+        party = SimpleNamespace(id=1)
+        doc = SimpleNamespace(party=party)
+        mock_resolve.return_value = SimpleNamespace(account=SimpleNamespace(id=91))
 
         account = resolve_sales_customer_account(doc)
 
         self.assertEqual(account.id, 91)
         mock_resolve.assert_called_once_with(
-            customer,
+            party,
             role_key="CUSTOMER",
             purpose="CUSTOMER_RECEIVABLE",
         )
 
-    @patch("apps.tenant_apps.dea.posting.rules.party_accounts.resolve_customer_account")
+    @patch("apps.tenant_apps.dea.posting.rules.party_accounts.resolve_party_account")
     def test_purchase_supplier_uses_supplier_payable_purpose(self, mock_resolve):
-        supplier = SimpleNamespace(id=2)
-        doc = SimpleNamespace(vendor=supplier)
-        mock_resolve.return_value = SimpleNamespace(id=92)
+        party = SimpleNamespace(id=2)
+        doc = SimpleNamespace(party=party)
+        mock_resolve.return_value = SimpleNamespace(account=SimpleNamespace(id=92))
 
         account = resolve_purchase_supplier_account(doc)
 
         self.assertEqual(account.id, 92)
         mock_resolve.assert_called_once_with(
-            supplier,
+            party,
             role_key="SUPPLIER",
             purpose="SUPPLIER_PAYABLE",
         )
@@ -99,8 +99,7 @@ class SalesPurchasePostingRuleTests(SimpleTestCase):
         doc = SimpleNamespace(
             id=1,
             invoice_number="INV-1",
-            customer_id=7,
-            customer=SimpleNamespace(id=7),
+            party_id=17,
             total_amount=Money(118, "INR"),
             taxable_amount=Money(100, "INR"),
             cgst_amount=Money(9, "INR"),
@@ -117,6 +116,10 @@ class SalesPurchasePostingRuleTests(SimpleTestCase):
         self.assertEqual(bundle.account_lines[0].ledger_id, 10)
         self.assertEqual(bundle.account_lines[0].side, "Dr")
         self.assertEqual(bundle.account_lines[0].amount, Decimal("118"))
+        self.assertEqual(
+            SalesInvoiceRule().fingerprint_payload(SimpleNamespace(doc=doc))["party_id"],
+            17,
+        )
         mock_resolve_account.assert_called_once_with(doc)
 
     @patch(
@@ -138,8 +141,7 @@ class SalesPurchasePostingRuleTests(SimpleTestCase):
         doc = SimpleNamespace(
             id=2,
             internal_number="PI-1",
-            vendor_id=8,
-            vendor=SimpleNamespace(id=8),
+            party_id=18,
             purchase_type="GOODS",
             taxable_amount=Money(100, "INR"),
             cgst_amount=Money(9, "INR"),
@@ -157,4 +159,8 @@ class SalesPurchasePostingRuleTests(SimpleTestCase):
         self.assertEqual(bundle.account_lines[0].ledger_id, 13)
         self.assertEqual(bundle.account_lines[0].side, "Cr")
         self.assertEqual(bundle.account_lines[0].amount, Decimal("113"))
+        self.assertEqual(
+            PurchaseGoodsRule().fingerprint_payload(SimpleNamespace(doc=doc))["party_id"],
+            18,
+        )
         mock_resolve_account.assert_called_once_with(doc)

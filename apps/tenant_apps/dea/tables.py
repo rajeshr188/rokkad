@@ -39,13 +39,13 @@ class AccountTable(tables.Table):
     id = tables.Column(verbose_name="ID", linkify=True)
     AccountType_Ext = tables.Column(verbose_name="Type")
     balance = tables.Column(accessor="get_balance", verbose_name="Balance")
-    contact = tables.Column(linkify=True, verbose_name="Account")
+    party = tables.Column(linkify=True, verbose_name="Party")
 
     class Meta:
         model = Account
         fields = (
             "id",
-            "contact",
+            "party",
             "AccountType_Ext",
             "balance",
         )

@@ -228,7 +228,7 @@ currencies AS (
 )
 SELECT 
     a.id as account_id,
-    a.contact_id,
+    a.party_id,
     a."AccountType_Ext_id",
     COALESCE(ls."ClosingBalance_currency", 
         c.amount_currency,

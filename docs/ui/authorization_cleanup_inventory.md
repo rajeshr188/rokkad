@@ -214,7 +214,8 @@ Current guardrails:
 
 Known gaps:
 
-- Contact remains a legacy compatibility surface while Party replaces it; do not invest in broad Contact authorization cleanup unless a compatibility route becomes unsafe before cutover.
+- Contact URLs are retired redirects to Party. The app remains installed only
+  to satisfy the pre-baseline migration graph and has no supported web surface.
 - DEA and Girvi still have broader domain-specific permission-hardening tracks outside this SaaS IA Phase 5 closeout; current Phase 5 guards only assert their shared access helper contracts remain available.
 - Phase 5 tenant authorization cleanup is complete for current Product, Rates, Notify, and utility data-tool route groups.
 

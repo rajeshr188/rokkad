@@ -54,7 +54,7 @@ class WorkspaceSlugDeferredTargetsIntentTests(SimpleTestCase):
             "/w/<workspace_slug>/settings/roles/": "workspace_settings_team",
             "/w/<workspace_slug>/settings/billing/": "subscriptions:dashboard",
             "/w/<workspace_slug>/settings/modules/": "new workspace modules screen",
-            "/w/<workspace_slug>/settings/numbering/": "girvi:girvi_series_list",
+            "/w/<workspace_slug>/settings/numbering/": "loans:license_list",
             "/w/<workspace_slug>/settings/accounting/": "dea_chart_of_accounts",
             "/w/<workspace_slug>/settings/security/": "new workspace security/audit screen",
         }

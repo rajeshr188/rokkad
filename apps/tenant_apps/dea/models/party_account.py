@@ -24,9 +24,8 @@ class PartyAccountMappingStatus(models.TextChoices):
 class PartyAccountMapping(models.Model):
     """Maps a party role/purpose to a DEA subledger account.
 
-    This is the bridge between the long-term Party model and the current DEA
-    Account model. While Account still stores the legacy Contact customer FK,
-    this mapping records why a party is using a specific account.
+    This records why a Party uses a specific DEA account for a business role
+    and posting purpose.
     """
 
     party = models.ForeignKey(

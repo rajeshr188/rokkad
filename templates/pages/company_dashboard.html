@@ -64,7 +64,7 @@
 </div>
 <div class="row">
   <div class="col-sm-6 col-md-3 g-2 mb-2">
-    <div class="card card-stats card-round" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
+    <div class="card card-stats card-round" hx-get="{% url 'party:party_list' %}" hx-target="#content"
         hx-trigger="click" hx-push-url="true"
       style="cursor:pointer;">
       <div class="card-body">
@@ -87,7 +87,7 @@
     </div>
   </div>
   <div class="col-sm-6 col-md-3 g-2 mb-2">
-    <div class="card card-stats card-round" href="" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content"
+    <div class="card card-stats card-round" href="" hx-get="{% url 'loans:pawn_loan_list' %}" hx-target="#content"
       hx-swap="innerHTML" hx-trigger="click" style="cursor: pointer;" 
       hx-push-url="true">
       <div class="card-body">
@@ -504,13 +504,11 @@
 
   <div class="col-md-6 g-4 mb-4">
     <div class="div-holderl">
-      {% get_widget_from_url url_name="girvi:series_report" display_table=False extra_params="time_series_pattern=monthly"%}
     </div>
   </div>
 
   <div class="col-md-6 g-4 mb-4">
     <div class="div-holderl">
-      {% get_widget_from_url url_name="girvi:license_report" display_table=False extra_params="time_series_pattern=monthly"%}
     </div>
   </div>
 

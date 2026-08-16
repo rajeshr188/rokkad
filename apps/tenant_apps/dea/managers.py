@@ -16,7 +16,7 @@ class AccountManager(models.Manager):
         return (
             super()
             .get_queryset(*args, **kwargs)
-            .select_related("AccountType_Ext", "contact", "entity")
+            .select_related("AccountType_Ext", "party", "entity")
             .prefetch_related("accounttransactions", "accountstatements")
         )
 

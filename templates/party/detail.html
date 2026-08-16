@@ -100,7 +100,6 @@
             <div class="col-md-4"><div class="text-muted small">PAN</div><div class="fw-semibold">{{ party.tax_pan|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">GSTIN</div><div class="fw-semibold">{{ party.gstin|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Risk Level</div><div class="fw-semibold">{{ party.risk_level|default:"-" }}</div></div>
-            <div class="col-md-4"><div class="text-muted small">Legacy Customer</div><div class="fw-semibold">{{ activity.customer|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Created</div><div class="fw-semibold">{{ party.created_at|date:"d M Y H:i" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Updated</div><div class="fw-semibold">{{ party.updated_at|date:"d M Y H:i" }}</div></div>
         </div>
@@ -320,7 +319,7 @@
     <div class="tab-pane fade {% if active_tab == 'transactions' %}show active{% endif %}" id="transactions">
         <div class="row g-3">
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Account Mappings</div><div class="h4 mb-0">{{ account_mappings|length }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Loans</div><div class="h4 mb-0">{{ activity.counts.given_loans|add:activity.counts.taken_loans }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans|add:loan_history.counts.closed_loans }}</div></div></div>
         </div>
     </div>
 
@@ -329,7 +328,7 @@
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Closed Loans</div><div class="h4 mb-0">{{ loan_history.counts.closed_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{{ loan_history.counts.active_outstanding }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Collateral Items</div><div class="h4 mb-0">{{ loan_history.counts.collateral_items }}</div><div class="small text-muted">{{ loan_history.counts.collateral_loan_amount }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Collateral Items</div><div class="h4 mb-0">{{ loan_history.counts.collateral_items }}</div></div></div>
         </div>
 
         <div class="card mb-3">
@@ -363,7 +362,6 @@
                             <td>{{ row.notice_count }}</td>
                             <td>
                                 <div>{{ row.collateral_items_count }} items</div>
-                                <div class="text-muted small">Value: {{ row.collateral_loan_amount }}</div>
                             </td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
@@ -411,7 +409,6 @@
                             </td>
                             <td>
                                 <div>{{ row.collateral_items_count }} items</div>
-                                <div class="text-muted small">Value: {{ row.collateral_loan_amount }}</div>
                             </td>
                             <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ row.detail_url }}"><i class="bi bi-box-arrow-up-right"></i></a></td>
                         </tr>

@@ -91,7 +91,7 @@ This document defines target Bootstrap/HTMX screens. It marks whether each scree
 ## Contact Customer List
 
 - Status: REFACTOR.
-- Existing URL name: `contact_customer_list`.
+- Legacy Contact screen retired; bookmarks redirect to the Party list.
 - Existing template family: `contact/customer_list.html` if present under app/templates or project templates.
 - Purpose today: customer list.
 - Target: keep as legacy compatibility route and redirect or visually label as Legacy Customers once Party UI exists.

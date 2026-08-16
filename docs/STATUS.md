@@ -1,12 +1,315 @@
 ---
 status: active
 owner: project
-updated: 2026-08-14
+updated: 2026-08-16
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
 
 # Status
+
+- 2026-08-16: Party-native test-fixture conversion has started. Fixed sale,
+  fixed purchase, unfixed sale, and unfixed purchase DEA service suites no
+  longer import or construct Contact customers; they use Party directly and
+  create DEA accounts through `Account.party`. A combined tenant test run
+  advanced through ten tests without a failure but exceeded the five-minute
+  command timeout during the expensive multi-schema run. Sixteen real stale
+  test modules remain (plus one Orgs negative source assertion that intentionally
+  names the retired import).
+
+- 2026-08-16: The uninstalled Contact package is physically deleted. Django
+  startup and migration-drift checks pass without it. Project-owned
+  `/contact/...` redirects remain live, and the Girvi/Contact route-intent suite
+  passes all 24 tests after correcting its stale exact-prefix inventory for the
+  existing Loans, portal, and Accounting routes. Remaining retirement cleanup
+  includes converting surviving historical test fixtures that still import
+  `contact.Customer` to Party-native fixtures.
+  The clean rehearsal database contains zero Contact/Girvi/legacy-Notify
+  ContentTypes and zero associated permissions in both public and tenant
+  schemas.
+
+- 2026-08-16: The replacement development migration history is Contact-free.
+  Notify v2, Product, and DEA now create Party-owned state directly while
+  retaining later migration node names and indispensable custom operations.
+  Contact has been removed from active and legacy settings. Django system
+  checks pass and the full project reports no migration drift.
+
+- 2026-08-16: Guarded database
+  `rokkad_baseline_rehearsal_20260816_contactfree` migrated successfully from
+  empty for `public` and tenant `contactfree_tenant`. Every DEA migration,
+  Product view/constraint migration, Loans database guard, and Notify v2
+  migration completed without Contact installed. The migration plan contains
+  no Contact app, and no surviving app migration depends on Contact.
+
+- 2026-08-16: Isolated reference database
+  `rokkad_baseline_rehearsal_20260816` migrated successfully from empty for
+  `public` and tenant `baseline_tenant` using guarded rehearsal settings. The
+  tenant reference has 193 base tables, 5 views, 63 user triggers, and 2,880
+  constraints; public has 48 tables and 435 constraints. It creates six Contact
+  tables, zero Girvi/legacy-Notify tables, and the expected Notify v2 tables.
+
+- 2026-08-16: Phase 7 migration-baseline cutover is active and protected by a
+  verified PostgreSQL custom archive at
+  `.local-backups/fresh_clean-pre-contact-baseline-20260816-154116.dump`
+  (8,833,038 bytes; 17,671 TOC entries). The audit found indispensable custom
+  operations across surviving apps, so mechanical migration regeneration is
+  rejected. The baseline must preserve current SQL views, database guards,
+  masters/seeds, repairs, and lifecycle constraints while omitting retired-app
+  transformations.
+
+- 2026-08-16: Contact's supported web surface is retired. `/contact/...`
+  bookmarks now resolve through project-owned `legacy_contact_urls` and redirect
+  to the Party list; tenant URLs no longer import Contact's URLConf or views.
+  Contact is now uninstalled after the development migration-baseline rewrite.
+  Fifteen of
+  sixteen route-intent tests pass; the remaining failure is the known stale
+  prefix expectation omitting existing portal/loans/accounting routes.
+
+- 2026-08-16: DEA invoices are now schema-level Party-only. Migration
+  `dea.0048` removes `SalesInvoiceVoucher.customer` and
+  `PurchaseInvoiceVoucher.vendor` plus their obsolete indexes. Model save and
+  posting account resolution no longer fall back through Contact; required
+  Party ownership selects the customer/supplier subledger. All six focused
+  resolver/posting tests pass, both new migrations execute successfully in the
+  test database, and model drift/Django/compilation/diff checks pass.
+
+- 2026-08-16: DEA `Account.contact` is removed from runtime and schema state.
+  Required `Account.party` is now the sole counterparty identity; migration
+  `dea.0047` drops the legacy FK, the account manager and examples are
+  Party-only, and the focused unbridged-Party account test passes. Migration
+  graph/state checks, Django checks, compilation, and diff checks pass. The two
+  nullable invoice evidence FKs remain the next Contact schema boundary.
+
+- 2026-08-16: The Contact customer bridge is fully retired. Its service,
+  backfill command, dedicated tests, and Party-merge Customer conflict/transfer
+  behavior are removed. DEA account creation/save/balance lookup is Party-only,
+  and Party export no longer publishes `legacy_customer_id`. Remaining
+  retirement migrations fail closed with direct Party-mapping guidance rather
+  than referencing the deleted command. The focused unbridged DEA account test,
+  Django checks, compilation, and diff checks pass.
+
+- 2026-08-16: The user-facing legacy Customer-to-Party conversion workflow is
+  retired: route, view, Contact-backed form, list action, template, and web tests
+  are removed. `customer_bridge` now has no production runtime caller; it is
+  retained only behind the explicit `backfill_parties_from_customers` migration
+  command until Contact data removal. The focused route/template test and
+  Django checks pass. The broad canonicalization suite still has its unrelated
+  stale Girvi-route expectations.
+
+- 2026-08-16: Party read surfaces no longer depend on Contact compatibility.
+  Portal invoices filter solely by required `SalesInvoiceVoucher.party`, and
+  the regression passes with no legacy Customer. Party detail removed its dead
+  Girvi-era `legacy_customer` activity adapter and now derives loan counts from
+  the Loans-owned Party history selector. The portal regression passed; the
+  second UI test timed out while preparing its separate tenant schema.
+
+- 2026-08-16: Loans borrower-accounting setup is now Party-native. It creates
+  or reuses DEA's `BORROWER / BORROWER_LOAN_RECEIVABLE` mapping directly from
+  the PawnLoan borrower and no longer imports the Contact customer bridge,
+  creates a compatibility Customer, or emits Customer fields in its result and
+  audit evidence. The focused Loans regression passed; the combined two-test
+  command later timed out during the DEA test after one passing test.
+
+- 2026-08-16: Orgs dashboard composition and global navigation are now
+  Contact-free. Party owns the customer dashboard summary through active
+  CUSTOMER roles, Party creation years/types, and Party-linked active
+  PawnLoans. Desktop navigation opens Parties instead of legacy Contacts.
+  Nine focused tests, compilation, Django checks, and diff checks pass.
+
+- 2026-08-16: Girvi is physically retired. Its installed-app entry, 136-route
+  URLConf, source package, migrations, templates, graph artifacts, root
+  validation scripts, and generated bytecode are removed. `/girvi/...`
+  bookmarks now redirect through `django_project.legacy_girvi_urls` to the
+  canonical PawnLoan list. Global navigation and Contact loan metrics now use
+  Loans/Party-owned data. Django checks, the Loans migration graph, and eight
+  focused retirement tests pass. Historical route-intent and renamed Girvi-only
+  fixture bodies remain test-cleanup debt; they no longer load the retired app.
+
+- 2026-08-16: Legacy `notify` is fully removed from installed apps and source:
+  models, migrations, views, services, templates, tests, assets, and the obsolete
+  shared `utils/loan_pdf.py` helper are deleted. Temporary `/notify/...`
+  bookmark names now live in `django_project.legacy_notify_urls` and redirect
+  safely to Notify v2 without translating legacy IDs. Notify v2 migration and
+  Django checks pass. The selected authorization suite has two unrelated stale
+  failures because its expected middleware-prefix set omits the existing
+  `accounting/` route.
+
+- 2026-08-16: Girvi runtime no longer imports legacy Notify or reads its generic
+  notification relations. Dashboard/detail/operational presentation now reports
+  no Girvi notice state, facade notice counts are zero, and the stale
+  `one_year_reminder` task fails safe with an explicit disabled result. Loans
+  and Notify v2 notice workflows are unchanged. Eight focused tests, compile,
+  Django, and diff checks pass.
+
+- 2026-08-16: Tenant default seeding no longer imports, schedules, or exposes a
+  skip flag for legacy Notify. Notify v2 remains the only notification seed
+  action and currently owns no global defaults. The legacy seed method bodies
+  have been physically deleted. Dry-run/help checks and Django system checks
+  pass.
+
+- 2026-08-16: Legacy Notify URLs and Orgs notification aliases no longer invoke
+  legacy views. Existing route names/bookmarks redirect to the Notify v2 batch
+  list, deliberately discarding incompatible legacy object IDs, and remaining
+  legacy menu links now open Notify v2. Legacy models stay installed until
+  Girvi and tenant-default seeding dependencies are removed. Six focused tests,
+  Django checks, and diff checks pass.
+
+- 2026-08-16: Orgs workspace loan compatibility routes now dispatch to Loans
+  PawnLoan views while retaining their public route names. The loan module and
+  chooser no longer advertise Girvi, and workspace numbering now opens Loans
+  license/series setup. Focused route-intent tests and Django checks pass.
+
+- 2026-08-16: DEA period close no longer imports or mutates Girvi. The Girvi
+  unreleased-loan warning and automatic period-close accrual catch-up are
+  removed. DEA still enforces its own draft-voucher and balance-sheet fatal
+  checks plus depreciation/prepaid warnings and the existing reconciliation
+  placeholder. No Loans replacement was added because Loans has no approved
+  period-close batch accrual command. The focused boundary test, Django checks,
+  and DEA drift check pass; static runtime search finds no Girvi import in DEA.
+
+- 2026-08-16: The Orgs workspace dashboard no longer imports the Girvi facade.
+  `get_workspace_pawn_loan_dashboard_summary` now supplies active count, total
+  due, outstanding interest, lifecycle counts, and closed-progress from
+  workspace-scoped PawnLoans and canonical balance selectors. The old Girvi
+  "sunken" metric is deliberately empty because Loans has no authoritative
+  equivalent. Two focused selector/composition tests, Django checks, and drift
+  checks pass. Orgs still contains explicit Girvi deep-route compatibility
+  wrappers; those are a separate route retirement boundary.
+
+- 2026-08-16: Party portal payment discovery no longer imports Girvi. Sales-
+  invoice receipts remain sourced from DEA `PaymentVoucher`; PawnLoan repayments
+  are sourced from immutable Loans accounting events scoped through
+  `loan.borrower`, excluding reversed events. Portal amounts use frozen
+  principal, interest, and fee components plus the event currency. Three focused
+  Party/Loans selector tests, Django checks, and migration-drift checks pass.
+  Static runtime search finds no Girvi import anywhere in the Party app.
+
+- 2026-08-16: Party detail and customer-portal loan summaries now read canonical
+  `Loans.PawnLoan` rows through `get_party_pawn_loan_history_summary`; neither
+  imports the Girvi facade. Active financial amounts come from the canonical
+  Loans balance selector, while draft/approved rows intentionally expose no
+  posted outstanding amount. Two focused selector tests, Django checks, and
+  Loans/Party drift checks pass. The existing database-backed portal test could
+  not run because the stale `test_fresh_clean` database already exists; it was
+  not deleted automatically. Portal payment lookup still has a Girvi source
+  branch and is the next Party boundary.
+
+- 2026-08-16: The Girvi-to-Notify-v2 producer integration is retired. Single-
+  loan and bulk reminder routes/actions are removed, Girvi auction transitions
+  no longer create notification batches, and Notify v2's Girvi batch service
+  and PDF renderer are deleted. Generic Notify v2 event emission, delivery,
+  providers, artifacts, downloads, and historical batch evidence remain. Twelve
+  focused generic Notify v2/access tests, Django checks, and model-drift checks
+  pass. No database rows were deleted.
+
+- 2026-08-16: Notify v2's active batch UI is now domain-neutral. It no longer
+  links to Girvi or legacy Notify, no longer exposes the Girvi-only "Print All"
+  renderer route, and tenant default seeding no longer installs Girvi reminder
+  event/policy/template rows. Historical batches, artifacts, digital dispatch,
+  downloads, and printed/posted evidence remain readable. The focused batch UI
+  test, Django checks, and migration-drift checks pass. Girvi producers and the
+  dormant Girvi renderer/service are intentionally left for the next coordinated
+  deletion slice so current Girvi imports are not broken mid-step.
+
+- 2026-08-16: Notify v2 now owns its workspace authorization boundary and no
+  longer imports decorators from retiring legacy `notify`. The permission
+  contract remains unchanged (`data_view` for view/print, `data_edit` for
+  edit/send, and Owner/Admin for provider setup). Four focused fail-closed
+  access tests and `manage.py check` pass. Girvi-specific Notify v2 rendering
+  and batch producers remain the next dependency boundary; legacy Notify is
+  not yet removable.
+
+- 2026-08-16: DEA sales and purchase invoices now require Party for new writes,
+  forms, admin, search, display, reporting, account resolution, and version-3
+  posting fingerprints. Legacy Customer/vendor FKs are nullable `SET_NULL`
+  evidence only. Fail-closed migration `dea.0046` protects unmapped historical
+  invoices. DEA migrations `0044` through `0046`, including the Party balance
+  SQL view, executed successfully in the test database; all six focused
+  sales/purchase posting tests pass. A direct numeric balance-view test exceeded
+  120 seconds during tenant setup and returned no assertion result. No production
+  database was migrated.
+
+- 2026-08-16: DEA's unmanaged `account_balances` projection and dashboard
+  consumers now use Party rather than Contact. Reversible migration `dea.0045`
+  recreates the view from `dea_account.party_id` and records Party in migration
+  state. System, compilation, graph, and drift checks pass. Plain `sqlmigrate`
+  is a no-op under the tenant router, but the migration has since executed
+  successfully through the tenant test runner. Numeric view reconciliation
+  remains a fresh-database gate. No production database was migrated.
+
+- 2026-08-16: DEA Account now has required Party ownership with a temporary
+  nullable Contact evidence link. `dea.0044` performs a fail-closed Party
+  backfill. New Party account resolution no longer requires a legacy Customer;
+  account forms, filters, primary account/aging/period/opening-balance surfaces,
+  and commodity event consistency checks use Party. Django checks, compilation,
+  migration graph, and drift checks pass. The focused tenant database test did
+  not finish within 180 seconds and returned no assertion result. Unmanaged DEA
+  balance views still expose Contact and remain a recorded blocker. No production
+  database was migrated.
+
+- 2026-08-16: Phase 1 retirement execution has removed two concrete Contact
+  dependencies. Product price overrides now belong to Party end-to-end, with a
+  fail-closed `product.0015` backfill. Notify v2 recipients no longer store a
+  Contact FK; `notify_v2.0006` protects mapped legacy associations while keeping
+  Party optional for generic/system recipients. Django checks and migration
+  drift checks pass, both migrations applied in the focused test database, and
+  the targeted Notify v2 batch test passes. The Product suite was not completed:
+  stale `--keepdb` tenant rows caused uniqueness failures and a clean test-DB
+  rebuild exceeded 180 seconds. No production database was migrated.
+
+- 2026-08-16: The Contact/Girvi/legacy-Notify retirement ADR is accepted and
+  Phase 0 is complete. `manage.py check` passes with zero issues. The inventory
+  records Contact FKs in DEA, Product, Party, and Notify v2; Notify v2's legacy
+  Notify authorization dependency; Girvi consumers across DEA, Party, Orgs,
+  onboarding, configuration, and Notify v2; and the surviving migration nodes
+  that prevent package-first deletion. Loans already owns the FundingLoan
+  target. Notify v2's 29-test baseline has 21 passes and eight pre-existing
+  access-decorator errors; the Party suite exceeded the 120-second baseline
+  window. No runtime behavior, schema, settings, route, or database data changed.
+
+- 2026-08-16: A documentation-only proposed ADR and gated execution plan now
+  define retirement of `contact`, `girvi`, and legacy `notify`, while retaining
+  `party`, `loans`, `notify_v2`, and DEA. The plan orders Party replacement,
+  Girvi consumer removal, Notify v2 cleanup, legacy Notify retirement, DEA
+  decoupling, physical package deletion, and a clean development migration
+  baseline/database rebuild. It includes per-phase verification and rollback
+  gates. No runtime code, model, migration, settings, route, data, or database
+  behavior changed; implementation remains gated on acceptance of the proposed
+  ADR and explicit resolution of development-data and TakenLoan/funding
+  dispositions.
+
+- 2026-08-14: The `no-tenants` seed and database-role baseline is complete.
+  Tenant defaults resolve to DEA core/voucher types, Terms and Rates fixtures,
+  Product reference rows, Party roles, legacy Notify templates, and Notify v2
+  Girvi defaults; public defaults resolve to permission setup. The current
+  development database uses the `postgres` superuser and Docker trust auth, with
+  no migration/runtime role split, so restricted-role RLS proof is a critical
+  Phase 1 gate. Historical dumps and older Product fixtures still need an owner
+  KEEP/ARCHIVE/DELETE disposition. Documentation only.
+
+- 2026-08-14: The `no-tenants` Phase 0 integrity inventory is complete. The live
+  tenant model graph contains 252 uniqueness rules, 358 tenant foreign-key
+  edges, 28 cross-app edges, 10 generic relation surfaces, and three unmanaged
+  accounting/inventory balance views. The inventory defines Workspace-scoped
+  uniqueness, composite same-Workspace constraints, generic-link safeguards,
+  view security, index policy, and per-app completion gates. Documentation only;
+  runtime implementation remains gated on the proposed ADR.
+
+- 2026-08-14: The `no-tenants` Phase 0 registry/coupling inventory is recorded.
+  Django currently registers 212 tenant-app models: only 35 have a direct
+  non-null Workspace FK and 177 lack direct ownership. 76 discovered test modules
+  directly use tenant test helpers, and 35 migration files containing raw SQL
+  objects require clean-baseline review. This remains analysis-only pending ADR
+  acceptance; no runtime or database behavior changed.
+
+- 2026-08-14: The `no-tenants` branch now has a proposed architecture decision
+  and phased execution plan for replacing `django-tenants` schema isolation
+  with direct Workspace ownership, restricted-role PostgreSQL RLS, explicit
+  transaction-scoped context, tenant-aware relational integrity, and a clean
+  development migration baseline. The earlier hybrid/schema-tenancy targets are
+  marked as historical pending acceptance of the replacement ADR. This is a
+  documentation-only planning slice; no runtime code, model, migration,
+  dependency, settings, or database behavior changed.
 
 - 2026-08-14: Workspace invitation acceptance now requires the authenticated
   account to have a verified allauth `EmailAddress` matching the invited email.
@@ -2105,7 +2408,7 @@ Rokkad is moving toward a layered architecture:
 - SaaS IA Phase 10.7 workspace slug route-map review is complete in `docs/ui/workspace_slug_route_map_review.md`. The review records completed slug aliases, compatibility findings, verification, deferred target routes, and the commit boundary. The next recommended action after commit is to choose targets for the remaining deferred `/w/<workspace_slug>/...` routes or start the customer/member portal IA phase.
 - SaaS IA Phase 11.1 deferred workspace slug target selection is complete in `docs/ui/workspace_slug_deferred_targets_plan.md`. Operations/sales/purchase target the DEA business-events dashboard; commodity targets DEA commodity master; reports targets DEA reports hub; profile/billing/accounting target existing workspace update, subscription dashboard, and chart of accounts surfaces; roles and numbering have interim targets; modules and security remain absent until real workspace-owned screens exist. The next recommended action is Phase 11.2: implement only the safe redirect aliases.
 - SaaS IA Phase 11.2 safe deferred workspace slug aliases are implemented. `/w/<workspace_slug>/operations/`, `/sales/`, and `/purchase/` redirect to DEA business events; `/commodity/` redirects to DEA commodity master; `/reports/` redirects to DEA reports hub; `/settings/profile/`, `/settings/billing/`, and `/settings/accounting/` redirect to existing workspace profile, selected-workspace billing, and DEA chart-of-accounts surfaces. Contact, settings roles, modules, numbering, and security remain absent. The next recommended action is either Phase 11.3 interim roles/numbering aliases or Phase 11.4 real modules/security screen design.
-- SaaS IA Phase 11.3 interim workspace settings slug aliases are implemented. `/w/<workspace_slug>/settings/roles/` redirects to workspace team management, and `/settings/numbering/` redirects to Girvi series. Settings modules and security remain absent until real workspace-owned screens exist. The next recommended action is Phase 11.4: design/implement modules and workspace security/audit settings screens before adding their slug aliases.
+- SaaS IA Phase 11.3 interim workspace settings slug aliases are implemented. `/w/<workspace_slug>/settings/roles/` redirects to workspace team management, and `/settings/numbering/` redirects to Loans license/series setup. Settings modules and security remain absent until real workspace-owned screens exist. The next recommended action is Phase 11.4: design/implement modules and workspace security/audit settings screens before adding their slug aliases.
 - SaaS IA Phase 11.4 workspace modules/security settings screens are implemented. `/workspace/<id>/settings/modules/` and `/workspace/<id>/settings/security/` are real workspace-owned settings pages; `/w/<workspace_slug>/settings/modules/` and `/settings/security/` redirect to them. Modules is a read-only installed-module map, and Security reads workspace `AuditLog` events instead of redirecting to account-level security. The next recommended action is a final Phase 11 route-map review, then customer/member portal IA.
 - SaaS IA Phase 11 final review is complete in `docs/ui/workspace_slug_phase11_review.md`. The `/w/<workspace_slug>/...` tenant and workspace-settings route map is now live except Contact, which remains skipped in favor of Party, and the customer/member portal, which is a separate next phase.
 - SaaS IA Phase 12.1 customer/member portal planning is complete in `docs/ui/customer_portal_phase12_plan.md`; the later Party Phase 10 runtime slice now supersedes its route-absent checkpoint.

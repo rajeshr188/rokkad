@@ -420,7 +420,7 @@ def _get_dashboard_alerts():
                     "type": "danger",
                     "icon": "exclamation-triangle",
                     "title": "Credit Limit Exceeded",
-                    "message": f"{account.contact.name} ({account.account_number}) is over credit limit",
+                    "message": f"{account.party.display_name} ({account.account_number}) is over credit limit",
                     "link": account.get_absolute_url(),
                     "link_text": "View Account",
                 }
@@ -538,13 +538,13 @@ def _get_top_debtors(limit=5):
         AccountBalance.objects.filter(
             AccountType_Ext__XactTypeCode__XactTypeCode="Dr", current_balance__gt=0
         )
-        .select_related("account", "contact")
+        .select_related("account", "party")
         .order_by("-current_balance")[:limit]
     ):
         debtors.append(
             {
                 "account": balance.account,
-                "contact": balance.contact,
+                "party": balance.party,
                 "balance": balance.get_balance(),
                 "account_number": balance.account.account_number,
             }
@@ -561,13 +561,13 @@ def _get_top_creditors(limit=5):
         AccountBalance.objects.filter(
             AccountType_Ext__XactTypeCode__XactTypeCode="Cr", current_balance__gt=0
         )
-        .select_related("account", "contact")
+        .select_related("account", "party")
         .order_by("-current_balance")[:limit]
     ):
         creditors.append(
             {
                 "account": balance.account,
-                "contact": balance.contact,
+                "party": balance.party,
                 "balance": balance.get_balance(),
                 "account_number": balance.account.account_number,
             }
@@ -599,7 +599,7 @@ def receivables_aging(request):
     # Get all debtor accounts with positive balance
     debtors = Account.objects.filter(
         AccountType_Ext__XactTypeCode__XactTypeCode="Dr", status=AccountStatus.ACTIVE
-    ).select_related("contact", "AccountType_Ext")
+    ).select_related("party", "AccountType_Ext")
 
     aging_data = []
     today = timezone.now().date()
@@ -632,7 +632,7 @@ def receivables_aging(request):
             aging_data.append(
                 {
                     "account": account,
-                    "contact": account.contact,
+                    "party": account.party,
                     "balance": balance,
                     "days_old": days_old,
                     "bucket": bucket,
@@ -672,7 +672,7 @@ def payables_aging(request):
     # Get all creditor accounts with positive balance
     creditors = Account.objects.filter(
         AccountType_Ext__XactTypeCode__XactTypeCode="Cr", status=AccountStatus.ACTIVE
-    ).select_related("contact", "AccountType_Ext")
+    ).select_related("party", "AccountType_Ext")
 
     aging_data = []
     today = timezone.now().date()
@@ -705,7 +705,7 @@ def payables_aging(request):
             aging_data.append(
                 {
                     "account": account,
-                    "contact": account.contact,
+                    "party": account.party,
                     "balance": balance,
                     "days_old": days_old,
                     "bucket": bucket,

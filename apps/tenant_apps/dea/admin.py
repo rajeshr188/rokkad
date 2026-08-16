@@ -406,7 +406,7 @@ class SalesInvoiceVoucherAdmin(admin.ModelAdmin):
 
     list_display = (
         "invoice_number",
-        "customer",
+        "party",
         "invoice_date",
         "total_amount",
         "received_amount",
@@ -420,7 +420,7 @@ class SalesInvoiceVoucherAdmin(admin.ModelAdmin):
     )
     search_fields = (
         "invoice_number",
-        "customer__name",
+        "party__display_name",
     )
     readonly_fields = (
         "invoice_number",
@@ -442,7 +442,7 @@ class SalesInvoiceVoucherAdmin(admin.ModelAdmin):
     )
     inlines = [SalesInvoiceLineItemInline]
     fieldsets = (
-        ("Identity", {"fields": ("invoice_number", "customer", "invoice_date")}),
+        ("Identity", {"fields": ("invoice_number", "party", "invoice_date")}),
         (
             "Amounts",
             {
@@ -537,7 +537,7 @@ class PurchaseInvoiceVoucherAdmin(admin.ModelAdmin):
 
     list_display = (
         "internal_number",
-        "vendor",
+        "party",
         "purchase_type",
         "invoice_date",
         "net_payable",
@@ -554,7 +554,7 @@ class PurchaseInvoiceVoucherAdmin(admin.ModelAdmin):
     search_fields = (
         "internal_number",
         "invoice_number",
-        "vendor__name",
+        "party__display_name",
     )
     readonly_fields = (
         "internal_number",
@@ -580,7 +580,7 @@ class PurchaseInvoiceVoucherAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "internal_number",
-                    "vendor",
+                    "party",
                     "purchase_type",
                     "invoice_number",
                     "invoice_date",

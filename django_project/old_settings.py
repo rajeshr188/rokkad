@@ -68,12 +68,9 @@ SHARED_APPS = [
 ]
 
 TENANT_APPS = [
-    "apps.tenant_apps.contact",
-    "apps.tenant_apps.girvi",
     "apps.tenant_apps.product",
     # 'apps.tenant_apps.terms',
     "apps.tenant_apps.rates",
-    "apps.tenant_apps.notify",
     # 'apps.tenant_apps.dea',
 ]
 

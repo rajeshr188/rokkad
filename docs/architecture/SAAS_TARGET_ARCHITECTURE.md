@@ -8,6 +8,13 @@ related: [../implementation/saas-foundation-architecture-audit.md, ../implementa
 
 # Canonical MVP SaaS Target Architecture
 
+> **No-tenants branch update (2026-08-14):** this proposed schema-tenancy target
+> is retained as historical design evidence. The branch now targets removal of
+> `django-tenants` through the proposed
+> [shared-schema Workspace RLS ADR](../adr/2026-08-14-shared-schema-workspace-rls-tenancy.md).
+> Runtime implementation remains blocked until that replacement ADR is reviewed
+> and accepted.
+
 ## 1. Status and decision boundary
 
 This document proposes the canonical first-production SaaS architecture for Rokkad. It is intentionally smaller than the source audit and deliberately rejects several recommendations that would add machinery without solving an MVP problem.

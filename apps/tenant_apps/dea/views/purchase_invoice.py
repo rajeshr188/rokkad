@@ -35,7 +35,7 @@ class PurchaseInvoiceListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = (
             PurchaseInvoiceVoucher.objects.select_related(
-                "vendor", "created_by", "updated_by"
+                "party", "created_by", "updated_by"
             )
             .prefetch_related("line_items")
             .order_by("-invoice_date", "-created_at")
@@ -69,8 +69,8 @@ class PurchaseInvoiceListView(LoginRequiredMixin, ListView):
                 | Q(invoice_number__icontains=search)
                 | Q(reference__icontains=search)
                 | Q(description__icontains=search)
-                | Q(vendor__firstname__icontains=search)
-                | Q(vendor__lastname__icontains=search)
+                | Q(party__display_name__icontains=search)
+                | Q(party__legal_name__icontains=search)
             )
 
         return qs

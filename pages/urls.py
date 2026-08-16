@@ -1,7 +1,5 @@
 from django.urls import path
 
-from apps.tenant_apps.girvi.views import download_template_pack
-
 from .views import (
     HomePageView,
     TenantPageView,
@@ -55,6 +53,4 @@ urlpatterns = [
         workspace_select,
         name="workspace_select",
     ),  # Select workspace
-    # DEPRECATED: keep legacy starter-pack URL working while Girvi owns the feature
-    path("download-templates/", download_template_pack, name="download_template_pack"),
 ]

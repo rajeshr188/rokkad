@@ -132,7 +132,7 @@ def _get_dashboard_alerts():
                 "type": "danger",
                 "icon": "exclamation-triangle",
                 "title": "Credit Limit Exceeded",
-                "message": f"{account.contact.name} ({account.account_number}) is over credit limit",
+                "message": f"{account.party.display_name} ({account.account_number}) is over credit limit",
                 "link": account.get_absolute_url(),
                 "link_text": "View Account",
             })
@@ -228,12 +228,12 @@ def _get_top_debtors(limit=5):
         AccountBalance.objects.filter(
             AccountType_Ext__XactTypeCode__XactTypeCode="Dr", current_balance__gt=0
         )
-        .select_related("account", "contact")
+        .select_related("account", "party")
         .order_by("-current_balance")[:limit]
     ):
         debtors.append({
             "account": ab.account,
-            "contact": ab.contact,
+            "party": ab.party,
             "balance": ab.get_balance(),
             "account_number": ab.account.account_number,
         })
@@ -246,12 +246,12 @@ def _get_top_creditors(limit=5):
         AccountBalance.objects.filter(
             AccountType_Ext__XactTypeCode__XactTypeCode="Cr", current_balance__gt=0
         )
-        .select_related("account", "contact")
+        .select_related("account", "party")
         .order_by("-current_balance")[:limit]
     ):
         creditors.append({
             "account": ab.account,
-            "contact": ab.contact,
+            "party": ab.party,
             "balance": ab.get_balance(),
             "account_number": ab.account.account_number,
         })

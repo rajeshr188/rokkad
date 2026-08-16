@@ -76,7 +76,7 @@
                 </div>
                 <div class="col-md-3">
                     <label for="search" class="form-label">Search</label>
-                    <input type="text" name="search" id="search" class="form-control" placeholder="Invoice, customer, reference" value="{{ search_query }}">
+                    <input type="text" name="search" id="search" class="form-control" placeholder="Invoice, party, reference" value="{{ search_query }}">
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary me-2">
@@ -120,7 +120,7 @@
                                 </a>
                             </td>
                             <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
-                            <td>{{ invoice.customer }}</td>
+                            <td>{{ invoice.party }}</td>
                             <td class="text-end">₹{{ invoice.total_amount|floatformat:2 }}</td>
                             <td class="text-end">₹{{ invoice.received_amount|floatformat:2 }}</td>
                             <td class="text-end">₹{{ invoice.outstanding_balance|floatformat:2 }}</td>

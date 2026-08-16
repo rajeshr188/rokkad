@@ -267,7 +267,7 @@
                                         {{ debtor.account_number }}
                                     </a>
                                 </td>
-                                <td>{{ debtor.contact.name|truncatewords:3 }}</td>
+                                <td>{{ debtor.party.display_name|truncatewords:3 }}</td>
                                 <td class="text-end">{{ debtor.balance }}</td>
                             </tr>
                             {% empty %}
@@ -306,7 +306,7 @@
                                         {{ creditor.account_number }}
                                     </a>
                                 </td>
-                                <td>{{ creditor.contact.name|truncatewords:3 }}</td>
+                                <td>{{ creditor.party.display_name|truncatewords:3 }}</td>
                                 <td class="text-end">{{ creditor.balance }}</td>
                             </tr>
                             {% empty %}

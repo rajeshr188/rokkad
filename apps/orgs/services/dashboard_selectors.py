@@ -15,13 +15,13 @@ def get_workspace_dashboard_context(*, workspace):
         "setup_checklist": build_workspace_setup_checklist(workspace=workspace),
     }
 
-    from apps.tenant_apps.contact.facade import (
-        get_workspace_customer_dashboard_summary,
+    from apps.tenant_apps.party.facade import (
+        get_workspace_customer_party_dashboard_summary,
     )
-    from apps.tenant_apps.girvi.facade import get_workspace_loan_dashboard_summary
+    from apps.tenant_apps.loans.selectors import get_workspace_pawn_loan_dashboard_summary
     from apps.tenant_apps.rates.facade import get_workspace_rate_dashboard_summary
 
-    context.update(get_workspace_customer_dashboard_summary())
-    context.update(get_workspace_loan_dashboard_summary())
+    context.update(get_workspace_customer_party_dashboard_summary())
+    context.update(get_workspace_pawn_loan_dashboard_summary(workspace=workspace))
     context.update(get_workspace_rate_dashboard_summary())
     return context

@@ -28,7 +28,7 @@ class PriceAdminForm(forms.ModelForm):
 
 class PriceAdmin(admin.ModelAdmin):
     form = PriceAdminForm
-    list_display = ["product", "contact", "purchase_price", "selling_price"]
+    list_display = ["product", "party", "purchase_price", "selling_price"]
 
 
 admin.site.register(Price, PriceAdmin)

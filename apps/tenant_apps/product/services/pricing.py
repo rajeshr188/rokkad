@@ -13,23 +13,23 @@ class EffectivePrice:
     tier: Optional[PricingTier] = None
 
 
-def resolve_effective_price(contact, product) -> Optional[EffectivePrice]:
+def resolve_effective_price(party, product) -> Optional[EffectivePrice]:
     """
-    Resolve the effective unit prices for a contact and product.
+    Resolve the effective unit prices for a party and product.
 
     Precedence:
-    1) Walk tier hierarchy from contact.pricing_tier upward and pick first hit.
-    2) If contact-specific price exists, it overrides tier values.
+    1) Walk tier hierarchy from party.pricing_tier upward and pick first hit.
+    2) If a party-specific price exists, it overrides tier values.
     """
 
-    tier_price = _resolve_tier_price(contact=contact, product=product)
-    override_price = _resolve_contact_override_price(contact=contact, product=product)
+    tier_price = _resolve_tier_price(party=party, product=product)
+    override_price = _resolve_party_override_price(party=party, product=product)
 
     if override_price is not None:
         return EffectivePrice(
             purchase_price=override_price.purchase_price,
             selling_price=override_price.selling_price,
-            source="contact_override",
+            source="party_override",
             tier=tier_price.pricing_tier if tier_price else None,
         )
 
@@ -44,8 +44,8 @@ def resolve_effective_price(contact, product) -> Optional[EffectivePrice]:
     return None
 
 
-def _resolve_tier_price(contact, product) -> Optional[PricingTierProductPrice]:
-    pricing_tier = getattr(contact, "pricing_tier", None)
+def _resolve_tier_price(party, product) -> Optional[PricingTierProductPrice]:
+    pricing_tier = getattr(party, "pricing_tier", None)
     while pricing_tier:
         pricing_tier_price = (
             PricingTierProductPrice.objects.filter(
@@ -61,10 +61,10 @@ def _resolve_tier_price(contact, product) -> Optional[PricingTierProductPrice]:
     return None
 
 
-def _resolve_contact_override_price(contact, product) -> Optional[Price]:
+def _resolve_party_override_price(party, product) -> Optional[Price]:
     return (
         Price.objects.filter(
-            contact=contact,
+            party=party,
             product=product,
         )
         .order_by("id")

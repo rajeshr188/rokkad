@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import (
     Account,
     AccountType_Ext,
@@ -69,13 +68,13 @@ class ResolvedPartyAccount:
 
 
 def default_customer_purpose(customer):
-    if customer.customer_type == Customer.CustomerType.Supplier:
+    if getattr(customer, "customer_type", None) == "S":
         return PartyAccountPurpose.SUPPLIER_PAYABLE
     return PartyAccountPurpose.CUSTOMER_RECEIVABLE
 
 
 def default_role_for_customer(customer):
-    if customer.customer_type == Customer.CustomerType.Supplier:
+    if getattr(customer, "customer_type", None) == "S":
         return "SUPPLIER"
     return "CUSTOMER"
 
@@ -127,12 +126,6 @@ def resolve_party_account(
     if not create:
         return None
 
-    customer = getattr(party, "legacy_customer", None)
-    if not customer:
-        raise ValidationError(
-            "Party account creation currently requires a legacy Customer bridge."
-        )
-
     with transaction.atomic():
         mapping = _find_mapping(party, role_key, purpose, event_type)
         if mapping:
@@ -142,7 +135,7 @@ def resolve_party_account(
                 created=False,
             )
 
-        account = _create_account_for_customer(customer, purpose)
+        account = _create_account_for_party(party, purpose)
         mapping = PartyAccountMapping.objects.create(
             party=party,
             role_key=role_key,
@@ -166,21 +159,13 @@ def ensure_customer_account(customer):
             create=True,
         )
 
-    account_type = _account_type_for_purpose(purpose)
-    account = (
-        Account.objects.filter(contact=customer, AccountType_Ext=account_type)
-        .order_by("id")
-        .first()
-    )
-    if account:
-        return account
-    return _create_account_for_customer(customer, purpose)
+    raise ValidationError("Customer must be mapped to Party before account resolution.")
 
 
 def _find_mapping(party, role_key, purpose, event_type):
     query = PartyAccountMapping.objects.select_related(
         "account",
-        "account__contact",
+        "account__party",
         "control_ledger",
     ).filter(
         party=party,
@@ -195,19 +180,17 @@ def _find_mapping(party, role_key, purpose, event_type):
     return query.filter(event_type="").first()
 
 
-def _create_account_for_customer(customer, purpose):
+def _create_account_for_party(party, purpose):
     return Account.objects.create(
-        contact=customer,
-        entity=_entity_type_for_customer(customer),
+        party=party,
+        entity=_entity_type_for_party(party),
         AccountType_Ext=_account_type_for_purpose(purpose),
     )
 
 
-def _entity_type_for_customer(customer):
-    if getattr(customer, "party_id", None):
-        party_type = customer.party.party_type
-        if party_type in {"ORGANIZATION", "BANK", "GOVERNMENT"}:
-            return EntityType.objects.get(name="Organisation")
+def _entity_type_for_party(party):
+    if party.party_type in {"ORGANIZATION", "BANK", "GOVERNMENT"}:
+        return EntityType.objects.get(name="Organisation")
     return EntityType.objects.get(name="Person")
 
 

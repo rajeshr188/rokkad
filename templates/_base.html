@@ -52,24 +52,24 @@ See templates/layouts/base.html for the current base template.
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           {% if user.profile.workspace and user.profile.workspace.schema_name != 'public' %}
           <li class="nav-item">
-            <a class="nav-link" href="" hx-get="{% url 'contact_customer_list' %}" hx-target="#content"
+            <a class="nav-link" href="{% url 'party:party_list' %}"
               hx-push-url="true">Customer</a>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="girviDropdown" role="button" data-bs-toggle="dropdown"
               aria-expanded="false">
-              Girvi
+              Loans
             </a>
             <ul class="dropdown-menu" aria-labelledby="girviDropdown">
-              <li><a class="dropdown-item" href="" hx-get="{% url 'girvi:girvi_dashboard' %}" hx-target="#content"
+              <li><a class="dropdown-item" href="" hx-get="{% url 'loans:pawn_loan_list' %}" hx-target="#content"
                   hx-swap="innerHTML" hx-push-url="true">{% trans "Dashboard" %}</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="" hx-get="{% url 'girvi:girvi_loan_list' %}" hx-target="#content"
+              <li><a class="dropdown-item" href="" hx-get="{% url 'loans:pawn_loan_list' %}" hx-target="#content"
                   hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-push-url="true">{% trans "Loans" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'girvi:girvi_release_list' %}">{% trans "Release" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'girvi:girvi_license_list' %}">{% trans "License" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'girvi:girvi_storage_boxes' %}">{% trans "Storage" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'notify_noticegroup_list' %}">{% trans "Notice" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'loans:pawn_operations_console' %}">{% trans "Operations" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'loans:license_list' %}">{% trans "License" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'loans:pawn_storage_location_list' %}">{% trans "Storage" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'notify_v2_batch_list' %}">{% trans "Notices" %}</a></li>
             </ul>
           </li>
           <li class="nav-item dropdown">
@@ -434,7 +434,7 @@ document.body.addEventListener('htmx:historyRestore', function(evt) {
       </li>
       <li>
         <button type="button" class="dropdown-item d-flex align-items-center" hx-trigger="click"
-          hx-get="{% url 'girvi:girvi_release_create'%}" hx-target="#content">
+          hx-get="{% url 'loans:pawn_operations_console'%}" hx-target="#content">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
             class="bi bi-file-earmark-plus" viewBox="0 0 16 16">
             <path
@@ -442,7 +442,7 @@ document.body.addEventListener('htmx:historyRestore', function(evt) {
             <path
               d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z" />
           </svg>
-          Release
+          Loan operations
         </button>
       </li>
     </ul>

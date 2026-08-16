@@ -21,11 +21,10 @@ from .models import (
 
 class AccountWidget(s2forms.ModelSelect2Widget):
     search_fields = [
-        "contact__firstname__icontains",
-        "contact__lastname__icontains",
-        "contact__relatedas__icontains",
-        "contact__relatedto__icontains",
-        "contact__contactno__phone_number__icontains",
+        "party__display_name__icontains",
+        "party__legal_name__icontains",
+        "party__primary_phone__icontains",
+        "party__primary_email__icontains",
     ]
 
 
@@ -47,7 +46,7 @@ class JournalEntryWidget(s2forms.ModelSelect2Widget):
 class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
-        fields = "__all__"
+        exclude = ["contact"]
 
 
 class AccountStatementForm(forms.ModelForm):

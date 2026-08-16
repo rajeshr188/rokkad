@@ -105,7 +105,7 @@
                 <tbody>
                     {% for stmt in account_statements %}
                     <tr>
-                        <td>{{ stmt.AccountNo.contact.name }}</td>
+                        <td>{{ stmt.AccountNo.party.display_name }}</td>
                         <td>{{ stmt.AccountNo.AccountType_Ext }}</td>
                         <td class="text-end">{{ stmt.ClosingBalance }}</td>
                     </tr>

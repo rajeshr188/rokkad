@@ -44,7 +44,7 @@ This phase chooses concrete targets for the remaining deferred
 | `/w/<workspace_slug>/settings/roles/` | `workspace_settings_team` | interim redirect target | There is no dedicated roles/permissions editor yet. Team management is the current closest workspace-admin surface. |
 | `/w/<workspace_slug>/settings/billing/` | `subscriptions:dashboard` | safe redirect target | Current subscription dashboard is the billing surface. The slug view should resolve/select workspace before redirecting. |
 | `/w/<workspace_slug>/settings/modules/` | new workspace modules screen | wait for new screen | No module registry/admin screen exists. Do not fake this with setup checklist after the route is live. |
-| `/w/<workspace_slug>/settings/numbering/` | `girvi:girvi_series_list` | interim redirect target | Girvi series is the current numbering implementation. Future target should be a unified numbering-series manager. |
+| `/w/<workspace_slug>/settings/numbering/` | `loans:license_list` | canonical redirect target | Loans owns license-scoped series and official-number sequence configuration. |
 | `/w/<workspace_slug>/settings/accounting/` | `dea_chart_of_accounts` | safe redirect target | Chart of accounts is the best current accounting setup entrypoint. Opening balances remain available through the setup checklist. |
 | `/w/<workspace_slug>/settings/security/` | new workspace security/audit screen | wait for new screen | Audit logs exist in the data model/admin, but no workspace-owned security/audit UI exists. Do not redirect to account settings. |
 
@@ -80,7 +80,7 @@ Status: complete.
 Add interim aliases only if the user experience is acceptable:
 
 - settings/roles -> team management;
-- settings/numbering -> Girvi series.
+- settings/numbering -> Loans license and series setup.
 
 Document in the UI that these are current operational surfaces, not final
 workspace settings modules.

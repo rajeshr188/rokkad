@@ -56,7 +56,7 @@
                 <tbody>
                     {% for item in account_balances %}
                     <tr>
-                        <td>{{ item.account.account_number }} — {{ item.account.contact }}</td>
+                        <td>{{ item.account.account_number }} — {{ item.account.party }}</td>
                         <td>{{ item.type }}</td>
                         <td class="text-end">{{ item.amount }}</td>
                     </tr>

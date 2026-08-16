@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
-from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import (
     AccountTransaction,
     AccountingPeriod,
@@ -71,11 +70,7 @@ class UnfixedSaleServiceTests(TenantTestCase):
         )
         self.gold = Commodity.objects.create(code="GOLD", name="Gold")
         self.party = Party.objects.create(display_name="Unfixed Sale Customer")
-        self.customer = Customer.objects.create(
-            firstname="Unfixed",
-            lastname="Buyer",
-            customer_type=Customer.CustomerType.Retail,
-        )
+        self.customer = self.party
         self.vault = CommodityAccount.objects.create(
             code="UNFIXED_SALE_GOLD_VAULT",
             name="Unfixed sale gold vault",

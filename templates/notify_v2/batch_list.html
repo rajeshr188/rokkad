@@ -5,30 +5,17 @@
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h4 class="mb-0">Notify V2 Batches <span class="badge bg-secondary">{{ objects.count }}</span></h4>
-    <div class="text-muted small">Manual print/post reminder runs created from Girvi selections.</div>
+    <div class="text-muted small">Notification batches and retained delivery evidence.</div>
   </div>
   <div class="d-flex gap-2 flex-wrap">
     <a class="btn btn-sm btn-outline-primary" href="{% url 'notify_v2_settings' %}">
       <i class="bi bi-sliders me-1"></i>Settings
-    </a>
-    <a class="btn btn-sm btn-primary" href="{% url entrypoint_url_name %}">
-      <i class="bi bi-plus-circle me-1"></i>Create from Girvi
-    </a>
-    <a class="btn btn-sm btn-outline-secondary" href="{% url legacy_url_name %}">
-      <i class="bi bi-clock-history me-1"></i>Open Legacy Notify
     </a>
   </div>
 </div>
 {% endblock %}
 
 {% block workspace_content %}
-<div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
-  <div>
-    <strong>Start here:</strong> {{ entrypoint_text }}
-  </div>
-  <a class="btn btn-sm btn-outline-primary" href="{% url entrypoint_url_name %}">Go to Girvi Loans</a>
-</div>
-
 {% if request.user.is_staff and request.tenant and request.tenant.schema_name != 'public' %}
 <div class="card mb-3 border-warning-subtle">
   <div class="card-body">
@@ -130,11 +117,7 @@
           <td>{{ i.job_count }}</td>
           <td>{{ i.created_by|default:'—' }}</td>
           <td class="text-muted small">{{ i.created|date:"d M Y, H:i" }}</td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-secondary" href="{{ i.get_print_url }}">
-              <i class="bi bi-printer me-1"></i>Print
-            </a>
-          </td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ i.get_absolute_url }}">Open</a></td>
         </tr>
         {% empty %}
         <tr><td colspan="7" class="text-center text-muted py-4">No notify_v2 batches yet.</td></tr>

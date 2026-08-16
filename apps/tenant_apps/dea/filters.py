@@ -1,8 +1,8 @@
 import django_filters
 from django_select2.forms import Select2Widget
 
-from apps.tenant_apps.contact.forms import CustomerWidget
-from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
 
 from .models import (
     Account,
@@ -31,8 +31,8 @@ class LedgerTransactionFilter(django_filters.FilterSet):
 
 
 class AccountFilter(django_filters.FilterSet):
-    contact = django_filters.ModelChoiceFilter(
-        queryset=Customer.objects.all(), label="Account", widget=CustomerWidget()
+    party = django_filters.ModelChoiceFilter(
+        queryset=Party.objects.all(), label="Party", widget=PartyAutocompleteWidget()
     )
     AccountType_Ext = django_filters.ModelChoiceFilter(
         queryset=AccountType_Ext.objects.all(),
@@ -42,7 +42,7 @@ class AccountFilter(django_filters.FilterSet):
 
     class Meta:
         model = Account
-        fields = ["contact", "AccountType_Ext"]
+        fields = ["party", "AccountType_Ext"]
 
 
 class JournalEntryFilter(django_filters.FilterSet):

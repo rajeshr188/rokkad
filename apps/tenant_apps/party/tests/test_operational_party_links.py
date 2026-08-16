@@ -19,9 +19,7 @@ from apps.tenant_apps.dea.models import (
 from apps.tenant_apps.dea.posting.rules.party_accounts import (
     resolve_sales_customer_account,
 )
-from apps.tenant_apps.girvi.models import GivenLoan, License, Series, TakenLoan
-from apps.tenant_apps.party.services.customer_bridge import ensure_customer_party
-from apps.tenant_apps.notify.models import Notification, NoticeTypeConfig
+from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.notify_v2.models import NotificationRecipient
 
 
@@ -55,56 +53,24 @@ class OperationalPartyLinkTests(TenantTestCase):
     def setUp(self):
         super().setUp()
         connection.set_tenant(self.tenant)
+        customer_party = Party.objects.create(display_name="Linked Customer")
+        supplier_party = Party.objects.create(display_name="Linked Supplier")
         self.customer = Customer.objects.create(
             firstname="Linked",
             lastname="Customer",
             customer_type=Customer.CustomerType.Retail,
+            party=customer_party,
         )
         self.supplier = Customer.objects.create(
             firstname="Linked",
             lastname="Supplier",
             customer_type=Customer.CustomerType.Supplier,
-        )
-        ensure_customer_party(self.customer)
-        ensure_customer_party(self.supplier)
-        self.customer.refresh_from_db()
-        self.supplier.refresh_from_db()
-
-    def test_girvi_loans_sync_party_shadow_fields(self):
-        license_record = License.objects.create(
-            name="Test License",
-            license_number=f"LIC-{uuid.uuid4().hex[:8]}",
-        )
-        given_series = Series.objects.create(
-            license=license_record,
-            name="Given",
-            prefix="G",
-            loan_type=Series.LoanType.GIVEN,
-        )
-        taken_series = Series.objects.create(
-            license=license_record,
-            name="Taken",
-            prefix="T",
-            loan_type=Series.LoanType.TAKEN,
+            party=supplier_party,
         )
 
-        given_loan = GivenLoan.objects.create(
-            loan_id="G00001",
-            series=given_series,
-            borrower=self.customer,
-        )
-        taken_loan = TakenLoan.objects.create(
-            loan_id="T00001",
-            series=taken_series,
-            lender=self.supplier,
-        )
-
-        self.assertEqual(given_loan.borrower_party, self.customer.party)
-        self.assertEqual(taken_loan.lender_party, self.supplier.party)
-
-    def test_dea_invoice_vouchers_sync_party_shadow_fields(self):
+    def test_dea_invoice_vouchers_are_party_owned(self):
         sales_invoice = SalesInvoiceVoucher.objects.create(
-            customer=self.customer,
+            party=self.customer.party,
             subtotal=Money(100, "INR"),
             taxable_amount=Money(100, "INR"),
             total_amount=Money(100, "INR"),
@@ -112,7 +78,7 @@ class OperationalPartyLinkTests(TenantTestCase):
             auto_post_to_accounting=False,
         )
         purchase_invoice = PurchaseInvoiceVoucher.objects.create(
-            vendor=self.supplier,
+            party=self.supplier.party,
             subtotal=Money(100, "INR"),
             taxable_amount=Money(100, "INR"),
             total_amount=Money(100, "INR"),
@@ -124,30 +90,19 @@ class OperationalPartyLinkTests(TenantTestCase):
         self.assertEqual(sales_invoice.party, self.customer.party)
         self.assertEqual(purchase_invoice.party, self.supplier.party)
 
-    def test_notification_surfaces_sync_party_shadow_fields(self):
-        notice_type = NoticeTypeConfig.objects.create(
-            code=f"PARTY_NOTICE_{uuid.uuid4().hex[:8]}",
-            name="Party Notice",
-            category=NoticeTypeConfig.CategoryChoices.GENERAL,
-        )
-        notification = Notification.objects.create(
-            customer=self.customer,
-            notice_type_config=notice_type,
-            medium_type=Notification.MediumType.Email,
-        )
+    def test_notify_v2_recipient_is_party_owned(self):
         recipient = NotificationRecipient.objects.create(
-            customer=self.customer,
+            party=self.customer.party,
             name_snapshot=self.customer.name,
         )
 
-        self.assertEqual(notification.party, self.customer.party)
         self.assertEqual(recipient.party, self.customer.party)
 
     def test_resolver_prefers_explicit_party_mapping(self):
         self._seed_account_masters()
         party = self.customer.party
         account = Account.objects.create(
-            contact=self.customer,
+            party=party,
             entity=EntityType.objects.get(name="Person"),
             AccountType_Ext=AccountType_Ext.objects.get(description="Debtor"),
         )
@@ -158,7 +113,6 @@ class OperationalPartyLinkTests(TenantTestCase):
             account=account,
         )
         invoice = SalesInvoiceVoucher.objects.create(
-            customer=self.customer,
             party=party,
             subtotal=Money(100, "INR"),
             taxable_amount=Money(100, "INR"),

@@ -16,13 +16,6 @@ from decimal import Decimal
 from .doc import BusinessDoc
 
 
-def _party_from_customer(customer):
-    if not customer:
-        return None
-    party_id = getattr(customer, "party_id", None)
-    return customer.party if party_id else None
-
-
 class PurchaseType(models.TextChoices):
     """Type of purchase"""
 
@@ -67,21 +60,12 @@ class PurchaseInvoiceVoucher(BusinessDoc):
         null=True, blank=True, help_text="Date when goods/services received"
     )
 
-    # === Vendor ===
-    vendor = models.ForeignKey(
-        "contact.Customer",
-        on_delete=models.PROTECT,
-        related_name="purchase_invoices",
-        limit_choices_to={"customer_type": "S"},
-        help_text="Vendor who supplied",
-    )
+    # === Supplier Party ===
     party = models.ForeignKey(
         "party.Party",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name="dea_purchase_invoices",
-        help_text="Shadow Party link for the vendor during Customer migration.",
+        help_text="Canonical supplier Party.",
     )
 
     # === Purchase Type ===
@@ -201,14 +185,13 @@ class PurchaseInvoiceVoucher(BusinessDoc):
         verbose_name = "Purchase Invoice Voucher"
         verbose_name_plural = "Purchase Invoice Vouchers"
         indexes = [
-            models.Index(fields=["invoice_date", "vendor"]),
             models.Index(fields=["invoice_date", "party"]),
             models.Index(fields=["purchase_type", "is_fully_paid"]),
             models.Index(fields=["created_at"]),
         ]
 
     def __str__(self):
-        return f"{self.internal_number} - {self.vendor} - ₹{self.net_payable.amount}"
+        return f"{self.internal_number} - {self.party} - ₹{self.net_payable.amount}"
 
     def clean(self):
         """Validate invoice data"""
@@ -239,14 +222,6 @@ class PurchaseInvoiceVoucher(BusinessDoc):
 
     def save(self, *args, **kwargs):
         """Auto-generate internal number and calculate amounts"""
-        if not self.party_id:
-            party = _party_from_customer(getattr(self, "vendor", None))
-            if party:
-                self.party = party
-                update_fields = kwargs.get("update_fields")
-                if update_fields is not None:
-                    kwargs["update_fields"] = set(update_fields) | {"party"}
-
         if not self.internal_number:
             self.internal_number = self._generate_internal_number()
 
@@ -315,7 +290,7 @@ class PurchaseInvoiceVoucher(BusinessDoc):
         """Return economic data for fingerprinting"""
         return {
             "internal_number": self.internal_number,
-            "vendor_id": self.vendor_id,
+            "party_id": self.party_id,
             "purchase_type": self.purchase_type,
             "total_amount": float(self.total_amount.amount),
             "line_items": [

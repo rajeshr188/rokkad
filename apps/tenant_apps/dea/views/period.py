@@ -277,7 +277,7 @@ def period_detail(request, pk):
 
         account_balances = AccountStatement.objects.filter(
             period=period, is_opening_statement=False
-        ).select_related("AccountNo", "AccountNo__contact")[:10]
+        ).select_related("AccountNo", "AccountNo__party")[:10]
     else:
         ledger_balances = None
         account_balances = None
@@ -509,24 +509,6 @@ def period_close(request, pk):
             try:
                 notes = form.cleaned_data.get("notes", "")
 
-                # 1.8 — Interest accrual catch-up before close.
-                # Run accrual for all unreleased loans up to period.end_date so
-                # that P&L is complete before the closing entries are generated.
-                # Failures are surfaced as warnings and do NOT block the close.
-                try:
-                    from apps.tenant_apps.girvi.facade import (
-                        run_period_close_interest_accrual,
-                    )
-
-                    accrual_failures = run_period_close_interest_accrual(
-                        period=period,
-                        user=request.user,
-                    )
-                    for warning_msg in accrual_failures:
-                        messages.warning(request, f"Accrual catch-up: {warning_msg}")
-                except ImportError:
-                    logger.debug("Girvi app not installed; skipping accrual catch-up on period close.")
-
                 # Close the period
                 period.close_period(user=request.user, notes=notes)
                 entries_processed = period.journal_entries.count()
@@ -697,8 +679,8 @@ def period_balances(request, pk):
     # Get closing statements for accounts
     account_statements = (
         AccountStatement.objects.filter(period=period, is_opening_statement=False)
-        .select_related("AccountNo", "AccountNo__contact", "AccountNo__AccountType_Ext")
-        .order_by("AccountNo__contact__firstname", "AccountNo__contact__lastname")
+        .select_related("AccountNo", "AccountNo__party", "AccountNo__AccountType_Ext")
+        .order_by("AccountNo__party__display_name", "AccountNo__account_number")
     )
 
     # Group by account type
@@ -743,7 +725,7 @@ def period_report(request, pk):
 
     account_statements = AccountStatement.objects.filter(
         period=period, is_opening_statement=False
-    ).select_related("AccountNo", "AccountNo__contact")
+    ).select_related("AccountNo", "AccountNo__party")
 
     report_data["ledger_statements"] = ledger_statements
     report_data["account_statements"] = account_statements

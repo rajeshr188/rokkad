@@ -256,9 +256,8 @@ class PurchaseRateFixingPreviewForm(forms.Form):
             raise forms.ValidationError("Fixing fine weight cannot exceed open exposure.")
         if (
             supplier_account
-            and supplier_account.contact_id
-            and supplier_account.contact.party_id
-            and supplier_account.contact.party_id != exposure.party_id
+            and supplier_account.party_id
+            and supplier_account.party_id != exposure.party_id
         ):
             raise forms.ValidationError(
                 "Supplier account party must match exposure party when linked."
@@ -351,9 +350,8 @@ class SaleRateFixingPreviewForm(forms.Form):
             raise forms.ValidationError("Fixing fine weight cannot exceed open exposure.")
         if (
             customer_account
-            and customer_account.contact_id
-            and customer_account.contact.party_id
-            and customer_account.contact.party_id != exposure.party_id
+            and customer_account.party_id
+            and customer_account.party_id != exposure.party_id
         ):
             raise forms.ValidationError(
                 "Customer account party must match exposure party when linked."

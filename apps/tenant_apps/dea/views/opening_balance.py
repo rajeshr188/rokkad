@@ -138,7 +138,7 @@ def _opening_balance_step2_entry(request):
 
     # Get all accounts
     accounts = Account.objects.filter(status="ACTIVE").select_related(
-        "contact", "AccountType_Ext"
+        "party", "AccountType_Ext"
     )
 
     # Get existing opening balances if any

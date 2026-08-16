@@ -57,9 +57,9 @@ NAVIGATION_STRUCTURE = {
             "is_header": True,
         },
         {
-            "id": "girvi",
-            "label": "Loans (गिरवी)",
-            "url_name": "girvi:girvi_loan_list",
+            "id": "loans",
+            "label": "PawnLoans",
+            "url_name": "loans:pawn_loan_list",
             "icon": "cash-coin",
             "section": "data",
             "required_permission": "data_view",
@@ -81,9 +81,9 @@ NAVIGATION_STRUCTURE = {
             "required_permission": "data_view",
         },
         {
-            "id": "contacts",
-            "label": "Contacts",
-            "url_name": "contact:contact_list",
+            "id": "parties",
+            "label": "Parties",
+            "url_name": "party:party_list",
             "icon": "people-fill",
             "section": "data",
             "required_permission": "data_view",
@@ -130,9 +130,9 @@ PUBLIC_NAVIGATION = [
         "icon": "book-fill",
     },
     {
-        "id": "contact",
-        "label": "Contact",
-        "url": "/contact/",
+        "id": "parties",
+        "label": "Parties",
+        "url": "/party/",
         "icon": "envelope-fill",
     },
 ]

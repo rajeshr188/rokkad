@@ -33,10 +33,6 @@ class Command(BaseCommand):
             "--skip-product",
             action="store_true",
         )
-        parser.add_argument(
-            "--skip-notify",
-            action="store_true",
-        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
@@ -68,7 +64,6 @@ class Command(BaseCommand):
                     skip_terms=options["skip_terms"],
                     skip_rates=options["skip_rates"],
                     skip_product=options["skip_product"],
-                    skip_notify=options["skip_notify"],
                 )
                 seeded += 1
             except Exception as exc:  # noqa: BLE001

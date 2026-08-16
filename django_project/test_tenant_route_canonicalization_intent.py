@@ -298,7 +298,6 @@ class TenantRouteCanonicalizationIntentTests(SimpleTestCase):
                 "workspace_slug_party_detail",
                 "workspace_slug_party_update",
             ),
-            "templates/party/customer_convert.html": ("workspace_slug_parties",),
         }
 
         for template_path, expected_routes in template_cases.items():

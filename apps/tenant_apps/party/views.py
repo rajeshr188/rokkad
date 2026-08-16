@@ -14,11 +14,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.tenant_apps.girvi.facade import get_party_loan_history_summary
+from apps.tenant_apps.loans.selectors import get_party_pawn_loan_history_summary
 
 from .access import assert_party_action_permission, party_action_required
 from .forms import (
-    CustomerConversionForm,
     PartyAddressForm,
     PartyContactMethodForm,
     PartyDocumentForm,
@@ -40,7 +39,6 @@ from .models import (
 )
 from .selectors import party_detail_queryset
 from .resources import PartyResource
-from .services.customer_bridge import ensure_customer_party
 from .services.party_merge import merge_parties
 
 
@@ -48,51 +46,6 @@ PARTY_EXPORT_FORMATS = {
     "csv": "text/csv",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
-
-
-def _count_related(manager):
-    if manager is None:
-        return 0
-    try:
-        return manager.count()
-    except Exception:
-        return 0
-
-
-def _latest_related(manager, limit=10):
-    if manager is None:
-        return []
-    try:
-        return list(manager.all()[:limit])
-    except Exception:
-        return []
-
-
-def _legacy_activity(party):
-    customer = getattr(party, "legacy_customer", None)
-    if not customer:
-        return {
-            "customer": None,
-            "given_loans": [],
-            "taken_loans": [],
-            "counts": {
-                "given_loans": 0,
-                "taken_loans": 0,
-            },
-        }
-
-    given_loans = getattr(customer, "loans_received", None)
-    taken_loans = getattr(customer, "loans_given", None)
-
-    return {
-        "customer": customer,
-        "given_loans": _latest_related(given_loans),
-        "taken_loans": _latest_related(taken_loans),
-        "counts": {
-            "given_loans": _count_related(given_loans),
-            "taken_loans": _count_related(taken_loans),
-        },
-    }
 
 
 def _party_detail_url(party, tab="overview"):
@@ -214,11 +167,10 @@ def _party_detail_context(
     )
 
     active_tab = active_tab or request.GET.get("tab") or "overview"
-    loan_history = get_party_loan_history_summary(party, limit=20)
+    loan_history = get_party_pawn_loan_history_summary(party, limit=20)
     return {
         "party": party,
         "role_form": PartyRoleForm(),
-        "activity": _legacy_activity(party),
         "loan_history": loan_history,
         "account_mappings": party.dea_account_mappings.all(),
         "active_tab": active_tab,
@@ -391,26 +343,6 @@ def party_create(request):
         request,
         "party/form.html",
         {"form": form, "title": "Create Party", "submit_label": "Create"},
-    )
-
-
-@party_action_required("create")
-def party_customer_convert(request):
-    form = CustomerConversionForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        customer = form.cleaned_data["customer"]
-        result = ensure_customer_party(customer)
-        customer.refresh_from_db()
-        if result["created"]:
-            messages.success(request, "Customer converted to Party.")
-        else:
-            messages.info(request, "Customer was already linked to Party.")
-        return redirect("party:party_detail", pk=customer.party.pk)
-
-    return render(
-        request,
-        "party/customer_convert.html",
-        {"form": form},
     )
 
 

@@ -7,7 +7,7 @@
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
-        {{ account.contact.firstname }} {{ account.contact.lastname }}
+        {{ account.party.display_name }}
         <small class="text-muted ms-2">{{ account.account_number }}</small>
       </h5>
       <span class="badge {% if account.status == 'ACTIVE' %}bg-success{% elif account.status == 'CLOSED' %}bg-danger{% elif account.status == 'SUSPENDED' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">

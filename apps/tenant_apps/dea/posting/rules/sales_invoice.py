@@ -18,7 +18,7 @@ from .party_accounts import resolve_sales_customer_account
 @register_rule("SALES_INVOICE")
 class SalesInvoiceRule(BasePostingRule):
     voucher_type = "SALES_INVOICE"
-    rule_version = "2"
+    rule_version = "3"
 
     def should_run(self, doc) -> bool:
         from apps.tenant_apps.dea.models import SalesInvoiceVoucher
@@ -104,7 +104,7 @@ class SalesInvoiceRule(BasePostingRule):
             "rule_version": self.rule_version,
             "invoice_id": getattr(doc, "id", None),
             "invoice_number": getattr(doc, "invoice_number", None),
-            "customer_id": getattr(doc, "customer_id", None),
+            "party_id": getattr(doc, "party_id", None),
             "total_amount": str(getattr(doc.total_amount, "amount", "")),
             "currency": str(getattr(doc.total_amount, "currency", "")),
         }

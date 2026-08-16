@@ -9,8 +9,8 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("contact", "0001_initial"),
         ("dea", "0001_initial"),
+        ("party", "0001_initial"),
         ("product", "0001_initial"),
     ]
 
@@ -37,11 +37,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="price",
-            name="contact",
+            name="party",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name="prices",
-                to="contact.customer",
+                related_name="product_price_overrides",
+                to="party.party",
             ),
         ),
         migrations.AddField(

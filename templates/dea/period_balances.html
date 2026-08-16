@@ -80,7 +80,7 @@
                     <tr>
                         <td>
                             <a href="{% url 'dea_account_detail' stmt.AccountNo.pk %}">
-                                {{ stmt.AccountNo.contact.name }}
+                                {{ stmt.AccountNo.party.display_name }}
                             </a>
                         </td>
                         <td>{{ stmt.AccountNo.AccountType_Ext }}</td>

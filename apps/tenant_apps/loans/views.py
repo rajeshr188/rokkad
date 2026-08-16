@@ -1,11 +1,10 @@
 import hashlib
 import uuid
-from types import SimpleNamespace
 from copy import deepcopy
 from decimal import Decimal
+from types import SimpleNamespace
 
 import fitz
-
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.paginator import Paginator
@@ -38,31 +37,30 @@ from apps.tenant_apps.loans.filters import (
     PawnStorageLocationFilter,
 )
 from apps.tenant_apps.loans.forms import (
-    LoanLicenseForm,
-    LoanLicenseRenewalForm,
     LoanDocumentAssetUploadForm,
     LoanDocumentAssignmentForm,
-    LoanDocumentLayoutCreateForm,
-    LoanDocumentLayoutDefinitionForm,
     LoanDocumentFlowBlockForm,
     LoanDocumentFlowSettingsForm,
+    LoanDocumentLayoutCreateForm,
+    LoanDocumentLayoutDefinitionForm,
+    LoanDocumentLayoutPackImportForm,
     LoanDocumentOverlayBlockForm,
     LoanDocumentOverlayLogicalSettingsForm,
     LoanDocumentOverlaySettingsForm,
-    LoanDocumentLayoutPackImportForm,
     LoanDocumentPrintProfileAssignmentForm,
     LoanDocumentPrintProfileCreateForm,
     LoanDocumentPrintProfileDefinitionForm,
+    LoanLicenseForm,
+    LoanLicenseRenewalForm,
+    LoanMonitoringPolicyForm,
     LoanProductVersionDraftForm,
     LoanSeriesSetupForm,
     PawnEconomicConfigurationForm,
-    LoanMonitoringPolicyForm,
     PawnFeePolicyForm,
-    PawnPhysicalVerificationStartForm,
     PawnPhysicalVerificationObservationForm,
+    PawnPhysicalVerificationStartForm,
     PawnSetupTransferForm,
 )
-
 
 _OVERLAY_PAGE_DIMENSIONS_MM = {
     "A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279),
@@ -70,21 +68,10 @@ _OVERLAY_PAGE_DIMENSIONS_MM = {
 
 _PENDING_STORAGE_ITEM_SESSION_KEY = "loans_pending_storage_item"
 
-from apps.tenant_apps.loans.web.reports import (
-    pawn_loan_report_export,
-    pawn_loan_reports,
-    pawn_party_statement,
-)
-from apps.tenant_apps.loans.web.operations import (
-    pawn_loan_notice_list,
-    pawn_operations_console,
-    pawn_operations_runbook,
-    pawn_risk_whatsapp_pilot,
-    pawn_risk_portfolio,
-)
-from apps.tenant_apps.loans.web.risk_actions import pawn_risk_borrower_notice_create
 from apps.tenant_apps.loans.web.communication_actions import pawn_communication_consent
-from apps.tenant_apps.loans.web.communication_policy_actions import pawn_communication_policy
+from apps.tenant_apps.loans.web.communication_policy_actions import (
+    pawn_communication_policy,
+)
 from apps.tenant_apps.loans.web.funding import (
     funding_loan_agreement_pdf,
     funding_loan_read_console,
@@ -93,6 +80,19 @@ from apps.tenant_apps.loans.web.funding import (
     funding_loan_return_receipt_pdf,
     funding_loan_statement_pdf,
 )
+from apps.tenant_apps.loans.web.operations import (
+    pawn_loan_notice_list,
+    pawn_operations_console,
+    pawn_operations_runbook,
+    pawn_risk_portfolio,
+    pawn_risk_whatsapp_pilot,
+)
+from apps.tenant_apps.loans.web.reports import (
+    pawn_loan_report_export,
+    pawn_loan_reports,
+    pawn_party_statement,
+)
+from apps.tenant_apps.loans.web.risk_actions import pawn_risk_borrower_notice_create
 
 
 def _fit_overlay_geometry(definition, target_page_size):
@@ -122,88 +122,6 @@ def _fit_overlay_geometry(definition, target_page_size):
                 target_height - block["height_mm"],
             )
     definition["page_size"] = target_page_size
-from apps.tenant_apps.loans.models import (
-    LoanDocumentLayout,
-    LoanDocumentLayoutRevision,
-    LoanDocumentIssue,
-    LoanDocumentPrintProfile,
-    LoanDocumentPrintProfileRevision,
-    LoanLicense,
-    LoanOperationalNotice,
-    LoanLicenseRevision,
-    LoanProduct,
-    LoanSeries,
-    PawnLoan,
-    PawnCollateralItem,
-    PawnCollateralPhoto,
-    PawnPhysicalVerificationObservation,
-    PawnPhysicalVerificationSession,
-    PawnStorageLocation,
-    PawnLoanAccountingEvent,
-    PawnLoanAccountingOutbox,
-    PawnLoanAuction,
-    PawnLoanEconomicPolicy,
-    LoanMonitoringPolicy,
-    PawnLoanFeePolicy,
-    PawnLoanRelease,
-    PawnLoanRenewal,
-    PawnMetalInterestRatePolicy,
-)
-from apps.tenant_apps.loans.selectors import (
-    get_loan_license_register,
-    get_pawn_loan_balance,
-    get_pawn_loan_exposure,
-    get_pawn_loan_delinquency,
-    get_pawn_loan_collateral_valuation,
-    get_pawn_loan_risk_assessment,
-    reconcile_pawn_loan_receivable,
-    get_pawn_loan_notice_rows,
-    get_physical_verification_detail,
-    get_pawn_loan_series_navigation,
-)
-from apps.tenant_apps.loans.services import (
-    LicenseSeriesError,
-    LoanAccountingOutboxError,
-    NumberAllocationError,
-    PawnLifecycleError,
-    PawnLoanDocumentError,
-    PawnLoanDocumentService,
-    issue_configurable_document,
-    DocumentLayoutServiceError,
-    LoanDocumentLayoutService,
-    RiskSnapshotRefreshError,
-    activate_license,
-    activate_product_version,
-    create_product_version_draft,
-    create_configured_series,
-    create_license,
-    create_pawn_economic_configuration,
-    create_loan_monitoring_policy,
-    create_pawn_loan_fee_policy,
-    reassess_pawn_loans_batch,
-    refresh_loan_risk_snapshot,
-    dispatch_operational_notice,
-    renew_license,
-    expire_license,
-    preview_number,
-    preview_pawn_loan_accruals,
-    retry_failed_outbox_event,
-    retire_product_version,
-    seed_default_loan_products,
-    assess_pawn_loan_event_reversal,
-    transfer_expired_draft_setup,
-    render_collateral_label,
-    PawnCollateralMediaError,
-    PawnPhysicalVerificationError,
-    LoanOperationalNoticeError,
-    create_license_expiry_notice,
-    record_physical_verification_observation,
-    start_physical_verification,
-    render_storage_location_label,
-    update_license,
-    update_configured_series,
-    render_loan_license_register_pdf,
-)
 from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer,
     DocumentAsset,
@@ -218,6 +136,88 @@ from apps.tenant_apps.loans.documents.packs import (
     LayoutPackError,
     export_layout_pack,
     import_layout_pack,
+)
+from apps.tenant_apps.loans.models import (
+    LoanDocumentIssue,
+    LoanDocumentLayout,
+    LoanDocumentLayoutRevision,
+    LoanDocumentPrintProfile,
+    LoanDocumentPrintProfileRevision,
+    LoanLicense,
+    LoanLicenseRevision,
+    LoanMonitoringPolicy,
+    LoanOperationalNotice,
+    LoanProduct,
+    LoanSeries,
+    PawnCollateralItem,
+    PawnCollateralPhoto,
+    PawnLoan,
+    PawnLoanAccountingEvent,
+    PawnLoanAccountingOutbox,
+    PawnLoanAuction,
+    PawnLoanEconomicPolicy,
+    PawnLoanFeePolicy,
+    PawnLoanRelease,
+    PawnLoanRenewal,
+    PawnMetalInterestRatePolicy,
+    PawnPhysicalVerificationObservation,
+    PawnPhysicalVerificationSession,
+    PawnStorageLocation,
+)
+from apps.tenant_apps.loans.selectors import (
+    get_loan_license_register,
+    get_pawn_loan_balance,
+    get_pawn_loan_collateral_valuation,
+    get_pawn_loan_delinquency,
+    get_pawn_loan_exposure,
+    get_pawn_loan_notice_rows,
+    get_pawn_loan_risk_assessment,
+    get_pawn_loan_series_navigation,
+    get_physical_verification_detail,
+    reconcile_pawn_loan_receivable,
+)
+from apps.tenant_apps.loans.services import (
+    DocumentLayoutServiceError,
+    LicenseSeriesError,
+    LoanAccountingOutboxError,
+    LoanDocumentLayoutService,
+    LoanOperationalNoticeError,
+    NumberAllocationError,
+    PawnCollateralMediaError,
+    PawnLifecycleError,
+    PawnLoanDocumentError,
+    PawnLoanDocumentService,
+    PawnPhysicalVerificationError,
+    RiskSnapshotRefreshError,
+    activate_license,
+    activate_product_version,
+    assess_pawn_loan_event_reversal,
+    create_configured_series,
+    create_license,
+    create_license_expiry_notice,
+    create_loan_monitoring_policy,
+    create_pawn_economic_configuration,
+    create_pawn_loan_fee_policy,
+    create_product_version_draft,
+    dispatch_operational_notice,
+    expire_license,
+    issue_configurable_document,
+    preview_number,
+    preview_pawn_loan_accruals,
+    reassess_pawn_loans_batch,
+    record_physical_verification_observation,
+    refresh_loan_risk_snapshot,
+    render_collateral_label,
+    render_loan_license_register_pdf,
+    render_storage_location_label,
+    renew_license,
+    retire_product_version,
+    retry_failed_outbox_event,
+    seed_default_loan_products,
+    start_physical_verification,
+    transfer_expired_draft_setup,
+    update_configured_series,
+    update_license,
 )
 from apps.tenant_apps.loans.services.print_profiles import (
     LoanDocumentPrintProfileService,

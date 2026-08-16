@@ -10,7 +10,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h2">Purchase Invoices</h1>
-            <p class="text-muted">Manage vendor invoices and track payments</p>
+            <p class="text-muted">Manage supplier invoices and track payments</p>
         </div>
         <a href="{% url 'dea_purchase_invoice_create' %}" class="btn btn-primary btn-lg">
             <i class="fas fa-plus"></i> New Purchase Invoice
@@ -85,7 +85,7 @@
             </form>
             <div class="row g-3 mt-2">
                 <div class="col-md-6">
-                    <input type="text" name="search" class="form-control" placeholder="Search vendor or invoice number..." value="{{ request.GET.search }}">
+                    <input type="text" name="search" class="form-control" placeholder="Search party or invoice number..." value="{{ request.GET.search }}">
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary w-100">
@@ -120,7 +120,7 @@
                     {% for invoice in object_list %}
                     <tr>
                         <td><strong>{{ invoice.internal_number }}</strong></td>
-                        <td>{{ invoice.vendor.name }}</td>
+                        <td>{{ invoice.party.display_name }}</td>
                         <td>
                             <span class="badge bg-info">{{ invoice.get_purchase_type_display }}</span>
                         </td>

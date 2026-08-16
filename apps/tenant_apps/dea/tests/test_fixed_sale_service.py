@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
-from apps.tenant_apps.contact.models import Customer
 from apps.tenant_apps.dea.models import (
     Account,
     AccountingPeriod,
@@ -31,6 +30,7 @@ from apps.tenant_apps.dea.services.fixed_sale import (
     FixedSalePostingPayload,
     post_fixed_sale,
 )
+from apps.tenant_apps.party.models import Party
 
 
 User = get_user_model()
@@ -76,13 +76,9 @@ class FixedSaleServiceTests(TenantTestCase):
         self._seed_account_masters()
         self.ledgers = self._seed_ledgers()
         self.gold = Commodity.objects.create(code="GOLD", name="Gold")
-        self.customer = Customer.objects.create(
-            firstname="Fixed",
-            lastname="Buyer",
-            customer_type=Customer.CustomerType.Retail,
-        )
+        self.customer = Party.objects.create(display_name="Fixed Buyer")
         self.customer_account = Account.objects.create(
-            contact=self.customer,
+            party=self.customer,
             entity=EntityType.objects.get(name="Person"),
             AccountType_Ext=AccountType_Ext.objects.get(description="Debtor"),
         )

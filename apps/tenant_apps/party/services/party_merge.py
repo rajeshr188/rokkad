@@ -57,7 +57,6 @@ def merge_parties(*, target, source, actor=None):
     documents_moved = source.documents.update(party=target)
     relationships_moved, relationship_skips = _move_relationships(target, source)
     account_mappings_moved = _move_account_mappings(target, source)
-    _move_legacy_customer(target, source)
     _archive_source_party(target, source, actor=actor)
 
     return PartyMergeResult(
@@ -76,12 +75,6 @@ def merge_parties(*, target, source, actor=None):
 
 def _merge_conflicts(target, source):
     conflicts = []
-    if getattr(target, "legacy_customer", None) and getattr(source, "legacy_customer", None):
-        conflicts.append(
-            "Both parties are linked to legacy customers. Merge the legacy customer "
-            "records first or wait for operational foreign-key migration."
-        )
-
     target_identifiers = {
         identifier.identifier_type: identifier
         for identifier in target.identifiers.all()
@@ -257,13 +250,6 @@ def _move_relationships(target, source):
 
 def _move_account_mappings(target, source):
     return PartyAccountMapping.objects.filter(party=source).update(party=target)
-
-
-def _move_legacy_customer(target, source):
-    source_customer = getattr(source, "legacy_customer", None)
-    if source_customer and not getattr(target, "legacy_customer", None):
-        source_customer.party = target
-        source_customer.save(update_fields=["party"])
 
 
 def _archive_source_party(target, source, actor=None):

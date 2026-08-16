@@ -70,7 +70,7 @@ class NotificationPolicyAdmin(TenantSchemaAdminGuardMixin, admin.ModelAdmin):
 
 @admin.register(NotificationRecipient)
 class NotificationRecipientAdmin(TenantSchemaAdminGuardMixin, admin.ModelAdmin):
-    list_display = ["name_snapshot", "customer", "email", "phone", "preferred_locale", "is_active"]
+    list_display = ["name_snapshot", "party", "email", "phone", "preferred_locale", "is_active"]
     list_filter = ["preferred_locale", "is_active"]
     search_fields = ["name_snapshot", "email", "phone", "customer__firstname", "customer__lastname"]
     ordering = ["name_snapshot"]

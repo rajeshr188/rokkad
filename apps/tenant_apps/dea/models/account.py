@@ -8,8 +8,6 @@ from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
 from moneyed import Money
 
-from apps.tenant_apps.contact.models import Customer
-
 from ..managers import AccountManager
 from ..utils.currency import Balance
 from .ledger import Ledger
@@ -57,7 +55,8 @@ class AccountStatus(models.TextChoices):
 class Account(models.Model):
     """
     Represents a customer/vendor account in the accounting system.
-    Each account is linked to a contact and can have credit limits.
+    Each counterparty account is linked to its canonical Party and can have
+    credit limits.
 
     Account Numbering Format: <AccountType_prefix><sequential_number>
     Example: DR0001, CR0001 (DR=Debtor, CR=Creditor)
@@ -73,8 +72,10 @@ class Account(models.Model):
     AccountType_Ext = models.ForeignKey(
         AccountType_Ext, on_delete=models.CASCADE, verbose_name=_("Account Type")
     )
-    contact = models.ForeignKey(
-        Customer, on_delete=models.CASCADE, related_name="accounts"
+    party = models.ForeignKey(
+        "party.Party",
+        on_delete=models.PROTECT,
+        related_name="dea_accounts",
     )
 
     # Account identification
@@ -127,7 +128,7 @@ class Account(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.account_number or self.id} | {self.contact} | {self.AccountType_Ext}"
+        return f"{self.account_number or self.id} | {self.party} | {self.AccountType_Ext}"
 
     def save(self, *args, **kwargs):
         # Generate account number if not set
@@ -505,7 +506,7 @@ class Account(models.Model):
         See migration 0003_create_ledger_balance_view.py for SQL definition
 
         Example:
-        >>> customer_account = Account.objects.get(contact__name='ABC Corp')
+        >>> customer_account = Account.objects.get(party__display_name='ABC Corp')
         >>> balance_obj = customer_account.get_current_balance()
         >>> inr_balance = balance_obj.get('INR')  # Returns Money object
         >>> print(f"ABC Corp owes: {inr_balance}")
@@ -539,7 +540,7 @@ class Account(models.Model):
         4. These become checkpoints for future current_balance() calls
 
         Example:
-        >>> customer_account = Account.objects.get(contact__name='ABC Corp')
+        >>> customer_account = Account.objects.get(party__display_name='ABC Corp')
         >>> statements = customer_account.audit()  # Creates snapshots
         >>> # Now current_balance() only scans transactions AFTER these snapshots
 
@@ -787,8 +788,8 @@ class AccountBalance(models.Model):
     account = models.OneToOneField(
         Account, primary_key=True, db_column="account_id", on_delete=models.DO_NOTHING
     )
-    contact = models.ForeignKey(
-        "contact.Customer", db_column="contact_id", on_delete=models.DO_NOTHING
+    party = models.ForeignKey(
+        "party.Party", db_column="party_id", on_delete=models.DO_NOTHING
     )
     AccountType_Ext = models.ForeignKey(
         "AccountType_Ext", db_column="AccountType_Ext_id", on_delete=models.DO_NOTHING

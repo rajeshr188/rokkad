@@ -11,8 +11,8 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("contact", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
+        ("party", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -30,11 +30,11 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "contact",
-                    models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="account",
-                        to="contact.customer",
+                    "party",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="dea_accounts",
+                        to="party.party",
                     ),
                 ),
             ],
@@ -232,6 +232,14 @@ class Migration(migrations.Migration):
                         primary_key=True,
                         serialize=False,
                         to="dea.account",
+                    ),
+                ),
+                (
+                    "party",
+                    models.ForeignKey(
+                        db_column="party_id",
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="party.party",
                     ),
                 ),
                 ("currency", models.CharField(max_length=3)),
@@ -840,12 +848,6 @@ class Migration(migrations.Migration):
             model_name="ledger",
             constraint=models.UniqueConstraint(
                 fields=("name", "parent"), name="unique_ledgername_parent"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="account",
-            constraint=models.UniqueConstraint(
-                fields=("contact",), name="unique_contact_account"
             ),
         ),
         migrations.AlterUniqueTogether(

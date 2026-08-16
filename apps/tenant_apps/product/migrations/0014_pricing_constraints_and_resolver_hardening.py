@@ -19,15 +19,15 @@ def dedupe_pricing_rows(apps, schema_editor):
         ).order_by("id")
         rows.exclude(id=rows.first().id).delete()
 
-    duplicate_contact_prices = (
-        Price.objects.values("contact_id", "product_id")
+    duplicate_party_prices = (
+        Price.objects.values("party_id", "product_id")
         .annotate(row_count=Count("id"))
         .filter(row_count__gt=1)
     )
 
-    for duplicate in duplicate_contact_prices:
+    for duplicate in duplicate_party_prices:
         rows = Price.objects.filter(
-            contact_id=duplicate["contact_id"],
+            party_id=duplicate["party_id"],
             product_id=duplicate["product_id"],
         ).order_by("id")
         rows.exclude(id=rows.first().id).delete()
@@ -65,8 +65,8 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="price",
             constraint=models.UniqueConstraint(
-                fields=("contact", "product"),
-                name="uq_product_price_contact_product",
+                fields=("party", "product"),
+                name="uq_product_price_party_product",
             ),
         ),
         migrations.AddConstraint(

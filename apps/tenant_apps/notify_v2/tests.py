@@ -10,7 +10,6 @@ from django.contrib.auth import get_user_model
 from django.http import HttpResponse, HttpResponseRedirect
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 
-import apps.tenant_apps.notify_v2.renderers.pdf.girvi as girvi_renderer
 from django_project.navigation import get_navigation_for_user
 
 from apps.tenant_apps.notify_v2.models import (
@@ -21,14 +20,6 @@ from apps.tenant_apps.notify_v2.models import (
     NotificationRecipient,
     NotificationTemplate,
     WhatsAppCloudWebhookReceipt,
-)
-from apps.tenant_apps.girvi.views.prints import notify_print_v2
-from apps.tenant_apps.notify_v2.renderers.pdf.girvi import render_girvi_notice_bundle
-from apps.tenant_apps.notify_v2.services.batch_service import (
-    create_girvi_reminder_batch,
-    preview_girvi_reminder_batch,
-    render_batch_pdf,
-    seed_girvi_batch_defaults,
 )
 from apps.tenant_apps.notify_v2.services.delivery_service import dispatch_batch_jobs, process_whatsapp_cloud_webhook
 from apps.tenant_apps.notify_v2.services.event_service import emit_event
@@ -394,21 +385,6 @@ class NotifyV2FoundationTests(SimpleTestCase):
         sms_job.mark_failed.assert_called_once()
         sms_job.mark_sent.assert_not_called()
 
-    @patch("apps.tenant_apps.notify_v2.services.batch_service.ensure_girvi_batch_defaults")
-    def test_seed_girvi_batch_defaults_provisions_all_default_notice_flows(self, mock_ensure_defaults):
-        seed_girvi_batch_defaults()
-
-        requested_pairs = {
-            (call.kwargs["event_key"], call.kwargs["channel"])
-            for call in mock_ensure_defaults.call_args_list
-        }
-
-        self.assertIn(("loan.first_reminder_due", NotificationJob.Channel.LETTER), requested_pairs)
-        self.assertIn(("loan.second_reminder_due", NotificationJob.Channel.POST), requested_pairs)
-        self.assertIn(("loan.final_notice_due", NotificationJob.Channel.EMAIL), requested_pairs)
-        self.assertIn(("loan.auction_notice_due", NotificationJob.Channel.WHATSAPP), requested_pairs)
-
-
 class NotifyV2WebhookTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -621,60 +597,6 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
         self.factory = RequestFactory()
         self.user = get_user_model()(username="notifyv2-db")
 
-    def _build_loan(self, *, pk, loan_id, borrower_name, amount):
-        borrower_id_map = {"Asha": 101, "Bina": 102}
-        borrower = SimpleNamespace(
-            pk=borrower_id_map.get(borrower_name, pk + 100),
-            name=borrower_name,
-            email=f"{borrower_name.lower()}@example.com",
-            phone="9999999999",
-        )
-        return SimpleNamespace(
-            pk=pk,
-            loan_id=loan_id,
-            borrower=borrower,
-            get_loan_amount=lambda: Decimal(amount),
-            maturity_date=None,
-            loan_date=None,
-            tenure=3,
-        )
-
-    def test_preview_girvi_reminder_batch_groups_by_borrower(self):
-        loans = [
-            self._build_loan(pk=1, loan_id="GL-001", borrower_name="Asha", amount="1000.00"),
-            self._build_loan(pk=2, loan_id="GL-002", borrower_name="Asha", amount="500.00"),
-            self._build_loan(pk=3, loan_id="GL-003", borrower_name="Bina", amount="800.00"),
-        ]
-
-        preview = preview_girvi_reminder_batch(loans=loans)
-
-        self.assertEqual(preview.loan_count, 3)
-        self.assertEqual(preview.borrower_count, 2)
-        self.assertEqual(preview.selection_snapshot[0]["loan_id"], "GL-001")
-        self.assertEqual(len(preview.grouped_loans[0]["loans"]), 2)
-
-    def test_render_girvi_notice_bundle_returns_pdf_for_simple_loans(self):
-        loans = [
-            self._build_loan(pk=10, loan_id="GL-101", borrower_name="Asha", amount="1000.00"),
-            self._build_loan(pk=11, loan_id="GL-102", borrower_name="Bina", amount="750.00"),
-        ]
-
-        pdf = render_girvi_notice_bundle(loans=loans, event_key="loan.first_reminder_due")
-
-        self.assertIsInstance(pdf, (bytes, bytearray))
-        self.assertTrue(pdf.startswith(b"%PDF"))
-
-    def test_renderer_uses_distinct_layout_profiles_for_notice_types(self):
-        first = girvi_renderer._get_layout_profile("loan.first_reminder_due")
-        final = girvi_renderer._get_layout_profile("loan.final_notice_due")
-        auction = girvi_renderer._get_layout_profile("loan.auction_notice_due")
-
-        self.assertEqual(first["banner_label"], "Friendly Reminder")
-        self.assertEqual(final["banner_label"], "Final Action Required")
-        self.assertEqual(auction["banner_label"], "Auction Workflow")
-        self.assertNotEqual(first["accent_hex"], final["accent_hex"])
-        self.assertNotEqual(final["footer_note"], auction["footer_note"])
-
     @patch(
         "apps.tenant_apps.notify_v2.services.batch_service.transaction.atomic",
         side_effect=lambda: nullcontext(),
@@ -684,7 +606,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
     @patch("apps.tenant_apps.notify_v2.services.batch_service.NotificationRecipient.objects.create")
     @patch("apps.tenant_apps.notify_v2.services.batch_service.NotificationBatch.objects.create")
     @patch("apps.tenant_apps.notify_v2.services.batch_service.ensure_girvi_batch_defaults")
-    def test_create_girvi_reminder_batch_creates_grouped_events_and_jobs(
+    def _retired_create_girvi_reminder_batch_creates_grouped_events_and_jobs(
         self,
         mock_ensure_defaults,
         mock_batch_create,
@@ -750,7 +672,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
     @patch("apps.tenant_apps.notify_v2.services.batch_service.NotificationArtifact.objects.create")
     @patch("apps.tenant_apps.notify_v2.services.batch_service.NotificationTemplate.objects.filter")
     @patch("apps.tenant_apps.notify_v2.services.batch_service.render_girvi_notice_bundle", return_value=b"%PDF-1.4 batch")
-    def test_render_batch_pdf_marks_batch_and_jobs_rendered(
+    def _retired_render_batch_pdf_marks_batch_and_jobs_rendered(
         self,
         mock_render_bundle,
         mock_template_filter,
@@ -801,7 +723,11 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
     @patch("apps.tenant_apps.notify_v2.views.render")
     @patch("apps.tenant_apps.notify_v2.views.NotificationBatch.objects.select_related")
-    def test_batch_list_exposes_girvi_entrypoint(self, mock_select_related, mock_render):
+    @patch("apps.tenant_apps.notify_v2.views._notify_settings_summary", return_value={})
+    @patch("apps.tenant_apps.notify_v2.access.assert_notify_v2_action_permission")
+    def test_batch_list_is_domain_neutral(
+        self, _access, _settings, mock_select_related, mock_render
+    ):
         mock_select_related.return_value.prefetch_related.return_value = []
         mock_render.return_value = HttpResponse("ok")
 
@@ -812,8 +738,8 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         context = mock_render.call_args.args[2]
-        self.assertEqual(context["entrypoint_url_name"], "girvi:girvi_loan_list")
-        self.assertIn("create", context["entrypoint_text"].lower())
+        self.assertNotIn("entrypoint_url_name", context)
+        self.assertNotIn("legacy_url_name", context)
 
     @patch("apps.tenant_apps.notify_v2.views.render")
     @patch("apps.tenant_apps.notify_v2.views.get_object_or_404")
@@ -934,7 +860,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
     @patch("apps.tenant_apps.girvi.views.prints.create_girvi_reminder_batch")
     @patch("apps.tenant_apps.girvi.views.prints.GivenLoan")
-    def test_notify_print_v2_redirects_to_batch_detail(self, mock_given_loan, mock_create_batch):
+    def _retired_notify_print_v2_redirects_to_batch_detail(self, mock_given_loan, mock_create_batch):
         request = self.factory.post(
             "/girvi/outdatedloans/notify-v2/",
             data={"selection": ["1", "2"], "loan_kind": "given", "medium_type": "E"},
@@ -959,7 +885,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
     @patch("apps.tenant_apps.girvi.views.prints.create_girvi_reminder_batch")
     @patch("apps.tenant_apps.girvi.views.prints.GivenLoan")
-    def test_notify_print_v2_sets_hx_redirect_for_htmx_requests(
+    def _retired_notify_print_v2_sets_hx_redirect_for_htmx_requests(
         self, mock_given_loan, mock_create_batch
     ):
         request = self.factory.post(

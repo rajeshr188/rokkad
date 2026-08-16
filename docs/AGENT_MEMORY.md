@@ -1,12 +1,22 @@
 ---
 status: active
 owner: project
-updated: 2026-08-10
+updated: 2026-08-16
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+On the `no-tenants` branch, the proposed tenancy direction is a clean
+development-stage replacement of `django-tenants` with ordinary global
+Workspace control-plane models, direct non-null Workspace ownership on every
+tenant row, PostgreSQL forced RLS under a restricted runtime role, and one
+transaction-scoped Workspace context primitive for HTTP, tasks, commands, and
+tests. The proposed ADR is
+`docs/adr/2026-08-14-shared-schema-workspace-rls-tenancy.md`; implementation is
+not authorized until it is reviewed and accepted. Existing schema-tenancy and
+hybrid recommendations are historical evidence on this branch, not the target.
 
 Rokkad follows KISS (Keep It Simple, Stupid). Choose the smallest coherent
 design that meets the current business need, prefer ordinary Django and existing
@@ -22,22 +32,109 @@ must have a verified allauth `EmailAddress` matching the invitation before
 Enforce this in the service so both direct-link and invitation-dashboard flows
 share the rule; never infer mailbox control from matching email strings alone.
 
-Notify v2 is the target notification platform. Legacy `notify` remains a
-supported compatibility and history boundary while Girvi reminders, printed
-notices, Party counts, seeds, routes, and existing tenant evidence depend on it.
-Build no new workflows on legacy Notify. Do not delete its runtime or tables
-until the accepted staged retirement and tenant reconciliation gates pass.
-Retirement is dependency-first: decouple every consumer, permit at most one
-temporary read-only history adapter, isolate legacy Notify from normal runtime,
-then remove it. Never replace direct imports with dual writes.
-Canonical decision: `docs/adr/2026-08-14-legacy-notify-retirement-boundary.md`.
+The accepted target retires Contact, Girvi, and legacy `notify`, while keeping
+Party, Loans, Notify v2, and DEA. Retirement is dependency-first: migrate
+Contact consumers to Party, remove Girvi consumers, remove Girvi behavior from
+Notify v2, give Notify v2 its own authorization boundary, decouple DEA, delete
+runtime packages, then rebuild the clean development migration baseline. Never
+replace direct imports with dual writes and never mutate posted journals during
+retirement. Canonical decision:
+`docs/adr/2026-08-16-retire-contact-girvi-and-legacy-notify.md`.
+Notify v2 owns its authorization implementation in `notify_v2.access`; do not
+reintroduce imports from retiring `notify.access`. Preserve its current
+workspace permission mapping and Owner/Admin provider-setup boundary.
+Notify v2 batch history is a generic evidence surface: preserve existing jobs,
+artifacts, downloads, dispatch, and print/post timestamps during retirement.
+Do not restore Girvi or legacy-Notify creation links or Girvi default seeding.
+Legacy Notify route names are temporary bookmark compatibility aliases only;
+they redirect to `notify_v2_batch_list` and must not call legacy Notify views or
+translate legacy primary keys into unrelated Notify v2 batch IDs.
+The legacy Notify Django app is physically removed. Its temporary bookmark URL
+names are project-owned in `django_project.legacy_notify_urls`; do not recreate
+an installed `notify` app. Notify v2 is the sole supported notification app.
+Tenant default seeding must not import or schedule legacy Notify. Keep only the
+Notify v2 action; its configuration remains workflow-owned rather than seeded
+from Girvi reminder defaults.
+Girvi runtime must not import legacy Notify or inspect its reverse generic
+notification relations. Keep stale Girvi reminder task names fail-safe and
+disabled until scheduler configuration is removed; do not redirect them into
+Notify v2 because supported notices are Loans-owned intents.
+The Girvi-to-Notify-v2 batch producer and PDF renderer are retired. Girvi
+transitions must not emit Notify v2 reminder/auction batches; new Loans notices
+use the Loans-owned intent workflows and Notify v2 delivery boundary.
+Party-facing loan history is owned by
+`loans.selectors.get_party_pawn_loan_history_summary`. It must remain Party-
+scoped and use canonical Loans balances for financial amounts; never fall back
+to Girvi or treat draft principal as posted outstanding.
+Party portal PawnLoan payment history is sourced from immutable, non-reversed
+`PawnLoanAccountingEvent` repayment rows. Compose the displayed receipt amount
+only from frozen principal, interest, and fee payload components; sales invoice
+receipts remain DEA PaymentVoucher evidence.
+Workspace dashboard PawnLoan metrics are owned by
+`loans.selectors.get_workspace_pawn_loan_dashboard_summary` and require an
+explicit workspace. Do not restore Girvi dashboard reads or approximate its
+"sunken" valuation concept without a separately accepted Loans design.
+DEA period close must not import Girvi or silently mutate Loans. Keep its
+checklist DEA-owned. A future Loans period-close accrual gate requires an
+explicit Loans service contract and accounting tests before integration.
+Keep the public `/w/<workspace_slug>/loans/...` compatibility route names while
+Girvi is retired, but dispatch them to Loans PawnLoan views. Workspace numbering
+belongs to Loans license/series setup (`loans:license_list`).
 
 FundingLoan is a supported Loans aggregate and operator workflow; never describe
-it as a disabled prototype. Girvi and Loans coexist independently during
-capability extraction, with no workspace default and no conditional routing
-between their origination screens. Generic entry surfaces offer an explicit
-choice. Girvi remains operational for its own records and as a business-rule
-reference until a separate retirement ADR is accepted.
+it as a disabled prototype. Loans is the sole target loan platform. Girvi may
+remain runnable only during the gated retirement execution and receives no new
+features.
+
+Girvi is now physically removed and must not be reinstalled. Temporary
+`/girvi/...` bookmark compatibility is project-owned by
+`django_project.legacy_girvi_urls` and redirects to `loans:pawn_loan_list`.
+PawnLoan is the sole supported customer pawn-loan aggregate.
+
+Workspace customer dashboard metrics are Party-owned through
+`get_workspace_customer_party_dashboard_summary`; Orgs must not import the
+retiring Contact facade. Global customer navigation targets `party:party_list`.
+
+PawnLoan borrower-accounting setup is Party-native. Resolve or create the DEA
+`BORROWER / BORROWER_LOAN_RECEIVABLE` account mapping directly for the borrower
+Party; do not recreate a legacy Customer or import Party's customer bridge.
+Setup audit evidence identifies the Party, account, and mapping only.
+
+Party portal invoice reads are scoped exclusively by the invoice's required
+`party`; never reintroduce a `legacy_customer` OR fallback. Party detail loan
+counts come from Loans' Party history selector, not Contact/Girvi reverse
+relations. The user-facing legacy Customer conversion workflow is retired.
+The former `party.services.customer_bridge` and
+`backfill_parties_from_customers` command are deleted. Party merge does not
+inspect or transfer legacy Customers. DEA account creation, model save, and
+balance lookup are Party-only, and Party exports contain no legacy Customer ID.
+`DEA.Account.contact` is removed by migration `dea.0047`; never restore a
+Contact shadow FK or Contact-based account manager lookup. `Account.party` is
+the sole required counterparty identity.
+DEA invoice Contact shadows are removed by `dea.0048`:
+`SalesInvoiceVoucher.customer` and `PurchaseInvoiceVoucher.vendor` no longer
+exist. Invoice posting resolves CUSTOMER/SUPPLIER accounts only from each
+invoice's required `party`.
+Contact has no supported web routes. Project-owned
+`django_project.legacy_contact_urls` redirects all `/contact/...` bookmarks to
+`party:party_list`. Contact is physically deleted and no longer installed: the clean development
+migration history creates Party ownership directly and has no dependency on
+the Contact graph. Never remount its URLConf or restore it to settings.
+Phase 7 has a verified rollback archive at
+`.local-backups/fresh_clean-pre-contact-baseline-20260816-154116.dump`. Do not
+mechanically regenerate migrations: preserve current DEA views/masters/repairs,
+Loans/Product/Accounting guards, Orgs roles, required Rates seed state, and
+Notify v2 Party state without replaying retired-app data copies.
+Use `django_project.settings.baseline_rehearsal` only with a
+`ROKKAD_REHEARSAL_DB_NAME` beginning `rokkad_baseline_rehearsal_`. Reference DB
+`rokkad_baseline_rehearsal_20260816` and tenant `baseline_tenant` migrated from
+empty. Tenant parity is 193 tables, 5 views, 63 user triggers, and 2,880
+constraints; the replacement must create zero `contact_*` tables.
+The replacement graph was proven from empty in guarded database
+`rokkad_baseline_rehearsal_20260816_contactfree`, including tenant schema
+`contactfree_tenant`, with Contact absent from installed apps. All DEA, Product,
+Loans, Party, and Notify v2 migrations completed successfully and Django reports
+no migration drift.
 
 Persisted `LoanRiskSnapshot` rows are the monitoring/reporting read model. Live
 risk calculation produces or refreshes those snapshots; stale/error rows remain
@@ -1739,7 +1836,7 @@ Phase 11.1 deferred workspace slug target selection is complete in `docs/ui/work
 
 Phase 11.2 safe deferred workspace slug aliases are implemented. Operations/sales/purchase redirect to `dea_business_events_dashboard`, commodity redirects to `dea_commodity_list`, reports redirects to `dea_reports_hub`, settings/profile redirects to `workspace_update`, settings/billing selects the workspace then redirects to `subscriptions:dashboard`, and settings/accounting redirects to `dea_chart_of_accounts`. Contact plus settings roles/modules/numbering/security remain absent until separate decisions.
 
-Phase 11.3 interim workspace settings slug aliases are implemented. Settings/roles redirects to `workspace_settings_team`; settings/numbering redirects to `girvi:girvi_series_list`. Settings/modules and settings/security remain absent until real workspace-owned modules and security/audit screens are designed.
+Phase 11.3 interim workspace settings slug aliases are implemented. Settings/roles redirects to `workspace_settings_team`; settings/numbering now redirects to `loans:license_list`. Settings/modules and settings/security remain absent until real workspace-owned modules and security/audit screens are designed.
 
 Phase 11.4 workspace modules/security settings screens are implemented. `workspace_settings_modules` renders a read-only installed-module map, `workspace_settings_security` renders workspace audit/security activity from `AuditLog`, and slug aliases redirect to these workspace-owned pages. Do not redirect workspace security to account-level allauth/security settings.
 

@@ -143,13 +143,13 @@ def pricing_tier_product_price_delete(request, pk):
 
 @product_action_required("view")
 def price_override_list(request):
-    object_list = Price.objects.select_related("contact", "product", "price_tier").all()
+    object_list = Price.objects.select_related("party", "product", "price_tier").all()
     return TemplateResponse(
         request,
         "product/price/price_override_list.html",
         context={
             "object_list": object_list,
-            "page_title": "Contact Price Overrides",
+            "page_title": "Party Price Overrides",
         },
     )
 
@@ -161,17 +161,17 @@ def price_override_create(request):
         if form.is_valid():
             try:
                 form.save()
-                messages.success(request, "Contact price override created.")
+                messages.success(request, "Party price override created.")
                 return redirect("product_price_override_list")
             except IntegrityError:
                 form.add_error(
                     None,
-                    "A contact override already exists for this contact and product.",
+                    "A party override already exists for this party and product.",
                 )
     return TemplateResponse(
         request,
         "product/price/price_override_form.html",
-        context={"form": form, "page_title": "Create Contact Price Override"},
+        context={"form": form, "page_title": "Create Party Price Override"},
     )
 
 
@@ -183,12 +183,12 @@ def price_override_update(request, pk):
         if form.is_valid():
             try:
                 form.save()
-                messages.success(request, "Contact price override updated.")
+                messages.success(request, "Party price override updated.")
                 return redirect("product_price_override_list")
             except IntegrityError:
                 form.add_error(
                     None,
-                    "A contact override already exists for this contact and product.",
+                    "A party override already exists for this party and product.",
                 )
     return TemplateResponse(
         request,
@@ -196,7 +196,7 @@ def price_override_update(request, pk):
         context={
             "form": form,
             "obj": obj,
-            "page_title": "Update Contact Price Override",
+            "page_title": "Update Party Price Override",
         },
     )
 

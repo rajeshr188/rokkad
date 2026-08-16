@@ -10,7 +10,6 @@ class PartyResource(resources.ModelResource):
     status_display = Field(column_name="status_display")
     relation_display = Field(column_name="relation_display")
     active_roles = Field(column_name="active_roles")
-    legacy_customer_id = Field(column_name="legacy_customer_id")
 
     created_at = Field(
         attribute="created_at",
@@ -44,7 +43,6 @@ class PartyResource(resources.ModelResource):
             "risk_level",
             "credit_hold",
             "active_roles",
-            "legacy_customer_id",
             "created_at",
             "updated_at",
         )
@@ -69,12 +67,3 @@ class PartyResource(resources.ModelResource):
             if role.status == PartyRole.RoleStatus.ACTIVE
         ]
         return ", ".join(roles)
-
-    def dehydrate_legacy_customer_id(self, party):
-        try:
-            return party.legacy_customer_id
-        except AttributeError:
-            try:
-                return party.legacy_customer.pk
-            except Exception:
-                return ""

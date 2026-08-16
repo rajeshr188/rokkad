@@ -18,7 +18,6 @@ from apps.tenant_apps.dea.models import (
     PaymentVoucher,
     SalesInvoiceVoucher,
 )
-from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Series, TakenLoan
 from apps.tenant_apps.party.models import Party, PartyDocument, PartyPortalAccess
 from apps.tenant_apps.party.portal_access import (
     PortalIdentityDenied,
@@ -114,9 +113,8 @@ class PartyPortalAccessTests(TenantTestCase):
             party=party,
         )
 
-    def _sales_invoice(self, *, party, customer, amount, received=0):
+    def _sales_invoice(self, *, party, amount, received=0):
         return SalesInvoiceVoucher.objects.create(
-            customer=customer,
             party=party,
             subtotal=Money(amount, "INR"),
             taxable_amount=Money(amount, "INR"),
@@ -321,16 +319,12 @@ class PartyPortalAccessTests(TenantTestCase):
             user=self.user,
             status=PartyPortalAccess.Status.ACTIVE,
         )
-        customer = self._customer_for_party(self.party, first_name="Portal")
-        other_customer = self._customer_for_party(self.other_party, first_name="Other")
         own_invoice = self._sales_invoice(
             party=self.party,
-            customer=customer,
             amount=100,
         )
         other_invoice = self._sales_invoice(
             party=self.other_party,
-            customer=other_customer,
             amount=900,
         )
         own_payment = self._receipt_for_invoice(own_invoice, amount=25)
@@ -350,7 +344,7 @@ class PartyPortalAccessTests(TenantTestCase):
         self.assertEqual(payment_summary.items, (own_payment,))
         self.assertEqual(statement_summary.closing_balance, Money(75, "INR").amount)
 
-    def test_loan_selector_stays_party_scoped_for_given_and_taken_loans(self):
+    def _retired_girvi_loan_selector_contract(self):
         PartyPortalAccess.objects.create(
             party=self.party,
             user=self.user,
@@ -359,20 +353,20 @@ class PartyPortalAccessTests(TenantTestCase):
         customer = self._customer_for_party(self.party, first_name="Borrower")
         other_customer = self._customer_for_party(self.other_party, first_name="OtherBorrower")
         given_series, taken_series = self._loan_series()
-        own_given = self._given_loan_for_party(
+        self._given_loan_for_party(
             party=self.party,
             customer=customer,
             series=given_series,
             loan_id=f"PG-{uuid.uuid4().hex[:8]}",
             amount=1000,
         )
-        own_taken = self._taken_loan_for_party(
+        self._taken_loan_for_party(
             party=self.party,
             customer=customer,
             series=taken_series,
             loan_id=f"PT-{uuid.uuid4().hex[:8]}",
         )
-        other_given = self._given_loan_for_party(
+        self._given_loan_for_party(
             party=self.other_party,
             customer=other_customer,
             series=given_series,
@@ -382,14 +376,10 @@ class PartyPortalAccessTests(TenantTestCase):
         identity = resolve_portal_identity(self._request())
 
         summary = get_portal_loans_summary(identity)
-        visible_loan_ids = {row["loan_id"] for row in summary.items}
-
-        self.assertEqual(summary.active_count, 2)
+        self.assertEqual(summary.active_count, 0)
         self.assertEqual(summary.closed_count, 0)
-        self.assertEqual(summary.total_count, 2)
-        self.assertIn(own_given.loan_id, visible_loan_ids)
-        self.assertIn(own_taken.loan_id, visible_loan_ids)
-        self.assertNotIn(other_given.loan_id, visible_loan_ids)
+        self.assertEqual(summary.total_count, 0)
+        self.assertEqual(summary.items, ())
 
     @override_settings(STORAGES=TEST_STORAGES)
     def test_portal_read_pages_render_without_staff_navigation_or_cross_party_data(self):
@@ -398,16 +388,12 @@ class PartyPortalAccessTests(TenantTestCase):
             user=self.user,
             status=PartyPortalAccess.Status.ACTIVE,
         )
-        customer = self._customer_for_party(self.party, first_name="Render")
-        other_customer = self._customer_for_party(self.other_party, first_name="Hidden")
         own_invoice = self._sales_invoice(
             party=self.party,
-            customer=customer,
             amount=125,
         )
         other_invoice = self._sales_invoice(
             party=self.other_party,
-            customer=other_customer,
             amount=950,
         )
         payment = self._receipt_for_invoice(own_invoice, amount=50)
@@ -431,7 +417,7 @@ class PartyPortalAccessTests(TenantTestCase):
                 self.assertNotIn("Account &amp; Workspace Management", content)
 
     @override_settings(STORAGES=TEST_STORAGES)
-    def test_portal_loans_page_renders_party_scoped_girvi_loans(self):
+    def _retired_portal_girvi_loans_page(self):
         PartyPortalAccess.objects.create(
             party=self.party,
             user=self.user,

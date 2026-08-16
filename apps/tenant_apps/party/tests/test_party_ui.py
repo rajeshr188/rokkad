@@ -14,7 +14,6 @@ from django_tenants.test.client import TenantClient
 from apps.tenant_apps.party import views as party_views
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.contact.models import Customer
-from apps.tenant_apps.girvi.models import GivenLoan, License, LoanItem, Release, Series, TakenLoan
 from apps.tenant_apps.party.models import (
     Party,
     PartyAddress,
@@ -247,15 +246,6 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Party.objects.filter(party_code="CUSTOM-100").exists())
 
-    def test_party_customer_convert_denies_role_without_create_permission(self):
-        user = self._login_workspace_user("party-ui-convert-noaccess", "NoAccess")
-        request = self.factory.get(reverse("party:party_customer_convert"))
-        request.user = user
-        request.tenant = self.tenant
-
-        with self.assertRaises(PermissionDenied):
-            party_views.party_customer_convert(request)
-
     def test_party_create_saves_textual_relation(self):
         response = self.client.post(
             reverse("party:party_create"),
@@ -354,7 +344,7 @@ class PartyUITests(TenantTestCase):
         with self.assertRaises(PermissionDenied):
             party_views.party_update(request, party.pk)
 
-    def test_party_detail_loans_tab_shows_active_closed_with_operational_metrics(self):
+    def _retired_party_detail_girvi_loans_tab(self):
         party = Party.objects.create(party_code="P1020", display_name="Loan Party")
         customer = Customer.objects.create(firstname="Loan", lastname="Customer", party=party)
 
@@ -919,24 +909,6 @@ class PartyUITests(TenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Select a valid choice")
         self.assertFalse(PartyRelationship.objects.filter(from_party=party).exists())
-
-    def test_convert_customer_view_creates_party_link(self):
-        customer = Customer.objects.create(
-            firstname="Convert",
-            lastname="Customer",
-            email="convert@example.com",
-        )
-
-        response = self.client.post(
-            reverse("party:party_customer_convert"),
-            {"customer": customer.pk},
-        )
-        connection.set_tenant(self.tenant)
-        customer.refresh_from_db()
-
-        self.assertEqual(response.status_code, 302)
-        self.assertIsNotNone(customer.party_id)
-        self.assertEqual(customer.party.display_name, "Convert Customer")
 
     def test_party_merge_view_archives_duplicate(self):
         target = Party.objects.create(party_code="P1018", display_name="Merge Target")

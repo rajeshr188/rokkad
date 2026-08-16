@@ -245,24 +245,27 @@ class SaaSRouteIntentTests(SimpleTestCase):
         self.assertEqual(
             tenant_prefixes,
             {
+                "accounting/",
                 "party/",
                 "contact/",
                 "data-tools/",
                 "girvi/",
+                "loans/",
                 "rates/",
                 "product/",
                 "notify/",
                 "notify-v2/",
                 "dea/",
+                "portal/",
             },
         )
 
     def test_tenant_urlconf_resolves_representative_tenant_erp_paths(self):
         path_cases = {
             "/party/": "party_list",
-            "/contact/customer/": "contact_customer_list",
+            "/contact/customer/": "contact_retired_path",
             "/data-tools/export/": "export_form",
-            "/girvi/deletemultiple/": "girvi_loan_deletemultiple",
+            "/girvi/deletemultiple/": "girvi_retired_path",
             "/rates/rates/": "rate_list",
             "/product/": "product_product_home",
             "/notify/noticegroup/": "notify_noticegroup_list",

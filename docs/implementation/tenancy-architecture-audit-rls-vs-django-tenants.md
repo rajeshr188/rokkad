@@ -8,6 +8,13 @@ related: [../AGENT_MEMORY.md, ../STATUS.md, ../constitution.md, testing-and-migr
 
 # Tenancy Architecture Audit: `django-tenants` vs PostgreSQL RLS
 
+> **No-tenants branch update (2026-08-14):** this audit predates the explicit
+> development-stage decision to remove schema tenancy without preserving local
+> data or migration compatibility. Its repository findings remain useful, but
+> its hybrid timing recommendation is superseded by the proposed
+> [shared-schema Workspace RLS ADR](../adr/2026-08-14-shared-schema-workspace-rls-tenancy.md)
+> and [removal plan](../plans/django-tenants-removal.md) if that ADR is accepted.
+
 This document records the July 2026 tenancy architecture review for Rokkad. It is not an accepted ADR. It is an implementation reference for future planning around whether Rokkad should continue with schema-per-tenant isolation through `django-tenants` or migrate toward shared-schema PostgreSQL Row Level Security.
 
 ## Executive Summary

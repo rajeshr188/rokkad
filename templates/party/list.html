@@ -19,9 +19,6 @@
             </a>
         </div>
         {% endif %}
-        <a class="btn btn-outline-secondary" href="{% url 'party:party_customer_convert' %}">
-            <i class="bi bi-arrow-left-right"></i> Convert Customer
-        </a>
         <a class="btn btn-primary" href="{% if user_workspace %}{% url 'workspace_slug_party_create' workspace_slug=user_workspace.schema_name %}{% else %}{% url 'party:party_create' %}{% endif %}">
             <i class="bi bi-plus-lg"></i> New Party
         </a>

@@ -425,9 +425,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
             actor=self.tenant.owner,
         )
 
-        self.assertTrue(first.customer_created)
         self.assertTrue(first.mapping_created)
-        self.assertFalse(second.customer_created)
         self.assertFalse(second.mapping_created)
         self.assertEqual(first.account.pk, second.account.pk)
         self.assertEqual(first.mapping.pk, second.mapping.pk)
@@ -435,7 +433,7 @@ class PawnDisbursalServiceTests(TenantTestCase):
         self.assertEqual(first.mapping.purpose, "BORROWER_LOAN_RECEIVABLE")
         self.assertEqual(first.mapping.status, "ACTIVE")
         self.assertEqual(first.mapping.control_ledger.name, "BORROWER_LOAN_CTRL")
-        self.assertEqual(self.loan.borrower.legacy_customer.pk, first.customer.pk)
+        self.assertFalse(hasattr(self.loan.borrower, "legacy_customer"))
         self.assertTrue(
             assess_pawn_loan_accounting_readiness(
                 self.loan,
@@ -443,6 +441,12 @@ class PawnDisbursalServiceTests(TenantTestCase):
             ).ready
         )
         audit.assert_called_once()
+
+        source = (
+            Path(__file__).parents[1] / "services" / "borrower_accounting.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("customer_bridge", source)
+        self.assertNotIn("legacy_customer", source)
 
     def test_default_adapter_posts_balanced_dea_voucher_and_is_idempotent(self):
         self._seed_dea_disbursal_setup()

@@ -345,8 +345,8 @@ def _validate_locked_exposure(
         errors["exposure"] = "Exposure fixed status is not open for fixing."
     if payload.fine_weight > exposure.open_fine_weight:
         errors["fine_weight"] = "Fixing fine weight cannot exceed open exposure."
-    if payload.supplier_account.contact.party_id and (
-        payload.supplier_account.contact.party_id != exposure.party_id
+    if payload.supplier_account.party_id and (
+        payload.supplier_account.party_id != exposure.party_id
     ):
         errors["supplier_account"] = (
             "Supplier account party must match exposure party when linked."
@@ -375,8 +375,8 @@ def _validate_locked_sale_exposure(
         errors["exposure"] = "Exposure fixed status is not open for fixing."
     if payload.fine_weight > exposure.open_fine_weight:
         errors["fine_weight"] = "Fixing fine weight cannot exceed open exposure."
-    if payload.customer_account.contact.party_id and (
-        payload.customer_account.contact.party_id != exposure.party_id
+    if payload.customer_account.party_id and (
+        payload.customer_account.party_id != exposure.party_id
     ):
         errors["customer_account"] = (
             "Customer account party must match exposure party when linked."

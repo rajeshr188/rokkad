@@ -7,7 +7,6 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contact', '0006_customer_party'),
         ('dea', '0030_remove_voucher_unique_posted_voucher_per_doc_and_more'),
         ('party', '0001_initial'),
     ]
@@ -32,24 +31,9 @@ class Migration(migrations.Migration):
                 'ordering': ('party', 'role_key', 'purpose', 'id'),
             },
         ),
-        migrations.SeparateDatabaseAndState(
-            database_operations=[
-                migrations.RunSQL(
-                    sql='ALTER TABLE "dea_account" DROP CONSTRAINT IF EXISTS "unique_contact_account"',
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
-            ],
-            state_operations=[
-                migrations.RemoveConstraint(
-                    model_name='account',
-                    name='unique_contact_account',
-                ),
-            ],
-        ),
-        migrations.AlterField(
-            model_name='account',
-            name='contact',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='accounts', to='contact.customer'),
+        migrations.RunSQL(
+            sql='ALTER TABLE "dea_account" DROP CONSTRAINT IF EXISTS "unique_contact_account"',
+            reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.AddField(
             model_name='partyaccountmapping',

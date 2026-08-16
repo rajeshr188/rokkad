@@ -51,7 +51,7 @@ Do not partially migrate navigation. Follow the accepted ADR if moving to dynami
 - EXISTING: Company Settings -> `workspace_detail`.
 - EXISTING: Preferences -> `workspace_preferences`.
 - EXISTING: Subscription -> `subscriptions:dashboard`.
-- EXISTING: Contacts -> `contact_customer_list`.
+- RETIRED: legacy Contact bookmarks redirect to the Party list.
 - EXISTING: Product -> `product_product_home`.
 - EXISTING: Notifications V2 -> `notify_v2_batch_list`.
 - EXISTING: Girvi -> `girvi:girvi_dashboard`.

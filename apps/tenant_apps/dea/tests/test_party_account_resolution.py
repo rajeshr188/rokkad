@@ -1,7 +1,6 @@
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
 
@@ -22,7 +21,6 @@ from apps.tenant_apps.dea.models import (
     TransactionType_DE,
 )
 from apps.tenant_apps.party.models import Party
-from apps.tenant_apps.party.services.customer_bridge import ensure_customer_party
 
 
 User = get_user_model()
@@ -57,36 +55,32 @@ class PartyAccountResolutionTests(TenantTestCase):
         connection.set_tenant(self.tenant)
         self._seed_account_masters()
 
-    def test_ensure_customer_account_keeps_legacy_read_compatibility(self):
+    def test_customer_account_resolution_uses_explicit_party_link(self):
+        party = Party.objects.create(display_name="Retail Buyer")
         customer = Customer.objects.create(
             firstname="Retail",
             lastname="Buyer",
             customer_type=Customer.CustomerType.Retail,
+            party=party,
         )
 
         account = ensure_customer_account(customer)
 
-        self.assertEqual(account.contact, customer)
+        self.assertFalse(hasattr(account, "contact"))
+        self.assertEqual(account.party, party)
         self.assertEqual(account.AccountType_Ext.description, "Debtor")
-        self.assertEqual(customer.account, account)
-        self.assertEqual(Account.objects.filter(contact=customer).count(), 1)
+        self.assertEqual(Account.objects.filter(party=party).count(), 1)
 
     def test_party_can_have_distinct_accounts_by_role_and_purpose(self):
-        customer = Customer.objects.create(
-            firstname="Rajesh",
-            lastname="Trader",
-            customer_type=Customer.CustomerType.Retail,
-        )
-        ensure_customer_party(customer)
-        customer.refresh_from_db()
+        party = Party.objects.create(display_name="Rajesh Trader")
 
         receivable = resolve_party_account(
-            customer.party,
+            party,
             role_key="CUSTOMER",
             purpose=PartyAccountPurpose.CUSTOMER_RECEIVABLE,
         )
         payable = resolve_party_account(
-            customer.party,
+            party,
             role_key="SUPPLIER",
             purpose=PartyAccountPurpose.SUPPLIER_PAYABLE,
         )
@@ -94,19 +88,21 @@ class PartyAccountResolutionTests(TenantTestCase):
         self.assertNotEqual(receivable.account.id, payable.account.id)
         self.assertEqual(receivable.account.AccountType_Ext.description, "Debtor")
         self.assertEqual(payable.account.AccountType_Ext.description, "Creditor")
+        self.assertEqual(receivable.account.party, party)
+        self.assertEqual(payable.account.party, party)
         self.assertEqual(
-            PartyAccountMapping.objects.filter(party=customer.party).count(),
+            PartyAccountMapping.objects.filter(party=party).count(),
             2,
         )
 
     def test_resolve_customer_account_uses_party_mapping_when_customer_is_bridged(self):
+        party = Party.objects.create(display_name="Loan Borrower")
         customer = Customer.objects.create(
             firstname="Loan",
             lastname="Borrower",
             customer_type=Customer.CustomerType.Retail,
+            party=party,
         )
-        ensure_customer_party(customer)
-        customer.refresh_from_db()
 
         account = resolve_customer_account(
             customer,
@@ -115,22 +111,24 @@ class PartyAccountResolutionTests(TenantTestCase):
         )
 
         mapping = PartyAccountMapping.objects.get(
-            party=customer.party,
+            party=party,
             role_key="BORROWER",
             purpose=PartyAccountPurpose.BORROWER_LOAN_RECEIVABLE,
         )
         self.assertEqual(mapping.account, account)
         self.assertEqual(mapping.control_ledger.name, "BORROWER_LOAN_CTRL")
 
-    def test_party_account_creation_requires_legacy_customer_bridge_for_now(self):
+    def test_party_account_creation_does_not_require_legacy_customer_bridge(self):
         party = Party.objects.create(party_code="P-UNBRIDGED", display_name="Unbridged")
 
-        with self.assertRaises(ValidationError):
-            resolve_party_account(
-                party,
-                role_key="CUSTOMER",
-                purpose=PartyAccountPurpose.CUSTOMER_RECEIVABLE,
-            )
+        resolved = resolve_party_account(
+            party,
+            role_key="CUSTOMER",
+            purpose=PartyAccountPurpose.CUSTOMER_RECEIVABLE,
+        )
+
+        self.assertEqual(resolved.account.party, party)
+        self.assertFalse(hasattr(resolved.account, "contact"))
 
     def test_resolve_without_create_returns_none(self):
         party = Party.objects.create(party_code="P-NO-CREATE", display_name="No Create")

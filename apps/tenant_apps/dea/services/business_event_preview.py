@@ -1378,9 +1378,8 @@ def build_purchase_rate_fixing_readiness(cleaned_data: dict, *, actor=None) -> d
         exposure
         and supplier_account
         and (
-            not supplier_account.contact_id
-            or not supplier_account.contact.party_id
-            or supplier_account.contact.party_id == exposure.party_id
+            not supplier_account.party_id
+            or supplier_account.party_id == exposure.party_id
         )
     )
     add_check(
@@ -1498,9 +1497,8 @@ def build_purchase_rate_fixing_posting_readiness(
         exposure
         and supplier_account
         and (
-            not supplier_account.contact_id
-            or not supplier_account.contact.party_id
-            or supplier_account.contact.party_id == exposure.party_id
+            not supplier_account.party_id
+            or supplier_account.party_id == exposure.party_id
         )
     )
     add_check(
@@ -1587,9 +1585,8 @@ def build_sale_rate_fixing_readiness(cleaned_data: dict, *, actor=None) -> dict:
         exposure
         and customer_account
         and (
-            not customer_account.contact_id
-            or not customer_account.contact.party_id
-            or customer_account.contact.party_id == exposure.party_id
+            not customer_account.party_id
+            or customer_account.party_id == exposure.party_id
         )
     )
     add_check(
@@ -1707,9 +1704,8 @@ def build_sale_rate_fixing_posting_readiness(
         exposure
         and customer_account
         and (
-            not customer_account.contact_id
-            or not customer_account.contact.party_id
-            or customer_account.contact.party_id == exposure.party_id
+            not customer_account.party_id
+            or customer_account.party_id == exposure.party_id
         )
     )
     add_check(

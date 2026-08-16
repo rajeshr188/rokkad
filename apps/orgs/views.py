@@ -69,8 +69,8 @@ WORKSPACE_MODULE_REGISTRY = [
     },
     {
         "name": "Loans",
-        "description": "Girvi loan workflows, collateral custody, releases, repayments, and notices.",
-        "route_name": "girvi:girvi_dashboard",
+        "description": "PawnLoan workflows, collateral custody, releases, repayments, and notices.",
+        "route_name": "loans:pawn_loan_list",
         "default_status": "Active",
     },
     {
@@ -302,7 +302,7 @@ def workspace_slug_settings_roles(request, workspace_slug):
 @login_required
 def workspace_slug_settings_numbering(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("girvi:girvi_series_list")
+    return redirect("loans:license_list")
 
 
 @login_required
@@ -366,133 +366,105 @@ def workspace_slug_loans(request, workspace_slug):
 @login_required
 def workspace_slug_loan_list(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_list
+    from apps.tenant_apps.loans.views import pawn_loan_list
 
-    return loan_list(request)
+    return pawn_loan_list(request)
 
 
 @login_required
 def workspace_slug_loan_table(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_table_partial
-
-    return loan_table_partial(request)
+    return redirect("workspace_slug_loan_list", workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_loan_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail
+    from apps.tenant_apps.loans.views import pawn_loan_detail
 
-    return loan_detail(request, pk=pk)
+    return pawn_loan_detail(request, pk=pk)
 
 
 @login_required
 def workspace_slug_loan_detail_items(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail_items_tab
-
-    return loan_detail_items_tab(request, pk=pk)
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#collateral")
 
 
 @login_required
 def workspace_slug_loan_detail_payments(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail_payments_tab
-
-    return loan_detail_payments_tab(request, pk=pk)
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#financial-events")
 
 
 @login_required
 def workspace_slug_loan_detail_transactions(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail_transactions_tab
-
-    return loan_detail_transactions_tab(request, pk=pk)
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#financial-events")
 
 
 @login_required
 def workspace_slug_loan_detail_statement(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail_statement_tab
-
-    return loan_detail_statement_tab(request, pk=pk)
+    return redirect("loans:pawn_loan_detail", pk=pk)
 
 
 @login_required
 def workspace_slug_loan_detail_notices(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail_notices_tab
-
-    return loan_detail_notices_tab(request, pk=pk)
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#notices")
 
 
 @login_required
 def workspace_slug_loan_detail_release(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import loan_detail_release_tab
-
-    return loan_detail_release_tab(request, pk=pk)
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#release")
 
 
 @login_required
 def workspace_slug_loan_pdf(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.loan import print_loan
+    from apps.tenant_apps.loans.views import pawn_loan_ticket_pdf
 
-    return print_loan(request, pk=pk)
+    return pawn_loan_ticket_pdf(request, pk=pk)
 
 
 @login_required
 def workspace_slug_loan_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.reports import LoanTimeSeriesReport
+    from apps.tenant_apps.loans.views import pawn_loan_reports
 
-    return LoanTimeSeriesReport.as_view()(request)
+    return pawn_loan_reports(request)
 
 
 @login_required
 def workspace_slug_loan_by_customer_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.reports import LoanByCustomerReport
-
-    return LoanByCustomerReport.as_view()(request)
+    return redirect("loans:pawn_loan_reports")
 
 
 @login_required
 def workspace_slug_loan_crosstab_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.reports import LoanCrosstabReport
-
-    return LoanCrosstabReport.as_view()(request)
+    return redirect("loans:pawn_loan_reports")
 
 
 @login_required
 def workspace_slug_loan_list_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.reports import LoanListReport
-
-    return LoanListReport.as_view()(request)
+    return redirect("loans:pawn_loan_reports")
 
 
 @login_required
 def workspace_slug_loan_reconciliation_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.reports import (
-        loan_accounting_reconciliation_report,
-    )
-
-    return loan_accounting_reconciliation_report(request)
+    return redirect("loans:pawn_operations_console")
 
 
 @login_required
 def workspace_slug_loan_operational_controls_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.girvi.views.reports import (
-        loan_operational_controls_report,
-    )
-
-    return loan_operational_controls_report(request)
+    return redirect("loans:pawn_operations_console")
 
 
 @login_required
@@ -594,33 +566,25 @@ def workspace_slug_rate_source_detail(request, workspace_slug, pk):
 @login_required
 def workspace_slug_notifications(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.notify.views import notification_list
-
-    return notification_list(request)
+    return redirect("notify_v2_batch_list")
 
 
 @login_required
 def workspace_slug_notification_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.notify.views import notification_detail
-
-    return notification_detail(request, pk=pk)
+    return redirect("notify_v2_batch_list")
 
 
 @login_required
 def workspace_slug_notice_groups(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.notify.views import noticegroup_list
-
-    return noticegroup_list(request)
+    return redirect("notify_v2_batch_list")
 
 
 @login_required
 def workspace_slug_notice_group_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.notify.views import noticegroup_detail
-
-    return noticegroup_detail(request, pk=pk)
+    return redirect("notify_v2_batch_list")
 
 
 @login_required

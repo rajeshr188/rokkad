@@ -18,7 +18,7 @@ from .party_accounts import resolve_purchase_supplier_account
 @register_rule("PURCHASE_GOODS")
 class PurchaseGoodsRule(BasePostingRule):
     voucher_type = "PURCHASE_GOODS"
-    rule_version = "2"
+    rule_version = "3"
     debit_ledger_key = "INVENTORY"
     account_xact_type = "CRPU"
 
@@ -127,7 +127,7 @@ def _purchase_fingerprint(rule, ctx):
         "rule_version": rule.rule_version,
         "invoice_id": getattr(doc, "id", None),
         "internal_number": getattr(doc, "internal_number", None),
-        "vendor_id": getattr(doc, "vendor_id", None),
+        "party_id": getattr(doc, "party_id", None),
         "purchase_type": getattr(doc, "purchase_type", None),
         "net_payable": str(getattr(doc.net_payable, "amount", "")),
         "currency": str(getattr(doc.net_payable, "currency", "")),

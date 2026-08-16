@@ -1,10 +1,30 @@
 ---
 status: active
 owner: project
-updated: 2026-07-05
-tags: [plans, active, girvi, dea, party, configuration]
-related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, ../flows/dea-posting-flow.md, ../archive/girvi/GIRVI_EVENT_DRIVEN_DEA_POSTING_SPEC.md, party-rollout.md, centralized-preferences-architecture-plan.md]
+updated: 2026-08-16
+tags: [plans, active, retirement, girvi, contact, notify, dea, party, configuration]
+related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, contact-girvi-legacy-notify-retirement.md, django-tenants-removal.md]
 ---
+
+## Proposed: remove django-tenants
+
+The `no-tenants` branch targets a clean development-stage replacement of
+schema-per-tenant isolation with explicit Workspace ownership and PostgreSQL
+RLS. The architecture remains planning-only until the proposed ADR is accepted.
+
+- [Proposed ADR](../adr/2026-08-14-shared-schema-workspace-rls-tenancy.md)
+- [Phased removal plan](django-tenants-removal.md)
+
+## Active: retire Contact, Girvi, and legacy Notify
+
+The target product keeps Party, Loans, Notify v2, and DEA while retiring the
+legacy Contact, Girvi, and Notify applications. Execution is dependency-first:
+Party replacement, external-consumer removal, Notify v2 Girvi cleanup, DEA
+decoupling, physical app deletion, and finally a clean development migration
+baseline/database rebuild.
+
+- [Accepted retirement ADR](../adr/2026-08-16-retire-contact-girvi-and-legacy-notify.md)
+- [Phased execution plan](contact-girvi-legacy-notify-retirement.md)
 
 ## Future: workspace WhatsApp Cloud acceptance
 
@@ -14,7 +34,7 @@ operational-acceptance workflow documented in
 `workspace-whatsapp-cloud-integration-acceptance.md`. It remains future work;
 saving or enabling credentials does not constitute operational acceptance.
 
-## Future: legacy Notify retirement
+## Future: legacy Notify retirement (absorbed by combined retirement plan)
 
 Notify v2 is the target platform, but legacy `notify` remains supported while
 Girvi and historical evidence depend on it. The staged retirement gates and
@@ -22,11 +42,13 @@ restart point are documented in `legacy-notify-to-notify-v2-retirement.md`.
 Deletion is not authorized until tenant reconciliation, parity, retention, and
 upgrade-safety gates pass.
 
-# Active Plan
+# Historical active tracks pending retirement ADR
 
 ## Girvi Event-Driven DEA Posting
 
-The current active architecture track is to make Girvi lifecycle accounting effects explicit, reliable, and idempotent.
+This track is cancelled if the proposed combined retirement ADR is accepted.
+Until then, synchronous Girvi-to-DEA posting remains the runtime path and no
+further event-driven investment is authorized.
 
 Current execution state (2026-06-21):
 
@@ -59,7 +81,9 @@ The active Party rollout introduces `apps.tenant_apps.party` as the long-term ex
 Current status:
 
 - Phases 0-4 are complete.
-- Phase 5, Girvi pilot integration for borrower/lender account resolution, is next.
+- The prior Girvi pilot is no longer the proposed next phase. Under the combined
+  retirement plan, Party becomes the complete replacement for Contact and
+  Girvi-specific Party integration is removed.
 
 Plan:
 

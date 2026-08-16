@@ -87,8 +87,13 @@ from .obligation_state import (
     get_active_repayment_schedule_as_of,
 )
 from .navigation import PawnLoanSeriesNavigation, get_pawn_loan_series_navigation
+from .party_history import PartyPawnLoanRow, get_party_pawn_loan_history_summary
+from .workspace_dashboard import get_workspace_pawn_loan_dashboard_summary
 
 __all__ = [
+    "PartyPawnLoanRow",
+    "get_party_pawn_loan_history_summary",
+    "get_workspace_pawn_loan_dashboard_summary",
     "PawnLoanBalance",
     "PawnLoanBalanceSelectorError",
     "PostingBlocker",

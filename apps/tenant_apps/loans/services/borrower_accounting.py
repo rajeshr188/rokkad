@@ -10,7 +10,6 @@ from apps.orgs.audit import AuditLog
 from apps.tenant_apps.dea import facade as dea_facade
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 from apps.tenant_apps.party.models import Party
-from apps.tenant_apps.party.services.customer_bridge import ensure_party_customer
 
 
 class PawnBorrowerAccountingSetupError(ValueError):
@@ -23,8 +22,6 @@ class PawnBorrowerAccountingSetupResult:
     party: Party
     account: object
     mapping: object
-    customer: object | None
-    customer_created: bool
     mapping_created: bool
 
 
@@ -63,15 +60,7 @@ def ensure_pawn_borrower_accounting(loan_id: int, *, actor=None, request=None):
             purpose="BORROWER_LOAN_RECEIVABLE",
             create=False,
         )
-        try:
-            customer = party.legacy_customer
-        except ObjectDoesNotExist:
-            customer = None
-        customer_created = False
         if resolved is None:
-            bridge = ensure_party_customer(party, created_by=actor)
-            customer = bridge["customer"]
-            customer_created = bridge["created"]
             resolved = dea_facade.resolve_party_account(
                 party,
                 role_key="BORROWER",
@@ -91,11 +80,9 @@ def ensure_pawn_borrower_accounting(loan_id: int, *, actor=None, request=None):
         party=party,
         account=resolved.account,
         mapping=resolved.mapping,
-        customer=customer,
-        customer_created=customer_created,
         mapping_created=resolved.created,
     )
-    if customer_created or resolved.created:
+    if resolved.created:
         _audit_setup(result, actor=actor, request=request)
     return result
 
@@ -114,10 +101,8 @@ def _audit_setup(result, *, actor, request):
                 "entity": "pawn_loan_borrower_accounting",
                 "loan_id": result.loan.pk,
                 "party_id": result.party.pk,
-                "customer_id": getattr(result.customer, "pk", None),
                 "account_id": result.account.pk,
                 "mapping_id": result.mapping.pk,
-                "customer_created": result.customer_created,
                 "mapping_created": result.mapping_created,
             },
             request=request,

@@ -121,20 +121,13 @@ class NotificationPolicy(TimestampedModel):
 
 
 class NotificationRecipient(TimestampedModel):
-    customer = models.ForeignKey(
-        "contact.Customer",
-        on_delete=models.SET_NULL,
-        related_name="notify_v2_recipients",
-        null=True,
-        blank=True,
-    )
     party = models.ForeignKey(
         "party.Party",
         on_delete=models.PROTECT,
         related_name="notify_v2_recipients",
         null=True,
         blank=True,
-        help_text="Shadow Party link for the recipient during Customer migration.",
+        help_text="Canonical Party receiving this notification when it represents a business counterparty.",
     )
     name_snapshot = models.CharField(max_length=150)
     email = models.EmailField(blank=True)
@@ -154,17 +147,6 @@ class NotificationRecipient(TimestampedModel):
 
     def __str__(self):
         return self.name_snapshot or f"Recipient {self.pk}"
-
-    def save(self, *args, **kwargs):
-        if not self.party_id:
-            party = getattr(getattr(self, "customer", None), "party", None)
-            if party:
-                self.party = party
-                update_fields = kwargs.get("update_fields")
-                if update_fields is not None:
-                    kwargs["update_fields"] = set(update_fields) | {"party"}
-        super().save(*args, **kwargs)
-
 
 class NotificationTemplate(TimestampedModel):
     Channel = NotificationChannel
@@ -244,9 +226,6 @@ class NotificationBatch(TimestampedModel):
 
     def get_absolute_url(self):
         return reverse("notify_v2_batch_detail", args=[self.pk])
-
-    def get_print_url(self):
-        return reverse("notify_v2_batch_print", args=[self.pk])
 
     def mark_rendered(self, *, save=True):
         self.status = self.Status.RENDERED

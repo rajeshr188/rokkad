@@ -31,7 +31,6 @@ class PreCloseChecklist:
     def run(self, period, tenant=None) -> list[dict]:
         checks = [
             self._unposted_vouchers_check(period),
-            self._interest_accrual_check(period),
             self._unreconciled_bank_items_check(period),
             self._depreciation_posted_check(period),
             self._prepaid_expired_check(period),
@@ -60,40 +59,6 @@ class PreCloseChecklist:
             is_fatal=True,
             count=0,
             status_text="Ready",
-        )
-
-    def _interest_accrual_check(self, period) -> CheckResult:
-        try:
-            from apps.tenant_apps.girvi.facade import count_unreleased_given_loans
-        except ImportError:
-            return CheckResult(
-                key="interest_accrual",
-                label="Interest accrual catch-up",
-                status="info",
-                is_fatal=False,
-                count=0,
-                status_text="Girvi app not installed; check skipped",
-            )
-
-        unreleased_loans = count_unreleased_given_loans()
-        if unreleased_loans:
-            return CheckResult(
-                key="interest_accrual",
-                label="Interest accrual catch-up",
-                status="warning",
-                is_fatal=False,
-                count=unreleased_loans,
-                status_text=(
-                    f"{unreleased_loans} active loan(s) require catch-up before close"
-                ),
-            )
-        return CheckResult(
-            key="interest_accrual",
-            label="Interest accrual catch-up",
-            status="pass",
-            is_fatal=False,
-            count=0,
-            status_text="No active unreleased loans pending catch-up",
         )
 
     def _unreconciled_bank_items_check(self, period) -> CheckResult:

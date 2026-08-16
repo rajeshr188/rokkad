@@ -7,7 +7,7 @@ from django_select2 import forms as s2forms
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 from mptt.forms import TreeNodeChoiceField
 
-from apps.tenant_apps.contact.models import Customer
+from apps.tenant_apps.party.models import Party
 
 from .attributes import *
 from .models import *
@@ -597,8 +597,8 @@ class PricingTierProductPriceForm(CrispyFormMixin, forms.ModelForm):
 
 
 class PriceOverrideForm(CrispyFormMixin, forms.ModelForm):
-    contact = forms.ModelChoiceField(
-        queryset=Customer.objects.all(),
+    party = forms.ModelChoiceField(
+        queryset=Party.objects.all(),
         widget=Select2Widget,
     )
     product = forms.ModelChoiceField(
@@ -610,7 +610,7 @@ class PriceOverrideForm(CrispyFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.setup_form_helper(
             Layout(
-                Row(Column("contact", css_class="col-md-6"), Column("product", css_class="col-md-6")),
+                Row(Column("party", css_class="col-md-6"), Column("product", css_class="col-md-6")),
                 Row(
                     Column("purchase_price", css_class="col-md-4"),
                     Column("selling_price", css_class="col-md-4"),
@@ -621,21 +621,21 @@ class PriceOverrideForm(CrispyFormMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        contact = cleaned_data.get("contact")
+        party = cleaned_data.get("party")
         product = cleaned_data.get("product")
-        if contact and product:
-            qs = Price.objects.filter(contact=contact, product=product)
+        if party and product:
+            qs = Price.objects.filter(party=party, product=product)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise forms.ValidationError(
-                    "A contact override already exists for this contact and product."
+                    "A party override already exists for this party and product."
                 )
         return cleaned_data
 
     class Meta:
         model = Price
-        fields = ["contact", "product", "purchase_price", "selling_price", "price_tier"]
+        fields = ["party", "product", "purchase_price", "selling_price", "price_tier"]
 
 
 class StockInForm(CrispyFormMixin, forms.ModelForm):

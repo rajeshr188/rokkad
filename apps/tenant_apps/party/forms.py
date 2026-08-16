@@ -295,22 +295,6 @@ class PartyRelationshipForm(forms.ModelForm):
         return cleaned
 
 
-class CustomerConversionForm(forms.Form):
-    customer = forms.ModelChoiceField(
-        queryset=None,
-        widget=forms.Select(attrs={"class": SELECT_CLASS}),
-        help_text="Select a legacy customer that is not yet linked to a Party.",
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        from apps.tenant_apps.contact.models import Customer
-
-        self.fields["customer"].queryset = Customer.objects.filter(
-            party__isnull=True
-        ).order_by("firstname", "lastname")
-
-
 class PartyMergeForm(forms.Form):
     source_party = forms.ModelChoiceField(
         queryset=None,

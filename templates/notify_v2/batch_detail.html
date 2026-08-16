@@ -32,9 +32,6 @@
       <i class="bi bi-download me-1"></i>Download Latest PDF
     </a>
     {% endif %}
-    <a class="btn btn-sm btn-outline-secondary" href="{% url 'notify_v2_batch_print' object.pk %}">
-      <i class="bi bi-printer me-1"></i>Print All
-    </a>
     <form method="post" action="{% url 'notify_v2_batch_mark_printed' object.pk %}">
       {% csrf_token %}
       <button class="btn btn-sm btn-outline-primary" type="submit">Mark Printed</button>
@@ -56,7 +53,7 @@
     <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Recipients</div><div class="fs-5 fw-bold">{{ recipient_count }}</div></div></div>
   </div>
   <div class="col-md-3">
-    <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Selected Loans</div><div class="fs-5 fw-bold">{{ loan_count }}</div></div></div>
+    <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Selected Records</div><div class="fs-5 fw-bold">{{ selection_count }}</div></div></div>
   </div>
   <div class="col-md-3">
     <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Jobs</div><div class="fs-5 fw-bold">{{ object.job_count }}</div></div></div>
@@ -157,7 +154,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <div class="text-muted small">No rendered artifacts are available yet. Use <strong>Print All</strong> to generate them.</div>
+        <div class="text-muted small">No rendered artifacts are available for this batch.</div>
         {% endif %}
       </div>
     </div>

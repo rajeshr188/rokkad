@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('contact', '0003_alter_customer_options_and_more'),
+        ('party', '0005_partyportalaccess'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -161,7 +161,7 @@ class Migration(migrations.Migration):
                 ('preferred_locale', models.CharField(default='en', max_length=10)),
                 ('consent_flags', models.JSONField(blank=True, default=dict)),
                 ('is_active', models.BooleanField(default=True)),
-                ('customer', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='notify_v2_recipients', to='contact.customer')),
+                ('party', models.ForeignKey(blank=True, help_text='Canonical Party receiving this notification when it represents a business counterparty.', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='notify_v2_recipients', to='party.party')),
             ],
             options={
                 'ordering': ['name_snapshot', 'id'],
@@ -214,6 +214,10 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name='notificationrecipient',
             index=models.Index(fields=['phone'], name='notify_v2_n_phone_1a75fa_idx'),
+        ),
+        migrations.AddIndex(
+            model_name='notificationrecipient',
+            index=models.Index(fields=['party', 'is_active'], name='notify_v2_n_party_i_6df4c0_idx'),
         ),
         migrations.AddIndex(
             model_name='notificationevent',

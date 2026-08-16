@@ -80,8 +80,8 @@ class Price(models.Model):
     """
 
     product = models.ForeignKey("ProductVariant", on_delete=models.CASCADE)
-    contact = models.ForeignKey(
-        "contact.Customer", on_delete=models.CASCADE, related_name="prices"
+    party = models.ForeignKey(
+        "party.Party", on_delete=models.CASCADE, related_name="product_price_overrides"
     )
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -94,8 +94,8 @@ class Price(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["contact", "product"],
-                name="uq_product_price_contact_product",
+                fields=["party", "product"],
+                name="uq_product_price_party_product",
             ),
             models.CheckConstraint(
                 condition=Q(purchase_price__gte=0),

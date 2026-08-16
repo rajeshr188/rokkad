@@ -546,10 +546,10 @@ class OrgNavigationFlowTests(SimpleTestCase):
 			"apps.orgs.services.dashboard_selectors.build_workspace_setup_checklist",
 			return_value=setup_checklist,
 		) as mock_build, patch(
-			"apps.tenant_apps.contact.facade.get_workspace_customer_dashboard_summary",
+            "apps.tenant_apps.party.facade.get_workspace_customer_party_dashboard_summary",
 			return_value={"total_customers": 0, "new_customers": []},
 		), patch(
-			"apps.tenant_apps.girvi.facade.get_workspace_loan_dashboard_summary",
+			"apps.tenant_apps.loans.selectors.get_workspace_pawn_loan_dashboard_summary",
 			return_value={"loan_count": 0},
 		), patch(
 			"apps.tenant_apps.rates.facade.get_workspace_rate_dashboard_summary",

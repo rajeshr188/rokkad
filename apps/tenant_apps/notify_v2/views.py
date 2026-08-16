@@ -17,8 +17,9 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.notify.access import notify_action_required, notify_admin_required
 from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
+
+from .access import notify_v2_action_required, notify_v2_admin_required
 
 from .models import (
     NotificationBatch,
@@ -29,7 +30,6 @@ from .models import (
     WhatsAppCloudWebhookReceipt,
 )
 from .services.delivery_service import DIGITAL_CHANNELS, dispatch_batch_jobs, process_whatsapp_cloud_webhook
-from .services import render_batch_pdf
 from .services.whatsapp_readiness import assess_whatsapp_cloud_readiness
 from .services.whatsapp_integration import (
     WhatsAppIntegrationError, get_whatsapp_cloud_credentials,
@@ -136,12 +136,12 @@ def _notify_settings_summary():
     }
 
 
-@notify_action_required("view")
+@notify_v2_action_required("view")
 def index(_request):
     return redirect("notify_v2_batch_list")
 
 
-@notify_action_required("view")
+@notify_v2_action_required("view")
 def settings_overview(request):
     settings_summary = _notify_settings_summary()
     whatsapp_readiness = assess_whatsapp_cloud_readiness()
@@ -173,7 +173,7 @@ def settings_overview(request):
     return render(request, "notify_v2/settings.html", context)
 
 
-@notify_admin_required
+@notify_v2_admin_required
 def whatsapp_cloud_integration_setup(request):
     workspace = request.notify_workspace
     integration = get_whatsapp_cloud_integration(workspace.pk)
@@ -250,7 +250,7 @@ def whatsapp_cloud_webhook(request):
     return JsonResponse({"ok": True, **summary})
 
 
-@notify_action_required("view")
+@notify_v2_action_required("view")
 def batch_list(request):
     batches = NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
         "jobs"
@@ -261,15 +261,12 @@ def batch_list(request):
         "notify_v2/batch_list.html",
         {
             "objects": batches,
-            "entrypoint_url_name": "girvi:girvi_loan_list",
-            "entrypoint_text": "Create a new reminder batch from selected Girvi loans.",
-            "legacy_url_name": "notify_noticegroup_list",
             "notify_settings": notify_settings,
         },
     )
 
 
-@notify_action_required("view")
+@notify_v2_action_required("view")
 def batch_detail(request, pk):
     batch = get_object_or_404(
         NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
@@ -283,7 +280,7 @@ def batch_detail(request, pk):
     artifacts = _collect_artifacts(jobs)
     latest_artifact = next((artifact for artifact in artifacts if getattr(artifact, "file", None)), None)
     digital_job_count = len([job for job in jobs if getattr(job, "channel", None) in DIGITAL_CHANNELS])
-    loan_count = len(batch.selection_snapshot or [])
+    selection_count = len(batch.selection_snapshot or [])
     recipient_count = len({job.event.recipient_id for job in jobs if getattr(job.event, "recipient_id", None)})
     return render(
         request,
@@ -296,13 +293,13 @@ def batch_detail(request, pk):
             "latest_artifact": latest_artifact,
             "digital_job_count": digital_job_count,
             "can_send_digital": digital_job_count > 0,
-            "loan_count": loan_count,
+            "selection_count": selection_count,
             "recipient_count": recipient_count or batch.job_count,
         },
     )
 
 
-@notify_action_required("send")
+@notify_v2_action_required("send")
 @require_http_methods(["POST"])
 def batch_send_digital(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
@@ -322,20 +319,7 @@ def batch_send_digital(request, pk):
     return redirect("notify_v2_batch_detail", pk=batch.pk)
 
 
-@notify_action_required("print")
-def batch_print(request, pk):
-    batch = get_object_or_404(NotificationBatch, pk=pk)
-    pdf = render_batch_pdf(batch)
-    if not pdf:
-        _flash(request, messages.WARNING, "No printable content is available for this batch yet.")
-        return redirect("notify_v2_batch_detail", pk=batch.pk)
-
-    response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="notify_v2_batch_{batch.pk}.pdf"'
-    return response
-
-
-@notify_action_required("view")
+@notify_v2_action_required("view")
 def batch_download_artifacts(request, pk):
     batch = get_object_or_404(
         NotificationBatch.objects.prefetch_related("jobs__event__recipient", "jobs__artifacts"),
@@ -371,7 +355,7 @@ def batch_download_artifacts(request, pk):
     return response
 
 
-@notify_action_required("edit")
+@notify_v2_action_required("edit")
 @require_http_methods(["POST"])
 def batch_mark_printed(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
@@ -380,7 +364,7 @@ def batch_mark_printed(request, pk):
     return redirect("notify_v2_batch_detail", pk=batch.pk)
 
 
-@notify_action_required("edit")
+@notify_v2_action_required("edit")
 @require_http_methods(["POST"])
 def batch_mark_posted(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)

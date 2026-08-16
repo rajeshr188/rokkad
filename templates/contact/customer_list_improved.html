@@ -150,7 +150,7 @@
                 <a class="btn btn-sm btn-success" href="{% url 'loans:pawn_loan_create' %}{% if customer.party_id %}?party={{ customer.party_id }}{% endif %}">
                     {% trans "PawnLoan" %}
                 </a>
-                <a class="btn btn-sm btn-outline-success" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}">
+                <a class="btn btn-sm btn-outline-success" href="{% url 'loans:pawn_loan_create' %}">
                     {% trans "Girvi" %}
                 </a>
                 <button class="btn btn-sm btn-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest .customer-card" hx-swap="outerHTML swap:0.5s">
@@ -216,7 +216,7 @@
                             <a class="btn btn-sm btn-outline-success" href="{% url 'loans:pawn_loan_create' %}{% if customer.party_id %}?party={{ customer.party_id }}{% endif %}" title="{% trans 'New PawnLoan' %}">
                                 <i class="bi bi-plus-circle"></i>
                             </a>
-                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'girvi:girvi_loan_create' %}?customer={{ customer.id }}" title="{% trans 'New Girvi loan' %}">G</a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'loans:pawn_loan_create' %}" title="{% trans 'New pawn loan' %}">L</a>
                             <button class="btn btn-sm btn-outline-danger" hx-delete="{% url 'contact_customer_delete' customer.id %}" hx-confirm="{% trans 'Are you sure?' %}" hx-target="closest tr" hx-swap="outerHTML swap:0.5s" title="{% trans 'Delete' %}">
                                 <i class="bi bi-trash"></i>
                             </button>

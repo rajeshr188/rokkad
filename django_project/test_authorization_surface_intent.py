@@ -140,22 +140,12 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         self.assertIn("if not allow_profile_fallback:", tenant_context)
         self.assertIn("return None", tenant_context)
 
-    def test_girvi_and_dea_shared_access_helpers_remain_available(self):
-        girvi_access = _read("apps/tenant_apps/girvi/views/access.py")
+    def test_tenant_access_helpers_remain_available(self):
         dea_access = _read("apps/tenant_apps/dea/views/access.py")
         party_access = _read("apps/tenant_apps/party/access.py")
         product_access = _read("apps/tenant_apps/product/access.py")
         rate_access = _read("apps/tenant_apps/rates/access.py")
-        notify_access = _read("apps/tenant_apps/notify/access.py")
-
-        for expected in (
-            "def assert_girvi_workspace_access",
-            "def girvi_workspace_required",
-            "def assert_girvi_workspace_permission",
-            "def girvi_permission_required",
-            "class GirviPermissionRequiredMixin",
-        ):
-            self.assertIn(expected, girvi_access)
+        notify_v2_access = _read("apps/tenant_apps/notify_v2/access.py")
 
         for expected in (
             "def assert_dea_accountant_access",
@@ -194,13 +184,13 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             self.assertIn(expected, rate_access)
 
         for expected in (
-            "def assert_notify_workspace_access",
-            "def assert_notify_permission",
-            "def assert_notify_action_permission",
-            "def notify_action_required",
-            "class NotifyActionRequiredMixin",
+            "def assert_notify_v2_workspace_access",
+            "def assert_notify_v2_permission",
+            "def assert_notify_v2_action_permission",
+            "def notify_v2_action_required",
+            "class NotifyV2ActionRequiredMixin",
         ):
-            self.assertIn(expected, notify_access)
+            self.assertIn(expected, notify_v2_access)
 
     def test_known_tenant_authorization_gaps_are_documented_before_behavior_changes(self):
         inventory = (DOCS_UI_ROOT / "authorization_cleanup_inventory.md").read_text(
@@ -213,14 +203,13 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
             inventory,
         )
         self.assertIn("Phase 5 tenant authorization cleanup is complete for current Product, Rates, Notify, and utility data-tool route groups", inventory)
-        self.assertIn("Contact remains a legacy compatibility surface", inventory)
+        self.assertIn("Contact URLs are retired redirects to Party", inventory)
         self.assertIn("Middleware workspace-required prefixes cover current tenant ERP prefixes", inventory)
         self.assertIn("every current tenant ERP prefix", inventory)
         self.assertIn("canonical `/workspace/<id>/settings/...`", inventory)
 
     def test_login_only_tenant_app_gaps_remain_visible_for_phase5_cleanup(self):
         party_views = _read("apps/tenant_apps/party/views.py")
-        contact_customer_views = _read("apps/tenant_apps/contact/views/customer.py")
         product_views = _read("apps/tenant_apps/product/views/product.py")
         producttype_views = _read("apps/tenant_apps/product/views/producttype.py")
         productvariant_views = _read("apps/tenant_apps/product/views/productvariant.py")
@@ -228,7 +217,6 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         product_price_views = _read("apps/tenant_apps/product/views/price.py")
         product_image_views = _read("apps/tenant_apps/product/views/image.py")
         rate_views = _read("apps/tenant_apps/rates/views.py")
-        notify_views = _read("apps/tenant_apps/notify/views.py")
         notify_v2_views = _read("apps/tenant_apps/notify_v2/views.py")
 
         self.assertNotIn("@login_required", party_views)
@@ -250,11 +238,8 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         self.assertNotIn("LoginRequiredMixin", product_image_views)
         self.assertIn("ProductActionRequiredMixin", product_image_views)
         self.assertIn("rate_action_required", rate_views)
-        self.assertIn("notify_action_required", notify_views)
-        self.assertIn("notify_action_required", notify_v2_views)
+        self.assertIn("notify_v2_action_required", notify_v2_views)
         self.assertIn("def whatsapp_cloud_webhook", notify_v2_views)
-
-        self.assertIn("@login_required", contact_customer_views)
 
         self.assertNotIn("girvi_permission_required", party_views)
         self.assertNotIn("dea_accountant_required", party_views)
@@ -289,14 +274,9 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
                 "guard": "@rate_action_required(",
                 "minimum": 10,
             },
-            "notify_legacy": {
-                "content": _read("apps/tenant_apps/notify/views.py"),
-                "guard": "@notify_action_required(",
-                "minimum": 9,
-            },
             "notify_v2": {
                 "content": _read("apps/tenant_apps/notify_v2/views.py"),
-                "guard": "@notify_action_required(",
+                "guard": "@notify_v2_action_required(",
                 "minimum": 8,
             },
             "utility_data_tools": {
@@ -354,7 +334,7 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
                 self.assertIn("Girvi", content)
 
         self.assertIn(
-            "Contact remains a legacy compatibility surface while Party replaces it",
+            "Contact URLs are retired redirects to Party",
             inventory,
         )
         self.assertIn(

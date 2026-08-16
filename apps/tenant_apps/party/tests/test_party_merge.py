@@ -24,7 +24,6 @@ from apps.tenant_apps.party.models import (
     PartyRole,
     PartyRoleType,
 )
-from apps.tenant_apps.party.services.customer_bridge import ensure_customer_party
 from apps.tenant_apps.party.services.party_merge import merge_parties
 
 
@@ -143,17 +142,6 @@ class PartyMergeTests(TenantTestCase):
 
         self.assertEqual(document.party, target)
         self.assertEqual(document.identifier, target_identifier)
-
-    def test_merge_refuses_two_legacy_customer_links(self):
-        target_customer = Customer.objects.create(firstname="Target", lastname="Customer")
-        source_customer = Customer.objects.create(firstname="Source", lastname="Customer")
-        ensure_customer_party(target_customer)
-        ensure_customer_party(source_customer)
-        target_customer.refresh_from_db()
-        source_customer.refresh_from_db()
-
-        with self.assertRaises(ValidationError):
-            merge_parties(target=target_customer.party, source=source_customer.party)
 
     def test_merge_refuses_conflicting_account_mapping(self):
         self._seed_account_masters()

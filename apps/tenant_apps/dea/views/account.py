@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,8 +9,6 @@ from django_tables2.export.export import TableExport
 from moneyed import Money
 
 from apps.tenant_apps.utils.htmx_utils import for_htmx
-from apps.tenant_apps.party.models import Party
-
 from ..filters import AccountFilter
 from ..forms import AccountStatementForm, AccountTransactionForm
 from ..models import Account, AccountStatement, AccountTransaction, JournalEntry, AccountStatus
@@ -52,9 +49,10 @@ def account_list(request):
         request.GET,
         queryset=Account.objects.select_related(
             "accountbalance",
+            "party",
             "contact",
             "AccountType_Ext",
-        ).order_by("contact__firstname", "contact__lastname"),
+        ).order_by("party__display_name", "account_number"),
     )
     table = AccountTable(f.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
@@ -103,29 +101,20 @@ def account_list(request):
 
 @login_required
 def get_customer_balance(request):
-    customer = request.GET.get("customer")
     borrower_party = request.GET.get("borrower_party")
-    account_filter = {}
+    party_id = borrower_party or request.GET.get("party")
 
-    if borrower_party and not customer:
-        party = get_object_or_404(Party, pk=borrower_party)
-        try:
-            customer = party.legacy_customer.pk
-        except ObjectDoesNotExist:
-            customer = None
-
-    if not customer:
+    if not party_id:
         return HttpResponse(
             """
             <div class="alert alert-secondary" role="alert">
                 <h4 class="alert-heading">Borrower Balance</h4>
-                <p>Balance is not available until this Party is bridged to a customer account.</p>
+                <p>Select a Party to view its account balance.</p>
             </div>
             """
         )
 
-    account_filter["contact__pk"] = customer
-    acc = get_object_or_404(Account, **account_filter)
+    acc = get_object_or_404(Account, party_id=party_id)
     # Construct the HTML for the Bootstrap 5 alert
     alert_html = f"""
     <div class="alert alert-info" role="alert">
@@ -143,6 +132,7 @@ def account_detail(request, pk=None):
     acc = get_object_or_404(
         Account.objects.select_related(
             "contact",
+            "party",
             "AccountType_Ext",
             "AccountType_Ext__XactTypeCode",
         ),

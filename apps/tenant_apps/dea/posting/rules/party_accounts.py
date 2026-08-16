@@ -50,42 +50,24 @@ def resolve_taken_loan_lender_account(source_loan):
 
 def resolve_sales_customer_account(source_doc):
     party = getattr(source_doc, "party", None)
-    if party:
-        return resolve_party_account(
-            party,
-            role_key="CUSTOMER",
-            purpose="CUSTOMER_RECEIVABLE",
-        ).account
-
-    customer = getattr(source_doc, "customer", None)
-    if not customer:
-        raise ValidationError("Sales document has no customer")
-
-    return resolve_customer_account(
-        customer,
+    if not party:
+        raise ValidationError("Sales document has no customer Party")
+    return resolve_party_account(
+        party,
         role_key="CUSTOMER",
         purpose="CUSTOMER_RECEIVABLE",
-    )
+    ).account
 
 
 def resolve_purchase_supplier_account(source_doc):
     party = getattr(source_doc, "party", None)
-    if party:
-        return resolve_party_account(
-            party,
-            role_key="SUPPLIER",
-            purpose="SUPPLIER_PAYABLE",
-        ).account
-
-    supplier = getattr(source_doc, "vendor", None) or getattr(source_doc, "supplier", None)
-    if not supplier:
-        raise ValidationError("Purchase document has no supplier/vendor")
-
-    return resolve_customer_account(
-        supplier,
+    if not party:
+        raise ValidationError("Purchase document has no supplier Party")
+    return resolve_party_account(
+        party,
         role_key="SUPPLIER",
         purpose="SUPPLIER_PAYABLE",
-    )
+    ).account
 
 
 def resolve_customer_advance_account(source_doc):

@@ -66,11 +66,11 @@
             <div class="workspace-nav-section">
                 <h6 class="workspace-nav-section-title">Apps</h6>
                 
-                <!-- Contacts -->
-                {% if 'contact_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'contact_customer_list' or 'contact' in request.resolver_match.url_name %}active{% endif %}"
-                   href="{% url 'contact_customer_list' %}">
-                    <i class="bi bi-people-fill"></i> Contacts
+                <!-- Parties -->
+                {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
+                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' %}active{% endif %}"
+                   href="{% url 'party:party_list' %}">
+                    <i class="bi bi-people-fill"></i> Parties
                 </a>
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' or request.resolver_match.url_name == 'workspace_slug_parties' %}active{% endif %}"
                    href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.schema_name %}">
@@ -94,15 +94,11 @@
                      </a>
                      {% endif %}
 
-                <!-- Independent Girvi and PawnLoan applications -->
+                <!-- Canonical Loans application -->
                 {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' and '/setup/' not in request.path %}active{% endif %}"
                    href="{% url 'loans:pawn_loan_list' %}">
                     <i class="bi bi-cash-coin"></i> PawnLoans
-                </a>
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'girvi' %}active{% endif %}"
-                   href="{% url 'girvi:girvi_dashboard' %}">
-                    <i class="bi bi-archive"></i> Girvi
                 </a>
                 {% endif %}
                 {% if role_name == 'Owner' or role_name == 'Admin' %}

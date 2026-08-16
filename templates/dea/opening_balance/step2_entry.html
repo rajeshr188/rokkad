@@ -72,7 +72,7 @@
                     <tbody>
                         {% for account in accounts %}
                         <tr>
-                            <td>{{ account.account_number }} — {{ account.contact }}</td>
+                            <td>{{ account.account_number }} — {{ account.party }}</td>
                             <td><span class="badge bg-light text-dark">{{ account.AccountType_Ext }}</span></td>
                             <td>
                                 <input type="number" name="account_{{ account.pk }}" step="0.01" class="form-control" placeholder="0.00">

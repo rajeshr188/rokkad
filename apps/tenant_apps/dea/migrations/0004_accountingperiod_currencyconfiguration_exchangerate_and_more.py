@@ -9,7 +9,6 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("contact", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
         ("dea", "0003_create_ledger_balance_view"),
         ("orgs", "0019_alter_company_members"),

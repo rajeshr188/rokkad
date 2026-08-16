@@ -10,8 +10,8 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("contact", "0003_alter_customer_options_and_more"),
         ("dea", "0006_expensevoucher_expenselineitem_journalentryvoucher_and_more"),
+        ("party", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -347,13 +347,12 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "vendor",
+                    "party",
                     models.ForeignKey(
-                        help_text="Vendor who supplied",
-                        limit_choices_to={"is_vendor": True},
+                        help_text="Canonical supplier Party.",
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="purchase_invoices",
-                        to="contact.contact",
+                        related_name="dea_purchase_invoices",
+                        to="party.party",
                     ),
                 ),
             ],
@@ -755,12 +754,12 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "customer",
+                    "party",
                     models.ForeignKey(
-                        help_text="Customer who purchased",
+                        help_text="Canonical customer Party.",
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="sales_invoices",
-                        to="contact.customer",
+                        related_name="dea_sales_invoices",
+                        to="party.party",
                     ),
                 ),
                 (
@@ -935,7 +934,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="purchaseinvoicevoucher",
             index=models.Index(
-                fields=["invoice_date", "vendor"], name="dea_purchas_invoice_156c77_idx"
+                fields=["invoice_date", "party"], name="dea_purchas_invoice_f0c565_idx"
             ),
         ),
         migrations.AddIndex(
@@ -958,8 +957,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="salesinvoicevoucher",
             index=models.Index(
-                fields=["invoice_date", "customer"],
-                name="dea_salesin_invoice_3bf4f9_idx",
+                fields=["invoice_date", "party"],
+                name="dea_salesin_invoice_3db705_idx",
             ),
         ),
         migrations.AddIndex(

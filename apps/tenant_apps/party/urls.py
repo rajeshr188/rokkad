@@ -7,7 +7,6 @@ app_name = "party"
 urlpatterns = [
     path("", views.party_list, name="party_list"),
     path("create/", views.party_create, name="party_create"),
-    path("convert-customer/", views.party_customer_convert, name="party_customer_convert"),
     path("<int:pk>/", views.party_detail, name="party_detail"),
     path("<int:pk>/edit/", views.party_update, name="party_update"),
     path("<int:pk>/merge/", views.party_merge, name="party_merge"),

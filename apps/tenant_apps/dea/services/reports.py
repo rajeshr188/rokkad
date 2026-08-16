@@ -504,7 +504,7 @@ class ReportsService:
             amount = invoice.total_amount - invoice.received_amount
 
             report.lines.append(ReportLine(
-                account_name=f"Invoice {invoice.invoice_number} - {invoice.customer}",
+                account_name=f"Invoice {invoice.invoice_number} - {invoice.party}",
                 balance=amount,
                 level=1,
                 account_id=invoice.id,
@@ -582,7 +582,7 @@ class ReportsService:
             amount = bill.total_amount - bill.paid_amount
 
             report.lines.append(ReportLine(
-                account_name=f"Bill {bill.internal_number or bill.invoice_number} - {bill.vendor}",
+                account_name=f"Bill {bill.internal_number or bill.invoice_number} - {bill.party}",
                 balance=amount,
                 level=1,
                 account_id=bill.id,

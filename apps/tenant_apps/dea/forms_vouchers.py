@@ -466,7 +466,7 @@ class SalesInvoiceForm(forms.ModelForm):
         model = SalesInvoiceVoucher
         fields = [
             "invoice_date",
-            "customer",
+            "party",
             "reference",
             "description",
             "payment_terms",
@@ -490,7 +490,7 @@ class SalesInvoiceForm(forms.ModelForm):
         self.helper.layout = Layout(
             Row(
                 Column("invoice_date", css_class="col-md-4"),
-                Column("customer", css_class="col-md-8"),
+                Column("party", css_class="col-md-8"),
             ),
             "reference",
             "description",
@@ -580,7 +580,7 @@ class PurchaseInvoiceForm(forms.ModelForm):
             "invoice_number",
             "invoice_date",
             "received_date",
-            "vendor",
+            "party",
             "purchase_type",
             "reference",
             "description",
@@ -612,7 +612,7 @@ class PurchaseInvoiceForm(forms.ModelForm):
                 Column("received_date", css_class="col-md-4"),
             ),
             Row(
-                Column("vendor", css_class="col-md-8"),
+                Column("party", css_class="col-md-8"),
                 Column("purchase_type", css_class="col-md-4"),
             ),
             "reference",
