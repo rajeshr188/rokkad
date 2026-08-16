@@ -8,6 +8,18 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Production-shaped runtime-role validation passes against the
+  rebuilt local shared-schema database. The ordinary Django connection is
+  `rokkad_runtime`: it is neither superuser nor `BYPASSRLS`, has no database or
+  role creation privilege, and owns zero application tables. PostgreSQL reports
+  all 95 surviving business tables with both RLS and FORCE RLS enabled. Without
+  Workspace context, representative Party, Loans, Notify v2, and Rates queries
+  each return zero rows. The current development database has no Workspace
+  fixture, so positive scoped reads remain proven by the restricted-role RLS
+  suites. `check --deploy` reports only the expected development-settings
+  warnings for DEBUG, HSTS, SSL redirect, and the local secret key; deployment
+  must use hardened production settings.
+
 - 2026-08-17: Post-baseline retirement cleanup is complete. Eight historical
   phase/source-snapshot test files and the obsolete unimplemented Rates DRF API
   test were removed. Current suites pass independently: Loans 394, Party 74,

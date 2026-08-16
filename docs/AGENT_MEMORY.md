@@ -8,6 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Runtime-role checkpoint (2026-08-17): the ordinary local Django connection is
+`rokkad_runtime`, which is NOSUPERUSER/NOBYPASSRLS, cannot create databases or
+roles, and owns zero application tables. All 95 surviving business tables have
+RLS enabled and forced. No-context ORM counts for representative Party, Loans,
+Notify v2, and Rates roots are all zero. The development database currently has
+no Workspace fixture; use restricted-role tests for positive scoped-read and
+cross-Workspace evidence. Development `check --deploy` warnings about DEBUG,
+HSTS, SSL redirect, and the local secret are settings hardening reminders, not
+RLS failures.
+
 Current test checkpoint (2026-08-17): stale phase/source-snapshot tests for the
 retired tenant/accounting architecture are removed. The independently executed
 current suites total 777 passing tests: Loans 394, Party 74, Rates 14, control
