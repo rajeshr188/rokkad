@@ -73,14 +73,6 @@ NAVIGATION_STRUCTURE = {
             "required_permission": "data_view",
         },
         {
-            "id": "accounting",
-            "label": "Accounting (DEA)",
-            "url_name": "dea_home",
-            "icon": "calculator",
-            "section": "data",
-            "required_permission": "data_view",
-        },
-        {
             "id": "parties",
             "label": "Parties",
             "url_name": "party:party_list",

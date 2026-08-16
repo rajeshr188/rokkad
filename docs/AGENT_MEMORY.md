@@ -18,6 +18,13 @@ and reconciliation. `PawnLoanAccountingEvent` is currently the internal event
 spine as well as a DEA source; do not delete it until operational behavior is
 characterized and migrated to neutral Loans terminology. Canonical decision:
 `docs/adr/2026-08-16-retire-accounting.md`.
+DEA and tenant/Standalone Accounting are now physically removed from the
+repository and from `TENANT_APPS`. Their top-level URL mounts, navigation,
+templates, setup checklist tasks, and tenant seed actions are retired. Old
+workspace-slug accounting/commodity/report bookmarks return HTTP 410 during
+the tenancy URL-baseline transition. Product's obsolete journal-entry FK and
+historical DEA migration dependency are removed. Do not restore either app or
+introduce new accounting route aliases.
 Phase 1 classifies `PawnLoanAccountingEvent` fields (`event_kind`, effective
 date, frozen payload/fingerprint, idempotency key, reversal link, actor, and
 timestamp) as Loans operational evidence. `PawnLoanAccountingOutbox`, delivery

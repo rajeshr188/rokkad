@@ -14,7 +14,6 @@ SELECT
     st.weight,
     st.movement_type_id,
     mv.direction AS movement_direction,
-    st.journal_entry_id,
     st.description
 FROM product_stocktransaction st
 JOIN product_movement mv ON mv.id = st.movement_type_id;

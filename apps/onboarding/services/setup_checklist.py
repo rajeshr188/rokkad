@@ -22,9 +22,6 @@ class WorkspaceSetupMetrics:
 
     member_count: int | None = None
     invitation_count: int | None = None
-    accounting_period_count: int | None = None
-    ledger_count: int | None = None
-    opening_balance_count: int | None = None
     party_count: int | None = None
     product_count: int | None = None
     stock_count: int | None = None
@@ -107,25 +104,6 @@ def build_workspace_setup_checklist(
             url_name="workspace_settings_preferences",
         ),
         SetupChecklistItem(
-            key="accounting_setup",
-            title="Accounting setup",
-            description="Create the first accounting period and chart of accounts.",
-            status=_status_from_any(
-                metrics.accounting_period_count,
-                metrics.ledger_count,
-            ),
-            action_label="Open accounting setup",
-            url_name="dea_period_list",
-        ),
-        SetupChecklistItem(
-            key="opening_balances",
-            title="Opening balances",
-            description="Record opening balances before day-to-day posting.",
-            status=_status_from_count(metrics.opening_balance_count),
-            action_label="Add opening balances",
-            url_name="dea_opening_balance_wizard",
-        ),
-        SetupChecklistItem(
             key="parties",
             title="Parties",
             description="Add customers, suppliers, brokers, or employees.",
@@ -165,14 +143,6 @@ def build_workspace_setup_checklist(
             action_label="Configure rates",
             url_name="rate_list",
         ),
-        SetupChecklistItem(
-            key="first_transaction",
-            title="First transaction",
-            description="Create the first business event or posted source document.",
-            status=_status_from_count(metrics.transaction_count),
-            action_label="Create transaction",
-            url_name="dea_business_events_dashboard",
-        ),
     )
     return WorkspaceSetupChecklist(workspace=workspace, items=items)
 
@@ -188,12 +158,6 @@ def collect_workspace_setup_metrics(*, workspace) -> WorkspaceSetupMetrics:
     return WorkspaceSetupMetrics(
         member_count=member_count,
         invitation_count=invitation_count,
-        accounting_period_count=_safe_model_count("dea", "AccountingPeriod"),
-        ledger_count=_safe_model_count("dea", "Ledger"),
-        opening_balance_count=_sum_known(
-            _safe_model_count("dea", "AccountStatement"),
-            _safe_model_count("dea", "LedgerStatement"),
-        ),
         party_count=_safe_model_count("party", "Party"),
         product_count=_sum_known(
             _safe_model_count("product", "Product"),
@@ -208,12 +172,8 @@ def collect_workspace_setup_metrics(*, workspace) -> WorkspaceSetupMetrics:
             _safe_model_count("rates", "RateSource"),
         ),
         transaction_count=_sum_known(
-            _safe_model_count("dea", "Voucher"),
-            _safe_model_count("dea", "JournalEntry"),
-            _safe_model_count("dea", "BusinessEventDraft"),
             _safe_model_count("product", "StockTransaction"),
-            _safe_model_count("girvi", "GivenLoan"),
-            _safe_model_count("girvi", "TakenLoan"),
+            _safe_model_count("loans", "PawnLoanEvent"),
         ),
     )
 

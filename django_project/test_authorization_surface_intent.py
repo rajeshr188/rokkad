@@ -140,20 +140,11 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
         self.assertIn("if not allow_profile_fallback:", tenant_context)
         self.assertIn("return None", tenant_context)
 
-    def test_tenant_access_helpers_remain_available(self):
-        dea_access = _read("apps/tenant_apps/dea/views/access.py")
+    def test_surviving_tenant_access_helpers_remain_available(self):
         party_access = _read("apps/tenant_apps/party/access.py")
         product_access = _read("apps/tenant_apps/product/access.py")
         rate_access = _read("apps/tenant_apps/rates/access.py")
         notify_v2_access = _read("apps/tenant_apps/notify_v2/access.py")
-
-        for expected in (
-            "def assert_dea_accountant_access",
-            "def dea_accountant_required",
-            "class DeaAccountantRequiredMixin",
-            "ACCOUNTANT_ROLES",
-        ):
-            self.assertIn(expected, dea_access)
 
         for expected in (
             "def assert_party_workspace_access",
@@ -317,7 +308,6 @@ class AuthorizationSurfaceIntentTests(SimpleTestCase):
                 "product",
                 "notify",
                 "notify-v2",
-                "dea",
             },
         )
         self.assertTrue(tenant_prefixes.issubset(workspace_required))

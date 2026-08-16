@@ -23,8 +23,6 @@ TENANT_ERP_URLPATTERNS = [
     path("product/", include("apps.tenant_apps.product.urls")),
     path("notify/", include("django_project.legacy_notify_urls")),
     path("notify-v2/", include("apps.tenant_apps.notify_v2.urls")),
-    path("dea/", include("apps.tenant_apps.dea.urls")),
-    path("accounting/", include("apps.tenant_apps.accounting.urls")),
 ]
 
 urlpatterns = TENANT_ADMIN_URLPATTERNS + TENANT_ERP_URLPATTERNS + shared_urlpatterns

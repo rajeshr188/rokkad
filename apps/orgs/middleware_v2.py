@@ -64,7 +64,6 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         "/party/",
         "/girvi/",
         "/loans/",
-        "/dea/",
         "/sales/",
         "/purchase/",
         "/contact/",

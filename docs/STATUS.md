@@ -8,6 +8,19 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: DEA and tenant/Standalone Accounting are physically removed,
+  including their migrations, commands, tests, and dedicated templates. Both
+  apps and their top-level URL mounts are unregistered. Party accounting
+  mappings, accounting navigation/setup/seeding, and Product's obsolete
+  journal-entry FK plus DEA migration dependency are removed. Old workspace
+  accounting/commodity/report bookmarks return HTTP 410 pending the tenancy
+  URL-baseline rebuild. Django checks, migration drift, and all 15 accounting
+  retirement boundary tests pass.
+  Empty-database rehearsal then exposed and fixed a Product SQL projection that
+  still selected the retired journal FK. The project suite now completes its
+  migration setup; its first remaining failure is an unrelated stale invitation
+  intent assertion expecting direct `Membership.objects.get_or_create` usage.
+
 - 2026-08-17: Accounting-era cutover code and tests are retired. The PawnLoan
   cutover selector and command are deleted. Party portal invoices now return an
   explicit empty unsupported summary, portal payments use only `PawnLoanEvent`,

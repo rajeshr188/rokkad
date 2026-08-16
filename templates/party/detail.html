@@ -296,29 +296,8 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'accounts' %}show active{% endif %}" id="accounts">
-        <div class="table-responsive">
-            <table class="table table-sm align-middle">
-                <thead><tr><th>Role</th><th>Purpose</th><th>Account</th><th>Control Ledger</th><th>Status</th><th>Default</th></tr></thead>
-                <tbody>
-                    {% for mapping in account_mappings %}
-                    <tr>
-                        <td>{{ mapping.role_key }}</td>
-                        <td>{{ mapping.get_purpose_display }}</td>
-                        <td><a href="{% url 'dea_account_detail' mapping.account.pk %}">{{ mapping.account }}</a></td>
-                        <td>{% if mapping.control_ledger %}<a href="{% url 'dea_ledger_detail' mapping.control_ledger.pk %}">{{ mapping.control_ledger }}</a>{% else %}-{% endif %}</td>
-                        <td>{{ mapping.get_status_display }}</td>
-                        <td>{{ mapping.is_default|yesno:"Yes,No" }}</td>
-                    </tr>
-                    {% empty %}<tr><td colspan="6" class="text-muted">No account mappings found.</td></tr>{% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <div class="tab-pane fade {% if active_tab == 'transactions' %}show active{% endif %}" id="transactions">
         <div class="row g-3">
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Account Mappings</div><div class="h4 mb-0">{{ account_mappings|length }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans|add:loan_history.counts.closed_loans }}</div></div></div>
         </div>
     </div>

@@ -16,7 +16,6 @@ from types import SimpleNamespace
 from datetime import timedelta
 from django.utils import timezone
 
-from django.apps import apps as django_apps
 from apps.tenant_apps.utils.htmx_utils import for_htmx
 
 from ..access import ProductActionRequiredMixin, product_action_required
@@ -253,21 +252,10 @@ def stock_select(request, q=None):
 
 @product_action_required("create")
 def stock_in_direct(request):
-    # Check if journal_entry_id is provided in the request
-    journal_entry_id = request.GET.get("journal_entry_id", None)
-    # Initialize the form with the journal_entry_id
     form = StockInForm(request.POST or None)
     if request.method == "POST":
-        journal_entry = None
-        if journal_entry_id:
-            # Attach to an existing JournalEntry (e.g. from a purchase voucher flow)
-            journal_entry = get_object_or_404(django_apps.get_model("dea", "JournalEntry"), id=journal_entry_id)
-        # When no journal_entry_id is given, journal_entry stays None.
-        # StockTransaction.journal_entry is nullable so this is valid for
-        # direct / non-accounting stock-in operations.
         if form.is_valid():
             stock_transaction = form.save(commit=False)
-            stock_transaction.journal_entry = journal_entry
             stock_transaction.save()
             return redirect("product_stock_list")
 

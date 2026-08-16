@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseGone, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -902,6 +902,54 @@ def workspace_slug_reports(request, workspace_slug):
     from apps.tenant_apps.dea.views.reports_hub import reports_hub
 
     return reports_hub(request)
+
+
+@login_required
+def retired_accounting_surface(request, *args, **kwargs):
+    """Return an explicit retirement response for old accounting bookmarks."""
+
+    return HttpResponseGone("Accounting has been retired from Rokkad.")
+
+
+# Keep old workspace bookmarks deterministic while the tenancy URL baseline is
+# rebuilt. None of these routes import or execute a retired accounting app.
+workspace_slug_settings_accounting = retired_accounting_surface
+workspace_slug_accounting = retired_accounting_surface
+workspace_slug_accounting_chart_of_accounts = retired_accounting_surface
+workspace_slug_accounting_accounts = retired_accounting_surface
+workspace_slug_accounting_account_detail = retired_accounting_surface
+workspace_slug_accounting_ledgers = retired_accounting_surface
+workspace_slug_accounting_ledger_detail = retired_accounting_surface
+workspace_slug_accounting_transactions = retired_accounting_surface
+workspace_slug_accounting_trial_balance = retired_accounting_surface
+workspace_slug_accounting_balance_sheet = retired_accounting_surface
+workspace_slug_accounting_profit_loss = retired_accounting_surface
+workspace_slug_accounting_income_statement = retired_accounting_surface
+workspace_slug_accounting_cash_flow = retired_accounting_surface
+workspace_slug_accounting_ar_aging = retired_accounting_surface
+workspace_slug_accounting_ap_aging = retired_accounting_surface
+workspace_slug_accounting_financial_ratios = retired_accounting_surface
+workspace_slug_accounting_vouchers = retired_accounting_surface
+workspace_slug_accounting_voucher_detail = retired_accounting_surface
+workspace_slug_accounting_payments = retired_accounting_surface
+workspace_slug_accounting_payment_detail = retired_accounting_surface
+workspace_slug_accounting_expenses = retired_accounting_surface
+workspace_slug_accounting_expense_detail = retired_accounting_surface
+workspace_slug_accounting_journal_entry_vouchers = retired_accounting_surface
+workspace_slug_accounting_journal_entry_voucher_detail = retired_accounting_surface
+workspace_slug_accounting_periods = retired_accounting_surface
+workspace_slug_accounting_period_detail = retired_accounting_surface
+workspace_slug_accounting_reconciliation = retired_accounting_surface
+workspace_slug_accounting_reconciliation_detail = retired_accounting_surface
+workspace_slug_operations = retired_accounting_surface
+workspace_slug_sales = retired_accounting_surface
+workspace_slug_purchase = retired_accounting_surface
+workspace_slug_commodity = retired_accounting_surface
+workspace_slug_commodity_detail = retired_accounting_surface
+workspace_slug_commodity_metal_balance_report = retired_accounting_surface
+workspace_slug_commodity_exposure_report = retired_accounting_surface
+workspace_slug_commodity_valuation_report = retired_accounting_surface
+workspace_slug_reports = retired_accounting_surface
 
 
 def _assert_owner_access(request, workspace, allow_platform_admin=True):

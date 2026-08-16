@@ -99,7 +99,6 @@ class InventoryMovementService:
         movement_type_id,
         quantity,
         weight,
-        journal_entry=None,
         reason=None,
         description=None
     ):
@@ -111,7 +110,6 @@ class InventoryMovementService:
             movement_type_id: Movement.id (e.g., 'P', 'S', 'PR', 'SR', 'AD', 'RM', 'SS')
             quantity: Integer quantity moved
             weight: Decimal weight moved
-            journal_entry: Optional JournalEntry for accounting moves
             reason: Optional reason code for audit trail
             description: Optional text description
 
@@ -142,7 +140,6 @@ class InventoryMovementService:
             'quantity': quantity,
             'weight': weight,
             'movement_type': movement,
-            'journal_entry': journal_entry,
             'description': description or reason,
         }
 

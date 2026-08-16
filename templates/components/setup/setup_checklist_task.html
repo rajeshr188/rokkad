@@ -21,10 +21,6 @@
     <div class="mgmt-setup-task-action">
         {% if item.key == "business_profile" %}
         <a href="{% url 'workspace_settings_preferences' workspace_id=workspace_id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-        {% elif item.key == "accounting_setup" %}
-        <a href="{% url 'dea_period_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-        {% elif item.key == "opening_balances" %}
-        <a href="{% url 'dea_opening_balance_wizard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "parties" %}
         {% if workspace_slug %}
         <a href="{% url 'workspace_slug_parties' workspace_slug=workspace_slug %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
@@ -37,8 +33,6 @@
         <a href="{% url 'workspace_settings_invite' workspace_id=workspace_id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "rates" %}
         <a href="{% url 'rate_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
-        {% elif item.key == "first_transaction" %}
-        <a href="{% url 'dea_business_events_dashboard' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% endif %}
     </div>
     {% endif %}

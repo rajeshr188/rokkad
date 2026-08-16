@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("dea", "0001_initial"),
         ("party", "0001_initial"),
         ("product", "0001_initial"),
     ]
@@ -151,15 +150,6 @@ class Migration(migrations.Migration):
             name="stock",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE, to="product.stock"
-            ),
-        ),
-        migrations.AddField(
-            model_name="stocktransaction",
-            name="journal_entry",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="stxns",
-                to="dea.journalentry",
             ),
         ),
         migrations.AddField(

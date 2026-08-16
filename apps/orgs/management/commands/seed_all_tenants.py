@@ -18,10 +18,6 @@ class Command(BaseCommand):
             help="Continue seeding remaining schemas if one fails.",
         )
         parser.add_argument(
-            "--skip-dea-core",
-            action="store_true",
-        )
-        parser.add_argument(
             "--skip-terms",
             action="store_true",
         )
@@ -60,7 +56,6 @@ class Command(BaseCommand):
                 call_command(
                     "seed_tenant_defaults",
                     schema=schema_name,
-                    skip_dea_core=options["skip_dea_core"],
                     skip_terms=options["skip_terms"],
                     skip_rates=options["skip_rates"],
                     skip_product=options["skip_product"],

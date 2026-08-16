@@ -5,7 +5,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from apps.tenant_apps.dea.services.voucher_type_seed import seed_voucher_types
 from apps.tenant_apps.party.services import seed_party_roles
 from apps.tenant_apps.product.models import Attribute, Category, Movement, ProductType
 
@@ -23,11 +22,6 @@ class Command(BaseCommand):
             "--dry-run",
             action="store_true",
             help="Print actions without applying changes.",
-        )
-        parser.add_argument(
-            "--skip-dea-core",
-            action="store_true",
-            help="Skip DEA core ledger seeding.",
         )
         parser.add_argument(
             "--skip-terms",
@@ -72,9 +66,6 @@ class Command(BaseCommand):
         }
 
         actions = []
-        if not options["skip_dea_core"]:
-            actions.append("seed_dea_core")
-            actions.append("seed_dea_voucher_types")
         if not options["skip_terms"]:
             actions.append("seed_terms")
         if not options["skip_rates"]:
@@ -98,13 +89,6 @@ class Command(BaseCommand):
 
         with schema_context(schema_name):
             with transaction.atomic():
-                if "seed_dea_core" in actions:
-                    # Existing idempotent command for account types + required ledgers.
-                    call_command("seed_core_ledgers", schema=schema_name)
-
-                if "seed_dea_voucher_types" in actions:
-                    self._seed_dea_voucher_types()
-
                 if "seed_terms" in actions:
                     self._load_fixture_if_exists(fixture_paths["terms"])
 
@@ -132,10 +116,6 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Loading fixture: {fixture_path}")
         call_command("loaddata", str(fixture_path), verbosity=0)
-
-    def _seed_dea_voucher_types(self):
-        """Extracted from dea migration RunPython seeds (idempotent)."""
-        seed_voucher_types()
 
     def _seed_party_defaults(self):
         result = seed_party_roles()

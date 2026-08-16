@@ -184,7 +184,7 @@ class Stock(models.Model):
         """
         return (self.created - self.updated).days
 
-    def transact(self, weight, quantity, movement_type, journal_entry=None):
+    def transact(self, weight, quantity, movement_type):
         """
         Record a movement for this stock.
         Delegates to inventory service layer.
@@ -193,7 +193,6 @@ class Stock(models.Model):
             weight: Decimal weight
             quantity: Integer quantity
             movement_type: Movement.id string (e.g., 'P', 'S', 'AD')
-            journal_entry: Optional JournalEntry for accounting
 
         Returns:
             StockTransaction instance
@@ -204,7 +203,6 @@ class Stock(models.Model):
             movement_type_id=movement_type,
             quantity=quantity,
             weight=weight,
-            journal_entry=journal_entry,
         )
 
     # @classmethod
@@ -309,10 +307,6 @@ class StockTransaction(models.Model):
         related_name='transactions',
         help_text="Union FK: either stock_id or stock_item_id must be set"
     )
-    journal_entry = models.ForeignKey(
-        "dea.JournalEntry", on_delete=models.CASCADE, related_name="stxns", null=True, blank=True
-    )
-
     def __str__(self):
         subject = self.stock or self.stock_item
         return f"{subject} {self.movement_type} {self.quantity} {self.weight}"
@@ -535,7 +529,7 @@ class StockItem(models.Model):
             ),
         )
 
-    def transact(self, weight, quantity, movement_type, journal_entry=None):
+    def transact(self, weight, quantity, movement_type):
         """
         Record a movement for this unique item.
         Delegates to inventory service layer.
@@ -544,7 +538,6 @@ class StockItem(models.Model):
             weight: Decimal weight
             quantity: Integer quantity (typically 1 for unique items)
             movement_type: Movement.id string (e.g., 'P', 'S', 'AD')
-            journal_entry: Optional JournalEntry for accounting
 
         Returns:
             StockTransaction instance
@@ -556,7 +549,6 @@ class StockItem(models.Model):
             movement_type_id=movement_type,
             quantity=quantity,
             weight=weight,
-            journal_entry=journal_entry,
         )
 
     def update_status(self):

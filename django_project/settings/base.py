@@ -79,12 +79,10 @@ SHARED_APPS = [
 TENANT_APPS = [
     "apps.tenant_apps.party",
     "apps.tenant_apps.loans.apps.LoansConfig",
-    "apps.tenant_apps.accounting.apps.AccountingConfig",
     "apps.tenant_apps.product",
     "apps.tenant_apps.terms",
     "apps.tenant_apps.rates",
     "apps.tenant_apps.notify_v2",
-    "apps.tenant_apps.dea",
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]

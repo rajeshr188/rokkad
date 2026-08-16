@@ -172,7 +172,6 @@ def _party_detail_context(
         "party": party,
         "role_form": PartyRoleForm(),
         "loan_history": loan_history,
-        "account_mappings": party.dea_account_mappings.all(),
         "active_tab": active_tab,
         "photo_form": photo_form or PartyProfilePhotoForm(instance=party),
         "contact_form": contact_form
@@ -317,8 +316,6 @@ def party_list(request):
 def party_detail(request, pk):
     party = get_object_or_404(
         party_detail_queryset().prefetch_related(
-            "dea_account_mappings__account",
-            "dea_account_mappings__control_ledger",
             "relationships_from__to_party",
             "relationships_to__from_party",
         ),

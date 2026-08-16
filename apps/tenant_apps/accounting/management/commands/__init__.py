@@ -1,1 +1,0 @@
-"""Standalone accounting management commands."""
