@@ -521,7 +521,8 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertIn("team_invite", dashboard_html)
 		self.assertIn("setup_checklist", dashboard_html)
 		self.assertIn("Workspace setup", dashboard_html)
-		self.assertIn("workspace_slug_accounting", dashboard_html)
+		self.assertNotIn("workspace_slug_accounting", dashboard_html)
+		self.assertNotIn("DEA Dashboard", dashboard_html)
 		self.assertIn("setup_checklist_task.html", dashboard_html)
 		self.assertIn("workspace_settings_setup_state", dashboard_html)
 
@@ -2336,14 +2337,10 @@ class WorkspaceModuleEntitlementTests(SimpleTestCase):
 		) as mock_eval:
 			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
 
-		self.assertEqual(mock_eval.call_count, 3)
+		self.assertEqual(mock_eval.call_count, 2)
 
-		advanced = next(item for item in modules if item["name"] == "Advanced Reporting")
 		api = next(item for item in modules if item["name"] == "API Access")
 		custom_fields = next(item for item in modules if item["name"] == "Custom Fields")
-
-		self.assertEqual(advanced["status"], "Active")
-		self.assertTrue(advanced["is_openable"])
 
 		self.assertEqual(api["status"], "Billing Required")
 		self.assertFalse(api["is_openable"])
@@ -2367,9 +2364,13 @@ class WorkspaceModuleEntitlementTests(SimpleTestCase):
 			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
 
 		portal = next(item for item in modules if item["name"] == "Customer Portal")
-		accounting = next(item for item in modules if item["name"] == "Accounting")
+		rates = next(item for item in modules if item["name"] == "Rates")
 
 		self.assertEqual(portal["status"], "Planned")
 		self.assertFalse(portal["is_openable"])
-		self.assertEqual(accounting["status"], "Active")
-		self.assertTrue(accounting["is_openable"])
+		self.assertEqual(rates["status"], "Active")
+		self.assertTrue(rates["is_openable"])
+		self.assertTrue(
+			{"Accounting", "Operations", "Inventory", "Commodity", "Advanced Reporting"}
+			.isdisjoint(module["name"] for module in modules)
+		)

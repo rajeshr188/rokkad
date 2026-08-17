@@ -8,6 +8,14 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: The Workspace dashboard no longer renders the retired DEA
+  Dashboard/accounting quick action. The Workspace module registry now lists
+  only surviving operational apps (Parties, Loans, Notify v2, and Rates) plus
+  still-planned/platform capabilities; retired Accounting, DEA Operations,
+  Inventory, Commodity, and DEA-backed Advanced Reporting entries are removed.
+  Old accounting URLs remain HTTP 410 compatibility endpoints only and are not
+  advertised by current UI.
+
 - 2026-08-17: Workspace dashboard Party metrics now import `PawnLoanState`
   through the canonical Loans domain API rather than the persistence-model
   package. The stale nonexistent `DEFAULTED` lifecycle state was removed from

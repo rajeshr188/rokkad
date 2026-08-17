@@ -49,18 +49,6 @@ subscription_access_service = SubscriptionAccessService()
 
 WORKSPACE_MODULE_REGISTRY = [
     {
-        "name": "Accounting",
-        "description": "Chart of accounts, vouchers, journals, reports, and posting controls.",
-        "route_name": "dea_home",
-        "default_status": "Active",
-    },
-    {
-        "name": "Operations",
-        "description": "DEA business-event workflows for sales, purchase, settlement, and commodity previews.",
-        "route_name": "dea_business_events_dashboard",
-        "default_status": "Active",
-    },
-    {
         "name": "Parties",
         "description": "Customer, supplier, broker, employee, KYC, and relationship records.",
         "route_name": "party:party_list",
@@ -73,21 +61,15 @@ WORKSPACE_MODULE_REGISTRY = [
         "default_status": "Active",
     },
     {
-        "name": "Inventory",
-        "description": "Product catalog, stock records, stock movements, pricing, and physical audit.",
-        "route_name": "product_product_home",
-        "default_status": "Active",
-    },
-    {
-        "name": "Commodity",
-        "description": "Commodity master data and accounting-linked commodity reporting.",
-        "route_name": "dea_commodity_list",
-        "default_status": "Active",
-    },
-    {
         "name": "Notifications",
         "description": "Operational notification batches and delivery settings.",
         "route_name": "notify_v2_index",
+        "default_status": "Active",
+    },
+    {
+        "name": "Rates",
+        "description": "Workspace-owned reference rates and rate sources.",
+        "route_name": "rate_list",
         "default_status": "Active",
     },
     {
@@ -95,13 +77,6 @@ WORKSPACE_MODULE_REGISTRY = [
         "description": "Future customer-facing loans, invoices, payments, documents, and statements.",
         "route_name": "",
         "default_status": "Planned",
-    },
-    {
-        "name": "Advanced Reporting",
-        "description": "Advanced financial and operational reporting surfaces.",
-        "route_name": "dea_reports_hub",
-        "feature_code": "advanced_reporting",
-        "default_status": "Active",
     },
     {
         "name": "API Access",

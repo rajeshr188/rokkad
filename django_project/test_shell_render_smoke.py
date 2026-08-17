@@ -452,6 +452,8 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         )
 
         self.assertIn("Workspace setup", html)
+        self.assertNotIn("DEA Dashboard", html)
+        self.assertNotIn("workspace_slug_accounting", html)
         self.assertIn("1/2", html)
         self.assertIn("50%", html)
         self.assertIn("1/2 complete", html)

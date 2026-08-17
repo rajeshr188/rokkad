@@ -8,6 +8,12 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Current Workspace UI must not advertise DEA/accounting. The dashboard has no
+DEA quick action, and the module registry exposes Parties, Loans, Notify v2,
+and Rates rather than retired Accounting, DEA Operations, Inventory, Commodity,
+or DEA-backed reporting. Named accounting routes exist only as HTTP 410
+bookmark compatibility surfaces and must not be linked from live templates.
+
 Cross-app consumers of Loans lifecycle vocabulary must import
 `PawnLoanState` from `apps.tenant_apps.loans.domain`, never from the Loans model
 package. The stored state machine has DRAFT, APPROVED, ACTIVE, CANCELLED, and
