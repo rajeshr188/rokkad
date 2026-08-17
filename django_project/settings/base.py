@@ -122,7 +122,7 @@ MIDDLEWARE = [
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
-ROOT_URLCONF = "django_project.tenant_urls"
+ROOT_URLCONF = "django_project.workspace_urls"
 # ROOT_URLCONF = "django_project.urls"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application

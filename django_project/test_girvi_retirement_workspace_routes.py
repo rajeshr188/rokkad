@@ -56,7 +56,7 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         settings_source = Path("django_project/settings/base.py").read_text(
             encoding="utf-8"
         )
-        tenant_urls_source = Path("django_project/tenant_urls.py").read_text(
+        workspace_urls_source = Path("django_project/workspace_urls.py").read_text(
             encoding="utf-8"
         )
 
@@ -64,8 +64,8 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         self.assertFalse(Path("templates/notify").exists())
         self.assertFalse(Path("apps/tenant_apps/utils/loan_pdf.py").exists())
         self.assertNotIn('"apps.tenant_apps.notify",', settings_source)
-        self.assertNotIn("apps.tenant_apps.notify.urls", tenant_urls_source)
-        self.assertIn("django_project.legacy_notify_urls", tenant_urls_source)
+        self.assertNotIn("apps.tenant_apps.notify.urls", workspace_urls_source)
+        self.assertIn("django_project.legacy_notify_urls", workspace_urls_source)
 
     def test_orgs_notification_wrappers_do_not_import_legacy_notify(self):
         source = Path("apps/orgs/views.py").read_text(encoding="utf-8")
@@ -102,12 +102,12 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         settings_source = Path("django_project/settings/base.py").read_text(
             encoding="utf-8"
         )
-        tenant_urls_source = Path("django_project/tenant_urls.py").read_text(
+        workspace_urls_source = Path("django_project/workspace_urls.py").read_text(
             encoding="utf-8"
         )
 
         self.assertFalse(Path("apps/tenant_apps/girvi").exists())
         self.assertFalse(Path("templates/girvi").exists())
         self.assertNotIn('"apps.tenant_apps.girvi",', settings_source)
-        self.assertNotIn("apps.tenant_apps.girvi.urls", tenant_urls_source)
-        self.assertIn("django_project.legacy_girvi_urls", tenant_urls_source)
+        self.assertNotIn("apps.tenant_apps.girvi.urls", workspace_urls_source)
+        self.assertIn("django_project.legacy_girvi_urls", workspace_urls_source)

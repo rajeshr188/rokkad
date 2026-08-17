@@ -11,7 +11,7 @@ environ.Env.read_env()
 
 secret_admin_url = env("SECRET_ADMIN_URL", default="admin")
 
-# Active public-schema URLConf. Keep this control-plane only: public pages,
+# Platform URLConf. Keep this control-plane only: public pages,
 # auth/invitations, and global workspace management come from shared_urlpatterns.
 PLATFORM_ADMIN_URLPATTERNS = [
     path(secret_admin_url + "/", admin.site.urls),

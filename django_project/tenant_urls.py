@@ -1,35 +1,12 @@
-from django.conf import settings
-from django.conf.urls.static import static
-from django.contrib import admin
-from django.urls import include, path
+"""Deprecated import compatibility for the pre-RLS URLConf module name."""
 
-from django_project.shared_urlpatterns import shared_urlpatterns
+from django_project.workspace_urls import (  # noqa: F401
+    WORKSPACE_ADMIN_URLPATTERNS,
+    WORKSPACE_APP_URLPATTERNS,
+    urlpatterns,
+)
 
-TENANT_ADMIN_URLPATTERNS = [
-    path("admin/", admin.site.urls),
-]
-
-# Tenant/workspace ERP routes. These should stay tenant-schema only; public and
-# global control-plane routes continue to come from shared_urlpatterns below for
-# compatibility until the later route split introduces explicit aliases.
-TENANT_ERP_URLPATTERNS = [
-    path("portal/", include("apps.tenant_apps.party.portal_urls")),
-    path("party/", include("apps.tenant_apps.party.urls")),
-    path("contact/", include("django_project.legacy_contact_urls")),
-    path("data-tools/", include("apps.tenant_apps.utils.importing.urls")),
-    path("girvi/", include("django_project.legacy_girvi_urls")),
-    path("loans/", include("apps.tenant_apps.loans.urls")),
-    path("rates/", include("apps.tenant_apps.rates.urls")),
-    path("notify/", include("django_project.legacy_notify_urls")),
-    path("notify-v2/", include("apps.tenant_apps.notify_v2.urls")),
-]
-
-urlpatterns = TENANT_ADMIN_URLPATTERNS + TENANT_ERP_URLPATTERNS + shared_urlpatterns
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    import debug_toolbar
-
-    urlpatterns = [
-        path("__debug__/", include(debug_toolbar.urls)),
-    ] + urlpatterns
+# Temporary source compatibility for tests or extensions importing the old
+# constants. Runtime settings use django_project.workspace_urls directly.
+TENANT_ADMIN_URLPATTERNS = WORKSPACE_ADMIN_URLPATTERNS
+TENANT_ERP_URLPATTERNS = WORKSPACE_APP_URLPATTERNS

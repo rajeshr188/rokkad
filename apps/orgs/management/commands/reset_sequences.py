@@ -3,9 +3,7 @@ reset_sequences — reset all PostgreSQL sequences to max(id)+1 after loading
 a production dump into a fresh database.
 
 Usage:
-    python manage.py reset_sequences            # public schema only
-    python manage.py reset_sequences --all      # public + all tenant schemas
-    python manage.py reset_sequences --schema jcl --schema jsk  # specific schemas
+    python manage.py reset_sequences
 """
 from django.core.management.base import BaseCommand
 from django.db import connection
@@ -14,46 +12,12 @@ from django.db import connection
 class Command(BaseCommand):
     help = "Reset PostgreSQL sequences to max(id) after loading a production dump."
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--all",
-            action="store_true",
-            dest="all_schemas",
-            help="Reset sequences in all tenant schemas (plus public).",
-        )
-        parser.add_argument(
-            "--schema",
-            action="append",
-            dest="schemas",
-            metavar="SCHEMA",
-            help="Reset sequences in a specific schema (repeatable).",
-        )
-
     def handle(self, *args, **options):
-        schemas_to_reset = []
-
-        if options["all_schemas"]:
-            with connection.cursor() as c:
-                c.execute(
-                    "SELECT schema_name FROM information_schema.schemata "
-                    "WHERE schema_name NOT IN ('pg_catalog','information_schema','pg_toast') "
-                    "  AND schema_name NOT LIKE 'pg_%' "
-                    "ORDER BY schema_name"
-                )
-                schemas_to_reset = [row[0] for row in c.fetchall()]
-        elif options["schemas"]:
-            schemas_to_reset = options["schemas"]
-        else:
-            schemas_to_reset = ["public"]
-
-        total_reset = 0
-        for schema in schemas_to_reset:
-            count = self._reset_schema(schema)
-            total_reset += count
+        total_reset = self._reset_schema("public")
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Done. Reset {total_reset} sequence(s) across {len(schemas_to_reset)} schema(s)."
+                f"Done. Reset {total_reset} sequence(s) in the shared schema."
             )
         )
 

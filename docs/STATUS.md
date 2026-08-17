@@ -26,6 +26,13 @@ migration drift pass, and the first combined Phase 7 regression gate passes
 the unused Guardian dependency declaration in the UTF-16 requirements file,
 and classification of legacy inbound routes.
 
+The second slice makes `django_project.workspace_urls` the active shared-schema
+business URLConf. `tenant_urls` is now only a thin import-compatibility module;
+route behavior is unchanged and 58 URL/portal/retirement tests pass. The
+`reset_sequences` command no longer accepts arbitrary schema or all-schema
+options and operates only on the shared schema. Current public and Notify v2 UI
+copy no longer advertises retired accounting or tenant-schema operation.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

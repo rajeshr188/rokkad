@@ -23,12 +23,19 @@ Completed first slice:
 - reconciled invitation alias tests with the accepted safe GET/login contract;
 - replaced the last live `TENANT_APPS` import error with
   `WORKSPACE_APP_LABELS` terminology.
+- made `django_project.workspace_urls` the active URLConf while retaining a
+  minimal `tenant_urls` import shim for external/test compatibility;
+- removed cross-schema options from `reset_sequences`; it now operates only on
+  the shared `public` schema;
+- removed retired accounting and tenant-schema wording from current public and
+  Notify v2 UI copy.
 
 Still pending:
 
-- rename the active `tenant_urls` module without changing route behavior;
+- remove the deprecated `tenant_urls` import shim after remaining test and
+  extension imports move to `workspace_urls`;
 - classify the `apps.tenant_apps` package name and persisted `schema_name`
   field separately because both have wide migration/import impact;
-- remove obsolete schema-oriented management-command options and current docs;
+- rename or retire remaining schema-era seed commands and current docs;
 - remove the now-unused Guardian line from the UTF-16 requirements manifest;
 - inventory legacy inbound aliases before deletion.

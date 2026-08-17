@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from django_project import public_urls, tenant_urls, urls
+from django_project import public_urls, tenant_urls, urls, workspace_urls
 from django_project.shared_urlpatterns import (
     AUTH_URLPATTERNS,
     CANONICAL_CONTROL_PLANE_URLPATTERNS,
@@ -20,8 +20,9 @@ def _route_prefixes(patterns):
 
 class SaaSRouteIntentTests(SimpleTestCase):
     def test_active_urlconfs_match_shared_schema_routing_settings(self):
-        self.assertEqual(settings.ROOT_URLCONF, "django_project.tenant_urls")
+        self.assertEqual(settings.ROOT_URLCONF, "django_project.workspace_urls")
         self.assertFalse(hasattr(settings, "PUBLIC_SCHEMA_URLCONF"))
+        self.assertIs(tenant_urls.urlpatterns, workspace_urls.urlpatterns)
 
     def test_shared_urlpatterns_preserve_compatibility_order(self):
         expected = (
