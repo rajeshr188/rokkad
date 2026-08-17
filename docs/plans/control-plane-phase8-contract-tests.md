@@ -74,6 +74,15 @@ the Workspace ID, path, identity-resolution source, and an explicit override
 marker. Platform authority still cannot bypass conflicting domain/path identity
 or Workspace lifecycle restrictions.
 
+Slice 8.6 closes `CP-DATAPLANE-001`. A database-backed contract derives all 95
+surviving business tables from the authoritative model registry and compares
+them directly with PostgreSQL metadata. Every model must have a direct non-null
+`orgs.Company` owner; every table must have enabled and forced RLS plus the
+canonical `workspace_isolation` policy in both `USING` and `WITH CHECK`.
+
+All known behavioral coverage gaps are now closed. Phase 8 still requires its
+documented aggregate CI command and final full-gate closeout before completion.
+
 ## Guardrails
 
 - Do not weaken fail-closed behavior to make a test pass.

@@ -85,6 +85,12 @@ now audited only after explicit Workspace context establishment, with Workspace
 ID, path, resolution source, and override marker. Conflicting explicit identity
 and lifecycle denial continue to fail before override access is granted.
 
+Phase 8.6 closes `CP-DATAPLANE-001`. The contract suite now derives all 95
+surviving business tables from the authoritative registry and proves direct
+non-null Workspace ownership plus enabled, forced, canonical PostgreSQL RLS
+metadata for every table. No known Phase 8 behavioral coverage gap remains;
+aggregate CI documentation and final closeout are next.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

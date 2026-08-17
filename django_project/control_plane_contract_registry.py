@@ -50,7 +50,7 @@ CONTRACT_TEST_LABELS = {
     ),
     "CP-ENTITLEMENT-003": ("django_project.test_phase1_subscription_boundary.Phase1SubscriptionBoundaryTests.test_business_restriction_runs_after_workspace_is_established",),
     "CP-DATAPLANE-001": (
-        RLS + "LoansRLSIsolationTests.test_root_and_child_rows_are_hidden_without_context",
+        "apps.tenancy.test_registry.WorkspaceDataPlaneMetadataTests.test_every_registered_model_has_canonical_forced_rls_metadata",
         RLS + "LoansRLSIsolationTests.test_bulk_child_insert_cannot_spoof_another_workspace",
     ),
     "CP-JOB-001": (
@@ -60,6 +60,4 @@ CONTRACT_TEST_LABELS = {
     ),
 }
 
-CONTRACT_COVERAGE_GAPS = {
-    "CP-DATAPLANE-001": "Loans evidence is not an all-Workspace-model metadata gate.",
-}
+CONTRACT_COVERAGE_GAPS = {}
