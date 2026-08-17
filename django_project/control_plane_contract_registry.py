@@ -40,7 +40,7 @@ CONTRACT_TEST_LABELS = {
         LIFE + "WorkspaceLifecycleServiceTests.test_owner_can_archive_and_reactivate_same_workspace",
         BILL + "Phase4BillingTests.test_expired_trial_is_derived_without_mutating_stored_status",
     ),
-    "CP-LIFECYCLE-002": (LIFE + "WorkspaceLifecycleServiceTests.test_owner_can_archive_and_reactivate_same_workspace",),
+    "CP-LIFECYCLE-002": (LIFE + "WorkspaceLifecycleServiceTests.test_archive_and_suspension_preserve_business_row_ownership",),
     "CP-BILLING-001": (BILL + "BillingMiddlewareAcceptanceTests.test_business_app_is_blocked_when_workspace_has_no_subscription",),
     "CP-BILLING-002": (BILL + "Phase4BillingTests.test_webhook_replay_is_acknowledged_without_reprocessing",),
     "CP-ENTITLEMENT-001": (BILL + "Phase4BillingTests.test_entitlements_are_namespaced_typed_and_missing_fails_closed",),
@@ -62,6 +62,5 @@ CONTRACT_TEST_LABELS = {
 
 CONTRACT_COVERAGE_GAPS = {
     "CP-AUTH-003": "Platform override evidence does not assert an audit event.",
-    "CP-LIFECYCLE-002": "Lifecycle evidence does not assert retained business-row ownership.",
     "CP-DATAPLANE-001": "Loans evidence is not an all-Workspace-model metadata gate.",
 }

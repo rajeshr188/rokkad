@@ -76,6 +76,10 @@ execution now have direct explicit-ID/context tests. The audit found and fixed
 `reassess_pawn_loans`, which accepted `--workspace-id` but previously required
 an ambient context; the command now owns `workspace_context(workspace_id)`.
 
+Phase 8.4 closes `CP-LIFECYCLE-002`. A database-backed lifecycle contract test
+now proves that suspension and archive do not delete, reassign, or mutate a
+Workspace-owned Rates evidence row; ownership remains the original Workspace.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

@@ -12,6 +12,8 @@ from apps.orgs import views
 from apps.orgs.services import control_plane
 from apps.orgs.models import Company
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
+from apps.tenancy.context import workspace_context
+from apps.tenant_apps.rates.models import RateSource
 
 
 class ArchiveWorkspaceFormTests(SimpleTestCase):
@@ -243,6 +245,32 @@ class WorkspaceLifecycleServiceTests(TestCase):
         self.transition(Company.LifecycleState.ACTIVE, self.owner)
         self.assertEqual(self.workspace.pk, workspace_id)
         self.assertTrue(Company.objects.filter(pk=workspace_id).exists())
+
+    def test_archive_and_suspension_preserve_business_row_ownership(self):
+        with workspace_context(self.workspace.pk):
+            source = RateSource.objects.create(
+                workspace=self.workspace,
+                name="Lifecycle Evidence",
+                location="Vault",
+            )
+        evidence = (source.pk, source.workspace_id, source.name, source.location)
+
+        self.transition(Company.LifecycleState.SUSPENDED, self.platform)
+        with workspace_context(self.workspace.pk):
+            suspended = RateSource.objects.get(pk=source.pk)
+            self.assertEqual(
+                (suspended.pk, suspended.workspace_id, suspended.name, suspended.location),
+                evidence,
+            )
+
+        self.transition(Company.LifecycleState.ACTIVE, self.platform)
+        self.transition(Company.LifecycleState.ARCHIVED, self.owner)
+        with workspace_context(self.workspace.pk):
+            archived = RateSource.objects.get(pk=source.pk)
+            self.assertEqual(
+                (archived.pk, archived.workspace_id, archived.name, archived.location),
+                evidence,
+            )
 
     def test_platform_can_suspend_and_clear_suspension(self):
         self.transition(Company.LifecycleState.SUSPENDED, self.platform)

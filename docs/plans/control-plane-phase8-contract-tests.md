@@ -63,6 +63,11 @@ the all-Workspace command proves it passes each explicit ID to that scoped
 command. The PawnLoan reassessment command was found relying on ambient context
 and now opens its own context around the batch service call.
 
+Slice 8.4 closes `CP-LIFECYCLE-002` with database evidence. A Workspace-owned
+Rates row is created, the Workspace is suspended, reactivated, and archived
+through the canonical lifecycle service, and the test proves the row identity,
+owner ID, and payload remain unchanged at each restricted lifecycle state.
+
 ## Guardrails
 
 - Do not weaken fail-closed behavior to make a test pass.
