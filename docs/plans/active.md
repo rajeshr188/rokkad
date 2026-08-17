@@ -6,6 +6,15 @@ tags: [plans, active, retirement, girvi, contact, notify, dea, party, configurat
 related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, contact-girvi-legacy-notify-retirement.md, django-tenants-removal.md]
 ---
 
+## Active: control-plane Phase 8 contract tests
+
+Phase 7 tenancy and authorization residue cleanup is complete. Phase 8 now
+consolidates the accepted `CP-*` invariants into an executable CI contract gate
+before Phase 9 audits Party, Loans, Notify v2, and Rates for conformance.
+
+- [Phase 8 execution plan](control-plane-phase8-contract-tests.md)
+- [Accepted contracts](../architecture/control-plane-contracts.md)
+
 ## Proposed: remove django-tenants
 
 The `no-tenants` branch targets a clean development-stage replacement of

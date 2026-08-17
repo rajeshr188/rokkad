@@ -8,7 +8,7 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
-## 2026-08-17 — Phase 7 residue cleanup started
+## 2026-08-17 — Phase 7 residue cleanup complete
 
 The first Phase 7 slice removes `request.tenant` from middleware, templates,
 and tests; `request.workspace` is now the only HTTP Workspace attribute. The
@@ -54,6 +54,16 @@ three migrations; a rename has no isolation benefit. `Company.schema_name` is
 the current unique Workspace routing key, not database state. ADR
 `2026-08-17-transitional-tenancy-names.md` requires a later additive,
 backfilled, immutable `Company.slug` migration instead of an in-place rename.
+
+The final slice normalizes `requirements.txt` from UTF-16 LE to UTF-8 and
+removes the unused `django-guardian` declaration. Phase 7 is complete: no live
+Guardian integration, `request.tenant`, tenant URLConf, django-tenants setting,
+or tenant-named seed command remains. Deferred package/field names and inbound
+aliases are explicitly classified rather than mistaken for runtime tenancy.
+
+Phase 8 has started with an executable control-plane contract-test plan. It
+will turn the accepted `CP-*` invariants into a traceable CI gate before Phase
+9 app conformance work.
 
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 

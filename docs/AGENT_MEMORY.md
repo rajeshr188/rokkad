@@ -8,7 +8,7 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
-Phase 7 residue cleanup is in progress. `request.workspace` is now the sole
+Phase 7 residue cleanup is complete. `request.workspace` is now the sole
 HTTP Workspace attribute; never restore `request.tenant`. Middleware helpers
 and diagnostics use Workspace terminology. Empty django-tenants settings are
 gone. Guardian runtime integration is retired because there were zero object
@@ -34,6 +34,9 @@ deferred because it changes imports and migration references without improving
 RLS. `Company.schema_name` is temporarily the Workspace routing key only. Do
 not treat it as database schema state or rename it in place; a later phase must
 add and backfill an immutable `Company.slug` before switching callers.
+The requirements manifest is UTF-8 and no longer declares Guardian. Phase 8 is
+the active control-plane track: consolidate the accepted `CP-*` invariants into
+an executable, traceable contract-test gate without redesigning runtime APIs.
 
 Phase 6 URL and shell standardization is complete. Global control-plane pages
 use `/app/...`; Workspace pages and settings use `/w/<workspace_slug>/...`.

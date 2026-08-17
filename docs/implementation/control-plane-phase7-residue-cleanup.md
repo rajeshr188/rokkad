@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 owner: project
 updated: 2026-08-17
 tags: [control-plane, cleanup, tenancy, authorization]
@@ -33,9 +33,11 @@ Completed first slice:
 - renamed the active seed commands to `seed_workspace_defaults` and
   `seed_all_workspaces`, and removed unreachable retired-Product seed code.
 
-Still pending:
+Final dependency cleanup:
 
-- remove the now-unused Guardian line from the UTF-16 requirements manifest;
+- normalized `requirements.txt` from UTF-16 LE to UTF-8;
+- removed the unused `django-guardian` declaration after runtime integration
+  and README claims had already been retired.
 
 ## Transitional name classification
 

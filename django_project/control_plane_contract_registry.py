@@ -1,0 +1,30 @@
+"""Executable evidence registry for accepted control-plane invariants."""
+
+
+CONTRACT_TEST_MODULES = {
+    "CP-WORKSPACE-001": ("apps.orgs.tests",),
+    "CP-WORKSPACE-002": ("apps.orgs.tests",),
+    "CP-WORKSPACE-003": ("apps.orgs.tests",),
+    "CP-WORKSPACE-004": ("apps.orgs.tests",),
+    "CP-WORKSPACE-005": ("apps.orgs.tests",),
+    "CP-RLS-001": ("apps.tenant_apps.loans.tests.test_rls",),
+    "CP-RLS-002": ("apps.tenant_apps.loans.tests.test_rls",),
+    "CP-RLS-003": ("apps.tenant_apps.loans.tests.test_rls",),
+    "CP-MEMBERSHIP-001": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-MEMBERSHIP-002": ("apps.orgs.test_phase5_invitations",),
+    "CP-OWNERSHIP-001": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-OWNERSHIP-002": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-OWNERSHIP-003": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-AUTH-001": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-AUTH-002": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-AUTH-003": ("apps.orgs.test_phase2_ownership_access",),
+    "CP-LIFECYCLE-001": ("apps.orgs.test_workspace_lifecycle",),
+    "CP-LIFECYCLE-002": ("apps.orgs.test_workspace_lifecycle",),
+    "CP-BILLING-001": ("apps.subscriptions.test_phase4_billing",),
+    "CP-BILLING-002": ("apps.subscriptions.test_phase4_billing",),
+    "CP-ENTITLEMENT-001": ("apps.subscriptions.test_phase4_billing",),
+    "CP-ENTITLEMENT-002": ("apps.subscriptions.test_phase4_billing",),
+    "CP-ENTITLEMENT-003": ("django_project.test_phase1_subscription_boundary",),
+    "CP-DATAPLANE-001": ("apps.tenant_apps.loans.tests.test_rls",),
+    "CP-JOB-001": ("apps.orgs.test_seed_rls_smoke_command",),
+}
