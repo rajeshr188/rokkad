@@ -36,14 +36,14 @@ def lookup_active_portal_access(user, request):
         return None
     return PortalIdentity(
         user=user,
-        workspace=getattr(request, "tenant", None),
+        workspace=getattr(request, "workspace", None),
         party=grant.party,
         access_grant=grant,
     )
 
 
 def resolve_portal_identity(request, *, binding_lookup: PortalBindingLookup | None = None):
-    """Resolve the authenticated user's tenant Party portal identity.
+    """Resolve the authenticated user's Workspace Party portal identity.
 
     The first live portal routes must call this helper, or a stricter successor,
     before reading loans, invoices, payments, documents, or statements.

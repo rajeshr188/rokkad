@@ -58,7 +58,7 @@ from apps.tenant_apps.loans.services import (
 
 
 @override_settings(
-    ROOT_URLCONF="django_project.tenant_urls",
+    ROOT_URLCONF="django_project.workspace_urls",
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {

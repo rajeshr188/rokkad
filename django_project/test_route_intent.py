@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from django_project import public_urls, tenant_urls, urls, workspace_urls
+from django_project import public_urls, urls, workspace_urls
 from django_project.shared_urlpatterns import (
     AUTH_URLPATTERNS,
     CANONICAL_CONTROL_PLANE_URLPATTERNS,
@@ -22,7 +22,6 @@ class SaaSRouteIntentTests(SimpleTestCase):
     def test_active_urlconfs_match_shared_schema_routing_settings(self):
         self.assertEqual(settings.ROOT_URLCONF, "django_project.workspace_urls")
         self.assertFalse(hasattr(settings, "PUBLIC_SCHEMA_URLCONF"))
-        self.assertIs(tenant_urls.urlpatterns, workspace_urls.urlpatterns)
 
     def test_shared_urlpatterns_preserve_compatibility_order(self):
         expected = (
@@ -135,8 +134,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
         for path, route_name in route_cases.items():
             with self.subTest(path=path, urlconf="public"):
                 self.assertEqual(resolve(path, urlconf=urls).url_name, route_name)
-            with self.subTest(path=path, urlconf="tenant"):
-                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+            with self.subTest(path=path, urlconf="workspace"):
+                self.assertEqual(resolve(path, urlconf=workspace_urls).url_name, route_name)
 
     def test_current_canonical_control_plane_aliases_resolve_in_public_and_tenant_urlconfs(self):
         route_cases = {
@@ -160,8 +159,8 @@ class SaaSRouteIntentTests(SimpleTestCase):
         for path, route_name in route_cases.items():
             with self.subTest(path=path, urlconf="public"):
                 self.assertEqual(resolve(path, urlconf=urls).url_name, route_name)
-            with self.subTest(path=path, urlconf="tenant"):
-                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+            with self.subTest(path=path, urlconf="workspace"):
+                self.assertEqual(resolve(path, urlconf=workspace_urls).url_name, route_name)
 
     def test_legacy_org_routes_remain_unchanged_after_canonical_aliases(self):
         self.assertEqual(reverse("workspace_selector"), "/orgs/workspace/")
@@ -238,11 +237,11 @@ class SaaSRouteIntentTests(SimpleTestCase):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=urls)
 
-    def test_tenant_urlconf_collects_tenant_erp_prefixes_separately(self):
-        tenant_prefixes = _route_prefixes(tenant_urls.TENANT_ERP_URLPATTERNS)
+    def test_workspace_urlconf_collects_business_prefixes_separately(self):
+        workspace_prefixes = _route_prefixes(workspace_urls.WORKSPACE_APP_URLPATTERNS)
 
         self.assertEqual(
-            tenant_prefixes,
+            workspace_prefixes,
             {
                 "party/",
                 "contact/",
@@ -256,7 +255,7 @@ class SaaSRouteIntentTests(SimpleTestCase):
             },
         )
 
-    def test_tenant_urlconf_resolves_representative_tenant_erp_paths(self):
+    def test_workspace_urlconf_resolves_representative_business_paths(self):
         path_cases = {
             "/party/": "party_list",
             "/contact/customer/": "contact_retired_path",
@@ -269,7 +268,7 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
         for path, route_name in path_cases.items():
             with self.subTest(path=path):
-                match = resolve(path, urlconf=tenant_urls)
+                match = resolve(path, urlconf=workspace_urls)
                 self.assertEqual(match.url_name, route_name)
 
     def test_legacy_public_urlconf_uses_same_shared_control_plane_bundle(self):
@@ -281,7 +280,7 @@ class SaaSRouteIntentTests(SimpleTestCase):
     def test_phase92_pricing_route_is_public_and_shared_compatibility_route(self):
         self.assertEqual(reverse("pricing"), "/pricing/")
         self.assertEqual(resolve("/pricing/", urlconf=urls).url_name, "pricing")
-        self.assertEqual(resolve("/pricing/", urlconf=tenant_urls).url_name, "pricing")
+        self.assertEqual(resolve("/pricing/", urlconf=workspace_urls).url_name, "pricing")
 
     def test_still_deferred_public_and_tenant_route_aliases_are_intentionally_absent(self):
         absent_route_names = (
@@ -301,6 +300,6 @@ class SaaSRouteIntentTests(SimpleTestCase):
             with self.subTest(path=path, urlconf="public"):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=urls)
-            with self.subTest(path=path, urlconf="tenant"):
+            with self.subTest(path=path, urlconf="workspace"):
                 with self.assertRaises(Resolver404):
-                    resolve(path, urlconf=tenant_urls)
+                    resolve(path, urlconf=workspace_urls)

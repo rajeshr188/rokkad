@@ -38,7 +38,7 @@ from apps.tenant_apps.loans.services.pawn_draft_split import (
 
 
 @override_settings(
-    ROOT_URLCONF="django_project.tenant_urls",
+    ROOT_URLCONF="django_project.workspace_urls",
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},

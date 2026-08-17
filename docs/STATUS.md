@@ -27,8 +27,10 @@ the unused Guardian dependency declaration in the UTF-16 requirements file,
 and classification of legacy inbound routes.
 
 The second slice makes `django_project.workspace_urls` the active shared-schema
-business URLConf. `tenant_urls` is now only a thin import-compatibility module;
-route behavior is unchanged and 58 URL/portal/retirement tests pass. The
+business URLConf and removes the obsolete `tenant_urls` compatibility module
+after moving all active imports and test overrides. Party portal identity now
+reads only `request.workspace`, closing the last runtime `request.tenant`
+consumer exposed by the regression gate. Route behavior is unchanged. The
 `reset_sequences` command no longer accepts arbitrary schema or all-schema
 options and operates only on the shared schema. Current public and Notify v2 UI
 copy no longer advertises retired accounting or tenant-schema operation.

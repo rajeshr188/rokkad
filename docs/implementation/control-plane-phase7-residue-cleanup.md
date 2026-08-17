@@ -23,8 +23,9 @@ Completed first slice:
 - reconciled invitation alias tests with the accepted safe GET/login contract;
 - replaced the last live `TENANT_APPS` import error with
   `WORKSPACE_APP_LABELS` terminology.
-- made `django_project.workspace_urls` the active URLConf while retaining a
-  minimal `tenant_urls` import shim for external/test compatibility;
+- made `django_project.workspace_urls` the active URLConf and removed the
+  obsolete `tenant_urls` import shim after moving active callers;
+- changed Party portal identity resolution to use only `request.workspace`;
 - removed cross-schema options from `reset_sequences`; it now operates only on
   the shared `public` schema;
 - removed retired accounting and tenant-schema wording from current public and
@@ -32,8 +33,6 @@ Completed first slice:
 
 Still pending:
 
-- remove the deprecated `tenant_urls` import shim after remaining test and
-  extension imports move to `workspace_urls`;
 - classify the `apps.tenant_apps` package name and persisted `schema_name`
   field separately because both have wide migration/import impact;
 - rename or retire remaining schema-era seed commands and current docs;

@@ -17,9 +17,10 @@ domain-service rules. The canonical anonymous invitation alias redirects to
 login with its key preserved, while the retired django-invitations route is
 HTTP 410.
 
-The active business URLConf is `django_project.workspace_urls`.
-`django_project.tenant_urls` is a deprecated import shim only; do not add new
-imports to it. `reset_sequences` is shared-schema-only and must not regain
+The active business URLConf is `django_project.workspace_urls`; the obsolete
+`django_project.tenant_urls` compatibility module is removed. Party portal
+identity reads `request.workspace`, never `request.tenant`. `reset_sequences`
+is shared-schema-only and must not regain
 cross-schema discovery or `--schema`/`--all` options.
 
 Phase 6 URL and shell standardization is complete. Global control-plane pages

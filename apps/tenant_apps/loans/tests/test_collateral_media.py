@@ -56,7 +56,7 @@ TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="rokkad-collateral-media-")
 
 
 @override_settings(
-    ROOT_URLCONF="django_project.tenant_urls",
+    ROOT_URLCONF="django_project.workspace_urls",
     DEBUG=True,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     STORAGES={

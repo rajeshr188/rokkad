@@ -4,7 +4,7 @@ from django.test import SimpleTestCase
 from django.test import RequestFactory
 from django.urls import resolve, reverse
 
-from django_project import tenant_urls
+from django_project import workspace_urls
 
 
 class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
@@ -47,7 +47,7 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
             "/notify/notification/7/",
         ):
             with self.subTest(path=path):
-                match = resolve(path, urlconf=tenant_urls)
+                match = resolve(path, urlconf=workspace_urls)
                 response = match.func(factory.get(path), **match.kwargs)
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(response.url, "/notify-v2/batches/")

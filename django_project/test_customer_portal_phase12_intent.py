@@ -3,7 +3,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 from django.urls import Resolver404, resolve, reverse
 
-from django_project import tenant_urls, urls
+from django_project import workspace_urls, urls
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -47,8 +47,8 @@ class CustomerPortalPhase12IntentTests(SimpleTestCase):
 
         for route_name, path in route_map.items():
             with self.subTest(route_name=route_name):
-                self.assertEqual(reverse(route_name, urlconf=tenant_urls), path)
-                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+                self.assertEqual(reverse(route_name, urlconf=workspace_urls), path)
+                self.assertEqual(resolve(path, urlconf=workspace_urls).url_name, route_name)
             with self.subTest(path=path, urlconf="public"):
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=urls)

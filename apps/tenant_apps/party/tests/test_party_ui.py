@@ -26,7 +26,7 @@ User = get_user_model()
 
 
 @override_settings(
-    ROOT_URLCONF="django_project.tenant_urls",
+    ROOT_URLCONF="django_project.workspace_urls",
     MEDIA_ROOT=tempfile.mkdtemp(),
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

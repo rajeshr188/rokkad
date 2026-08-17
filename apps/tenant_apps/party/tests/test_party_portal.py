@@ -32,7 +32,7 @@ from apps.tenant_apps.party.services.portal_access import (
     revoke_portal_access,
     suspend_portal_access,
 )
-from django_project import tenant_urls, urls
+from django_project import workspace_urls, urls
 
 
 User = get_user_model()
@@ -234,7 +234,7 @@ class PartyPortalRouteIntentTests(SimpleTestCase):
         }
         for route_name, path in expected_routes.items():
             with self.subTest(route_name=route_name):
-                self.assertEqual(reverse(route_name, urlconf=tenant_urls), path)
-                self.assertEqual(resolve(path, urlconf=tenant_urls).url_name, route_name)
+                self.assertEqual(reverse(route_name, urlconf=workspace_urls), path)
+                self.assertEqual(resolve(path, urlconf=workspace_urls).url_name, route_name)
                 with self.assertRaises(Resolver404):
                     resolve(path, urlconf=urls)

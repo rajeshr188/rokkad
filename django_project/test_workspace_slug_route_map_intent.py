@@ -3,7 +3,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 
-from django_project import tenant_urls, urls
+from django_project import workspace_urls, urls
 from django_project.shared_urlpatterns import CANONICAL_WORKSPACE_SLUG_URLPATTERNS
 
 
@@ -55,7 +55,7 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
                     resolve(path, urlconf=urls)
             with self.subTest(path=path, urlconf="tenant"):
                 with self.assertRaises(Resolver404):
-                    resolve(path, urlconf=tenant_urls)
+                    resolve(path, urlconf=workspace_urls)
 
     def test_phase101_current_workspace_identity_sources_are_documented(self):
         plan = _read("docs/ui/workspace_slug_route_map_plan.md")
@@ -280,7 +280,7 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
         with self.assertRaises(NoReverseMatch):
             reverse("workspace_slug_contact", kwargs={"workspace_slug": "acme"})
 
-        for urlconf in (urls, tenant_urls):
+        for urlconf in (urls, workspace_urls):
             with self.subTest(urlconf=urlconf):
                 with self.assertRaises(Resolver404):
                     resolve("/w/acme/contact/", urlconf=urlconf)
