@@ -504,6 +504,9 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertIn("team_invitations", sidebar_html)
 		self.assertIn("workspace_detail", sidebar_html)
 		self.assertIn("workspace_preferences", sidebar_html)
+		self.assertEqual(sidebar_html.count("workspace_slug_parties"), 2)
+		self.assertNotIn("{% url 'party:party_list' %}", sidebar_html)
+		self.assertEqual(sidebar_html.count("</i> Parties"), 1)
 		
 		# Verify deprecated route names are NOT used
 		self.assertNotIn("orgs_invite_delete", sidebar_html)

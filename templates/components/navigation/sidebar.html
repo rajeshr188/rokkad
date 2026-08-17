@@ -68,10 +68,6 @@
                 
                 <!-- Parties -->
                 {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' %}active{% endif %}"
-                   href="{% url 'party:party_list' %}">
-                    <i class="bi bi-people-fill"></i> Parties
-                </a>
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' or request.resolver_match.url_name == 'workspace_slug_parties' %}active{% endif %}"
                    href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-person-vcard"></i> Parties

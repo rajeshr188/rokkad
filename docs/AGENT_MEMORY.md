@@ -8,6 +8,11 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The Workspace sidebar has one canonical Parties entry, routed through
+`workspace_slug_parties`. Do not add a second direct `party:party_list` entry;
+namespaced Party detail/edit pages are already covered by the same link's
+active-state condition.
+
 Current Workspace UI must not advertise DEA/accounting. The dashboard has no
 DEA quick action, and the module registry exposes Parties, Loans, Notify v2,
 and Rates rather than retired Accounting, DEA Operations, Inventory, Commodity,

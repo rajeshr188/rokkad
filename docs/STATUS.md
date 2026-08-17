@@ -8,6 +8,11 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: The active Workspace sidebar now renders exactly one Parties app
+  link. The duplicate direct `party:party_list` entry was removed; the single
+  canonical link uses the Workspace-slug Party route and retains active-state
+  handling for both namespaced Party pages and the slug entrypoint.
+
 - 2026-08-17: The Workspace dashboard no longer renders the retired DEA
   Dashboard/accounting quick action. The Workspace module registry now lists
   only surviving operational apps (Parties, Loans, Notify v2, and Rates) plus
