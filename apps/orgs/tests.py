@@ -1401,7 +1401,7 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 				save=lambda **kwargs: profile_saves.append(kwargs),
 			),
 		)
-		request = self.factory.get("/orgs/team/invitations/accept/key123/")
+		request = self.factory.post("/orgs/team/invitations/accept/key123/")
 		request.user = user
 		fake_queryset = SimpleNamespace(first=lambda: invitation)
 		fake_manager = SimpleNamespace(filter=lambda **_kwargs: fake_queryset)
@@ -1420,18 +1420,18 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 		mock_messages.success.assert_called_once()
 		mock_redirect.assert_called_once_with("workspace_dashboard", workspace_id=9)
 
-	def test_unauthenticated_direct_accept_preserves_django_invitations_fallback(self):
+	def test_unauthenticated_direct_accept_redirects_to_login_with_next(self):
 		from apps.orgs import views as org_views
 
 		request = self.factory.get("/orgs/team/invitations/accept/key123/")
 		request.user = SimpleNamespace(is_authenticated=False)
-		fallback_response = object()
+		with patch("apps.orgs.views.redirect") as mock_redirect:
+			org_views.team_accept_invitation(request, key="key123")
 
-		with patch("apps.orgs.views.AcceptInvite.as_view", return_value=lambda request, key: fallback_response) as mock_as_view:
-			response = org_views.team_accept_invitation(request, key="key123")
-
-		mock_as_view.assert_called_once()
-		self.assertIs(response, fallback_response)
+		redirect_target = mock_redirect.call_args.args[0]
+		self.assertIn("/accounts/login/", redirect_target)
+		self.assertIn("next=", redirect_target)
+		self.assertIn("key123", redirect_target)
 
 	@patch("apps.orgs.views.redirect")
 	@patch("apps.orgs.views.messages")
@@ -1448,7 +1448,7 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 			role=SimpleNamespace(name="Member"),
 			lifecycle_state=lambda: CompanyInvitation.Status.PENDING,
 		)
-		request = self.factory.get("/orgs/team/invitations/accept/key123/")
+		request = self.factory.post("/orgs/team/invitations/accept/key123/")
 		request.user = SimpleNamespace(
 			email="user@example.com",
 			is_authenticated=True,
@@ -1843,62 +1843,6 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		)
 		mock_ctx.assert_not_called()
 
-	def test_invitation_mutations_are_audited(self):
-		company = SimpleNamespace(id=9, name="Acme")
-		invitation = SimpleNamespace(
-			email="invitee@example.com",
-			company=company,
-			role=SimpleNamespace(name="Member"),
-			mark_declined=lambda: None,
-			mark_revoked=lambda: None,
-			accept=lambda _request: None,
-		)
-		user = SimpleNamespace(id=7, email="invitee@example.com")
-
-		fake_membership_filter = SimpleNamespace(exists=lambda: True)
-
-		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()), \
-			 patch("apps.orgs.services.control_plane.assert_verified_invitation_identity"), \
-			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
-			 patch("apps.orgs.services.control_plane.AuditLog.log") as mock_audit:
-			control_plane.accept_invitation(invitation=invitation, user=user, request=SimpleNamespace())
-			control_plane.decline_invitation(invitation=invitation, actor=user, request=SimpleNamespace())
-			control_plane.revoke_invitation(invitation=invitation, actor=user, request=SimpleNamespace())
-
-		actions = [call.args[0] for call in mock_audit.call_args_list]
-		self.assertIn("TEAM_INVITE_ACCEPT", actions)
-		self.assertIn("TEAM_INVITE_DECLINE", actions)
-		self.assertIn("TEAM_INVITE_REVOKE", actions)
-
-	def test_accept_invitation_blocks_membership_create_when_workspace_is_full(self):
-		company = SimpleNamespace(id=9, name="Acme")
-		invitation = SimpleNamespace(
-			email="invitee@example.com",
-			company=company,
-			role=SimpleNamespace(name="Member"),
-			accept=MagicMock(),
-		)
-		user = SimpleNamespace(id=7, email="invitee@example.com")
-
-		fake_membership_filter = SimpleNamespace(exists=lambda: False)
-
-		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()), \
-			 patch("apps.orgs.services.control_plane.assert_verified_invitation_identity"), \
-			 patch.object(control_plane.Membership.objects, "filter", return_value=fake_membership_filter), \
-			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \
-			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create, \
-			 patch("apps.orgs.services.control_plane.AuditLog.log") as mock_audit:
-			with self.assertRaises(ValidationError):
-				control_plane.accept_invitation(
-					invitation=invitation,
-					user=user,
-					request=SimpleNamespace(),
-				)
-
-		mock_membership_create.assert_not_called()
-		invitation.accept.assert_not_called()
-		mock_audit.assert_not_called()
-
 	def test_audit_actions_match_declared_choices(self):
 		from apps.orgs.audit import AuditLog
 
@@ -2223,131 +2167,13 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 
 
 class InvitationSignalHandlerTests(SimpleTestCase):
-	def test_invite_accepted_existing_user_is_idempotent(self):
-		user = SimpleNamespace(id=7)
-		role = SimpleNamespace(name="Member")
-		invitation = SimpleNamespace(company=SimpleNamespace(id=9), role=role)
+	def test_membership_signals_are_retired(self):
+		from pathlib import Path
 
-		fake_qs = SimpleNamespace(first=lambda: user)
-		with patch.object(org_signals.User.objects, "filter", return_value=fake_qs), \
-			 patch("apps.orgs.signals.control_plane.create_membership") as mock_create_membership, \
-			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
-			org_signals.create_membership(
-				sender=object(), email="User@Example.com", invitation=invitation
-			)
-
-		mock_create_membership.assert_called_once_with(
-			user=user,
-			company=invitation.company,
-			role=invitation.role,
-			request=None,
-			invite_reason="invitation_accept",
-		)
-		mock_pending.assert_not_called()
-
-	def test_invite_accepted_unknown_user_creates_pending(self):
-		invitation = SimpleNamespace(
-			company=SimpleNamespace(id=9),
-			role=SimpleNamespace(name="Member"),
-		)
-		fake_qs = SimpleNamespace(first=lambda: None)
-
-		with patch.object(org_signals.User.objects, "filter", return_value=fake_qs), \
-			 patch.object(org_signals.Membership.objects, "get_or_create") as mock_get_or_create, \
-			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
-			org_signals.create_membership(
-				sender=object(), email="new@example.com", invitation=invitation
-			)
-
-		mock_get_or_create.assert_not_called()
-		mock_pending.assert_called_once_with(
-			email="new@example.com",
-			company=invitation.company,
-			defaults={"role": invitation.role},
-		)
-
-	def test_invite_accepted_without_invitation_is_noop(self):
-		with patch.object(org_signals.Membership.objects, "get_or_create") as mock_get_or_create, \
-			 patch.object(org_signals.PendingInvitation.objects, "get_or_create") as mock_pending:
-			org_signals.create_membership(sender=object(), email="x@example.com")
-
-		mock_get_or_create.assert_not_called()
-		mock_pending.assert_not_called()
-
-	def test_user_signed_up_consumes_all_pending_invites(self):
-		user = SimpleNamespace(email="user@example.com")
-		pending_1 = SimpleNamespace(
-			company=SimpleNamespace(id=1),
-			role=SimpleNamespace(name="Member"),
-			delete=lambda: None,
-		)
-		pending_2 = SimpleNamespace(
-			company=SimpleNamespace(id=2),
-			role=SimpleNamespace(name="Admin"),
-			delete=lambda: None,
-		)
-
-		class PendingQS:
-			def select_related(self, *_args):
-				return [pending_1, pending_2]
-
-		with patch.object(
-			org_signals.PendingInvitation.objects,
-			"filter",
-			return_value=PendingQS(),
-		), patch.object(
-			org_signals.transaction,
-			"atomic",
-			return_value=contextlib.nullcontext(),
-		), patch("apps.orgs.signals.control_plane.create_membership") as mock_create_membership, patch.object(
-			pending_1,
-			"delete",
-		) as delete_1, patch.object(
-			pending_2,
-			"delete",
-		) as delete_2:
-			org_signals.create_membership_on_signup(sender=object(), user=user)
-
-		self.assertEqual(mock_create_membership.call_count, 2)
-		delete_1.assert_called_once()
-		delete_2.assert_called_once()
-
-	def test_user_signed_up_keeps_pending_invitation_when_seat_limited(self):
-		user = SimpleNamespace(email="user@example.com")
-		pending = SimpleNamespace(
-			id=11,
-			company=SimpleNamespace(id=1),
-			role=SimpleNamespace(name="Member"),
-			delete=MagicMock(),
-		)
-
-		class PendingQS:
-			def select_related(self, *_args):
-				return [pending]
-
-		with patch.object(
-			org_signals.PendingInvitation.objects,
-			"filter",
-			return_value=PendingQS(),
-		), patch.object(
-			org_signals.transaction,
-			"atomic",
-			return_value=contextlib.nullcontext(),
-		), patch(
-			"apps.orgs.signals.control_plane.create_membership",
-			side_effect=ValidationError("limit reached"),
-		):
-			org_signals.create_membership_on_signup(sender=object(), user=user)
-
-		pending.delete.assert_not_called()
-
-	def test_user_signed_up_without_email_is_noop(self):
-		with patch.object(org_signals.PendingInvitation.objects, "filter") as mock_filter:
-			org_signals.create_membership_on_signup(
-				sender=object(), user=SimpleNamespace(email="")
-			)
-		mock_filter.assert_not_called()
-
+		signals_source = Path(org_signals.__file__).read_text(encoding="utf-8")
+		self.assertNotIn("@receiver", signals_source)
+		self.assertNotIn("PendingInvitation", signals_source)
+		self.assertNotIn("create_membership(", signals_source)
 
 class WorkspaceModuleEntitlementTests(SimpleTestCase):
 	def test_workspace_modules_map_entitlement_outcomes(self):

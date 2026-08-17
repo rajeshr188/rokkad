@@ -123,6 +123,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 "workspace_update",
                 "workspace_delete",
                 "workspace_restore",
+                "workspace_lifecycle_transition",
                 "workspace_preferences",
                 "team_invitations",
                 "team_accept_invitation",
@@ -238,10 +239,11 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             encoding="utf-8-sig"
         )
 
-        self.assertIn("from invitations.views import AcceptInvite", views_content)
+        self.assertNotIn("from invitations.views import AcceptInvite", views_content)
         self.assertIn("views.team_accept_invitation", urls_content)
         self.assertIn("def team_accept_invitation(request, key):", views_content)
-        self.assertIn("return AcceptInvite.as_view()(request, key=key)", views_content)
+        self.assertIn("if request.method != \"POST\":", views_content)
+        self.assertIn('"company/invitation_accept_confirm.html"', views_content)
         self.assertIn("control_plane.accept_invitation(", views_content)
         self.assertEqual(settings.INVITATIONS_INVITATION_MODEL, "orgs.CompanyInvitation")
         self.assertTrue(app_settings.CONFIRM_INVITE_ON_GET)
@@ -261,14 +263,14 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         )
         self.assertIn("control_plane.decline_invitation(", views_content)
 
-    def test_direct_accept_signal_bridges_membership_but_not_product_flow(self):
+    def test_signup_signals_do_not_create_membership_implicitly(self):
         signals_content = (PROJECT_ROOT / "apps" / "orgs" / "signals.py").read_text(
             encoding="utf-8-sig"
         )
 
-        self.assertIn("@receiver(invite_accepted)", signals_content)
-        self.assertIn("control_plane.create_membership(", signals_content)
-        self.assertIn("PendingInvitation.objects.get_or_create", signals_content)
+        self.assertNotIn("@receiver", signals_content)
+        self.assertNotIn("create_membership(", signals_content)
+        self.assertNotIn("PendingInvitation", signals_content)
         self.assertNotIn("profile.workspace", signals_content)
         self.assertNotIn("AuditLog", signals_content)
 
@@ -291,7 +293,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             "test_invitation_revoke_returns_to_workspace_scoped_sent_list",
             "class DirectInvitationAcceptAdapterTests",
             "test_authenticated_matching_user_accepts_through_control_plane",
-            "test_unauthenticated_direct_accept_preserves_django_invitations_fallback",
+            "test_unauthenticated_direct_accept_redirects_to_login_with_next",
             "test_authenticated_email_mismatch_does_not_accept_invitation",
             "class MembershipLifecycleGuardrailTests",
             "test_cannot_remove_last_owner",
@@ -308,7 +310,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         for expected in (
             "def team_accept_invitation(request, key):",
             "if not request.user.is_authenticated:",
-            "return AcceptInvite.as_view()(request, key=key)",
+            "return redirect(f\"{reverse('account_login')}?next={accept_url}\")",
             "invitation.email.casefold() != request.user.email.casefold()",
             "current_state != CompanyInvitation.Status.PENDING",
             "control_plane.accept_invitation(",
@@ -360,9 +362,10 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
 
         for expected in (
             "def accept_invitation(",
-            "Membership.objects.filter(user=user, company=invitation.company).exists()",
+            "CompanyInvitation.objects.select_for_update()",
+            'Membership.objects.filter(\n            user=user,\n            company=locked.company,',
             "Membership.objects.create(",
-            "invitation.accept(request)",
+            "locked.status = CompanyInvitation.Status.ACCEPTED",
             '"TEAM_INVITE_ACCEPT"',
             "def decline_invitation(",
             "invitation.mark_declined()",

@@ -296,34 +296,6 @@ class CompanyInvitation(AbstractBaseInvitation):
         return f"Invited: {self.email} Status: {self.lifecycle_state()} "
 
 
-class PendingInvitation(models.Model):
-    email = models.EmailField(verbose_name=_("e-mail address"))
-    company = models.ForeignKey(
-        Company,
-        on_delete=models.CASCADE,
-        related_name="pending_invitations",
-        verbose_name=_("company"),
-    )
-    role = models.ForeignKey(
-        Role,
-        on_delete=models.CASCADE,
-        related_name="pending_invitations",
-        verbose_name=_("role"),
-    )
-    created = models.DateTimeField(auto_now_add=True, verbose_name=_("created"))
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["email", "company"],
-                name="orgs_pendinginvitation_unique_email_company",
-            ),
-        ]
-
-    def __str__(self):
-        return f"Pending invitation for {self.email} to {self.company}"
-
-
 from dynamic_preferences.models import PerInstancePreferenceModel
 
 

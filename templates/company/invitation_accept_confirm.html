@@ -1,0 +1,18 @@
+{% extends "base_global.html" %}
+
+{% block title %}Accept Workspace invitation{% endblock %}
+
+{% block mgmt_content %}
+<main class="container py-5" style="max-width: 42rem;">
+  <h1>Join {{ invitation.company.name }}</h1>
+  <p>
+    You were invited as <strong>{{ invitation.role.name }}</strong>.
+    Confirming will add your verified account to this Workspace.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-primary" type="submit">Accept invitation</button>
+    <a class="btn btn-outline-secondary" href="{% url 'team_invitations' %}">Cancel</a>
+  </form>
+</main>
+{% endblock %}

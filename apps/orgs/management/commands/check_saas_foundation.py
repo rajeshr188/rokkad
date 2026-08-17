@@ -13,7 +13,6 @@ from apps.orgs.models import (
     Company,
     CompanyInvitation,
     Membership,
-    PendingInvitation,
     Role,
 )
 
@@ -22,7 +21,6 @@ def _source_reference_counts():
     """Count active Python references that define competing foundation paths."""
     root = Path(settings.BASE_DIR)
     needles = {
-        "pending_invitation": "PendingInvitation",
         "guardian": "guardian",
         "hardcoded_role_permissions": "RolePermissions",
         "subscription_access_service": "SubscriptionAccessService",
@@ -66,14 +64,6 @@ def collect_saas_foundation_inventory():
         ).filter(has_owner_role=False)
 
         authoritative_pending = CompanyInvitation.pending_queryset()
-        matching_invitation = authoritative_pending.filter(
-            company_id=OuterRef("company_id"),
-            email__iexact=OuterRef("email"),
-        )
-        orphan_pending_bridges = PendingInvitation.objects.annotate(
-            has_invitation=Exists(matching_invitation)
-        ).filter(has_invitation=False)
-
         case_variant_invitation_groups = (
             authoritative_pending.annotate(normalized_email=Lower("email"))
             .values("company_id", "normalized_email")
@@ -111,8 +101,6 @@ def collect_saas_foundation_inventory():
             "invitations": {
                 "company_invitation_total": CompanyInvitation.objects.count(),
                 "company_invitation_pending": authoritative_pending.count(),
-                "pending_bridge_total": PendingInvitation.objects.count(),
-                "orphan_pending_bridge": orphan_pending_bridges.count(),
                 "case_variant_pending_groups": case_variant_invitation_groups.count(),
             },
             "roles": role_rows,
@@ -150,7 +138,6 @@ class Command(BaseCommand):
                 inventory["companies"]["owner_missing_membership"],
                 inventory["companies"]["owner_without_owner_role"],
                 inventory["memberships"]["null_role"],
-                inventory["invitations"]["orphan_pending_bridge"],
                 inventory["invitations"]["case_variant_pending_groups"],
             ]
         )

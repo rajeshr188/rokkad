@@ -8,6 +8,18 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Phase 5 invitation convergence is complete. All authenticated acceptance paths must
+call `control_plane.accept_invitation`, which locks the authoritative
+`CompanyInvitation`, verifies the invited allauth EmailAddress, validates
+expiry/terminal state and active Workspace lifecycle, enforces seat capacity,
+creates at most one Membership, and writes accepted terminal state. Invitation
+links never mutate on GET: authenticated GET renders confirmation, POST accepts,
+and anonymous GET redirects to login with the invitation URL as `next`. The
+legacy `PendingInvitation` signup bridge is retired by `orgs.0004`: bridge rows
+are first restored to authoritative pending invitation state, orphans abort the
+migration, and only then is the bridge table deleted. Signup and third-party
+invitation signals never create Membership implicitly.
+
 Phase 4 major-review checkpoint (2026-08-17): the commercial request boundary
 must fail closed. `SubscriptionValidationMiddleware` redirects a Workspace with
 no Subscription to its slug-scoped plan page, permits active/current-trial

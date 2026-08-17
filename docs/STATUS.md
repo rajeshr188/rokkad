@@ -8,6 +8,24 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-08-17 — Phase 5 invitation convergence complete
+
+Phase 4 is checkpointed in commit `ec62c98`. Phase 5 now has one locked,
+verified, idempotent invitation-acceptance command. It rejects mismatched or
+unverified email, expiry, revoked/declined state, inactive Workspace state, and
+seat-capacity failure before mutation; successful acceptance creates one
+Membership and writes the terminal invitation state and audit evidence. Direct
+email links are confirmation-only on GET and accept through CSRF-protected POST;
+anonymous links preserve the key through login. Migration
+`orgs.0004_retire_pending_invitation_bridge` is applied locally: bridge intent
+is reconciled to authoritative invitations, orphans abort before deletion, and
+the bridge table is retired. Signup and django-invitations signals no longer
+create Membership implicitly. The obsolete signal-era tests are removed and
+their replacement contract asserts that Membership receivers stay absent. The
+final invitation, onboarding, source-contract, and org regression gate passes
+138/138; foundation inventory reports zero integrity findings. Phase 6 URL and
+control-plane UI standardization is next.
+
 ## 2026-08-17 — Phase 4 major acceptance review
 
 The Workspace lifecycle, Subscription lifecycle, entitlement authority,

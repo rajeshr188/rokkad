@@ -13,7 +13,6 @@ from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from dynamic_preferences.views import PreferenceFormView
-from invitations.views import AcceptInvite
 from render_block import render_block_to_string
 
 from apps.onboarding.services import (
@@ -1141,7 +1140,8 @@ def invite_success(request):
 
 def team_accept_invitation(request, key):
     if not request.user.is_authenticated:
-        return AcceptInvite.as_view()(request, key=key)
+        accept_url = reverse("team_accept_invitation", kwargs={"key": key})
+        return redirect(f"{reverse('account_login')}?next={accept_url}")
 
     invitation = (
         CompanyInvitation.objects.select_related("company", "role")
@@ -1164,6 +1164,13 @@ def team_accept_invitation(request, key):
     if current_state != CompanyInvitation.Status.PENDING:
         messages.info(request, f"Invitation is already {current_state}.")
         return redirect("team_invitations")
+
+    if request.method != "POST":
+        return render(
+            request,
+            "company/invitation_accept_confirm.html",
+            {"invitation": invitation},
+        )
 
     try:
         control_plane.accept_invitation(

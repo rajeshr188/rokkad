@@ -396,34 +396,62 @@ def send_onboarding_team_invitations(
 
 
 def accept_invitation(*, invitation, user, request):
-    """Accept invitation in public schema and ensure membership exists."""
+    """Accept one verified invitation under lock, idempotently."""
     with _control_plane_transaction():
-        assert_verified_invitation_identity(invitation=invitation, user=user)
-        existing = Membership.objects.filter(user=user, company=invitation.company).exists()
-        if not existing:
+        locked = (
+            CompanyInvitation.objects.select_for_update()
+            .select_related("company", "role")
+            .get(pk=invitation.pk)
+        )
+        assert_verified_invitation_identity(invitation=locked, user=user)
+
+        state = locked.lifecycle_state()
+        if state == "expired":
+            raise ValidationError("This invitation has expired.")
+        if state in {
+            CompanyInvitation.Status.DECLINED,
+            CompanyInvitation.Status.REVOKED,
+        }:
+            raise ValidationError(f"This invitation is already {state}.")
+        if locked.company.lifecycle_state != Company.LifecycleState.ACTIVE:
+            raise ValidationError("This Workspace is not accepting invitations.")
+
+        membership = Membership.objects.filter(
+            user=user,
+            company=locked.company,
+        ).first()
+        created = False
+        if membership is None:
             ensure_workspace_has_member_capacity(
-                workspace=invitation.company,
+                workspace=locked.company,
                 include_pending_invitations=False,
                 extra_slots=1,
             )
-            Membership.objects.create(
+            membership = Membership.objects.create(
                 user=user,
-                company=invitation.company,
-                role=invitation.role,
+                company=locked.company,
+                role=locked.role,
                 invite_reason="invitation_accept",
             )
+            created = True
 
-        invitation.accept(request)
+        if locked.status != CompanyInvitation.Status.ACCEPTED or not locked.accepted:
+            locked.status = CompanyInvitation.Status.ACCEPTED
+            locked.accepted = True
+            locked.responded_at = timezone.now()
+            locked.save(update_fields=["status", "accepted", "responded_at"])
 
-    AuditLog.log(
-        "TEAM_INVITE_ACCEPT",
-        user=user,
-        company=invitation.company,
-        description=f"Accepted invitation to {invitation.company.name}",
-        request=request,
-        success=True,
-        content_object=invitation,
-    )
+    if created or state != CompanyInvitation.Status.ACCEPTED:
+        AuditLog.log(
+            "TEAM_INVITE_ACCEPT",
+            user=user,
+            company=locked.company,
+            description=f"Accepted invitation to {locked.company.name}",
+            request=request,
+            success=True,
+            content_object=locked,
+        )
+    return membership
 
 
 def decline_invitation(*, invitation, actor, request):
