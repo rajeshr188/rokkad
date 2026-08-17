@@ -8,6 +8,12 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Cross-app consumers of Loans lifecycle vocabulary must import
+`PawnLoanState` from `apps.tenant_apps.loans.domain`, never from the Loans model
+package. The stored state machine has DRAFT, APPROVED, ACTIVE, CANCELLED, and
+CLOSED; overdue/default conditions are derived and must not be invented as a
+persisted `DEFAULTED` state.
+
 Public/auth requests may have an authenticated user without any selected
 Workspace. Context processors and shared templates must treat both
 `request.workspace` and the temporary `request.tenant` alias as nullable. The

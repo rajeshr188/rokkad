@@ -8,6 +8,12 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Workspace dashboard Party metrics now import `PawnLoanState`
+  through the canonical Loans domain API rather than the persistence-model
+  package. The stale nonexistent `DEFAULTED` lifecycle state was removed from
+  the active-customer filter; current persisted candidates are APPROVED and
+  ACTIVE. A focused selector regression test protects this cross-app boundary.
+
 - 2026-08-17: Public account signup no longer crashes after authentication when
   no Workspace has been selected. The theme context processor now prefers
   `request.workspace`, safely tolerates `workspace`/legacy `tenant` being

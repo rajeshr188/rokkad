@@ -29,13 +29,12 @@ def party_detail_queryset():
 
 def get_workspace_customer_party_dashboard_summary():
     """Return the legacy dashboard context shape from canonical Party rows."""
-    from apps.tenant_apps.loans.models import PawnLoanState
+    from apps.tenant_apps.loans.domain import PawnLoanState
 
     customers = parties_with_role("CUSTOMER").distinct()
     active_loan_states = {
         PawnLoanState.APPROVED.value,
         PawnLoanState.ACTIVE.value,
-        PawnLoanState.DEFAULTED.value,
     }
     return {
         "total_customers": customers.count(),
