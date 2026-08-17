@@ -65,6 +65,12 @@ Phase 8 has started with an executable control-plane contract-test plan. It
 will turn the accepted `CP-*` invariants into a traceable CI gate before Phase
 9 app conformance work.
 
+Phase 8.2 maps all 25 invariants to exact executable test labels and records
+four honest coverage gaps rather than treating nearby module tests as proof.
+New source guards enforce exclusive PostgreSQL context setting through
+`workspace_context()` and prevent Party, Loans, Notify v2, and Rates from
+importing subscription models, billing transitions, or provider services.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

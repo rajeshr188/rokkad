@@ -49,6 +49,14 @@ requires executable tests in each module. Behavioral evidence is intentionally
 coarse at this stage; the next slice audits individual test methods and fills
 real gaps before the registry can be treated as completion evidence.
 
+Slice 8.2 replaces module-level references with exact executable test labels.
+The audit identifies four genuine remaining gaps: audited platform override,
+business-row ownership retention across lifecycle changes, all-model RLS
+metadata coverage, and explicit Workspace context ownership for jobs/commands.
+It also adds source guards proving that only `workspace_context()` sets the
+PostgreSQL Workspace setting and surviving business apps do not import billing
+models, transitions, or provider services.
+
 ## Guardrails
 
 - Do not weaken fail-closed behavior to make a test pass.
