@@ -97,6 +97,12 @@ gate passes 34/34; the separate four-app restricted-role RLS gate passes 19/19.
 Django checks, migration drift, dependencies, and foundation integrity are
 clean. Phase 9 cross-app conformance is the next control-plane phase.
 
+Phase 9 has started with a four-app authorization audit. There are no Workspace,
+RLS, billing, or entitlement blockers. Thirteen runtime modules still make
+direct platform-admin, owner, or role-name decisions: one in Party, one in
+Rates, two in Notify v2, and nine in Loans. A guard test freezes that baseline;
+the conversion order is Rates, Party, Notify v2, then bounded Loans slices.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

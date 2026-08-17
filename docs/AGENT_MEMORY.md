@@ -42,6 +42,10 @@ gap. All 95 surviving business models must remain in the authoritative registry
 with direct non-null Workspace ownership and canonical forced RLS. Phase 8 is
 closed by the deduplicated `django_project.test_control_plane_contract_gate`.
 Phase 9 cross-app conformance is next.
+Phase 9 is active. Its reviewed baseline contains 13 runtime modules with
+direct platform-admin/owner/role-name authorization decisions: Rates 1, Party
+1, Notify v2 2, and Loans 9. Do not add new direct checks. Convert in that order
+to `WorkspaceAccess` and stable action codes while preserving app helper APIs.
 Every successful platform membership override is audited after explicit
 Workspace context establishment; identity conflicts and lifecycle restrictions
 remain non-bypassable.

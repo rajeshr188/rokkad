@@ -6,6 +6,14 @@ tags: [plans, active, retirement, girvi, contact, notify, dea, party, configurat
 related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, contact-girvi-legacy-notify-retirement.md, django-tenants-removal.md]
 ---
 
+## Active: control-plane Phase 9 app conformance
+
+Party, Loans, Notify v2, and Rates are being converged on `WorkspaceAccess`
+action-code authorization without changing domain workflows.
+
+- [Phase 9 execution plan](control-plane-phase9-app-conformance.md)
+- [Accepted contracts](../architecture/control-plane-contracts.md)
+
 ## Completed: control-plane Phase 8 contract tests
 
 Phase 8 consolidated the accepted `CP-*` invariants into an executable CI
