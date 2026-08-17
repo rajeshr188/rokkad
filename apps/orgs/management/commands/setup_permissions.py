@@ -1,6 +1,6 @@
 """
 Management command to setup default roles and permissions.
-Run after installing django-guardian: python manage.py setup_permissions
+Run with: python manage.py setup_permissions
 """
 
 from django.contrib.auth.models import Permission

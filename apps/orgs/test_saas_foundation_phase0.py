@@ -47,13 +47,13 @@ class SaasFoundationPhase0CharacterizationTests(SimpleTestCase):
     def test_membership_validation_precedes_tenant_context_switch(self):
         source = _read("apps/orgs/middleware_v2.py")
         validation = source.index("validation = self._validate_workspace_access")
-        switch = source.index("self._set_tenant_context(request, workspace)", validation)
+        switch = source.index("self._set_workspace_context(request, workspace)", validation)
         self.assertLess(validation, switch)
 
     def test_domain_path_mismatch_is_checked_before_tenant_switch(self):
         source = _read("apps/orgs/middleware_v2.py")
         mismatch = source.index("domain_workspace.id != path_workspace.id")
-        switch = source.index("self._set_tenant_context(request, workspace)")
+        switch = source.index("self._set_workspace_context(request, workspace)")
         self.assertLess(mismatch, switch)
 
     def test_subscription_access_is_separate_from_workspace_middleware(self):
@@ -91,7 +91,7 @@ class SaasFoundationInventoryCommandTests(SimpleTestCase):
 
         payload = json.loads(stdout.getvalue())
         self.assertTrue(payload["read_only"])
-        self.assertEqual(payload["integrity_finding_count"], 19)
+        self.assertEqual(payload["integrity_finding_count"], 13)
 
     def test_fail_on_findings_exits_nonzero(self):
         inventory = {

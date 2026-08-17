@@ -8,8 +8,8 @@ def resolve_request_workspace(
     """Return only the Workspace explicitly established for this request.
 
     ``include_public`` remains as a compatibility keyword while public
-    Workspace sentinels are retired. Profile preference and ``request.tenant``
-    are deliberately not fallback sources.
+    Workspace sentinels are retired. Profile preference is deliberately not a
+    fallback source.
     """
     workspace = getattr(request, "workspace", None)
     if workspace is None:

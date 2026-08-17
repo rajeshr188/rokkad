@@ -110,16 +110,19 @@ class Phase7PublicAuthRenderSmokeTests(TestCase):
             "/invitations/accept-invite/abc123",
         )
 
-    def test_invalid_current_invitation_accept_path_fails_closed(self):
-        route_names = (
-            "public_invitation_accept",
-            "invitations:accept-invite",
+    def test_canonical_invitation_alias_preserves_key_through_login(self):
+        response = self.client.get(
+            reverse("public_invitation_accept", kwargs={"key": "abc123"})
         )
 
-        for route_name in route_names:
-            with self.subTest(route_name=route_name):
-                response = self.client.get(
-                    reverse(route_name, kwargs={"key": "abc123"})
-                )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+        self.assertIn("next=", response.url)
+        self.assertIn("abc123", response.url)
 
-                self.assertEqual(response.status_code, 410)
+    def test_retired_third_party_invitation_path_fails_closed(self):
+        response = self.client.get(
+            reverse("invitations:accept-invite", kwargs={"key": "abc123"})
+        )
+
+        self.assertEqual(response.status_code, 410)

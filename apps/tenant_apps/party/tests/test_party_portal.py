@@ -83,13 +83,13 @@ class PartyPortalAccessTests(WorkspaceTestCase):
     def _request(self):
         request = type("Request", (), {})()
         request.user = self.user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
         return request
 
     def _view_request(self, path="/portal/"):
         request = self.factory.get(path, HTTP_HOST=self.test_domain)
         request.user = self.user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
         request.LANGUAGE_CODE = settings.LANGUAGE_CODE
         return request
 

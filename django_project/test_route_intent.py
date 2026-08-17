@@ -21,7 +21,7 @@ def _route_prefixes(patterns):
 class SaaSRouteIntentTests(SimpleTestCase):
     def test_active_urlconfs_match_shared_schema_routing_settings(self):
         self.assertEqual(settings.ROOT_URLCONF, "django_project.tenant_urls")
-        self.assertEqual(settings.PUBLIC_SCHEMA_URLCONF, "django_project.urls")
+        self.assertFalse(hasattr(settings, "PUBLIC_SCHEMA_URLCONF"))
 
     def test_shared_urlpatterns_preserve_compatibility_order(self):
         expected = (

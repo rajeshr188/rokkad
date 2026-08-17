@@ -23,11 +23,10 @@ class WorkspaceContextValidationTests(SimpleTestCase):
         manager = MagicMock()
 
         with patch("apps.orgs.middleware_v2.workspace_context", return_value=manager):
-            middleware._set_tenant_context(request, workspace)
+            middleware._set_workspace_context(request, workspace)
 
         manager.__enter__.assert_called_once_with()
         self.assertIs(request.workspace, workspace)
-        self.assertIs(request.tenant, workspace)
 
         response = object()
         self.assertIs(middleware.process_response(request, response), response)

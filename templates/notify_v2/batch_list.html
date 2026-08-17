@@ -16,7 +16,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-{% if request.user.is_staff and request.tenant and request.tenant.schema_name != 'public' %}
+{% if request.user.is_staff and request.workspace %}
 <div class="card mb-3 border-warning-subtle">
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">

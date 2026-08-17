@@ -3,7 +3,7 @@ Enhanced WorkspaceMiddleware with security validation.
 Fixes critical authorization bypass vulnerability.
 
 This module is intentionally standalone (it does not inherit from
-TenantMainMiddleware). The request flow is security-critical and custom:
+schema-tenancy middleware). The request flow is security-critical and custom:
 deterministic Workspace resolution, membership authorization, and explicit
 redirect/cleanup behavior.
 """
@@ -28,12 +28,6 @@ from apps.tenancy.context import workspace_context
 logger = logging.getLogger(__name__)
 
 PUBLIC_WORKSPACE_SLUG = "public"
-
-
-def get_public_schema_name():
-    """Temporary terminology bridge while schema_name callers become slug callers."""
-
-    return PUBLIC_WORKSPACE_SLUG
 
 
 class SecureWorkspaceMiddleware(MiddlewareMixin):
@@ -123,7 +117,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             domain_workspace
             and path_workspace
             and domain_workspace.id != path_workspace.id
-            and domain_workspace.schema_name != get_public_schema_name()
+            and domain_workspace.schema_name != PUBLIC_WORKSPACE_SLUG
         ):
             logger.warning(
                 "Workspace path/domain mismatch for user %s: domain=%s path=%s path_url=%s",
@@ -140,13 +134,11 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             return HttpResponseForbidden("Conflicting Workspace identity.")
 
         # Keep a clear signal for downstream code and diagnostics.
-        request.tenant_resolution_source = source
+        request.workspace_resolution_source = source
 
         # Unauthenticated requests can still be served in the resolved tenant schema.
         if not request.user.is_authenticated:
-            if workspace and workspace.schema_name != get_public_schema_name():
-                # self._set_tenant_context(request, workspace)
-                # return None
+            if workspace and workspace.schema_name != PUBLIC_WORKSPACE_SLUG:
                 # For ERP SaaS: no public content on tenant domains — force login
                 self._set_public_context(request)
                 return HttpResponseRedirect(
@@ -171,7 +163,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             return HttpResponseRedirect(reverse("workspace_selector"))
 
         # Public workspace (or unresolved) → public schema
-        if not workspace or workspace.schema_name == get_public_schema_name():
+        if not workspace or workspace.schema_name == PUBLIC_WORKSPACE_SLUG:
             self._set_public_context(request)
             return None
 
@@ -181,7 +173,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         )
 
         if validation["allowed"]:
-            self._set_tenant_context(request, workspace)
+            self._set_workspace_context(request, workspace)
             request.workspace_access = validation.get("access")
 
             # Log sensitive access
@@ -207,18 +199,16 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         """Clear Workspace context for a global/control-plane request."""
         self._close_workspace_context(request)
         request.workspace = None
-        request.tenant = None
         request.workspace_access = None
         request.urlconf = settings.ROOT_URLCONF
         set_urlconf(request.urlconf)
 
-    def _set_tenant_context(self, request, workspace):
+    def _set_workspace_context(self, request, workspace):
         """Establish explicit shared-schema Workspace context."""
         context_manager = workspace_context(workspace.id)
         context_manager.__enter__()
         request._workspace_context_manager = context_manager
         request.workspace = workspace
-        request.tenant = workspace
         request.urlconf = settings.ROOT_URLCONF
         set_urlconf(request.urlconf)
 
@@ -260,7 +250,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             return Company.all_objects.filter(id=workspace_id).first()
 
         workspace_slug = self._extract_workspace_slug_from_path(request.path)
-        if not workspace_slug or workspace_slug == get_public_schema_name():
+        if not workspace_slug or workspace_slug == PUBLIC_WORKSPACE_SLUG:
             return None
 
         return Company.all_objects.filter(
@@ -287,7 +277,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         self, domain_workspace, path_workspace, profile_workspace=None
     ):
         """Pick the effective Workspace from explicit request identity."""
-        public_schema = get_public_schema_name()
+        public_schema = PUBLIC_WORKSPACE_SLUG
 
         if domain_workspace and domain_workspace.schema_name != public_schema:
             return domain_workspace, "domain"

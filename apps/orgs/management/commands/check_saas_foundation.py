@@ -21,7 +21,6 @@ def _source_reference_counts():
     """Count active Python references that define competing foundation paths."""
     root = Path(settings.BASE_DIR)
     needles = {
-        "guardian": "guardian",
         "hardcoded_role_permissions": "RolePermissions",
         "subscription_access_service": "SubscriptionAccessService",
         "profile_workspace_fallback": "profile_workspace",
@@ -77,14 +76,6 @@ def collect_saas_foundation_inventory():
             .values("id", "name", "permission_count")
         )
 
-        guardian_user_assignments = 0
-        guardian_group_assignments = 0
-        if "guardian" in settings.INSTALLED_APPS:
-            from guardian.models import GroupObjectPermission, UserObjectPermission
-
-            guardian_user_assignments = UserObjectPermission.objects.count()
-            guardian_group_assignments = GroupObjectPermission.objects.count()
-
         inventory = {
             "schema": public_schema,
             "read_only": True,
@@ -104,11 +95,6 @@ def collect_saas_foundation_inventory():
                 "case_variant_pending_groups": case_variant_invitation_groups.count(),
             },
             "roles": role_rows,
-            "guardian": {
-                "installed": "guardian" in settings.INSTALLED_APPS,
-                "user_object_permission_rows": guardian_user_assignments,
-                "group_object_permission_rows": guardian_group_assignments,
-            },
         }
 
     inventory["source_references"] = _source_reference_counts()

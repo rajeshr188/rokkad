@@ -772,7 +772,7 @@ class DomainPathMismatchTests(SimpleTestCase):
 		request = SimpleNamespace(
 			path="/orgs/workspace/2/detail/",
 			user=user,
-			tenant_resolution_source=None,
+			workspace_resolution_source=None,
 			urlconf=None,
 		)
 		
@@ -784,7 +784,7 @@ class DomainPathMismatchTests(SimpleTestCase):
 			 patch.object(self.middleware, "_requires_workspace", return_value=False), \
 			 patch.object(self.middleware, "_handle_workspace_mismatch"), \
 			 patch.object(self.middleware, "_validate_workspace_access", return_value={"allowed": True}), \
-			 patch.object(self.middleware, "_set_tenant_context"), \
+			 patch.object(self.middleware, "_set_workspace_context"), \
 			 patch("apps.orgs.middleware_v2.messages"):
 			
 			result = self.middleware.process_request(request)
@@ -1990,10 +1990,10 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 			)
 			stack.enter_context(patch.object(self.middleware, "_is_sensitive_path", return_value=False))
 			mock_set_tenant = stack.enter_context(
-				patch.object(self.middleware, "_set_tenant_context")
+				patch.object(self.middleware, "_set_workspace_context")
 			)
 			self.middleware.process_request(request)
-		self.assertEqual(request.tenant_resolution_source, "domain")
+		self.assertEqual(request.workspace_resolution_source, "domain")
 		mock_set_tenant.assert_called_once_with(request, self.tenant_ws)
 
 	def test_path_workspace_wins_over_profile_without_domain(self):
@@ -2011,10 +2011,10 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 			)
 			stack.enter_context(patch.object(self.middleware, "_is_sensitive_path", return_value=False))
 			mock_set_tenant = stack.enter_context(
-				patch.object(self.middleware, "_set_tenant_context")
+				patch.object(self.middleware, "_set_workspace_context")
 			)
 			self.middleware.process_request(request)
-		self.assertEqual(request.tenant_resolution_source, "path")
+		self.assertEqual(request.workspace_resolution_source, "path")
 		mock_set_tenant.assert_called_once_with(request, path_ws)
 
 	@patch("apps.orgs.middleware_v2.HttpResponseRedirect")
@@ -2076,7 +2076,7 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 			)
 			stack.enter_context(patch.object(self.middleware, "_is_sensitive_path", return_value=False))
 			mock_set_tenant = stack.enter_context(
-				patch.object(self.middleware, "_set_tenant_context")
+				patch.object(self.middleware, "_set_workspace_context")
 			)
 			result = self.middleware.process_request(request)
 
@@ -2094,11 +2094,11 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 			 patch.object(self.middleware, "_resolve_workspace_from_domain", return_value=self.tenant_ws), \
 			 patch.object(self.middleware, "_resolve_workspace_from_path", return_value=None), \
 			 patch.object(self.middleware, "_set_public_context") as mock_public, \
-			 patch.object(self.middleware, "_set_tenant_context") as mock_tenant:
+			 patch.object(self.middleware, "_set_workspace_context") as mock_workspace:
 			self.middleware.process_request(request)
 
 		mock_public.assert_called_once_with(request)
-		mock_tenant.assert_not_called()
+		mock_workspace.assert_not_called()
 		mock_redir.assert_called_once()
 
 	def test_unauthenticated_without_workspace_gets_public_context(self):

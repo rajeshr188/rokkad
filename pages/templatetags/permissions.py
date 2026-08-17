@@ -15,7 +15,7 @@ def render_main_navigation(user, workspace=None, permissions=None):
     Render main navigation based on user permissions.
 
     Usage in template:
-      {% render_main_navigation user workspace=request.tenant permissions=user_permissions %}
+      {% render_main_navigation user workspace=request.workspace permissions=user_permissions %}
     """
     if not permissions:
         permissions = set()

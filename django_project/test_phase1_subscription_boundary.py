@@ -16,7 +16,6 @@ class Phase1SubscriptionBoundaryTests(SimpleTestCase):
         request = self.factory.get(path)
         request.user = SimpleNamespace(is_authenticated=True)
         request.workspace = self.workspace
-        request.tenant = self.workspace
         return request
 
     def test_business_restriction_runs_after_workspace_is_established(self):
@@ -37,7 +36,6 @@ class Phase1SubscriptionBoundaryTests(SimpleTestCase):
             "workspace_subscriptions:plan-list", workspace_slug="acme"
         )
         self.assertIs(request.workspace, self.workspace)
-        self.assertIs(request.tenant, request.workspace)
         self.assertEqual(response.status_code, 302)
 
     def test_billing_recovery_route_keeps_context_and_skips_restriction(self):

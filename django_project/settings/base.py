@@ -62,7 +62,6 @@ SHARED_APPS = [
     "django_htmx",
     "import_export",
     "colorfield",
-    "guardian",  # Object-level permissions
     # Local
     "accounts",
     "apps.configuration",
@@ -80,16 +79,7 @@ SHARED_APPS = [
     "viewflow",
 ]
 
-TENANT_APPS = []
-
-INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
-
-TENANT_MODEL = "orgs.Company"  # app.Model
-
-TENANT_DOMAIN_MODEL = "orgs.Domain"  # app.Model
-
-# Controlled rollout flag for automatic tenant baseline seeding on workspace create.
-TENANT_AUTO_SEED_ON_CREATE = env.bool("TENANT_AUTO_SEED_ON_CREATE", default=False)
+INSTALLED_APPS = list(SHARED_APPS)
 
 # Clone mode for onboarding template provisioning.
 # Recommended for clone+seed workflow: NODATA (clone structure, seed via commands).
@@ -133,7 +123,6 @@ MIDDLEWARE = [
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
 ROOT_URLCONF = "django_project.tenant_urls"
-PUBLIC_SCHEMA_URLCONF = "django_project.urls"
 # ROOT_URLCONF = "django_project.urls"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
@@ -303,14 +292,8 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "home"
 # https://django-allauth.readthedocs.io/en/latest/installation.html?highlight=backends
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",  # Default
-    "guardian.backends.ObjectPermissionBackend",  # Guardian object permissions
     "allauth.account.auth_backends.AuthenticationBackend",
 )
-
-# Guardian settings
-ANONYMOUS_USER_NAME = None
-GUARDIAN_RENDER_403 = True
-GUARDIAN_TEMPLATE_403 = "403.html"
 
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 # ACCOUNT_SESSION_REMEMBER = True

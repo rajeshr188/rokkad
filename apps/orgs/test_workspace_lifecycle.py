@@ -87,12 +87,11 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         form = render.call_args.args[2]["form"]
         self.assertIn("confirmation_name", form.errors)
 
-    def test_archive_authorizes_against_url_workspace_not_request_tenant(self):
-        public_tenant = SimpleNamespace(schema_name="public")
+    def test_archive_authorizes_against_url_workspace_not_request_workspace(self):
         self.owner.is_authenticated = True
         request = self.factory.get("/orgs/workspace/9/delete/")
         request.user = self.owner
-        request.tenant = public_tenant
+        request.workspace = None
 
         with patch("apps.orgs.views.get_object_or_404", return_value=self.workspace), \
                 patch("apps.orgs.views._assert_workspace_access") as access, \

@@ -8,6 +8,15 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Phase 7 residue cleanup is in progress. `request.workspace` is now the sole
+HTTP Workspace attribute; never restore `request.tenant`. Middleware helpers
+and diagnostics use Workspace terminology. Empty django-tenants settings are
+gone. Guardian runtime integration is retired because there were zero object
+ACL assignments and no callers; authorization remains `WorkspaceAccess` plus
+domain-service rules. The canonical anonymous invitation alias redirects to
+login with its key preserved, while the retired django-invitations route is
+HTTP 410.
+
 Phase 6 URL and shell standardization is complete. Global control-plane pages
 use `/app/...`; Workspace pages and settings use `/w/<workspace_slug>/...`.
 New UI, redirects, breadcrumbs, forms, and HTMX actions must emit slug routes,

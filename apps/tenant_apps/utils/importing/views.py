@@ -216,7 +216,7 @@ def import_data(request):
         model, _app_path = _find_tenant_model(model_name)
         if model is None:
             return HttpResponseBadRequest(
-                f"No model named '{model_name}' found in TENANT_APPS"
+                f"No model named '{model_name}' found in WORKSPACE_APP_LABELS"
             )
 
         model_resource = _import_resource_for_model(model)()

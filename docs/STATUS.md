@@ -8,6 +8,24 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-08-17 — Phase 7 residue cleanup started
+
+The first Phase 7 slice removes `request.tenant` from middleware, templates,
+and tests; `request.workspace` is now the only HTTP Workspace attribute. The
+middleware API and diagnostic field now use Workspace terminology. Empty
+django-tenants settings (`TENANT_APPS`, tenant model/domain settings,
+public-schema URLConf, and the unused auto-seed flag) are removed. Guardian had
+zero object-permission assignments and no runtime decorator callers, so its
+installed app, backend, settings, object-permission decorator, and foundation
+inventory branch are retired; `WorkspaceAccess` remains the authorization
+authority. The stale invitation test contradiction is resolved in favor of the
+accepted Phase 5 contract: the canonical alias preserves the key through login,
+while the retired third-party route returns HTTP 410. System checks and
+migration drift pass, and the first combined Phase 7 regression gate passes
+155/155. Remaining Phase 7 work includes URLConf/package/schema terminology,
+the unused Guardian dependency declaration in the UTF-16 requirements file,
+and classification of legacy inbound routes.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

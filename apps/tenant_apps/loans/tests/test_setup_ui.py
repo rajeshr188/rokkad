@@ -608,7 +608,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         )
         request = RequestFactory().get("/loans/setup/")
         request.user = user
-        request.tenant = self.tenant
+        request.workspace = self.tenant
 
         with self.assertRaises(PermissionDenied):
             assert_loans_setup_access(request)

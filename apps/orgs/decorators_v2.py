@@ -1,14 +1,11 @@
 """
-Enhanced permission decorators using django-guardian.
-Provides object-level and feature-level permission checking.
+Workspace action and role decorators.
 """
 
 import functools
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseForbidden
-from django.shortcuts import get_object_or_404
-from guardian.shortcuts import get_perms
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Membership
@@ -152,68 +149,6 @@ def any_permission_required(perms, raise_exception=True):
                 if raise_exception:
                     raise PermissionDenied(f"One of permissions {perms} required")
                 return HttpResponseForbidden()
-
-            return view_func(request, *args, **kwargs)
-
-        return _wrapped_view
-
-    return decorator
-
-
-def object_permission_required(
-    perm, model, pk_url_kwarg="pk", accept_global_perms=True
-):
-    """
-    Check object-level permissions using Guardian.
-
-    Usage:
-        @object_permission_required('change_company', Company, pk_url_kwarg='company_id')
-        def update_company(request, company_id):
-            ...
-    """
-
-    def decorator(view_func):
-        @functools.wraps(view_func)
-        @login_required
-        def _wrapped_view(request, *args, **kwargs):
-            # Get object_id from URL kwargs
-            object_id = kwargs.get(pk_url_kwarg)
-            if not object_id:
-                raise Http404(f"Missing {pk_url_kwarg} in URL")
-
-            # Get the object
-            obj = get_object_or_404(model, pk=object_id)
-
-            # Check permission using Guardian
-            user_perms = get_perms(request.user, obj)
-
-            if perm not in user_perms:
-                # Also check global permission from role if accept_global_perms
-                if accept_global_perms:
-                    workspace = _resolve_workspace(request)
-                    if workspace:
-                        try:
-                            has_global = resolve_workspace_access(
-                                actor=request.user, workspace=workspace
-                            ).can(perm)
-                            if has_global:
-                                return view_func(request, *args, **kwargs)
-                        except Membership.DoesNotExist:
-                            pass
-
-                # Log denial
-                AuditLog.log(
-                    "PERMISSION_DENIED",
-                    user=request.user,
-                    description=f"Object permission denied: '{perm}' on {model.__name__} {object_id}",
-                    request=request,
-                    success=False,
-                    content_object=obj,
-                )
-
-                raise PermissionDenied(
-                    f"You don't have permission to {perm} this {model.__name__}"
-                )
 
             return view_func(request, *args, **kwargs)
 
