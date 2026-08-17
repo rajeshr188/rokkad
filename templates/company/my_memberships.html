@@ -49,7 +49,7 @@
                                     {% if membership.role and membership.role.name == 'Owner' %}
                                     <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="d-inline">
                                         {% csrf_token %}
-                                        <input type="hidden" name="next" value="{% url 'subscriptions:dashboard' %}">
+                                        <input type="hidden" name="next" value="{% url 'workspace_subscriptions:dashboard' workspace_slug=membership.company.schema_name %}">
                                         <button type="submit" class="btn btn-sm btn-outline-secondary">
                                             <i class="bi bi-credit-card me-1"></i>Billing
                                         </button>

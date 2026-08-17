@@ -8,6 +8,67 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-08-17 — Phase 4 major acceptance review
+
+The Workspace lifecycle, Subscription lifecycle, entitlement authority,
+control-plane authorization, and forced-RLS foundation have been reviewed as a
+single request boundary. A billing fail-open blocker was found in
+`SubscriptionValidationMiddleware` and fixed: billing evaluation exceptions
+now return HTTP 503. Full-client tests prove no Subscription is redirected to
+Workspace billing, active/current-trial access is allowed, and expired trials
+are recovery-only. The combined control-plane suite passes 141/141 and the
+billing plus four-app restricted-role RLS gate passes 17/17. The classified
+review is `docs/implementation/control-plane-phase4-major-review.md`. Phase 5
+invitation/onboarding consolidation is next.
+
+The post-review billing recovery check found an empty local Plan catalog. The
+default catalog command is now idempotent, the local database has active
+Starter, Professional, and Enterprise rows, and live plan copy no longer
+advertises retired Product, Inventory/Warehouse, or invoice-era capacity.
+
+Development now exposes explicit owner-only plan trial activation. Trial start
+is POST-only, locks the Workspace, rejects duplicate subscriptions, creates the
+BillingAccount and typed entitlement projection atomically, and appends a
+`trial.started` SubscriptionEvent. Workspace creation itself still grants no
+commercial access. Development enables this flow explicitly; production keeps
+it disabled until commercial policy approves it.
+
+- 2026-08-17: Workspace billing navigation now reverses only the canonical
+  `workspace_subscriptions` routes with an explicit Workspace slug. The shared
+  management account sidebar caused `/w/<slug>/settings/billing/plans/` to
+  raise `NoReverseMatch` by reversing the ambiguous legacy `subscriptions`
+  namespace without arguments. Desktop/mobile account navigation, main
+  navigation, upgrade links, feature/subscription alerts, Workspace pages, and
+  control-plane redirects now use slug-bearing billing routes or send global
+  requests to the Workspace selector. A full plans-page shell render test
+  protects the boundary.
+
+- 2026-08-17: The global `/dashboard/` and legacy company-dashboard redirect no
+  longer pass the retired `allow_profile_fallback` keyword to
+  `resolve_request_workspace()`. They now honor the Phase 1 contract: explicit
+  request Workspace context only, followed by active Membership-based routing
+  to the Workspace selector. Regression tests cover both paths, and the source
+  tree contains no remaining runtime use of the removed keyword.
+
+- 2026-08-17: SaaS control-plane Phase 4 billing and entitlement normalization
+  is complete. `Subscription.status` is the sole stored billing state;
+  `is_active` and time-dependent status writes from `Subscription.save()` are
+  removed. Effective trial expiry is derived without mutation, and valid
+  commercial transitions run through a row-locked service that appends a
+  `SubscriptionEvent`. Invoice capture and payment-failure provider paths use
+  that service. Razorpay webhook identity is persisted with a provider-scoped
+  uniqueness constraint, successful replays are acknowledged without repeated
+  effects, and state changes plus processed evidence commit atomically. The
+  entitlement API exposes typed `enabled()`, `require()`, and `limit()`
+  decisions over registered namespaced codes. Missing, malformed, expired, or
+  commercially unavailable grants fail closed; plan projection preserves
+  explicit overrides, whose actor/reason provenance is database-enforced.
+  Workspace seats, module gating, context processors, feature decorators, and
+  subscription middleware consume the separated policies. Billing recovery
+  remains reachable without changing Workspace identity, lifecycle,
+  Membership/RBAC, or RLS. Migrations `subscriptions.0002` and `0003` are
+  applied; Phase 5 has not started.
+
 - 2026-08-17: SaaS control-plane Phase 3 Workspace operational lifecycle is
   complete. `Company.is_deleted` and the ordinary hard-delete setting/model/
   admin paths are retired. Migration `orgs.0003` maps archived rows and installs

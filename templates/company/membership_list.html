@@ -38,7 +38,7 @@
                         Includes active workspace members. Remaining seats: {{ seat_capacity.members_remaining }}.
                     </div>
                 </div>
-                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-primary">
+                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.schema_name %}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-arrow-up-right"></i> Upgrade plan
                 </a>
             </div>

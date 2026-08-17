@@ -25,7 +25,7 @@
                 <div class="small mb-2">
                     This count includes active members and pending invitations. Remaining seats: {{ seat_capacity.members_and_pending_remaining }}.
                 </div>
-                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-warning">
+                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.schema_name %}" class="btn btn-sm btn-outline-warning">
                     <i class="bi bi-arrow-up-right"></i> Upgrade plan
                 </a>
             </div>

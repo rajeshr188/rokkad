@@ -114,7 +114,6 @@ class Subscription(models.Model):
     trial_end_date = models.DateTimeField(null=True, blank=True)
 
     # Billing
-    is_active = models.BooleanField(default=True)
     auto_renew = models.BooleanField(default=True)
 
     # Razorpay subscription ID (for recurring payments)
@@ -148,22 +147,7 @@ class Subscription(models.Model):
             else:  # YEARLY
                 self.end_date = self.start_date + relativedelta(years=1)
 
-        # Check if trial ended
-        if (
-            self.status == self.StatusChoices.TRIAL
-            and timezone.now() > self.trial_end_date
-        ):
-            self.status = self.StatusChoices.PAST_DUE
-
         super().save(*args, **kwargs)
-
-        from apps.subscriptions.services import (
-            ensure_billing_account_for_subscription,
-            ensure_entitlements_for_subscription,
-        )
-
-        ensure_billing_account_for_subscription(self)
-        ensure_entitlements_for_subscription(self)
 
     def is_trial_active(self):
         """Check if company is still in trial period"""
@@ -206,20 +190,18 @@ class Subscription(models.Model):
         return total
 
     def can_add_member(self):
-        """Check if company can add more members based on plan"""
+        """Compatibility wrapper around the canonical member entitlement."""
+        from apps.subscriptions.entitlements import limit
+
         current_users = self.get_current_user_count()
-        return current_users < self.plan.max_users
+        member_limit = limit(self.company, "workspace.max_members")
+        return member_limit is not None and current_users < member_limit
 
     def can_access_feature(self, feature_name):
-        """Check if company's subscription tier has access to feature"""
-        features = {
-            "advanced_reporting": self.plan.has_advanced_reporting,
-            "multi_warehouse": self.plan.has_multi_warehouse,
-            "approvals": self.plan.has_approvals_workflow,
-            "api": self.plan.has_api_access,
-            "custom_fields": self.plan.has_custom_fields,
-        }
-        return features.get(feature_name, False)
+        """Compatibility wrapper around the canonical entitlement service."""
+        from apps.subscriptions.entitlements import enabled
+
+        return enabled(self.company, feature_name)
 
     def is_billing_manager(self, user):
         """Check if user can manage billing (company owner or billing admin)"""
@@ -284,6 +266,20 @@ class SubscriptionEntitlement(models.Model):
     feature_code = models.CharField(max_length=100, verbose_name=_("Feature Code"))
     enabled = models.BooleanField(default=True)
     value = models.CharField(max_length=255, blank=True)
+    source = models.CharField(
+        max_length=20,
+        choices=[("plan", "Plan projection"), ("override", "Explicit override")],
+        default="plan",
+    )
+    override_reason = models.TextField(blank=True)
+    override_actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="subscription_entitlement_overrides",
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -291,6 +287,19 @@ class SubscriptionEntitlement(models.Model):
         unique_together = ("subscription", "feature_code")
         verbose_name = _("Subscription Entitlement")
         verbose_name_plural = _("Subscription Entitlements")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(source="plan")
+                    | (
+                        models.Q(source="override")
+                        & models.Q(override_actor__isnull=False)
+                        & ~models.Q(override_reason="")
+                    )
+                ),
+                name="subscription_override_requires_provenance",
+            )
+        ]
 
     def __str__(self):
         return f"{self.subscription.company.name} / {self.feature_code}"
@@ -313,6 +322,7 @@ class ProviderWebhookEvent(models.Model):
         verbose_name=_("Subscription"),
     )
     provider = models.CharField(max_length=50, default="razorpay")
+    provider_event_id = models.CharField(max_length=255, null=True, blank=True)
     event_type = models.CharField(max_length=100, blank=True)
     payload = models.JSONField(default=dict, blank=True)
     status = models.CharField(
@@ -329,6 +339,12 @@ class ProviderWebhookEvent(models.Model):
         ordering = ["-created_at"]
         verbose_name = _("Provider Webhook Event")
         verbose_name_plural = _("Provider Webhook Events")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("provider", "provider_event_id"),
+                name="subscription_provider_event_unique",
+            )
+        ]
 
 
 class SubscriptionEvent(models.Model):
@@ -460,15 +476,20 @@ class Invoice(models.Model):
         super().save(*args, **kwargs)
 
     def mark_as_paid(self, razorpay_id):
-        """Mark invoice as paid and update subscription status"""
+        """Mark an invoice paid and activate through the billing transition service."""
         self.status = self.StatusChoices.PAID
         self.paid_at = timezone.now()
         self.razorpay_payment_id = razorpay_id
         self.save()
 
-        # Update subscription status to active
-        self.subscription.status = Subscription.StatusChoices.ACTIVE
-        self.subscription.save()
+        from apps.subscriptions.billing import transition_subscription
+
+        transition_subscription(
+            subscription=self.subscription,
+            target_status=Subscription.StatusChoices.ACTIVE,
+            event_type="invoice.paid",
+            payload={"invoice_id": self.pk, "provider_payment_id": razorpay_id},
+        )
 
 
 class Payment(models.Model):
@@ -595,7 +616,11 @@ class UsageMetrics(models.Model):
 
     def is_near_user_limit(self):
         """Check if company is near max users limit (>80%)"""
-        max_users = self.subscription.plan.max_users
+        from apps.subscriptions.entitlements import limit
+
+        max_users = limit(self.subscription.company, "workspace.max_members")
+        if max_users is None:
+            return False
         return self.users_count > (max_users * 0.8)
 
     def is_near_transaction_limit(self):

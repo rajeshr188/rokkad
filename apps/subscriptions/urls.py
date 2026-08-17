@@ -11,6 +11,11 @@ app_name = "subscriptions"
 urlpatterns = [
     # Plans and Subscriptions
     path("plans/", views.SubscriptionPlanListView.as_view(), name="plan-list"),
+    path(
+        "plans/<int:plan_id>/start-trial/",
+        views.StartTrialView.as_view(),
+        name="start-trial",
+    ),
     path("checkout/<int:plan_id>/", views.CheckoutView.as_view(), name="checkout"),
     # Payments
     path("payment/create/", views.PaymentView.as_view(), name="payment-create"),

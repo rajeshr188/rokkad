@@ -455,6 +455,7 @@ RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="test_key_secret")
 
 # Billing Configuration
 BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="18")  # 18% GST for India
+BILLING_ALLOW_TRIAL_START = env.bool("BILLING_ALLOW_TRIAL_START", default=DEBUG)
 
 THOUSAND_SEPARATOR = ","
 DECIMAL_SEPARATOR = "."

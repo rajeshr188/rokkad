@@ -6,6 +6,7 @@ env = environ.Env()
 environ.Env.read_env()
 
 DEBUG = False
+BILLING_ALLOW_TRIAL_START = False
 
 ALLOWED_HOSTS = ["*", "rokkad.com", "www.rokkad.com"]
 

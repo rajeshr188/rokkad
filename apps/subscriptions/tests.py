@@ -1,8 +1,11 @@
 from io import StringIO
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.template.loader import render_to_string
+from django.urls import resolve
 
 from apps.subscriptions.services import (
     SubscriptionAccessService,
@@ -88,11 +91,11 @@ class SubscriptionAccessServiceTests(TestCase):
         entitlements = build_entitlement_defaults(subscription)
         feature_codes = {entry["feature_code"] for entry in entitlements}
 
-        self.assertIn("advanced_reporting", feature_codes)
-        self.assertIn("max_users", feature_codes)
-        self.assertIn("max_products", feature_codes)
-        self.assertTrue(any(entry["feature_code"] == "advanced_reporting" and entry["enabled"] is True for entry in entitlements))
-        self.assertTrue(any(entry["feature_code"] == "max_users" and entry["value"] == "7" for entry in entitlements))
+        self.assertIn("reporting.advanced", feature_codes)
+        self.assertIn("workspace.max_members", feature_codes)
+        self.assertIn("inventory.max_products", feature_codes)
+        self.assertTrue(any(entry["feature_code"] == "reporting.advanced" and entry["enabled"] is True for entry in entitlements))
+        self.assertTrue(any(entry["feature_code"] == "workspace.max_members" and entry["value"] == "7" for entry in entitlements))
 
     def test_backfill_command_supports_dry_run(self):
         out = StringIO()
@@ -100,3 +103,55 @@ class SubscriptionAccessServiceTests(TestCase):
         output = out.getvalue()
 
         self.assertIn("Backfill complete", output)
+
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+    )
+    def test_workspace_plan_page_shell_reverses_billing_with_workspace_slug(self):
+        class EmptyPlans:
+            def __iter__(self):
+                return iter(())
+
+            def count(self):
+                return 0
+
+        workspace = SimpleNamespace(
+            id=9, schema_name="jcl", name="JCL", theme="#ff0000", logo=None
+        )
+        user = SimpleNamespace(
+            id=1,
+            pk=1,
+            is_authenticated=True,
+            username="owner",
+            get_full_name=lambda: "Owner",
+            profile=SimpleNamespace(id=1, pk=1, workspace=workspace),
+        )
+        request = RequestFactory().get("/w/jcl/settings/billing/plans/")
+        request.user = user
+        request.workspace = workspace
+        request.resolver_match = resolve(request.path)
+
+        with patch(
+            "django_project.context_processors.get_effective_permissions",
+            return_value=set(),
+        ), patch(
+            "django_project.context_processors.get_workspace_role_name",
+            return_value="Owner",
+        ):
+            html = render_to_string(
+                "subscriptions/plan_list.html",
+                {
+                    "plans": EmptyPlans(),
+                    "workspace": workspace,
+                    "user_workspace": workspace,
+                    "user_role": "Owner",
+                },
+                request=request,
+            )
+
+        self.assertIn("/w/jcl/settings/billing/dashboard/", html)

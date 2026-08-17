@@ -129,15 +129,9 @@
                 <h5 class="mt-4 mb-3">Features</h5>
                 <ul class="plan-features">
                     <li>{{ plan.max_users }} Users</li>
-                    <li>{{ plan.max_products }} Products</li>
-                    <li>{{ plan.max_warehouses }} Warehouse{% if plan.max_warehouses > 1 %}s{% endif %}</li>
-                    <li>{{ plan.max_transactions_per_month }} Monthly Transactions</li>
-                    <li>{{ plan.max_invoices_per_month }} Monthly Invoices</li>
+                    <li>{{ plan.max_transactions_per_month }} Monthly Operations</li>
                     <li {% if not plan.has_advanced_reporting %}class="unavailable"{% endif %}>
                         Advanced Reporting
-                    </li>
-                    <li {% if not plan.has_multi_warehouse %}class="unavailable"{% endif %}>
-                        Multi-Warehouse Support
                     </li>
                     <li {% if not plan.has_approvals_workflow %}class="unavailable"{% endif %}>
                         Approval Workflow
@@ -150,7 +144,17 @@
                     </li>
                 </ul>
                 
-                {% if current_plan.id != plan.id %}
+                {% if not current_subscription and trial_start_enabled and plan.trial_days > 0 %}
+                <form method="post" action="{% url 'workspace_subscriptions:start-trial' workspace_slug=request.workspace.schema_name plan_id=plan.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-action">
+                        Start {{ plan.trial_days }}-day free trial
+                    </button>
+                </form>
+                <a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.schema_name plan_id=plan.id %}" class="btn btn-outline-primary btn-action">
+                    Subscribe now
+                </a>
+                {% elif current_plan.id != plan.id %}
                 <a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.schema_name plan_id=plan.id %}" class="btn btn-primary btn-action">
                     Upgrade to {{ plan.name }}
                 </a>

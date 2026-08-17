@@ -73,8 +73,12 @@
                             {% if user_role == 'Owner' %}
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header text-uppercase small">Billing</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'subscriptions:dashboard' %}"><i class="bi bi-credit-card"></i> Billing Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{% url 'subscriptions:plan-list' %}"><i class="bi bi-receipt"></i> Subscription Plans</a></li>
+                            {% if request.workspace %}
+                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.schema_name %}"><i class="bi bi-credit-card"></i> Billing Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.schema_name %}"><i class="bi bi-receipt"></i> Subscription Plans</a></li>
+                            {% else %}
+                            <li><a class="dropdown-item" href="{% url 'workspace_selector' %}"><i class="bi bi-credit-card"></i> Select Workspace for Billing</a></li>
+                            {% endif %}
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header text-uppercase small">Account</h6></li>

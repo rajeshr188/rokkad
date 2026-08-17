@@ -319,6 +319,13 @@ unit. `PAST_DUE`, `CANCELLED`, and `EXPIRED` never block access to billing
 recovery routes. Billing policy feeds entitlement evaluation; it does not
 establish Membership, Workspace lifecycle, request context, or RLS.
 
+Implementation status (2026-08-17): Phase 4 is complete. Effective billing
+state is derived by `apps.subscriptions.billing` without model-save mutation;
+stored transitions are row-locked and append `SubscriptionEvent` evidence.
+`Subscription.is_active` is removed. Provider webhook events have durable,
+provider-scoped replay identity, and billing recovery routes remain exempt from
+commercial blocking without losing explicit Workspace/RLS context.
+
 ## 10. Entitlements
 
 The target public API is a single Workspace-scoped service:
@@ -352,6 +359,15 @@ Rules:
 
 Entitlement denial limits a capability. It must not clear `request.workspace`,
 change RLS, or erase access to billing recovery and authorized data export.
+
+Implementation status (2026-08-17): Phase 4 is complete. The namespaced typed
+registry and `enabled()`/`require()`/`limit()` API live in
+`apps.subscriptions.entitlements`. Plan projection writes canonical effective
+rows, never overwrites explicit overrides, and override actor/reason provenance
+is constrained in PostgreSQL. Missing, malformed, expired, and commercially
+unavailable grants fail closed. Seats, module gating, and feature decorators use
+this API; the mixed `SubscriptionAccessService` remains compatibility-only and
+has no runtime middleware or control-plane caller.
 
 ## 11. Data-plane contract
 

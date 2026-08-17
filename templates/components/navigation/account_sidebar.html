@@ -12,7 +12,7 @@
     {% if ew %}
     <form method="post" action="{% url 'workspace_select' ew.id %}" class="m-0">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{% url 'subscriptions:dashboard' %}">
+        <input type="hidden" name="next" value="{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.schema_name %}">
         <button type="submit" class="nav-link mgmt-nav-link w-100 text-start {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}">
             <i class="bi bi-credit-card"></i> Billing
         </button>
@@ -43,7 +43,7 @@
     {% if ew %}
     <form method="post" action="{% url 'workspace_select' ew.id %}" class="m-0">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{% url 'subscriptions:dashboard' %}">
+        <input type="hidden" name="next" value="{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.schema_name %}">
         <button type="submit" class="nav-link mgmt-nav-link w-100 text-start {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}">
             <i class="bi bi-credit-card"></i> Billing
         </button>

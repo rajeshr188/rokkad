@@ -200,9 +200,17 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             kwargs={"workspace_id": workspace.id},
         )
         self.assertIn(f'action="{billing_action}"', html)
-        self.assertIn(f'value="{reverse("subscriptions:dashboard")}"', html)
-        self.assertIn(f'href="{reverse("subscriptions:dashboard")}"', html)
-        self.assertIn(f'href="{reverse("subscriptions:plan-list")}"', html)
+        billing_dashboard = reverse(
+            "workspace_subscriptions:dashboard",
+            kwargs={"workspace_slug": workspace.schema_name},
+        )
+        billing_plans = reverse(
+            "workspace_subscriptions:plan-list",
+            kwargs={"workspace_slug": workspace.schema_name},
+        )
+        self.assertIn(f'value="{billing_dashboard}"', html)
+        self.assertNotIn(f'href="{billing_dashboard}"', html)
+        self.assertNotIn(f'href="{billing_plans}"', html)
 
         for label in (
             "My Workspaces",
@@ -215,8 +223,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             "Sent Invitations",
             "My Invitations",
             "Billing",
-            "Billing Dashboard",
-            "Subscription Plans",
+            "Select Workspace for Billing",
             "Account Settings",
             "Profile",
         ):

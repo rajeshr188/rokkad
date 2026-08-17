@@ -7,6 +7,7 @@ import json
 from decimal import Decimal
 from datetime import datetime
 from django.views.generic import ListView, DetailView, CreateView, TemplateView
+from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponse, Http404
@@ -16,11 +17,13 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 
-from .models import Plan, Subscription, Invoice, Payment
+from .models import Plan, Subscription, Invoice, Payment, ProviderWebhookEvent
 from .razorpay_service import RazorpayService
 from apps.orgs.tenant_context import resolve_request_workspace
 
@@ -90,14 +93,50 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
         # Calculate features comparison
         all_features = {
             "advanced_reporting": "Advanced Reporting",
-            "multi_warehouse": "Multi-Warehouse Support",
             "approvals_workflow": "Approval Workflow",
             "api_access": "API Access",
             "custom_fields": "Custom Fields",
         }
         context["features"] = all_features
+        context["trial_start_enabled"] = settings.BILLING_ALLOW_TRIAL_START
 
         return context
+
+
+class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
+    """Explicitly start a plan trial; Workspace creation grants no access."""
+
+    def post(self, request, *args, **kwargs):
+        if not settings.BILLING_ALLOW_TRIAL_START:
+            raise PermissionDenied("Trial activation is disabled.")
+
+        workspace = resolve_request_workspace(request)
+        plan = get_object_or_404(Plan, pk=kwargs["plan_id"], is_active=True)
+
+        from apps.subscriptions.billing import start_trial
+
+        try:
+            subscription = start_trial(
+                workspace=workspace,
+                plan=plan,
+                actor=request.user,
+            )
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
+            return redirect(
+                "workspace_subscriptions:plan-list",
+                workspace_slug=workspace.schema_name,
+            )
+
+        messages.success(
+            request,
+            f"Your {subscription.plan.name} trial is active until "
+            f"{subscription.trial_end_date:%d %b %Y}.",
+        )
+        return redirect(
+            "workspace_slug_dashboard",
+            workspace_slug=workspace.schema_name,
+        )
 
 
 class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
@@ -168,31 +207,47 @@ class PaymentView(LoginRequiredMixin, BillingPermissionMixin, CreateView):
                 )
 
             plan = get_object_or_404(Plan, id=plan_id)
+            workspace = resolve_request_workspace(request)
+            if workspace is None:
+                return JsonResponse(
+                    {"success": False, "error": "Explicit Workspace required"},
+                    status=400,
+                )
 
             # Create or update subscription
             subscription, created = Subscription.objects.update_or_create(
-                user=request.user,
+                company=workspace,
                 defaults={
                     "plan": plan,
-                    "status": Subscription.StatusChoices.ACTIVE,
                 },
             )
+            from apps.subscriptions.services import (
+                ensure_billing_account_for_subscription,
+                ensure_entitlements_for_subscription,
+            )
+
+            ensure_billing_account_for_subscription(subscription)
+            ensure_entitlements_for_subscription(subscription)
 
             # Update invoice as paid
             try:
                 invoice = Invoice.objects.get(razorpay_order_id=razorpay_order_id)
                 invoice.mark_as_paid(razorpay_payment_id)
             except Invoice.DoesNotExist:
-                pass
+                return JsonResponse(
+                    {"success": False, "error": "Invoice not found"}, status=400
+                )
 
             # Create payment record
-            Payment.objects.create(
-                invoice=invoice,
+            Payment.objects.get_or_create(
                 razorpay_payment_id=razorpay_payment_id,
-                razorpay_order_id=razorpay_order_id,
-                amount=invoice.total_amount,
-                status=Payment.PaymentStatusChoices.CAPTURED,
-                payment_date=datetime.now(),
+                defaults={
+                    "invoice": invoice,
+                    "razorpay_order_id": razorpay_order_id,
+                    "amount": invoice.total_amount,
+                    "status": Payment.PaymentStatusChoices.CAPTURED,
+                    "payment_date": timezone.now(),
+                },
             )
 
             # Send confirmation email
@@ -379,9 +434,36 @@ def razorpay_webhook(request):
         if generated_signature != razorpay_signature:
             return HttpResponse("Signature verification failed", status=400)
 
-        # Parse and process event
+        # Persist the provider identity before processing so replay is harmless.
         event_data = json.loads(webhook_body)
-        RazorpayService.handle_payment_webhook(event_data)
+        provider_event_id = request.META.get("HTTP_X_RAZORPAY_EVENT_ID") or hashlib.sha256(
+            webhook_body
+        ).hexdigest()
+        webhook_event, created = ProviderWebhookEvent.objects.get_or_create(
+            provider="razorpay",
+            provider_event_id=provider_event_id,
+            defaults={
+                "event_type": event_data.get("event", ""),
+                "payload": event_data,
+            },
+        )
+        if not created and webhook_event.status == ProviderWebhookEvent.StatusChoices.PROCESSED:
+            return HttpResponse("Webhook already processed", status=200)
+
+        with transaction.atomic():
+            processed = RazorpayService.handle_payment_webhook(event_data)
+            webhook_event.status = (
+                ProviderWebhookEvent.StatusChoices.PROCESSED
+                if processed
+                else ProviderWebhookEvent.StatusChoices.FAILED
+            )
+            webhook_event.error_message = "" if processed else "Provider event processing failed"
+            webhook_event.processed_at = timezone.now() if processed else None
+            webhook_event.save(
+                update_fields=["status", "error_message", "processed_at", "updated_at"]
+            )
+        if not processed:
+            return HttpResponse("Webhook processing failed", status=500)
 
         return HttpResponse("Webhook processed", status=200)
 

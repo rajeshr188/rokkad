@@ -2351,54 +2351,39 @@ class InvitationSignalHandlerTests(SimpleTestCase):
 
 class WorkspaceModuleEntitlementTests(SimpleTestCase):
 	def test_workspace_modules_map_entitlement_outcomes(self):
-		workspace = SimpleNamespace(id=9, schema_name="acme")
+		workspace = SimpleNamespace(id=9, schema_name="acme", subscription=SimpleNamespace())
 		user = SimpleNamespace(id=1, is_authenticated=True)
 
-		def _decision_for(feature_code):
-			if feature_code == "advanced_reporting":
-				return SimpleNamespace(allowed=True, reason="AUTHORIZED", message="")
-			if feature_code == "api":
-				return SimpleNamespace(
-					allowed=False,
-					reason="NO_SUBSCRIPTION",
-					message="No active subscription found.",
-				)
-			return SimpleNamespace(
-				allowed=False,
-				reason="FEATURE_BLOCKED",
-				message="Custom fields are not enabled on your plan.",
-			)
-
 		with patch.object(
-			org_views.subscription_access_service,
-			"evaluate_access",
-			side_effect=lambda **kwargs: _decision_for(kwargs["feature_code"]),
-		) as mock_eval:
+			org_views.entitlements, "enabled", return_value=False
+		) as mock_enabled, patch(
+			"apps.orgs.views.effective_billing_state",
+			return_value=SimpleNamespace(commercially_available=True),
+		):
 			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
 
-		self.assertEqual(mock_eval.call_count, 2)
+		self.assertEqual(mock_enabled.call_count, 2)
 
 		api = next(item for item in modules if item["name"] == "API Access")
 		custom_fields = next(item for item in modules if item["name"] == "Custom Fields")
 
-		self.assertEqual(api["status"], "Billing Required")
+		self.assertEqual(api["status"], "Locked")
 		self.assertFalse(api["is_openable"])
 		self.assertTrue(api["upgrade_url"])
 
 		self.assertEqual(custom_fields["status"], "Locked")
 		self.assertEqual(
 			custom_fields["lock_reason"],
-			"Custom fields are not enabled on your plan.",
+			"This capability is not included in the Workspace entitlement grant.",
 		)
 
 	def test_workspace_modules_keep_planned_and_active_base_states(self):
-		workspace = SimpleNamespace(id=9, schema_name="acme")
+		workspace = SimpleNamespace(id=9, schema_name="acme", subscription=SimpleNamespace())
 		user = SimpleNamespace(id=1, is_authenticated=True)
 
-		with patch.object(
-			org_views.subscription_access_service,
-			"evaluate_access",
-			return_value=SimpleNamespace(allowed=True, reason="AUTHORIZED", message=""),
+		with patch.object(org_views.entitlements, "enabled", return_value=True), patch(
+			"apps.orgs.views.effective_billing_state",
+			return_value=SimpleNamespace(commercially_available=True),
 		):
 			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
 

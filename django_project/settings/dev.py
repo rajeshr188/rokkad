@@ -1,6 +1,7 @@
 from .base import *
 
 DEBUG = True
+BILLING_ALLOW_TRIAL_START = True
 
 ALLOWED_HOSTS = [
     "*",

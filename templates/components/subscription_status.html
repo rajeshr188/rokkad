@@ -17,7 +17,7 @@ Context:
     <p class="mb-0 mt-2">
       Your workspace "{{ workspace_name }}" does not have an active subscription.
       {% if user_role == 'Owner' %}
-      <a href="{% url 'subscriptions:plan-list' %}" class="alert-link">
+      <a href="{% if request.workspace %}{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.schema_name %}{% else %}{% url 'workspace_selector' %}{% endif %}" class="alert-link">
         Choose a plan to continue.
       </a>
       {% endif %}
@@ -32,7 +32,7 @@ Context:
     <p class="mb-0 mt-2">
       Your payment is overdue. Please update your billing information to continue.
       {% if user_role == 'Owner' %}
-      <a href="{% url 'subscriptions:dashboard' %}" class="alert-link">
+      <a href="{% if request.workspace %}{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.schema_name %}{% else %}{% url 'workspace_selector' %}{% endif %}" class="alert-link">
         Manage billing
       </a>
       {% endif %}

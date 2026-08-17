@@ -41,13 +41,13 @@ from .services.membership_capacity import get_workspace_seat_capacity_snapshot
 from .services import role_policy
 from .services.dashboard_selectors import get_workspace_dashboard_context
 from .tenant_context import resolve_preferred_workspace, resolve_request_workspace
-from apps.subscriptions.services import SubscriptionAccessService
+from apps.subscriptions import entitlements
+from apps.subscriptions.billing import effective_billing_state
 from apps.orgs.access import resolve_workspace_access
 
 # Create your views here.
 logger = logging.getLogger(__name__)
 User = get_user_model()
-subscription_access_service = SubscriptionAccessService()
 
 WORKSPACE_MODULE_REGISTRY = [
     {
@@ -84,14 +84,14 @@ WORKSPACE_MODULE_REGISTRY = [
         "name": "API Access",
         "description": "Programmatic API integration access for this workspace.",
         "route_name": "",
-        "feature_code": "api",
+        "feature_code": "api.access",
         "default_status": "Active",
     },
     {
         "name": "Custom Fields",
         "description": "Custom fields for advanced workflow and data capture scenarios.",
         "route_name": "",
-        "feature_code": "custom_fields",
+        "feature_code": "workspace.custom_fields",
         "default_status": "Active",
     },
 ]
@@ -181,22 +181,28 @@ def _workspace_module_statuses(*, workspace, user):
         route_name = module.get("route_name")
 
         if feature_code:
-            decision = subscription_access_service.evaluate_access(
-                user=user,
-                workspace=workspace,
-                feature_code=feature_code,
-            )
-            if decision.allowed:
+            try:
+                subscription = workspace.subscription
+                billing = effective_billing_state(subscription)
+            except Exception:
+                billing = None
+            if entitlements.enabled(workspace, feature_code):
                 module["status"] = "Active"
                 module["is_openable"] = bool(route_name)
-            elif decision.reason in {"NO_SUBSCRIPTION", "SUBSCRIPTION_INACTIVE"}:
+            elif billing is None or not billing.commercially_available:
                 module["status"] = "Billing Required"
-                module["lock_reason"] = decision.message
-                module["upgrade_url"] = reverse("subscriptions:dashboard")
+                module["lock_reason"] = "An active commercial subscription is required."
+                module["upgrade_url"] = reverse(
+                    "workspace_subscriptions:dashboard",
+                    kwargs={"workspace_slug": workspace.schema_name},
+                )
             else:
                 module["status"] = "Locked"
-                module["lock_reason"] = decision.message
-                module["upgrade_url"] = reverse("subscriptions:dashboard")
+                module["lock_reason"] = "This capability is not included in the Workspace entitlement grant."
+                module["upgrade_url"] = reverse(
+                    "workspace_subscriptions:dashboard",
+                    kwargs={"workspace_slug": workspace.schema_name},
+                )
         else:
             module["is_openable"] = bool(route_name) and module["status"] == "Active"
 
@@ -1788,9 +1794,6 @@ def workspace_select(request, workspace_id):
     return redirect("workspace_dashboard", workspace_id=workspace.id)
 
 
-subscription_access_service = SubscriptionAccessService()
-
-
 def subscription_required(view_func):
     """
     Decorator to ensure workspace has active subscription.
@@ -1805,22 +1808,20 @@ def subscription_required(view_func):
         if not workspace:
             return redirect("workspace_list")
 
-        decision = subscription_access_service.evaluate_access(
-            user=request.user,
-            workspace=workspace,
-        )
+        try:
+            subscription = workspace.subscription
+            decision = effective_billing_state(subscription)
+        except Exception:
+            subscription = None
+            decision = None
 
-        if not decision.allowed:
-            if decision.reason == "NO_SUBSCRIPTION":
-                messages.warning(
-                    request, "No active subscription found. Please set up billing."
-                )
-                return redirect("subscriptions:dashboard")
+        if decision is None or not decision.commercially_available:
+            messages.warning(request, "Subscription access is unavailable.")
+            return redirect(
+                "workspace_subscriptions:dashboard",
+                workspace_slug=workspace.schema_name,
+            )
 
-            messages.warning(request, decision.message or "Subscription access is unavailable.")
-            return redirect("subscriptions:dashboard")
-
-        subscription = decision.subscription
         if subscription and getattr(subscription, "end_date", None):
             days_left = (subscription.end_date - timezone.now()).days
             if 0 <= days_left <= 7:

@@ -5,8 +5,10 @@ from django.shortcuts import redirect
 from django.urls import resolve
 from django.utils import timezone
 from django.contrib import messages
+from django.http import HttpResponse
 from apps.orgs.tenant_context import resolve_request_workspace
-from apps.subscriptions.services import SubscriptionAccessService
+from apps.subscriptions.billing import effective_billing_state
+from apps.subscriptions.models import Subscription
 
 
 class HtmxMessagesMiddleware(MiddlewareMixin):
@@ -41,9 +43,6 @@ class HtmxMessagesMiddleware(MiddlewareMixin):
         )
 
         return response
-
-
-subscription_access_service = SubscriptionAccessService()
 
 
 class SubscriptionValidationMiddleware(MiddlewareMixin):
@@ -131,12 +130,20 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
 
         # Centralized subscription evaluation.
         try:
-            decision = subscription_access_service.evaluate_access(
-                user=request.user,
-                workspace=workspace,
-            )
+            subscription = Subscription.objects.filter(company=workspace).first()
+            if subscription is None:
+                messages.warning(
+                    request,
+                    "No subscription found. Please set up billing to continue.",
+                )
+                return redirect(
+                    "workspace_subscriptions:plan-list",
+                    workspace_slug=workspace.schema_name,
+                )
 
-            if not decision.allowed:
+            decision = effective_billing_state(subscription)
+
+            if not decision.commercially_available:
                 if decision.reason == "NO_SUBSCRIPTION":
                     try:
                         current_url = resolve(request.path).url_name
@@ -164,7 +171,6 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                     workspace_slug=workspace.schema_name,
                 )
 
-            subscription = decision.subscription
             if subscription and getattr(subscription, "end_date", None):
                 days_left = (subscription.end_date - timezone.now()).days
                 if 0 <= days_left <= 7:
@@ -172,11 +178,14 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                         request, f"Your subscription will renew in {days_left} days."
                     )
 
-        except Exception as e:
+        except Exception:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.error(f"Subscription validation error: {str(e)}")
-            return None
+            logger.exception("Subscription validation failed closed")
+            return HttpResponse(
+                "Subscription validation is temporarily unavailable.",
+                status=503,
+            )
 
         return None

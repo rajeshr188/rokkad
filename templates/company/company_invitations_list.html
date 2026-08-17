@@ -46,7 +46,7 @@
                             {{ seat_capacity.remaining }} seats remaining
                         </span>
                         <div class="mt-2">
-                            <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-primary">Upgrade plan</a>
+                            <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.schema_name %}" class="btn btn-sm btn-outline-primary">Upgrade plan</a>
                         </div>
                     </div>
                 </div>

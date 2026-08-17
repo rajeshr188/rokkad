@@ -21,23 +21,18 @@ class Phase1SubscriptionBoundaryTests(SimpleTestCase):
 
     def test_business_restriction_runs_after_workspace_is_established(self):
         request = self._request("/party/")
-        decision = SimpleNamespace(
-            allowed=False,
-            reason="NO_SUBSCRIPTION",
-            message="No subscription.",
-            subscription=None,
-        )
         resolved = SimpleNamespace(url_name="party_list", view_name="party:party_list")
+        subscriptions = SimpleNamespace(first=lambda: None)
 
         with patch("django_project.middleware.resolve", return_value=resolved), patch(
-            "django_project.middleware.subscription_access_service.evaluate_access",
-            return_value=decision,
-        ) as evaluate, patch("django_project.middleware.messages"), patch(
+            "django_project.middleware.Subscription.objects.filter",
+            return_value=subscriptions,
+        ) as subscription_filter, patch("django_project.middleware.messages"), patch(
             "django_project.middleware.redirect", return_value=SimpleNamespace(status_code=302)
         ) as redirect:
             response = self.middleware.process_request(request)
 
-        evaluate.assert_called_once_with(user=request.user, workspace=self.workspace)
+        subscription_filter.assert_called_once_with(company=self.workspace)
         redirect.assert_called_once_with(
             "workspace_subscriptions:plan-list", workspace_slug="acme"
         )
@@ -53,10 +48,10 @@ class Phase1SubscriptionBoundaryTests(SimpleTestCase):
         )
 
         with patch("django_project.middleware.resolve", return_value=resolved), patch(
-            "django_project.middleware.subscription_access_service.evaluate_access"
-        ) as evaluate:
+            "django_project.middleware.Subscription.objects.filter"
+        ) as subscription_filter:
             response = self.middleware.process_request(request)
 
-        evaluate.assert_not_called()
+        subscription_filter.assert_not_called()
         self.assertIsNone(response)
         self.assertIs(request.workspace, self.workspace)

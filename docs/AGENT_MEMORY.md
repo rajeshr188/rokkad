@@ -8,6 +8,23 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Phase 4 major-review checkpoint (2026-08-17): the commercial request boundary
+must fail closed. `SubscriptionValidationMiddleware` redirects a Workspace with
+no Subscription to its slug-scoped plan page, permits active/current-trial
+Subscriptions, limits expired trials and inactive states to billing recovery,
+and returns HTTP 503 on billing evaluation failure. Never catch a billing
+authority failure and continue into a business view. The classified acceptance
+record is `docs/implementation/control-plane-phase4-major-review.md`; Phase 5
+invitation/onboarding consolidation is next, while business-app authorization
+and core-module entitlement convergence remain Phases 8/9.
+
+Development trial activation is explicit rather than automatic: an owner
+selects a current Plan and POSTs the trial-start action. The locked transaction
+creates exactly one trial Subscription, BillingAccount, entitlement projection,
+and `trial.started` event. Never grant a trial merely by creating a Workspace or
+bypass billing under DEBUG. `BILLING_ALLOW_TRIAL_START` is explicitly true in
+development and false in production.
+
 The normative SaaS control-plane contract is
 `docs/architecture/control-plane-contracts.md`; read it before changing
 Workspace resolution, Membership, ownership, RBAC, lifecycle, billing,
@@ -34,12 +51,21 @@ are row-locked, reason-required, actor-authorized, and audited; `is_deleted` and
 ordinary hard deletion are retired; and middleware enforces lifecycle without
 letting platform override bypass it. Lifecycle never changes Subscription state
 or RLS ownership. Surviving business-app helper convergence remains Phase 9.
-Phase 4 billing normalization is next and must remain separate from lifecycle.
+Phase 4 is complete: `Subscription.status` is the only stored billing state;
+effective state is derived without writes; billing transitions are locked and
+event-backed; provider webhook identity is durable and replay-safe; and the
+typed namespaced entitlement API is the runtime feature/limit authority.
+Missing or malformed grants fail closed, and explicit override provenance is
+database-enforced. Billing remains separate from lifecycle, Membership/RBAC,
+request identity, and RLS. Phase 5 is next.
 
 Local migration checkpoint (2026-08-17): rebuilt-baseline migration records
 are reconciled with the already-equivalent physical schema, and
 `orgs.0002_workspace_ownership_and_membership_integrity` and
 `orgs.0003_workspace_operational_lifecycle` are applied normally.
+Subscription migrations `0002_remove_subscription_is_active_and_more` and
+`0003_subscriptionentitlement_subscription_override_requires_provenance` are
+also applied normally.
 The migration is non-atomic by design because PostgreSQL must commit deferred
 FK events from its data reconciliation before altering Membership. The current
 database has no pending migrations, no null Membership roles, no

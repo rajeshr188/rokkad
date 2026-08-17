@@ -135,14 +135,16 @@ def subscription_context(request):
 
     try:
         from apps.subscriptions.models import Subscription
+        from apps.subscriptions.billing import effective_billing_state
 
         subscription = Subscription.objects.get(company=workspace)
+        billing = effective_billing_state(subscription)
 
         return {
-            "has_active_subscription": subscription.is_active,
+            "has_active_subscription": billing.commercially_available,
             "subscription_plan": subscription.plan.name if subscription.plan else None,
             "days_until_renewal": subscription.days_until_renewal(),
-            "subscription_expired": subscription.status == "past_due",
+            "subscription_expired": billing.recovery_only,
         }
 
     except Exception:

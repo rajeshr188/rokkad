@@ -50,7 +50,7 @@
             <div class="workspace-nav-section">
                 <h6 class="workspace-nav-section-title">Billing</h6>
                 <a class="workspace-nav-link {% if request.resolver_match.url_name == 'subscriptions:dashboard' or request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
-                   href="{% url 'subscriptions:dashboard' %}">
+                   href="{% url 'workspace_subscriptions:dashboard' workspace_slug=user_workspace.schema_name %}">
                     <i class="bi bi-credit-card"></i> Subscription
                     {% if not has_active_subscription %}
                         <span class="badge bg-danger text-white float-end">Action Needed</span>

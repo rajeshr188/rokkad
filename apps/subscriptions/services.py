@@ -28,47 +28,47 @@ def build_entitlement_defaults(subscription: Any) -> list[dict[str, Any]]:
 
     return [
         {
-            "feature_code": "advanced_reporting",
+            "feature_code": "reporting.advanced",
             "enabled": bool(getattr(plan, "has_advanced_reporting", False)),
         },
         {
-            "feature_code": "multi_warehouse",
+            "feature_code": "inventory.multi_warehouse",
             "enabled": bool(getattr(plan, "has_multi_warehouse", False)),
         },
         {
-            "feature_code": "approvals",
+            "feature_code": "workflow.approvals",
             "enabled": bool(getattr(plan, "has_approvals_workflow", False)),
         },
         {
-            "feature_code": "api",
+            "feature_code": "api.access",
             "enabled": bool(getattr(plan, "has_api_access", False)),
         },
         {
-            "feature_code": "custom_fields",
+            "feature_code": "workspace.custom_fields",
             "enabled": bool(getattr(plan, "has_custom_fields", False)),
         },
         {
-            "feature_code": "max_users",
+            "feature_code": "workspace.max_members",
             "enabled": True,
             "value": str(getattr(plan, "max_users", 0)),
         },
         {
-            "feature_code": "max_products",
+            "feature_code": "inventory.max_products",
             "enabled": True,
             "value": str(getattr(plan, "max_products", 0)),
         },
         {
-            "feature_code": "max_warehouses",
+            "feature_code": "inventory.max_warehouses",
             "enabled": True,
             "value": str(getattr(plan, "max_warehouses", 0)),
         },
         {
-            "feature_code": "max_transactions_per_month",
+            "feature_code": "workspace.max_transactions_per_month",
             "enabled": True,
             "value": str(getattr(plan, "max_transactions_per_month", 0)),
         },
         {
-            "feature_code": "max_invoices_per_month",
+            "feature_code": "workspace.max_invoices_per_month",
             "enabled": True,
             "value": str(getattr(plan, "max_invoices_per_month", 0)),
         },
@@ -130,6 +130,9 @@ def ensure_entitlements_for_subscription(subscription: Any, dry_run: bool = Fals
             },
         )
         if not created:
+            if entitlement.source == "override":
+                created_entities.append((entitlement, False))
+                continue
             changed = False
             if entitlement.enabled != payload.get("enabled", True):
                 entitlement.enabled = payload.get("enabled", True)
@@ -153,41 +156,13 @@ def _parse_positive_int(value: Any) -> Optional[int]:
 
 
 def resolve_workspace_max_users_limit(*, workspace: Any, subscription: Optional[Any] = None) -> Optional[int]:
-    """Resolve effective max-users limit from entitlements, falling back to plan."""
+    """Resolve the effective member limit through the canonical entitlement API."""
     if workspace is None or "subscriptions" not in settings.INSTALLED_APPS:
         return None
 
-    if subscription is None:
-        try:
-            from apps.subscriptions.models import Subscription
+    from apps.subscriptions.entitlements import limit
 
-            subscription = (
-                Subscription.objects.filter(company=workspace)
-                .order_by("-created_at")
-                .first()
-            )
-        except Exception:
-            subscription = None
-
-    if subscription is None:
-        return None
-
-    try:
-        from apps.subscriptions.models import SubscriptionEntitlement
-
-        entitlement = SubscriptionEntitlement.objects.filter(
-            subscription=subscription,
-            feature_code="max_users",
-        ).first()
-        if entitlement and getattr(entitlement, "value", None):
-            parsed = _parse_positive_int(entitlement.value)
-            if parsed is not None:
-                return parsed
-    except Exception:
-        pass
-
-    plan = getattr(subscription, "plan", None)
-    return _parse_positive_int(getattr(plan, "max_users", None))
+    return limit(workspace, "workspace.max_members")
 
 
 def get_workspace_member_usage(*, workspace: Any, include_pending_invitations: bool = False) -> int:
@@ -292,17 +267,9 @@ class SubscriptionAccessService:
                 subscription=None,
             )
 
-        if getattr(subscription, "is_active", True) is False:
-            return AccessDecision(
-                False,
-                "SUBSCRIPTION_INACTIVE",
-                "This workspace subscription is inactive.",
-                membership=membership,
-                subscription=subscription,
-            )
+        from apps.subscriptions.billing import effective_billing_state
 
-        status = getattr(subscription, "status", "active")
-        if status in {"past_due", "cancelled", "expired"}:
+        if not effective_billing_state(subscription).commercially_available:
             return AccessDecision(
                 False,
                 "SUBSCRIPTION_INACTIVE",
@@ -312,11 +279,14 @@ class SubscriptionAccessService:
             )
 
         if feature_code:
-            entitlement = entitlement or self._get_entitlement(
-                subscription=subscription,
-                feature_code=feature_code,
+            from apps.subscriptions.entitlements import enabled
+
+            feature_enabled = (
+                bool(entitlement.enabled)
+                if entitlement is not None
+                else enabled(workspace, feature_code)
             )
-            if entitlement is not None and getattr(entitlement, "enabled", True) is False:
+            if not feature_enabled:
                 return AccessDecision(
                     False,
                     "FEATURE_BLOCKED",

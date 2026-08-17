@@ -62,7 +62,8 @@ class SaasFoundationPhase0CharacterizationTests(SimpleTestCase):
 
         self.assertNotIn("subscription_access_service.evaluate_access", workspace_middleware)
         self.assertIn("class SubscriptionValidationMiddleware", subscription_middleware)
-        self.assertIn("subscription_access_service.evaluate_access", subscription_middleware)
+        self.assertIn("effective_billing_state", subscription_middleware)
+        self.assertNotIn("SubscriptionAccessService", subscription_middleware)
 
 
 class SaasFoundationInventoryCommandTests(SimpleTestCase):

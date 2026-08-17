@@ -4,10 +4,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 
 from apps.orgs.tenant_context import resolve_request_workspace
-from apps.subscriptions.services import SubscriptionAccessService
-
-
-subscription_access_service = SubscriptionAccessService()
+from apps.subscriptions import entitlements
 
 
 def subscription_feature_required(feature_code):
@@ -24,15 +21,10 @@ def subscription_feature_required(feature_code):
                 )
                 return redirect("workspace_list")
 
-            decision = subscription_access_service.evaluate_access(
-                user=request.user,
-                workspace=workspace,
-                feature_code=feature_code,
-            )
-            if not decision.allowed:
+            if not entitlements.enabled(workspace, feature_code):
                 messages.warning(
                     request,
-                    decision.message or "This feature is not available on your current plan.",
+                    "This feature is not available on your current plan.",
                 )
                 return redirect(
                     "workspace_subscriptions:dashboard",

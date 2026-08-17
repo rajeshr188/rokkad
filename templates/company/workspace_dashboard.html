@@ -32,7 +32,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-{% if workspace.subscription and not workspace.subscription.is_active %}
+{% if workspace.subscription and not has_active_subscription %}
 {% include 'components/common/alert.html' with type='warning' title='Subscription Inactive' message='Your subscription is inactive. Please renew to continue using this workspace.' dismissible=True %}
 {% endif %}
 
@@ -222,7 +222,7 @@
                 {% else %}
                 <p class="small text-muted mb-3">Subscription renewal needed.</p>
                 {% endif %}
-                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-primary w-100">
+                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.schema_name %}" class="btn btn-sm btn-primary w-100">
                     <i class="bi bi-credit-card me-1"></i>Manage Subscription
                 </a>
             </div>

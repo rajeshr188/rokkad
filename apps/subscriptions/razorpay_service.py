@@ -165,6 +165,14 @@ class RazorpayService:
                     invoice = Invoice.objects.get(razorpay_order_id=order_id)
                     invoice.status = Invoice.StatusChoices.OVERDUE
                     invoice.save()
+                    from apps.subscriptions.billing import transition_subscription
+
+                    transition_subscription(
+                        subscription=invoice.subscription,
+                        target_status=Subscription.StatusChoices.PAST_DUE,
+                        event_type="payment.failed",
+                        payload={"provider_order_id": order_id},
+                    )
                 except Invoice.DoesNotExist:
                     pass
 

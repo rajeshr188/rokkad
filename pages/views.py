@@ -42,7 +42,6 @@ def Dashboard(request):
     selected_workspace = resolve_request_workspace(
         request,
         include_public=True,
-        allow_profile_fallback=True,
     )
     if selected_workspace and selected_workspace.schema_name != "public":
         try:
@@ -75,7 +74,6 @@ def company_dashboard(request):
     workspace = resolve_request_workspace(
         request,
         include_public=True,
-        allow_profile_fallback=True,
     )
     if workspace and workspace.schema_name == "public":
         return redirect("dashboard")
