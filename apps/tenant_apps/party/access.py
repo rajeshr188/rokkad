@@ -4,22 +4,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 
-from apps.orgs.permissions import (
-    get_effective_permissions,
-    get_workspace_role_name,
-    is_platform_admin,
-)
+from apps.orgs.access import resolve_workspace_access
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
-PARTY_ADMIN_ROLES = {"Owner", "Admin", "Administrator"}
+PARTY_ADMIN_ACTION = "workspace.settings.manage"
 
 PARTY_ACTION_PERMISSIONS = {
-    "view": ("contact_view", "data_view"),
-    "create": ("contact_create", "data_create"),
-    "edit": ("contact_edit", "data_edit"),
-    "delete": ("contact_delete", "data_delete"),
-    "export": ("contact_export", "data_export"),
+    "view": ("contact.view", "data.view"),
+    "create": ("contact.create", "data.create"),
+    "edit": ("contact.edit", "data.edit"),
+    "delete": ("contact.delete", "data.delete"),
+    "export": ("contact.export", "data.export"),
 }
 
 
@@ -36,31 +32,25 @@ def assert_party_workspace_access(request):
     if not user or not getattr(user, "is_authenticated", False):
         raise PermissionDenied("Authentication required")
 
-    if is_platform_admin(user) or getattr(workspace, "owner", None) == user:
-        return workspace
-
-    if get_workspace_role_name(user, workspace) is None:
+    access = resolve_workspace_access(actor=user, workspace=workspace)
+    if access.membership is None and not access.platform_override:
         raise PermissionDenied("Not a workspace member")
 
+    request.party_workspace_access = access
     return workspace
 
 
 def assert_party_permission(request, *permissions, require_all=False):
     """Fail closed unless the user has the requested Party permission(s)."""
     workspace = assert_party_workspace_access(request)
-    user = getattr(request, "user", None)
-
-    if is_platform_admin(user) or getattr(workspace, "owner", None) == user:
-        return workspace
-
     if not permissions:
         return workspace
 
-    effective_permissions = get_effective_permissions(user, workspace)
+    access = request.party_workspace_access
     has_required = (
-        all(permission in effective_permissions for permission in permissions)
+        all(access.can(permission) for permission in permissions)
         if require_all
-        else any(permission in effective_permissions for permission in permissions)
+        else any(access.can(permission) for permission in permissions)
     )
     if not has_required:
         required = ", ".join(permissions)
@@ -84,12 +74,7 @@ def can_administer_party_data(request):
     except PermissionDenied:
         return False
 
-    user = getattr(request, "user", None)
-    if is_platform_admin(user) or getattr(workspace, "owner", None) == user:
-        return True
-
-    role_name = get_workspace_role_name(user, workspace)
-    return role_name in PARTY_ADMIN_ROLES
+    return request.party_workspace_access.can(PARTY_ADMIN_ACTION)
 
 
 def party_workspace_required(view_func):

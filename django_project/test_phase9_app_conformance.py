@@ -17,7 +17,6 @@ KNOWN_DIRECT_AUTH_MODULES = {
     "loans/web/reports.py",
     "notify_v2/access.py",
     "notify_v2/views.py",
-    "party/access.py",
 }
 
 

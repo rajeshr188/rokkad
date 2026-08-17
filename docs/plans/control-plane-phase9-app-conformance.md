@@ -76,6 +76,18 @@ without Membership or audited platform override, and authorize through stable
 `data.view`, `data.create`, `data.edit`, and `data.delete` codes. Public helper,
 decorator, and mixin signatures remain unchanged.
 
+Slice 9.3 converts Party. Workspace membership and platform override now come
+only from `WorkspaceAccess`; Party actions use stable `contact.*` / `data.*`
+codes, and Party administration uses `workspace.settings.manage` instead of an
+app-local Owner/Admin role-name set. Portal identity remains a separate customer
+binding and is not broadened by staff authorization.
+
+The focused Party authorization, model, selector, merge, workspace-isolation,
+RLS, and control-plane contract suites pass. The legacy Party browser suite is
+not part of this slice's green gate because its workspace fixture has no active
+subscription and is redirected to billing before reaching Party views; that
+pre-existing fixture gap is separate from Party authorization conformance.
+
 ## Guardrails
 
 - RLS remains ownership isolation, never action authorization.

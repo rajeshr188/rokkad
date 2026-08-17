@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 
 from apps.tenant_apps.party.access import (
     PARTY_ACTION_PERMISSIONS,
+    PARTY_ADMIN_ACTION,
     assert_party_action_permission,
     assert_party_permission,
     assert_party_workspace_access,
@@ -14,141 +15,123 @@ from apps.tenant_apps.party.access import (
 
 
 class PartyAccessHelperTests(SimpleTestCase):
-    def _request(self, *, user=None):
-        if user is None:
-            user = SimpleNamespace(is_authenticated=True, is_superuser=False)
-        return SimpleNamespace(user=user)
-
-    def _workspace(self, *, owner=None):
-        return SimpleNamespace(owner=owner, schema_name="tenant1")
+    def setUp(self):
+        self.workspace = SimpleNamespace(id=13)
+        self.user = SimpleNamespace(is_authenticated=True)
+        self.request = SimpleNamespace(user=self.user, workspace=self.workspace)
 
     @patch("apps.tenant_apps.party.access.resolve_request_workspace", return_value=None)
-    def test_workspace_access_fails_closed_without_workspace(self, _mock_resolve):
+    def test_workspace_access_fails_closed_without_workspace(self, _resolve):
         with self.assertRaisesMessage(PermissionDenied, "No tenant workspace selected"):
-            assert_party_workspace_access(self._request())
+            assert_party_workspace_access(self.request)
 
     @patch(
         "apps.tenant_apps.party.access.resolve_request_workspace",
-        side_effect=AttributeError("bad tenant"),
+        side_effect=AttributeError("bad context"),
     )
-    def test_workspace_access_fails_closed_for_invalid_context(self, _mock_resolve):
+    def test_workspace_access_fails_closed_for_invalid_context(self, _resolve):
         with self.assertRaisesMessage(PermissionDenied, "Invalid tenant workspace context"):
-            assert_party_workspace_access(self._request())
+            assert_party_workspace_access(self.request)
 
     @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_workspace_owner_is_allowed(self, mock_resolve):
-        user = SimpleNamespace(is_authenticated=True, is_superuser=False)
-        workspace = self._workspace(owner=user)
-        mock_resolve.return_value = workspace
-
-        self.assertIs(assert_party_workspace_access(self._request(user=user)), workspace)
-
-    @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_platform_admin_is_allowed(self, mock_resolve):
-        admin = SimpleNamespace(is_authenticated=True, is_superuser=True)
-        workspace = self._workspace()
-        mock_resolve.return_value = workspace
-
-        self.assertIs(assert_party_workspace_access(self._request(user=admin)), workspace)
-
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value=None)
-    @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_non_member_is_denied(self, mock_resolve, _mock_role):
-        mock_resolve.return_value = self._workspace()
+    @patch("apps.tenant_apps.party.access.resolve_workspace_access")
+    def test_non_member_is_denied(self, resolve_access, resolve_workspace):
+        resolve_workspace.return_value = self.workspace
+        resolve_access.return_value = SimpleNamespace(
+            membership=None,
+            platform_override=False,
+        )
 
         with self.assertRaisesMessage(PermissionDenied, "Not a workspace member"):
-            assert_party_workspace_access(self._request())
+            assert_party_workspace_access(self.request)
 
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value="Member")
     @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_workspace_member_is_allowed(self, mock_resolve, _mock_role):
-        workspace = self._workspace()
-        mock_resolve.return_value = workspace
+    @patch("apps.tenant_apps.party.access.resolve_workspace_access")
+    def test_member_access_is_resolved_once(self, resolve_access, resolve_workspace):
+        resolve_workspace.return_value = self.workspace
+        access = SimpleNamespace(membership=object(), platform_override=False)
+        resolve_access.return_value = access
 
-        self.assertIs(assert_party_workspace_access(self._request()), workspace)
+        self.assertIs(assert_party_workspace_access(self.request), self.workspace)
+        self.assertIs(self.request.party_workspace_access, access)
+        resolve_access.assert_called_once_with(actor=self.user, workspace=self.workspace)
 
-    @patch(
-        "apps.tenant_apps.party.access.get_effective_permissions",
-        return_value={"contact_create"},
-    )
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value="Member")
     @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_permission_allows_any_required_permission(
-        self,
-        mock_resolve,
-        _mock_role,
-        _mock_permissions,
+    @patch("apps.tenant_apps.party.access.resolve_workspace_access")
+    def test_permission_supports_any_and_all_semantics(
+        self, resolve_access, resolve_workspace
     ):
-        workspace = self._workspace()
-        mock_resolve.return_value = workspace
+        resolve_workspace.return_value = self.workspace
+        granted = {"contact.create", "data.create"}
+        resolve_access.return_value = SimpleNamespace(
+            membership=object(),
+            platform_override=False,
+            can=lambda action: action in granted,
+        )
 
         self.assertIs(
             assert_party_permission(
-                self._request(),
-                "contact_create",
-                "data_create",
-                require_all=False,
+                self.request, "contact.create", "missing.action", require_all=False
             ),
-            workspace,
+            self.workspace,
+        )
+        self.assertIs(
+            assert_party_permission(
+                self.request, "contact.create", "data.create", require_all=True
+            ),
+            self.workspace,
         )
 
-    @patch(
-        "apps.tenant_apps.party.access.get_effective_permissions",
-        return_value={"contact_create"},
-    )
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value="Member")
     @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_permission_denies_missing_permission(
-        self,
-        mock_resolve,
-        _mock_role,
-        _mock_permissions,
+    @patch("apps.tenant_apps.party.access.resolve_workspace_access")
+    def test_action_map_uses_stable_codes_and_denies_missing_action(
+        self, resolve_access, resolve_workspace
     ):
-        mock_resolve.return_value = self._workspace()
+        resolve_workspace.return_value = self.workspace
+        resolve_access.return_value = SimpleNamespace(
+            membership=object(),
+            platform_override=False,
+            can=lambda _action: False,
+        )
 
-        with self.assertRaisesMessage(
-            PermissionDenied,
-            "Missing workspace permission(s): contact_delete, data_delete",
-        ):
-            assert_party_permission(
-                self._request(),
-                "contact_delete",
-                "data_delete",
-                require_all=False,
-            )
-
-    @patch(
-        "apps.tenant_apps.party.access.get_effective_permissions",
-        return_value={"data_export"},
-    )
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value="Member")
-    @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_action_permission_uses_party_permission_map(
-        self,
-        mock_resolve,
-        _mock_role,
-        _mock_permissions,
-    ):
-        workspace = self._workspace()
-        mock_resolve.return_value = workspace
-
-        self.assertEqual(PARTY_ACTION_PERMISSIONS["export"], ("contact_export", "data_export"))
-        self.assertIs(assert_party_action_permission(self._request(), "export"), workspace)
+        self.assertEqual(
+            PARTY_ACTION_PERMISSIONS["export"],
+            ("contact.export", "data.export"),
+        )
+        with self.assertRaisesMessage(PermissionDenied, "contact.export, data.export"):
+            assert_party_action_permission(self.request, "export")
 
     def test_unknown_party_action_fails_fast(self):
         with self.assertRaisesMessage(ValueError, "Unknown Party action 'archive'"):
-            assert_party_action_permission(self._request(), "archive")
+            assert_party_action_permission(self.request, "archive")
 
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value="Admin")
     @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_admin_role_can_administer_party_data(self, mock_resolve, _mock_role):
-        mock_resolve.return_value = self._workspace()
+    @patch("apps.tenant_apps.party.access.resolve_workspace_access")
+    def test_administration_uses_stable_workspace_action(
+        self, resolve_access, resolve_workspace
+    ):
+        resolve_workspace.return_value = self.workspace
+        checked = []
+        resolve_access.return_value = SimpleNamespace(
+            membership=object(),
+            platform_override=False,
+            can=lambda action: checked.append(action) or True,
+        )
 
-        self.assertTrue(can_administer_party_data(self._request()))
+        self.assertTrue(can_administer_party_data(self.request))
+        self.assertEqual(PARTY_ADMIN_ACTION, "workspace.settings.manage")
+        self.assertEqual(checked, ["workspace.settings.manage"])
 
-    @patch("apps.tenant_apps.party.access.get_workspace_role_name", return_value="Viewer")
     @patch("apps.tenant_apps.party.access.resolve_request_workspace")
-    def test_viewer_role_cannot_administer_party_data(self, mock_resolve, _mock_role):
-        mock_resolve.return_value = self._workspace()
+    @patch("apps.tenant_apps.party.access.resolve_workspace_access")
+    def test_platform_override_flows_through_workspace_access(
+        self, resolve_access, resolve_workspace
+    ):
+        resolve_workspace.return_value = self.workspace
+        resolve_access.return_value = SimpleNamespace(
+            membership=None,
+            platform_override=True,
+            can=lambda _action: True,
+        )
 
-        self.assertFalse(can_administer_party_data(self._request()))
+        self.assertIs(assert_party_action_permission(self.request, "view"), self.workspace)

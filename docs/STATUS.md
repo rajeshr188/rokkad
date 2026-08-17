@@ -108,6 +108,12 @@ actions while preserving existing decorators and mixins. Direct owner, role,
 and platform checks are gone from Rates; the frozen debt baseline is now 12
 runtime modules.
 
+Phase 9.3 converts Party authorization to `WorkspaceAccess`. Party staff actions
+now use stable `contact.*` / `data.*` codes, and Party administration requires
+`workspace.settings.manage` instead of direct Owner/Admin role checks. Portal
+identity remains unchanged. The frozen direct-authorization baseline is now 11
+runtime modules.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace
