@@ -11,6 +11,7 @@ from django.core.management import call_command
 from django.utils import timezone
 from apps.tenancy.testing import WorkspaceTestCase
 
+from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.domain import (
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
@@ -71,6 +72,12 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
 
     def setUp(self):
         super().setUp()
+        owner_role, _ = Role.objects.get_or_create(name="Owner")
+        Membership.objects.get_or_create(
+            user=self.tenant.owner,
+            company=self.tenant,
+            defaults={"role": owner_role},
+        )
         self.actor = get_user_model().objects.create_user(
             username=f"notice-{uuid.uuid4().hex[:8]}",
             email=f"notice-{uuid.uuid4().hex[:8]}@example.com",

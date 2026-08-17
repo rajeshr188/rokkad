@@ -6,7 +6,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.orgs.permissions import is_platform_admin
+from apps.orgs.access import resolve_workspace_access
+from apps.tenant_apps.loans.access import LOANS_OWNER_ACTION
 from apps.tenant_apps.loans.domain import CollateralCustodyState
 from apps.tenant_apps.loans.models import (
     PawnCollateralItem,
@@ -312,9 +313,8 @@ def _workspace_id():
 
 
 def _require_owner(workspace, actor):
-    if actor is None or not (
-        is_platform_admin(actor) or workspace.owner_id == actor.pk
-    ):
+    access = resolve_workspace_access(actor=actor, workspace=workspace)
+    if not access.can(LOANS_OWNER_ACTION):
         raise PawnPhysicalVerificationError(
             "Only the workspace Owner may conduct physical verification during the pilot."
         )

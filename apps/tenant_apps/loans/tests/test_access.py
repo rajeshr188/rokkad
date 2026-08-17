@@ -12,6 +12,15 @@ from apps.tenant_apps.loans.access import (
     assert_loans_setup_access,
     assert_loans_workspace_access,
 )
+from apps.tenant_apps.loans.services.physical_verification import (
+    PawnPhysicalVerificationError,
+    _require_owner as require_physical_verification_owner,
+)
+from apps.tenant_apps.loans.services.storage_operations import (
+    PawnStorageError,
+    _require_owner as require_storage_owner,
+)
+from apps.tenant_apps.loans.web.pawn_custody_actions import _can_manage_storage
 
 
 class LoansAccessTests(SimpleTestCase):
@@ -94,3 +103,37 @@ class LoansAccessTests(SimpleTestCase):
         )
 
         self.assertIs(assert_loans_owner_access(self.request), self.workspace)
+
+    @patch("apps.tenant_apps.loans.services.storage_operations.resolve_workspace_access")
+    @patch("apps.tenant_apps.loans.services.physical_verification.resolve_workspace_access")
+    def test_custody_services_use_owner_only_workspace_action(
+        self, resolve_verification_access, resolve_storage_access
+    ):
+        denied = self._access(allowed={LOANS_SETUP_ACTION})
+        resolve_verification_access.return_value = denied
+        resolve_storage_access.return_value = denied
+
+        with self.assertRaises(PawnPhysicalVerificationError):
+            require_physical_verification_owner(self.workspace, self.user)
+        with self.assertRaises(PawnStorageError):
+            require_storage_owner(self.workspace, self.user)
+
+        allowed = self._access(allowed={LOANS_OWNER_ACTION})
+        resolve_verification_access.return_value = allowed
+        resolve_storage_access.return_value = allowed
+        require_physical_verification_owner(self.workspace, self.user)
+        require_storage_owner(self.workspace, self.user)
+
+        resolve_verification_access.assert_called_with(
+            actor=self.user, workspace=self.workspace
+        )
+        resolve_storage_access.assert_called_with(
+            actor=self.user, workspace=self.workspace
+        )
+
+    def test_custody_web_helper_consumes_cached_workspace_access(self):
+        access = self._access(allowed={LOANS_OWNER_ACTION})
+        request = SimpleNamespace(loans_workspace_access=access)
+
+        self.assertTrue(_can_manage_storage(request))
+        access.can.assert_called_once_with(LOANS_OWNER_ACTION)

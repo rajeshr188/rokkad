@@ -11,7 +11,8 @@ from reportlab.lib.pagesizes import A6
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-from apps.orgs.permissions import is_platform_admin
+from apps.orgs.access import resolve_workspace_access
+from apps.tenant_apps.loans.access import LOANS_OWNER_ACTION
 from apps.tenant_apps.loans.domain import CollateralCustodyState
 from apps.tenant_apps.loans.models import (
     PawnCollateralItem,
@@ -212,9 +213,8 @@ def render_storage_location_label(location, *, qr_target):
 
 
 def _require_owner(workspace, actor):
-    if actor is None or not (
-        is_platform_admin(actor) or workspace.owner_id == actor.pk
-    ):
+    access = resolve_workspace_access(actor=actor, workspace=workspace)
+    if not access.can(LOANS_OWNER_ACTION):
         raise PawnStorageError("Only the workspace Owner may manage collateral storage during the pilot.")
 
 

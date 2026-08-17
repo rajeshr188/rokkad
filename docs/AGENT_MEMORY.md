@@ -48,10 +48,11 @@ staff actions use `contact.*` / `data.*`; Party administration uses
 `workspace.settings.manage`, while portal identity remains separate. Notify v2
 workflow actions use `data.*`, while provider configuration separately requires
 `workspace.settings.manage`. The frozen direct-authorization baseline is now
-eight Loans modules: the central Loans access helper is converted, while direct
-authorization remains in its reviewed service/view callers. Loans membership
+five Loans modules: the central access helper and custody workflow are converted,
+while direct authorization remains in reviewed financial, auction, reversal,
+report, and broad view callers. Loans membership
 entry requires `data.view`, setup requires `workspace.settings.manage`, and the
-existing owner-only operational boundary uses `workspace.transfer`.
+existing owner-only operational and custody boundaries use `workspace.transfer`.
 Every successful platform membership override is audited after explicit
 Workspace context establishment; identity conflicts and lifecycle restrictions
 remain non-bypassable.

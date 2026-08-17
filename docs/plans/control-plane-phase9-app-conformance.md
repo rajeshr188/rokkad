@@ -106,6 +106,15 @@ explicit nonmember, slug-scoped business-entry, Phase 9, and control-plane
 contract gates pass. The remaining baseline is eight reviewed Loans service and
 view modules, to be converted in workflow-sized slices.
 
+Slice 9.6 converts the Owner-only custody workflow across storage operations,
+physical verification, and custody web actions. Every layer now consumes
+`workspace.transfer` through `WorkspaceAccess`; domain-specific error types,
+pilot restrictions, immutable evidence, discrepancy resolution, and notice
+behavior are preserved. The notice suite fixture now includes the canonical
+mirrored Owner Membership previously masked by a direct owner-ID shortcut.
+Focused authorization, all eight notice tests, and four service-level custody
+tests pass. Five reviewed Loans modules remain.
+
 ## Guardrails
 
 - RLS remains ownership isolation, never action authorization.

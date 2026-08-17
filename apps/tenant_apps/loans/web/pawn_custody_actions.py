@@ -6,8 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from apps.orgs.permissions import is_platform_admin
-from apps.tenant_apps.loans.access import loans_owner_required
+from apps.tenant_apps.loans.access import LOANS_OWNER_ACTION, loans_owner_required
 from apps.tenant_apps.loans.forms import (
     PawnPhysicalVerificationResolutionForm, PawnStorageLocationForm,
     PawnStorageTransferForm,
@@ -34,7 +33,7 @@ def _pawn_loan_for_workspace(request, pk):
 
 
 def _can_manage_storage(request):
-    return bool(is_platform_admin(request.user) or request.loans_workspace.owner_id == request.user.pk)
+    return request.loans_workspace_access.can(LOANS_OWNER_ACTION)
 
 @loans_owner_required
 def pawn_storage_location_create(request):
@@ -170,4 +169,3 @@ def pawn_physical_verification_discrepancy_notice(request, observation_pk):
             request, "Verification discrepancy alert intent is ready for the workspace Owner."
         )
     return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
-

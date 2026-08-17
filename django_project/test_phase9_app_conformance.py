@@ -8,10 +8,7 @@ DIRECT_AUTH_MARKERS = ("is_platform_admin", "get_workspace_role_name")
 KNOWN_DIRECT_AUTH_MODULES = {
     "loans/services/pawn_auctions.py",
     "loans/services/pawn_reversal.py",
-    "loans/services/physical_verification.py",
-    "loans/services/storage_operations.py",
     "loans/views.py",
-    "loans/web/pawn_custody_actions.py",
     "loans/web/pawn_financial_actions.py",
     "loans/web/reports.py",
 }
