@@ -28,7 +28,7 @@
         {% elif item.key == "invite_team" %}
         <a href="{% url 'workspace_settings_invite' workspace_id=workspace_id %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% elif item.key == "rates" %}
-        <a href="{% url 'rate_list' %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
+        <a href="{% url 'workspace_slug_rates' workspace_slug=workspace_slug %}" class="btn btn-sm btn-outline-primary">{{ item.action_label }}</a>
         {% endif %}
     </div>
     {% endif %}

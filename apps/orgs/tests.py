@@ -518,6 +518,22 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertIn("workspace_preferences", sidebar_html)
 		self.assertEqual(sidebar_html.count("workspace_slug_parties"), 2)
 		self.assertNotIn("{% url 'party:party_list' %}", sidebar_html)
+		for route_name in (
+			"workspace_slug_notifications",
+			"workspace_slug_loan_list",
+			"workspace_slug_settings_numbering",
+			"workspace_slug_rates",
+			"workspace_slug_data_tools_import",
+		):
+			self.assertIn(route_name, sidebar_html)
+		for unscoped_route in (
+			"notify_v2_batch_list",
+			"loans:pawn_loan_list",
+			"loans:license_list",
+			"rate_list",
+			"data_import:import_data",
+		):
+			self.assertNotIn("{% url '" + unscoped_route + "'", sidebar_html)
 		self.assertEqual(sidebar_html.count("</i> Parties"), 1)
 		
 		# Verify deprecated route names are NOT used
@@ -2233,6 +2249,19 @@ class WorkspaceModuleEntitlementTests(SimpleTestCase):
 		self.assertFalse(portal["is_openable"])
 		self.assertEqual(rates["status"], "Active")
 		self.assertTrue(rates["is_openable"])
+		self.assertEqual(
+			{
+				module["name"]: module["route_name"]
+				for module in modules
+				if module["name"] in {"Parties", "Loans", "Notifications", "Rates"}
+			},
+			{
+				"Parties": "workspace_slug_parties",
+				"Loans": "workspace_slug_loan_list",
+				"Notifications": "workspace_slug_notifications",
+				"Rates": "workspace_slug_rates",
+			},
+		)
 		self.assertTrue(
 			{"Accounting", "Operations", "Inventory", "Commodity", "Advanced Reporting"}
 			.isdisjoint(module["name"] for module in modules)

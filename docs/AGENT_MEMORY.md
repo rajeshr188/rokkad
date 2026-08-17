@@ -62,6 +62,11 @@ never integer-ID Workspace routes. Slug adapters resolve the authoritative
 Workspace and call the existing authorized view directly, preserving one
 business implementation. Integer `/workspace/<id>/...` and `/orgs/...` routes
 are inbound compatibility only until a later explicit removal decision.
+Primary business-app navigation and the Workspace module registry must also use
+slug-scoped adapters. Never link from a resolved Workspace page to unscoped
+`/party/`, `/loans/`, `/notify-v2/`, `/rates/`, or `/data-tools/` entrypoints:
+doing so intentionally loses explicit Workspace identity, and profile selection
+must not be used to reconstruct request authority.
 
 Phase 5 invitation convergence is complete. All authenticated acceptance paths must
 call `control_plane.accept_invitation`, which locks the authoritative

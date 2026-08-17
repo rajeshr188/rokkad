@@ -43,7 +43,7 @@
                 <p class="small text-muted mb-3">{{ module.lock_reason }}</p>
                 {% endif %}
                 {% if module.route_name and module.is_openable %}
-                <a href="{% url module.route_name %}" class="btn btn-sm btn-outline-secondary">
+                <a href="{% url module.route_name workspace_slug=company.schema_name %}" class="btn btn-sm btn-outline-secondary">
                     Open
                 </a>
                 {% elif module.status != "Active" and module.upgrade_url %}

@@ -183,6 +183,14 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
             "workspace_slug_sales": ({"workspace_slug": "acme"}, "/w/acme/sales/"),
             "workspace_slug_purchase": ({"workspace_slug": "acme"}, "/w/acme/purchase/"),
             "workspace_slug_loans": ({"workspace_slug": "acme"}, "/w/acme/loans/"),
+            "workspace_slug_loan_create": (
+                {"workspace_slug": "acme"},
+                "/w/acme/loans/new/",
+            ),
+            "workspace_slug_data_tools_import": (
+                {"workspace_slug": "acme"},
+                "/w/acme/data-tools/import/",
+            ),
             "workspace_slug_inventory": ({"workspace_slug": "acme"}, "/w/acme/inventory/"),
             "workspace_slug_accounting": ({"workspace_slug": "acme"}, "/w/acme/accounting/"),
             "workspace_slug_commodity": ({"workspace_slug": "acme"}, "/w/acme/commodity/"),

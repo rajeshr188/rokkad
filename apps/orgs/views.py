@@ -52,25 +52,25 @@ WORKSPACE_MODULE_REGISTRY = [
     {
         "name": "Parties",
         "description": "Customer, supplier, broker, employee, KYC, and relationship records.",
-        "route_name": "party:party_list",
+        "route_name": "workspace_slug_parties",
         "default_status": "Active",
     },
     {
         "name": "Loans",
         "description": "PawnLoan workflows, collateral custody, releases, repayments, and notices.",
-        "route_name": "loans:pawn_loan_list",
+        "route_name": "workspace_slug_loan_list",
         "default_status": "Active",
     },
     {
         "name": "Notifications",
         "description": "Operational notification batches and delivery settings.",
-        "route_name": "notify_v2_index",
+        "route_name": "workspace_slug_notifications",
         "default_status": "Active",
     },
     {
         "name": "Rates",
         "description": "Workspace-owned reference rates and rate sources.",
-        "route_name": "rate_list",
+        "route_name": "workspace_slug_rates",
         "default_status": "Active",
     },
     {
@@ -288,7 +288,9 @@ def workspace_slug_settings_roles(request, workspace_slug):
 @login_required
 def workspace_slug_settings_numbering(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:license_list")
+    from apps.tenant_apps.loans.views import license_list
+
+    return license_list(request)
 
 
 @login_required
@@ -361,6 +363,14 @@ def workspace_slug_loan_list(request, workspace_slug):
     from apps.tenant_apps.loans.views import pawn_loan_list
 
     return pawn_loan_list(request)
+
+
+@login_required
+def workspace_slug_loan_create(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_loan_create
+
+    return pawn_loan_create(request)
 
 
 @login_required
@@ -542,7 +552,9 @@ def workspace_slug_rate_source_detail(request, workspace_slug, pk):
 @login_required
 def workspace_slug_notifications(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("notify_v2_batch_list")
+    from apps.tenant_apps.notify_v2.views import batch_list
+
+    return batch_list(request)
 
 
 @login_required
@@ -569,6 +581,14 @@ def workspace_slug_data_tools_export(request, workspace_slug):
     from apps.tenant_apps.utils.importing.views import export_form
 
     return export_form(request)
+
+
+@login_required
+def workspace_slug_data_tools_import(request, workspace_slug):
+    _get_workspace_from_slug(workspace_slug, include_inactive=True)
+    from apps.tenant_apps.utils.importing.views import import_data
+
+    return import_data(request)
 
 
 @login_required

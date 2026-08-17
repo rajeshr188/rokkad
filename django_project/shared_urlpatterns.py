@@ -258,6 +258,11 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_loan_list",
     ),
     path(
+        "w/<str:workspace_slug>/loans/new/",
+        org_views.workspace_slug_loan_create,
+        name="workspace_slug_loan_create",
+    ),
+    path(
         "w/<str:workspace_slug>/loans/table/",
         org_views.workspace_slug_loan_table,
         name="workspace_slug_loan_table",
@@ -416,6 +421,11 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         "w/<str:workspace_slug>/data-tools/export/",
         org_views.workspace_slug_data_tools_export,
         name="workspace_slug_data_tools_export",
+    ),
+    path(
+        "w/<str:workspace_slug>/data-tools/import/",
+        org_views.workspace_slug_data_tools_import,
+        name="workspace_slug_data_tools_import",
     ),
     path(
         "w/<str:workspace_slug>/data-tools/export/<str:model_name>/<str:export_format>/",

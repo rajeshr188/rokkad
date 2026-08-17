@@ -488,7 +488,13 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             ),
             html,
         )
-        self.assertIn(reverse("rate_list"), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_rates",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
+            html,
+        )
         self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)
 
     def test_workspace_settings_setup_page_renders_checklist(self):
@@ -558,5 +564,11 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             ),
             html,
         )
-        self.assertIn(reverse("rate_list"), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_rates",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
+            html,
+        )
         self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)

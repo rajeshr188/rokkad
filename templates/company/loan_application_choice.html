@@ -8,7 +8,7 @@
 <div class="row g-3">
   <div class="col-md-8"><div class="card h-100"><div class="card-body">
     <h2 class="h5">PawnLoans</h2><p>Use the current Loans workflow for new pawn contracts and Loans-owned records.</p>
-    <div class="d-flex gap-2"><a class="btn btn-primary" href="{% url 'loans:pawn_loan_list' %}">Open PawnLoans</a><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_create' %}">New PawnLoan</a></div>
+    <div class="d-flex gap-2"><a class="btn btn-primary" href="{% url 'workspace_slug_loan_list' workspace_slug=request.workspace.schema_name %}">Open PawnLoans</a><a class="btn btn-outline-primary" href="{% url 'workspace_slug_loan_create' workspace_slug=request.workspace.schema_name %}">New PawnLoan</a></div>
   </div></div></div>
 </div>
 {% endblock %}

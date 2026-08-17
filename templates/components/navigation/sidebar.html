@@ -77,7 +77,7 @@
                      <!-- Notifications (V2) -->
                      {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                      <a class="workspace-nav-link {% if 'notify_v2_' in request.resolver_match.url_name %}active{% endif %}"
-                         href="{% url 'notify_v2_batch_list' %}">
+                         href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.schema_name %}">
                           <i class="bi bi-envelope-paper-fill"></i> Notifications (V2)
                      </a>
                      {% endif %}
@@ -85,27 +85,27 @@
                 <!-- Canonical Loans application -->
                 {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' and '/setup/' not in request.path %}active{% endif %}"
-                   href="{% url 'loans:pawn_loan_list' %}">
+                   href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-cash-coin"></i> PawnLoans
                 </a>
                 {% endif %}
                 {% if role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' %}active{% endif %}"
-                   href="{% url 'loans:license_list' %}">
+                   href="{% url 'workspace_slug_settings_numbering' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-ui-checks-grid"></i> Loans Setup
                 </a>
                 {% endif %}
                 <!-- Rates -->
                 {% if 'data_view' in user_permissions or 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.url_name == 'rate_list' or 'rate' in request.resolver_match.url_name %}active{% endif %}"
-                   href="{% url 'rate_list' %}">
+                   href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-coin"></i> Rates
                 </a>
                 {% endif %}
 
                 {% if 'data_import' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
                 <a class="workspace-nav-link {% if request.resolver_match.namespace == 'data_import' %}active{% endif %}"
-                   href="{% url 'data_import:import_data' %}">
+                   href="{% url 'workspace_slug_data_tools_import' workspace_slug=effective_workspace.schema_name %}">
                     <i class="bi bi-arrow-down-up"></i> Data Tools
                 </a>
                 {% endif %}
