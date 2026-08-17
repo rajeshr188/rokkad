@@ -22,7 +22,7 @@
         {% endif %}
         {% with ws=request.user.profile.workspace %}
         {% if ws %}
-        <a href="{% url 'workspace_dashboard' workspace_id=ws.id %}">
+        <a href="{% url 'workspace_slug_dashboard' workspace_slug=ws.schema_name %}">
             <i class="bi bi-arrow-right-circle me-1"></i>Enter {{ ws.name }}
         </a>
         {% endif %}

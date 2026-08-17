@@ -24,7 +24,7 @@
         <!-- Main Navigation -->
         <nav class="workspace-nav">
                 {% if effective_workspace %}
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_dashboard' %}active{% endif %}"
+            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_dashboard' or request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}"
                     href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.schema_name %}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>

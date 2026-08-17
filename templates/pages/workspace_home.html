@@ -93,7 +93,7 @@
                                     <!-- Action Buttons -->
                                     <div class="d-grid gap-2">
                                         {% if current_workspace == membership.company %}
-                                            <a href="{% url 'workspace_dashboard' workspace_id=membership.company.id %}" class="btn btn-primary btn-sm">
+<a href="{% url 'workspace_slug_dashboard' workspace_slug=membership.company.schema_name %}" class="btn btn-primary btn-sm">
                                                 <i class="bi bi-arrow-right-circle"></i> Enter Workspace
                                             </a>
                                         {% else %}

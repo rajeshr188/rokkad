@@ -173,7 +173,10 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                 "workspace_slug_settings",
                 kwargs={"workspace_slug": workspace.schema_name},
             ),
-            reverse("workspace_settings_setup", kwargs={"workspace_id": workspace.id}),
+            reverse(
+                "workspace_slug_settings_setup",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
             reverse(
                 "workspace_slug_settings_preferences",
                 kwargs={"workspace_slug": workspace.schema_name},
@@ -182,7 +185,10 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                 "workspace_slug_settings_team",
                 kwargs={"workspace_slug": workspace.schema_name},
             ),
-            reverse("workspace_settings_invite", kwargs={"workspace_id": workspace.id}),
+            reverse(
+                "workspace_slug_settings_invite",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
             reverse(
                 "workspace_slug_settings_invitations",
                 kwargs={"workspace_slug": workspace.schema_name},
@@ -297,7 +303,13 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn(reverse("app_workspace_create"), html)
         self.assertIn(reverse("app_invitations"), html)
         self.assertIn(reverse("workspace_select", kwargs={"workspace_id": other_workspace.id}), html)
-        self.assertIn(reverse("workspace_settings_home", kwargs={"workspace_id": workspace.id}), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_settings",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
+            html,
+        )
         self.assertNotIn("createWorkspaceModal", html)
         self.assertNotIn("Welcome Back!", html)
 
@@ -469,7 +481,13 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Rates", html)
         self.assertIn("Parties", html)
         self.assertIn("Dismiss", html)
-        self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_settings_setup_state",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
+            html,
+        )
         self.assertIn(reverse("rate_list"), html)
         self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)
 
@@ -533,6 +551,12 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Parties", html)
         self.assertIn("Mark setup complete", html)
         self.assertIn("Dismiss dashboard card", html)
-        self.assertIn(reverse("workspace_settings_setup_state", kwargs={"workspace_id": workspace.id}), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_settings_setup_state",
+                kwargs={"workspace_slug": workspace.schema_name},
+            ),
+            html,
+        )
         self.assertIn(reverse("rate_list"), html)
         self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)

@@ -11,7 +11,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'workspace_list' %}">Workspaces</a></li>
             {% if company %}
-            <li class="breadcrumb-item"><a href="{% url 'workspace_detail' company.id %}">{{ company.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.schema_name %}">{{ company.name }}</a></li>
             <li class="breadcrumb-item active">Edit</li>
             {% else %}
             <li class="breadcrumb-item active">Create Workspace</li>

@@ -6,7 +6,7 @@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{% url 'workspace_selector' %}">My Workspaces</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'workspace_settings_home' workspace_id=company.id %}">{{ company.name }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.schema_name %}">{{ company.name }}</a></li>
         <li class="breadcrumb-item active">Modules</li>
     </ol>
 </nav>

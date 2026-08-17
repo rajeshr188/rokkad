@@ -6,7 +6,7 @@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{% url 'app_workspaces' %}">My Workspaces</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'workspace_settings_home' workspace_id=company.id %}">{{ company.name }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.schema_name %}">{{ company.name }}</a></li>
         <li class="breadcrumb-item active">Setup</li>
     </ol>
 </nav>
@@ -18,7 +18,7 @@
         <h1 class="h3 fw-bold mb-1">Workspace setup</h1>
         <p class="text-muted mb-0">Track the core setup tasks needed before routine operations.</p>
     </div>
-    <a href="{% url 'workspace_dashboard' workspace_id=company.id %}" class="btn btn-outline-secondary btn-sm">
+<a href="{% url 'workspace_slug_dashboard' workspace_slug=company.schema_name %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-speedometer2 me-1"></i>Dashboard
     </a>
 </div>
@@ -31,7 +31,7 @@
         <div class="fw-semibold">Workspace setup is marked complete.</div>
         <div class="small">The checklist remains available for review and future adjustments.</div>
     </div>
-    <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+    <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.schema_name %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="reopen">
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -44,7 +44,7 @@
         <div class="fw-semibold">Setup card is dismissed from the dashboard.</div>
         <div class="small">You can reopen it or continue using this setup page.</div>
     </div>
-    <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+    <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.schema_name %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="reopen">
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -70,7 +70,7 @@
     </div>
     <div class="mgmt-setup-actions">
         {% if not setup_state.is_complete %}
-        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+        <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.schema_name %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="complete">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -78,7 +78,7 @@
         </form>
         {% endif %}
         {% if not setup_state.is_dismissed and not setup_state.is_complete %}
-        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=company.id %}">
+        <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.schema_name %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="dismiss">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">

@@ -59,7 +59,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between pt-3 border-top">
-                    <a class="btn btn-secondary" href="{% url 'workspace_detail' company.id %}#members-pane">
+                    <a class="btn btn-secondary" href="{% url 'workspace_slug_settings_team' workspace_slug=company.schema_name %}">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
                     <button class="btn btn-success" type="submit">

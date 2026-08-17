@@ -138,6 +138,16 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_settings",
     ),
     path(
+        "w/<str:workspace_slug>/settings/setup/",
+        org_views.workspace_slug_settings_setup,
+        name="workspace_slug_settings_setup",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/setup/state/",
+        org_views.workspace_slug_settings_setup_state,
+        name="workspace_slug_settings_setup_state",
+    ),
+    path(
         "w/<str:workspace_slug>/settings/preferences/",
         org_views.workspace_slug_settings_preferences,
         name="workspace_slug_settings_preferences",
@@ -151,6 +161,11 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         "w/<str:workspace_slug>/settings/invitations/",
         org_views.workspace_slug_settings_invitations,
         name="workspace_slug_settings_invitations",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/invitations/new/",
+        org_views.workspace_slug_settings_invite,
+        name="workspace_slug_settings_invite",
     ),
     path(
         "w/<str:workspace_slug>/settings/profile/",
@@ -181,6 +196,11 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         "w/<str:workspace_slug>/settings/security/",
         org_views.workspace_slug_settings_security,
         name="workspace_slug_settings_security",
+    ),
+    path(
+        "w/<str:workspace_slug>/settings/archive/",
+        org_views.workspace_slug_settings_archive,
+        name="workspace_slug_settings_archive",
     ),
     path(
         "w/<str:workspace_slug>/settings/accounting/",

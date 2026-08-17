@@ -310,7 +310,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 			profile=SimpleNamespace(set_workspace=lambda *_args, **_kwargs: None),
 		)
 
-		workspace = SimpleNamespace(id=12, name="WS-12")
+		workspace = SimpleNamespace(id=12, name="WS-12", schema_name="ws-12")
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
@@ -339,7 +339,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 			profile=SimpleNamespace(set_workspace=lambda workspace: set_calls.append(workspace.id)),
 		)
 
-		workspace = SimpleNamespace(id=12, name="WS-12")
+		workspace = SimpleNamespace(id=12, name="WS-12", schema_name="ws-12")
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
@@ -352,7 +352,9 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 
 		self.assertEqual(set_calls, [12])
 		mock_messages.success.assert_called_once()
-		mock_redirect.assert_called_once_with("workspace_dashboard", workspace_id=12)
+		mock_redirect.assert_called_once_with(
+			"workspace_slug_dashboard", workspace_slug="ws-12"
+		)
 
 	def test_workspace_select_get_cannot_mutate_profile_preference(self):
 		from apps.orgs import views as org_views
@@ -369,12 +371,12 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 	def test_workspace_select_accepts_only_same_host_next_target(self):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=12, name="WS-12")
+		workspace = SimpleNamespace(id=12, name="WS-12", schema_name="ws-12")
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		for next_target, expected_redirect in (
 			("/subscriptions/", "/subscriptions/"),
-			("https://attacker.example/phish", ("workspace_dashboard", 12)),
+			("https://attacker.example/phish", ("workspace_slug_dashboard", "ws-12")),
 		):
 			with self.subTest(next_target=next_target):
 				request = self.factory.post(
@@ -400,7 +402,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 
 				if isinstance(expected_redirect, tuple):
 					mock_redirect.assert_called_once_with(
-						expected_redirect[0], workspace_id=expected_redirect[1]
+						expected_redirect[0], workspace_slug=expected_redirect[1]
 					)
 				else:
 					mock_redirect.assert_called_once_with(expected_redirect)
@@ -529,15 +531,15 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		
 		# Should use canonical workspace routes
 		self.assertIn("workspace_selector", dashboard_html)
-		self.assertIn("workspace_detail", dashboard_html)
-		self.assertIn("workspace_settings_setup", dashboard_html)
-		self.assertIn("team_invite", dashboard_html)
+		self.assertIn("workspace_slug_settings", dashboard_html)
+		self.assertIn("workspace_slug_settings_setup", dashboard_html)
+		self.assertIn("workspace_slug_settings_invite", dashboard_html)
 		self.assertIn("setup_checklist", dashboard_html)
 		self.assertIn("Workspace setup", dashboard_html)
 		self.assertNotIn("workspace_slug_accounting", dashboard_html)
 		self.assertNotIn("DEA Dashboard", dashboard_html)
 		self.assertIn("setup_checklist_task.html", dashboard_html)
-		self.assertIn("workspace_settings_setup_state", dashboard_html)
+		self.assertIn("workspace_slug_settings_setup_state", dashboard_html)
 
 	def test_workspace_setup_page_uses_settings_shell_and_checklist(self):
 		with open("templates/company/workspace_setup.html", "r") as f:
@@ -546,8 +548,8 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertIn("{% extends 'base_workspace_settings.html' %}", setup_html)
 		self.assertIn("setup_checklist", setup_html)
 		self.assertIn("Workspace setup", setup_html)
-		self.assertIn("workspace_settings_home", setup_html)
-		self.assertIn("workspace_settings_setup_state", setup_html)
+		self.assertIn("workspace_slug_settings", setup_html)
+		self.assertIn("workspace_slug_settings_setup_state", setup_html)
 		self.assertIn("setup_checklist_task.html", setup_html)
 
 	def test_workspace_dashboard_context_includes_setup_checklist(self):
@@ -963,7 +965,7 @@ class InvitationLifecycleStateTests(SimpleTestCase):
 		request.user = SimpleNamespace(id=9)
 		request.headers = {}
 
-		company = SimpleNamespace(id=1)
+		company = SimpleNamespace(id=1, schema_name="acme")
 		mark_calls = []
 		invitation = SimpleNamespace(
 			id=42,
@@ -980,7 +982,10 @@ class InvitationLifecycleStateTests(SimpleTestCase):
 		mock_revoke.assert_called_once()
 		mock_messages.success.assert_called_once()
 		mock_redirect.assert_called_once_with(
-			reverse("workspace_settings_invitations", kwargs={"workspace_id": 1})
+			reverse(
+				"workspace_slug_settings_invitations",
+				kwargs={"workspace_slug": "acme"},
+			)
 		)
 
 
@@ -1029,7 +1034,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 	def test_send_team_invitation_service_enforces_role_grant_policy(self):
 		form = SimpleNamespace(cleaned_data={"role": SimpleNamespace(name="Admin")})
 		actor = SimpleNamespace(id=1)
-		company = SimpleNamespace(id=9)
+		company = SimpleNamespace(id=9, schema_name="acme")
 
 		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role", side_effect=ValidationError("denied")) as mock_policy, \
 			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx:
@@ -1091,7 +1096,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_revoke.assert_not_called()
 
 	def test_team_remove_member_requires_team_remove_permission(self):
-		company = SimpleNamespace(id=9)
+		company = SimpleNamespace(id=9, schema_name="acme")
 		membership = SimpleNamespace(
 			id=5,
 			user=SimpleNamespace(id=2, profile=SimpleNamespace(workspace=None)),
@@ -1126,7 +1131,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_remove.assert_not_called()
 
 	def test_team_change_role_requires_team_change_role_permission(self):
-		company = SimpleNamespace(id=9)
+		company = SimpleNamespace(id=9, schema_name="acme")
 		membership = SimpleNamespace(id=5, user=SimpleNamespace(id=2))
 		role = SimpleNamespace(id=3, name="Admin")
 		request = self.factory.post(
@@ -1283,7 +1288,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_messages,
 		mock_redirect,
 	):
-		company = SimpleNamespace(id=9)
+		company = SimpleNamespace(id=9, schema_name="acme")
 		seat_capacity = SimpleNamespace(has_limit=False)
 		request = self.factory.post(
 			"/workspace/9/settings/invitations/new/",
@@ -1301,14 +1306,14 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 
 		mock_messages.success.assert_called_once_with(request, "Invitation sent successfully")
 		mock_redirect.assert_called_once_with(
-			"workspace_settings_invitations",
-			workspace_id=9,
+			"workspace_slug_settings_invitations",
+			workspace_slug="acme",
 		)
 
 	def test_invite_success_links_back_to_workspace_scoped_sent_invitations(self):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=9)
+		workspace = SimpleNamespace(id=9, schema_name="acme")
 		request = self.factory.get("/orgs/team/invite/success/?workspace_id=9")
 		request.user = SimpleNamespace(id=1)
 
@@ -1327,7 +1332,10 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		self.assertIs(context["workspace"], workspace)
 		self.assertEqual(
 			context["sent_invitations_url"],
-			reverse("workspace_settings_invitations", kwargs={"workspace_id": 9}),
+			reverse(
+				"workspace_slug_settings_invitations",
+				kwargs={"workspace_slug": "acme"},
+			),
 		)
 
 	@patch("apps.orgs.views.redirect")
@@ -1339,7 +1347,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 	):
 		from apps.orgs import views as org_views
 
-		company = SimpleNamespace(id=9)
+		company = SimpleNamespace(id=9, schema_name="acme")
 		inviter = SimpleNamespace(id=1)
 		invitation = SimpleNamespace(
 			id=42,
@@ -1365,7 +1373,10 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			"Invitation revoked successfully",
 		)
 		mock_redirect.assert_called_once_with(
-			reverse("workspace_settings_invitations", kwargs={"workspace_id": 9})
+			reverse(
+				"workspace_slug_settings_invitations",
+				kwargs={"workspace_slug": "acme"},
+			)
 		)
 
 
@@ -1384,7 +1395,7 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 	):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=9, name="Acme")
+		workspace = SimpleNamespace(id=9, name="Acme", schema_name="acme")
 		role = SimpleNamespace(name="Member")
 		invitation = SimpleNamespace(
 			email="user@example.com",
@@ -1418,7 +1429,9 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 		self.assertIs(user.profile.workspace, workspace)
 		self.assertEqual(profile_saves, [{}])
 		mock_messages.success.assert_called_once()
-		mock_redirect.assert_called_once_with("workspace_dashboard", workspace_id=9)
+		mock_redirect.assert_called_once_with(
+			"workspace_slug_dashboard", workspace_slug="acme"
+		)
 
 	def test_unauthenticated_direct_accept_redirects_to_login_with_next(self):
 		from apps.orgs import views as org_views

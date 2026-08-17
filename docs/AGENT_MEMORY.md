@@ -8,6 +8,14 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Phase 6 URL and shell standardization is complete. Global control-plane pages
+use `/app/...`; Workspace pages and settings use `/w/<workspace_slug>/...`.
+New UI, redirects, breadcrumbs, forms, and HTMX actions must emit slug routes,
+never integer-ID Workspace routes. Slug adapters resolve the authoritative
+Workspace and call the existing authorized view directly, preserving one
+business implementation. Integer `/workspace/<id>/...` and `/orgs/...` routes
+are inbound compatibility only until a later explicit removal decision.
+
 Phase 5 invitation convergence is complete. All authenticated acceptance paths must
 call `control_plane.accept_invitation`, which locks the authoritative
 `CompanyInvitation`, verifies the invited allauth EmailAddress, validates

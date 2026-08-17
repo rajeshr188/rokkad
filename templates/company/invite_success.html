@@ -21,7 +21,7 @@
                             <i class="bi bi-envelope-check"></i> View Sent Invitations
                         </a>
                         {% if workspace %}
-                        <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'workspace_slug_settings_invite' workspace_slug=workspace.schema_name %}" class="btn btn-outline-secondary">
                             <i class="bi bi-person-plus"></i> Invite Another
                         </a>
                         {% else %}

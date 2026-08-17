@@ -20,7 +20,7 @@
     </div>
     <div class="tenant-action-row">
         {% if can_view %}
-        <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-outline-primary btn-sm">
+        <a href="{% url 'workspace_slug_settings' workspace_slug=workspace.schema_name %}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-gear me-1"></i>Settings
         </a>
         {% endif %}
@@ -72,15 +72,15 @@
     <div class="tenant-panel-body">
         <h6 class="text-uppercase small fw-bold text-muted mb-3">Quick Actions</h6>
         <div class="tenant-quick-grid">
-            <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="tenant-quick-action">
+            <a href="{% url 'workspace_slug_settings_invite' workspace_slug=workspace.schema_name %}" class="tenant-quick-action">
                 <div class="tenant-quick-title"><i class="bi bi-person-plus me-1"></i>Invite Member</div>
                 <div class="tenant-quick-copy">Send a new team invitation.</div>
             </a>
-            <a href="{% url 'team_members_list' %}" class="tenant-quick-action">
+            <a href="{% url 'workspace_slug_settings_team' workspace_slug=workspace.schema_name %}" class="tenant-quick-action">
                 <div class="tenant-quick-title"><i class="bi bi-people me-1"></i>Manage Team</div>
                 <div class="tenant-quick-copy">Roles, access and membership.</div>
             </a>
-            <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="tenant-quick-action">
+            <a href="{% url 'workspace_slug_settings' workspace_slug=workspace.schema_name %}" class="tenant-quick-action">
                 <div class="tenant-quick-title"><i class="bi bi-sliders me-1"></i>Workspace Settings</div>
                 <div class="tenant-quick-copy">Preferences and workspace controls.</div>
             </a>
@@ -108,8 +108,8 @@
         <div class="progress-bar mgmt-progress-bar" role="progressbar" style="width: {{ setup_checklist.completion_percentage }}%;" aria-valuenow="{{ setup_checklist.completion_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
     <div class="mgmt-setup-actions">
-        <a href="{% url 'workspace_settings_setup' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-primary">View setup</a>
-        <form method="post" action="{% url 'workspace_settings_setup_state' workspace_id=workspace.id %}">
+        <a href="{% url 'workspace_slug_settings_setup' workspace_slug=workspace.schema_name %}" class="btn btn-sm btn-outline-primary">View setup</a>
+        <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=workspace.schema_name %}">
             {% csrf_token %}
             <input type="hidden" name="action" value="dismiss">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">

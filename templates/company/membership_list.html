@@ -17,7 +17,7 @@
                     </p>
                 </div>
                 {% if 'team_invite' in user_permissions %}
-                <a href="{% url 'team_invite' workspace_id=workspace.id %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'workspace_slug_settings_invite' workspace_slug=workspace.schema_name %}" class="btn btn-primary btn-sm">
                     <i class="bi bi-person-plus"></i> Invite Member
                 </a>
                 {% endif %}

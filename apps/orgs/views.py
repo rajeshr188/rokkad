@@ -213,37 +213,55 @@ def _workspace_module_statuses(*, workspace, user):
 @login_required
 def workspace_slug_dashboard(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_dashboard", workspace_id=workspace.id)
+    return workspace_dashboard(request, workspace_id=workspace.id)
 
 
 @login_required
 def workspace_slug_settings_home(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_home", workspace_id=workspace.id)
+    return workspace_detail(request, workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_setup(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return workspace_setup(request, workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_setup_state(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return workspace_setup_state(request, workspace_id=workspace.id)
 
 
 @login_required
 def workspace_slug_settings_preferences(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_preferences", workspace_id=workspace.id)
+    return WorkspacePreferenceBuilder.as_view()(request, workspace_id=workspace.id)
 
 
 @login_required
 def workspace_slug_settings_team(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_team", workspace_id=workspace.id)
+    return membership_list(request, workspace_id=workspace.id)
 
 
 @login_required
 def workspace_slug_settings_invitations(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_invitations", workspace_id=workspace.id)
+    return companyinvitations_list(request, workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_invite(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return team_invite(request, workspace_id=workspace.id)
 
 
 @login_required
 def workspace_slug_settings_profile(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_update", workspace_id=workspace.id)
+    return workspace_update(request, workspace_id=workspace.id)
 
 
 @login_required
@@ -264,7 +282,7 @@ def workspace_slug_settings_accounting(request, workspace_slug):
 @login_required
 def workspace_slug_settings_roles(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_team", workspace_id=workspace.id)
+    return membership_list(request, workspace_id=workspace.id)
 
 
 @login_required
@@ -276,13 +294,19 @@ def workspace_slug_settings_numbering(request, workspace_slug):
 @login_required
 def workspace_slug_settings_modules(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_modules", workspace_id=workspace.id)
+    return workspace_modules(request, workspace_id=workspace.id)
 
 
 @login_required
 def workspace_slug_settings_security(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    return redirect("workspace_settings_security", workspace_id=workspace.id)
+    return workspace_security(request, workspace_id=workspace.id)
+
+
+@login_required
+def workspace_slug_settings_archive(request, workspace_slug):
+    workspace = _get_workspace_from_slug(workspace_slug)
+    return workspace_delete(request, workspace_id=workspace.id)
 
 
 @login_required
@@ -1087,8 +1111,8 @@ def team_invite(request, workspace_id=None, company_id=None):
                 )
                 messages.success(request, "Invitation sent successfully")
                 return redirect(
-                    "workspace_settings_invitations",
-                    workspace_id=company.id,
+                    "workspace_slug_settings_invitations",
+                    workspace_slug=company.schema_name,
                 )
             except (ValidationError, ValueError) as exc:
                 form.add_error(None, str(exc))
@@ -1123,8 +1147,8 @@ def invite_success(request):
             allow_platform_admin=True,
         )
         sent_invitations_url = reverse(
-            "workspace_settings_invitations",
-            kwargs={"workspace_id": workspace.id},
+            "workspace_slug_settings_invitations",
+            kwargs={"workspace_slug": workspace.schema_name},
         )
 
     return render(
@@ -1190,7 +1214,10 @@ def team_accept_invitation(request, key):
         request,
         f"Added to {invitation.company.name} as {invitation.role.name}",
     )
-    return redirect("workspace_dashboard", workspace_id=invitation.company.id)
+    return redirect(
+        "workspace_slug_dashboard",
+        workspace_slug=invitation.company.schema_name,
+    )
 
 
 @method_decorator(login_required, name="dispatch")
@@ -1543,11 +1570,10 @@ def invitation_delete(request, invitation_id):
     if request.headers.get("HX-Request"):
         return HttpResponse("Invitation revoked successfully")
 
-    invitation_workspace_id = getattr(invitation, "company_id", invitation.company.id)
     return redirect(
         reverse(
-            "workspace_settings_invitations",
-            kwargs={"workspace_id": invitation_workspace_id},
+            "workspace_slug_settings_invitations",
+            kwargs={"workspace_slug": invitation.company.schema_name},
         )
     )
 
@@ -1621,7 +1647,10 @@ def workspace_selector(request):
         try:
             # Verify membership still active
             memberships.get(company=selected_workspace)
-            return redirect("workspace_dashboard", workspace_id=selected_workspace.id)
+            return redirect(
+                "workspace_slug_dashboard",
+                workspace_slug=selected_workspace.schema_name,
+            )
         except Membership.DoesNotExist:
             # Workspace is no longer valid, clear it
             profile.workspace = None
@@ -1729,7 +1758,8 @@ def team_invitations(request):
                 )
 
                 return redirect(
-                    "workspace_dashboard", workspace_id=invitation.company.id
+                    "workspace_slug_dashboard",
+                    workspace_slug=invitation.company.schema_name,
                 )
 
             elif action == "decline":
@@ -1798,7 +1828,10 @@ def workspace_select(request, workspace_id):
         require_https=request.is_secure(),
     ):
         return redirect(next_url)
-    return redirect("workspace_dashboard", workspace_id=workspace.id)
+    return redirect(
+        "workspace_slug_dashboard",
+        workspace_slug=workspace.schema_name,
+    )
 
 
 def subscription_required(view_func):

@@ -8,6 +8,24 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
+
+The global shell remains rooted at `/app/`, while authenticated Workspace
+navigation now emits canonical `/w/<workspace_slug>/...` URLs. Workspace
+dashboard, settings, setup/state, team, invitation/new, modules, security,
+billing, and archive surfaces resolve the explicit slug and render the existing
+authorized target directly instead of bouncing through integer-ID URLs.
+Workspace selection and invitation acceptance now land on the canonical slug
+dashboard. Desktop/mobile settings navigation, Workspace cards, breadcrumbs,
+quick actions, and HTMX invitation actions use the same route contract. Legacy
+`/orgs/...` and `/workspace/<id>/...` entry points remain temporary inbound
+compatibility surfaces; no live primary shell emits them for the standardized
+flows. Focused URL, shell, navigation, and org regressions pass 114/114. The
+broader suite has one unrelated pre-existing contradiction in the Phase 7
+public invitation alias tests (one test expects the live alias to redirect to
+login while another expects the same anonymous URL to return 410); Phase 6 did
+not change that alias. Phase 7 residue cleanup is next.
+
 ## 2026-08-17 — Phase 5 invitation convergence complete
 
 Phase 4 is checkpointed in commit `ec62c98`. Phase 5 now has one locked,

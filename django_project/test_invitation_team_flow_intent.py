@@ -209,13 +209,16 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             encoding="utf-8-sig"
         )
 
-        self.assertIn('"workspace_settings_invitations"', views_content)
+        self.assertIn('"workspace_slug_settings_invitations"', views_content)
         self.assertIn("workspace_id=company.id", views_content)
         self.assertIn("def _get_workspace_from_query(request):", views_content)
         self.assertIn('workspace_id = request.GET.get("workspace_id")', views_content)
         self.assertIn("raise Http404(\"Invalid workspace ID\")", views_content)
-        self.assertIn('"workspace_settings_invitations"', views_content)
-        self.assertIn('kwargs={"workspace_id": invitation_workspace_id}', views_content)
+        self.assertIn('"workspace_slug_settings_invitations"', views_content)
+        self.assertIn(
+            'kwargs={"workspace_slug": invitation.company.schema_name}',
+            views_content,
+        )
 
     def test_invite_success_uses_workspace_settings_shell_after_cleanup(self):
         success_template = (TEMPLATES_ROOT / "company" / "invite_success.html").read_text(
@@ -257,8 +260,9 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
 
         self.assertIn("control_plane.accept_invitation(", views_content)
         self.assertIn("user.profile.workspace = invitation.company", views_content)
+        self.assertIn('"workspace_slug_dashboard",', views_content)
         self.assertIn(
-            '"workspace_dashboard", workspace_id=invitation.company.id',
+            "workspace_slug=invitation.company.schema_name",
             views_content,
         )
         self.assertIn("control_plane.decline_invitation(", views_content)
@@ -315,13 +319,14 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             "current_state != CompanyInvitation.Status.PENDING",
             "control_plane.accept_invitation(",
             "request.user.profile.workspace = invitation.company",
-            '"workspace_dashboard", workspace_id=invitation.company.id',
+            '"workspace_slug_dashboard",',
+            "workspace_slug=invitation.company.schema_name",
             "def companyinvitations_list(request, workspace_id=None):",
             'required_permissions={"team_invite"}',
             "def invitation_delete(request, invitation_id):",
             "can_revoke = request.user == invitation.inviter",
             "control_plane.revoke_invitation(",
-            '"workspace_settings_invitations"',
+            '"workspace_slug_settings_invitations"',
             "def team_remove_member(",
             'required_permissions={"team_remove"}',
             "control_plane.remove_membership(",
