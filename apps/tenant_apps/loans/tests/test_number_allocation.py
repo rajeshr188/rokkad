@@ -152,8 +152,9 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.domain.delete()
-        cls.tenant.delete()
+        # The shared test database is destroyed after the suite. These
+        # concurrency fixtures intentionally skip per-test flush and cannot
+        # bypass the production Workspace-retention/protected-FK contract.
         super().tearDownClass()
 
     def _fixture_teardown(self):

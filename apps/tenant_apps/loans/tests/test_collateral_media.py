@@ -14,7 +14,7 @@ from django.db import DatabaseError, connection, transaction
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.models import (
@@ -97,6 +97,7 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         # production manifest backend before this class override took effect.
         staticfiles_storage._wrapped = StaticFilesStorage()
         self.owner = self.tenant.owner
+        self.start_active_trial()
         role, _ = Role.objects.get_or_create(name="Owner")
         Membership.objects.get_or_create(
             user=self.owner,
@@ -133,7 +134,7 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             net_weight=Decimal("2.0000"),
             purity_percentage=Decimal("91.6000"),
         )
-        self.client = WorkspaceClient(self.tenant)
+        self.client = self.make_workspace_client()
         self.client.force_login(self.owner)
 
     @staticmethod

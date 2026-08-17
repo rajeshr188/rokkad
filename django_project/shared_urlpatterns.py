@@ -338,6 +338,11 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_loan_operational_controls_report",
     ),
     path(
+        "w/<str:workspace_slug>/loans/<path:loans_path>",
+        org_views.workspace_slug_loans_dispatch,
+        name="workspace_slug_loans_dispatch",
+    ),
+    path(
         "w/<str:workspace_slug>/inventory/",
         org_views.workspace_slug_inventory,
         name="workspace_slug_inventory",

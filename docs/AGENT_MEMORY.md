@@ -2559,6 +2559,17 @@ Operator parity-pilot preparation is documented in `docs/implementation/loans-gi
 
 ## Documentation Memory
 
+- Phase 10 established `/w/<Company.schema_name>/loans/...` as the canonical
+  complete Loans browser surface. `workspace_slug_loans_dispatch` validates the
+  route Workspace before forwarding to the established Loans resolver, then
+  keeps Loans-local HTML targets and redirects on the canonical prefix. The
+  unscoped `/loans/...` surface is compatibility-only and must never recover
+  Workspace identity from `UserProfile.workspace`.
+- Browser tests that need business access must opt into a real trial through
+  `WorkspaceTestCase.start_active_trial()` and use `WorkspaceClient`; there is no
+  debug/test billing bypass. The original Loans gate is 404/404, with eight
+  separate Phase 10 route-contract tests.
+
 - PawnLoan risk portfolio mutations use a non-3xx `HX-Redirect` response for
   HTMX because redirect response headers on HTTP 3xx responses are not exposed
   reliably to HTMX. Keep ordinary POST redirects as standard HTTP 302.

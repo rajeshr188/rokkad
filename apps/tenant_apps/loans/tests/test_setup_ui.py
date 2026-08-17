@@ -12,7 +12,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.access import assert_loans_setup_access
 from apps.tenant_apps.loans.domain import CollateralCustodyState, CollateralMetal, LoanDocumentKind
@@ -105,14 +105,15 @@ class LoansSetupUiTests(WorkspaceTestCase):
         static_url.start()
         self.addCleanup(static_url.stop)
         self.owner = self.tenant.owner
-        self.client = WorkspaceClient(self.tenant)
+        self.start_active_trial()
+        self.client = self.make_workspace_client()
         self.client.force_login(self.owner)
 
     def tenant_get(self, url):
-        return self.client.get(url)
+        return self.client.workspace_get(url)
 
     def tenant_post(self, url, data=None):
-        return self.client.post(url, data or {})
+        return self.client.workspace_post(url, data or {})
 
     def test_owner_can_seed_review_activate_and_retire_loan_products(self):
         response = self.tenant_post(reverse("loans:loan_product_seed_defaults"))

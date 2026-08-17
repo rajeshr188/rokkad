@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
-from apps.tenancy.testing import WorkspaceClient, WorkspaceTestCase
+from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenant_apps.loans.domain import LoanDocumentKind, TransactionKind
@@ -79,7 +79,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
         static_url.start()
         self.addCleanup(static_url.stop)
         self.owner = self.tenant.owner
-        self.client = WorkspaceClient(self.tenant)
+        self.start_active_trial()
+        self.client = self.make_workspace_client()
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
         self.product_version = seed_default_loan_products()[0]
@@ -543,8 +544,14 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_authorized_primary_navigation_exposes_pawnloans_and_setup(self):
         response = self.client.get(reverse("loans:license_list"))
-        self.assertContains(response, reverse("loans:pawn_loan_list"))
-        self.assertContains(response, reverse("loans:license_list"))
+        self.assertContains(
+            response,
+            reverse(
+                "workspace_slug_loan_list",
+                kwargs={"workspace_slug": self.tenant.schema_name},
+            ),
+        )
+        self.assertContains(response, self.workspace_reverse("loans:license_list"))
 
     def test_internal_reports_render_all_operational_sections(self):
         license, series = self._configured_setup()
