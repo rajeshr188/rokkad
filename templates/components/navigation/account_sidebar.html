@@ -9,10 +9,19 @@
     {% endif %}
 </a>
 {% if role_name == 'Owner' %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
-   href="{% if ew %}{% url 'workspace_select' ew.id %}?next={% url 'subscriptions:dashboard' %}{% else %}{% url 'workspace_selector' %}?show_all=1{% endif %}">
-    <i class="bi bi-credit-card"></i> Billing
-</a>
+    {% if ew %}
+    <form method="post" action="{% url 'workspace_select' ew.id %}" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'subscriptions:dashboard' %}">
+        <button type="submit" class="nav-link mgmt-nav-link w-100 text-start {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}">
+            <i class="bi bi-credit-card"></i> Billing
+        </button>
+    </form>
+    {% else %}
+    <a class="nav-link mgmt-nav-link" href="{% url 'workspace_selector' %}?show_all=1">
+        <i class="bi bi-credit-card"></i> Billing
+    </a>
+    {% endif %}
 {% endif %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'account_settings' %}active{% endif %}"
    href="{% url 'account_settings' %}">
@@ -31,10 +40,19 @@
     {% endif %}
 </a>
 {% if role_name == 'Owner' %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
-   href="{% if ew %}{% url 'workspace_select' ew.id %}?next={% url 'subscriptions:dashboard' %}{% else %}{% url 'workspace_selector' %}?show_all=1{% endif %}">
-    <i class="bi bi-credit-card"></i> Billing
-</a>
+    {% if ew %}
+    <form method="post" action="{% url 'workspace_select' ew.id %}" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'subscriptions:dashboard' %}">
+        <button type="submit" class="nav-link mgmt-nav-link w-100 text-start {% if request.resolver_match.namespace == 'subscriptions' %}active{% endif %}">
+            <i class="bi bi-credit-card"></i> Billing
+        </button>
+    </form>
+    {% else %}
+    <a class="nav-link mgmt-nav-link" href="{% url 'workspace_selector' %}?show_all=1">
+        <i class="bi bi-credit-card"></i> Billing
+    </a>
+    {% endif %}
 {% endif %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
    href="{% url 'profile' %}">

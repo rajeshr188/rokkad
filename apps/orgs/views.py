@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from dynamic_preferences.views import PreferenceFormView
 from invitations.views import AcceptInvite
@@ -39,8 +40,9 @@ from .services import control_plane
 from .services.membership_capacity import get_workspace_seat_capacity_snapshot
 from .services import role_policy
 from .services.dashboard_selectors import get_workspace_dashboard_context
-from .tenant_context import resolve_request_workspace
+from .tenant_context import resolve_preferred_workspace, resolve_request_workspace
 from apps.subscriptions.services import SubscriptionAccessService
+from apps.orgs.access import resolve_workspace_access
 
 # Create your views here.
 logger = logging.getLogger(__name__)
@@ -118,34 +120,20 @@ def _assert_workspace_access(
     """Validate workspace access and return normalized access context."""
     required_permissions = set(required_permissions or [])
 
-    if allow_platform_admin and is_platform_admin(request.user):
-        effective_perms = get_effective_permissions(request.user, workspace)
-        return {
-            "membership": None,
-            "role_name": "Superuser",
-            "effective_permissions": effective_perms,
-        }
-
-    membership = (
-        Membership.objects.select_related("role")
-        .filter(user=request.user, company=workspace)
-        .first()
-    )
-    if membership is None:
+    access = resolve_workspace_access(actor=request.user, workspace=workspace)
+    if access.platform_override and not allow_platform_admin:
+        raise PermissionDenied("Platform override is not allowed here")
+    if access.membership is None and not access.platform_override:
         raise PermissionDenied("You are not a member of this workspace")
-
+    for permission in required_permissions:
+        access.require(permission)
     effective_perms = get_effective_permissions(request.user, workspace)
-    missing_permissions = required_permissions - effective_perms
-    if missing_permissions:
-        raise PermissionDenied(
-            f"Missing required workspace permissions: {', '.join(sorted(missing_permissions))}"
-        )
-
-    role_name = membership.role.name if membership.role else "Member"
+    role_name = "Superuser" if access.platform_override else access.membership.role.name
     return {
-        "membership": membership,
+        "membership": access.membership,
         "role_name": role_name,
         "effective_permissions": effective_perms,
+        "access": access,
     }
 
 
@@ -163,16 +151,16 @@ def _get_workspace_from_query(request):
         return None
     if not workspace_id.isdigit():
         raise Http404("Invalid workspace ID")
-    return get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    return get_object_or_404(Company, id=workspace_id)
 
 
-def _get_workspace_from_slug(workspace_slug):
+def _get_workspace_from_slug(workspace_slug, *, include_inactive=False):
     if workspace_slug == "public":
         raise Http404("Workspace not found")
+    manager = Company.all_objects if include_inactive else Company.objects
     return get_object_or_404(
-        Company,
+        manager,
         schema_name=workspace_slug,
-        is_deleted=False,
     )
 
 
@@ -256,9 +244,10 @@ def workspace_slug_settings_profile(request, workspace_slug):
 @login_required
 def workspace_slug_settings_billing(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
-    select_url = reverse("workspace_select", kwargs={"workspace_id": workspace.id})
-    billing_url = reverse("subscriptions:dashboard")
-    return redirect(f"{select_url}?next={billing_url}")
+    return redirect(
+        "workspace_subscriptions:dashboard",
+        workspace_slug=workspace.schema_name,
+    )
 
 
 @login_required
@@ -547,7 +536,7 @@ def workspace_slug_notice_group_detail(request, workspace_slug, pk):
 
 @login_required
 def workspace_slug_data_tools_export(request, workspace_slug):
-    _get_workspace_from_slug(workspace_slug)
+    _get_workspace_from_slug(workspace_slug, include_inactive=True)
     from apps.tenant_apps.utils.importing.views import export_form
 
     return export_form(request)
@@ -560,7 +549,7 @@ def workspace_slug_data_tools_export_data(
     model_name,
     export_format,
 ):
-    _get_workspace_from_slug(workspace_slug)
+    _get_workspace_from_slug(workspace_slug, include_inactive=True)
     from apps.tenant_apps.utils.importing.views import export_data
 
     return export_data(
@@ -684,10 +673,10 @@ def workspace_detail(request, workspace_id=None, company_id=None):
         raise Http404("Workspace ID is required")
 
     company = get_object_or_404(Company, id=workspace_id)
-    if company.is_deleted:
+    if company.lifecycle_state != Company.LifecycleState.ACTIVE:
         raise Http404("Company not found")
 
-    _assert_workspace_access(
+    access_context = _assert_workspace_access(
         request,
         company,
         required_permissions={"workspace_view"},
@@ -702,8 +691,9 @@ def workspace_detail(request, workspace_id=None, company_id=None):
             "company": company,
             "roles": roles,
             "workspace": company,
-            "can_archive_workspace": request.user == company.owner
-            or is_platform_admin(request.user),
+            "can_archive_workspace": access_context["access"].can(
+                "workspace.archive"
+            ),
         },
     )
 
@@ -715,7 +705,7 @@ def workspace_setup(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     access_context = _assert_workspace_access(
         request,
         company,
@@ -750,7 +740,7 @@ def workspace_setup_state(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     _assert_workspace_access(
         request,
         company,
@@ -784,7 +774,7 @@ def workspace_modules(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     access_context = _assert_workspace_access(
         request,
         company,
@@ -814,7 +804,7 @@ def workspace_security(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     access_context = _assert_workspace_access(
         request,
         company,
@@ -865,7 +855,7 @@ def workspace_update(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     _assert_workspace_access(
         request,
         company,
@@ -902,7 +892,7 @@ def workspace_delete(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     _assert_workspace_access(
         request,
         company,
@@ -920,13 +910,12 @@ def workspace_delete(request, workspace_id=None, company_id=None):
             company=company,
             actor=request.user,
             request=request,
+            reason=f"Owner confirmed archive of {company.name}",
         )
 
         # Do not leave the actor's profile pointing at an inaccessible tenant.
         if getattr(request.user.profile, "workspace", None) == company:
-            request.user.profile.workspace = Company.objects.get(
-                schema_name="public"
-            )
+            request.user.profile.workspace = None
             request.user.profile.save(update_fields=["workspace"])
 
         messages.success(
@@ -945,7 +934,9 @@ def workspace_delete(request, workspace_id=None, company_id=None):
 @login_required
 def archived_workspaces(request):
     """List archived workspaces that the actor is allowed to restore."""
-    workspaces = Company.all_objects.filter(is_deleted=True).exclude(
+    workspaces = Company.all_objects.filter(
+        lifecycle_state=Company.LifecycleState.ARCHIVED
+    ).exclude(
         schema_name="public"
     )
     if not is_platform_admin(request.user):
@@ -965,7 +956,7 @@ def workspace_restore(request, workspace_id):
     company = get_object_or_404(
         Company.all_objects,
         id=workspace_id,
-        is_deleted=True,
+        lifecycle_state=Company.LifecycleState.ARCHIVED,
     )
     if request.user != company.owner and not is_platform_admin(request.user):
         raise PermissionDenied("Only the workspace owner can restore this workspace")
@@ -979,19 +970,40 @@ def workspace_restore(request, workspace_id):
     return redirect("archived_workspaces")
 
 
+@require_POST
+@login_required
+def workspace_lifecycle_transition(request, workspace_id, target_state):
+    """Apply an explicitly authorized operational lifecycle transition."""
+    company = get_object_or_404(Company.all_objects, id=workspace_id)
+    reason = (request.POST.get("reason") or "").strip()
+    try:
+        updated = control_plane.transition_workspace_lifecycle(
+            workspace=company,
+            target_state=target_state.upper(),
+            actor=request.user,
+            reason=reason,
+            request=request,
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        return redirect("archived_workspaces")
+
+    messages.success(
+        request,
+        f"{updated.name} is now {updated.get_lifecycle_state_display().lower()}.",
+    )
+    return redirect("archived_workspaces")
+
+
 @login_required
 def companyinvitations_list(request, workspace_id=None):
     workspace = None
     if workspace_id is not None:
-        workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+        workspace = get_object_or_404(Company, id=workspace_id)
     if workspace is None:
         workspace = _get_workspace_from_query(request)
     if workspace is None:
-        workspace = resolve_request_workspace(
-            request,
-            include_public=False,
-            allow_profile_fallback=True,
-        )
+        workspace = resolve_request_workspace(request, include_public=False)
 
     if workspace is not None:
         _assert_workspace_access(
@@ -1047,7 +1059,7 @@ def team_invite(request, workspace_id=None, company_id=None):
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     _assert_workspace_access(
         request,
         company,
@@ -1179,7 +1191,7 @@ class CompanyPreferenceBuilder(PreferenceFormView):
         if workspace_id is None:
             raise Http404("Workspace ID is required")
 
-        workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+        workspace = get_object_or_404(Company, id=workspace_id)
         _assert_workspace_access(
             request,
             workspace,
@@ -1248,6 +1260,7 @@ class CompanyPreferenceBuilder(PreferenceFormView):
 
 @login_required
 @permission_required("team_remove")
+@require_POST
 def team_remove_member(request, workspace_id=None, membership_id=None, company_id=None):
     """
     Remove team member from workspace.
@@ -1257,7 +1270,7 @@ def team_remove_member(request, workspace_id=None, membership_id=None, company_i
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     _assert_workspace_access(
         request,
         company,
@@ -1301,7 +1314,7 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
     if workspace_id is None:
         raise Http404("Workspace ID is required")
 
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     _assert_workspace_access(
         request,
         company,
@@ -1355,13 +1368,9 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
 @login_required
 def membership_list(request, workspace_id=None):
     if workspace_id is not None:
-        workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+        workspace = get_object_or_404(Company, id=workspace_id)
     else:
-        workspace = resolve_request_workspace(
-            request,
-            include_public=False,
-            allow_profile_fallback=True,
-        )
+        workspace = resolve_request_workspace(request, include_public=False)
 
     if not workspace:
         messages.info(request, "Select a workspace to view team members.")
@@ -1399,18 +1408,14 @@ def membership_list(request, workspace_id=None):
 def my_memberships(request):
     memberships = (
         request.user.memberships.select_related("company", "role")
-        .filter(company__is_deleted=False)
+        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
         .order_by("company__name")
     )
 
     context = {
         "memberships": memberships,
         "membership_count": memberships.count(),
-        "active_workspace": resolve_request_workspace(
-            request,
-            include_public=False,
-            allow_profile_fallback=True,
-        ),
+        "preferred_workspace": resolve_preferred_workspace(request.user),
     }
     return render(request, "company/my_memberships.html", context)
 
@@ -1421,7 +1426,7 @@ def workspace_leave(request, workspace_id):
     Allow any workspace member to leave a workspace themselves.
     Owners must transfer ownership before leaving.
     """
-    company = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    company = get_object_or_404(Company, id=workspace_id)
     membership = get_object_or_404(Membership, user=request.user, company=company)
 
     if request.method == "GET":
@@ -1466,15 +1471,11 @@ def workspace_leave(request, workspace_id):
 @login_required
 def profile(request):
     user = request.user
-    workspace = resolve_request_workspace(
-        request,
-        include_public=False,
-        allow_profile_fallback=True,
-    )
+    workspace = resolve_preferred_workspace(request.user)
 
     memberships = (
         user.memberships.select_related("company", "role")
-        .filter(company__is_deleted=False)
+        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
         .order_by("company__name")
     )
     pending_invitations = CompanyInvitation.pending_queryset().filter(
@@ -1496,6 +1497,7 @@ def account_settings(request):
 
 
 @login_required
+@require_POST
 def invitation_delete(request, invitation_id):
     invitation = get_object_or_404(CompanyInvitation, id=invitation_id)
 
@@ -1595,17 +1597,13 @@ def workspace_selector(request):
     # Get user's workspace memberships
     memberships = (
         user.memberships.select_related("company", "role")
-        .filter(company__is_deleted=False)
+        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
         .order_by("-company__updated_at")
     )
 
     # If user has a valid selected workspace, take them directly to workspace dashboard
     # unless ?show_all=1 is passed (e.g. from "Back to Workspaces" link)
-    selected_workspace = resolve_request_workspace(
-        request,
-        include_public=True,
-        allow_profile_fallback=True,
-    )
+    selected_workspace = resolve_preferred_workspace(user)
     if selected_workspace and selected_workspace.schema_name != "public" and not request.GET.get("show_all"):
         try:
             # Verify membership still active
@@ -1747,6 +1745,7 @@ def team_invitations(request):
 
 
 @login_required
+@require_POST
 def workspace_select(request, workspace_id):
     """
     Select a workspace to work in.
@@ -1754,7 +1753,7 @@ def workspace_select(request, workspace_id):
     """
     user = request.user
 
-    workspace = Company.objects.filter(id=workspace_id, is_deleted=False).first()
+    workspace = Company.objects.filter(id=workspace_id).first()
     if workspace is None:
         messages.error(request, "Workspace not found")
         return redirect("workspace_selector")
@@ -1779,8 +1778,12 @@ def workspace_select(request, workspace_id):
 
     messages.success(request, f"Switched to {workspace.name}")
 
-    next_url = request.GET.get("next")
-    if next_url and next_url.startswith("/"):
+    next_url = request.POST.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
         return redirect(next_url)
     return redirect("workspace_dashboard", workspace_id=workspace.id)
 
@@ -1851,7 +1854,7 @@ def workspace_dashboard(request, workspace_id):
 
     """
     # Get workspace and validate access policy.
-    workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    workspace = get_object_or_404(Company, id=workspace_id)
 
     try:
         access_context = _assert_workspace_access(

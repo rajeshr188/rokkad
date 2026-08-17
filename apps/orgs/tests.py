@@ -69,13 +69,12 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 		fake_filtered = SimpleNamespace(first=lambda: workspace)
 		request = SimpleNamespace(path="/w/acme_workspace/parties/")
 
-		with patch.object(Company.objects, "filter", return_value=fake_filtered) as mock_filter:
+		with patch.object(Company.all_objects, "filter", return_value=fake_filtered) as mock_filter:
 			resolved = self.middleware._resolve_workspace_from_path(request)
 
 		self.assertIs(resolved, workspace)
 		mock_filter.assert_called_once_with(
 			schema_name="acme_workspace",
-			is_deleted=False,
 		)
 
 	def test_resolve_workspace_from_path_ignores_public_schema_slug(self):
@@ -90,25 +89,21 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 	def test_select_workspace_candidate_prefers_domain(self):
 		domain_workspace = SimpleNamespace(id=1, schema_name="acme")
 		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
-		profile_workspace = SimpleNamespace(id=3, schema_name="profile_ws")
 
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=domain_workspace,
 			path_workspace=path_workspace,
-			profile_workspace=profile_workspace,
 		)
 
 		self.assertEqual(workspace.id, 1)
 		self.assertEqual(source, "domain")
 
-	def test_select_workspace_candidate_falls_back_to_path_then_profile(self):
+	def test_select_workspace_candidate_uses_path_but_never_profile(self):
 		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
-		profile_workspace = SimpleNamespace(id=3, schema_name="profile_ws")
 
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=None,
 			path_workspace=path_workspace,
-			profile_workspace=profile_workspace,
 		)
 		self.assertEqual(workspace.id, 2)
 		self.assertEqual(source, "path")
@@ -116,46 +111,9 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=None,
 			path_workspace=None,
-			profile_workspace=profile_workspace,
 		)
-		self.assertEqual(workspace.id, 3)
-		self.assertEqual(source, "profile")
-
-	@patch("apps.orgs.middleware_v2.AuditLog.log")
-	def test_mismatch_logs_security_event(self, mock_audit_log):
-		request = SimpleNamespace(
-			user=SimpleNamespace(id=7),
-			path="/girvi/",
-			META={},
-		)
-		domain_workspace = SimpleNamespace(id=10, schema_name="tenant_a")
-		profile_workspace = SimpleNamespace(id=11, schema_name="tenant_b")
-
-		self.middleware._handle_workspace_mismatch(
-			request=request,
-			domain_workspace=domain_workspace,
-			profile_workspace=profile_workspace,
-		)
-
-		self.assertTrue(mock_audit_log.called)
-
-	@patch("apps.orgs.middleware_v2.AuditLog.log")
-	def test_mismatch_ignored_for_public_domain(self, mock_audit_log):
-		request = SimpleNamespace(
-			user=SimpleNamespace(id=7),
-			path="/",
-			META={},
-		)
-		domain_workspace = SimpleNamespace(id=10, schema_name=get_public_schema_name())
-		profile_workspace = SimpleNamespace(id=11, schema_name="tenant_b")
-
-		self.middleware._handle_workspace_mismatch(
-			request=request,
-			domain_workspace=domain_workspace,
-			profile_workspace=profile_workspace,
-		)
-
-		self.assertFalse(mock_audit_log.called)
+		self.assertIsNone(workspace)
+		self.assertEqual(source, "public")
 
 
 class TenantContextResolverTests(SimpleTestCase):
@@ -179,17 +137,18 @@ class TenantContextResolverTests(SimpleTestCase):
 		workspace = resolve_request_workspace(request)
 		self.assertIsNone(workspace)
 
-	def test_profile_fallback_only_when_opted_in(self):
+	def test_request_tenant_alias_is_not_a_resolution_source(self):
 		profile_workspace = SimpleNamespace(schema_name="tenant_b")
 		request = SimpleNamespace(
 			workspace=None,
+			tenant=profile_workspace,
 			user=SimpleNamespace(
 				is_authenticated=True,
 				profile=SimpleNamespace(workspace=profile_workspace),
 			),
 		)
-		workspace = resolve_request_workspace(request, allow_profile_fallback=True)
-		self.assertEqual(workspace.schema_name, "tenant_b")
+		workspace = resolve_request_workspace(request)
+		self.assertIsNone(workspace)
 
 	def test_missing_request_workspace_returns_none(self):
 		request = SimpleNamespace(
@@ -321,7 +280,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 				_assert_workspace_access(
 					request,
 					workspace,
-					required_permissions={"workspace_view"},
+					required_permissions={"workspace_delete"},
 				)
 
 	def test_workspace_access_allows_platform_admin_without_membership(self):
@@ -344,7 +303,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 	def test_workspace_select_redirects_when_access_denied(self, mock_messages, mock_redirect):
 		from apps.orgs import views as org_views
 
-		request = self.factory.get("/orgs/workspace/12/select/")
+		request = self.factory.post("/orgs/workspace/12/select/")
 		request.user = SimpleNamespace(
 			is_authenticated=True,
 			is_superuser=False,
@@ -373,7 +332,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		from apps.orgs import views as org_views
 
 		set_calls = []
-		request = self.factory.get("/orgs/workspace/12/select/")
+		request = self.factory.post("/orgs/workspace/12/select/")
 		request.user = SimpleNamespace(
 			is_authenticated=True,
 			is_superuser=False,
@@ -395,6 +354,57 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		mock_messages.success.assert_called_once()
 		mock_redirect.assert_called_once_with("workspace_dashboard", workspace_id=12)
 
+	def test_workspace_select_get_cannot_mutate_profile_preference(self):
+		from apps.orgs import views as org_views
+
+		request = self.factory.get("/orgs/workspace/12/select/")
+		request.user = SimpleNamespace(is_authenticated=True)
+
+		with patch("apps.orgs.views.Company.objects.filter") as mock_filter:
+			response = org_views.workspace_select.__wrapped__(request, workspace_id=12)
+
+		self.assertEqual(response.status_code, 405)
+		mock_filter.assert_not_called()
+
+	def test_workspace_select_accepts_only_same_host_next_target(self):
+		from apps.orgs import views as org_views
+
+		workspace = SimpleNamespace(id=12, name="WS-12")
+		fake_filter = SimpleNamespace(first=lambda: workspace)
+
+		for next_target, expected_redirect in (
+			("/subscriptions/", "/subscriptions/"),
+			("https://attacker.example/phish", ("workspace_dashboard", 12)),
+		):
+			with self.subTest(next_target=next_target):
+				request = self.factory.post(
+					"/orgs/workspace/12/select/",
+					{"next": next_target},
+				)
+				request.user = SimpleNamespace(
+					is_authenticated=True,
+					is_superuser=False,
+					profile=SimpleNamespace(set_workspace=lambda _workspace: None),
+				)
+
+				with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
+					 patch("apps.orgs.views._assert_workspace_access", return_value={
+						"membership": None,
+						"role_name": "Superuser",
+						"effective_permissions": {"workspace_view"},
+					 }), \
+					 patch("apps.orgs.views.AuditLog.log"), \
+					 patch("apps.orgs.views.messages.success"), \
+					 patch("apps.orgs.views.redirect") as mock_redirect:
+					org_views.workspace_select(request, workspace_id=12)
+
+				if isinstance(expected_redirect, tuple):
+					mock_redirect.assert_called_once_with(
+						expected_redirect[0], workspace_id=expected_redirect[1]
+					)
+				else:
+					mock_redirect.assert_called_once_with(expected_redirect)
+
 
 class RolePolicyTests(SimpleTestCase):
 	def test_non_owner_cannot_grant_admin_role(self):
@@ -402,7 +412,7 @@ class RolePolicyTests(SimpleTestCase):
 		workspace = SimpleNamespace(id=1)
 		role = SimpleNamespace(name="Admin")
 
-		with patch("apps.orgs.services.role_policy.get_effective_permissions", return_value={"team_invite"}), \
+		with patch("apps.orgs.services.role_policy.resolve_workspace_access", return_value=SimpleNamespace(can=lambda action: action == "team_invite")), \
 			 patch("apps.orgs.services.role_policy._actor_is_owner", return_value=False):
 			self.assertFalse(
 				role_policy.actor_can_grant_role(
@@ -417,7 +427,7 @@ class RolePolicyTests(SimpleTestCase):
 		workspace = SimpleNamespace(id=1)
 		role = SimpleNamespace(name="Admin")
 
-		with patch("apps.orgs.services.role_policy.get_effective_permissions", return_value={"team_invite", "team_invite_admin"}), \
+		with patch("apps.orgs.services.role_policy.resolve_workspace_access", return_value=SimpleNamespace(can=lambda action: action in {"team_invite", "team_invite_admin"})), \
 			 patch("apps.orgs.services.role_policy._actor_is_owner", return_value=True):
 			self.assertTrue(
 				role_policy.actor_can_grant_role(
@@ -656,7 +666,7 @@ class WorkspaceSetupStateViewTests(SimpleTestCase):
 		self.factory = RequestFactory()
 
 	def test_setup_state_dismiss_action_updates_state_and_redirects_to_safe_next(self):
-		workspace = SimpleNamespace(id=9, is_deleted=False)
+		workspace = SimpleNamespace(id=9, lifecycle_state="ACTIVE")
 		request = self.factory.post(
 			"/workspace/9/settings/setup/state/",
 			{"action": "dismiss", "next": "/workspace/9/settings/setup/"},
@@ -676,7 +686,7 @@ class WorkspaceSetupStateViewTests(SimpleTestCase):
 		redirect.assert_called_once_with("/workspace/9/settings/setup/")
 
 	def test_setup_state_complete_and_reopen_actions_delegate_to_services(self):
-		workspace = SimpleNamespace(id=9, is_deleted=False)
+		workspace = SimpleNamespace(id=9, lifecycle_state="ACTIVE")
 		request = self.factory.post(
 			"/workspace/9/settings/setup/state/",
 			{"action": "complete"},
@@ -714,7 +724,7 @@ class DomainPathMismatchTests(SimpleTestCase):
 	def setUp(self):
 		self.middleware = SecureWorkspaceMiddleware(lambda request: None)
 	
-	def test_domain_path_workspace_mismatch_redirects_to_domain_workspace(self):
+	def test_domain_path_workspace_mismatch_is_forbidden(self):
 		"""
 		Non-admin user requesting /orgs/workspace/2/... on domain resolving to workspace 1
 		should be redirected to workspace 1's dashboard (domain is authoritative).
@@ -741,17 +751,15 @@ class DomainPathMismatchTests(SimpleTestCase):
 			
 			result = self.middleware.process_request(request)
 			
-			# Should redirect to domain workspace
-			mock_redirect.assert_called_once()
-			call_args = mock_redirect.call_args[0]
-			self.assertIn("/orgs/workspace/1/", call_args)
+			self.assertEqual(result.status_code, 403)
+			mock_redirect.assert_not_called()
 			
 			# Should show error message
 			mock_messages.error.assert_called_once()
 			error_msg = mock_messages.error.call_args[0][1]
 			self.assertIn("does not match", error_msg.lower())
 	
-	def test_platform_admin_bypasses_domain_path_workspace_mismatch_guard(self):
+	def test_platform_admin_cannot_bypass_domain_path_workspace_mismatch_guard(self):
 		"""
 		Superuser (platform admin) can access /orgs/workspace/2/... on domain resolving
 		to workspace 1 without being redirected. Superuser bypass allows intentional admin access.
@@ -779,8 +787,7 @@ class DomainPathMismatchTests(SimpleTestCase):
 			
 			result = self.middleware.process_request(request)
 			
-			# Superuser should NOT be redirected (no redirect return value)
-			self.assertIsNone(result)
+			self.assertEqual(result.status_code, 403)
 	
 	def test_domain_workspace_is_authoritative_over_profile(self):
 		"""
@@ -996,7 +1003,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		return org_views.team_change_role.__wrapped__.__wrapped__
 
 	def test_team_invite_requires_workspace_team_invite_permission(self):
-		company = SimpleNamespace(id=9, is_deleted=False)
+		company = SimpleNamespace(id=9, lifecycle_state="ACTIVE")
 		seat_capacity = SimpleNamespace(has_limit=True, limit=5, members_and_pending_used=5)
 		request = self.factory.get("/orgs/workspace/9/team/invite/")
 		request.user = SimpleNamespace(id=1, is_superuser=False, is_authenticated=True)
@@ -1068,6 +1075,21 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_messages.error.assert_called_once()
 		mock_redirect.assert_called_once_with("workspace_selector")
 
+	def test_invitation_revoke_get_cannot_mutate_state(self):
+		from apps.orgs import views as org_views
+
+		request = self.factory.get("/orgs/team/invitations/42/delete/")
+		request.user = SimpleNamespace(is_authenticated=True)
+
+		with patch("apps.orgs.views.control_plane.revoke_invitation") as mock_revoke:
+			response = org_views.invitation_delete.__wrapped__(
+				request,
+				invitation_id=42,
+			)
+
+		self.assertEqual(response.status_code, 405)
+		mock_revoke.assert_not_called()
+
 	def test_team_remove_member_requires_team_remove_permission(self):
 		company = SimpleNamespace(id=9)
 		membership = SimpleNamespace(
@@ -1088,6 +1110,20 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			required_permissions={"team_remove"},
 			allow_platform_admin=True,
 		)
+
+	def test_team_remove_member_get_cannot_mutate_state(self):
+		request = self.factory.get("/orgs/workspace/9/team/member/5/remove/")
+		request.user = SimpleNamespace(id=1)
+
+		with patch("apps.orgs.views.control_plane.remove_membership") as mock_remove:
+			response = self._remove_member_view()(
+				request,
+				workspace_id=9,
+				membership_id=5,
+			)
+
+		self.assertEqual(response.status_code, 405)
+		mock_remove.assert_not_called()
 
 	def test_team_change_role_requires_team_change_role_permission(self):
 		company = SimpleNamespace(id=9)
@@ -1183,7 +1219,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			 patch("apps.orgs.views.render") as mock_render:
 			org_views.membership_list.__wrapped__(request, workspace_id=9)
 
-		mock_get.assert_called_once_with(org_views.Company, id=9, is_deleted=False)
+		mock_get.assert_called_once_with(org_views.Company, id=9)
 		mock_resolve.assert_not_called()
 		mock_access.assert_called_once_with(
 			request,
@@ -1226,7 +1262,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			 patch("apps.orgs.views.render") as mock_render:
 			org_views.companyinvitations_list.__wrapped__(request, workspace_id=9)
 
-		mock_get.assert_called_once_with(org_views.Company, id=9, is_deleted=False)
+		mock_get.assert_called_once_with(org_views.Company, id=9)
 		mock_query_workspace.assert_not_called()
 		mock_resolve.assert_not_called()
 		mock_access.assert_called_once_with(
@@ -2027,7 +2063,7 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 	@patch("apps.orgs.middleware_v2.HttpResponseRedirect")
 	@patch("apps.orgs.middleware_v2.messages")
 	@patch("apps.orgs.middleware_v2.reverse", return_value="/orgs/workspace/10/dashboard/")
-	def test_domain_path_workspace_mismatch_redirects_to_domain_workspace(
+	def test_domain_path_workspace_mismatch_is_forbidden(
 		self, _reverse, mock_messages, mock_redirect
 	):
 		"""A workspace id in path cannot target a different tenant than the mapped domain."""
@@ -2052,12 +2088,12 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 
 		mock_public.assert_called_once_with(request)
 		mock_messages.error.assert_called_once()
-		mock_redirect.assert_called_once_with("/orgs/workspace/10/dashboard/")
+		mock_redirect.assert_not_called()
 		mock_mismatch_handler.assert_not_called()
-		self.assertIsNotNone(result)
+		self.assertEqual(result.status_code, 403)
 
-	def test_platform_admin_bypasses_domain_path_workspace_mismatch_guard(self):
-		"""Platform admins can still access path-target workspace even when domain differs."""
+	def test_platform_admin_cannot_bypass_domain_path_workspace_mismatch_guard(self):
+		"""Platform authority cannot resolve conflicting explicit identity."""
 		path_ws = SimpleNamespace(id=6, schema_name="tenant_six")
 		profile = SimpleNamespace(workspace=self.profile_ws, save=lambda **kw: None)
 		superuser = SimpleNamespace(
@@ -2076,6 +2112,7 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 		with contextlib.ExitStack() as stack:
 			for p in patches:
 				stack.enter_context(p)
+			stack.enter_context(patch("apps.orgs.middleware_v2.messages"))
 			stack.enter_context(patch.object(self.middleware, "_handle_workspace_mismatch"))
 			stack.enter_context(
 				patch.object(self.middleware, "_validate_workspace_access", return_value={"allowed": True})
@@ -2086,9 +2123,8 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 			)
 			result = self.middleware.process_request(request)
 
-		self.assertEqual(request.tenant_resolution_source, "domain")
-		mock_set_tenant.assert_called_once_with(request, self.tenant_ws)
-		self.assertIsNone(result)
+		mock_set_tenant.assert_not_called()
+		self.assertEqual(result.status_code, 403)
 
 	# ── unauthenticated requests ─────────────────────────────────────────────────
 

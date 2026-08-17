@@ -159,11 +159,14 @@
                                             <td>{{ member.date_joined|date:"M d, Y" }}</td>
                                             <td>
                                                 {% if request.user|has_permission:"company.change_company" and member.user != user %}
-                                                <a href="{% url 'team_remove_member' workspace_id=company.id membership_id=member.id %}" 
-                                                   class="btn btn-sm btn-outline-danger"
-                                                   onclick="return confirm('Remove {{ member.user }} from this workspace?')">
-                                                    <i class="bi bi-person-dash"></i> Remove
-                                                </a>
+                                                <form method="post" action="{% url 'team_remove_member' workspace_id=company.id membership_id=member.id %}"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Remove {{ member.user }} from this workspace?')">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-person-dash"></i> Remove
+                                                    </button>
+                                                </form>
                                                 {% elif member.user == user %}
                                                 <span class="text-muted small">You</span>
                                                 {% else %}
@@ -224,12 +227,17 @@
                                             </td>
                                             <td>
                                                 {% if request.user|has_permission:"company.add_companymember" and invitation.is_pending %}
-                                                <button hx-post="{% url 'team_delete_invitation' invitation.id %}" 
-                                                        hx-target="closest tr" hx-swap="outerHTML"
-                                                        hx-confirm="Cancel invitation to {{ invitation.email }}?"
-                                                        class="btn btn-sm btn-outline-danger">
-                                                    <i class="bi bi-x-circle"></i> Cancel
-                                                </button>
+                                                <form method="post" action="{% url 'team_delete_invitation' invitation.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit"
+                                                            hx-post="{% url 'team_delete_invitation' invitation.id %}"
+                                                            hx-include="closest form"
+                                                            hx-target="closest tr" hx-swap="outerHTML"
+                                                            hx-confirm="Cancel invitation to {{ invitation.email }}?"
+                                                            class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-x-circle"></i> Cancel
+                                                    </button>
+                                                </form>
                                                 {% else %}
                                                 <span class="text-muted small">-</span>
                                                 {% endif %}

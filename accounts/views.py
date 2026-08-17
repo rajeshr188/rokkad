@@ -1,7 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
-from apps.orgs.tenant_context import resolve_request_workspace
+from django.views.decorators.http import require_POST
+
+from apps.orgs.tenant_context import resolve_preferred_workspace
 
 from .forms import UserProfileForm
 from .models import UserProfile
@@ -9,22 +11,29 @@ from .models import UserProfile
 # views.py
 
 
+@login_required
 def userprofile_detail(request, pk):
-    userprofile = get_object_or_404(UserProfile, pk=pk)
+    userprofile = get_object_or_404(UserProfile, pk=pk, user=request.user)
     return render(
         request, "account/userprofile_detail.html", {"userprofile": userprofile}
     )
 
 
+@login_required
 def userprofile_update(request, pk):
-    userprofile = get_object_or_404(UserProfile, pk=pk)
+    userprofile = get_object_or_404(UserProfile, pk=pk, user=request.user)
     if request.method == "POST":
-        form = UserProfileForm(request.POST, request.FILES, instance=userprofile)
+        form = UserProfileForm(
+            request.POST,
+            request.FILES,
+            instance=userprofile,
+            user=request.user,
+        )
         if form.is_valid():
             form.save()
             return redirect("userprofile_detail", pk=userprofile.pk)
     else:
-        form = UserProfileForm(instance=userprofile)
+        form = UserProfileForm(instance=userprofile, user=request.user)
     return render(request, "account/userprofile_form.html", {"form": form})
 
 
@@ -42,21 +51,22 @@ def userprofile_update(request, pk):
 
 
 @login_required
+@require_POST
 def switch_workspace(request, workspace_id):
     """
     Backward-compatible alias for canonical workspace switch view.
     """
-    return redirect("workspace_select", workspace_id=workspace_id)
+    from apps.orgs.views import workspace_select
+
+    return workspace_select(request, workspace_id=workspace_id)
 
 
 @login_required
+@require_POST
 def clear_workspace(request):
     """Clear the user's selected Workspace navigation preference."""
 
-    current_workspace = resolve_request_workspace(
-        request,
-        allow_profile_fallback=True,
-    )
+    preferred_workspace = resolve_preferred_workspace(request.user)
     request.user.profile.set_workspace(None)
 
     from apps.orgs.models import AuditLog
@@ -64,8 +74,8 @@ def clear_workspace(request):
     AuditLog.log(
         "WORKSPACE_CLEAR",
         user=request.user,
-        company=current_workspace,
-        description=f'Cleared workspace (was: {current_workspace.name if current_workspace else "None"})',
+        company=preferred_workspace,
+        description=f'Cleared workspace preference (was: {preferred_workspace.name if preferred_workspace else "None"})',
         request=request,
         success=True,
     )
@@ -88,31 +98,26 @@ def workspace_management(request):
     user = request.user
     profile = user.profile
 
-    # Get active workspace
-    current_workspace = resolve_request_workspace(
-        request,
-        include_public=True,
-        allow_profile_fallback=True,
-    )
+    preferred_workspace = resolve_preferred_workspace(user)
 
     # Get all user's workspaces (memberships)
     memberships = (
         user.memberships.select_related("company", "role")
-        .filter(company__is_deleted=False)
+        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
         .order_by("-company__updated_at")
     )
 
     context = {
-        "current_workspace": current_workspace,
+        "preferred_workspace": preferred_workspace,
         "memberships": memberships,
         "total_workspaces": memberships.count(),
-        "is_public": current_workspace and current_workspace.schema_name == "public",
     }
 
     return render(request, "account/workspace_management.html", context)
 
 
 @login_required
+@require_POST
 def reset_workspace(request):
     """
     Backward-compatible alias for clear workspace.

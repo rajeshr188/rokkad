@@ -16,11 +16,7 @@ def subscription_feature_required(feature_code):
     def decorator(view_func):
         @wraps(view_func)
         def wrapped_view(request, *args, **kwargs):
-            workspace = resolve_request_workspace(
-                request,
-                include_public=False,
-                allow_profile_fallback=False,
-            )
+            workspace = resolve_request_workspace(request, include_public=False)
             if workspace is None:
                 messages.warning(
                     request,
@@ -38,7 +34,10 @@ def subscription_feature_required(feature_code):
                     request,
                     decision.message or "This feature is not available on your current plan.",
                 )
-                return redirect("subscriptions:dashboard")
+                return redirect(
+                    "workspace_subscriptions:dashboard",
+                    workspace_slug=workspace.schema_name,
+                )
 
             return view_func(request, *args, **kwargs)
 

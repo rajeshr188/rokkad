@@ -12,7 +12,7 @@ from guardian.shortcuts import get_perms
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.models import Membership
-from apps.orgs.permissions import get_effective_permissions
+from apps.orgs.access import resolve_workspace_access
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
@@ -55,9 +55,9 @@ def permission_required(perm, raise_exception=True, log_denial=True):
                     raise PermissionDenied("No workspace selected")
                 return HttpResponseForbidden("No workspace selected")
 
-            effective_perms = get_effective_permissions(user, workspace)
+            access = resolve_workspace_access(actor=user, workspace=workspace)
 
-            if not effective_perms:
+            if access.membership is None and not access.platform_override:
                 if log_denial:
                     AuditLog.log(
                         "PERMISSION_DENIED",
@@ -71,7 +71,7 @@ def permission_required(perm, raise_exception=True, log_denial=True):
                     raise PermissionDenied("Not a workspace member")
                 return HttpResponseForbidden("Not a workspace member")
 
-            has_perm = perm in effective_perms
+            has_perm = access.can(perm)
 
             if not has_perm:
                 role_name = "Unknown"
@@ -131,14 +131,14 @@ def any_permission_required(perms, raise_exception=True):
                     raise PermissionDenied("No workspace selected")
                 return HttpResponseForbidden("No workspace selected")
 
-            effective_perms = get_effective_permissions(user, workspace)
+            access = resolve_workspace_access(actor=user, workspace=workspace)
 
-            if not effective_perms:
+            if access.membership is None and not access.platform_override:
                 if raise_exception:
                     raise PermissionDenied("Not a workspace member")
                 return HttpResponseForbidden("Not a workspace member")
 
-            has_any_perm = any(perm in effective_perms for perm in perms)
+            has_any_perm = any(access.can(perm) for perm in perms)
 
             if not has_any_perm:
                 AuditLog.log(
@@ -193,9 +193,9 @@ def object_permission_required(
                     workspace = _resolve_workspace(request)
                     if workspace:
                         try:
-                            has_global = perm in get_effective_permissions(
-                                request.user, workspace
-                            )
+                            has_global = resolve_workspace_access(
+                                actor=request.user, workspace=workspace
+                            ).can(perm)
                             if has_global:
                                 return view_func(request, *args, **kwargs)
                         except Membership.DoesNotExist:

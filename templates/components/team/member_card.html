@@ -54,10 +54,14 @@
                         data-bs-target="#editRoleModal-{{ member.id }}">
                     <i class="bi bi-pencil"></i> Change Role
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" 
-                        onclick="if(confirm('Remove this member?')) window.location='{% url 'team_remove_member' workspace_id=member.company.id membership_id=member.id %}';">
-                    <i class="bi bi-trash"></i> Remove
-                </button>
+                <form method="post" action="{% url 'team_remove_member' workspace_id=member.company.id membership_id=member.id %}"
+                      class="d-inline"
+                      onsubmit="return confirm('Remove this member?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i> Remove
+                    </button>
+                </form>
             </div>
         </div>
         {% endif %}

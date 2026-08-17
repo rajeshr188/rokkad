@@ -48,9 +48,12 @@
         
         <!-- Actions -->
         <div class="workspace-card__actions">
-            <a href="{% url 'workspace_select' workspace.id %}" class="btn btn-sm btn-primary btn-block">
-                <i class="bi bi-arrow-right"></i> Open Workspace
-            </a>
+            <form method="post" action="{% url 'workspace_select' workspace.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-primary btn-block">
+                    <i class="bi bi-arrow-right"></i> Open Workspace
+                </button>
+            </form>
             {% if user_is_admin %}
             <a href="{% url 'workspace_detail' workspace_id=workspace.id %}" class="btn btn-sm btn-outline-secondary mt-2 w-100">
                 <i class="bi bi-gear"></i> Settings

@@ -1,9 +1,10 @@
 ---
-status: current-audit
+status: accepted-baseline
 owner: project
 updated: 2026-08-17
 tags: [architecture, saas, control-plane, workspace, rls, security, audit]
 related:
+  - ../adr/2026-08-17-saas-control-plane-audit-baseline.md
   - ../adr/2026-08-14-shared-schema-workspace-rls-tenancy.md
   - current-workspace-resolution-chain-using-postgres-rls.md
   - ../implementation/django-schema-tenancy-to-postgresql-rls-guide.md
@@ -18,11 +19,23 @@ SaaS control plane after the migration from schema tenancy to shared-schema
 PostgreSQL Row-Level Security (RLS).
 
 It describes current implementation, reconstructed user flows, security and
-architectural findings, a proposed target, and a phased improvement roadmap.
-It is an audit and planning reference. Recommendations here are not accepted
-architecture decisions unless separately recorded in an ADR.
+architectural findings, the accepted architectural direction, and the
+incremental improvement roadmap. ADR 2026-08-17 accepts this document as the
+execution baseline. Phase 0.5 converted its recommendations into the normative
+[control-plane contracts](control-plane-contracts.md) before implementation.
 
 No application behavior was changed as part of this audit.
+
+## Execution status
+
+Phase 0 is complete. Profile self-service endpoints are authenticated and
+self-only, profile Workspace choices are membership-scoped, and persistent
+Workspace selection, member removal, and invitation revocation are POST-only
+with CSRF-protected callers. Workspace-selection redirects accept only safe
+same-host `next` targets. Phase 0.5 is also complete: request authority,
+ownership, RBAC, lifecycle/billing separation, entitlements, data-plane
+boundaries, and implementation phases are locked in the normative contract.
+Phase 1 has not started.
 
 Diagrams are embedded as repository-owned SVG files so they render in ordinary
 Markdown viewers. Their Graphviz sources live in

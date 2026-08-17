@@ -21,16 +21,17 @@ def _read(relative_path):
 class SaasFoundationPhase0CharacterizationTests(SimpleTestCase):
     """Lock the inspected baseline before the accepted safety changes begin."""
 
-    def test_hard_delete_is_currently_enabled_and_exposed_to_company_admin(self):
-        self.assertTrue(settings.ALLOW_COMPANY_HARD_DELETE)
+    def test_hard_delete_is_retired_from_company_model_and_admin(self):
+        self.assertFalse(hasattr(settings, "ALLOW_COMPANY_HARD_DELETE"))
         admin_source = _read("apps/orgs/admin.py")
-        self.assertIn("def hard_delete_companies", admin_source)
-        self.assertIn('"hard_delete_companies"', admin_source)
+        self.assertNotIn("def hard_delete_companies", admin_source)
+        self.assertNotIn('"hard_delete_companies"', admin_source)
+        self.assertIn("return False", admin_source)
 
     def test_email_verification_is_currently_optional(self):
         self.assertEqual(settings.ACCOUNT_EMAIL_VERIFICATION, "optional")
 
-    def test_middleware_currently_selects_profile_workspace_as_fallback(self):
+    def test_middleware_does_not_select_profile_workspace_as_fallback(self):
         middleware = SecureWorkspaceMiddleware(get_response=lambda request: None)
         profile_workspace = SimpleNamespace(schema_name="tenant_from_profile")
 
@@ -40,8 +41,8 @@ class SaasFoundationPhase0CharacterizationTests(SimpleTestCase):
             profile_workspace=profile_workspace,
         )
 
-        self.assertIs(workspace, profile_workspace)
-        self.assertEqual(source, "profile")
+        self.assertIsNone(workspace)
+        self.assertEqual(source, "public")
 
     def test_membership_validation_precedes_tenant_context_switch(self):
         source = _read("apps/orgs/middleware_v2.py")
@@ -55,11 +56,11 @@ class SaasFoundationPhase0CharacterizationTests(SimpleTestCase):
         switch = source.index("self._set_tenant_context(request, workspace)")
         self.assertLess(mismatch, switch)
 
-    def test_subscription_access_is_currently_enforced_in_two_middlewares(self):
+    def test_subscription_access_is_separate_from_workspace_middleware(self):
         workspace_middleware = _read("apps/orgs/middleware_v2.py")
         subscription_middleware = _read("django_project/middleware.py")
 
-        self.assertIn("subscription_access_service.evaluate_access", workspace_middleware)
+        self.assertNotIn("subscription_access_service.evaluate_access", workspace_middleware)
         self.assertIn("class SubscriptionValidationMiddleware", subscription_middleware)
         self.assertIn("subscription_access_service.evaluate_access", subscription_middleware)
 
@@ -74,10 +75,6 @@ class SaasFoundationInventoryCommandTests(SimpleTestCase):
                 "owner_without_owner_role": 2,
             },
             "memberships": {"null_role": 3},
-            "ownership": {
-                "multiple_active_company_groups": 4,
-                "active_row_disagrees_with_company_owner": 5,
-            },
             "invitations": {
                 "orphan_pending_bridge": 6,
                 "case_variant_pending_groups": 7,
@@ -93,7 +90,7 @@ class SaasFoundationInventoryCommandTests(SimpleTestCase):
 
         payload = json.loads(stdout.getvalue())
         self.assertTrue(payload["read_only"])
-        self.assertEqual(payload["integrity_finding_count"], 28)
+        self.assertEqual(payload["integrity_finding_count"], 19)
 
     def test_fail_on_findings_exits_nonzero(self):
         inventory = {
@@ -104,10 +101,6 @@ class SaasFoundationInventoryCommandTests(SimpleTestCase):
                 "owner_without_owner_role": 0,
             },
             "memberships": {"null_role": 0},
-            "ownership": {
-                "multiple_active_company_groups": 0,
-                "active_row_disagrees_with_company_owner": 0,
-            },
             "invitations": {
                 "orphan_pending_bridge": 0,
                 "case_variant_pending_groups": 0,

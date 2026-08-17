@@ -4,8 +4,8 @@ Fixes critical authorization bypass vulnerability.
 
 This module is intentionally standalone (it does not inherit from
 TenantMainMiddleware). The request flow is security-critical and custom:
-deterministic tenant resolution, membership/subscription authorization,
-mismatch auditing, and explicit redirect/cleanup behavior.
+deterministic Workspace resolution, membership authorization, and explicit
+redirect/cleanup behavior.
 """
 
 import logging
@@ -14,19 +14,19 @@ import re
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import DisallowedHost
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse, set_urlconf
 from django.utils.deprecation import MiddlewareMixin
 
 from apps.orgs.audit import AuditLog
+from apps.orgs.access import resolve_workspace_access
+from apps.orgs.lifecycle import lifecycle_access
 from apps.orgs.models import Company, Domain, Membership
 from apps.orgs.permissions import is_platform_admin
-from apps.subscriptions.services import SubscriptionAccessService
 from apps.tenancy.context import workspace_context
 
 logger = logging.getLogger(__name__)
 
-subscription_access_service = SubscriptionAccessService()
 PUBLIC_WORKSPACE_SLUG = "public"
 
 
@@ -55,14 +55,29 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
     # not from "/admin/", so there is no conflict.
     EXEMPT_URLS = [
         "/accounts/",
+        "/app/",
+        "/onboarding/",
+        "/profile/",
         "/static/",
         "/media/",
         "/__debug__/",
     ]
 
+    GLOBAL_CONTROL_PLANE_URLS = {
+        "/orgs/workspace/",
+        "/orgs/workspace/create/",
+        "/orgs/workspace/list/",
+        "/orgs/workspace/archived/",
+        "/orgs/team/invitations/",
+        "/orgs/memberships/",
+        "/orgs/profile/",
+        "/orgs/account/settings/",
+    }
+
     # URLs that require workspace
     WORKSPACE_REQUIRED_URLS = [
         "/party/",
+        "/portal/",
         "/girvi/",
         "/loans/",
         "/sales/",
@@ -92,34 +107,23 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             self._set_public_context(request)
             return None
 
-        # Resolve candidates in a deterministic order:
-        # 1) Domain mapping (authoritative)
-        # 2) URL path workspace hints
-        # 3) User profile workspace fallback (transition mode)
+        # Resolve only explicit request identity. Profile Workspace is a
+        # navigation preference, never request or database authority.
         domain_workspace = self._resolve_workspace_from_domain(request)
         path_workspace = self._resolve_workspace_from_path(request)
-        profile_workspace = (
-            self._get_user_workspace(request.user)
-            if request.user.is_authenticated
-            else None
-        )
 
         workspace, source = self._select_workspace_candidate(
             domain_workspace=domain_workspace,
             path_workspace=path_workspace,
-            profile_workspace=profile_workspace,
         )
 
-        # Domain mapping is authoritative. If path embeds a different workspace id,
-        # reject it to prevent cross-workspace URL probing on tenant domains.
+        # Multiple explicit identities must agree. Platform authority never
+        # resolves an ambiguous Workspace identity.
         if (
             domain_workspace
             and path_workspace
             and domain_workspace.id != path_workspace.id
             and domain_workspace.schema_name != get_public_schema_name()
-            and not (
-                request.user.is_authenticated and is_platform_admin(request.user)
-            )
         ):
             logger.warning(
                 "Workspace path/domain mismatch for user %s: domain=%s path=%s path_url=%s",
@@ -133,9 +137,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
                 request,
                 "Workspace URL does not match the current domain.",
             )
-            return HttpResponseRedirect(
-                reverse("workspace_dashboard", kwargs={"workspace_id": domain_workspace.id})
-            )
+            return HttpResponseForbidden("Conflicting Workspace identity.")
 
         # Keep a clear signal for downstream code and diagnostics.
         request.tenant_resolution_source = source
@@ -162,12 +164,6 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             self._set_public_context(request)
             return None
 
-        self._handle_workspace_mismatch(
-            request=request,
-            domain_workspace=domain_workspace,
-            profile_workspace=profile_workspace,
-        )
-
         # No workspace but URL requires it → redirect
         if not workspace and self._requires_workspace(request.path):
             messages.warning(request, "Please select a workspace to continue.")
@@ -186,11 +182,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
 
         if validation["allowed"]:
             self._set_tenant_context(request, workspace)
-
-            # Keep profile workspace synchronized to the effective tenant.
-            if profile_workspace != workspace and hasattr(request.user, "profile"):
-                request.user.profile.workspace = workspace
-                request.user.profile.save(update_fields=["workspace"])
+            request.workspace_access = validation.get("access")
 
             # Log sensitive access
             if self._is_sensitive_path(request.path):
@@ -216,6 +208,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         self._close_workspace_context(request)
         request.workspace = None
         request.tenant = None
+        request.workspace_access = None
         request.urlconf = settings.ROOT_URLCONF
         set_urlconf(request.urlconf)
 
@@ -264,15 +257,14 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         """Resolve workspace from known id or slug path patterns."""
         workspace_id = self._extract_workspace_id_from_path(request.path)
         if workspace_id:
-            return Company.objects.filter(id=workspace_id, is_deleted=False).first()
+            return Company.all_objects.filter(id=workspace_id).first()
 
         workspace_slug = self._extract_workspace_slug_from_path(request.path)
         if not workspace_slug or workspace_slug == get_public_schema_name():
             return None
 
-        return Company.objects.filter(
+        return Company.all_objects.filter(
             schema_name=workspace_slug,
-            is_deleted=False,
         ).first()
 
     def _extract_workspace_id_from_path(self, path):
@@ -291,8 +283,10 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
                 return match.group("workspace_slug")
         return None
 
-    def _select_workspace_candidate(self, domain_workspace, path_workspace, profile_workspace):
-        """Pick the effective workspace in deterministic priority order."""
+    def _select_workspace_candidate(
+        self, domain_workspace, path_workspace, profile_workspace=None
+    ):
+        """Pick the effective Workspace from explicit request identity."""
         public_schema = get_public_schema_name()
 
         if domain_workspace and domain_workspace.schema_name != public_schema:
@@ -301,45 +295,18 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         if path_workspace and path_workspace.schema_name != public_schema:
             return path_workspace, "path"
 
-        if profile_workspace and profile_workspace.schema_name != public_schema:
-            return profile_workspace, "profile"
-
         if domain_workspace and domain_workspace.schema_name == public_schema:
             return domain_workspace, "domain-public"
 
         return None, "public"
 
-    def _handle_workspace_mismatch(self, request, domain_workspace, profile_workspace):
-        """Log mismatch when domain-resolved tenant and selected profile workspace diverge."""
-        if not domain_workspace or not profile_workspace:
-            return
+    def _get_user_workspace(self, request):
+        """Retired compatibility seam: profile preference is never authority."""
+        return None
 
-        if domain_workspace.id == profile_workspace.id:
-            return
-
-        if domain_workspace.schema_name == get_public_schema_name():
-            return
-
-        logger.warning(
-            "Workspace mismatch detected for user %s: domain=%s profile=%s",
-            request.user.id,
-            domain_workspace.id,
-            profile_workspace.id,
-        )
-
-        AuditLog.log(
-            action="UNAUTHORIZED_ACCESS",
-            user=request.user,
-            company=profile_workspace,
-            description="Workspace mismatch between domain resolution and selected profile workspace",
-            request=request,
-            success=False,
-            data={
-                "path": request.path,
-                "domain_workspace_id": domain_workspace.id,
-                "profile_workspace_id": profile_workspace.id,
-            },
-        )
+    def _handle_workspace_mismatch(self, **kwargs):
+        """Retired compatibility seam; explicit conflicts are rejected inline."""
+        return None
 
     def _validate_workspace_access(self, user, workspace, request):
         """
@@ -349,8 +316,29 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         Returns dict with 'allowed', 'reason', 'message' keys.
         """
 
-        # Superusers bypass membership checks (Django admin / staff access)
-        if is_platform_admin(user):
+        access = resolve_workspace_access(actor=user, workspace=workspace)
+
+        lifecycle = lifecycle_access(workspace=workspace, access=access)
+        recovery_path = request.path.startswith(
+            (
+                f"/w/{workspace.schema_name}/settings/",
+                f"/w/{workspace.schema_name}/data-tools/export/",
+                f"/workspace/{workspace.id}/settings/",
+                f"/orgs/workspace/{workspace.id}/restore/",
+                f"/orgs/workspace/{workspace.id}/lifecycle/",
+            )
+        )
+        if not lifecycle.may_enter_business and not (
+            recovery_path and lifecycle.may_use_recovery
+        ):
+            return {
+                "allowed": False,
+                "reason": "WORKSPACE_LIFECYCLE_DENIED",
+                "message": "This Workspace is not available for ordinary operation.",
+            }
+
+        # Platform administrators bypass membership, never lifecycle controls.
+        if access.platform_override:
             logger.debug(
                 f"✅ Superuser {user.id} ({user.email}) granted access to workspace "
                 f"{workspace.id} ({workspace.name}) without membership requirement."
@@ -360,25 +348,12 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
                 "reason": "SUPERUSER",
                 "message": "",
                 "membership": None,
+                "access": access,
             }
 
-        # Check 1: Is company deleted?
-        if workspace.is_deleted:
-            logger.warning(
-                f"User {user.id} tried to access deleted workspace {workspace.id}"
-            )
-            return {
-                "allowed": False,
-                "reason": "COMPANY_DELETED",
-                "message": "This workspace has been deleted.",
-            }
-
-        # 🔒 Check 2: IS USER A MEMBER? (MOST IMPORTANT)
-        try:
-            membership = Membership.objects.select_related("role").get(
-                user=user, company=workspace
-            )
-        except Membership.DoesNotExist:
+        # 🔒 Check 1: IS USER A MEMBER? (MOST IMPORTANT)
+        membership = access.membership
+        if membership is None:
             # ❌ NOT A MEMBER - LOG AS SECURITY INCIDENT
             logger.error(
                 f"🚨 SECURITY ALERT: User {user.id} ({user.email}) "
@@ -407,21 +382,6 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
                 "message": "You are not a member of this workspace.",
             }
 
-        # Centralized subscription and entitlement evaluation.
-        if "subscriptions" in settings.INSTALLED_APPS:
-            decision = subscription_access_service.evaluate_access(
-                user=user,
-                workspace=workspace,
-                membership=membership,
-            )
-            if not decision.allowed:
-                return {
-                    "allowed": False,
-                    "reason": decision.reason,
-                    "message": decision.message,
-                    "membership": membership,
-                }
-
         # ✅ All checks passed - AUTHORIZED
         logger.debug(
             f"✅ User {user.id} authorized for workspace {workspace.id} "
@@ -433,20 +393,14 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             "reason": "AUTHORIZED",
             "message": "",
             "membership": membership,
+            "access": access,
         }
 
-    def _get_user_workspace(self, user):
-        """Safely get user's workspace"""
-        try:
-            if hasattr(user, "profile") and user.profile.workspace:
-                return user.profile.workspace
-        except Exception as e:
-            logger.error(f"Error getting workspace for user {user.id}: {e}")
-        return None
-
     def _is_exempt_url(self, path):
-        """Check if URL is exempt from workspace validation"""
-        return any(path.startswith(exempt) for exempt in self.EXEMPT_URLS)
+        """Return whether the route is explicitly global/control-plane."""
+        return path in self.GLOBAL_CONTROL_PLANE_URLS or any(
+            path.startswith(exempt) for exempt in self.EXEMPT_URLS
+        )
 
     def _requires_workspace(self, path):
         """Check if URL requires workspace context"""

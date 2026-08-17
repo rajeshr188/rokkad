@@ -36,6 +36,7 @@ This folder is the living documentation system. Historical notes, audits, and su
 
 ## App Internals
 
+- [Canonical SaaS control-plane contracts](architecture/control-plane-contracts.md)
 - [SaaS control-plane architecture audit](architecture/saas-control-plane-architecture-audit.md)
 - [Current Workspace resolution and PostgreSQL RLS chain](architecture/current-workspace-resolution-chain-using-postgres-rls.md)
 - [Loan exposure and risk architecture](architecture/loan-risk/README.md)

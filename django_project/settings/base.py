@@ -100,7 +100,6 @@ ONBOARDING_TEMPLATE_CLONE_MODE = env(
 
 # Performance: avoid repeated search_path SET calls when tenant is unchanged.
 TENANT_LIMIT_SET_CALLS = True
-ALLOW_COMPANY_HARD_DELETE=True
 # Optional shared schemas visible to all tenants (for reference/master data).
 # Configure via .env, e.g. PG_EXTRA_SEARCH_PATHS=shared_data
 PG_EXTRA_SEARCH_PATHS = env.list("PG_EXTRA_SEARCH_PATHS", default=[])

@@ -52,6 +52,11 @@ WORKSPACE_MANAGER_URLPATTERNS = [
         name="workspace_restore",
     ),
     path(
+        "workspace/<int:workspace_id>/lifecycle/<str:target_state>/",
+        views.workspace_lifecycle_transition,
+        name="workspace_lifecycle_transition",
+    ),
+    path(
         "workspace/<int:workspace_id>/preferences/",
         views.CompanyPreferenceBuilder.as_view(),
         name="workspace_preferences",

@@ -33,16 +33,12 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
             "apps.onboarding.views.get_or_create_progress",
             return_value=self._progress(is_complete=True),
         ), patch(
-            "apps.onboarding.views.resolve_request_workspace",
+            "apps.onboarding.views.resolve_preferred_workspace",
             return_value=workspace,
         ) as mock_resolve:
             views.onboarding_start(request)
 
-        mock_resolve.assert_called_once_with(
-            request,
-            include_public=False,
-            allow_profile_fallback=True,
-        )
+        mock_resolve.assert_called_once_with(request.user)
         mock_redirect.assert_called_once_with(
             "workspace_settings_setup",
             workspace_id=9,
@@ -59,7 +55,7 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
             "apps.onboarding.views.get_or_create_progress",
             return_value=self._progress(is_complete=True),
         ), patch(
-            "apps.onboarding.views.resolve_request_workspace",
+            "apps.onboarding.views.resolve_preferred_workspace",
             return_value=None,
         ):
             views.onboarding_start(request)
@@ -82,6 +78,9 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
             return_value=progress,
         ), patch(
             "apps.onboarding.views.resolve_request_workspace",
+            return_value=workspace,
+        ), patch(
+            "apps.onboarding.views.resolve_preferred_workspace",
             return_value=workspace,
         ):
             views.onboarding_complete(request)
@@ -107,7 +106,7 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
             "apps.onboarding.views.get_or_create_progress",
             return_value=progress,
         ), patch(
-            "apps.onboarding.views.resolve_request_workspace",
+            "apps.onboarding.views.resolve_preferred_workspace",
             return_value=workspace,
         ):
             views.onboarding_skip(request)

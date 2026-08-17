@@ -6,13 +6,12 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Count, Exists, F, OuterRef
+from django.db.models import Count, Exists, OuterRef
 from django.db.models.functions import Lower
 
 from apps.orgs.models import (
     Company,
     CompanyInvitation,
-    CompanyOwnership,
     Membership,
     PendingInvitation,
     Role,
@@ -24,7 +23,6 @@ def _source_reference_counts():
     root = Path(settings.BASE_DIR)
     needles = {
         "pending_invitation": "PendingInvitation",
-        "company_ownership": "CompanyOwnership",
         "guardian": "guardian",
         "hardcoded_role_permissions": "RolePermissions",
         "subscription_access_service": "SubscriptionAccessService",
@@ -67,16 +65,6 @@ def collect_saas_foundation_inventory():
             has_owner_role=Exists(owner_role_membership)
         ).filter(has_owner_role=False)
 
-        active_ownerships = CompanyOwnership.objects.filter(end_date__isnull=True)
-        multiple_active_ownerships = (
-            active_ownerships.values("company_id")
-            .annotate(total=Count("id"))
-            .filter(total__gt=1)
-        )
-        ownership_disagreements = active_ownerships.exclude(
-            user_id=F("company__owner_id")
-        )
-
         authoritative_pending = CompanyInvitation.pending_queryset()
         matching_invitation = authoritative_pending.filter(
             company_id=OuterRef("company_id"),
@@ -112,18 +100,13 @@ def collect_saas_foundation_inventory():
             "read_only": True,
             "companies": {
                 "total_non_public": companies.count(),
-                "archived": companies.filter(is_deleted=True).count(),
+                "archived": companies.filter(lifecycle_state="ARCHIVED").count(),
                 "owner_missing_membership": owner_missing_membership.count(),
                 "owner_without_owner_role": owner_wrong_role.count(),
             },
             "memberships": {
                 "total": Membership.objects.count(),
                 "null_role": Membership.objects.filter(role__isnull=True).count(),
-            },
-            "ownership": {
-                "history_rows": CompanyOwnership.objects.count(),
-                "multiple_active_company_groups": multiple_active_ownerships.count(),
-                "active_row_disagrees_with_company_owner": ownership_disagreements.count(),
             },
             "invitations": {
                 "company_invitation_total": CompanyInvitation.objects.count(),
@@ -167,8 +150,6 @@ class Command(BaseCommand):
                 inventory["companies"]["owner_missing_membership"],
                 inventory["companies"]["owner_without_owner_role"],
                 inventory["memberships"]["null_role"],
-                inventory["ownership"]["multiple_active_company_groups"],
-                inventory["ownership"]["active_row_disagrees_with_company_owner"],
                 inventory["invitations"]["orphan_pending_bridge"],
                 inventory["invitations"]["case_variant_pending_groups"],
             ]

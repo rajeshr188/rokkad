@@ -67,10 +67,10 @@
                                     <!-- Action Buttons -->
                                     <div class="text-end">
                                         {% if current_workspace != membership.company %}
-                                            <a href="{% url 'workspace_select' membership.company.id %}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                Switch
-                                            </a>
+                                            <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Switch</button>
+                                            </form>
                                         {% else %}
                                             <a href="{% url 'workspace_dashboard' membership.company.id %}"
                                               class="btn btn-sm btn-primary">

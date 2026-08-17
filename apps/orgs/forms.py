@@ -268,7 +268,7 @@ class CompanyForm(forms.ModelForm):
             if self.instance.pk:
                 # Allow the current instance's name
                 if (
-                    Company.objects.all_with_deleted()
+                    Company.all_objects
                     .filter(name=name)
                     .exclude(pk=self.instance.pk)
                     .exists()
@@ -278,7 +278,7 @@ class CompanyForm(forms.ModelForm):
                     )
             else:
                 # Check for new instances
-                if Company.objects.all_with_deleted().filter(name=name).exists():
+                if Company.all_objects.filter(name=name).exists():
                     raise forms.ValidationError(
                         "Company with this name already exists."
                     )

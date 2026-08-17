@@ -18,15 +18,15 @@
                 </a>
             </div>
 
-            <!-- Current Workspace Card -->
+            <!-- Preferred Workspace Card -->
             <div class="card mb-4 border-info">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
-                        <i class="bi bi-check-circle"></i> {% trans "Current Workspace" %}
+                        <i class="bi bi-check-circle"></i> {% trans "Preferred Workspace" %}
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if is_public %}
+                    {% if not preferred_workspace %}
                         <p class="text-muted mb-3">
                             <i class="bi bi-exclamation-circle"></i>
                             {% trans "No workspace selected. You're in the public area." %}
@@ -34,29 +34,25 @@
                         <a href="{% url 'workspace_selector' %}" class="btn btn-primary">
                             <i class="bi bi-arrow-right"></i> {% trans "Select a Workspace" %}
                         </a>
-                    {% elif current_workspace %}
+                    {% else %}
                         <div class="row">
                             <div class="col-md-8">
-                                <h4>{{ current_workspace.name|capfirst }}</h4>
+                                <h4>{{ preferred_workspace.name|capfirst }}</h4>
                                 <dl class="row">
                                     <dt class="col-sm-4">{% trans "Schema" %}:</dt>
                                     <dd class="col-sm-8">
-                                        <code>{{ current_workspace.schema_name }}</code>
+                                        <code>{{ preferred_workspace.schema_name }}</code>
                                     </dd>
                                     <dt class="col-sm-4">{% trans "Created" %}:</dt>
-                                    <dd class="col-sm-8">{{ current_workspace.created_at|date:"SHORT_DATE_FORMAT" }}</dd>
+                                    <dd class="col-sm-8">{{ preferred_workspace.created_at|date:"SHORT_DATE_FORMAT" }}</dd>
                                     <dt class="col-sm-4">{% trans "Status" %}:</dt>
                                     <dd class="col-sm-8">
-                                        {% if current_workspace.is_deleted %}
-                                            <span class="badge bg-danger">{% trans "Deleted" %}</span>
-                                        {% else %}
-                                            <span class="badge bg-success">{% trans "Active" %}</span>
-                                        {% endif %}
+                                        <span class="badge bg-success">{{ preferred_workspace.get_lifecycle_state_display }}</span>
                                     </dd>
                                 </dl>
                             </div>
                             <div class="col-md-4">
-                                <a href="{% url 'workspace_dashboard' current_workspace.id %}" class="btn btn-primary w-100 mb-2">
+                                <a href="{% url 'workspace_slug_dashboard' preferred_workspace.schema_name %}" class="btn btn-primary w-100 mb-2">
                                     <i class="bi bi-speedometer2"></i> {% trans "Go to Dashboard" %}
                                 </a>
                                 <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#clearModal">
@@ -64,11 +60,6 @@
                                 </button>
                             </div>
                         </div>
-                    {% else %}
-                        <p class="text-warning mb-3">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            {% trans "Workspace information not available" %}
-                        </p>
                     {% endif %}
                 </div>
             </div>
@@ -96,12 +87,12 @@
                                 </thead>
                                 <tbody>
                                     {% for membership in memberships %}
-                                    <tr class="{% if membership.company.id == current_workspace.id %}table-info{% endif %}">
+                                    <tr class="{% if membership.company.id == preferred_workspace.id %}table-info{% endif %}">
                                         <td>
                                             <strong>{{ membership.company.name|capfirst }}</strong>
-                                            {% if membership.company.id == current_workspace.id %}
+                                            {% if membership.company.id == preferred_workspace.id %}
                                                 <span class="badge bg-success ms-2">
-                                                    <i class="bi bi-check-circle"></i> {% trans "Active" %}
+                                                    <i class="bi bi-check-circle"></i> {% trans "Preferred" %}
                                                 </span>
                                             {% endif %}
                                         </td>
@@ -118,13 +109,15 @@
                                             {{ membership.company.created_at|date:"M d, Y" }}
                                         </td>
                                         <td>
-                                            {% if membership.company.id != current_workspace.id %}
-                                                <a href="{% url 'workspace_select' membership.company.id %}" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="bi bi-box-arrow-in-right"></i> {% trans "Switch" %}
-                                                </a>
+                                            {% if membership.company.id != preferred_workspace.id %}
+                                                <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-box-arrow-in-right"></i> {% trans "Switch" %}
+                                                    </button>
+                                                </form>
                                             {% else %}
-                                                <span class="text-muted">{% trans "Current" %}</span>
+                                                <span class="text-muted">{% trans "Preferred" %}</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -160,11 +153,14 @@
                             </a>
                         </div>
                         <div class="col-md-6">
-                            <a href="{% url 'clear_workspace' %}" class="btn btn-outline-warning btn-block w-100 py-3 mb-2"
-                               onclick="return confirm('{% trans "Are you sure? You'll need to select a workspace again." %}')">
-                                <i class="bi bi-arrow-counterclockwise"></i><br>
-                                <strong>{% trans "Reset Workspace" %}</strong>
-                            </a>
+                            <form method="post" action="{% url 'clear_workspace' %}"
+                                  onsubmit="return confirm('{% trans "Are you sure? You'll need to select a workspace again." %}')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-warning btn-block w-100 py-3 mb-2">
+                                    <i class="bi bi-arrow-counterclockwise"></i><br>
+                                    <strong>{% trans "Reset Workspace" %}</strong>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -184,7 +180,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>{% trans "This will clear your current workspace selection and return you to the public area." %}</p>
+                <p>{% trans "This will clear your preferred workspace for navigation." %}</p>
                 <p>{% trans "You can select a different workspace afterwards." %}</p>
                 <p class="text-muted small mb-0">
                     <i class="bi bi-info-circle"></i>
@@ -195,9 +191,12 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     {% trans "Cancel" %}
                 </button>
-                <a href="{% url 'clear_workspace' %}" class="btn btn-warning">
-                    <i class="bi bi-arrow-counterclockwise"></i> {% trans "Clear Workspace" %}
-                </a>
+                <form method="post" action="{% url 'clear_workspace' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise"></i> {% trans "Clear Workspace" %}
+                    </button>
+                </form>
             </div>
         </div>
     </div>

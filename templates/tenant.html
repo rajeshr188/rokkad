@@ -45,9 +45,10 @@
           {% for workspace in user.company_set.all %}
             {% if workspace.id != request.user.profile.workspace.id%}
             <li>
-              <a class="dropdown-item" href="{% url 'workspace_select' workspace.id %}">
-                {{ workspace.name|capfirst }}
-              </a>
+              <form method="post" action="{% url 'workspace_select' workspace.id %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="dropdown-item">{{ workspace.name|capfirst }}</button>
+              </form>
             </li>
             {%endif%}
           {% endfor %}
@@ -59,9 +60,12 @@
           </li>
           {%if user.profile.workspace and user.profile.workspace.schema_name != 'public'%}
             <li>
-                <a class="dropdown-item" href="{% url 'clear_workspace'%}">
-                  <i class="bi bi-arrow-counterclockwise"></i> {% trans "Clear Workspace" %}
-                </a>
+                <form method="post" action="{% url 'clear_workspace'%}" class="m-0">
+                  {% csrf_token %}
+                  <button type="submit" class="dropdown-item">
+                    <i class="bi bi-arrow-counterclockwise"></i> {% trans "Clear Workspace" %}
+                  </button>
+                </form>
             </li>
             {%endif%}
         </ul>

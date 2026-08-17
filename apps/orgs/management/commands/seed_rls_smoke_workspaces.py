@@ -50,8 +50,11 @@ class Command(BaseCommand):
                 schema_name=slug,
                 defaults={"name": name, "owner": owner, "creator": owner},
             )
-            if workspace.is_deleted:
-                workspace.restore()
+            if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
+                raise CommandError(
+                    f"Smoke Workspace {workspace.schema_name} is not active; "
+                    "change it through the lifecycle service before seeding."
+                )
             with workspace_context(workspace.pk):
                 source, _ = RateSource.objects.get_or_create(
                     name=self.source_name,

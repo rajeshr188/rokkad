@@ -8,16 +8,108 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
-- 2026-08-17: The post-RLS SaaS control plane has a repository-based current-state
-  architecture audit at
+- 2026-08-17: SaaS control-plane Phase 3 Workspace operational lifecycle is
+  complete. `Company.is_deleted` and the ordinary hard-delete setting/model/
+  admin paths are retired. Migration `orgs.0003` maps archived rows and installs
+  the independent `ACTIVE`, `SUSPENDED`, `ARCHIVED`, and `DELETION_PENDING`
+  state model. A row-locked, reason-required, audited lifecycle service enforces
+  the accepted transition graph and actor rules. Middleware enforces lifecycle
+  after explicit Workspace resolution and independently of Membership, RBAC,
+  Subscription state, and RLS; platform override bypasses Membership only, not
+  inactive-Workspace boundaries. Recovery routes remain narrowly available to
+  the authorized actors, inactive rows retain their Workspace ownership, and
+  physical erasure remains reserved for a later privileged retention workflow.
+  The migration applied normally. Verification passed 130 focused control-plane
+  tests, all 12 restricted-role Party/Loans/Notify v2/Rates RLS tests, migration
+  drift and system checks, and the foundation inventory with zero integrity
+  findings and 95/95 forced-RLS coverage. Phase 4 billing normalization has not
+  started.
+
+- 2026-08-17: The local development database migration ledger is reconciled
+  with the rebuilt baseline and Phase 2 is physically applied. The database
+  retained old pre-baseline migration names while already containing the new
+  baseline schema, causing `accounts.0002_initial` to try to recreate
+  `accounts_userprofile.workspace_id`. Physical columns, constraints, 95
+  forced-RLS tables/policies, and 42 Loans guard triggers were verified before
+  marking only the equivalent rebuilt baseline migrations applied. The truly
+  new `orgs.0002` then ran normally. Its migration is deliberately non-atomic
+  at the migration level so PostgreSQL can commit reconciliation FK events
+  before altering Membership constraints. The final plan has no pending
+  migrations; foundation inventory reports zero integrity findings, zero null
+  Membership roles, and correct Owner Memberships for all three Workspaces;
+  `CompanyOwnership` is absent; forced RLS remains 95/95.
+
+- 2026-08-17: SaaS control-plane Phase 2 ownership and authorization is
+  complete. Migration `orgs.0002` reconciles every Workspace to
+  `Company.owner_id`, creates/fixes its single mirrored Owner Membership,
+  demotes competing Owner-role rows to Admin, fills null Membership roles,
+  makes roles non-null, protects owner user deletion, and retires
+  `CompanyOwnership`. `transfer_workspace_ownership()` locks the Workspace and
+  affected Memberships, requires an existing target member and reason, updates
+  the owner plus both roles atomically, rejects stale competing actors, and
+  emits `OWNERSHIP_TRANSFER`. The request-independent `WorkspaceAccess` policy
+  now supplies normalized namespaced actions, fail-closed `can()`/`require()`,
+  and the sole superuser platform override. Secure middleware attaches it after
+  Membership validation; control-plane view guards, decorators, and role policy
+  consume it. Final Party/Loans/Notify v2/Rates helper convergence remains the
+  explicitly planned Phase 9 boundary. Verification passed: 199 broad
+  control-plane tests, 120 focused Phase 2/Orgs tests (including a real
+  PostgreSQL competing-transfer test), and all 12 restricted-role RLS tests.
+  Phase 3 is now complete as recorded above.
+
+- 2026-08-17: SaaS control-plane Phase 1 (Workspace Resolution and Request
+  Context) is complete. Workspace authority now comes only from a registered
+  domain or a recognized Workspace-bearing path. Conflicting domain/path
+  identities return HTTP 403 for every actor, including platform
+  administrators. Global account, onboarding, selector, membership, profile,
+  and account-settings routes explicitly clear request and PostgreSQL
+  Workspace context. Profile Workspace remains a validated navigation
+  preference only; request resolvers and context processors no longer use it
+  or `request.tenant` as fallback authority. Middleware establishes
+  `request.workspace`, its temporary identical `request.tenant` alias, and
+  transaction-local RLS context before the separate subscription guard runs.
+  Workspace billing has canonical `/w/<workspace-slug>/settings/billing/...`
+  routes, and unscoped business roots including `/portal/` fail closed to the
+  selector. No models, migrations, ownership/RBAC, lifecycle, entitlement
+  semantics, or business-app architecture changed. The focused control-plane,
+  tenancy, onboarding, subscription, route-map, and shell suites pass (164
+  tests in the focused gate, plus all 12 restricted-role RLS tests). Phase 2
+  has not started.
+
+- 2026-08-17: SaaS control-plane Phase 0.5 architecture decision lock is
+  complete. The normative contract is
+  [docs/architecture/control-plane-contracts.md](architecture/control-plane-contracts.md).
+  Five Accepted ADRs lock explicit domain/path Workspace authority and the
+  `request.workspace`/RLS relationship; `Company.owner_id` with one mirrored
+  Owner Membership; target `WorkspaceAccess` action authorization; a four-state
+  operational lifecycle separate from Subscription billing state; and one
+  fail-closed typed entitlement service. The contract also records canonical,
+  transitional, deprecated, forbidden, and removal APIs; 25 invariants; a
+  phase-by-phase impact map; and the exact Phase 1 middleware/resolver/context-
+  processor/test boundary. The July tenant-billed subscription proposal is
+  marked superseded by these accepted decisions while retaining Workspace-as-
+  customer intent. This phase changed documentation only: no runtime model,
+  migration, middleware, RBAC, billing, business-app, URL, or UI behavior was
+  changed; its Phase 1 contract is now implemented as recorded above.
+
+- 2026-08-17: The post-RLS SaaS control-plane audit is now the accepted
+  incremental execution baseline under ADR
+  `2026-08-17-saas-control-plane-audit-baseline.md`. Phase 0 closed the immediate
+  security findings: profile detail/update are authenticated and self-only;
+  profile Workspace choices expose only active memberships; persistent
+  Workspace switch/select/clear/reset, member removal, and invitation revoke
+  are POST-only; all shipped callers use CSRF-protected forms; and selection
+  redirects accept only same-host `next` targets. Ten profile/method/template
+  tests and 39 focused Workspace, invitation/team, and shell-render tests pass.
+  The repository-based audit is at
   [docs/architecture/saas-control-plane-architecture-audit.md](architecture/saas-control-plane-architecture-audit.md).
   It preserves the request/RLS, component, onboarding, UI, and proposed lifecycle
   diagrams; capability and user-flow inventory; P0-P3 findings; security
   invariant matrix; duplication and django-tenants residue reports; proposed
   control-plane-to-data-plane contract; standards; and phased roadmap. This is
-  an audit and recommendation reference, not an accepted target-architecture
-  decision. The immediate risks recorded are profile IDOR, GET-based control-
-  plane mutations, non-canonical ownership, and broken/non-idempotent billing.
+  an accepted baseline and roadmap; its Phase 0.5 decisions now live in the
+  canonical control-plane contract. The remaining implementation risks are non-
+  canonical ownership and broken/non-idempotent billing.
   All six architecture diagrams are also checked-in SVG assets generated from
   adjacent Graphviz sources, while expandable Mermaid source remains in the
   audit. The diagrams therefore render without Mermaid support.

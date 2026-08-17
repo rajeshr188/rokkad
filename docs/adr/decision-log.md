@@ -21,6 +21,12 @@ This is the live index of architecture decisions in docs/decisions.
 | 2026-05-03 | 2026-05-03_BUSINESSDOC_INHERITANCE_ANALYSIS.md | Accepted | Platform Architecture, Girvi, DEA | girvi, dea | - | BusinessDoc inheritance from girvi is wrong; BaseLoan/Loan/LoanPayment to be decoupled. PaymentVoucher/JournalEntryVoucher correctly inherit it.
 | 2026-05-03 | (inline) DEA_FACADE_BOUNDARY | Accepted | Platform Architecture | girvi, contact, sales, purchase, dea | - | dea/facade.py is the only cross-app import point into DEA. girvi, contact, sales, purchase all migrated. 25 violations remain (tracked by scripts/check_dea_boundary.py).
 | 2026-06-27 | 2026-06-27-girvi-release-accrual-lifecycle-boundary.md | Accepted | Girvi Team, DEA Team, Platform Architecture | girvi, dea, orgs | - | Accepts release as the owner of custody handoff and closure while keeping interest accrual as a separate event that may be invoked as a pre-release catch-up step. |
+| 2026-08-17 | 2026-08-17-saas-control-plane-audit-baseline.md | Accepted | Project | control plane | - | Accepts the post-RLS audit as the incremental execution baseline. |
+| 2026-08-17 | 2026-08-17-workspace-request-authority-and-rls-context.md | Accepted | Project | orgs, tenancy, accounts | - | Explicit domain/path identity establishes `request.workspace`; profile state is navigation-only. |
+| 2026-08-17 | 2026-08-17-workspace-ownership-authority.md | Accepted | Project | orgs, accounts | - | `Company.owner_id` is the sole ownership authority with one mirrored Owner Membership. |
+| 2026-08-17 | 2026-08-17-workspace-authorization-contract.md | Accepted | Project | orgs, supported business apps | - | One `WorkspaceAccess` policy and stable action codes will replace fragmented RBAC. |
+| 2026-08-17 | 2026-08-17-workspace-lifecycle-and-billing-boundary.md | Accepted | Project | orgs, subscriptions | 2026-07-02-tenant-billed-subscription-architecture.md (part) | Workspace operational state and Subscription billing state are independent. |
+| 2026-08-17 | 2026-08-17-workspace-entitlement-contract.md | Accepted | Project | subscriptions, supported business apps | 2026-07-02-tenant-billed-subscription-architecture.md (part) | One fail-closed typed entitlement service owns runtime feature and limit decisions. |
 
 ## Maintenance Rules
 

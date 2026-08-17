@@ -151,11 +151,11 @@
                 </ul>
                 
                 {% if current_plan.id != plan.id %}
-                <a href="{% url 'subscriptions:checkout' plan_id=plan.id %}" class="btn btn-primary btn-action">
+                <a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.schema_name plan_id=plan.id %}" class="btn btn-primary btn-action">
                     Upgrade to {{ plan.name }}
                 </a>
                 {% else %}
-                <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-secondary btn-action">
+                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.schema_name %}" class="btn btn-secondary btn-action">
                     View Dashboard
                 </a>
                 {% endif %}

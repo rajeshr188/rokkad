@@ -121,6 +121,13 @@ CANONICAL_CONTROL_PLANE_URLPATTERNS = [
 
 CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
     path(
+        "w/<str:workspace_slug>/settings/billing/",
+        include(
+            ("apps.subscriptions.urls", "subscriptions"),
+            namespace="workspace_subscriptions",
+        ),
+    ),
+    path(
         "w/<str:workspace_slug>/",
         org_views.workspace_slug_dashboard,
         name="workspace_slug_dashboard",

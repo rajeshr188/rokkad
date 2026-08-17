@@ -1,25 +1,44 @@
+from django.core.exceptions import ObjectDoesNotExist
+
+
 def resolve_request_workspace(
     request,
     include_public=False,
-    allow_profile_fallback=False,
 ):
-    """Resolve Workspace with request.workspace as source-of-truth.
+    """Return only the Workspace explicitly established for this request.
 
-    Profile fallback is opt-in and intended only for non-authoritative UX flows
-    on public pages (for example: showing a previously selected workspace name).
+    ``include_public`` remains as a compatibility keyword while public
+    Workspace sentinels are retired. Profile preference and ``request.tenant``
+    are deliberately not fallback sources.
     """
     workspace = getattr(request, "workspace", None)
-    if workspace is not None:
+    if workspace is None:
+        return None
+    if not include_public and is_public_workspace(workspace):
+        return None
+    return workspace
+
+
+def resolve_preferred_workspace(user):
+    """Return a valid navigation preference, never request authority."""
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+    try:
+        workspace = user.profile.workspace
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+    if workspace is None or getattr(workspace, "lifecycle_state", None) != "ACTIVE":
+        return None
+
+    from apps.orgs.models import Membership
+    from apps.orgs.permissions import is_platform_admin
+
+    if is_platform_admin(user) or Membership.objects.filter(
+        user=user,
+        company=workspace,
+    ).exists():
         return workspace
-
-    if not allow_profile_fallback:
-        return None
-
-    user = getattr(request, "user", None)
-    if not user or not user.is_authenticated or not hasattr(user, "profile"):
-        return None
-
-    return getattr(user.profile, "workspace", None)
+    return None
 
 
 def is_public_workspace(workspace):

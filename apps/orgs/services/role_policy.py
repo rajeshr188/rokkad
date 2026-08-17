@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied, ValidationError
 
-from apps.orgs.permissions import get_effective_permissions, is_platform_admin
+from apps.orgs.access import resolve_workspace_access
+from apps.orgs.permissions import is_platform_admin
 
 
 ELEVATED_ROLE_NAMES = {"owner", "admin"}
@@ -18,16 +19,22 @@ def membership_role_name(membership) -> str:
 
 
 def is_owner_membership(membership) -> bool:
-    return membership_role_name(membership) == OWNER_ROLE_NAME
+    if not membership:
+        return False
+    company = membership.company
+    canonical_owner_id = getattr(company, "owner_id", None)
+    if canonical_owner_id is None and getattr(company, "owner", None) is not None:
+        canonical_owner_id = getattr(company.owner, "id", None)
+    if canonical_owner_id is None:
+        return membership_role_name(membership) == OWNER_ROLE_NAME
+    member_user_id = getattr(
+        membership, "user_id", getattr(getattr(membership, "user", None), "id", None)
+    )
+    return member_user_id == canonical_owner_id
 
 
 def owner_membership_count(workspace) -> int:
-    from apps.orgs.models import Membership
-
-    return Membership.objects.filter(
-        company=workspace,
-        role__name__iexact="Owner",
-    ).count()
+    return 1 if getattr(workspace, "owner_id", None) else 0
 
 
 def actor_can_grant_role(*, actor, workspace, role) -> bool:
@@ -36,15 +43,17 @@ def actor_can_grant_role(*, actor, workspace, role) -> bool:
         return True
 
     target_role = role_name(role)
-    effective_permissions = get_effective_permissions(actor, workspace)
+    if target_role == OWNER_ROLE_NAME:
+        return False
+    access = resolve_workspace_access(actor=actor, workspace=workspace)
 
     if target_role in ELEVATED_ROLE_NAMES:
-        return "team_invite_admin" in effective_permissions and _actor_is_owner(
+        return access.can("team_invite_admin") and _actor_is_owner(
             actor,
             workspace,
         )
 
-    return "team_invite" in effective_permissions
+    return access.can("team_invite")
 
 
 def allowed_invitation_roles(*, actor, workspace):
@@ -52,9 +61,10 @@ def allowed_invitation_roles(*, actor, workspace):
     from apps.orgs.models import Role
 
     roles = Role.objects.all().order_by("name")
+    roles = roles.exclude(name__iexact="Owner")
     if is_platform_admin(actor) or _actor_is_owner(actor, workspace):
         return roles
-    return roles.exclude(name__iexact="Owner").exclude(name__iexact="Admin")
+    return roles.exclude(name__iexact="Admin")
 
 
 def assert_can_invite_role(*, actor, workspace, role):
@@ -66,6 +76,8 @@ def assert_can_invite_role(*, actor, workspace, role):
 
 def assert_can_change_role(*, actor, workspace, membership, new_role):
     """Validate role transitions before changing a membership role."""
+    if role_name(new_role) == OWNER_ROLE_NAME:
+        raise PermissionDenied("Use ownership transfer to assign the Owner role.")
     if is_platform_admin(actor):
         _assert_owner_count_safe(membership=membership, new_role=new_role)
         return
@@ -97,12 +109,15 @@ def assert_can_remove_membership(*, actor, workspace, membership):
 
 
 def _actor_is_owner(actor, workspace) -> bool:
+    owner_id = getattr(workspace, "owner_id", None)
+    if owner_id is not None:
+        return owner_id == getattr(actor, "id", None)
+    owner = getattr(workspace, "owner", None)
+    if owner is not None:
+        return owner == actor
     from apps.orgs.models import Membership
-
     return Membership.objects.filter(
-        user=actor,
-        company=workspace,
-        role__name__iexact="Owner",
+        user=actor, company=workspace, role__name__iexact="Owner"
     ).exists()
 
 

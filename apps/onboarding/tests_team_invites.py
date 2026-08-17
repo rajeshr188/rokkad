@@ -33,7 +33,7 @@ class OnboardingTeamInviteTests(SimpleTestCase):
 
         with (
             patch("apps.onboarding.views.get_or_create_progress", return_value=progress),
-            patch("apps.onboarding.views.resolve_request_workspace", return_value=company),
+            patch("apps.onboarding.views.resolve_preferred_workspace", return_value=company),
             patch("apps.onboarding.views.TeamInviteForm", return_value=form),
             patch(
                 "apps.onboarding.views.control_plane.send_onboarding_team_invitations",
@@ -77,7 +77,7 @@ class OnboardingTeamInviteTests(SimpleTestCase):
 
         with (
             patch("apps.onboarding.views.get_or_create_progress", return_value=progress),
-            patch("apps.onboarding.views.resolve_request_workspace"),
+            patch("apps.onboarding.views.resolve_preferred_workspace"),
             patch("apps.onboarding.views.messages.info") as info_message,
             patch("apps.onboarding.views.redirect", return_value="redirected") as redirect,
         ):

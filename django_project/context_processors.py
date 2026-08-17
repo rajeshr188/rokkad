@@ -5,11 +5,14 @@ These provide global context to all templates.
 from django.conf import settings
 
 from apps.orgs.permissions import get_effective_permissions, get_workspace_role_name
-from apps.orgs.tenant_context import resolve_request_workspace
+from apps.orgs.tenant_context import (
+    resolve_preferred_workspace,
+    resolve_request_workspace,
+)
 
 
 def _resolve_workspace(request):
-    return resolve_request_workspace(request, include_public=False, allow_profile_fallback=True)
+    return resolve_request_workspace(request, include_public=False)
 
 
 def google_oauth_context(request):
@@ -88,8 +91,8 @@ def workspace_context(request):
     - workspace_name: Current workspace name
     - workspace_theme: Theme color from workspace settings
     """
-    # Get workspace from request.tenant or user profile (if authenticated)
     workspace = _resolve_workspace(request)
+    preferred_workspace = resolve_preferred_workspace(request.user)
 
     in_tenant = workspace and workspace.schema_name != "public"
 
@@ -99,6 +102,7 @@ def workspace_context(request):
         "workspace_theme": workspace.get_theme_color()
         if hasattr(workspace, "get_theme_color")
         else None,
+        "preferred_workspace": preferred_workspace,
     }
 
 

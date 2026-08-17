@@ -10,7 +10,10 @@ from django.shortcuts import redirect, render
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.services import control_plane
-from apps.orgs.tenant_context import resolve_request_workspace
+from apps.orgs.tenant_context import (
+    resolve_preferred_workspace,
+    resolve_request_workspace,
+)
 
 from .forms import (
     CompanySetupForm,
@@ -44,11 +47,7 @@ def get_or_create_progress(user):
 
 def _redirect_to_workspace_setup_or_list(request):
     """Route completed onboarding to workspace setup when a workspace is selected."""
-    company = resolve_request_workspace(
-        request,
-        include_public=False,
-        allow_profile_fallback=True,
-    )
+    company = resolve_preferred_workspace(request.user)
     if company is not None:
         return redirect("workspace_settings_setup", workspace_id=company.id)
     return redirect("workspace_list")
@@ -213,11 +212,7 @@ def onboarding_team(request):
     if progress.team_setup_completed or progress.skipped_team:
         return redirect(progress.next_step_url)
 
-    company = resolve_request_workspace(
-        request,
-        include_public=False,
-        allow_profile_fallback=True,
-    )
+    company = resolve_preferred_workspace(request.user)
 
     if request.method == "POST":
         if "skip" in request.POST:

@@ -295,7 +295,7 @@
         {% if not invoice.is_paid %}
         <div class="notes-section">
             <h5>Payment Instructions</h5>
-            <p>To complete payment for this invoice, please visit your <a href="{% url 'subscriptions:dashboard' %}">billing dashboard</a> and proceed with checkout.</p>
+            <p>To complete payment for this invoice, please visit your <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.schema_name %}">billing dashboard</a> and proceed with checkout.</p>
             <p class="small text-muted mb-0">Accepted payment methods: Credit Card, Debit Card, UPI, Bank Transfer</p>
         </div>
         {% endif %}
@@ -318,10 +318,10 @@
         
         <!-- Action Buttons -->
         <div class="action-buttons">
-            <a href="{% url 'subscriptions:invoice-pdf' pk=invoice.id %}" class="btn btn-primary">
+            <a href="{% url 'workspace_subscriptions:invoice-pdf' workspace_slug=request.workspace.schema_name pk=invoice.id %}" class="btn btn-primary">
                 <i class="fas fa-download"></i> Download PDF
             </a>
-            <a href="{% url 'subscriptions:dashboard' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.schema_name %}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
             <button class="btn btn-outline-secondary" onclick="window.print()">

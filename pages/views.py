@@ -5,7 +5,7 @@ from django.views.generic import TemplateView
 
 from apps.onboarding.decorators import onboarding_required
 from apps.orgs.decorators_v2 import roles_required
-from apps.orgs.models import Membership
+from apps.orgs.models import Company, Membership
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
@@ -53,7 +53,9 @@ def Dashboard(request):
                 user.profile.workspace = None
                 user.profile.save(update_fields=["workspace"])
 
-    memberships = user.memberships.filter(company__is_deleted=False)
+    memberships = user.memberships.filter(
+        company__lifecycle_state=Company.LifecycleState.ACTIVE
+    )
 
     if memberships.exists():
         return redirect("workspace_selector")

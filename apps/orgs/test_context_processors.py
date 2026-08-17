@@ -28,7 +28,7 @@ class ThemeProcessorTests(SimpleTestCase):
             {"theme": "#123456", "logo": "logo.png"},
         )
 
-    def test_legacy_tenant_alias_remains_a_safe_fallback(self):
+    def test_legacy_tenant_alias_is_not_independent_authority(self):
         workspace = SimpleNamespace(theme="#abcdef", logo=None)
         request = SimpleNamespace(
             user=SimpleNamespace(is_authenticated=True),
@@ -37,5 +37,5 @@ class ThemeProcessorTests(SimpleTestCase):
 
         self.assertEqual(
             theme_processor(request),
-            {"theme": "#abcdef", "logo": None},
+            {"theme": "", "logo": None},
         )

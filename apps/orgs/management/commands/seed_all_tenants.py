@@ -27,7 +27,7 @@ class Command(BaseCommand):
         continue_on_error = options["continue_on_error"]
 
         workspace_ids = list(
-            Company.objects.filter(is_deleted=False).values_list("pk", flat=True)
+            Company.objects.values_list("pk", flat=True)
         )
 
         self.stdout.write(self.style.NOTICE(f"Found {len(workspace_ids)} Workspaces"))

@@ -15,8 +15,9 @@ This file is the operating contract for Codex, Copilot, and other AI coding agen
 1. Always read [docs/AGENT_MEMORY.md](docs/AGENT_MEMORY.md) first.
 2. Always read [docs/STATUS.md](docs/STATUS.md) before planning work.
 3. Check [docs/adr/](docs/adr/) before changing architecture.
-4. Check [docs/domain/](docs/domain/) before changing business logic.
-5. Check [docs/constitution.md](docs/constitution.md) when a change touches accounting, posting, reversals, or tenant isolation.
+4. Read [docs/architecture/control-plane-contracts.md](docs/architecture/control-plane-contracts.md) before changing Workspace resolution, membership, ownership, authorization, lifecycle, billing, entitlements, or data-plane integration.
+5. Check [docs/domain/](docs/domain/) before changing business logic.
+6. Check [docs/constitution.md](docs/constitution.md) when a change touches accounting, posting, reversals, or tenant isolation.
 
 ## Project Summary
 

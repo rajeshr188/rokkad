@@ -195,11 +195,12 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         for href in expected_hrefs:
             self.assertIn(f'href="{href}"', html)
 
-        billing_href = (
-            f'{reverse("workspace_select", kwargs={"workspace_id": workspace.id})}'
-            f'?next={reverse("subscriptions:dashboard")}'
+        billing_action = reverse(
+            "workspace_select",
+            kwargs={"workspace_id": workspace.id},
         )
-        self.assertIn(f'href="{billing_href}"', html)
+        self.assertIn(f'action="{billing_action}"', html)
+        self.assertIn(f'value="{reverse("subscriptions:dashboard")}"', html)
         self.assertIn(f'href="{reverse("subscriptions:dashboard")}"', html)
         self.assertIn(f'href="{reverse("subscriptions:plan-list")}"', html)
 

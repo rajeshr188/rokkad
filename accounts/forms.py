@@ -23,6 +23,19 @@ class CustomUserChangeForm(UserChangeForm):
 
 
 class UserProfileForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        from apps.orgs.models import Company
+
+        workspace_field = self.fields["workspace"]
+        workspace_field.queryset = Company.objects.none()
+        if user is not None and user.is_authenticated:
+            workspace_ids = user.memberships.filter(
+                company__lifecycle_state=Company.LifecycleState.ACTIVE,
+            ).values_list("company_id", flat=True)
+            workspace_field.queryset = Company.objects.filter(pk__in=workspace_ids)
+
     class Meta:
         model = UserProfile
         fields = ("workspace", "timezone", "profile_picture", "phone_number", "address")

@@ -25,7 +25,7 @@ def _can_edit_workspace_preferences(user, workspace):
 
 @login_required
 def workspace_preferences_redirect(request, workspace_id):
-    workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+    workspace = get_object_or_404(Company, id=workspace_id)
     if not _can_edit_workspace_preferences(request.user, workspace):
         raise Http404("Workspace preferences not found")
     return redirect("workspace_settings_preferences", workspace_id=workspace.id)
@@ -41,7 +41,7 @@ class WorkspacePreferenceBuilder(PreferenceFormView):
         if workspace_id is None:
             raise Http404("Workspace ID is required")
 
-        self.workspace = get_object_or_404(Company, id=workspace_id, is_deleted=False)
+        self.workspace = get_object_or_404(Company, id=workspace_id)
         if not _can_edit_workspace_preferences(request.user, self.workspace):
             raise Http404("Workspace preferences not found")
         return super().dispatch(request, *args, **kwargs)

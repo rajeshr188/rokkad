@@ -12,13 +12,15 @@
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="workspaceDropdown">
         {% for membership in request.user.memberships.all %}
             <li>
-                <a class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}"
-                   href="{% url 'workspace_select' membership.company.id %}">
-                    <i class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
-                    {% if request.user.profile.workspace.id == membership.company.id %}
-                        <i class="bi bi-check-lg ms-2"></i>
-                    {% endif %}
-                </a>
+                <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}">
+                        <i class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
+                        {% if request.user.profile.workspace.id == membership.company.id %}
+                            <i class="bi bi-check-lg ms-2"></i>
+                        {% endif %}
+                    </button>
+                </form>
             </li>
         {% empty %}
             <li><span class="dropdown-item-text text-muted">No workspaces</span></li>
@@ -36,9 +38,12 @@
         </li>
         {% if request.user.profile.workspace and request.user.profile.workspace.schema_name != 'public' %}
         <li>
-            <a class="dropdown-item" href="{% url 'clear_workspace' %}">
-                <i class="bi bi-arrow-counterclockwise me-1"></i>Clear Workspace
-            </a>
+            <form method="post" action="{% url 'clear_workspace' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="dropdown-item">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Clear Workspace
+                </button>
+            </form>
         </li>
         {% endif %}
     </ul>
@@ -57,13 +62,15 @@
         <ul class="dropdown-menu w-100" aria-labelledby="workspaceDropdownBtn">
             {% for membership in request.user.memberships.all %}
                 <li>
-                    <a class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}" 
-                       href="{% url 'workspace_select' membership.company.id %}">
-                        <i class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
-                        {% if request.user.profile.workspace.id == membership.company.id %}
-                            <i class="bi bi-check-lg float-end text-success"></i>
-                        {% endif %}
-                    </a>
+                    <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}">
+                            <i class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
+                            {% if request.user.profile.workspace.id == membership.company.id %}
+                                <i class="bi bi-check-lg float-end text-success"></i>
+                            {% endif %}
+                        </button>
+                    </form>
                 </li>
             {% empty %}
                 <li><span class="dropdown-item-text text-muted">No workspaces</span></li>

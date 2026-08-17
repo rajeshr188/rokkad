@@ -22,13 +22,15 @@ User = get_user_model()
 
 class CompanyManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(is_deleted=False)
-
-    def all_with_deleted(self):
-        return super().get_queryset()
-
+        return super().get_queryset().filter(lifecycle_state="ACTIVE")
 
 class Company(models.Model):
+    class LifecycleState(models.TextChoices):
+        ACTIVE = "ACTIVE", _("Active")
+        SUSPENDED = "SUSPENDED", _("Suspended")
+        ARCHIVED = "ARCHIVED", _("Archived")
+        DELETION_PENDING = "DELETION_PENDING", _("Deletion pending")
+
     # Transitional routing key. It remains named schema_name until all callers
     # move to the shared-schema Workspace slug contract.
     schema_name = models.CharField(max_length=63, unique=True, db_index=True)
@@ -44,7 +46,7 @@ class Company(models.Model):
         verbose_name=_("Owner"),
         to=User,
         related_name="owned_companies",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
     creator = models.ForeignKey(
         verbose_name=_("Creator"),
@@ -54,7 +56,14 @@ class Company(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_deleted = models.BooleanField(default=False)  # Soft delete flag
+    lifecycle_state = models.CharField(
+        max_length=20,
+        choices=LifecycleState.choices,
+        default=LifecycleState.ACTIVE,
+        db_index=True,
+    )
+    lifecycle_changed_at = models.DateTimeField(default=timezone.now)
+    lifecycle_reason = models.TextField(blank=True)
 
     objects = CompanyManager()  # Use custom manager
     all_objects = models.Manager()  # Include soft-deleted instances
@@ -83,42 +92,9 @@ class Company(models.Model):
 
         return self.schema_name
 
-    def archive(self):
-        """Soft-delete a Workspace while preserving its owned rows."""
-        if self.is_deleted:
-            return
-        self.is_deleted = True
-        self.save(update_fields=["is_deleted", "updated_at"])
-
-    def delete(self, *args, hard=False, **kwargs):
-        """Default delete path archives the workspace unless hard=True is passed."""
-        if hard:
-            return self.hard_delete()
-        self.archive()
-
-    def hard_delete(self, force=False):
-        """Permanently remove an explicitly authorized Workspace row."""
-        if self.schema_name == "public":
-            raise ValueError("Public workspace cannot be hard deleted")
-
-        hard_delete_enabled = force or getattr(
-            settings,
-            "ALLOW_COMPANY_HARD_DELETE",
-            False,
-        )
-        if not hard_delete_enabled:
-            raise ValueError(
-                "Hard delete is disabled. Set ALLOW_COMPANY_HARD_DELETE=True to enable."
-            )
-
-        return super().delete()
-
-    def restore(self):
-        """Restore archived workspace."""
-        if not self.is_deleted:
-            return
-        self.is_deleted = False
-        self.save(update_fields=["is_deleted", "updated_at"])
+    def delete(self, *args, **kwargs):
+        """Physical erasure is not an ordinary model operation."""
+        raise ValueError("Use the privileged retention workflow for Workspace erasure.")
 
 
 class Domain(models.Model):
@@ -132,40 +108,6 @@ class Domain(models.Model):
 
     def __str__(self):
         return self.domain
-
-
-class CompanyOwnership(models.Model):
-    user = models.ForeignKey(verbose_name=_("User"), to=User, on_delete=models.CASCADE)
-    company = models.ForeignKey(
-        verbose_name=_("Company"), to=Company, on_delete=models.CASCADE
-    )
-    start_date = models.DateTimeField(auto_now_add=True)
-    end_date = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "company"],
-                name="orgs_companyownership_unique_user_company",
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.user} owns {self.company} since {self.start_date}"
-
-    # Transfer ownership of a company to a new user
-    def transfer_ownership(company, new_owner):
-        # End the current ownership
-        current_ownership = CompanyOwnership.objects.filter(
-            company=company, end_date__isnull=True
-        ).first()
-        if current_ownership:
-            current_ownership.end_date = timezone.now()
-            current_ownership.save()
-
-        # Start a new ownership
-        new_ownership = CompanyOwnership(user=new_owner, company=company)
-        new_ownership.save()
 
 
 class Membership(models.Model):
@@ -184,8 +126,6 @@ class Membership(models.Model):
     role = models.ForeignKey(
         "Role",
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
         related_name="memberships",
         verbose_name=_("Role"),
     )

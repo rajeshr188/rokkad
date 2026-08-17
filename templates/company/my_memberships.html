@@ -31,7 +31,7 @@
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ membership.company.name }}</div>
-                                {% if active_workspace and active_workspace.id == membership.company.id %}
+                                {% if preferred_workspace and preferred_workspace.id == membership.company.id %}
                                 <span class="badge bg-success-subtle text-success border border-success-subtle mt-1">Active</span>
                                 {% endif %}
                             </td>
@@ -39,13 +39,21 @@
                             <td class="text-muted">{{ membership.date_joined|date:"M d, Y" }}</td>
                             <td>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <a href="{% url 'workspace_select' membership.company.id %}?next={% url 'workspace_dashboard' workspace_id=membership.company.id %}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-box-arrow-in-right me-1"></i>Open
-                                    </a>
+                                    <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{% url 'workspace_dashboard' workspace_id=membership.company.id %}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-box-arrow-in-right me-1"></i>Open
+                                        </button>
+                                    </form>
                                     {% if membership.role and membership.role.name == 'Owner' %}
-                                    <a href="{% url 'workspace_select' membership.company.id %}?next={% url 'subscriptions:dashboard' %}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-credit-card me-1"></i>Billing
-                                    </a>
+                                    <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{% url 'subscriptions:dashboard' %}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-credit-card me-1"></i>Billing
+                                        </button>
+                                    </form>
                                     {% endif %}
                                 </div>
                             </td>

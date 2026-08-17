@@ -8,15 +8,59 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The normative SaaS control-plane contract is
+`docs/architecture/control-plane-contracts.md`; read it before changing
+Workspace resolution, Membership, ownership, RBAC, lifecycle, billing,
+entitlements, or data-plane integration. Phase 0.5 locked these decisions:
+explicit domain/path identity alone establishes `request.workspace` and the
+matching `workspace_context()`; profile Workspace is navigation-only;
+`Membership` is the sole ordinary User–Workspace relationship;
+`Company.owner_id` is ownership authority with one mirrored Owner Membership;
+target `WorkspaceAccess` owns action authorization; Workspace operational state
+is independent of Subscription billing state; and business apps consume one
+typed, fail-closed entitlement service. Phase 1 is complete: only explicit
+domain/path identity may establish `request.workspace` and matching RLS
+context; conflicts are HTTP 403 even for platform admins; global control-plane
+routes clear context; profile Workspace is navigation-only; and
+`request.tenant` is only a nullable identical compatibility alias. Subscription
+enforcement runs after identity/RLS establishment, and canonical billing URLs
+are Workspace-slug scoped. Phase 2 is also complete: `Company.owner_id` is
+protected canonical authority, Membership roles are required,
+`CompanyOwnership` is retired, ownership transfer is atomic and row-locked,
+and control-plane authorization consumes request-independent `WorkspaceAccess`
+with namespaced actions. Phase 3 is complete: Workspace operational state is
+stored as `ACTIVE`, `SUSPENDED`, `ARCHIVED`, or `DELETION_PENDING`; transitions
+are row-locked, reason-required, actor-authorized, and audited; `is_deleted` and
+ordinary hard deletion are retired; and middleware enforces lifecycle without
+letting platform override bypass it. Lifecycle never changes Subscription state
+or RLS ownership. Surviving business-app helper convergence remains Phase 9.
+Phase 4 billing normalization is next and must remain separate from lifecycle.
+
+Local migration checkpoint (2026-08-17): rebuilt-baseline migration records
+are reconciled with the already-equivalent physical schema, and
+`orgs.0002_workspace_ownership_and_membership_integrity` and
+`orgs.0003_workspace_operational_lifecycle` are applied normally.
+The migration is non-atomic by design because PostgreSQL must commit deferred
+FK events from its data reconciliation before altering Membership. The current
+database has no pending migrations, no null Membership roles, no
+`CompanyOwnership` table, zero foundation integrity findings, and 95/95 forced
+RLS policies. Do not re-run fake reconciliation on another database without
+first proving its physical baseline equivalence.
+
 The canonical current-state SaaS control-plane audit is
 `docs/architecture/saas-control-plane-architecture-audit.md`. It records the
 implemented request-to-RLS chain, capability and user-flow inventory, P0-P3
 findings, invariant matrix, duplication and django-tenants residue, UI/URL
 analysis, proposed target components, data-plane contract, standards, and
-phased roadmap. Treat it as architectural evidence and recommendations, not an
-accepted decision. Its immediate blockers are the profile IDOR, GET-based
-mutations, non-canonical ownership, and broken/non-idempotent billing. The RLS
-foundation itself remains the accepted and comparatively strong boundary. Its
+phased roadmap. ADR `2026-08-17-saas-control-plane-audit-baseline.md` accepts it
+as the incremental execution baseline. Phase 0 is complete: profile detail and
+update are authenticated self-service endpoints, profile Workspace choices are
+limited to the user's active memberships, and persistent Workspace selection,
+member removal, and invitation revocation are POST-only CSRF-protected
+operations. Workspace-selection `next` redirects are same-host only. Exact
+Workspace authority, ownership/RBAC, lifecycle/billing, and entitlement
+contracts are now locked by the normative Phase 0.5 document above. The RLS
+foundation remains the accepted and comparatively strong boundary. The audit's
 six diagrams use embedded SVG assets under
 `docs/architecture/diagrams/saas-control-plane/`; keep the adjacent Graphviz
 sources and expandable Mermaid source synchronized when diagrams change.
@@ -38,11 +82,12 @@ package. The stored state machine has DRAFT, APPROVED, ACTIVE, CANCELLED, and
 CLOSED; overdue/default conditions are derived and must not be invented as a
 persisted `DEFAULTED` state.
 
-Public/auth requests may have an authenticated user without any selected
-Workspace. Context processors and shared templates must treat both
-`request.workspace` and the temporary `request.tenant` alias as nullable. The
-theme processor returns neutral defaults in that state and prefers the
-canonical Workspace when present.
+Public/auth requests may have an authenticated user and a populated navigation
+preference without an active Workspace. Context processors and shared templates
+must treat both `request.workspace` and the temporary `request.tenant` alias as
+nullable. The theme processor uses only canonical `request.workspace` and
+returns neutral defaults otherwise; it must not independently fall back to the
+alias or profile preference.
 
 The reusable migration runbook is
 `docs/implementation/django-schema-tenancy-to-postgresql-rls-guide.md`. Use it

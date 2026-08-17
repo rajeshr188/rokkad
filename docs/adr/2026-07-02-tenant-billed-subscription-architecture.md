@@ -1,15 +1,24 @@
 ---
-status: proposed
+status: superseded
 owner: project
 updated: 2026-07-02
 tags: [adr, subscriptions, saas, tenancy]
-related: [../implementation/subscription-architecture-blueprint.md, ../STATUS.md]
+related:
+  - ../implementation/subscription-architecture-blueprint.md
+  - ../architecture/control-plane-contracts.md
+  - 2026-08-17-workspace-lifecycle-and-billing-boundary.md
+  - 2026-08-17-workspace-entitlement-contract.md
+  - ../STATUS.md
 ---
 
 # Tenant-Billed Subscription Architecture for Rokkad
 
+> Superseded on 2026-08-17. The Workspace-as-customer direction remains valid,
+> while the accepted lifecycle, billing, and entitlement contracts now live in
+> the linked Phase 0.5 ADRs and canonical control-plane contract.
+
 Date: 2026-07-02
-Status: Proposed
+Status: Superseded
 Owners: Platform Architecture, Billing, Tenant Security
 
 ## Summary

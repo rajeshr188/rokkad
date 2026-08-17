@@ -2,7 +2,6 @@
 # admin.py
 from django import forms
 from django.contrib import admin
-from django.contrib import messages
 
 from .models import AuditLog, Company, Domain, Membership, Role
 
@@ -29,24 +28,6 @@ class PublicTenantOnlyMixin:
         return self._only_public_tenant_access(request)
 
 
-class SoftDeletedFilter(admin.SimpleListFilter):
-    title = "soft deleted"
-    parameter_name = "is_deleted"
-
-    def lookups(self, request, model_admin):
-        return (
-            ("yes", "Yes"),
-            ("no", "No"),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == "yes":
-            return queryset.filter(is_deleted=True)
-        if self.value() == "no":
-            return queryset.filter(is_deleted=False)
-        return queryset
-
-
 class CompanyAdminForm(forms.ModelForm):
     class Meta:
         model = Company
@@ -61,59 +42,17 @@ class CompanyAdminForm(forms.ModelForm):
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
     form = CompanyAdminForm
-    list_display = ("name", "owner", "theme", "logo", "is_deleted")
+    list_display = ("name", "owner", "lifecycle_state", "lifecycle_changed_at")
     search_fields = ["name"]
-    list_filter = ["owner", SoftDeletedFilter]
-    actions = ["restore_companies", "hard_delete_companies"]
+    list_filter = ["owner", "lifecycle_state"]
+    actions = []
 
     def get_queryset(self, request):
         # Use the all_objects manager to include soft-deleted instances
         return self.model.all_objects.all()
 
-    def restore_companies(self, request, queryset):
-        restored_count = 0
-        for company in queryset:
-            if company.is_deleted:
-                company.restore()
-                restored_count += 1
-
-        self.message_user(
-            request,
-            f"Restored {restored_count} workspace(s).",
-            level=messages.SUCCESS,
-        )
-
-    restore_companies.short_description = "Restore selected companies"
-
-    def hard_delete_companies(self, request, queryset):
-        deleted_count = 0
-        blocked_count = 0
-        for company in queryset:
-            try:
-                company.hard_delete()
-                deleted_count += 1
-            except ValueError as exc:
-                blocked_count += 1
-                self.message_user(
-                    request,
-                    f"Skipped hard delete for {company.name}: {exc}",
-                    level=messages.WARNING,
-                )
-
-        if deleted_count:
-            self.message_user(
-                request,
-                f"Hard-deleted {deleted_count} workspace(s).",
-                level=messages.SUCCESS,
-            )
-        if blocked_count and not deleted_count:
-            self.message_user(
-                request,
-                "No workspaces were hard-deleted.",
-                level=messages.WARNING,
-            )
-
-    hard_delete_companies.short_description = "Permanently delete selected companies"
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 # app = apps.get_app_config('orgs')

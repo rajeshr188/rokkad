@@ -170,7 +170,7 @@
                     {% endif %}
                     
                     <div class="mt-4">
-                        <a href="{% url 'subscriptions:plan-list' %}" class="btn btn-outline-primary btn-sm">
+                        <a href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.schema_name %}" class="btn btn-outline-primary btn-sm">
                             Change Plan
                         </a>
                         {% if subscription.status == 'active' %}
@@ -296,11 +296,11 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="{% url 'subscriptions:invoice-detail' pk=invoice.id %}" 
+                                        <a href="{% url 'workspace_subscriptions:invoice-detail' workspace_slug=request.workspace.schema_name pk=invoice.id %}"
                                            class="btn btn-outline-primary">
                                             View
                                         </a>
-                                        <a href="{% url 'subscriptions:invoice-pdf' pk=invoice.id %}" 
+                                        <a href="{% url 'workspace_subscriptions:invoice-pdf' workspace_slug=request.workspace.schema_name pk=invoice.id %}"
                                            class="btn btn-outline-secondary">
                                             PDF
                                         </a>
@@ -336,7 +336,7 @@
             <h4 class="alert-heading">No Active Subscription</h4>
             <p>You don't have an active subscription yet. Get started by choosing a plan.</p>
             <hr>
-            <a href="{% url 'subscriptions:plan-list' %}" class="btn btn-primary">
+            <a href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.schema_name %}" class="btn btn-primary">
                 View Plans
             </a>
         </div>

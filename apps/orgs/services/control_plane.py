@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from allauth.account.models import EmailAddress
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.orgs.audit import AuditLog
@@ -12,6 +13,7 @@ from apps.orgs.services.membership_capacity import (
     ensure_workspace_has_member_capacity,
 )
 from apps.orgs.services import role_policy
+from apps.orgs.lifecycle import validate_transition
 
 
 def _control_plane_transaction():
@@ -123,35 +125,113 @@ def save_workspace_update_form(*, form, actor, request):
     return company
 
 
-def archive_workspace(*, company, actor, request):
-    """Archive workspace in public schema."""
+def transition_workspace_lifecycle(
+    *, workspace, target_state, actor, reason, request=None
+):
+    """Lock and perform one authorized operational lifecycle transition."""
+    if not (reason or "").strip():
+        raise ValidationError("A lifecycle transition reason is required.")
     with _control_plane_transaction():
-        company.archive()
+        locked = Company.all_objects.select_for_update().get(pk=workspace.pk)
+        validate_transition(workspace=locked, target_state=target_state, actor=actor)
+        previous_state = locked.lifecycle_state
+        locked.lifecycle_state = target_state
+        locked.lifecycle_reason = reason.strip()
+        locked.lifecycle_changed_at = timezone.now()
+        locked.save(
+            update_fields=[
+                "lifecycle_state",
+                "lifecycle_reason",
+                "lifecycle_changed_at",
+                "updated_at",
+            ]
+        )
+        AuditLog.log(
+            "WORKSPACE_LIFECYCLE_CHANGE",
+            user=actor,
+            company=locked,
+            description=f"Workspace lifecycle changed: {previous_state} -> {target_state}",
+            request=request,
+            success=True,
+            data={
+                "from_state": previous_state,
+                "to_state": target_state,
+                "reason": reason.strip(),
+            },
+        )
+    return locked
 
-    AuditLog.log(
-        "COMPANY_DELETE",
-        user=actor,
-        company=company,
-        description=f"Archived workspace: {company.name}",
+
+def archive_workspace(*, company, actor, request, reason="Owner requested archive"):
+    return transition_workspace_lifecycle(
+        workspace=company,
+        target_state=Company.LifecycleState.ARCHIVED,
+        actor=actor,
+        reason=reason,
         request=request,
-        success=True,
     )
 
 
-def restore_workspace(*, company, actor, request):
-    """Restore an archived workspace without recreating or changing its schema."""
-    with _control_plane_transaction():
-        company.restore()
-
-    AuditLog.log(
-        "COMPANY_RESTORE",
-        user=actor,
-        company=company,
-        description=f"Restored workspace: {company.name}",
+def restore_workspace(*, company, actor, request, reason="Owner restored archive"):
+    return transition_workspace_lifecycle(
+        workspace=company,
+        target_state=Company.LifecycleState.ACTIVE,
+        actor=actor,
+        reason=reason,
         request=request,
-        success=True,
     )
-    return company
+
+
+def transfer_workspace_ownership(
+    *, workspace, new_owner, actor, previous_owner_role, reason, request=None
+):
+    """Atomically transfer canonical ownership and its mirrored roles."""
+    from apps.orgs.permissions import is_platform_admin
+
+    if not (reason or "").strip():
+        raise ValidationError("An ownership-transfer reason is required.")
+    if previous_owner_role.name.casefold() == "owner":
+        raise ValidationError("The previous owner requires a non-owner role.")
+
+    with _control_plane_transaction():
+        locked = Company.all_objects.select_for_update().get(pk=workspace.pk)
+        if actor != locked.owner and not is_platform_admin(actor):
+            raise PermissionDenied("Only the current owner can transfer ownership.")
+        if new_owner == locked.owner:
+            raise ValidationError("The new owner must be a different member.")
+
+        memberships = {
+            item.user_id: item
+            for item in Membership.objects.select_for_update()
+            .select_related("role")
+            .filter(company=locked, user__in=[locked.owner, new_owner])
+        }
+        previous = memberships.get(locked.owner_id)
+        target = memberships.get(new_owner.pk)
+        if previous is None or target is None:
+            raise ValidationError("Both owners must have Workspace memberships.")
+
+        owner_role = Role.objects.get(name__iexact="Owner")
+        locked.owner = new_owner
+        locked.save(update_fields=["owner", "updated_at"])
+        previous.role = previous_owner_role
+        target.role = owner_role
+        Membership.objects.bulk_update([previous, target], ["role"])
+
+        AuditLog.log(
+            "OWNERSHIP_TRANSFER",
+            user=actor,
+            company=locked,
+            description=f"Transferred ownership to {getattr(new_owner, 'email', new_owner)}",
+            request=request,
+            success=True,
+            data={
+                "previous_owner_id": previous.user_id,
+                "new_owner_id": target.user_id,
+                "reason": reason.strip(),
+            },
+        )
+    return locked
 
 
 def create_membership(*, user, company, role, request, actor=None, invite_reason=""):

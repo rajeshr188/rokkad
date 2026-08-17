@@ -87,6 +87,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         "subscriptions:razorpay-webhook",  # payment webhook
         "subscriptions:invoice-detail",  # view invoice
         "subscriptions:invoice-pdf",  # download invoice PDF
+        "workspace_slug_settings_billing",
     ]
 
     def _resolve_workspace(self, request):
@@ -101,9 +102,15 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
 
         # Skip for exempt URLs
         try:
-            current_url = resolve(request.path).url_name
-            if current_url in self.EXEMPT_URLS or (
-                current_url and current_url.startswith("admin:")
+            resolved = resolve(request.path)
+            current_url = resolved.url_name
+            current_view = resolved.view_name
+            if (
+                current_url in self.EXEMPT_URLS
+                or current_view in self.EXEMPT_URLS
+                or current_view.startswith("subscriptions:")
+                or current_view.startswith("workspace_subscriptions:")
+                or current_view.startswith("admin:")
             ):
                 return None
         except Exception:
@@ -139,18 +146,23 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                     if (
                         current_url
                         and not current_url.startswith("subscriptions:")
-                        and "tenant" in request.path.lower()
                     ):
                         messages.warning(
                             request,
                             "⚠️ No active subscription found. Please set up billing to continue.",
                         )
-                        return redirect("subscriptions:plan-list")
+                        return redirect(
+                            "workspace_subscriptions:plan-list",
+                            workspace_slug=workspace.schema_name,
+                        )
 
                     return None
 
                 messages.warning(request, decision.message or "Subscription access is unavailable.")
-                return redirect("subscriptions:dashboard")
+                return redirect(
+                    "workspace_subscriptions:dashboard",
+                    workspace_slug=workspace.schema_name,
+                )
 
             subscription = decision.subscription
             if subscription and getattr(subscription, "end_date", None):

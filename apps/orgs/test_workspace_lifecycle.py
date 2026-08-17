@@ -2,13 +2,16 @@ import inspect
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from django.core.exceptions import PermissionDenied
-from django.test import RequestFactory, SimpleTestCase
+from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.urls import reverse
 
 from apps.orgs.forms import ArchiveWorkspaceForm
 from apps.orgs import views
 from apps.orgs.services import control_plane
+from apps.orgs.models import Company
+from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
 
 
 class ArchiveWorkspaceFormTests(SimpleTestCase):
@@ -142,45 +145,127 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         restore.assert_not_called()
 
 
-class WorkspaceLifecycleServiceTests(SimpleTestCase):
-    def test_archive_uses_soft_archive_and_never_hard_delete(self):
-        company = MagicMock(name="company")
-        company.name = "JCL Finance"
-        actor = SimpleNamespace(pk=7)
-        request = SimpleNamespace()
+class WorkspaceLifecycleMiddlewareTests(SimpleTestCase):
+    def setUp(self):
+        self.middleware = SecureWorkspaceMiddleware(lambda request: None)
+        self.platform = SimpleNamespace(id=1, email="platform@example.com")
+        self.workspace = SimpleNamespace(
+            id=9,
+            name="JCL Finance",
+            schema_name="jcl-finance",
+            owner_id=7,
+            lifecycle_state=Company.LifecycleState.SUSPENDED,
+        )
+        self.platform_access = SimpleNamespace(
+            actor=self.platform,
+            platform_override=True,
+            membership=None,
+            can=lambda _permission: True,
+        )
 
+    def test_platform_override_does_not_bypass_suspended_business_boundary(self):
+        request = SimpleNamespace(path="/w/jcl-finance/loans/")
         with patch(
-            "apps.orgs.services.control_plane._control_plane_transaction"
-        ) as public_context, patch(
-            "apps.orgs.services.control_plane.AuditLog.log"
+            "apps.orgs.middleware_v2.resolve_workspace_access",
+            return_value=self.platform_access,
         ):
-            public_context.return_value.__enter__.return_value = None
-            control_plane.archive_workspace(
-                company=company,
-                actor=actor,
-                request=request,
+            result = self.middleware._validate_workspace_access(
+                self.platform, self.workspace, request
             )
 
-        company.archive.assert_called_once_with()
-        company.hard_delete.assert_not_called()
+        self.assertFalse(result["allowed"])
+        self.assertEqual(result["reason"], "WORKSPACE_LIFECYCLE_DENIED")
 
-    def test_restore_reactivates_same_workspace(self):
-        company = MagicMock(name="company")
-        company.name = "JCL Finance"
-        actor = SimpleNamespace(pk=7)
-        request = SimpleNamespace()
-
+    def test_platform_can_use_suspended_recovery_surface(self):
+        request = SimpleNamespace(path="/w/jcl-finance/settings/billing/")
         with patch(
-            "apps.orgs.services.control_plane._control_plane_transaction"
-        ) as public_context, patch(
-            "apps.orgs.services.control_plane.AuditLog.log"
+            "apps.orgs.middleware_v2.resolve_workspace_access",
+            return_value=self.platform_access,
         ):
-            public_context.return_value.__enter__.return_value = None
-            restored = control_plane.restore_workspace(
-                company=company,
-                actor=actor,
-                request=request,
+            result = self.middleware._validate_workspace_access(
+                self.platform, self.workspace, request
             )
 
-        company.restore.assert_called_once_with()
-        self.assertIs(restored, company)
+        self.assertTrue(result["allowed"])
+        self.assertEqual(result["reason"], "SUPERUSER")
+
+    def test_archived_owner_can_reach_explicit_export_surface(self):
+        owner = SimpleNamespace(id=7, email="owner@example.com")
+        membership = SimpleNamespace(role=SimpleNamespace(name="Owner"))
+        access = SimpleNamespace(
+            actor=owner,
+            platform_override=False,
+            membership=membership,
+            can=lambda _permission: True,
+        )
+        self.workspace.lifecycle_state = Company.LifecycleState.ARCHIVED
+        request = SimpleNamespace(path="/w/jcl-finance/data-tools/export/")
+        with patch(
+            "apps.orgs.middleware_v2.resolve_workspace_access", return_value=access
+        ):
+            result = self.middleware._validate_workspace_access(
+                owner, self.workspace, request
+            )
+
+        self.assertTrue(result["allowed"])
+        self.assertEqual(result["reason"], "AUTHORIZED")
+
+
+class WorkspaceLifecycleServiceTests(TestCase):
+    def setUp(self):
+        users = get_user_model()
+        self.owner = users.objects.create_user(username="owner", password="test")
+        self.platform = users.objects.create_superuser(
+            username="platform", email="platform@example.com", password="test"
+        )
+        self.other = users.objects.create_user(username="other", password="test")
+        self.workspace = Company.all_objects.create(
+            name="JCL Finance",
+            schema_name="jcl-finance",
+            owner=self.owner,
+            creator=self.owner,
+        )
+
+    def transition(self, target, actor, reason="Phase 3 test"):
+        self.workspace = control_plane.transition_workspace_lifecycle(
+            workspace=self.workspace,
+            target_state=target,
+            actor=actor,
+            reason=reason,
+        )
+        return self.workspace
+
+    def test_owner_can_archive_and_reactivate_same_workspace(self):
+        workspace_id = self.workspace.pk
+        self.transition(Company.LifecycleState.ARCHIVED, self.owner)
+        self.assertFalse(Company.objects.filter(pk=workspace_id).exists())
+        self.assertTrue(Company.all_objects.filter(pk=workspace_id).exists())
+
+        self.transition(Company.LifecycleState.ACTIVE, self.owner)
+        self.assertEqual(self.workspace.pk, workspace_id)
+        self.assertTrue(Company.objects.filter(pk=workspace_id).exists())
+
+    def test_platform_can_suspend_and_clear_suspension(self):
+        self.transition(Company.LifecycleState.SUSPENDED, self.platform)
+        self.transition(Company.LifecycleState.ACTIVE, self.platform)
+        self.assertEqual(self.workspace.lifecycle_state, Company.LifecycleState.ACTIVE)
+
+    def test_owner_cannot_suspend_workspace(self):
+        with self.assertRaises(PermissionDenied):
+            self.transition(Company.LifecycleState.SUSPENDED, self.owner)
+
+    def test_platform_can_schedule_and_cancel_deletion(self):
+        self.transition(Company.LifecycleState.ARCHIVED, self.owner)
+        self.transition(Company.LifecycleState.DELETION_PENDING, self.platform)
+        self.transition(Company.LifecycleState.ARCHIVED, self.platform)
+        self.assertEqual(self.workspace.lifecycle_state, Company.LifecycleState.ARCHIVED)
+
+    def test_invalid_transition_and_blank_reason_are_rejected(self):
+        with self.assertRaises(ValidationError):
+            self.transition(Company.LifecycleState.DELETION_PENDING, self.platform)
+        with self.assertRaises(ValidationError):
+            self.transition(Company.LifecycleState.ARCHIVED, self.owner, reason=" ")
+
+    def test_ordinary_model_delete_is_disabled(self):
+        with self.assertRaisesMessage(ValueError, "privileged retention workflow"):
+            self.workspace.delete()
