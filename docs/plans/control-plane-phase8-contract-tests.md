@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 owner: project
 updated: 2026-08-17
 tags: [plans, control-plane, contracts, tests, rls]
@@ -82,6 +82,21 @@ canonical `workspace_isolation` policy in both `USING` and `WITH CHECK`.
 
 All known behavioral coverage gaps are now closed. Phase 8 still requires its
 documented aggregate CI command and final full-gate closeout before completion.
+
+## Closeout
+
+Phase 8 is complete. The deterministic CI entry point is:
+
+```powershell
+python manage.py test django_project.test_control_plane_contract_registry django_project.test_control_plane_contract_gate --settings django_project.settings.test --noinput
+```
+
+The gate derives unique executable labels from the invariant registry, so
+adding or changing contract evidence automatically changes the aggregate suite.
+Closeout passed 34 exact contract tests. The separate Party, Loans, Notify v2,
+and Rates restricted-role RLS gate passed 19 tests; Django checks, migration
+drift, dependency checks, and the foundation inventory also passed with zero
+integrity findings.
 
 ## Guardrails
 

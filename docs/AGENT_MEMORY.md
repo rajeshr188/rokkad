@@ -35,12 +35,13 @@ RLS. `Company.schema_name` is temporarily the Workspace routing key only. Do
 not treat it as database schema state or rename it in place; a later phase must
 add and backfill an immutable `Company.slug` before switching callers.
 The requirements manifest is UTF-8 and no longer declares Guardian. Phase 8 is
-the active control-plane track: consolidate the accepted `CP-*` invariants into
-an executable, traceable contract-test gate without redesigning runtime APIs.
+complete: the accepted `CP-*` invariants have an executable, traceable contract
+gate without redesigning runtime APIs.
 The Phase 8 registry uses exact test labels and has no known behavioral coverage
 gap. All 95 surviving business models must remain in the authoritative registry
 with direct non-null Workspace ownership and canonical forced RLS. Phase 8 is
-not complete until the aggregate CI gate and closeout are recorded.
+closed by the deduplicated `django_project.test_control_plane_contract_gate`.
+Phase 9 cross-app conformance is next.
 Every successful platform membership override is audited after explicit
 Workspace context establishment; identity conflicts and lifecycle restrictions
 remain non-bypassable.

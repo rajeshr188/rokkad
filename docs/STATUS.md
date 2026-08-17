@@ -91,6 +91,12 @@ non-null Workspace ownership plus enabled, forced, canonical PostgreSQL RLS
 metadata for every table. No known Phase 8 behavioral coverage gap remains;
 aggregate CI documentation and final closeout are next.
 
+Phase 8 is complete. `django_project.test_control_plane_contract_gate` derives
+one deduplicated aggregate suite from the exact invariant registry. The final
+gate passes 34/34; the separate four-app restricted-role RLS gate passes 19/19.
+Django checks, migration drift, dependencies, and foundation integrity are
+clean. Phase 9 cross-app conformance is the next control-plane phase.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace
