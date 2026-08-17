@@ -40,6 +40,14 @@ The third slice renames the active seed commands to
 current documentation, and removes an unreachable Product-era seeding method.
 No legacy command aliases remain.
 
+The fourth slice inventories legacy inbound routes. Contact, Girvi, and legacy
+Notify paths are project-owned redirects only; they do not participate in
+Workspace resolution, authorization, or RLS context. The old dashboard and
+integer-ID control-plane routes are likewise inbound compatibility surfaces.
+All are deferred until telemetry or an explicit compatibility deadline supports
+removal. The obsolete Guardian claim is removed from the README; only its
+dependency line remains, blocked on safely normalizing the UTF-16 manifest.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

@@ -39,3 +39,22 @@ Still pending:
   field separately because both have wide migration/import impact;
 - remove the now-unused Guardian line from the UTF-16 requirements manifest;
 - inventory legacy inbound aliases before deletion.
+
+## Legacy inbound route classification
+
+The current compatibility routes have been inspected and are not authorization
+or RLS authorities. They only redirect already-resolved Workspace requests:
+
+| Surface | Current behavior | Classification |
+| --- | --- | --- |
+| `/contact/**` | Redirects old bookmarks to the Party list | DEFER TO LATER PHASE |
+| `/girvi/**` | Redirects old bookmarks to the Loans list | DEFER TO LATER PHASE |
+| Listed `/notify/...` routes | Redirect compatible legacy entry points to Notify v2 batch history | DEFER TO LATER PHASE |
+| `/company_dashboard/` | Redirects through explicit Workspace resolution to the canonical slug dashboard | DEFER TO LATER PHASE |
+| Integer `/workspace/<id>/...` and `/orgs/...` routes | Inbound control-plane compatibility for pre-slug links | DEFER TO LATER PHASE |
+
+Deleting these routes now would break bookmarks and external links without
+materially simplifying the RLS boundary. Remove them only after route telemetry
+or an explicit compatibility deadline shows that callers have migrated. The
+legacy Notify URLConf intentionally enumerates known paths instead of accepting
+an unrestricted catch-all.

@@ -79,24 +79,26 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
             4,
         )
 
-    def test_tenant_seed_commands_do_not_schedule_legacy_notify(self):
-        tenant_seed = Path(
+    def test_workspace_seed_commands_do_not_schedule_legacy_notify(self):
+        workspace_seed = Path(
             "apps/orgs/management/commands/seed_workspace_defaults.py"
         ).read_text(encoding="utf-8")
-        all_tenants_seed = Path(
+        all_workspaces_seed = Path(
             "apps/orgs/management/commands/seed_all_workspaces.py"
         ).read_text(encoding="utf-8")
-        active_tenant_seed = tenant_seed.split(
+        active_workspace_seed = workspace_seed.split(
             "def _seed_notification_template_defaults", 1
         )[0]
 
-        self.assertNotIn("apps.tenant_apps.notify.models", tenant_seed)
-        self.assertNotIn('actions.append("seed_notify")', active_tenant_seed)
-        self.assertNotIn('if "seed_notify" in actions', active_tenant_seed)
-        self.assertNotIn('"--skip-notify"', active_tenant_seed)
-        self.assertNotIn('"--skip-notify"', all_tenants_seed)
-        self.assertNotIn('skip_notify=options["skip_notify"]', all_tenants_seed)
-        self.assertIn('actions.append("seed_notify_v2")', active_tenant_seed)
+        self.assertNotIn("apps.tenant_apps.notify.models", workspace_seed)
+        self.assertNotIn('actions.append("seed_notify")', active_workspace_seed)
+        self.assertNotIn('if "seed_notify" in actions', active_workspace_seed)
+        self.assertNotIn('"--skip-notify"', active_workspace_seed)
+        self.assertNotIn('"--skip-notify"', all_workspaces_seed)
+        self.assertNotIn(
+            'skip_notify=options["skip_notify"]', all_workspaces_seed
+        )
+        self.assertIn('actions.append("seed_notify_v2")', active_workspace_seed)
 
     def test_girvi_runtime_package_is_removed(self):
         settings_source = Path("django_project/settings/base.py").read_text(

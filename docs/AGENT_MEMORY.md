@@ -25,6 +25,10 @@ cross-schema discovery or `--schema`/`--all` options.
 Workspace defaults are seeded with `seed_workspace_defaults` or
 `seed_all_workspaces`; the old tenant-named commands and dead Product seeder
 are removed and must not be restored.
+Legacy `/contact/**`, `/girvi/**`, listed `/notify/...`, old dashboard, and
+integer-ID control-plane paths are inbound redirects, not tenancy authorities.
+Retain them until telemetry or an explicit compatibility deadline justifies
+removal; legacy Notify must remain an enumerated allowlist, never a catch-all.
 
 Phase 6 URL and shell standardization is complete. Global control-plane pages
 use `/app/...`; Workspace pages and settings use `/w/<workspace_slug>/...`.

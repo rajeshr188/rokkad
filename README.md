@@ -25,7 +25,7 @@ security isolates Workspaces under a restricted runtime database role.
 - Party master data, Notify v2 delivery evidence, and Workspace Rates
 - Invitation and membership flows (`django-invitations` + custom org models)
 - Auth and social auth via `django-allauth`
-- Object-level permissions via `django-guardian`
+- Workspace authorization through `WorkspaceAccess` and domain-service rules
 - HTMX-enabled UI paths and dynamic preferences
 
 ## Tech Stack
