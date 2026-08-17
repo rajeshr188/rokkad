@@ -5,12 +5,21 @@ from django.core.exceptions import PermissionDenied
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.access import (
+    LOANS_ADMIN_ACTION,
     LOANS_OWNER_ACTION,
     LOANS_SETUP_ACTION,
     LOANS_WORKSPACE_ACTION,
     assert_loans_owner_access,
     assert_loans_setup_access,
     assert_loans_workspace_access,
+)
+from apps.tenant_apps.loans.services.pawn_auctions import (
+    PawnAuctionError,
+    _require_administrator as require_auction_administrator,
+)
+from apps.tenant_apps.loans.services.pawn_reversal import (
+    PawnReversalError,
+    _require_administrator as require_reversal_administrator,
 )
 from apps.tenant_apps.loans.services.physical_verification import (
     PawnPhysicalVerificationError,
@@ -21,6 +30,16 @@ from apps.tenant_apps.loans.services.storage_operations import (
     _require_owner as require_storage_owner,
 )
 from apps.tenant_apps.loans.web.pawn_custody_actions import _can_manage_storage
+from apps.tenant_apps.loans.web.pawn_financial_actions import (
+    _can_administer as can_administer_financial_actions,
+)
+from apps.tenant_apps.loans.web.reports import (
+    _can_administer as can_administer_reports,
+)
+from apps.tenant_apps.loans.views import (
+    _can_administer as can_administer_views,
+    _can_manage_storage as can_manage_storage_views,
+)
 
 
 class LoansAccessTests(SimpleTestCase):
@@ -137,3 +156,36 @@ class LoansAccessTests(SimpleTestCase):
 
         self.assertTrue(_can_manage_storage(request))
         access.can.assert_called_once_with(LOANS_OWNER_ACTION)
+
+    @patch("apps.tenant_apps.loans.services.pawn_reversal.resolve_workspace_access")
+    @patch("apps.tenant_apps.loans.services.pawn_auctions.resolve_workspace_access")
+    def test_financial_services_use_workspace_admin_action(
+        self, resolve_auction_access, resolve_reversal_access
+    ):
+        denied = self._access(allowed={LOANS_WORKSPACE_ACTION})
+        resolve_auction_access.return_value = denied
+        resolve_reversal_access.return_value = denied
+
+        with self.assertRaises(PawnAuctionError):
+            require_auction_administrator(self.user, self.workspace)
+        with self.assertRaises(PawnReversalError):
+            require_reversal_administrator(self.user, self.workspace)
+
+        allowed = self._access(allowed={LOANS_ADMIN_ACTION})
+        resolve_auction_access.return_value = allowed
+        resolve_reversal_access.return_value = allowed
+        require_auction_administrator(self.user, self.workspace)
+        require_reversal_administrator(self.user, self.workspace)
+
+    def test_financial_report_and_view_helpers_consume_cached_access(self):
+        admin_access = self._access(allowed={LOANS_ADMIN_ACTION})
+        admin_request = SimpleNamespace(loans_workspace_access=admin_access)
+
+        self.assertTrue(can_administer_financial_actions(admin_request))
+        self.assertTrue(can_administer_reports(admin_request))
+        self.assertTrue(can_administer_views(admin_request))
+        self.assertFalse(can_manage_storage_views(admin_request))
+
+        owner_access = self._access(allowed={LOANS_OWNER_ACTION})
+        owner_request = SimpleNamespace(loans_workspace_access=owner_access)
+        self.assertTrue(can_manage_storage_views(owner_request))

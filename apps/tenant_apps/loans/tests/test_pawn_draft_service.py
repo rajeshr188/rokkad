@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from apps.tenancy.testing import WorkspaceTestCase
 
+from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     CollateralMetal,
@@ -90,6 +91,12 @@ class PawnDraftServiceTests(WorkspaceTestCase):
 
     def setUp(self):
         super().setUp()
+        owner_role, _ = Role.objects.get_or_create(name="Owner")
+        Membership.objects.get_or_create(
+            user=self.tenant.owner,
+            company=self.tenant,
+            defaults={"role": owner_role},
+        )
         self.actor = get_user_model().objects.create_user(
             username=f"draft-actor-{uuid.uuid4().hex[:8]}",
             email=f"draft-actor-{uuid.uuid4().hex[:8]}@example.com",

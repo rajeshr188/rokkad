@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 owner: project
 updated: 2026-08-17
 tags: [plans, control-plane, authorization, conformance]
@@ -114,6 +114,23 @@ behavior are preserved. The notice suite fixture now includes the canonical
 mirrored Owner Membership previously masked by a direct owner-ID shortcut.
 Focused authorization, all eight notice tests, and four service-level custody
 tests pass. Five reviewed Loans modules remain.
+
+Slice 9.7 completes Loans and Phase 9. Auction and reversal services resolve
+`WorkspaceAccess` directly; financial, reporting, and broad view helpers consume
+the request-cached result. Administrator operations require
+`workspace.settings.manage`, while Owner-only custody remains
+`workspace.transfer`. The direct authorization baseline is zero across Party,
+Loans, Notify v2, and Rates. `django_project.test_phase9_app_conformance_gate`
+is the aggregate CI entrypoint.
+
+Closeout passes 34 economics/auction/reversal/report tests, the 34-test aggregate
+Phase 9 gate, the 12-test four-app restricted-role RLS gate, zero foundation
+integrity findings, Django checks, and migration drift. Full Loans discovery
+executes 404 tests: 315 pass;
+89 legacy browser failures/errors are billing redirects from unscoped
+`/loans/...` fixtures before Loans views execute. That fixture modernization is
+explicit follow-up debt; Phase 9 does not reintroduce profile fallback or weaken
+the billing boundary to make stale paths pass.
 
 ## Guardrails
 

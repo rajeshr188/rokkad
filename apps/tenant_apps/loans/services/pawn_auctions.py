@@ -9,7 +9,8 @@ from django.db.models import Max
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
-from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
+from apps.orgs.access import resolve_workspace_access
+from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     PawnLoanAuctionState,
@@ -554,11 +555,9 @@ def _money(value, loan):
 
 
 def _require_administrator(actor, workspace):
-    if actor is None or not getattr(actor, "is_authenticated", False):
+    access = resolve_workspace_access(actor=actor, workspace=workspace)
+    if not access.can(LOANS_ADMIN_ACTION):
         raise PawnAuctionError("PawnLoan auction requires an administrator.")
-    if is_platform_admin(actor) or workspace.owner_id == actor.pk or get_workspace_role_name(actor, workspace) in {"Owner", "Admin"}:
-        return
-    raise PawnAuctionError("PawnLoan auction requires an administrator.")
 
 
 def _audit(auction, event_kind, actor, *, reason="", from_state=None, to_state=None, metadata=None):

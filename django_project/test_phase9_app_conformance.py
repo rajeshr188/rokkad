@@ -4,18 +4,17 @@ from django.test import SimpleTestCase
 
 
 SUPPORTED_APP_ROOT = Path("apps/tenant_apps")
-DIRECT_AUTH_MARKERS = ("is_platform_admin", "get_workspace_role_name")
-KNOWN_DIRECT_AUTH_MODULES = {
-    "loans/services/pawn_auctions.py",
-    "loans/services/pawn_reversal.py",
-    "loans/views.py",
-    "loans/web/pawn_financial_actions.py",
-    "loans/web/reports.py",
-}
+DIRECT_AUTH_MARKERS = (
+    "is_platform_admin",
+    "get_workspace_role_name",
+    "workspace.owner_id ==",
+    "workspace.owner ==",
+)
+KNOWN_DIRECT_AUTH_MODULES = set()
 
 
 class Phase9AppConformanceBaselineTests(SimpleTestCase):
-    def test_direct_authorization_debt_is_frozen_to_reviewed_modules(self):
+    def test_direct_authorization_debt_is_zero_across_supported_apps(self):
         found = set()
         for app in ("party", "loans", "notify_v2", "rates"):
             root = SUPPORTED_APP_ROOT / app

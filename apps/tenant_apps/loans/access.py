@@ -7,7 +7,8 @@ from apps.orgs.access import resolve_workspace_access
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
-LOANS_SETUP_ACTION = "workspace.settings.manage"
+LOANS_ADMIN_ACTION = "workspace.settings.manage"
+LOANS_SETUP_ACTION = LOANS_ADMIN_ACTION
 LOANS_OWNER_ACTION = "workspace.transfer"
 LOANS_WORKSPACE_ACTION = "data.view"
 

@@ -17,8 +17,9 @@ from django.utils.dateparse import parse_date
 from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
-from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 from apps.tenant_apps.loans.access import (
+    LOANS_ADMIN_ACTION,
+    LOANS_OWNER_ACTION,
     assert_loans_owner_access,
     loans_owner_required,
     loans_setup_required,
@@ -2195,20 +2196,11 @@ def _primary_action(loan, context):
 
 
 def _can_administer(request):
-    user = request.user
-    workspace = request.loans_workspace
-    return bool(
-        is_platform_admin(user)
-        or workspace.owner_id == user.pk
-        or get_workspace_role_name(user, workspace) in {"Owner", "Admin"}
-    )
+    return request.loans_workspace_access.can(LOANS_ADMIN_ACTION)
 
 
 def _can_manage_storage(request):
-    return bool(
-        is_platform_admin(request.user)
-        or request.loans_workspace.owner_id == request.user.pk
-    )
+    return request.loans_workspace_access.can(LOANS_OWNER_ACTION)
 
 
 def _event_rows(loan, *, can_administer):

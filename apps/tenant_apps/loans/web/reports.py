@@ -6,8 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.http import content_disposition_header
 
-from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
-from apps.tenant_apps.loans.access import loans_workspace_required
+from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION, loans_workspace_required
 from apps.tenant_apps.loans.services import (
     PawnLoanReportExportError,
     build_party_statement_dataset,
@@ -109,12 +108,7 @@ def _report_as_of_date(request):
 
 
 def _can_administer(request):
-    return bool(
-        is_platform_admin(request.user)
-        or request.loans_workspace.owner_id == request.user.pk
-        or get_workspace_role_name(request.user, request.loans_workspace)
-        in {"Owner", "Admin"}
-    )
+    return request.loans_workspace_access.can(LOANS_ADMIN_ACTION)
 
 
 __all__ = ["pawn_loan_report_export", "pawn_loan_reports", "pawn_party_statement"]
