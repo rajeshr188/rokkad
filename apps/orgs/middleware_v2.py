@@ -176,8 +176,9 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             self._set_workspace_context(request, workspace)
             request.workspace_access = validation.get("access")
 
-            # Log sensitive access
-            if self._is_sensitive_path(request.path):
+            if getattr(request.workspace_access, "platform_override", False):
+                self._log_platform_override(request, workspace)
+            elif self._is_sensitive_path(request.path):
                 self._log_access(request, workspace, success=True)
 
             return None
@@ -422,3 +423,23 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             )
         except Exception as e:
             logger.error(f"Failed to log workspace access: {e}")
+
+    def _log_platform_override(self, request, workspace):
+        """Audit every successful membership bypass after context is established."""
+        try:
+            AuditLog.log(
+                action="WORKSPACE_ACCESS",
+                user=request.user,
+                company=workspace,
+                description=f"Platform override access to workspace {workspace.name}",
+                request=request,
+                success=True,
+                data={
+                    "workspace_id": workspace.id,
+                    "path": request.path,
+                    "resolution_source": request.workspace_resolution_source,
+                    "platform_override": True,
+                },
+            )
+        except Exception as exc:
+            logger.error(f"Failed to log platform override access: {exc}")

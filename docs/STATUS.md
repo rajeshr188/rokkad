@@ -80,6 +80,11 @@ Phase 8.4 closes `CP-LIFECYCLE-002`. A database-backed lifecycle contract test
 now proves that suspension and archive do not delete, reassign, or mutate a
 Workspace-owned Rates evidence row; ownership remains the original Workspace.
 
+Phase 8.5 closes `CP-AUTH-003`. Successful platform-admin membership bypass is
+now audited only after explicit Workspace context establishment, with Workspace
+ID, path, resolution source, and override marker. Conflicting explicit identity
+and lifecycle denial continue to fail before override access is granted.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

@@ -33,7 +33,7 @@ CONTRACT_TEST_LABELS = {
         T + "WorkspaceAccessPolicyTests.test_workspace_access_denies_missing_required_permission",
     ),
     "CP-AUTH-003": (
-        T + "WorkspaceAccessPolicyTests.test_workspace_access_allows_platform_admin_without_membership",
+        "apps.orgs.test_platform_override_audit.PlatformOverrideAuditContractTests.test_explicit_platform_override_is_audited_after_context_establishment",
         T + "DomainPathMismatchTests.test_platform_admin_cannot_bypass_domain_path_workspace_mismatch_guard",
     ),
     "CP-LIFECYCLE-001": (
@@ -61,6 +61,5 @@ CONTRACT_TEST_LABELS = {
 }
 
 CONTRACT_COVERAGE_GAPS = {
-    "CP-AUTH-003": "Platform override evidence does not assert an audit event.",
     "CP-DATAPLANE-001": "Loans evidence is not an all-Workspace-model metadata gate.",
 }

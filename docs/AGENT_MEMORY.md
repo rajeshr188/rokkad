@@ -37,9 +37,12 @@ add and backfill an immutable `Company.slug` before switching callers.
 The requirements manifest is UTF-8 and no longer declares Guardian. Phase 8 is
 the active control-plane track: consolidate the accepted `CP-*` invariants into
 an executable, traceable contract-test gate without redesigning runtime APIs.
-The Phase 8 registry uses exact test labels. Its open gaps are CP-AUTH-003 and
+The Phase 8 registry uses exact test labels. Its only open gap is
 CP-DATAPLANE-001; do not claim contract
-completion until each has direct behavioral evidence.
+completion until it has direct behavioral evidence.
+Every successful platform membership override is audited after explicit
+Workspace context establishment; identity conflicts and lifecycle restrictions
+remain non-bypassable.
 Workspace commands must accept an explicit Workspace ID and open their own
 `workspace_context()`; never rely on ambient HTTP or scheduler context.
 

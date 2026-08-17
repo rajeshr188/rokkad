@@ -68,6 +68,12 @@ Rates row is created, the Workspace is suspended, reactivated, and archived
 through the canonical lifecycle service, and the test proves the row identity,
 owner ID, and payload remain unchanged at each restricted lifecycle state.
 
+Slice 8.5 closes `CP-AUTH-003`. Every successful platform membership override
+is now audited after the explicit Workspace context is established, including
+the Workspace ID, path, identity-resolution source, and an explicit override
+marker. Platform authority still cannot bypass conflicting domain/path identity
+or Workspace lifecycle restrictions.
+
 ## Guardrails
 
 - Do not weaken fail-closed behavior to make a test pass.
