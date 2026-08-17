@@ -1,0 +1,39 @@
+digraph InformationArchitecture {
+  graph [rankdir=LR, bgcolor="#FFFFFF", pad=0.3, nodesep=0.28, ranksep=0.65, fontname="Arial", label="Proposed control-plane information architecture", labelloc=t, fontsize=20, compound=true];
+  node [shape=box, style="rounded,filled", fillcolor="#F8FAFC", color="#475569", fontcolor="#0F172A", fontname="Arial", fontsize=11, margin="0.16,0.10"];
+  edge [color="#64748B", arrowsize=0.7];
+
+  subgraph cluster_global {
+    label="Global shell — /app/";
+    color="#2563EB";
+    style="rounded";
+    global [label="Global navigation", fillcolor="#DBEAFE", color="#2563EB"];
+    account [label="Account and security"];
+    workspaces [label="My Workspaces"];
+    invitations [label="Invitations"];
+    create [label="Create Workspace"];
+    global -> account;
+    global -> workspaces;
+    global -> invitations;
+    global -> create;
+  }
+
+  subgraph cluster_workspace {
+    label="Workspace shell — /w/<workspace-slug>/";
+    color="#16A34A";
+    style="rounded";
+    workspace [label="Workspace navigation", fillcolor="#DCFCE7", color="#16A34A"];
+    dashboard [label="Dashboard"];
+    team [label="Team and access"];
+    settings [label="Workspace settings"];
+    billing [label="Subscription and billing"];
+    apps [label="Party · Loans\nNotify v2 · Rates"];
+    workspace -> dashboard;
+    workspace -> team;
+    workspace -> settings;
+    workspace -> billing;
+    workspace -> apps;
+  }
+
+  workspaces -> workspace [label="select", color="#4F46E5", fontcolor="#4F46E5", ltail=cluster_global, lhead=cluster_workspace];
+}

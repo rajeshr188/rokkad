@@ -1,14 +1,16 @@
 ---
 status: active
 owner: project
-updated: 2026-08-04
+updated: 2026-08-17
 tags: [docs, navigation, architecture]
 related: [STATUS.md, ROADMAP.md, GLOSSARY.md, AGENT_MEMORY.md]
 ---
 
 # Rokkad Documentation
 
-Rokkad is a SaaS mini ERP for small businesses. Accounting is the central core, with Girvi loan management, contacts, inventory, sales, purchase, commodity/rates, workspace management, authentication, authorization, subscriptions, invitations, onboarding, notifications, and team management around it.
+Rokkad is a shared-schema Django SaaS application for operational pawn lending.
+Its supported business applications are Party, Loans, Notify v2, and Rates.
+PostgreSQL forced RLS isolates Workspace-owned data.
 
 This folder is the living documentation system. Historical notes, audits, and superseded plans are preserved under [archive](archive/).
 
@@ -34,6 +36,8 @@ This folder is the living documentation system. Historical notes, audits, and su
 
 ## App Internals
 
+- [SaaS control-plane architecture audit](architecture/saas-control-plane-architecture-audit.md)
+- [Current Workspace resolution and PostgreSQL RLS chain](architecture/current-workspace-resolution-chain-using-postgres-rls.md)
 - [Loan exposure and risk architecture](architecture/loan-risk/README.md)
 - [Loans architecture and Girvi parity review](apps/loans/architecture-and-girvi-parity.md)
 - [Girvi app overview](apps/girvi/README.md)

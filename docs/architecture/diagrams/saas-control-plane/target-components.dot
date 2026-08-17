@@ -1,0 +1,31 @@
+digraph TargetComponents {
+  graph [rankdir=LR, bgcolor="#FFFFFF", pad=0.3, nodesep=0.35, ranksep=0.55, fontname="Arial", label="Proposed target control-plane components", labelloc=t, fontsize=20];
+  node [shape=box, style="rounded,filled", fillcolor="#F8FAFC", color="#475569", fontcolor="#0F172A", fontname="Arial", fontsize=11, margin="0.15,0.10"];
+  edge [color="#64748B", fontcolor="#334155", fontname="Arial", fontsize=9, arrowsize=0.7];
+
+  identity [label="Identity", fillcolor="#DBEAFE", color="#2563EB"];
+  resolver [label="Workspace Resolver"];
+  access [label="Workspace Access", fillcolor="#E0E7FF", color="#4F46E5"];
+  context [label="Workspace Context"];
+  rls [label="PostgreSQL RLS", fillcolor="#DCFCE7", color="#16A34A"];
+  membership [label="Membership"];
+  policy [label="Authorization Policy", fillcolor="#FEF3C7", color="#D97706"];
+  lifecycle [label="Workspace Lifecycle"];
+  subscription [label="Billing Subscription"];
+  entitlement [label="Entitlement Policy", fillcolor="#FFEDD5", color="#EA580C"];
+  commands [label="Control-plane Commands"];
+  dataplane [label="Data-plane Apps", fillcolor="#DBEAFE", color="#2563EB"];
+  events [label="Audit + Post-commit Events"];
+  email [label="Email + Background Work"];
+  provider [label="Provider Integration"];
+
+  identity -> resolver -> access -> context -> rls;
+  access -> membership -> policy;
+  lifecycle -> policy;
+  subscription -> entitlement -> policy;
+  policy -> commands;
+  policy -> dataplane;
+  commands -> events;
+  events -> email;
+  events -> provider;
+}

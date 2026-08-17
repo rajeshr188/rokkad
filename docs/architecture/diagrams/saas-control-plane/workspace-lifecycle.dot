@@ -1,0 +1,24 @@
+digraph WorkspaceLifecycle {
+  graph [rankdir=LR, bgcolor="#FFFFFF", pad=0.3, nodesep=0.45, ranksep=0.55, fontname="Arial", label="Proposed Workspace operational lifecycle", labelloc=t, fontsize=20];
+  node [shape=ellipse, style="filled", fillcolor="#F8FAFC", color="#475569", fontcolor="#0F172A", fontname="Arial", fontsize=11, margin="0.12,0.08"];
+  edge [color="#64748B", fontcolor="#334155", fontname="Arial", fontsize=9, arrowsize=0.7];
+
+  start [shape=circle, label="", width=0.2, fixedsize=true, fillcolor="#0F172A"];
+  provisioning [label="Provisioning", fillcolor="#FEF3C7", color="#D97706"];
+  active [label="Active", fillcolor="#DCFCE7", color="#16A34A"];
+  suspended [label="Suspended", fillcolor="#FFEDD5", color="#EA580C"];
+  archived [label="Archived", fillcolor="#E2E8F0"];
+  deletion [label="Deletion pending", fillcolor="#FEE2E2", color="#DC2626"];
+  deleted [label="Deleted", fillcolor="#FECACA", color="#991B1B"];
+  end [shape=doublecircle, label="", width=0.2, fixedsize=true, fillcolor="#0F172A"];
+
+  start -> provisioning -> active;
+  active -> suspended [label="suspend"];
+  suspended -> active [label="reactivate"];
+  active -> archived [label="archive"];
+  suspended -> archived [label="archive"];
+  archived -> active [label="restore"];
+  archived -> deletion [label="request deletion"];
+  deletion -> deleted [label="complete"];
+  deleted -> end;
+}

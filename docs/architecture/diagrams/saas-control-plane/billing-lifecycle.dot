@@ -1,0 +1,23 @@
+digraph BillingLifecycle {
+  graph [rankdir=LR, bgcolor="#FFFFFF", pad=0.3, nodesep=0.45, ranksep=0.55, fontname="Arial", label="Proposed billing lifecycle — separate from Workspace state", labelloc=t, fontsize=20];
+  node [shape=ellipse, style="filled", fillcolor="#F8FAFC", color="#475569", fontcolor="#0F172A", fontname="Arial", fontsize=11, margin="0.12,0.08"];
+  edge [color="#64748B", fontcolor="#334155", fontname="Arial", fontsize=9, arrowsize=0.7];
+
+  start [shape=circle, label="", width=0.2, fixedsize=true, fillcolor="#0F172A"];
+  trial [label="Trial", fillcolor="#DBEAFE", color="#2563EB"];
+  active [label="Active", fillcolor="#DCFCE7", color="#16A34A"];
+  pastdue [label="Past due", fillcolor="#FFEDD5", color="#EA580C"];
+  cancelled [label="Cancelled", fillcolor="#FEE2E2", color="#DC2626"];
+  expired [label="Expired", fillcolor="#FECACA", color="#991B1B"];
+  end [shape=doublecircle, label="", width=0.2, fixedsize=true, fillcolor="#0F172A"];
+
+  start -> trial;
+  trial -> active [label="activate"];
+  trial -> pastdue [label="trial ends unpaid"];
+  active -> pastdue [label="payment fails"];
+  pastdue -> active [label="recover"];
+  pastdue -> cancelled [label="cancel"];
+  active -> cancelled [label="cancel"];
+  cancelled -> expired [label="term ends"];
+  expired -> end;
+}

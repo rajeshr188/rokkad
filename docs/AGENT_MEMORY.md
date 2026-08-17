@@ -8,6 +8,19 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The canonical current-state SaaS control-plane audit is
+`docs/architecture/saas-control-plane-architecture-audit.md`. It records the
+implemented request-to-RLS chain, capability and user-flow inventory, P0-P3
+findings, invariant matrix, duplication and django-tenants residue, UI/URL
+analysis, proposed target components, data-plane contract, standards, and
+phased roadmap. Treat it as architectural evidence and recommendations, not an
+accepted decision. Its immediate blockers are the profile IDOR, GET-based
+mutations, non-canonical ownership, and broken/non-idempotent billing. The RLS
+foundation itself remains the accepted and comparatively strong boundary. Its
+six diagrams use embedded SVG assets under
+`docs/architecture/diagrams/saas-control-plane/`; keep the adjacent Graphviz
+sources and expandable Mermaid source synchronized when diagrams change.
+
 The Workspace sidebar has one canonical Parties entry, routed through
 `workspace_slug_parties`. Do not add a second direct `party:party_list` entry;
 namespaced Party detail/edit pages are already covered by the same link's

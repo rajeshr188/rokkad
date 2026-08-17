@@ -1,0 +1,48 @@
+digraph RequestProcessing {
+  graph [rankdir=TB, bgcolor="#FFFFFF", pad=0.25, nodesep=0.28, ranksep=0.42, fontname="Arial", label="Current request-to-RLS processing", labelloc=t, fontsize=20];
+  node [shape=box, style="rounded,filled", fillcolor="#F8FAFC", color="#475569", fontcolor="#0F172A", fontname="Arial", fontsize=11, margin="0.14,0.09"];
+  edge [color="#64748B", fontcolor="#334155", fontname="Arial", fontsize=9, arrowsize=0.7];
+
+  request [label="HTTP request", fillcolor="#DBEAFE", color="#2563EB"];
+  auth [label="Django authentication\nand allauth"];
+  middleware [label="SecureWorkspaceMiddleware", fillcolor="#E0E7FF", color="#4F46E5"];
+  domain [label="Domain mapping"];
+  path [label="Workspace ID or slug\nin URL path"];
+  profile [label="UserProfile.workspace\nfallback"];
+  resolver [label="Candidate selection\ndomain → path → profile", fillcolor="#FEF3C7", color="#D97706"];
+  resolved [shape=diamond, label="Workspace\nresolved?", fillcolor="#FEF3C7", color="#D97706"];
+  global [label="Global control-plane\nrequest", fillcolor="#F1F5F9"];
+  selector [label="Workspace selector", fillcolor="#FEE2E2", color="#DC2626"];
+  membership [label="Membership lookup", fillcolor="#DCFCE7", color="#16A34A"];
+  subscription [label="SubscriptionAccessService", fillcolor="#FFEDD5", color="#EA580C"];
+  allowed [shape=diamond, label="Access\nallowed?", fillcolor="#FEF3C7", color="#D97706"];
+  context [label="workspace_context(workspace_id)", fillcolor="#DCFCE7", color="#16A34A"];
+  setting [label="SET LOCAL app.workspace_id", fillcolor="#DCFCE7", color="#16A34A"];
+  view [label="View and decorator"];
+  authorization [label="Role and permission policy"];
+  entitlement [label="Optional entitlement check"];
+  service [label="Service or selector"];
+  postgres [shape=cylinder, label="PostgreSQL", fillcolor="#DBEAFE", color="#2563EB"];
+  rls [label="Forced RLS\nUSING + WITH CHECK", fillcolor="#DCFCE7", color="#16A34A"];
+  response [label="HTTP response"];
+  cleanup [label="Exit transaction and\nclear ContextVar", fillcolor="#E0E7FF", color="#4F46E5"];
+
+  request -> auth -> middleware;
+  middleware -> domain;
+  middleware -> path;
+  middleware -> profile;
+  {rank=same; domain; path; profile;}
+  domain -> resolver;
+  path -> resolver;
+  profile -> resolver;
+  resolver -> resolved;
+  resolved -> global [label="no / global URL"];
+  resolved -> selector [label="no / Workspace URL"];
+  resolved -> membership [label="yes"];
+  membership -> subscription -> allowed;
+  allowed -> selector [label="no"];
+  allowed -> context [label="yes"];
+  context -> setting -> view -> authorization -> entitlement -> service -> postgres -> rls;
+  rls -> response -> cleanup;
+  global -> response [style=dashed];
+}

@@ -1,0 +1,21 @@
+digraph SignupFlow {
+  graph [rankdir=LR, bgcolor="#FFFFFF", pad=0.25, nodesep=0.35, ranksep=0.45, fontname="Arial", label="Current signup and onboarding flow", labelloc=t, fontsize=20];
+  node [shape=box, style="rounded,filled", fillcolor="#F8FAFC", color="#475569", fontcolor="#0F172A", fontname="Arial", fontsize=11, margin="0.15,0.10"];
+  edge [color="#64748B", fontcolor="#334155", fontname="Arial", fontsize=9, arrowsize=0.7];
+
+  signup [label="allauth signup", fillcolor="#DBEAFE", color="#2563EB"];
+  user [label="User + UserProfile"];
+  pending [shape=diamond, label="Pending\ninvitation?", fillcolor="#FEF3C7", color="#D97706"];
+  signal [label="Signup signal creates\nMembership", fillcolor="#FFEDD5", color="#EA580C"];
+  onboarding [label="Onboarding", fillcolor="#E0E7FF", color="#4F46E5"];
+  profile [label="Profile step"];
+  workspace [label="Create or join\nWorkspace", fillcolor="#DCFCE7", color="#16A34A"];
+  team [label="Optional team\ninvitations"];
+  tour [label="Tour and first\nusable Workspace", fillcolor="#DCFCE7", color="#16A34A"];
+
+  signup -> user -> pending;
+  pending -> signal [label="yes"];
+  pending -> onboarding [label="no"];
+  signal -> onboarding;
+  onboarding -> profile -> workspace -> team -> tour;
+}

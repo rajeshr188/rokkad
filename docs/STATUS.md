@@ -8,6 +8,20 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: The post-RLS SaaS control plane has a repository-based current-state
+  architecture audit at
+  [docs/architecture/saas-control-plane-architecture-audit.md](architecture/saas-control-plane-architecture-audit.md).
+  It preserves the request/RLS, component, onboarding, UI, and proposed lifecycle
+  diagrams; capability and user-flow inventory; P0-P3 findings; security
+  invariant matrix; duplication and django-tenants residue reports; proposed
+  control-plane-to-data-plane contract; standards; and phased roadmap. This is
+  an audit and recommendation reference, not an accepted target-architecture
+  decision. The immediate risks recorded are profile IDOR, GET-based control-
+  plane mutations, non-canonical ownership, and broken/non-idempotent billing.
+  All six architecture diagrams are also checked-in SVG assets generated from
+  adjacent Graphviz sources, while expandable Mermaid source remains in the
+  audit. The diagrams therefore render without Mermaid support.
+
 - 2026-08-17: The active Workspace sidebar now renders exactly one Parties app
   link. The duplicate direct `party:party_list` entry was removed; the single
   canonical link uses the Workspace-slug Party route and retains active-state
