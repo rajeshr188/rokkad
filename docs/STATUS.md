@@ -8,6 +8,13 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+- 2026-08-17: Public account signup no longer crashes after authentication when
+  no Workspace has been selected. The theme context processor now prefers
+  `request.workspace`, safely tolerates `workspace`/legacy `tenant` being
+  absent or `None`, and returns neutral public-theme defaults. Focused tests
+  cover public authenticated requests, canonical Workspace context, and the
+  temporary tenant alias fallback.
+
 - 2026-08-17: A reusable end-to-end migration guide now documents how to move a
   Django SaaS project from schema-per-tenant storage to a shared PostgreSQL
   schema protected by forced RLS. It covers target invariants, inventory,

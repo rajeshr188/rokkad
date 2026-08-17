@@ -8,6 +8,12 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Public/auth requests may have an authenticated user without any selected
+Workspace. Context processors and shared templates must treat both
+`request.workspace` and the temporary `request.tenant` alias as nullable. The
+theme processor returns neutral defaults in that state and prefers the
+canonical Workspace when present.
+
 The reusable migration runbook is
 `docs/implementation/django-schema-tenancy-to-postgresql-rls-guide.md`. Use it
 when planning another schema-tenancy to shared-schema PostgreSQL RLS cutover.
