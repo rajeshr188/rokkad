@@ -6,7 +6,6 @@ from django.test import SimpleTestCase
 SUPPORTED_APP_ROOT = Path("apps/tenant_apps")
 DIRECT_AUTH_MARKERS = ("is_platform_admin", "get_workspace_role_name")
 KNOWN_DIRECT_AUTH_MODULES = {
-    "loans/access.py",
     "loans/services/pawn_auctions.py",
     "loans/services/pawn_reversal.py",
     "loans/services/physical_verification.py",

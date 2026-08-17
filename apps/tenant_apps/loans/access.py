@@ -3,20 +3,35 @@ import functools
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 
-from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
+from apps.orgs.access import resolve_workspace_access
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
-def assert_loans_setup_access(request):
+LOANS_SETUP_ACTION = "workspace.settings.manage"
+LOANS_OWNER_ACTION = "workspace.transfer"
+LOANS_WORKSPACE_ACTION = "data.view"
+
+
+def _resolve_loans_access(request):
     workspace = resolve_request_workspace(request)
     if workspace is None:
         raise PermissionDenied("No tenant workspace selected.")
 
     user = getattr(request, "user", None)
-    if is_platform_admin(user) or workspace.owner_id == getattr(user, "pk", None):
-        return workspace
+    if not user or not getattr(user, "is_authenticated", False):
+        raise PermissionDenied("Authentication required.")
 
-    if get_workspace_role_name(user, workspace) not in {"Owner", "Admin"}:
+    access = resolve_workspace_access(actor=user, workspace=workspace)
+    if access.membership is None and not access.platform_override:
+        raise PermissionDenied("Pawn loans require workspace membership.")
+
+    request.loans_workspace_access = access
+    return workspace, access
+
+
+def assert_loans_setup_access(request):
+    workspace, access = _resolve_loans_access(request)
+    if not access.can(LOANS_SETUP_ACTION):
         raise PermissionDenied("Loan setup requires workspace administration access.")
     return workspace
 
@@ -32,14 +47,10 @@ def loans_setup_required(view_func):
 
 
 def assert_loans_owner_access(request):
-    workspace = resolve_request_workspace(request)
-    if workspace is None:
-        raise PermissionDenied("No tenant workspace selected.")
-
-    user = getattr(request, "user", None)
-    if is_platform_admin(user) or workspace.owner_id == getattr(user, "pk", None):
-        return workspace
-    raise PermissionDenied("This Loans operation requires the workspace Owner.")
+    workspace, access = _resolve_loans_access(request)
+    if not access.can(LOANS_OWNER_ACTION):
+        raise PermissionDenied("This Loans operation requires the workspace Owner.")
+    return workspace
 
 
 def loans_owner_required(view_func):
@@ -53,15 +64,9 @@ def loans_owner_required(view_func):
 
 
 def assert_loans_workspace_access(request):
-    workspace = resolve_request_workspace(request)
-    if workspace is None:
-        raise PermissionDenied("No tenant workspace selected.")
-
-    user = getattr(request, "user", None)
-    if is_platform_admin(user) or workspace.owner_id == getattr(user, "pk", None):
-        return workspace
-    if get_workspace_role_name(user, workspace) is None:
-        raise PermissionDenied("Pawn loans require workspace membership.")
+    workspace, access = _resolve_loans_access(request)
+    if not access.can(LOANS_WORKSPACE_ACTION):
+        raise PermissionDenied("Pawn loan access requires data view permission.")
     return workspace
 
 

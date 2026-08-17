@@ -97,6 +97,15 @@ setup request attribute as `request.notify_v2_workspace`. All 38 Notify v2
 tests and the focused Phase 9 conformance gate pass. Only the nine reviewed
 Loans modules remain in the direct-authorization baseline.
 
+Slice 9.5 converts the central Loans access helper. It resolves and caches one
+`WorkspaceAccess`; ordinary Loans entry requires `data.view`, setup requires
+`workspace.settings.manage`, and owner-only custody/operational boundaries use
+the Owner-only `workspace.transfer` action. Public decorators and the
+`request.loans_workspace` compatibility attribute remain stable. Focused access,
+explicit nonmember, slug-scoped business-entry, Phase 9, and control-plane
+contract gates pass. The remaining baseline is eight reviewed Loans service and
+view modules, to be converted in workflow-sized slices.
+
 ## Guardrails
 
 - RLS remains ownership isolation, never action authorization.
