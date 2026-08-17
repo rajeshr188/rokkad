@@ -105,7 +105,7 @@ Files created or updated:
 - `apps/tenant_apps/party/services/role_seed.py`
 - `apps/tenant_apps/party/management/commands/seed_party_roles.py`
 - `apps/tenant_apps/party/tests/test_party_role_seed.py`
-- `apps/orgs/management/commands/seed_tenant_defaults.py`
+- `apps/orgs/management/commands/seed_workspace_defaults.py`
 - `docs/implementation/tenant-seeding.md`
 
 Seeded system roles:

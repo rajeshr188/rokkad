@@ -140,13 +140,13 @@ python manage.py seed_public_defaults
 Workspace defaults for one Workspace:
 
 ```bash
-python manage.py seed_tenant_defaults --workspace-id <workspace_id>
+python manage.py seed_workspace_defaults --workspace-id <workspace_id>
 ```
 
 All Workspaces:
 
 ```bash
-python manage.py seed_all_tenants
+python manage.py seed_all_workspaces
 ```
 
 ### 5) Run the app
@@ -175,9 +175,9 @@ Primary docs:
 ## Important Management Commands
 
 - `python manage.py seed_public_defaults`
-- `python manage.py seed_tenant_defaults --workspace-id <workspace_id>`
-- `python manage.py seed_all_tenants --dry-run`
-- `python manage.py seed_all_tenants --continue-on-error`
+- `python manage.py seed_workspace_defaults --workspace-id <workspace_id>`
+- `python manage.py seed_all_workspaces --dry-run`
+- `python manage.py seed_all_workspaces --continue-on-error`
 - Schema-parity checks are retired; shared-schema isolation is verified through Workspace/RLS gates.
 - `python manage.py setup_permissions`
 

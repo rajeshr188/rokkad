@@ -81,10 +81,10 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
 
     def test_tenant_seed_commands_do_not_schedule_legacy_notify(self):
         tenant_seed = Path(
-            "apps/orgs/management/commands/seed_tenant_defaults.py"
+            "apps/orgs/management/commands/seed_workspace_defaults.py"
         ).read_text(encoding="utf-8")
         all_tenants_seed = Path(
-            "apps/orgs/management/commands/seed_all_tenants.py"
+            "apps/orgs/management/commands/seed_all_workspaces.py"
         ).read_text(encoding="utf-8")
         active_tenant_seed = tenant_seed.split(
             "def _seed_notification_template_defaults", 1

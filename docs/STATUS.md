@@ -35,6 +35,11 @@ consumer exposed by the regression gate. Route behavior is unchanged. The
 options and operates only on the shared schema. Current public and Notify v2 UI
 copy no longer advertises retired accounting or tenant-schema operation.
 
+The third slice renames the active seed commands to
+`seed_workspace_defaults` and `seed_all_workspaces`, updates their callers and
+current documentation, and removes an unreachable Product-era seeding method.
+No legacy command aliases remain.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

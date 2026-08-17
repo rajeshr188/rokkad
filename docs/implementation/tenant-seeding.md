@@ -32,7 +32,7 @@ Missing setup should produce a visible setup action or self-healing seed path. I
 
 ## Party Roles
 
-Canonical Party roles are tenant seed data. They are created by `seed_party_roles` and included in `seed_tenant_defaults` unless `--skip-party` is supplied.
+Canonical Party roles are Workspace-owned seed data. They are created by `seed_party_roles` and included in `seed_workspace_defaults` unless `--skip-party` is supplied.
 
 The seed is idempotent and uses stable system keys so future accounting and workflow code can resolve roles by key instead of display label.
 

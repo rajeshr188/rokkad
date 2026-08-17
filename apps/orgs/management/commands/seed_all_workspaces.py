@@ -10,12 +10,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Print target schemas without applying seeds.",
+            help="Print target Workspaces without applying seeds.",
         )
         parser.add_argument(
             "--continue-on-error",
             action="store_true",
-            help="Continue seeding remaining schemas if one fails.",
+            help="Continue seeding remaining Workspaces if one fails.",
         )
         parser.add_argument(
             "--skip-rates",
@@ -44,7 +44,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Seeding Workspace: {workspace_id}")
             try:
                 call_command(
-                    "seed_tenant_defaults",
+                    "seed_workspace_defaults",
                     workspace_id=workspace_id,
                     skip_rates=options["skip_rates"],
                 )
@@ -55,8 +55,8 @@ class Command(BaseCommand):
                 if not continue_on_error:
                     break
 
-        self.stdout.write(self.style.SUCCESS(f"Seeded schemas: {seeded}"))
+        self.stdout.write(self.style.SUCCESS(f"Seeded Workspaces: {seeded}"))
         if failed:
-            self.stderr.write(self.style.ERROR(f"Failed schemas: {len(failed)}"))
+            self.stderr.write(self.style.ERROR(f"Failed Workspaces: {len(failed)}"))
             for workspace_id, error in failed:
                 self.stderr.write(f"- {workspace_id}: {error}")

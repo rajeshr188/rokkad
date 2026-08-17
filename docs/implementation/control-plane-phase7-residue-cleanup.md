@@ -30,11 +30,12 @@ Completed first slice:
   the shared `public` schema;
 - removed retired accounting and tenant-schema wording from current public and
   Notify v2 UI copy.
+- renamed the active seed commands to `seed_workspace_defaults` and
+  `seed_all_workspaces`, and removed unreachable retired-Product seed code.
 
 Still pending:
 
 - classify the `apps.tenant_apps` package name and persisted `schema_name`
   field separately because both have wide migration/import impact;
-- rename or retire remaining schema-era seed commands and current docs;
 - remove the now-unused Guardian line from the UTF-16 requirements manifest;
 - inventory legacy inbound aliases before deletion.

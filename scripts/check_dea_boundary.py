@@ -35,7 +35,7 @@ ALLOWLISTED_FILES = {
     # Remove this entry when loan.py is deleted (planned Q3 2026).
     "apps/tenant_apps/girvi/models/loan.py",
     # Admin seeding utility — VoucherType bootstrapping is acceptable here.
-    "apps/orgs/management/commands/seed_tenant_defaults.py",
+    "apps/orgs/management/commands/seed_workspace_defaults.py",
     # Dashboard reporting views — use DEA accounting query models directly.
     # TODO: wrap AccountStatement/Ledger queries in facade reporting functions.
     "pages/views.py",

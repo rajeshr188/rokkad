@@ -22,6 +22,9 @@ The active business URLConf is `django_project.workspace_urls`; the obsolete
 identity reads `request.workspace`, never `request.tenant`. `reset_sequences`
 is shared-schema-only and must not regain
 cross-schema discovery or `--schema`/`--all` options.
+Workspace defaults are seeded with `seed_workspace_defaults` or
+`seed_all_workspaces`; the old tenant-named commands and dead Product seeder
+are removed and must not be restored.
 
 Phase 6 URL and shell standardization is complete. Global control-plane pages
 use `/app/...`; Workspace pages and settings use `/w/<workspace_slug>/...`.

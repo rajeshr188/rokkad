@@ -87,7 +87,7 @@ ownership.
 Tenant creation occurs through the onboarding/control-plane services. Normal
 save can create the schema; clone mode can create the public `Company` without
 automatic schema creation and then provision explicitly. Default tenant data is
-seeded by `seed_tenant_defaults`; `seed_all_tenants` and parity checks operate
+seeded by `seed_workspace_defaults`; `seed_all_workspaces` and parity checks operate
 cross-tenant. `apps.orgs.signals` reacts to Company creation, with automatic
 seeding gated by `TENANT_AUTO_SEED_ON_CREATE`. Mandatory business configuration
 must not be added to a generic `post_save` receiver because Company signals run

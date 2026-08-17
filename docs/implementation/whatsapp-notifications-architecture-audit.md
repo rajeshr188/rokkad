@@ -400,7 +400,7 @@ These should have stronger approval, template governance, and audit visibility.
 - [apps/tenant_apps/girvi/views/notice.py](../../apps/tenant_apps/girvi/views/notice.py)
 - [apps/tenant_apps/girvi/views/prints.py](../../apps/tenant_apps/girvi/views/prints.py)
 - [apps/tenant_apps/girvi/transitions/commands.py](../../apps/tenant_apps/girvi/transitions/commands.py)
-- [apps/orgs/management/commands/seed_tenant_defaults.py](../../apps/orgs/management/commands/seed_tenant_defaults.py)
+- [apps/orgs/management/commands/seed_workspace_defaults.py](../../apps/orgs/management/commands/seed_workspace_defaults.py)
 
 ## Acceptance Criteria For The First Implementation Slice
 
