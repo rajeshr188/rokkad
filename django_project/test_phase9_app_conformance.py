@@ -18,7 +18,6 @@ KNOWN_DIRECT_AUTH_MODULES = {
     "notify_v2/access.py",
     "notify_v2/views.py",
     "party/access.py",
-    "rates/access.py",
 }
 
 

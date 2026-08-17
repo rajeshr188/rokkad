@@ -103,6 +103,11 @@ direct platform-admin, owner, or role-name decisions: one in Party, one in
 Rates, two in Notify v2, and nine in Loans. A guard test freezes that baseline;
 the conversion order is Rates, Party, Notify v2, then bounded Loans slices.
 
+Phase 9.2 converts Rates authorization to `WorkspaceAccess` and stable `data.*`
+actions while preserving existing decorators and mixins. Direct owner, role,
+and platform checks are gone from Rates; the frozen debt baseline is now 12
+runtime modules.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

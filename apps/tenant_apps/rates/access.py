@@ -4,19 +4,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 
-from apps.orgs.permissions import (
-    get_effective_permissions,
-    get_workspace_role_name,
-    is_platform_admin,
-)
+from apps.orgs.access import resolve_workspace_access
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
 RATE_ACTION_PERMISSIONS = {
-    "view": ("data_view",),
-    "create": ("data_create",),
-    "edit": ("data_edit",),
-    "delete": ("data_delete",),
+    "view": ("data.view",),
+    "create": ("data.create",),
+    "edit": ("data.edit",),
+    "delete": ("data.delete",),
 }
 
 
@@ -32,30 +28,24 @@ def assert_rate_workspace_access(request):
     if not user or not getattr(user, "is_authenticated", False):
         raise PermissionDenied("Authentication required")
 
-    if is_platform_admin(user) or getattr(workspace, "owner", None) == user:
-        return workspace
-
-    if get_workspace_role_name(user, workspace) is None:
+    access = resolve_workspace_access(actor=user, workspace=workspace)
+    if access.membership is None and not access.platform_override:
         raise PermissionDenied("Not a workspace member")
 
+    request.rate_workspace_access = access
     return workspace
 
 
 def assert_rate_permission(request, *permissions, require_all=False):
     workspace = assert_rate_workspace_access(request)
-    user = getattr(request, "user", None)
-
-    if is_platform_admin(user) or getattr(workspace, "owner", None) == user:
-        return workspace
-
     if not permissions:
         return workspace
 
-    effective_permissions = get_effective_permissions(user, workspace)
+    access = request.rate_workspace_access
     has_required = (
-        all(permission in effective_permissions for permission in permissions)
+        all(access.can(permission) for permission in permissions)
         if require_all
-        else any(permission in effective_permissions for permission in permissions)
+        else any(access.can(permission) for permission in permissions)
     )
     if not has_required:
         required = ", ".join(permissions)

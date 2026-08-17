@@ -68,6 +68,14 @@ namespaced action codes.
 7. Run the Phase 8 contract gate, four-app restricted-role RLS gate, Django
    checks, migration drift, and foundation integrity before closeout.
 
+## Current progress
+
+Slice 9.1 records and freezes the 13-module direct-authorization baseline.
+Slice 9.2 converts Rates: its helpers now resolve `WorkspaceAccess`, fail closed
+without Membership or audited platform override, and authorize through stable
+`data.view`, `data.create`, `data.edit`, and `data.delete` codes. Public helper,
+decorator, and mixin signatures remain unchanged.
+
 ## Guardrails
 
 - RLS remains ownership isolation, never action authorization.
