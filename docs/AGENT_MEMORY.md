@@ -42,10 +42,13 @@ gap. All 95 surviving business models must remain in the authoritative registry
 with direct non-null Workspace ownership and canonical forced RLS. Phase 8 is
 closed by the deduplicated `django_project.test_control_plane_contract_gate`.
 Phase 9 cross-app conformance is next.
-Phase 9 is active. Rates and Party are converted to `WorkspaceAccess`. Party
+Phase 9 is active. Rates, Party, and Notify v2 are converted to
+`WorkspaceAccess`. Party
 staff actions use `contact.*` / `data.*`; Party administration uses
-`workspace.settings.manage`, while portal identity remains separate. The frozen
-direct-authorization baseline is 11 modules: Notify v2 2 and Loans 9.
+`workspace.settings.manage`, while portal identity remains separate. Notify v2
+workflow actions use `data.*`, while provider configuration separately requires
+`workspace.settings.manage`. The frozen direct-authorization baseline is now
+the nine Loans modules only.
 Every successful platform membership override is audited after explicit
 Workspace context establishment; identity conflicts and lifecycle restrictions
 remain non-bypassable.

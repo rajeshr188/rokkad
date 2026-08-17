@@ -16,7 +16,6 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from apps.orgs.permissions import get_workspace_role_name, is_platform_admin
 from apps.tenancy.context import current_workspace_id
 
 from .access import notify_v2_action_required, notify_v2_admin_required
@@ -154,8 +153,8 @@ def settings_overview(request):
         "whatsapp_readiness": whatsapp_readiness,
         "can_manage_admin_models": can_manage_admin_models,
         "can_manage_whatsapp": bool(
-            workspace and (is_platform_admin(request.user) or workspace.owner_id == request.user.pk or
-                        get_workspace_role_name(request.user, workspace) in {"Owner", "Admin"})
+            workspace
+            and request.notify_v2_workspace_access.can("workspace.settings.manage")
         ),
         "counts": {
             "event_types": NotificationEventType.objects.filter(is_active=True).count(),
@@ -175,7 +174,7 @@ def settings_overview(request):
 
 @notify_v2_admin_required
 def whatsapp_cloud_integration_setup(request):
-    workspace = request.notify_workspace
+    workspace = request.notify_v2_workspace
     integration = get_whatsapp_cloud_integration(workspace.pk)
     initial = {
         "api_version": getattr(integration, "api_version", "v20.0"),

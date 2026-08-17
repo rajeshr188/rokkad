@@ -88,6 +88,15 @@ not part of this slice's green gate because its workspace fixture has no active
 subscription and is redirected to billing before reaching Party views; that
 pre-existing fixture gap is separate from Party authorization conformance.
 
+Slice 9.4 converts Notify v2. Its ordinary notification workflow actions now
+consume stable `data.*` codes through `WorkspaceAccess`, while WhatsApp provider
+configuration requires the separate `workspace.settings.manage` action. The
+settings UI consumes the same resolved access result instead of reconstructing
+owner/Admin/platform policy. The conversion also standardizes the provider
+setup request attribute as `request.notify_v2_workspace`. All 38 Notify v2
+tests and the focused Phase 9 conformance gate pass. Only the nine reviewed
+Loans modules remain in the direct-authorization baseline.
+
 ## Guardrails
 
 - RLS remains ownership isolation, never action authorization.

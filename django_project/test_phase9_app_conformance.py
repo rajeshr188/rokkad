@@ -15,8 +15,6 @@ KNOWN_DIRECT_AUTH_MODULES = {
     "loans/web/pawn_custody_actions.py",
     "loans/web/pawn_financial_actions.py",
     "loans/web/reports.py",
-    "notify_v2/access.py",
-    "notify_v2/views.py",
 }
 
 

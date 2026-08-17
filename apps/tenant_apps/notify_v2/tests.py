@@ -598,6 +598,17 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = get_user_model()(username="notifyv2-db")
+        access_patcher = patch(
+            "apps.tenant_apps.notify_v2.access.assert_notify_v2_action_permission",
+            side_effect=self._authorize_request,
+        )
+        access_patcher.start()
+        self.addCleanup(access_patcher.stop)
+
+    @staticmethod
+    def _authorize_request(request, _action):
+        request.notify_v2_workspace_access = SimpleNamespace(can=lambda _code: True)
+        return request.workspace
 
     @patch(
         "apps.tenant_apps.notify_v2.services.batch_service.transaction.atomic",

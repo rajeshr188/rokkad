@@ -114,6 +114,13 @@ now use stable `contact.*` / `data.*` codes, and Party administration requires
 identity remains unchanged. The frozen direct-authorization baseline is now 11
 runtime modules.
 
+Phase 9.4 converts Notify v2 authorization to `WorkspaceAccess`. Notification
+view/create/edit/delete/send/print workflows use stable `data.*` actions, while
+WhatsApp provider configuration separately requires
+`workspace.settings.manage`. Direct owner, role-name, and platform-admin checks
+are gone from Notify v2; only the nine reviewed Loans modules remain in the
+frozen baseline. All 38 Notify v2 tests pass.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace
