@@ -57,6 +57,12 @@ It also adds source guards proving that only `workspace_context()` sets the
 PostgreSQL Workspace setting and surviving business apps do not import billing
 models, transitions, or provider services.
 
+Slice 8.3 closes `CP-JOB-001`. The Workspace-default command now has direct
+evidence that it opens `workspace_context(workspace_id)` and an atomic unit;
+the all-Workspace command proves it passes each explicit ID to that scoped
+command. The PawnLoan reassessment command was found relying on ambient context
+and now opens its own context around the batch service call.
+
 ## Guardrails
 
 - Do not weaken fail-closed behavior to make a test pass.

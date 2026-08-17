@@ -2,6 +2,7 @@ from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 
+from apps.tenancy.context import workspace_context
 from apps.tenant_apps.loans.services.risk_snapshots import RiskSnapshotRefreshError, reassess_pawn_loans_batch
 
 
@@ -15,7 +16,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            result = reassess_pawn_loans_batch(workspace_id=options["workspace_id"], as_of_date=options["as_of"], batch_size=options["batch_size"])
+            with workspace_context(options["workspace_id"]):
+                result = reassess_pawn_loans_batch(workspace_id=options["workspace_id"], as_of_date=options["as_of"], batch_size=options["batch_size"])
         except RiskSnapshotRefreshError as exc:
             raise CommandError(str(exc)) from exc
         self.stdout.write(self.style.SUCCESS(f"selected={result['selected']} current={result['current']} errors={len(result['errors'])}"))

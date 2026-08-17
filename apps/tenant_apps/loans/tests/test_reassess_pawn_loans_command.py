@@ -11,7 +11,10 @@ class ReassessPawnLoansCommandTests(SimpleTestCase):
     @patch(
         "apps.tenant_apps.loans.management.commands.reassess_pawn_loans.reassess_pawn_loans_batch"
     )
-    def test_reports_successful_bounded_batch(self, reassess):
+    @patch(
+        "apps.tenant_apps.loans.management.commands.reassess_pawn_loans.workspace_context"
+    )
+    def test_reports_successful_bounded_batch(self, context, reassess):
         reassess.return_value = {"selected": 2, "current": 2, "errors": []}
         output = StringIO()
 
@@ -24,6 +27,7 @@ class ReassessPawnLoansCommandTests(SimpleTestCase):
         )
 
         self.assertIn("selected=2 current=2 errors=0", output.getvalue())
+        context.assert_called_once_with(5)
         reassess.assert_called_once_with(
             workspace_id=5,
             as_of_date=date(2026, 8, 13),
@@ -33,7 +37,10 @@ class ReassessPawnLoansCommandTests(SimpleTestCase):
     @patch(
         "apps.tenant_apps.loans.management.commands.reassess_pawn_loans.reassess_pawn_loans_batch"
     )
-    def test_partial_failure_is_visible_to_scheduler(self, reassess):
+    @patch(
+        "apps.tenant_apps.loans.management.commands.reassess_pawn_loans.workspace_context"
+    )
+    def test_partial_failure_is_visible_to_scheduler(self, context, reassess):
         reassess.return_value = {
             "selected": 2,
             "current": 1,
@@ -51,3 +58,4 @@ class ReassessPawnLoansCommandTests(SimpleTestCase):
             )
 
         self.assertIn("loan=9 error=Missing monitoring policy.", errors.getvalue())
+        context.assert_called_once_with(5)

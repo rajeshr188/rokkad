@@ -53,12 +53,15 @@ CONTRACT_TEST_LABELS = {
         RLS + "LoansRLSIsolationTests.test_root_and_child_rows_are_hidden_without_context",
         RLS + "LoansRLSIsolationTests.test_bulk_child_insert_cannot_spoof_another_workspace",
     ),
-    "CP-JOB-001": ("apps.orgs.test_seed_rls_smoke_command.SeedRLSSmokeWorkspacesCommandTests.test_refuses_an_unsafe_runtime_role",),
+    "CP-JOB-001": (
+        "apps.orgs.test_workspace_seed_commands.WorkspaceSeedCommandContextTests.test_workspace_defaults_opens_its_explicit_context",
+        "apps.orgs.test_workspace_seed_commands.WorkspaceSeedCommandContextTests.test_all_workspaces_passes_each_explicit_id_to_scoped_command",
+        "apps.tenant_apps.loans.tests.test_reassess_pawn_loans_command.ReassessPawnLoansCommandTests.test_reports_successful_bounded_batch",
+    ),
 }
 
 CONTRACT_COVERAGE_GAPS = {
     "CP-AUTH-003": "Platform override evidence does not assert an audit event.",
     "CP-LIFECYCLE-002": "Lifecycle evidence does not assert retained business-row ownership.",
     "CP-DATAPLANE-001": "Loans evidence is not an all-Workspace-model metadata gate.",
-    "CP-JOB-001": "Command evidence does not prove explicit workspace_id context ownership.",
 }

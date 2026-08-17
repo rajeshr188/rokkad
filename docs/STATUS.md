@@ -71,6 +71,11 @@ New source guards enforce exclusive PostgreSQL context setting through
 `workspace_context()` and prevent Party, Loans, Notify v2, and Rates from
 importing subscription models, billing transitions, or provider services.
 
+Phase 8.3 closes `CP-JOB-001`. Workspace seed fan-out and per-Workspace seed
+execution now have direct explicit-ID/context tests. The audit found and fixed
+`reassess_pawn_loans`, which accepted `--workspace-id` but previously required
+an ambient context; the command now owns `workspace_context(workspace_id)`.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace
