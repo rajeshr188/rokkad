@@ -29,6 +29,11 @@ Legacy `/contact/**`, `/girvi/**`, listed `/notify/...`, old dashboard, and
 integer-ID control-plane paths are inbound redirects, not tenancy authorities.
 Retain them until telemetry or an explicit compatibility deadline justifies
 removal; legacy Notify must remain an enumerated allowlist, never a catch-all.
+`apps.tenant_apps` is accepted transitional naming debt; its broad rename is
+deferred because it changes imports and migration references without improving
+RLS. `Company.schema_name` is temporarily the Workspace routing key only. Do
+not treat it as database schema state or rename it in place; a later phase must
+add and backfill an immutable `Company.slug` before switching callers.
 
 Phase 6 URL and shell standardization is complete. Global control-plane pages
 use `/app/...`; Workspace pages and settings use `/w/<workspace_slug>/...`.

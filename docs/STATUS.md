@@ -48,6 +48,13 @@ All are deferred until telemetry or an explicit compatibility deadline supports
 removal. The obsolete Guardian claim is removed from the README; only its
 dependency line remains, blocked on safely normalizing the UTF-16 manifest.
 
+The fifth slice classifies the final broad schema-era names. The
+`apps.tenant_apps` package is deferred naming debt spanning 197 live files and
+three migrations; a rename has no isolation benefit. `Company.schema_name` is
+the current unique Workspace routing key, not database state. ADR
+`2026-08-17-transitional-tenancy-names.md` requires a later additive,
+backfilled, immutable `Company.slug` migration instead of an in-place rename.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace

@@ -35,10 +35,18 @@ Completed first slice:
 
 Still pending:
 
-- classify the `apps.tenant_apps` package name and persisted `schema_name`
-  field separately because both have wide migration/import impact;
 - remove the now-unused Guardian line from the UTF-16 requirements manifest;
-- inventory legacy inbound aliases before deletion.
+
+## Transitional name classification
+
+ADR `2026-08-17-transitional-tenancy-names.md` records the accepted boundary:
+
+- `apps.tenant_apps` is deferred naming debt across 197 live files and three
+  migrations; renaming it does not strengthen RLS;
+- `Company.schema_name` is currently a Workspace routing key, not a PostgreSQL
+  schema selector;
+- the field will be retired only through a separate additive `Company.slug`
+  migration with backfill and bounded inbound compatibility.
 
 ## Legacy inbound route classification
 
