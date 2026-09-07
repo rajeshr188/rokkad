@@ -33,7 +33,7 @@
                         
                         {% if user_role == 'Owner' %}
                         <div>
-<a href="{% url 'workspace_slug_settings_profile' workspace_slug=company.schema_name %}" class="btn btn-outline-primary">
+<a href="{% url 'workspace_slug_settings_profile' workspace_slug=company.slug %}" class="btn btn-outline-primary">
                                 <i class="bi bi-pencil-square"></i> Edit Workspace
                             </a>
                         </div>
@@ -115,7 +115,7 @@
                         <div class="tab-pane fade show active" id="members-pane" role="tabpanel">
                             {% if request.user|has_permission:"orgs.add_membership" %}
                             <div class="mb-4" id="form">
-                                <button class="btn btn-success" hx-get="{% url 'workspace_slug_settings_invite' workspace_slug=company.schema_name %}"
+                                <button class="btn btn-success" hx-get="{% url 'workspace_slug_settings_invite' workspace_slug=company.slug %}"
                                         hx-target="#form" hx-swap="innerHTML" hx-push-url="true">
                                     <i class="bi bi-person-plus"></i> Invite Team Member
                                 </button>
@@ -262,7 +262,7 @@
                                 Archive this workspace to stop access while preserving its tenant schema and records.
                             </p>
                         </div>
-                        <a href="{% url 'workspace_slug_settings_archive' workspace_slug=company.schema_name %}" class="btn btn-outline-danger">
+                        <a href="{% url 'workspace_slug_settings_archive' workspace_slug=company.slug %}" class="btn btn-outline-danger">
                             <i class="bi bi-archive me-1"></i>Archive Workspace
                         </a>
                     </div>

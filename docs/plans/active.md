@@ -1,12 +1,27 @@
 ---
 status: active
 owner: project
-updated: 2026-08-16
+updated: 2026-09-08
 tags: [plans, active, retirement, girvi, contact, notify, dea, party, configuration]
 related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, contact-girvi-legacy-notify-retirement.md, django-tenants-removal.md]
 ---
 
-## Active: control-plane Phase 9 app conformance
+## Current checkpoint
+
+Control-plane Phases 8 and 9, Loans Workspace routing (Phase 10), and the
+immutable Workspace slug migration (Phase 11) are complete. The September 8
+checkpoint review passes 664 regression tests. See [current status](../STATUS.md)
+and [the migration record](../implementation/workspace-slug-migration.md).
+
+The supported apps are Party, Loans, Notify v2, and Rates. Shared-schema
+PostgreSQL forced RLS is implemented; Contact, Girvi, legacy Notify, and
+DEA/accounting are retired. The Loans UI redesign remains deferred. A new
+development phase has not yet been selected.
+
+The entries below preserve earlier planning context; their active/proposed
+labels are historical and do not override this checkpoint or current ADRs.
+
+## Historical: control-plane Phase 9 app conformance
 
 Party, Loans, Notify v2, and Rates are being converged on `WorkspaceAccess`
 action-code authorization without changing domain workflows.

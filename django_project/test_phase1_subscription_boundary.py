@@ -10,7 +10,7 @@ class Phase1SubscriptionBoundaryTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.middleware = SubscriptionValidationMiddleware(lambda request: None)
-        self.workspace = SimpleNamespace(id=7, schema_name="acme")
+        self.workspace = SimpleNamespace(id=7, slug="acme", schema_name="legacy_acme")
 
     def _request(self, path):
         request = self.factory.get(path)

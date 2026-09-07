@@ -125,7 +125,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
             return None
 
         # Skip public schema
-        if workspace.schema_name == "public":
+        if workspace.slug == "public":
             return None
 
         # Centralized subscription evaluation.
@@ -138,7 +138,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                 )
                 return redirect(
                     "workspace_subscriptions:plan-list",
-                    workspace_slug=workspace.schema_name,
+                    workspace_slug=workspace.slug,
                 )
 
             decision = effective_billing_state(subscription)
@@ -160,7 +160,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                         )
                         return redirect(
                             "workspace_subscriptions:plan-list",
-                            workspace_slug=workspace.schema_name,
+                            workspace_slug=workspace.slug,
                         )
 
                     return None
@@ -168,7 +168,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                 messages.warning(request, decision.message or "Subscription access is unavailable.")
                 return redirect(
                     "workspace_subscriptions:dashboard",
-                    workspace_slug=workspace.schema_name,
+                    workspace_slug=workspace.slug,
                 )
 
             if subscription and getattr(subscription, "end_date", None):

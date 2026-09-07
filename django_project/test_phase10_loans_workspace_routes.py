@@ -2,10 +2,11 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import Client, TestCase, override_settings
 from django.urls import resolve
 
-from apps.orgs.models import Company, Membership, Role
+from apps.orgs.models import Company, Domain, Membership, Role
 from apps.subscriptions.models import Plan, Subscription
 from apps.tenancy.context import workspace_context
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnLoan
@@ -14,6 +15,8 @@ from apps.tenant_apps.party.models import Party
 
 
 @override_settings(
+    ALLOWED_HOSTS=["testserver", "phase11-a.test", "phase11-b.test"],
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {
@@ -33,16 +36,23 @@ class LoansWorkspaceRouteContractTests(TestCase):
             price=0,
             description="Route contract trial",
         )
-        self.workspace_a = self._workspace("phase10-a")
-        self.workspace_b = self._workspace("phase10-b")
+        self.workspace_a = self._workspace("workspace-a", "legacy_schema_a")
+        self.workspace_b = self._workspace("workspace-b", "legacy_schema_b")
+        Domain.objects.create(
+            tenant=self.workspace_a, domain="phase11-a.test", is_primary=True
+        )
+        Domain.objects.create(
+            tenant=self.workspace_b, domain="phase11-b.test", is_primary=True
+        )
         self.loan_a = self._loan(self.workspace_a, "P10-A")
         self.loan_b = self._loan(self.workspace_b, "P10-B")
         self.client = Client()
         self.client.force_login(self.user)
 
-    def _workspace(self, slug):
+    def _workspace(self, slug, schema_name):
         workspace = Company.objects.create(
-            schema_name=slug,
+            schema_name=schema_name,
+            slug=slug,
             name=slug,
             owner=self.user,
             creator=self.user,
@@ -80,7 +90,7 @@ class LoansWorkspaceRouteContractTests(TestCase):
             )
 
     def _detail_url(self, workspace, loan):
-        return f"/w/{workspace.schema_name}/loans/internal/{loan.pk}/"
+        return f"/w/{workspace.slug}/loans/internal/{loan.pk}/"
 
     def test_explicit_path_controls_workspace_and_rls_visibility(self):
         response = self.client.get(self._detail_url(self.workspace_a, self.loan_a))
@@ -90,7 +100,7 @@ class LoansWorkspaceRouteContractTests(TestCase):
         self.assertContains(response, "P10-A")
 
     def test_named_workspace_loan_aliases_precede_the_deep_route_dispatcher(self):
-        match = resolve(f"/w/{self.workspace_a.schema_name}/loans/list/")
+        match = resolve(f"/w/{self.workspace_a.slug}/loans/list/")
 
         self.assertEqual(match.url_name, "workspace_slug_loan_list")
 
@@ -98,6 +108,43 @@ class LoansWorkspaceRouteContractTests(TestCase):
         response = self.client.get(self._detail_url(self.workspace_b, self.loan_a))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_unknown_slug_fails_closed(self):
+        response = self.client.get(
+            f"/w/unknown-workspace/loans/internal/{self.loan_a.pk}/"
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_matching_domain_and_slug_resolve_the_same_workspace(self):
+        response = self.client.get(
+            self._detail_url(self.workspace_a, self.loan_a),
+            HTTP_HOST="phase11-a.test",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.wsgi_request.workspace, self.workspace_a)
+
+    def test_conflicting_domain_and_slug_fail_closed(self):
+        response = self.client.get(
+            self._detail_url(self.workspace_b, self.loan_b),
+            HTTP_HOST="phase11-a.test",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_schema_name_is_not_accepted_as_route_identity(self):
+        response = self.client.get(
+            f"/w/{self.workspace_a.schema_name}/loans/internal/{self.loan_a.pk}/"
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_workspace_slug_is_immutable(self):
+        self.workspace_a.slug = "renamed-workspace"
+
+        with self.assertRaisesRegex(ValidationError, "immutable"):
+            self.workspace_a.save()
 
     def test_profile_preference_cannot_override_explicit_path(self):
         self.user.profile.workspace = self.workspace_b

@@ -17,7 +17,7 @@
                     </p>
                 </div>
                 {% if 'team_invite' in user_permissions %}
-                <a href="{% url 'workspace_slug_settings_invite' workspace_slug=workspace.schema_name %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'workspace_slug_settings_invite' workspace_slug=workspace.slug %}" class="btn btn-primary btn-sm">
                     <i class="bi bi-person-plus"></i> Invite Member
                 </a>
                 {% endif %}
@@ -38,7 +38,7 @@
                         Includes active workspace members. Remaining seats: {{ seat_capacity.members_remaining }}.
                     </div>
                 </div>
-                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.schema_name %}" class="btn btn-sm btn-outline-primary">
+                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.slug %}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-arrow-up-right"></i> Upgrade plan
                 </a>
             </div>

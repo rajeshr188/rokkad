@@ -87,7 +87,7 @@ These decisions cover every detailed finding in the source audit.
 |---|---|---|
 | F-01 Hard deletion enabled by default | **FIX NOW** | Make hard deletion disabled by default and remove it from ordinary/bulk admin workflows. Keep explicit model capability only for controlled development/operations until a later purge policy exists. |
 | F-02 Optional email verification | **SIMPLIFY** | Keep general signup verification optional for MVP, but require the authenticated account to prove control of the matching invited email before invitation acceptance creates membership. Keep ordinary allauth; add no custom identity service. |
-| F-03 Profile workspace used as tenant fallback | **FIX NOW** | Stop using `UserProfile.workspace` as schema authority. Retain it as navigation preference only. Domain or `/w/<schema_name>/` is authoritative. |
+| F-03 Profile workspace used as tenant fallback | **FIX NOW** | Stop using `UserProfile.workspace` as Workspace authority. Retain it as navigation preference only. Domain or `/w/<workspace_slug>/` is authoritative. |
 | F-04 Billing coupled to tenant admission | **SIMPLIFY** | Membership and tenant state decide schema access. Subscription checks occur after tenant context at explicitly gated product boundaries. Do not build a generic `FULL/READ_ONLY/BILLING_ONLY` access-mode engine. |
 | F-05 Competing ownership sources | **DELETE** | Delete `CompanyOwnership` after reference/data verification. `Company.owner` is the sole current-owner authority; `AuditLog` records transfers. |
 | F-06 Duplicate invitation state | **DELETE** | Delete `PendingInvitation` and its bridging signals after preserving invite-before-signup behavior directly through `CompanyInvitation`. |
@@ -171,7 +171,7 @@ Keep existing `SubscriptionEntitlement` rows if they are already used as effecti
 #### `orgs.Company`
 
 - The `django-tenants` tenant registry model.
-- Owns immutable `schema_name`, display name, current owner, archive flag, suspension flag, branding and timestamps.
+- Owns immutable `slug`, display name, current owner, archive flag, suspension flag, branding and timestamps. Legacy `schema_name` is non-routing metadata.
 - `auto_drop_schema` remains false.
 - Does not own plan features, module settings, business policy, or tenant business data.
 
@@ -434,7 +434,7 @@ Rules:
 
 ### Tenancy
 
-6. `schema_name` is valid, unique, reserved-name safe and immutable.
+6. `slug` is URL-safe, valid, unique, reserved-name safe and immutable.
 7. Domain/path tenant identity is authoritative; profile state is never authoritative.
 8. Membership and tenant availability are checked in public before `set_tenant`.
 9. Tenant ORM work occurs only after explicit tenant context is established.
@@ -470,7 +470,7 @@ Public routes:
 Tenant routes:
 
 1. Reset to public before tenant registry lookup.
-2. Resolve Company from validated domain or canonical `/w/<schema_name>/` path.
+2. Resolve Company from validated domain or canonical `/w/<workspace_slug>/` path using `Company.slug`.
 3. If both exist, they must identify the same Company.
 4. Require authentication, non-archived/non-suspended Company and Membership.
 5. Call `connection.set_tenant(company)` once.

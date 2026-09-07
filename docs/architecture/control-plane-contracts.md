@@ -411,7 +411,7 @@ Forbidden for new code:
 | `workspace_context(workspace_id)` | CANONICAL | Only normal RLS-context setter | — |
 | `current_workspace_id()` | ALLOWED | Validation/internal ownership support, not request resolution | — |
 | `WorkspaceOwnedModel` | CANONICAL | Required owned-table base/equivalent | — |
-| `Company.schema_name` as routing slug | TRANSITIONAL | Immutable `Workspace.slug` field/name | Phase 6/7 |
+| `Company.slug` as routing identity | STABLE | Immutable unique Workspace slug | Phase 11 complete |
 | `Membership(user, company)` | CANONICAL | Sole ordinary relationship | Phase 2 constraints |
 | `Company.owner_id` | CANONICAL | Sole ownership authority | Phase 2 hardening |
 | Owner Membership | ALLOWED DERIVED MIRROR | Must match `Company.owner_id` | Phase 2 |

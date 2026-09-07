@@ -20,7 +20,7 @@ class WorkspaceClient(Client):
         """Return the explicit path-scoped form of a legacy business URL."""
         if not url.startswith("/"):
             raise ValueError("Workspace URLs must be absolute paths.")
-        return f"/w/{self.workspace.schema_name}{url}"
+        return f"/w/{self.workspace.slug}{url}"
 
     def workspace_get(self, url, data=None, **extra):
         return self.get(self.workspace_url(url), data=data, **extra)
@@ -107,7 +107,7 @@ class WorkspaceTestCase(TestCase):
         from apps.subscriptions.models import Plan, Subscription
 
         plan = Plan.objects.create(
-            name=f"Test trial for {self.tenant.schema_name}",
+            name=f"Test trial for {self.tenant.slug}",
             tier=Plan.PlanTierChoices.STARTER,
             price=0,
             description="Workspace test harness trial",
@@ -118,7 +118,7 @@ class WorkspaceTestCase(TestCase):
     def workspace_reverse(self, viewname, *, args=None, kwargs=None):
         """Reverse a business route beneath the explicit Workspace path."""
         url = reverse(viewname, args=args, kwargs=kwargs)
-        return f"/w/{self.tenant.schema_name}{url}"
+        return f"/w/{self.tenant.slug}{url}"
 
     def assertWorkspaceRedirects(self, response, viewname, *, args=None, kwargs=None, **assertion_kwargs):
         """Assert that a response stays on the canonical Workspace route."""
@@ -132,6 +132,6 @@ class WorkspaceTestCase(TestCase):
         """Keep legacy Loans expectations honest when the response is canonical."""
         if expected_url.startswith("/loans/") and response.headers.get(
             "Location", ""
-        ).startswith(f"/w/{self.tenant.schema_name}/loans/"):
-            expected_url = f"/w/{self.tenant.schema_name}{expected_url}"
+        ).startswith(f"/w/{self.tenant.slug}/loans/"):
+            expected_url = f"/w/{self.tenant.slug}{expected_url}"
         return super().assertRedirects(response, expected_url, *args, **kwargs)

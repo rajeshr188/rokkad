@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
 from invitations import signals
 from invitations.adapters import get_invitations_adapter
 from invitations.app_settings import app_settings
@@ -31,9 +32,9 @@ class Company(models.Model):
         ARCHIVED = "ARCHIVED", _("Archived")
         DELETION_PENDING = "DELETION_PENDING", _("Deletion pending")
 
-    # Transitional routing key. It remains named schema_name until all callers
-    # move to the shared-schema Workspace slug contract.
+    # Retained legacy schema-tenancy metadata. It is not routing authority.
     schema_name = models.CharField(max_length=63, unique=True, db_index=True)
+    slug = models.SlugField(max_length=63, unique=True, db_index=True)
     name = models.CharField(_("Name"), max_length=200, unique=True)
     theme = ColorField(default="#FF0000")
     logo = models.ImageField(upload_to="company_logos/", null=True, blank=True)
@@ -86,11 +87,16 @@ class Company(models.Model):
     def get_absolute_url(self):
         return reverse("workspace_detail", kwargs={"workspace_id": self.id})
 
-    @property
-    def slug(self):
-        """Compatibility routing slug during the schema-name rename."""
-
-        return self.schema_name
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.schema_name or self.name)[:63]
+        if self.pk:
+            original_slug = type(self).all_objects.filter(pk=self.pk).values_list(
+                "slug", flat=True
+            ).first()
+            if original_slug is not None and self.slug != original_slug:
+                raise ValidationError("Workspace slug is immutable after creation.")
+        super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         """Physical erasure is not an ordinary model operation."""

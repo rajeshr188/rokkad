@@ -94,7 +94,7 @@ def workspace_context(request):
     workspace = _resolve_workspace(request)
     preferred_workspace = resolve_preferred_workspace(request.user)
 
-    in_tenant = workspace and workspace.schema_name != "public"
+    in_tenant = workspace and workspace.slug != "public"
 
     return {
         "in_tenant": in_tenant,

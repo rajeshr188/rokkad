@@ -216,7 +216,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         self.assertIn("raise Http404(\"Invalid workspace ID\")", views_content)
         self.assertIn('"workspace_slug_settings_invitations"', views_content)
         self.assertIn(
-            'kwargs={"workspace_slug": invitation.company.schema_name}',
+            'kwargs={"workspace_slug": invitation.company.slug}',
             views_content,
         )
 
@@ -262,7 +262,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         self.assertIn("user.profile.workspace = invitation.company", views_content)
         self.assertIn('"workspace_slug_dashboard",', views_content)
         self.assertIn(
-            "workspace_slug=invitation.company.schema_name",
+            "workspace_slug=invitation.company.slug",
             views_content,
         )
         self.assertIn("control_plane.decline_invitation(", views_content)
@@ -320,7 +320,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
             "control_plane.accept_invitation(",
             "request.user.profile.workspace = invitation.company",
             '"workspace_slug_dashboard",',
-            "workspace_slug=invitation.company.schema_name",
+            "workspace_slug=invitation.company.slug",
             "def companyinvitations_list(request, workspace_id=None):",
             'required_permissions={"team_invite"}',
             "def invitation_delete(request, invitation_id):",

@@ -24,10 +24,10 @@
         </div>
     </div>
     <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_parties' workspace_slug=user_workspace.schema_name %}{% else %}{% url 'party:party_list' %}{% endif %}">
+        <a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_parties' workspace_slug=user_workspace.slug %}{% else %}{% url 'party:party_list' %}{% endif %}">
             <i class="bi bi-arrow-left"></i> Back
         </a>
-        <a class="btn btn-primary" href="{% if user_workspace %}{% url 'workspace_slug_party_update' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_update' party.pk %}{% endif %}">
+        <a class="btn btn-primary" href="{% if user_workspace %}{% url 'workspace_slug_party_update' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_update' party.pk %}{% endif %}">
             <i class="bi bi-pencil"></i> Edit
         </a>
     </div>
@@ -166,7 +166,7 @@
                     <button class="btn btn-primary" type="submit">{% if edit_relationship %}Save{% else %}Add{% endif %}</button>
                 </div>
                 {% if edit_relationship %}
-                <div class="col-12"><a class="btn btn-outline-secondary btn-sm" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=relationships">Cancel</a></div>
+                <div class="col-12"><a class="btn btn-outline-secondary btn-sm" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=relationships">Cancel</a></div>
                 {% endif %}
             </div>
         </form>
@@ -181,11 +181,11 @@
                             {% for relationship in party.relationships_from.all %}
                             <tr>
                                 <td>{{ relationship.get_relationship_type_display }}</td>
-                                <td><a href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=relationship.to_party.pk %}{% else %}{% url 'party:party_detail' relationship.to_party.pk %}{% endif %}">{{ relationship.to_party.display_name }}</a></td>
+                                <td><a href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=relationship.to_party.pk %}{% else %}{% url 'party:party_detail' relationship.to_party.pk %}{% endif %}">{{ relationship.to_party.display_name }}</a></td>
                                 <td>{{ relationship.is_active|yesno:"Active,Inactive" }}</td>
                                 <td>{{ relationship.notes|default:"-" }}</td>
                                 <td class="text-end">
-                                    <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=relationships&edit_relationship={{ relationship.pk }}"><i class="bi bi-pencil"></i></a>
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=relationships&edit_relationship={{ relationship.pk }}"><i class="bi bi-pencil"></i></a>
                                     <form method="post" action="{% url 'party:party_relationship_delete' party.pk relationship.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                                 </td>
                             </tr>
@@ -202,7 +202,7 @@
                         <tbody>
                             {% for relationship in party.relationships_to.all %}
                             <tr>
-                                <td><a href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=relationship.from_party.pk %}{% else %}{% url 'party:party_detail' relationship.from_party.pk %}{% endif %}">{{ relationship.from_party.display_name }}</a></td>
+                                <td><a href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=relationship.from_party.pk %}{% else %}{% url 'party:party_detail' relationship.from_party.pk %}{% endif %}">{{ relationship.from_party.display_name }}</a></td>
                                 <td>{{ relationship.get_relationship_type_display }}</td>
                                 <td>{{ relationship.is_active|yesno:"Active,Inactive" }}</td>
                             </tr>
@@ -227,7 +227,7 @@
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button class="btn btn-primary" type="submit">{% if edit_contact %}Save{% else %}Add{% endif %}</button>
-                    {% if edit_contact %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=contacts">Cancel</a>{% endif %}
+                    {% if edit_contact %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=contacts">Cancel</a>{% endif %}
                 </div>
             </div>
         </form>
@@ -243,7 +243,7 @@
                         <td>{{ contact.is_primary|yesno:"Yes,No" }}</td>
                         <td>{{ contact.is_verified|yesno:"Yes,No" }}</td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=contacts&edit_contact={{ contact.pk }}"><i class="bi bi-pencil"></i></a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=contacts&edit_contact={{ contact.pk }}"><i class="bi bi-pencil"></i></a>
                             <form method="post" action="{% url 'party:party_contact_delete' party.pk contact.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                         </td>
                     </tr>
@@ -269,7 +269,7 @@
                 <div class="col-md-1 d-flex align-items-end"><div class="form-check mb-2">{{ address_form.is_default }} <label class="form-check-label" for="{{ address_form.is_default.id_for_label }}">Default</label></div></div>
                 <div class="col-12 d-flex gap-2">
                     <button class="btn btn-primary" type="submit">{% if edit_address %}Save{% else %}Add{% endif %}</button>
-                    {% if edit_address %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=addresses">Cancel</a>{% endif %}
+                    {% if edit_address %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=addresses">Cancel</a>{% endif %}
                 </div>
             </div>
         </form>
@@ -285,7 +285,7 @@
                         <td>{{ address.is_default|yesno:"Yes,No" }}</td>
                         <td>{{ address.is_verified|yesno:"Yes,No" }}</td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=addresses&edit_address={{ address.pk }}"><i class="bi bi-pencil"></i></a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=addresses&edit_address={{ address.pk }}"><i class="bi bi-pencil"></i></a>
                             <form method="post" action="{% url 'party:party_address_delete' party.pk address.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                         </td>
                     </tr>
@@ -409,7 +409,7 @@
                         <div class="col-md-6">{{ identifier_form.value.label_tag }}{{ identifier_form.value }}{{ identifier_form.value.errors }}</div>
                         <div class="col-md-6">{{ identifier_form.masked_value.label_tag }}{{ identifier_form.masked_value }}</div>
                         <div class="col-md-6">{{ identifier_form.expires_on.label_tag }}{{ identifier_form.expires_on }}</div>
-                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_identifier %}Save{% else %}Add{% endif %}</button>{% if edit_identifier %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc">Cancel</a>{% endif %}</div>
+                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_identifier %}Save{% else %}Add{% endif %}</button>{% if edit_identifier %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc">Cancel</a>{% endif %}</div>
                     </div>
                 </form>
                 <table class="table table-sm">
@@ -420,7 +420,7 @@
                             <td>{{ identifier.masked_value|default:identifier.value }}</td>
                             <td>{{ identifier.is_verified|yesno:"Verified,Pending" }}</td>
                             <td class="text-end">
-                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_identifier={{ identifier.pk }}"><i class="bi bi-pencil"></i></a>
+                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_identifier={{ identifier.pk }}"><i class="bi bi-pencil"></i></a>
                                 <form method="post" action="{% url 'party:party_identifier_delete' party.pk identifier.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                             </td>
                         </tr>
@@ -439,7 +439,7 @@
                         <div class="col-md-6">{{ document_form.identifier.label_tag }}{{ document_form.identifier }}</div>
                         <div class="col-md-6">{{ document_form.expires_on.label_tag }}{{ document_form.expires_on }}</div>
                         <div class="col-12">{{ document_form.file.label_tag }}{{ document_form.file }}{{ document_form.file.errors }}</div>
-                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_document %}Save{% else %}Add{% endif %}</button>{% if edit_document %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc">Cancel</a>{% endif %}</div>
+                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_document %}Save{% else %}Add{% endif %}</button>{% if edit_document %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc">Cancel</a>{% endif %}</div>
                     </div>
                 </form>
                 <table class="table table-sm">
@@ -450,7 +450,7 @@
                             <td>{% if document.file %}<a href="{{ document.file.url }}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}</td>
                             <td>{{ document.is_verified|yesno:"Verified,Pending" }}</td>
                             <td class="text-end">
-                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>
+                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>
                                 <form method="post" action="{% url 'party:party_document_delete' party.pk document.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                             </td>
                         </tr>

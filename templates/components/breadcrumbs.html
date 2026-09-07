@@ -22,7 +22,7 @@ Context:
     
     {% if in_tenant and workspace_name %}
       <li class="breadcrumb-item">
-        <a href="{% url 'workspace_slug_dashboard' workspace_slug=user.profile.workspace.schema_name %}">
+        <a href="{% url 'workspace_slug_dashboard' workspace_slug=user.profile.workspace.slug %}">
           📦 {{ workspace_name }}
         </a>
       </li>

@@ -1,12 +1,37 @@
 ---
 status: active
 owner: project
-updated: 2026-08-17
+updated: 2026-09-08
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
 
 # Status
+
+## 2026-09-08 — Phase 11 checkpoint verification
+
+Reviewed the immutable Workspace slug migration, creation services, canonical
+route lookups, navigation, billing member-count repair, and test changes.
+The fresh-database combined regression gate passes 664/664 tests, including
+the full Loans suite, orgs and subscriptions modules, Phase 10/11 routes,
+control-plane contracts, Phase 9 conformance, shell rendering, business
+entrypoints, and invitation/team route intent.
+
+Verification also passes Django system checks (one configured silencing),
+migration drift, applied-migration checks, and whitespace checks. The local
+four-Workspace foundation inventory reports zero integrity findings.
+
+The broader review corrected a lifecycle mock missing `slug` and replaced
+obsolete invitation acceptance mocks with focused tests of the current identity
+policy; database-backed Phase 5 tests retain locked acceptance and rejection
+coverage. Use `--top-level-directory .` for combined discovery so aggregate
+gates and Loans discovery import the same test modules. The initial combined
+run loaded RLS fixtures twice under different module names; the final run used
+a fresh test database and consistent imports.
+
+The active-plan index and memory now identify Phase 11 as the current completed
+checkpoint. Older phase-next statements are historical. Loans UI redesign
+remains deferred; no new development phase has been selected.
 
 ## 2026-08-17 — Phase 7 residue cleanup complete
 
@@ -121,6 +146,44 @@ WhatsApp provider configuration separately requires
 are gone from Notify v2; only the nine reviewed Loans modules remain in the
 frozen baseline. All 38 Notify v2 tests pass.
 
+A pre-Loans Phase 9 regression review fixed business-app navigation that dropped
+explicit Workspace identity after a successful Workspace switch. The sidebar,
+module registry, loan choice, dashboard Rates action, and setup checklist now
+emit `/w/<workspace_slug>/...` entrypoints; Notify v2 and other adapters invoke
+their business views without redirecting to unscoped URLs. An end-to-end gate
+proves Parties, Loans, Notify v2, and Rates retain `request.workspace` and do not
+emit the false “select a workspace” message. Profile fallback remains forbidden.
+
+Phase 9.5 begins Loans conversion at its central access helper. Membership and
+platform override now come only from `WorkspaceAccess`; ordinary Loans entry
+requires `data.view`, setup requires `workspace.settings.manage`, and the
+existing owner-only boundary uses the Owner-only `workspace.transfer` action.
+Eight reviewed Loans service/view modules remain. Focused access, nonmember,
+slug-scoped business-entry, Phase 9, and control-plane contract gates pass. The
+legacy setup browser fixture still uses unscoped `/loans/...` URLs and redirects
+before authorization, so it is not treated as evidence against this slice.
+
+Phase 9.6 converts the Owner-only Loans custody workflow. Collateral storage,
+physical verification, and custody web helpers now consume the canonical
+Owner-only `workspace.transfer` action through `WorkspaceAccess`; storage and
+verification lifecycle rules remain unchanged. A notice fixture now restores
+the required mirrored Owner Membership that the retired owner-ID shortcut had
+masked. Focused authorization, eight notice tests, and four service-level
+collateral/storage/verification tests pass. Five reviewed Loans modules remain.
+
+Phase 9 is complete. The final Loans slice converts auction and reversal
+services plus financial, report, and broad view helpers to `WorkspaceAccess`.
+Administrator workflows use `workspace.settings.manage`; Owner-only custody
+continues to use `workspace.transfer`. The supported-app direct authorization
+baseline is zero and a single aggregate Phase 9 gate covers Party, Rates,
+Notify v2, Loans, and the source guard. Verification passes 34 economics/
+auction/reversal/report tests, the 34-test Phase 9 aggregate gate, the 12-test
+four-app restricted-role RLS gate, zero foundation integrity findings, Django
+checks, and migration drift. Full Loans
+discovery runs 404 tests: 315 pass, while 89 legacy browser failures/errors are
+pre-view redirects caused by unscoped `/loans/...` fixtures without billing;
+they are recorded harness modernization debt, not bypassed by profile fallback.
+
 ## 2026-08-17 — Phase 6 URL and control-plane UI standardization complete
 
 The global shell remains rooted at `/app/`, while authenticated Workspace
@@ -181,6 +244,13 @@ BillingAccount and typed entitlement projection atomically, and appends a
 `trial.started` SubscriptionEvent. Workspace creation itself still grants no
 commercial access. Development enables this flow explicitly; production keeps
 it disabled until commercial policy approves it.
+
+- 2026-08-17: The Workspace billing dashboard now gets its user count from the
+  canonical Workspace membership-usage service and passes that value explicitly
+  to the template. This removes stale reads of the deleted
+  `Subscription.current_user_count` attribute, restores the usage/overage card,
+  and adds a full-client regression for the slug-scoped dashboard. The complete
+  subscriptions suite passes 24/24.
 
 - 2026-08-17: Workspace billing navigation now reverses only the canonical
   `workspace_subscriptions` routes with an explicit Workspace slug. The shared
@@ -3228,6 +3298,49 @@ Rokkad is moving toward a layered architecture:
 - LPD7's logical-layout/physical-print-profile architecture is committed but runtime implementation remains deferred. A pre-pilot compatibility guard now flags any active configured loan-ticket assignment that omits Original or Duplicate; the fixed fallback is compliant. The `jcl1` preflight has zero document-integrity findings after safely revalidating one unassigned pre-schema-change draft. The remaining document gate is the real A4/A5/simplex/duplex printer matrix.
 
 - Girvi/Loans operator parity-pilot preparation has started with a concrete 12-scenario runbook and weighted scorecard. The `jcl1` baseline contains 8 Loans PawnLoans and 8 Girvi GivenLoans, uses explicit `DEFERRED` accounting, has zero document-integrity findings, and has no storage/verification/operational-notice evidence yet. The official score is not running because current accounting/Girvi runtime changes are uncommitted. A 191-test combined gate exceeded both five- and ten-minute limits and exposed an implicit-DEA test assumption; that focused test passes once DEA is selected explicitly. Migration-drift checks for DEA, Loans, and Girvi are clean. Consolidate the runtime checkpoint and run smaller completed product gates before operator scoring.
+
+## Phase 10 — Loans workspace-route modernization
+
+- Complete on 2026-08-17. The original Loans regression gate is restored from
+  315/404 to 404/404 passing.
+- The full existing Loans URL surface is reachable canonically beneath
+  `/w/<Company.slug>/loans/...`. Middleware resolves the path Workspace,
+  validates Membership, establishes `request.workspace` and the PostgreSQL RLS
+  context, and only then dispatches to the existing Loans view.
+- Canonical responses rewrite Loans-local links, form/HTMX targets, and redirect
+  locations to remain under the explicit Workspace path. `/loans/...` remains
+  an inbound compatibility surface and does not use profile preference as
+  authority.
+- `WorkspaceTestCase` now provides explicit primitives for a Workspace client,
+  real active trial, Workspace URL reversal, and canonical redirect assertions.
+  No test-only billing or authorization bypass exists.
+- Eight additional route-contract tests prove explicit path authority,
+  cross-Workspace denial, profile mismatch behavior, removed-membership denial,
+  real subscription allow/deny behavior, independent multi-Workspace access,
+  fail-closed legacy routing, and named-route precedence over the deep-route
+  dispatcher.
+- Phase 11 subsequently replaced transitional `Company.schema_name` routing
+  with immutable `Company.slug`. The Loans UI redesign remains deferred.
+
+## Phase 11 — Immutable Workspace slug migration
+
+- Complete on 2026-08-18. `Company.slug` is now unique, non-null, URL-safe,
+  creation-assigned, and immutable after creation.
+- `/w/<workspace_slug>/...` resolves exclusively through `Company.slug`.
+  Domain/path conflicts still return 403; unknown and legacy schema-name paths
+  fail closed. No profile fallback exists.
+- Development migration `orgs.0005_company_immutable_slug` backfilled all four
+  local Workspaces without collision or data deletion.
+- All visible Workspace reversals and links use `.slug`. `schema_name` remains
+  only as classified legacy schema-tenancy metadata, public-schema compatibility,
+  and literal backup/import vocabulary.
+- Membership, `request.workspace`, numeric PostgreSQL RLS context, subscription
+  enforcement, and authorization policy are unchanged.
+- The clean Loans regression gate remains 404/404. The combined Phase 10/11
+  route contract is 13/13.
+- The immutable-slug decision and inventory are recorded in
+  `docs/adr/2026-08-18-immutable-workspace-slug.md` and
+  `docs/implementation/workspace-slug-migration.md`.
 
 ## Known Pressure Points
 

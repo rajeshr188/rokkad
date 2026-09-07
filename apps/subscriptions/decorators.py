@@ -28,7 +28,7 @@ def subscription_feature_required(feature_code):
                 )
                 return redirect(
                     "workspace_subscriptions:dashboard",
-                    workspace_slug=workspace.schema_name,
+                    workspace_slug=workspace.slug,
                 )
 
             return view_func(request, *args, **kwargs)

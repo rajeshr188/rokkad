@@ -64,8 +64,8 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 		)
 		self.assertIsNone(workspace_slug)
 
-	def test_resolve_workspace_from_path_supports_schema_name_slug(self):
-		workspace = SimpleNamespace(id=7, schema_name="acme_workspace")
+	def test_resolve_workspace_from_path_supports_workspace_slug(self):
+		workspace = SimpleNamespace(id=7, slug="acme_workspace")
 		fake_filtered = SimpleNamespace(first=lambda: workspace)
 		request = SimpleNamespace(path="/w/acme_workspace/parties/")
 
@@ -73,9 +73,7 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 			resolved = self.middleware._resolve_workspace_from_path(request)
 
 		self.assertIs(resolved, workspace)
-		mock_filter.assert_called_once_with(
-			schema_name="acme_workspace",
-		)
+		mock_filter.assert_called_once_with(slug="acme_workspace")
 
 	def test_resolve_workspace_from_path_ignores_public_schema_slug(self):
 		request = SimpleNamespace(path=f"/w/{get_public_schema_name()}/")
@@ -87,8 +85,8 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 		mock_filter.assert_not_called()
 
 	def test_select_workspace_candidate_prefers_domain(self):
-		domain_workspace = SimpleNamespace(id=1, schema_name="acme")
-		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
+		domain_workspace = SimpleNamespace(id=1, slug="acme")
+		path_workspace = SimpleNamespace(id=2, slug="path_ws")
 
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=domain_workspace,
@@ -99,7 +97,7 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 		self.assertEqual(source, "domain")
 
 	def test_select_workspace_candidate_uses_path_but_never_profile(self):
-		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
+		path_workspace = SimpleNamespace(id=2, slug="path_ws")
 
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=None,
@@ -119,14 +117,14 @@ class SecureWorkspaceMiddlewareTests(SimpleTestCase):
 class TenantContextResolverTests(SimpleTestCase):
 	def test_prefers_request_workspace(self):
 		request = SimpleNamespace(
-			workspace=SimpleNamespace(schema_name="workspace_a"),
+			workspace=SimpleNamespace(slug="workspace_a"),
 			user=SimpleNamespace(is_authenticated=False),
 		)
 		workspace = resolve_request_workspace(request)
-		self.assertEqual(workspace.schema_name, "workspace_a")
+		self.assertEqual(workspace.slug, "workspace_a")
 
 	def test_does_not_fallback_to_profile_workspace_by_default(self):
-		profile_workspace = SimpleNamespace(schema_name="tenant_b")
+		profile_workspace = SimpleNamespace(slug="tenant_b")
 		request = SimpleNamespace(
 			workspace=None,
 			user=SimpleNamespace(
@@ -138,7 +136,7 @@ class TenantContextResolverTests(SimpleTestCase):
 		self.assertIsNone(workspace)
 
 	def test_request_tenant_alias_is_not_a_resolution_source(self):
-		profile_workspace = SimpleNamespace(schema_name="tenant_b")
+		profile_workspace = SimpleNamespace(slug="tenant_b")
 		request = SimpleNamespace(
 			workspace=None,
 			tenant=profile_workspace,
@@ -310,7 +308,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 			profile=SimpleNamespace(set_workspace=lambda *_args, **_kwargs: None),
 		)
 
-		workspace = SimpleNamespace(id=12, name="WS-12", schema_name="ws-12")
+		workspace = SimpleNamespace(id=12, name="WS-12", slug="ws-12")
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
@@ -339,7 +337,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 			profile=SimpleNamespace(set_workspace=lambda workspace: set_calls.append(workspace.id)),
 		)
 
-		workspace = SimpleNamespace(id=12, name="WS-12", schema_name="ws-12")
+		workspace = SimpleNamespace(id=12, name="WS-12", slug="ws-12")
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
@@ -371,7 +369,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 	def test_workspace_select_accepts_only_same_host_next_target(self):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=12, name="WS-12", schema_name="ws-12")
+		workspace = SimpleNamespace(id=12, name="WS-12", slug="ws-12")
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		for next_target, expected_redirect in (
@@ -747,8 +745,8 @@ class DomainPathMismatchTests(SimpleTestCase):
 		Non-admin user requesting /orgs/workspace/2/... on domain resolving to workspace 1
 		should be redirected to workspace 1's dashboard (domain is authoritative).
 		"""
-		domain_workspace = SimpleNamespace(id=1, schema_name="domain_ws")
-		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
+		domain_workspace = SimpleNamespace(id=1, slug="domain_ws")
+		path_workspace = SimpleNamespace(id=2, slug="path_ws")
 		user = SimpleNamespace(is_authenticated=True, is_superuser=False)
 		request = SimpleNamespace(
 			path="/orgs/workspace/2/detail/",
@@ -782,8 +780,8 @@ class DomainPathMismatchTests(SimpleTestCase):
 		Superuser (platform admin) can access /orgs/workspace/2/... on domain resolving
 		to workspace 1 without being redirected. Superuser bypass allows intentional admin access.
 		"""
-		domain_workspace = SimpleNamespace(id=1, schema_name="domain_ws")
-		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
+		domain_workspace = SimpleNamespace(id=1, slug="domain_ws")
+		path_workspace = SimpleNamespace(id=2, slug="path_ws")
 		user = SimpleNamespace(is_authenticated=True, is_superuser=True)
 		request = SimpleNamespace(
 			path="/orgs/workspace/2/detail/",
@@ -812,8 +810,8 @@ class DomainPathMismatchTests(SimpleTestCase):
 		When domain resolves to workspace 1 and user's profile has workspace 2 selected,
 		workspace 1 should win (domain is authoritative).
 		"""
-		domain_workspace = SimpleNamespace(id=1, schema_name="domain_ws")
-		profile_workspace = SimpleNamespace(id=2, schema_name="profile_ws")
+		domain_workspace = SimpleNamespace(id=1, slug="domain_ws")
+		profile_workspace = SimpleNamespace(id=2, slug="profile_ws")
 		
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=domain_workspace,
@@ -829,8 +827,8 @@ class DomainPathMismatchTests(SimpleTestCase):
 		When there's no domain mapping, but path has /orgs/workspace/2/,
 		workspace 2 should be selected (path wins over profile).
 		"""
-		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
-		profile_workspace = SimpleNamespace(id=3, schema_name="profile_ws")
+		path_workspace = SimpleNamespace(id=2, slug="path_ws")
+		profile_workspace = SimpleNamespace(id=3, slug="profile_ws")
 		
 		workspace, source = self.middleware._select_workspace_candidate(
 			domain_workspace=None,
@@ -847,8 +845,8 @@ class DomainPathMismatchTests(SimpleTestCase):
 		Public schema can handle cross-workspace links without restriction.
 		"""
 		public_schema = get_public_schema_name()
-		domain_workspace = SimpleNamespace(id=1, schema_name=public_schema)
-		path_workspace = SimpleNamespace(id=2, schema_name="path_ws")
+		domain_workspace = SimpleNamespace(id=1, slug=public_schema)
+		path_workspace = SimpleNamespace(id=2, slug="path_ws")
 		user = SimpleNamespace(is_authenticated=True, is_superuser=False)
 		request = SimpleNamespace(path="/orgs/workspace/2/", user=user)
 		
@@ -857,7 +855,7 @@ class DomainPathMismatchTests(SimpleTestCase):
 		# Since domain IS public schema, the guard condition is false, so no redirect.
 		
 		# Verify the logic: if domain_workspace.schema_name == public_schema, guard doesn't apply
-		self.assertEqual(domain_workspace.schema_name, public_schema)
+		self.assertEqual(domain_workspace.slug, public_schema)
 		# If guard checked this, it would fail (short-circuit), so no redirect would occur.
 
 
@@ -981,7 +979,7 @@ class InvitationLifecycleStateTests(SimpleTestCase):
 		request.user = SimpleNamespace(id=9)
 		request.headers = {}
 
-		company = SimpleNamespace(id=1, schema_name="acme")
+		company = SimpleNamespace(id=1, slug="acme")
 		mark_calls = []
 		invitation = SimpleNamespace(
 			id=42,
@@ -1050,7 +1048,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 	def test_send_team_invitation_service_enforces_role_grant_policy(self):
 		form = SimpleNamespace(cleaned_data={"role": SimpleNamespace(name="Admin")})
 		actor = SimpleNamespace(id=1)
-		company = SimpleNamespace(id=9, schema_name="acme")
+		company = SimpleNamespace(id=9, slug="acme")
 
 		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role", side_effect=ValidationError("denied")) as mock_policy, \
 			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx:
@@ -1112,7 +1110,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_revoke.assert_not_called()
 
 	def test_team_remove_member_requires_team_remove_permission(self):
-		company = SimpleNamespace(id=9, schema_name="acme")
+		company = SimpleNamespace(id=9, slug="acme")
 		membership = SimpleNamespace(
 			id=5,
 			user=SimpleNamespace(id=2, profile=SimpleNamespace(workspace=None)),
@@ -1147,7 +1145,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_remove.assert_not_called()
 
 	def test_team_change_role_requires_team_change_role_permission(self):
-		company = SimpleNamespace(id=9, schema_name="acme")
+		company = SimpleNamespace(id=9, slug="acme")
 		membership = SimpleNamespace(id=5, user=SimpleNamespace(id=2))
 		role = SimpleNamespace(id=3, name="Admin")
 		request = self.factory.post(
@@ -1304,7 +1302,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		mock_messages,
 		mock_redirect,
 	):
-		company = SimpleNamespace(id=9, schema_name="acme")
+		company = SimpleNamespace(id=9, slug="acme")
 		seat_capacity = SimpleNamespace(has_limit=False)
 		request = self.factory.post(
 			"/workspace/9/settings/invitations/new/",
@@ -1329,7 +1327,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 	def test_invite_success_links_back_to_workspace_scoped_sent_invitations(self):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=9, schema_name="acme")
+		workspace = SimpleNamespace(id=9, slug="acme")
 		request = self.factory.get("/orgs/team/invite/success/?workspace_id=9")
 		request.user = SimpleNamespace(id=1)
 
@@ -1363,7 +1361,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 	):
 		from apps.orgs import views as org_views
 
-		company = SimpleNamespace(id=9, schema_name="acme")
+		company = SimpleNamespace(id=9, slug="acme")
 		inviter = SimpleNamespace(id=1)
 		invitation = SimpleNamespace(
 			id=42,
@@ -1411,7 +1409,7 @@ class DirectInvitationAcceptAdapterTests(SimpleTestCase):
 	):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=9, name="Acme", schema_name="acme")
+		workspace = SimpleNamespace(id=9, name="Acme", slug="acme")
 		role = SimpleNamespace(name="Member")
 		invitation = SimpleNamespace(
 			email="user@example.com",
@@ -1722,6 +1720,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		seed_workspace_defaults = MagicMock()
 
 		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch.object(control_plane.Company.all_objects, "filter", return_value=SimpleNamespace(exists=lambda: False)), \
 			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
 			 patch.object(control_plane.Role.objects, "get", return_value=owner_role) as mock_role_get, \
 			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create:
@@ -1738,6 +1737,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertIs(created_company, company)
 		self.assertEqual(provisioning_mode, "shared")
 		self.assertEqual(company.schema_name, "acme_workspace")
+		self.assertEqual(company.slug, "acme-workspace")
 		self.assertEqual(company.creator, user)
 		self.assertEqual(company.owner, user)
 		mock_ctx.assert_called_once()
@@ -1747,7 +1747,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		mock_role_get.assert_called_once_with(name="Owner")
 		mock_domain_create.assert_called_once_with(
 			tenant=company,
-			domain="acme_workspace.app.example.com",
+			domain="acme-workspace.app.example.com",
 			is_primary=True,
 		)
 		mock_membership_create.assert_called_once_with(
@@ -1958,8 +1958,8 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 
 	def setUp(self):
 		self.middleware = SecureWorkspaceMiddleware(lambda request: None)
-		self.tenant_ws = SimpleNamespace(id=10, schema_name="tenant_a")
-		self.profile_ws = SimpleNamespace(id=11, schema_name="tenant_b")
+		self.tenant_ws = SimpleNamespace(id=10, slug="tenant_a")
+		self.profile_ws = SimpleNamespace(id=11, slug="tenant_b")
 
 	def _make_auth_request(self, path="/girvi/loans/", profile_workspace=None):
 		profile = SimpleNamespace(workspace=profile_workspace, save=lambda **kw: None)
@@ -2014,7 +2014,7 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 
 	def test_path_workspace_wins_over_profile_without_domain(self):
 		"""Path workspace beats profile fallback when no domain mapping exists."""
-		path_ws = SimpleNamespace(id=12, schema_name="path_ws")
+		path_ws = SimpleNamespace(id=12, slug="path_ws")
 		request = self._make_auth_request(profile_workspace=self.profile_ws)
 		patches = self._base_patches(domain_ws=None, path_ws=path_ws, profile_ws=self.profile_ws)
 		with contextlib.ExitStack() as stack:
@@ -2041,7 +2041,7 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 	):
 		"""A workspace id in path cannot target a different tenant than the mapped domain."""
 		request = self._make_auth_request(path="/orgs/workspace/6/", profile_workspace=self.profile_ws)
-		path_ws = SimpleNamespace(id=6, schema_name="tenant_six")
+		path_ws = SimpleNamespace(id=6, slug="tenant_six")
 		patches = self._base_patches(
 			domain_ws=self.tenant_ws,
 			path_ws=path_ws,
@@ -2067,7 +2067,7 @@ class MiddlewareProcessRequestTests(SimpleTestCase):
 
 	def test_platform_admin_cannot_bypass_domain_path_workspace_mismatch_guard(self):
 		"""Platform authority cannot resolve conflicting explicit identity."""
-		path_ws = SimpleNamespace(id=6, schema_name="tenant_six")
+		path_ws = SimpleNamespace(id=6, slug="tenant_six")
 		profile = SimpleNamespace(workspace=self.profile_ws, save=lambda **kw: None)
 		superuser = SimpleNamespace(
 			id=5,
@@ -2206,7 +2206,7 @@ class InvitationSignalHandlerTests(SimpleTestCase):
 
 class WorkspaceModuleEntitlementTests(SimpleTestCase):
 	def test_workspace_modules_map_entitlement_outcomes(self):
-		workspace = SimpleNamespace(id=9, schema_name="acme", subscription=SimpleNamespace())
+		workspace = SimpleNamespace(id=9, slug="acme", subscription=SimpleNamespace())
 		user = SimpleNamespace(id=1, is_authenticated=True)
 
 		with patch.object(
@@ -2233,7 +2233,7 @@ class WorkspaceModuleEntitlementTests(SimpleTestCase):
 		)
 
 	def test_workspace_modules_keep_planned_and_active_base_states(self):
-		workspace = SimpleNamespace(id=9, schema_name="acme", subscription=SimpleNamespace())
+		workspace = SimpleNamespace(id=9, slug="acme", subscription=SimpleNamespace())
 		user = SimpleNamespace(id=1, is_authenticated=True)
 
 		with patch.object(org_views.entitlements, "enabled", return_value=True), patch(

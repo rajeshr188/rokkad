@@ -9,7 +9,9 @@ from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
 class PlatformOverrideAuditContractTests(SimpleTestCase):
     def test_explicit_platform_override_is_audited_after_context_establishment(self):
         middleware = SecureWorkspaceMiddleware(lambda request: None)
-        workspace = SimpleNamespace(id=19, schema_name="audit-ws", name="Audit WS")
+        workspace = SimpleNamespace(
+            id=19, slug="audit-ws", schema_name="audit_ws", name="Audit WS"
+        )
         actor = SimpleNamespace(
             id=7,
             email="platform@example.com",

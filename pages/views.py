@@ -43,12 +43,12 @@ def Dashboard(request):
         request,
         include_public=True,
     )
-    if selected_workspace and selected_workspace.schema_name != "public":
+    if selected_workspace and selected_workspace.slug != "public":
         try:
             user.memberships.get(company=selected_workspace)
             return redirect(
                 "workspace_slug_dashboard",
-                workspace_slug=selected_workspace.schema_name,
+                workspace_slug=selected_workspace.slug,
             )
         except Membership.DoesNotExist:
             if hasattr(user, "profile"):
@@ -78,13 +78,13 @@ def company_dashboard(request):
         request,
         include_public=True,
     )
-    if workspace and workspace.schema_name == "public":
+    if workspace and workspace.slug == "public":
         return redirect("dashboard")
 
     if workspace:
         return redirect(
             "workspace_slug_dashboard",
-            workspace_slug=workspace.schema_name,
+            workspace_slug=workspace.slug,
         )
     return redirect("workspace_selector")
 

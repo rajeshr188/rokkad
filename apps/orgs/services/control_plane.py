@@ -45,6 +45,7 @@ def create_workspace_from_form(*, form, user, request):
     with _control_plane_transaction():
         company = form.save(commit=False)
         company.schema_name = build_schema_name(company.name)
+        company.slug = build_workspace_slug(company.name)
         company.creator = user
         company.owner = user
         if Company.all_objects.filter(schema_name=company.schema_name).exists():
@@ -52,7 +53,7 @@ def create_workspace_from_form(*, form, user, request):
         company.save()
 
         domain = request.get_host().split(":")[0].lower().removeprefix("www.")
-        company_domain = f"{company.schema_name}.{domain}"
+        company_domain = f"{company.slug}.{domain}"
         if Domain.objects.filter(domain=company_domain).exists():
             raise ValidationError("Workspace domain already exists.")
         Domain.objects.create(tenant=company, domain=company_domain, is_primary=True)
@@ -83,13 +84,14 @@ def create_onboarding_workspace_from_form(
     with _control_plane_transaction():
         company = form.save(commit=False)
         company.schema_name = build_schema_name(company.name)
+        company.slug = build_workspace_slug(company.name)
         company.creator = user
         company.owner = user
         company.save()
         provisioning_mode = "shared"
 
         domain = request.get_host().split(":")[0].lower().removeprefix("www.")
-        company_domain = f"{company.schema_name}.{domain}"
+        company_domain = f"{company.slug}.{domain}"
         Domain.objects.create(tenant=company, domain=company_domain, is_primary=True)
 
         owner_role = Role.objects.get(name="Owner")
@@ -107,6 +109,23 @@ def build_schema_name(name):
     if schema_name == "public":
         raise ValidationError("Workspace slug cannot be public.")
     return schema_name[:63]
+
+
+def build_workspace_slug(name):
+    """Build the canonical immutable route slug for a new Workspace."""
+    base = slugify(name)[:63]
+    if not base:
+        raise ValidationError("Workspace name must contain letters or numbers.")
+    if base == "public":
+        raise ValidationError("Workspace slug cannot be public.")
+
+    candidate = base
+    suffix = 2
+    while Company.all_objects.filter(slug=candidate).exists():
+        marker = f"-{suffix}"
+        candidate = f"{base[: 63 - len(marker)]}{marker}"
+        suffix += 1
+    return candidate
 
 
 def save_workspace_update_form(*, form, actor, request):

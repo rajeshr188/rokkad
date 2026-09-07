@@ -25,6 +25,7 @@ from django.db import transaction
 
 from .models import Plan, Subscription, Invoice, Payment, ProviderWebhookEvent
 from .razorpay_service import RazorpayService
+from .services import get_workspace_member_usage
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
@@ -125,7 +126,7 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
             messages.error(request, exc.messages[0])
             return redirect(
                 "workspace_subscriptions:plan-list",
-                workspace_slug=workspace.schema_name,
+                workspace_slug=workspace.slug,
             )
 
         messages.success(
@@ -135,7 +136,7 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
         )
         return redirect(
             "workspace_slug_dashboard",
-            workspace_slug=workspace.schema_name,
+            workspace_slug=workspace.slug,
         )
 
 
@@ -260,7 +261,7 @@ class PaymentView(LoginRequiredMixin, BillingPermissionMixin, CreateView):
                     "subscription_id": subscription.id,
                     "redirect_url": reverse(
                         "workspace_subscriptions:dashboard",
-                        kwargs={"workspace_slug": workspace.schema_name},
+                        kwargs={"workspace_slug": workspace.slug},
                     ),
                 }
             )
@@ -305,11 +306,18 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
                 context["current_usage"] = None
 
             # Calculate overage
+            current_user_count = get_workspace_member_usage(workspace=workspace)
+            context["current_user_count"] = current_user_count
             context["user_overage"] = max(
-                0, subscription.current_user_count - subscription.plan.max_users
+                0, current_user_count - subscription.plan.max_users
             )
             context["overage_charge"] = (
                 context["user_overage"] * subscription.plan.extra_user_price
+            )
+            context["usage_percentage_users"] = (
+                min(100, round(current_user_count / subscription.plan.max_users * 100))
+                if subscription.plan.max_users > 0
+                else 0
             )
 
             # Days until renewal
@@ -406,7 +414,7 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
             messages.error(request, f"Error generating PDF: {str(e)}")
             return redirect(
                 "workspace_subscriptions:invoice-detail",
-                workspace_slug=workspace.schema_name,
+                workspace_slug=workspace.slug,
                 pk=invoice.id,
             )
 

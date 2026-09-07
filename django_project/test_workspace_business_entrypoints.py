@@ -63,7 +63,7 @@ class WorkspaceBusinessEntrypointTests(TestCase):
                 response = self.client.get(
                     reverse(
                         route_name,
-                        kwargs={"workspace_slug": self.workspace.schema_name},
+                        kwargs={"workspace_slug": self.workspace.slug},
                     )
                 )
                 self.assertEqual(response.status_code, 200)

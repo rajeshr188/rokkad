@@ -117,7 +117,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             domain_workspace
             and path_workspace
             and domain_workspace.id != path_workspace.id
-            and domain_workspace.schema_name != PUBLIC_WORKSPACE_SLUG
+            and domain_workspace.slug != PUBLIC_WORKSPACE_SLUG
         ):
             logger.warning(
                 "Workspace path/domain mismatch for user %s: domain=%s path=%s path_url=%s",
@@ -138,7 +138,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
 
         # Unauthenticated requests can still be served in the resolved tenant schema.
         if not request.user.is_authenticated:
-            if workspace and workspace.schema_name != PUBLIC_WORKSPACE_SLUG:
+            if workspace and workspace.slug != PUBLIC_WORKSPACE_SLUG:
                 # For ERP SaaS: no public content on tenant domains — force login
                 self._set_public_context(request)
                 return HttpResponseRedirect(
@@ -163,7 +163,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
             return HttpResponseRedirect(reverse("workspace_selector"))
 
         # Public workspace (or unresolved) → public schema
-        if not workspace or workspace.schema_name == PUBLIC_WORKSPACE_SLUG:
+        if not workspace or workspace.slug == PUBLIC_WORKSPACE_SLUG:
             self._set_public_context(request)
             return None
 
@@ -254,9 +254,7 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         if not workspace_slug or workspace_slug == PUBLIC_WORKSPACE_SLUG:
             return None
 
-        return Company.all_objects.filter(
-            schema_name=workspace_slug,
-        ).first()
+        return Company.all_objects.filter(slug=workspace_slug).first()
 
     def _extract_workspace_id_from_path(self, path):
         """Extract workspace id from path using known workspace URL patterns."""
@@ -280,13 +278,13 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         """Pick the effective Workspace from explicit request identity."""
         public_schema = PUBLIC_WORKSPACE_SLUG
 
-        if domain_workspace and domain_workspace.schema_name != public_schema:
+        if domain_workspace and domain_workspace.slug != public_schema:
             return domain_workspace, "domain"
 
-        if path_workspace and path_workspace.schema_name != public_schema:
+        if path_workspace and path_workspace.slug != public_schema:
             return path_workspace, "path"
 
-        if domain_workspace and domain_workspace.schema_name == public_schema:
+        if domain_workspace and domain_workspace.slug == public_schema:
             return domain_workspace, "domain-public"
 
         return None, "public"
@@ -312,8 +310,8 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
         lifecycle = lifecycle_access(workspace=workspace, access=access)
         recovery_path = request.path.startswith(
             (
-                f"/w/{workspace.schema_name}/settings/",
-                f"/w/{workspace.schema_name}/data-tools/export/",
+                f"/w/{workspace.slug}/settings/",
+                f"/w/{workspace.slug}/data-tools/export/",
                 f"/workspace/{workspace.id}/settings/",
                 f"/orgs/workspace/{workspace.id}/restore/",
                 f"/orgs/workspace/{workspace.id}/lifecycle/",

@@ -49,6 +49,7 @@ def _workspace(id=1, name="Acme Jewellers", schema_name="acme"):
         id=id,
         name=name,
         schema_name=schema_name,
+        slug=schema_name,
         owner_id=1,
         logo=None,
         memberships=_CountRelation(2),
@@ -171,27 +172,27 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             reverse("app_workspace_create"),
             reverse(
                 "workspace_slug_settings",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             reverse(
                 "workspace_slug_settings_setup",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             reverse(
                 "workspace_slug_settings_preferences",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             reverse(
                 "workspace_slug_settings_team",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             reverse(
                 "workspace_slug_settings_invite",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             reverse(
                 "workspace_slug_settings_invitations",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             reverse("app_invitations"),
             reverse("account_settings"),
@@ -208,11 +209,11 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn(f'action="{billing_action}"', html)
         billing_dashboard = reverse(
             "workspace_subscriptions:dashboard",
-            kwargs={"workspace_slug": workspace.schema_name},
+            kwargs={"workspace_slug": workspace.slug},
         )
         billing_plans = reverse(
             "workspace_subscriptions:plan-list",
-            kwargs={"workspace_slug": workspace.schema_name},
+            kwargs={"workspace_slug": workspace.slug},
         )
         self.assertIn(f'value="{billing_dashboard}"', html)
         self.assertNotIn(f'href="{billing_dashboard}"', html)
@@ -255,7 +256,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
 
         preferences_href = reverse(
             "workspace_slug_settings_preferences",
-            kwargs={"workspace_slug": workspace.schema_name},
+            kwargs={"workspace_slug": workspace.slug},
         )
         self.assertGreaterEqual(html.count(f'href="{preferences_href}"'), 2)
         self.assertIn("Preferences", html)
@@ -306,7 +307,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn(
             reverse(
                 "workspace_slug_settings",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             html,
         )
@@ -484,18 +485,18 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn(
             reverse(
                 "workspace_slug_settings_setup_state",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             html,
         )
         self.assertIn(
             reverse(
                 "workspace_slug_rates",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             html,
         )
-        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)
+        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}), html)
 
     def test_workspace_settings_setup_page_renders_checklist(self):
         workspace = _workspace()
@@ -560,15 +561,15 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn(
             reverse(
                 "workspace_slug_settings_setup_state",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             html,
         )
         self.assertIn(
             reverse(
                 "workspace_slug_rates",
-                kwargs={"workspace_slug": workspace.schema_name},
+                kwargs={"workspace_slug": workspace.slug},
             ),
             html,
         )
-        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.schema_name}), html)
+        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}), html)

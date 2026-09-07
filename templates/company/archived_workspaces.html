@@ -21,7 +21,7 @@
         <div class="d-flex justify-content-between align-items-start gap-3">
             <div>
                 <h2 id="archived-workspace-{{ workspace.id }}" class="h6 fw-bold mb-1">{{ workspace.name }}</h2>
-                <div class="small text-muted">Schema: <code>{{ workspace.schema_name }}</code></div>
+                <div class="small text-muted">Schema: <code>{{ workspace.slug }}</code></div>
                 <div class="small text-muted">Archived {{ workspace.updated_at|date:"M d, Y H:i" }}</div>
             </div>
             <span class="badge bg-secondary">Archived</span>

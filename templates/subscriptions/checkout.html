@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorMsg.classList.remove('show');
         
         // Create order on backend first
-        fetch('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.schema_name %}', {
+        fetch('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.slug %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function submitPayment() {
         loadingSpinner.classList.add('show');
         
-        fetch('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.schema_name %}', {
+        fetch('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.slug %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -1,12 +1,18 @@
 ---
 status: active
 owner: project
-updated: 2026-08-17
+updated: 2026-09-08
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+Current checkpoint: Phase 11 replaced `Company.schema_name` as path authority
+with immutable `Company.slug`. Phase 9 app authorization conformance and Phase
+10 Loans routing are complete. Older phase-next statements below are historical;
+use the latest Phase 11 section in `docs/STATUS.md` and the current checkpoint
+in `docs/plans/active.md` when resuming work.
 
 Phase 7 residue cleanup is complete. `request.workspace` is now the sole
 HTTP Workspace attribute; never restore `request.tenant`. Middleware helpers
@@ -31,7 +37,8 @@ Retain them until telemetry or an explicit compatibility deadline justifies
 removal; legacy Notify must remain an enumerated allowlist, never a catch-all.
 `apps.tenant_apps` is accepted transitional naming debt; its broad rename is
 deferred because it changes imports and migration references without improving
-RLS. `Company.schema_name` is temporarily the Workspace routing key only. Do
+RLS. `Company.slug` is the immutable Workspace routing key;
+`Company.schema_name` is legacy metadata only. Do
 not treat it as database schema state or rename it in place; a later phase must
 add and backfill an immutable `Company.slug` before switching callers.
 The requirements manifest is UTF-8 and no longer declares Guardian. Phase 8 is
@@ -2559,7 +2566,7 @@ Operator parity-pilot preparation is documented in `docs/implementation/loans-gi
 
 ## Documentation Memory
 
-- Phase 10 established `/w/<Company.schema_name>/loans/...` as the canonical
+- Phase 10 established `/w/<Company.slug>/loans/...` as the canonical
   complete Loans browser surface. `workspace_slug_loans_dispatch` validates the
   route Workspace before forwarding to the established Loans resolver, then
   keeps Loans-local HTML targets and redirects on the canonical prefix. The
@@ -2569,6 +2576,13 @@ Operator parity-pilot preparation is documented in `docs/implementation/loans-gi
   `WorkspaceTestCase.start_active_trial()` and use `WorkspaceClient`; there is no
   debug/test billing bypass. The original Loans gate is 404/404, with eight
   separate Phase 10 route-contract tests.
+
+- Phase 11 makes the unique non-null `Company.slug` the sole `/w/...` path
+  authority. Slugs are deterministically backfilled, assigned during Workspace
+  creation, and immutable after creation. Domain and path identities must still
+  agree; Membership, `request.workspace`, numeric `workspace_context`, RLS, and
+  profile non-authority are unchanged. `schema_name` remains only for explicit
+  legacy schema-tenancy metadata and commands.
 
 - PawnLoan risk portfolio mutations use a non-3xx `HX-Redirect` response for
   HTMX because redirect response headers on HTTP 3xx responses are not exposed

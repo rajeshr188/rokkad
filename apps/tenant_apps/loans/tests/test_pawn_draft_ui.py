@@ -548,7 +548,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             response,
             reverse(
                 "workspace_slug_loan_list",
-                kwargs={"workspace_slug": self.tenant.schema_name},
+                kwargs={"workspace_slug": self.tenant.slug},
             ),
         )
         self.assertContains(response, self.workspace_reverse("loans:license_list"))

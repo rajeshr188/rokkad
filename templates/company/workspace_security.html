@@ -6,7 +6,7 @@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{% url 'workspace_selector' %}">My Workspaces</a></li>
-<li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.schema_name %}">{{ company.name }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.slug %}">{{ company.name }}</a></li>
         <li class="breadcrumb-item active">Security</li>
     </ol>
 </nav>
@@ -18,7 +18,7 @@
         <h1 class="h3 mb-1">Security</h1>
         <p class="text-muted mb-0">Workspace audit activity and security-sensitive events.</p>
     </div>
-<a href="{% url 'workspace_slug_settings_team' workspace_slug=company.schema_name %}" class="btn btn-outline-primary">
+<a href="{% url 'workspace_slug_settings_team' workspace_slug=company.slug %}" class="btn btn-outline-primary">
         <i class="bi bi-people"></i> Manage team
     </a>
 </div>

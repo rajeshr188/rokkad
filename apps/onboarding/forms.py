@@ -114,9 +114,7 @@ class CompanySetupForm(forms.ModelForm):
 
     def clean_name(self):
         name = self.cleaned_data["name"]
-        # Check if company name already exists
-        schema_name = name.lower().replace(" ", "_")
-        if Company.objects.filter(schema_name=schema_name).exists():
+        if Company.all_objects.filter(name__iexact=name).exists():
             raise forms.ValidationError(
                 "A workspace with this name already exists. Please choose a different name."
             )

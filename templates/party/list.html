@@ -19,7 +19,7 @@
             </a>
         </div>
         {% endif %}
-        <a class="btn btn-primary" href="{% if user_workspace %}{% url 'workspace_slug_party_create' workspace_slug=user_workspace.schema_name %}{% else %}{% url 'party:party_create' %}{% endif %}">
+        <a class="btn btn-primary" href="{% if user_workspace %}{% url 'workspace_slug_party_create' workspace_slug=user_workspace.slug %}{% else %}{% url 'party:party_create' %}{% endif %}">
             <i class="bi bi-plus-lg"></i> New Party
         </a>
     </div>
@@ -83,7 +83,7 @@
                 </td>
                 <td class="fw-semibold">{{ party.party_code }}</td>
                 <td>
-                    <a class="fw-semibold text-decoration-none" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}">{{ party.display_name }}</a>
+                    <a class="fw-semibold text-decoration-none" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}">{{ party.display_name }}</a>
                     {% if party.legal_name %}<div class="small text-muted">{{ party.legal_name }}</div>{% endif %}
                     {% if party.relation_display %}<div class="small text-muted">{{ party.relation_display }}</div>{% endif %}
                 </td>
@@ -107,7 +107,7 @@
                     </span>
                 </td>
                 <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_update' workspace_slug=user_workspace.schema_name pk=party.pk %}{% else %}{% url 'party:party_update' party.pk %}{% endif %}" title="Edit">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_update' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_update' party.pk %}{% endif %}" title="Edit">
                         <i class="bi bi-pencil"></i>
                     </a>
                 </td>

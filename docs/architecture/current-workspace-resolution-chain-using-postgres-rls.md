@@ -163,17 +163,18 @@ For a slug path:
 
 ```python
 Company.objects.filter(
-    schema_name=workspace_slug,
+    slug=workspace_slug,
     is_deleted=False,
 ).first()
 ```
 
-`schema_name` is now only a transitional database column holding the routing slug. It no longer selects a PostgreSQL schema.
+`slug` is the dedicated immutable Workspace routing identifier.
+`schema_name` remains non-routing legacy schema-tenancy metadata.
 
 Conceptually:
 
 ```text
-Company.schema_name == Workspace.slug
+Company.slug == canonical Workspace route identifier
 ```
 
 ### Profile candidate

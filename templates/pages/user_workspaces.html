@@ -72,7 +72,7 @@
                                                 <button type="submit" class="btn btn-sm btn-outline-primary">Switch</button>
                                             </form>
                                         {% else %}
-<a href="{% url 'workspace_slug_dashboard' workspace_slug=membership.company.schema_name %}"
+<a href="{% url 'workspace_slug_dashboard' workspace_slug=membership.company.slug %}"
                                               class="btn btn-sm btn-primary">
                                                 Enter
                                             </a>

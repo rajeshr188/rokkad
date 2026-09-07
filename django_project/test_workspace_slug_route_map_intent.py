@@ -68,26 +68,34 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
         self.assertIn("WORKSPACE_ID_PATTERNS", middleware)
         self.assertIn("WORKSPACE_SLUG_PATTERNS", middleware)
         self.assertIn("def _extract_workspace_slug_from_path", middleware)
-        self.assertIn("schema_name=workspace_slug", middleware)
+        self.assertIn("filter(slug=workspace_slug)", middleware)
         self.assertIn("schema_name", models)
-        self.assertNotIn("slug = models.SlugField", models)
+        self.assertIn("slug = models.SlugField", models)
 
-    def test_phase102_slug_source_decision_uses_schema_name_without_migration(self):
+    def test_phase11_dedicated_slug_supersedes_the_initial_compatibility_source(self):
         plan = _read("docs/ui/workspace_slug_route_map_plan.md")
         models = _read("apps/orgs/models.py")
 
-        for expected in (
-            "Status: complete",
-            "Use `Company.schema_name` as the initial compatibility slug",
-            "no migration is needed",
-            "Do not expose schema names as editable marketing slugs",
-            "Adding `Company.slug` immediately",
-        ):
-            self.assertIn(expected, plan)
-
         self.assertIn("class Company(models.Model):", models)
         self.assertIn("schema_name", plan)
-        self.assertNotIn("slug = models.SlugField", models)
+        self.assertIn("slug = models.SlugField", models)
+        self.assertIn("Workspace slug is immutable after creation", models)
+
+    def test_phase11_active_routing_code_has_no_schema_name_authority(self):
+        middleware = _read("apps/orgs/middleware_v2.py")
+        views = _read("apps/orgs/views.py")
+        tenancy_testing = _read("apps/tenancy/testing.py")
+        templates = "\n".join(
+            path.read_text(encoding="utf-8-sig")
+            for path in (PROJECT_ROOT / "templates").rglob("*.html")
+        )
+
+        self.assertIn("filter(slug=workspace_slug)", middleware)
+        self.assertNotIn("schema_name=workspace_slug", middleware)
+        self.assertNotIn("schema_name=workspace_slug", views)
+        self.assertNotIn(".schema_name", tenancy_testing)
+        self.assertNotIn("workspace_slug=request.workspace.schema_name", templates)
+        self.assertNotIn("workspace_slug=workspace.schema_name", templates)
 
     def test_phase101_slug_rollout_is_reflected_in_project_docs(self):
         status = _read("docs/STATUS.md")

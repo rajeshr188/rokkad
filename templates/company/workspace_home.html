@@ -90,7 +90,7 @@
 
                     <div class="mgmt-workspace-actions">
                         {% if current_workspace == membership.company %}
-<a href="{% url 'workspace_slug_dashboard' workspace_slug=membership.company.schema_name %}" class="btn btn-primary btn-sm">
+<a href="{% url 'workspace_slug_dashboard' workspace_slug=membership.company.slug %}" class="btn btn-primary btn-sm">
                             <i class="bi bi-arrow-right-circle me-1"></i>Enter Workspace
                         </a>
                         {% else %}
@@ -102,7 +102,7 @@
                         </form>
                         {% endif %}
                         {% if membership.role.name == 'Owner' or membership.role.name == 'Admin' %}
-<a href="{% url 'workspace_slug_settings' workspace_slug=membership.company.schema_name %}" class="btn btn-outline-secondary btn-sm">
+<a href="{% url 'workspace_slug_settings' workspace_slug=membership.company.slug %}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-gear me-1"></i>Settings
                         </a>
                         {% endif %}

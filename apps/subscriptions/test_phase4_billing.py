@@ -259,6 +259,18 @@ class BillingMiddlewareAcceptanceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    def test_billing_dashboard_uses_workspace_member_count(self):
+        self.create_subscription(status=Subscription.StatusChoices.ACTIVE)
+
+        response = self.client.get(
+            "/w/no-billing-workspace/settings/billing/dashboard/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["current_user_count"], 1)
+        self.assertEqual(response.context["user_overage"], 0)
+        self.assertContains(response, "1/5")
+
     def test_expired_trial_is_limited_to_billing_recovery(self):
         self.create_subscription(
             status=Subscription.StatusChoices.TRIAL,

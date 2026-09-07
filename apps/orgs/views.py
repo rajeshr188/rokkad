@@ -159,7 +159,7 @@ def _get_workspace_from_slug(workspace_slug, *, include_inactive=False):
     manager = Company.all_objects if include_inactive else Company.objects
     return get_object_or_404(
         manager,
-        schema_name=workspace_slug,
+        slug=workspace_slug,
     )
 
 
@@ -193,14 +193,14 @@ def _workspace_module_statuses(*, workspace, user):
                 module["lock_reason"] = "An active commercial subscription is required."
                 module["upgrade_url"] = reverse(
                     "workspace_subscriptions:dashboard",
-                    kwargs={"workspace_slug": workspace.schema_name},
+                    kwargs={"workspace_slug": workspace.slug},
                 )
             else:
                 module["status"] = "Locked"
                 module["lock_reason"] = "This capability is not included in the Workspace entitlement grant."
                 module["upgrade_url"] = reverse(
                     "workspace_subscriptions:dashboard",
-                    kwargs={"workspace_slug": workspace.schema_name},
+                    kwargs={"workspace_slug": workspace.slug},
                 )
         else:
             module["is_openable"] = bool(route_name) and module["status"] == "Active"
@@ -269,7 +269,7 @@ def workspace_slug_settings_billing(request, workspace_slug):
     workspace = _get_workspace_from_slug(workspace_slug)
     return redirect(
         "workspace_subscriptions:dashboard",
-        workspace_slug=workspace.schema_name,
+        workspace_slug=workspace.slug,
     )
 
 
@@ -1168,7 +1168,7 @@ def team_invite(request, workspace_id=None, company_id=None):
                 messages.success(request, "Invitation sent successfully")
                 return redirect(
                     "workspace_slug_settings_invitations",
-                    workspace_slug=company.schema_name,
+                    workspace_slug=company.slug,
                 )
             except (ValidationError, ValueError) as exc:
                 form.add_error(None, str(exc))
@@ -1204,7 +1204,7 @@ def invite_success(request):
         )
         sent_invitations_url = reverse(
             "workspace_slug_settings_invitations",
-            kwargs={"workspace_slug": workspace.schema_name},
+            kwargs={"workspace_slug": workspace.slug},
         )
 
     return render(
@@ -1272,7 +1272,7 @@ def team_accept_invitation(request, key):
     )
     return redirect(
         "workspace_slug_dashboard",
-        workspace_slug=invitation.company.schema_name,
+        workspace_slug=invitation.company.slug,
     )
 
 
@@ -1629,7 +1629,7 @@ def invitation_delete(request, invitation_id):
     return redirect(
         reverse(
             "workspace_slug_settings_invitations",
-            kwargs={"workspace_slug": invitation.company.schema_name},
+            kwargs={"workspace_slug": invitation.company.slug},
         )
     )
 
@@ -1699,13 +1699,13 @@ def workspace_selector(request):
     # If user has a valid selected workspace, take them directly to workspace dashboard
     # unless ?show_all=1 is passed (e.g. from "Back to Workspaces" link)
     selected_workspace = resolve_preferred_workspace(user)
-    if selected_workspace and selected_workspace.schema_name != "public" and not request.GET.get("show_all"):
+    if selected_workspace and selected_workspace.slug != "public" and not request.GET.get("show_all"):
         try:
             # Verify membership still active
             memberships.get(company=selected_workspace)
             return redirect(
                 "workspace_slug_dashboard",
-                workspace_slug=selected_workspace.schema_name,
+                workspace_slug=selected_workspace.slug,
             )
         except Membership.DoesNotExist:
             # Workspace is no longer valid, clear it
@@ -1815,7 +1815,7 @@ def team_invitations(request):
 
                 return redirect(
                     "workspace_slug_dashboard",
-                    workspace_slug=invitation.company.schema_name,
+                    workspace_slug=invitation.company.slug,
                 )
 
             elif action == "decline":
@@ -1886,7 +1886,7 @@ def workspace_select(request, workspace_id):
         return redirect(next_url)
     return redirect(
         "workspace_slug_dashboard",
-        workspace_slug=workspace.schema_name,
+        workspace_slug=workspace.slug,
     )
 
 
@@ -1915,7 +1915,7 @@ def subscription_required(view_func):
             messages.warning(request, "Subscription access is unavailable.")
             return redirect(
                 "workspace_subscriptions:dashboard",
-                workspace_slug=workspace.schema_name,
+                workspace_slug=workspace.slug,
             )
 
         if subscription and getattr(subscription, "end_date", None):
@@ -1974,7 +1974,7 @@ def workspace_dashboard(request, workspace_id):
         request.user.profile.save()
 
     # Redirect to public if somehow in public schema
-    if workspace.schema_name == "public":
+    if workspace.slug == "public":
         return redirect("dashboard")
 
     context = {}

@@ -41,7 +41,7 @@
                                 <dl class="row">
                                     <dt class="col-sm-4">{% trans "Schema" %}:</dt>
                                     <dd class="col-sm-8">
-                                        <code>{{ preferred_workspace.schema_name }}</code>
+                                        <code>{{ preferred_workspace.slug }}</code>
                                     </dd>
                                     <dt class="col-sm-4">{% trans "Created" %}:</dt>
                                     <dd class="col-sm-8">{{ preferred_workspace.created_at|date:"SHORT_DATE_FORMAT" }}</dd>
@@ -52,7 +52,7 @@
                                 </dl>
                             </div>
                             <div class="col-md-4">
-                                <a href="{% url 'workspace_slug_dashboard' preferred_workspace.schema_name %}" class="btn btn-primary w-100 mb-2">
+                                <a href="{% url 'workspace_slug_dashboard' preferred_workspace.slug %}" class="btn btn-primary w-100 mb-2">
                                     <i class="bi bi-speedometer2"></i> {% trans "Go to Dashboard" %}
                                 </a>
                                 <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#clearModal">

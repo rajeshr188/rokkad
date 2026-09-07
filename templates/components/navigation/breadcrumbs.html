@@ -32,7 +32,7 @@ USAGE PATTERNS:
         <!-- Workspace Link (if in tenant context) -->
         {% if workspace_name and in_tenant %}
         <li class="breadcrumb-item">
-        <a href="{% url 'workspace_slug_dashboard' workspace_slug=user_workspace.schema_name %}">
+        <a href="{% url 'workspace_slug_dashboard' workspace_slug=user_workspace.slug %}">
                 {{ workspace_name }}
             </a>
         </li>

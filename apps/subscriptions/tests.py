@@ -19,7 +19,7 @@ class SubscriptionAccessServiceTests(TestCase):
         self.service = SubscriptionAccessService()
 
     def test_allows_access_for_active_workspace_subscription(self):
-        workspace = SimpleNamespace(id=1, schema_name="tenant_a")
+        workspace = SimpleNamespace(id=1, slug="tenant-a", schema_name="tenant_a")
         membership = SimpleNamespace(user=SimpleNamespace(id=7), role=SimpleNamespace(name="Admin"))
         subscription = SimpleNamespace(status="active", is_active=True)
 
@@ -34,7 +34,7 @@ class SubscriptionAccessServiceTests(TestCase):
         self.assertEqual(decision.reason, "AUTHORIZED")
 
     def test_blocks_access_when_subscription_is_not_active(self):
-        workspace = SimpleNamespace(id=1, schema_name="tenant_a")
+        workspace = SimpleNamespace(id=1, slug="tenant-a", schema_name="tenant_a")
         membership = SimpleNamespace(user=SimpleNamespace(id=7), role=SimpleNamespace(name="Admin"))
         subscription = SimpleNamespace(status="past_due", is_active=False)
 
@@ -49,7 +49,7 @@ class SubscriptionAccessServiceTests(TestCase):
         self.assertEqual(decision.reason, "SUBSCRIPTION_INACTIVE")
 
     def test_blocks_feature_access_when_entitlement_is_disabled(self):
-        workspace = SimpleNamespace(id=1, schema_name="tenant_a")
+        workspace = SimpleNamespace(id=1, slug="tenant-a", schema_name="tenant_a")
         membership = SimpleNamespace(user=SimpleNamespace(id=7), role=SimpleNamespace(name="Admin"))
         subscription = SimpleNamespace(status="active", is_active=True)
         entitlement = SimpleNamespace(feature_code="advanced_reporting", enabled=False)
@@ -121,7 +121,12 @@ class SubscriptionAccessServiceTests(TestCase):
                 return 0
 
         workspace = SimpleNamespace(
-            id=9, schema_name="jcl", name="JCL", theme="#ff0000", logo=None
+            id=9,
+            slug="jcl",
+            schema_name="legacy_jcl",
+            name="JCL",
+            theme="#ff0000",
+            logo=None,
         )
         user = SimpleNamespace(
             id=1,

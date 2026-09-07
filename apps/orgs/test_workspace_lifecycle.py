@@ -155,6 +155,7 @@ class WorkspaceLifecycleMiddlewareTests(SimpleTestCase):
             name="JCL Finance",
             schema_name="jcl-finance",
             owner_id=7,
+            slug="jcl-finance",
             lifecycle_state=Company.LifecycleState.SUSPENDED,
         )
         self.platform_access = SimpleNamespace(

@@ -74,8 +74,8 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header text-uppercase small">Billing</h6></li>
                             {% if request.workspace %}
-                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.schema_name %}"><i class="bi bi-credit-card"></i> Billing Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.schema_name %}"><i class="bi bi-receipt"></i> Subscription Plans</a></li>
+                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}"><i class="bi bi-credit-card"></i> Billing Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.slug %}"><i class="bi bi-receipt"></i> Subscription Plans</a></li>
                             {% else %}
                             <li><a class="dropdown-item" href="{% url 'workspace_selector' %}"><i class="bi bi-credit-card"></i> Select Workspace for Billing</a></li>
                             {% endif %}
