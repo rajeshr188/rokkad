@@ -27,7 +27,7 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
         mock_redirect,
     ):
         request = self._request()
-        workspace = SimpleNamespace(id=9, schema_name="demo")
+        workspace = SimpleNamespace(id=9, schema_name="demo", slug="demo")
 
         with patch(
             "apps.onboarding.views.get_or_create_progress",
@@ -40,8 +40,8 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
 
         mock_resolve.assert_called_once_with(request.user)
         mock_redirect.assert_called_once_with(
-            "workspace_settings_setup",
-            workspace_id=9,
+            "workspace_slug_settings_setup",
+            workspace_slug="demo",
         )
 
     @patch("apps.onboarding.views.redirect")
@@ -70,7 +70,7 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
         mock_audit_log,
     ):
         request = self._request()
-        workspace = SimpleNamespace(id=12, schema_name="demo")
+        workspace = SimpleNamespace(id=12, schema_name="demo", slug="demo")
         progress = self._progress(is_complete=False)
 
         with patch(
@@ -87,8 +87,8 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
 
         mock_audit_log.assert_called_once()
         mock_redirect.assert_called_once_with(
-            "workspace_settings_setup",
-            workspace_id=12,
+            "workspace_slug_settings_setup",
+            workspace_slug="demo",
         )
 
     @patch("apps.onboarding.views.messages")
@@ -99,7 +99,7 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
         mock_messages,
     ):
         request = self._request()
-        workspace = SimpleNamespace(id=15, schema_name="demo")
+        workspace = SimpleNamespace(id=15, schema_name="demo", slug="demo")
         progress = self._progress(is_complete=False)
 
         with patch(
@@ -113,6 +113,6 @@ class OnboardingCompletionRedirectTests(SimpleTestCase):
 
         mock_messages.warning.assert_called_once()
         mock_redirect.assert_called_once_with(
-            "workspace_settings_setup",
-            workspace_id=15,
+            "workspace_slug_settings_setup",
+            workspace_slug="demo",
         )

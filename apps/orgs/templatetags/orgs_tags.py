@@ -539,3 +539,14 @@ def workspace_context(request):
         }
     except Exception:
         return {}
+
+
+@register.simple_tag(takes_context=True)
+def navigation_actions(context):
+    """Normalize the request-scoped permission context for navigation only."""
+    from apps.orgs.access import normalize_action
+
+    request = context.get("request")
+    if not getattr(request, "workspace", None):
+        return frozenset()
+    return frozenset(normalize_action(code) for code in context.get("user_permissions", ()))

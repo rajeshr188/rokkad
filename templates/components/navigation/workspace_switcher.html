@@ -2,88 +2,83 @@
 {% if workspace_switcher_variant == "navbar" %}
 <li class="nav-item dropdown workspace-switcher workspace-switcher-navbar">
     <button class="nav-link dropdown-toggle nav-pill border-0" type="button" id="workspaceDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-briefcase me-1"></i>
-        {% if request.user.profile.workspace %}
-            {{ request.user.profile.workspace.name|truncatechars:22 }}
+        <i aria-hidden="true" class="bi bi-briefcase me-1"></i>
+        {% if request.workspace %}
+            {{ request.workspace.name|truncatechars:22 }}
         {% else %}
-            Select Workspace
+            Workspaces
         {% endif %}
     </button>
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="workspaceDropdown">
         {% for membership in request.user.memberships.all %}
+        {% if membership.company.lifecycle_state == 'ACTIVE' %}
             <li>
-                <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="m-0">
+                <form data-workspace-switch method="post" action="{% url 'workspace_select' membership.company.id %}" class="m-0">
                     {% csrf_token %}
-                    <button type="submit" class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}">
-                        <i class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
-                        {% if request.user.profile.workspace.id == membership.company.id %}
-                            <i class="bi bi-check-lg ms-2"></i>
+                    <button type="submit" class="dropdown-item {% if request.workspace.id == membership.company.id %}active{% endif %}">
+                        <i aria-hidden="true" class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
+                        {% if request.workspace.id == membership.company.id %}
+                            <i aria-hidden="true" class="bi bi-check-lg ms-2"></i>
                         {% endif %}
                     </button>
                 </form>
             </li>
+        {% endif %}
         {% empty %}
             <li><span class="dropdown-item-text text-muted">No workspaces</span></li>
         {% endfor %}
         <li><hr class="dropdown-divider"></li>
         <li>
             <a class="dropdown-item" href="{% url 'workspace_selector' %}?show_all=1">
-                <i class="bi bi-grid-3x3-gap me-1"></i>All Workspaces
+                <i aria-hidden="true" class="bi bi-grid-3x3-gap me-1"></i>All Workspaces
             </a>
         </li>
         <li>
             <a class="dropdown-item" href="{% url 'workspace_create' %}">
-                <i class="bi bi-plus-circle me-1"></i>Create New
+                <i aria-hidden="true" class="bi bi-plus-circle me-1"></i>Create New
             </a>
         </li>
-        {% if request.user.profile.workspace and request.user.profile.workspace.slug != 'public' %}
-        <li>
-            <form method="post" action="{% url 'clear_workspace' %}" class="m-0">
-                {% csrf_token %}
-                <button type="submit" class="dropdown-item">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>Clear Workspace
-                </button>
-            </form>
-        </li>
-        {% endif %}
+
     </ul>
 </li>
 {% else %}
 <div class="workspace-switcher mb-3">
     <div class="dropdown">
         <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="workspaceDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-briefcase"></i>
-            {% if request.user.profile.workspace %}
-                <span class="fw-bold">{{ request.user.profile.workspace.name }}</span>
+            <i aria-hidden="true" class="bi bi-briefcase"></i>
+            {% if request.workspace %}
+                <span class="fw-bold">{{ request.workspace.name }}</span>
             {% else %}
-                <span class="text-muted">Select Workspace</span>
+                <span class="text-muted">Workspaces</span>
             {% endif %}
         </button>
         <ul class="dropdown-menu w-100" aria-labelledby="workspaceDropdownBtn">
             {% for membership in request.user.memberships.all %}
+        {% if membership.company.lifecycle_state == 'ACTIVE' %}
                 <li>
-                    <form method="post" action="{% url 'workspace_select' membership.company.id %}" class="m-0">
+                    <form data-workspace-switch method="post" action="{% url 'workspace_select' membership.company.id %}" class="m-0">
                         {% csrf_token %}
-                        <button type="submit" class="dropdown-item {% if request.user.profile.workspace.id == membership.company.id %}active{% endif %}">
-                            <i class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
-                            {% if request.user.profile.workspace.id == membership.company.id %}
-                                <i class="bi bi-check-lg float-end text-success"></i>
+                        <button type="submit" class="dropdown-item {% if request.workspace.id == membership.company.id %}active{% endif %}">
+                            <i aria-hidden="true" class="bi bi-briefcase-fill"></i> {{ membership.company.name }}
+                            {% if request.workspace.id == membership.company.id %}
+                                <i aria-hidden="true" class="bi bi-check-lg float-end text-success"></i>
                             {% endif %}
                         </button>
                     </form>
                 </li>
-            {% empty %}
+            {% endif %}
+        {% empty %}
                 <li><span class="dropdown-item-text text-muted">No workspaces</span></li>
             {% endfor %}
             <li><hr class="dropdown-divider"></li>
             <li>
                 <a class="dropdown-item" href="{% url 'workspace_selector' %}?show_all=1">
-                    <i class="bi bi-window-plus"></i> View All Workspaces
+                    <i aria-hidden="true" class="bi bi-window-plus"></i> View All Workspaces
                 </a>
             </li>
             <li>
                 <a class="dropdown-item" href="{% url 'workspace_create' %}">
-                    <i class="bi bi-plus-circle"></i> Create New
+                    <i aria-hidden="true" class="bi bi-plus-circle"></i> Create New
                 </a>
             </li>
         </ul>

@@ -46,8 +46,8 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark modern-nav">
     <div class="container-fluid px-3 px-lg-4">
-        <a class="navbar-brand" href="{% url 'home' %}">
-            <i class="bi bi-building me-1"></i> Rokkad
+        <a class="navbar-brand" href="{% if request.workspace %}{% url 'workspace_slug_dashboard' workspace_slug=request.workspace.slug %}{% elif user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'home' %}{% endif %}">
+            <i aria-hidden="true" class="bi bi-building me-1"></i> Rokkad
         </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,37 +65,18 @@
                             {{ request.user.first_name|default:request.user.username|truncatechars:18 }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><h6 class="dropdown-header text-uppercase small">Profile</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person"></i> View Profile</a></li>
-                            <li><a class="dropdown-item" href="{% url 'my_memberships' %}"><i class="bi bi-diagram-3"></i> My Memberships</a></li>
-                            <li><a class="dropdown-item" href="{% url 'userprofile_update' request.user.profile.id %}"><i class="bi bi-pencil-square"></i> Edit Profile</a></li>
-                            <li><a class="dropdown-item" href="{% url 'workspace_management' %}"><i class="bi bi-briefcase-fill"></i> Workspace Management</a></li>
-                            {% if user_role == 'Owner' %}
+                            <li><a class="dropdown-item" href="{% url 'account_settings' %}"><i aria-hidden="true" class="bi bi-person"></i> My account</a></li>
+                            <li><a class="dropdown-item" href="{% url 'app_invitations' %}"><i aria-hidden="true" class="bi bi-envelope"></i> My invitations</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header text-uppercase small">Billing</h6></li>
-                            {% if request.workspace %}
-                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}"><i class="bi bi-credit-card"></i> Billing Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.slug %}"><i class="bi bi-receipt"></i> Subscription Plans</a></li>
-                            {% else %}
-                            <li><a class="dropdown-item" href="{% url 'workspace_selector' %}"><i class="bi bi-credit-card"></i> Select Workspace for Billing</a></li>
-                            {% endif %}
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header text-uppercase small">Account</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'account_settings' %}"><i class="bi bi-shield-lock"></i> Account Settings</a></li>
-                            <li><a class="dropdown-item" href="{% url 'account_email' %}"><i class="bi bi-envelope"></i> Email Addresses</a></li>
-                            <li><a class="dropdown-item" href="{% url 'account_change_password' %}"><i class="bi bi-key"></i> Change Password</a></li>
-                            <li><a class="dropdown-item" href="{% url 'socialaccount_connections' %}"><i class="bi bi-link-45deg"></i> Connected Accounts</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}"><i aria-hidden="true" class="bi bi-box-arrow-right"></i> Sign Out</a></li>
                         </ul>
                     </li>
                 {% else %}
                     <li class="nav-item">
-                        <a class="nav-link nav-pill" href="{% url 'account_login' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Sign In</a>
+                        <a class="nav-link nav-pill" href="{% url 'account_login' %}"><i aria-hidden="true" class="bi bi-box-arrow-in-right me-1"></i>Sign In</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-pill" href="{% url 'account_signup' %}"><i class="bi bi-person-plus me-1"></i>Sign Up</a>
+                        <a class="nav-link nav-pill" href="{% url 'account_signup' %}"><i aria-hidden="true" class="bi bi-person-plus me-1"></i>Sign Up</a>
                     </li>
                 {% endif %}
             </ul>

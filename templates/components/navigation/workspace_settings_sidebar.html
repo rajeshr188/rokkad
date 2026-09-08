@@ -1,47 +1,28 @@
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings' workspace_slug=ew.slug %}">
-    <i class="bi bi-gear"></i> Workspace settings
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' or request.resolver_match.url_name == 'workspace_slug_settings_setup' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_setup' workspace_slug=ew.slug %}">
-    <i class="bi bi-list-check"></i> Setup checklist
-</a>
-{% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_preferences' workspace_slug=ew.slug %}">
-    <i class="bi bi-sliders"></i> Preferences
-</a>
+{% load orgs_tags %}
+{% navigation_actions as nav_actions %}
+{% if 'workspace.view' in nav_actions %}
+{% url 'workspace_slug_settings' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Business profile</a>
+{% url 'workspace_slug_settings_setup' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Setup checklist</a>
 {% endif %}
-<div class="mgmt-section-title">Team</div>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' or request.resolver_match.url_name == 'workspace_slug_settings_team' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_team' workspace_slug=ew.slug %}">
-    <i class="bi bi-people"></i> Team Members
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invite' or request.resolver_match.url_name == 'workspace_settings_invite' or request.resolver_match.url_name == 'workspace_slug_settings_invite' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_invite' workspace_slug=ew.slug %}">
-    <i class="bi bi-person-plus"></i> Invite Member
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' or request.resolver_match.url_name == 'workspace_slug_settings_invitations' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.slug %}">
-    <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
-</a>
-<div class="mgmt-section-title">Configuration</div>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_modules' or request.resolver_match.url_name == 'workspace_slug_settings_modules' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_modules' workspace_slug=ew.slug %}">
-    <i class="bi bi-grid-3x3-gap"></i> Modules
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_security' or request.resolver_match.url_name == 'workspace_slug_settings_security' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_security' workspace_slug=ew.slug %}">
-    <i class="bi bi-shield-check"></i> Security
-</a>
-{% if role_name == 'Owner' or role_name == 'Superuser' %}
-<a class="nav-link mgmt-nav-link text-danger {% if request.resolver_match.url_name == 'workspace_delete' or request.resolver_match.url_name == 'workspace_slug_settings_archive' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_archive' workspace_slug=ew.slug %}">
-    <i class="bi bi-archive"></i> Archive Workspace
-</a>
+{% if 'team.view' in nav_actions %}{% url 'workspace_slug_settings_team' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Team</a>{% endif %}
+{% if 'billing.view' in nav_actions %}{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Billing</a>{% endif %}
+{% if 'workspace.settings.manage' in nav_actions %}
+{% url 'workspace_slug_settings_numbering' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Loan setup</a>
+{% url 'workspace_slug_loans_dispatch' workspace_slug=ew.slug loans_path='setup/documents/' as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Documents &amp; printing</a>
+{% url 'workspace_slug_settings_preferences' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Preferences</a>
+{% url 'workspace_slug_settings_modules' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">App configuration</a>
+{% url 'workspace_slug_settings_security' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Security</a>
 {% endif %}
-
-{% if role_name == 'Owner' %}
-<div class="mgmt-section-title">Billing</div>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.namespace == 'workspace_subscriptions' %}active{% endif %}" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.slug %}"><i class="bi bi-credit-card"></i>Subscription &amp; invoices</a>
-{% endif %}
+{% if 'data.import' in nav_actions %}{% url 'workspace_slug_data_tools_import' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Data tools</a>{% endif %}
+{% if 'workspace.archive' in nav_actions %}{% url 'workspace_slug_settings_archive' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link text-danger {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Archive Workspace</a>{% endif %}

@@ -50,6 +50,63 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
         self.workspace = self._workspace("Browser Counter")
         self._setup_loans()
 
+    def test_workspace_navigation_scope_and_unsaved_switch(self):
+        from playwright.sync_api import sync_playwright, expect
+
+        other = self._workspace("Second Workspace")
+        artifacts = Path(gettempdir()) / "rokkad-navigation"
+        artifacts.mkdir(exist_ok=True)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                context = browser.new_context(viewport={"width": 1440, "height": 1000})
+                context.add_cookies([{"name": "sessionid", "value": self.client.cookies["sessionid"].value, "url": self.live_server_url}])
+                page = context.new_page()
+                tab = context.new_page()
+                first_url = self.live_server_url + reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
+                second_url = self.live_server_url + reverse("workspace_slug_dashboard", kwargs={"workspace_slug": other.slug})
+                page.goto(first_url)
+                tab.goto(second_url)
+                expect(page.locator("#workspaceDropdown")).to_contain_text(self.workspace.name)
+                expect(tab.locator("#workspaceDropdown")).to_contain_text(other.name)
+                page.reload()
+                expect(page.locator("#workspaceDropdown")).to_contain_text(self.workspace.name)
+                page.goto(self.live_server_url + reverse("workspace_slug_settings_team", kwargs={"workspace_slug": self.workspace.slug}))
+                expect(page.get_by_role("navigation", name="Workspace navigation").first.get_by_role("link", name="PawnLoans", exact=True)).to_be_visible()
+                page.screenshot(path=str(artifacts / "team-desktop.png"), full_page=True)
+                page.goto(self.live_server_url + reverse("account_settings"))
+                expect(page.locator("#workspaceDropdown")).to_have_text("Workspaces")
+                page.goto(self.live_server_url + reverse("workspace_slug_party_create", kwargs={"workspace_slug": self.workspace.slug}))
+                page.locator('[name="display_name"]').fill("Unsaved navigation check")
+                dialogs = []
+                def cancel_switch(dialog):
+                    dialogs.append(dialog.message)
+                    dialog.dismiss()
+                page.on("dialog", cancel_switch)
+                page.locator("#workspaceDropdown").click()
+                page.locator('[data-workspace-switch]').filter(has_text=other.name).get_by_role("button").click()
+                self.assertEqual(len(dialogs), 1)
+                expect(page.locator('[name="display_name"]')).to_have_value("Unsaved navigation check")
+                expect(page.locator("#workspaceDropdown")).to_contain_text(self.workspace.name)
+                page.remove_listener("dialog", cancel_switch)
+                page.on("dialog", lambda dialog: dialog.accept())
+                if not page.locator('[data-workspace-switch]').filter(has_text=other.name).is_visible():
+                    page.locator("#workspaceDropdown").click()
+                page.locator('[data-workspace-switch]').filter(has_text=other.name).get_by_role("button").click()
+                expect(page).to_have_url(second_url)
+                page.wait_for_load_state("networkidle")
+                page.set_viewport_size({"width": 390, "height": 1000})
+                page.goto(self.live_server_url + reverse("workspace_slug_settings_team", kwargs={"workspace_slug": other.slug}))
+                page.get_by_role("button", name="Navigation", exact=True).click()
+                expect(page.locator("#mgmtOffcanvas").get_by_role("link", name="PawnLoans", exact=True)).to_be_visible()
+                page.wait_for_function("document.querySelector('#mgmtOffcanvas').classList.contains('show')")
+                page.screenshot(path=str(artifacts / "team-mobile-menu.png"), full_page=True)
+                self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 391)
+                page.wait_for_load_state("networkidle")
+                context.close()
+            finally:
+                browser.close()
+
     def test_administration_screens(self):
         from playwright.sync_api import sync_playwright, expect
 

@@ -4,6 +4,7 @@
 {% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/workspace-ui.css' %}">{% endblock %}
 {% block main_wrapper_class %}container-fluid p-0{% endblock %}
 {% block footer %}{% endblock %}
+{% block messages %}{% endblock %}
 
 {% block navbar %}
     {% include 'components/navigation/main_nav.html' %}
@@ -12,19 +13,6 @@
 {% block main_class %}d-flex flex-column min-vh-100 workspace-shell{% endblock %}
 
 {% block content %}
-{# ── Workspace context banner (data-plane indicator) ── #}
-{% if request.workspace %}
-<div class="workspace-context-bar">
-    <span>
-        <i class="bi bi-database-fill-check me-1"></i>
-        <strong>Workspace:</strong> {{ request.workspace.name }}
-        {% if user_role %}<span class="workspace-role-pill">{{ user_role }}</span>{% endif %}
-    </span>
-    <a href="{% url 'workspace_selector' %}?show_all=1" class="workspace-switch-link">
-        <i class="bi bi-arrow-left-right me-1"></i>Switch workspace
-    </a>
-</div>
-{% endif %}
 <div class="container-fluid flex-grow-1 workspace-page">
     <div class="row h-100">
         <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
@@ -74,6 +62,7 @@
         
         <!-- Main Content Area -->
         <main class="col-lg-10 px-3 px-md-4 py-3 workspace-content" id="content">
+            {% include "components/messages.html" with messages_container_class="mb-3" %}
             <!-- Breadcrumb Navigation -->
             {% block breadcrumbs %}{% endblock %}
             

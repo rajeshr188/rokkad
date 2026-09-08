@@ -10,16 +10,17 @@ related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, conta
 
 The approved counter UI, shared navigation, business-app and administration
 redesign, dashboard breadcrumbs, and preference test cleanup are published on
-`rls-mvp` through `2d5c121`. The latest expanded gate passes **620/620 tests**;
+`rls-mvp` through cleanup commit `5b69e2a`. The local navigation checkpoint's expanded gate passes **653/653 tests**;
 see [current status](../STATUS.md) for its scope and prior browser acceptance.
 
 Party, Loans, Notify v2, and Rates are the supported business apps. Workspace
 slug routing, action authorization, and PostgreSQL forced RLS remain the active
 boundaries. Contact, Girvi, legacy Notify, and DEA/accounting are retired.
 
-Current work is repository housekeeping after the approved revamp: simplify
-shared navigation, repair ignore rules, and archive obsolete root notes and
-diagnostics. Next review is operator feedback on navigation and routine work.
+The authorized [navigation simplification](workspace-navigation-simplification.md)
+is implemented locally: explicit Workspace labels, one shared app/settings sidebar,
+personal account scope, predictable landing/list/create routes, and unsaved-switch
+protection. Next review is the operator's normal account/Workspace workflow.
 Physical phone/camera and printer checks remain deferred; external private-media
 serving still needs deployment verification before a real-data pilot.
 

@@ -8,6 +8,66 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Workspace navigation simplification implemented
+
+Implemented the approved navigation proposal. Workspace apps and administration
+share one sidebar, with Team, Billing, and lending configuration under Settings.
+The header identifies the explicit request Workspace; personal pages show
+Workspaces and personal navigation. Removed the separate management banner and
+Clear Workspace from normal menus. Messages render once inside page content.
+
+The Workspace list always opens, duplicate management/membership entry points
+redirect there, and login landing uses a validated remembered Workspace or the
+chooser. Create/onboarding completion targets explicit setup URLs, retaining
+billing recovery. Personal pages preserve the saved preference; separate tabs
+retain their explicit Workspace. Switching warns before discarding unsaved edits.
+
+Changes are local and uncommitted. The expanded regression gate passes all 653
+tests across Workspace/account/onboarding/billing, configuration, Loans, shell
+rendering, business entry points, and the restricted-role HTTP operator journeys.
+All five Chromium scenarios pass (15 checks including the imported HTTP operator
+journeys): desktop/mobile lending, draft recovery, Party/Rates/Notify,
+administration, and two-Workspace navigation with unsaved-switch cancellation.
+Desktop sidebar and the fully opened mobile menu were visually checked. The final
+shell/navigation rerun passes 17 checks; `git diff --check` is clean. Physical
+device/printer checks remain deferred by the operator. See
+`docs/plans/workspace-navigation-simplification.md` for the implemented journeys.
+
+## 2026-09-08 - Workspace navigation analysis
+
+Reviewed account, Workspace selection/creation, onboarding, team, billing, and
+business-app navigation against the accepted request/RLS contract. Proposed one
+app shell with personal and Workspace scopes; team and billing stay within the
+Workspace. Identified saved-preference switcher labels, duplicate management
+surfaces, and Clear Workspace as sources of confusion. The recommendation and
+acceptance journeys are in `docs/plans/workspace-navigation-simplification.md`.
+This is a proposal only; no runtime changes or tests were made for this analysis.
+Earlier uncommitted notification/header fixes remain in the working tree.
+
+## 2026-09-08 - Management header and notification placement
+
+Removed the redundant preferred-Workspace entry shortcut from the management
+bar; the main header switcher remains. Management notifications now render once
+inside the content area below the management heading. Base and management layouts
+share `components/messages.html` so alert rendering stays consistent. All 15 shell
+checks pass, including single-message rendering and placement below the management
+heading. These header/notification follow-ups remain local and uncommitted.
+
+## 2026-09-08 - Repeated header identity removed
+
+Removed the repeated username from the management context bar. Account identity
+and its menu remain in the top-right header; the context bar retains its
+Workspace-entry shortcut. All 15 shell checks pass. This presentation fix and
+the preceding notification fix remain local and uncommitted.
+
+## 2026-09-08 - Duplicate sign-in notification fix
+
+Removed the management layout's second message loop; full-page notifications
+render once through the base alert block. The base toast container starts empty,
+while standalone HTMX toast fragments still render their messages. All 15 shell
+checks pass, including a single sign-in message across account/auth/Workspace
+layouts and retained background-toast content. This fix is local and uncommitted.
+
 ## 2026-09-08 - Post-revamp repository cleanup
 
 Completed a conservative housekeeping pass after the published `2d5c121`

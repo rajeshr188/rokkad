@@ -7,13 +7,13 @@
 {% block mgmt_content %}
 <div class="mgmt-workspace-hero">
     <div>
-        <div class="mgmt-kicker mb-1">Global workspace manager</div>
+        <div class="mgmt-kicker mb-1">Workspaces</div>
         <h1 class="h3 fw-bold mb-1">My Workspaces</h1>
         <p class="text-muted mb-0">
             {% if has_workspaces %}
             Choose the business workspace you want to operate or manage.
             {% else %}
-            Create your first workspace to start configuring the ERP.
+            Create a Workspace for your business, or accept an invitation below.
             {% endif %}
         </p>
     </div>
@@ -48,7 +48,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
                 <h2 class="h5 fw-bold mb-1">Workspace access</h2>
-                <p class="small text-muted mb-0">Switching updates your active workspace before entering business screens.</p>
+                <p class="small text-muted mb-0">Choose a Workspace to open its apps and settings.</p>
             </div>
             <a href="{% url 'app_invitations' %}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-envelope me-1"></i>Invitations
@@ -77,7 +77,7 @@
                             </div>
                         </div>
                         {% if current_workspace == membership.company %}
-                        <span class="mgmt-status-badge done"><i class="bi bi-check-circle"></i>Active</span>
+                        <span class="mgmt-status-badge done"><i class="bi bi-check-circle"></i>Last used</span>
                         {% endif %}
                     </div>
 
@@ -114,7 +114,7 @@
             <div class="mgmt-empty-state">
                 <div class="mb-3"><i class="bi bi-inbox fs-1 text-muted"></i></div>
                 <h2 class="h5 fw-bold mb-2">No workspaces yet</h2>
-                <p class="text-muted mb-3">Create your first workspace to configure business settings, accounting, inventory, and team access.</p>
+                <p class="text-muted mb-3">Create a Workspace to set up pawn lending and team access, or accept an invitation to an existing business.</p>
                 <a href="{% url 'app_workspace_create' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-1"></i>Create Workspace
                 </a>
@@ -176,7 +176,7 @@
         <aside class="mgmt-side-card">
             <div class="p-3 border-bottom">
                 <h2 class="h6 fw-bold mb-1">Account overview</h2>
-                <p class="small text-muted mb-0">Global account actions stay outside tenant ERP screens.</p>
+                <p class="small text-muted mb-0">Manage your personal account and invitations here.</p>
             </div>
             <div class="p-3">
                 <ul class="list-unstyled mb-0">

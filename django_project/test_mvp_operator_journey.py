@@ -274,6 +274,22 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertTrue(content.startswith(b"%PDF"))
         return content
 
+    def test_workspace_list_and_account_do_not_change_selected_workspace(self):
+        first = self._workspace("Navigation First")
+        second = self._workspace("Navigation Second")
+        first_page = self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": first.slug}))
+        self.assertContains(first_page, first.name)
+        self.owner.profile.refresh_from_db()
+        self.assertEqual(self.owner.profile.workspace_id, first.pk)
+        for route in ("app_workspaces", "workspace_selector", "account_settings"):
+            response = self._get(reverse(route))
+            self.assertIsNone(getattr(response.wsgi_request, "workspace", None))
+        self.owner.profile.refresh_from_db()
+        self.assertEqual(self.owner.profile.workspace_id, first.pk)
+        self.assertRedirects(self.client.get(reverse("workspace_management")), reverse("workspace_selector"))
+        landing = self.client.get(reverse("dashboard"))
+        self.assertRedirects(landing, reverse("workspace_slug_dashboard", kwargs={"workspace_slug": first.slug}))
+
     def test_two_workspaces_and_member_permissions_remain_independent(self):
         self.workspace = self._workspace("MVP First")
         party = self._party()

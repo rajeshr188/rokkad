@@ -1,157 +1,26 @@
 {% load orgs_tags %}
-<!-- Workspace Sidebar -->
-<div class="workspace-sidebar-wrapper">
-    <div class="workspace-sidebar-sticky">
-        {% with effective_workspace=workspace|default:user_workspace %}
-        {% if effective_workspace and effective_workspace.owner_id == request.user.id %}
-        {% firstof user_role "Owner" as role_name %}
-        {% else %}
-        {% firstof user_role "Member" as role_name %}
-        {% endif %}
-        <!-- Workspace Info - Using context processor variable -->
-        {% if effective_workspace and in_tenant %}
-        <div class="workspace-identity">
-            <h6 class="workspace-identity-kicker">
-                <i class="bi bi-database-fill-check me-1"></i> Workspace
-            </h6>
-            <div class="workspace-identity-name">{{ effective_workspace.name }}</div>
-            <small>
-                <span class="workspace-identity-role">{{ role_name }}</span>
-            </small>
-        </div>
-        {% endif %}
-
-        <!-- Main Navigation -->
-        <nav class="workspace-nav">
-            <!-- Tenant App Features (only in data-plane workspace context) -->
-            {% if in_tenant %}
-            <div class="workspace-nav-section">
-                <h6 class="workspace-nav-section-title">Counter work</h6>
-
-                <!-- Canonical Loans application -->
-                {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'pawn_loan_create' %}active{% endif %}" href="{% url 'workspace_slug_loan_create' workspace_slug=effective_workspace.slug %}"><i class="bi bi-plus-circle"></i> Counter &middot; New loan</a>
-                {% endif %}
-                {% if 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'loans' and request.resolver_match.url_name != 'pawn_loan_create' and '/setup/' not in request.path and '/numbering/' not in request.path %}active{% endif %}"
-                   href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.slug %}">
-                    <i class="bi bi-cash-coin"></i> PawnLoans
-                </a>
-                {% endif %}
-                {% if role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if '/loans/setup/' in request.path or '/settings/numbering/' in request.path %}active{% endif %}"
-                   href="{% url 'workspace_slug_settings_numbering' workspace_slug=effective_workspace.slug %}">
-                    <i class="bi bi-ui-checks-grid"></i> PawnLoan setup
-                </a>
-                {% endif %}
-                <!-- Parties -->
-                {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'party' or request.resolver_match.url_name == 'workspace_slug_parties' %}active{% endif %}"
-                   href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.slug %}">
-                    <i class="bi bi-person-vcard"></i> Parties
-                </a>
-                {% endif %}
-
-                     <!-- Notifications -->
-                     {% if 'data_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                     <a class="workspace-nav-link {% if 'notify_v2_' in request.resolver_match.url_name %}active{% endif %}"
-                         href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.slug %}">
-                          <i class="bi bi-envelope-paper-fill"></i> Notifications
-                     </a>
-                     {% endif %}
-
-                <!-- Rates -->
-                {% if 'data_view' in user_permissions or 'girvi_loan_view' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'rate_list' or 'rate' in request.resolver_match.url_name %}active{% endif %}"
-                   href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.slug %}">
-                    <i class="bi bi-coin"></i> Rates
-                </a>
-                {% endif %}
-
-                {% if 'data_import' in user_permissions or role_name == 'Owner' or role_name == 'Admin' %}
-                <a class="workspace-nav-link {% if request.resolver_match.namespace == 'data_import' %}active{% endif %}"
-                   href="{% url 'workspace_slug_data_tools_import' workspace_slug=effective_workspace.slug %}">
-                    <i class="bi bi-arrow-down-up"></i> Data Tools
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-
-
-                {% if effective_workspace %}
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_dashboard' or request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}"
-                    href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}">
-                <i class="bi bi-speedometer2"></i> Dashboard
-            </a>
-            {% endif %}
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'team_invitations' %}active{% endif %}"
-                    href="{% url 'team_invitations' %}">
-                <i class="bi bi-envelope"></i> My Invitations
-            </a>
-
-<h6 class="workspace-nav-section-title mt-3">Administration</h6>
-            {% if role_name == 'Owner' and effective_workspace %}
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
-               href="{% url 'workspace_slug_settings' workspace_slug=effective_workspace.slug %}">
-                <i class="bi bi-gear"></i> Workspace settings
-            </a>
-            <a class="workspace-nav-link" href="{% url 'workspace_slug_settings_team' workspace_slug=effective_workspace.slug %}"><i class="bi bi-people"></i>Team</a>
-            <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
-               href="{% url 'workspace_slug_settings_preferences' workspace_slug=effective_workspace.slug %}">
-                <i class="bi bi-sliders"></i> Preferences
-            </a>
-            {% endif %}
-
-            <!-- Billing/Subscription (owner only) -->
-            {% if role_name == 'Owner' %}
-            <div class="workspace-nav-section">
-                <h6 class="workspace-nav-section-title">Billing</h6>
-                <a class="workspace-nav-link {% if request.resolver_match.url_name == 'subscriptions:dashboard' or request.resolver_match.namespace == 'subscriptions' %}active{% endif %}"
-                   href="{% url 'workspace_subscriptions:dashboard' workspace_slug=user_workspace.slug %}">
-                    <i class="bi bi-credit-card"></i> Subscription
-                    {% if not has_active_subscription %}
-                        <span class="badge bg-danger text-white float-end">Action Needed</span>
-                    {% elif subscription_plan %}
-                        <span class="badge bg-success text-white float-end">{{ subscription_plan }}</span>
-                    {% endif %}
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- Control-plane link: only show a shortcut to Account Management from tenant sidebar -->
-            {% if in_tenant %}
-            <div class="workspace-nav-section mt-2">
-                <a class="workspace-nav-link text-muted small"
-                   href="{% url 'workspace_selector' %}?show_all=1">
-                    <i class="bi bi-arrow-left-circle"></i> Account &amp; Workspaces
-                </a>
-            </div>
-            {% endif %}
-        </nav>
-
-        <!-- Workspace Stats (if workspace exists) -->
-        {% if effective_workspace %}
-        <div class="workspace-sidebar-meta">
-            <div class="mb-2">
-                <span>Subscription:</span>
-                <br>
-                {% if has_active_subscription %}
-                    <span class="badge bg-success d-inline-block mt-1">
-                        <i class="bi bi-check-circle"></i> {{ subscription_plan|default:"Active" }}
-                    </span>
-                {% else %}
-                    <span class="badge bg-warning d-inline-block mt-1">
-                        <i class="bi bi-exclamation-circle"></i> Renewal Needed
-                    </span>
-                {% endif %}
-            </div>
-            {% if days_until_renewal %}
-            <div class="text-xs text-muted mt-2">
-                Renews in: <strong>{{ days_until_renewal }}</strong> days
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% endwith %}
-    </div>
-</div>
+{% navigation_actions as nav_actions %}
+{% with effective_workspace=request.workspace %}
+{% if effective_workspace %}
+<nav class="workspace-nav p-3" aria-label="Workspace navigation">
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}" href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-speedometer2"></i> Overview</a>
+  {% if 'data.view' in nav_actions %}
+  <a class="workspace-nav-link {% if '/internal/create/' in request.path or request.resolver_match.url_name == 'pawn_loan_create' or request.resolver_match.url_name == 'workspace_slug_loan_create' %}active{% endif %}" href="{% url 'workspace_slug_loan_create' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-plus-circle"></i> Counter / New loan</a>
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'pawn_loan_list' or request.resolver_match.url_name == 'workspace_slug_loan_list' or '/loans/internal/' in request.path and '/create/' not in request.path %}active{% endif %}" href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-cash-coin"></i> PawnLoans</a>
+  {% endif %}
+  {% if 'data.view' in nav_actions or 'contact.view' in nav_actions %}
+  <a class="workspace-nav-link {% if '/parties/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-person-vcard"></i> Parties</a>
+  {% endif %}
+  {% if 'data.view' in nav_actions %}
+  <a class="workspace-nav-link {% if '/rates/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-coin"></i> Rates</a>
+  <a class="workspace-nav-link {% if '/notify/' in request.path or '/notifications/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-envelope-paper"></i> Notifications</a>
+  {% endif %}
+  {% if 'workspace.settings.manage' in nav_actions or 'workspace.view' in nav_actions or 'team.view' in nav_actions or 'billing.view' in nav_actions or 'data.import' in nav_actions %}
+  <details class="workspace-settings-nav mt-3" {% if '/settings/' in request.path or '/loans/setup/' in request.path %}open{% endif %}>
+    <summary class="workspace-nav-link"><i aria-hidden="true" class="bi bi-gear"></i> Settings</summary>
+    {% include 'components/navigation/workspace_settings_sidebar.html' with ew=effective_workspace %}
+  </details>
+  {% endif %}
+</nav>
+{% endif %}
+{% endwith %}

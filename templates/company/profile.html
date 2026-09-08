@@ -38,22 +38,16 @@
                 <div class="card-body">
                     <h5 class="mb-3"><i class="bi bi-grid-3x3-gap me-2"></i>Account Overview</h5>
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="p-3 bg-light rounded text-center">
                                 <div class="small text-muted">Workspaces</div>
                                 <div class="h4 mb-0">{{ workspace_count }}</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="p-3 bg-light rounded text-center">
                                 <div class="small text-muted">Pending Invitations</div>
                                 <div class="h4 mb-0">{{ pending_invitation_count }}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded text-center">
-                                <div class="small text-muted">Active Workspace</div>
-                                <div class="h6 mb-0 text-truncate">{{ workspace.name|default:"Not selected" }}</div>
                             </div>
                         </div>
                     </div>
@@ -61,17 +55,9 @@
                         <a href="{% url 'workspace_selector' %}?show_all=1" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-briefcase me-1"></i>Manage Workspaces
                         </a>
-                        <a href="{% url 'my_memberships' %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-diagram-3 me-1"></i>My Memberships
-                        </a>
                         <a href="{% url 'team_invitations' %}" class="btn btn-sm btn-outline-success">
                             <i class="bi bi-envelope me-1"></i>My Invitations
                         </a>
-                        {% if user_role == 'Owner' %}
-                        <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=user_workspace.slug %}" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-credit-card me-1"></i>Billing
-                        </a>
-                        {% endif %}
                     </div>
                 </div>
             </div>

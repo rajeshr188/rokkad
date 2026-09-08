@@ -1,0 +1,22 @@
+{% load i18n %}
+        {% if messages %}
+            <div class="{{ messages_container_class|default:'container-lg mt-3' }}">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                        <strong>
+                            {% if message.tags == 'error' %}
+                                <i class="bi bi-exclamation-circle"></i> {% trans "Error" %}
+                            {% elif message.tags == 'success' %}
+                                <i class="bi bi-check-circle"></i> {% trans "Success" %}
+                            {% elif message.tags == 'warning' %}
+                                <i class="bi bi-exclamation-triangle"></i> {% trans "Warning" %}
+                            {% else %}
+                                <i class="bi bi-info-circle"></i> {% trans "Info" %}
+                            {% endif %}
+                        </strong>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}

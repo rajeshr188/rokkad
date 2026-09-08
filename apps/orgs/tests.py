@@ -510,18 +510,16 @@ class OrgNavigationFlowTests(SimpleTestCase):
 			sidebar_html = f.read()
 		
 		# Verify canonical route names are used
-		self.assertIn("workspace_dashboard", sidebar_html)
-		self.assertIn("team_invitations", sidebar_html)
-		self.assertIn("workspace_detail", sidebar_html)
-		self.assertIn("workspace_preferences", sidebar_html)
-		self.assertEqual(sidebar_html.count("workspace_slug_parties"), 2)
+		self.assertIn("workspace_slug_dashboard", sidebar_html)
+		self.assertIn("workspace_settings_sidebar.html", sidebar_html)
+		self.assertIn("request.workspace", sidebar_html)
+		self.assertIn("navigation_actions", sidebar_html)
+		self.assertEqual(sidebar_html.count("workspace_slug_parties"), 1)
 		self.assertNotIn("{% url 'party:party_list' %}", sidebar_html)
 		for route_name in (
 			"workspace_slug_notifications",
 			"workspace_slug_loan_list",
-			"workspace_slug_settings_numbering",
 			"workspace_slug_rates",
-			"workspace_slug_data_tools_import",
 		):
 			self.assertIn(route_name, sidebar_html)
 		for unscoped_route in (
@@ -645,9 +643,10 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		with open("templates/components/navigation/sidebar.html", "r") as f:
 			sidebar_html = f.read()
 
-		registered = {codename for codename, _name, _description in ALL_PERMISSIONS}
+		from apps.orgs.access import normalize_action
+		registered = {normalize_action(codename) for codename, _name, _description in ALL_PERMISSIONS}
 		referenced = set(
-			re.findall(r"'([^']+)'\s+in\s+user_permissions", sidebar_html)
+			re.findall(r"'([^']+)'\s+in\s+nav_actions", sidebar_html)
 		)
 
 		self.assertTrue(referenced)
@@ -660,8 +659,8 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		with open("templates/components/navigation/sidebar.html", "r") as f:
 			sidebar_html = f.read()
 
-		self.assertIn("data_view", sidebar_html)
-		self.assertIn("girvi_loan_view", sidebar_html)
+		self.assertIn("data.view", sidebar_html)
+		self.assertNotIn("girvi_loan_view", sidebar_html)
 		self.assertNotIn("dea_entry_view", sidebar_html)
 		self.assertNotIn("sales_invoice_view", sidebar_html)
 		self.assertNotIn("purchase_order_view", sidebar_html)

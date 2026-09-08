@@ -49,7 +49,7 @@ def _redirect_to_workspace_setup_or_list(request):
     """Route completed onboarding to workspace setup when a workspace is selected."""
     company = resolve_preferred_workspace(request.user)
     if company is not None:
-        return redirect("workspace_settings_setup", workspace_id=company.id)
+        return redirect("workspace_slug_settings_setup", workspace_slug=company.slug)
     return redirect("workspace_list")
 
 

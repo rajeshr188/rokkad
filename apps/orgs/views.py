@@ -717,7 +717,7 @@ def workspace_create(request):
                 form.add_error(None, exc)
                 return render(request, "company/company_form.html", {"form": form})
             request.user.profile.set_workspace(company)
-            return redirect("workspace_list")
+            return redirect("workspace_slug_settings_setup", workspace_slug=company.slug)
         else:
             # Handle form errors
             return render(request, "company/company_form.html", {"form": form})
@@ -1492,18 +1492,7 @@ def membership_list(request, workspace_id=None):
 
 @login_required
 def my_memberships(request):
-    memberships = (
-        request.user.memberships.select_related("company", "role")
-        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
-        .order_by("company__name")
-    )
-
-    context = {
-        "memberships": memberships,
-        "membership_count": memberships.count(),
-        "preferred_workspace": resolve_preferred_workspace(request.user),
-    }
-    return render(request, "company/my_memberships.html", context)
+    return redirect("workspace_selector")
 
 
 @login_required
@@ -1674,7 +1663,7 @@ def workspace_selector(request):
     - Pending invitations
     - Quick actions (create workspace)
 
-    Redirects to workspace_dashboard if user already has valid selected workspace.
+    Always displays the list, independently of the saved navigation preference.
     """
     user = request.user
     profile = user.profile
@@ -1686,21 +1675,7 @@ def workspace_selector(request):
         .order_by("-company__updated_at")
     )
 
-    # If user has a valid selected workspace, take them directly to workspace dashboard
-    # unless ?show_all=1 is passed (e.g. from "Back to Workspaces" link)
     selected_workspace = resolve_preferred_workspace(user)
-    if selected_workspace and selected_workspace.slug != "public" and not request.GET.get("show_all"):
-        try:
-            # Verify membership still active
-            memberships.get(company=selected_workspace)
-            return redirect(
-                "workspace_slug_dashboard",
-                workspace_slug=selected_workspace.slug,
-            )
-        except Membership.DoesNotExist:
-            # Workspace is no longer valid, clear it
-            profile.workspace = None
-            profile.save()
 
     # Get pending invitations
     pending_invitations = (

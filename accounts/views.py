@@ -85,35 +85,8 @@ def clear_workspace(request):
 
 @login_required
 def workspace_management(request):
-    """
-    User workspace management dashboard.
-
-    Allows user to:
-    - View current active workspace
-    - See all available workspaces
-    - Switch between workspaces
-    - Clear/reset workspace selection
-    - View workspace roles/permissions
-    """
-    user = request.user
-    profile = user.profile
-
-    preferred_workspace = resolve_preferred_workspace(user)
-
-    # Get all user's workspaces (memberships)
-    memberships = (
-        user.memberships.select_related("company", "role")
-        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
-        .order_by("-company__updated_at")
-    )
-
-    context = {
-        "preferred_workspace": preferred_workspace,
-        "memberships": memberships,
-        "total_workspaces": memberships.count(),
-    }
-
-    return render(request, "account/workspace_management.html", context)
+    """Compatibility entry point for the single Workspace list."""
+    return redirect("workspace_selector")
 
 
 @login_required

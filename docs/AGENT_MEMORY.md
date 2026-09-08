@@ -21,12 +21,14 @@ domain data. Party photo controls remain available in an expandable section,
 and closing it stops the existing camera stream. Notify keeps delivery batches
 primary and provider configuration secondary, preserving all action permissions.
 
-Administration uses `layouts/management.html` with the shared counter styles and
-`management-ui.css`. Desktop and mobile reuse the same Workspace settings and
-account navigation. Billing links carry an explicit Workspace slug; My Workspaces
-links include `show_all=1` to avoid the one-Workspace automatic dashboard redirect.
-Loan setup groups configuration, documents/printing, and operations/custody;
-setup subpages retain the shared setup navigation.
+Navigation is based on explicit page scope: the switcher reads `request.workspace`,
+not the saved profile preference. Global pages show Workspaces. Apps and settings
+share `components/navigation/sidebar.html`; navigation action checks normalize the
+request-scoped permission context. Personal pages have a separate personal sidebar.
+`workspace_selector` always renders the list; only login landing uses a validated
+saved preference. Create/onboarding completion target explicit setup URLs. Do not
+restore Clear Workspace as a prerequisite for account or Workspace management.
+`workspace-navigation.js` warns before discarding unsaved inputs during switching.
 
 Registry-resolution tests in `apps.configuration` use the supported
 `ui__default_table_page_size` preference to verify Workspace overrides, isolation,

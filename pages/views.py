@@ -3,10 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
-from apps.onboarding.decorators import onboarding_required
 from apps.orgs.decorators_v2 import roles_required
 from apps.orgs.models import Company, Membership
-from apps.orgs.tenant_context import resolve_request_workspace
+from apps.orgs.tenant_context import resolve_request_workspace, resolve_preferred_workspace
 
 
 class HomePageView(TemplateView):
@@ -28,42 +27,26 @@ class PricingPageView(TemplateView):
 
 
 @login_required
-@onboarding_required
 def Dashboard(request):
     """
     Smart landing page - routes user to appropriate destination.
 
     Decision tree:
-    1. Has valid workspace selected -> workspace_dashboard
-    2. Has memberships -> workspace_selector (choose workspace)
-    3. No memberships -> workspace_create (create first workspace)
+    1. Valid remembered Workspace -> its explicit dashboard.
+    2. Exactly one active membership -> its explicit dashboard.
+    3. Otherwise -> Workspace list, including incoming invitations.
     """
     user = request.user
-    selected_workspace = resolve_request_workspace(
-        request,
-        include_public=True,
-    )
-    if selected_workspace and selected_workspace.slug != "public":
-        try:
-            user.memberships.get(company=selected_workspace)
-            return redirect(
-                "workspace_slug_dashboard",
-                workspace_slug=selected_workspace.slug,
-            )
-        except Membership.DoesNotExist:
-            if hasattr(user, "profile"):
-                user.profile.workspace = None
-                user.profile.save(update_fields=["workspace"])
-
-    memberships = user.memberships.filter(
-        company__lifecycle_state=Company.LifecycleState.ACTIVE
-    )
-
-    if memberships.exists():
-        return redirect("workspace_selector")
-
-    messages.info(request, "Let's create your first workspace!")
-    return redirect("workspace_create")
+    selected_workspace = resolve_request_workspace(request) or resolve_preferred_workspace(user)
+    if selected_workspace:
+        return redirect("workspace_slug_dashboard", workspace_slug=selected_workspace.slug)
+    memberships = list(user.memberships.select_related("company").filter(
+        company__lifecycle_state=Company.LifecycleState.ACTIVE,
+    )[:2])
+    if len(memberships) == 1:
+        return redirect("workspace_slug_dashboard", workspace_slug=memberships[0].company.slug)
+    # The chooser also exposes incoming invitations for users with no Workspace.
+    return redirect("workspace_selector")
 
 
 @roles_required(["Owner", "Admin", "Member"])
