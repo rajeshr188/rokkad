@@ -1,0 +1,9 @@
+<aside class="record-context card" aria-label="Party summary"><div class="card-body">
+  <h2 class="h5">Party summary</h2><dl class="record-facts">
+    <dt>Name</dt><dd data-entry-field="display_name">{{ form.display_name.value|default:"Not entered" }}</dd>
+    <dt>Phone</dt><dd data-entry-field="primary_phone">{{ form.primary_phone.value|default:"Not entered" }}</dd>
+    <dt>Email</dt><dd data-entry-field="primary_email">{{ form.primary_email.value|default:"Not entered" }}</dd>
+    <dt>Status</dt><dd data-entry-field="status">{{ form.status.value }}</dd>
+    <dt>Credit hold</dt><dd data-entry-field="credit_hold">{{ form.credit_hold.value|yesno:"Yes,No" }}</dd>
+  </dl><div class="loan-summary-note">Check the name and contact details before saving. This record can be used across the Workspace; loan approval and KYC checks remain separate.</div>
+</div></aside>

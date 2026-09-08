@@ -3,6 +3,7 @@
 {% block title %}Renew {{ license.name }}{% endblock %}
 
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
   <a class="small text-decoration-none" href="{% url 'loans:license_detail' license.pk %}">&larr; License detail</a>
   <h1 class="h3 mt-2">Record license renewal</h1>

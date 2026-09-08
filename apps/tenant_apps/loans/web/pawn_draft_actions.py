@@ -260,12 +260,17 @@ def _safe_preview(series, kind):
 def get_pawn_draft_readiness(workspace):
     from apps.tenant_apps.party.models import Party
 
-    if not Party.objects.filter(status=Party.PartyStatus.ACTIVE).exists():
+    if not Party.objects.filter(
+        workspace=workspace, status=Party.PartyStatus.ACTIVE,
+    ).exists():
         return {
             "ready": False,
             "message": "Create an active Party before starting a pawn-loan draft.",
             "action_label": "Create Party",
-            "action_url": reverse("party:party_create"),
+            "action_url": reverse(
+                "workspace_party:party_create",
+                kwargs={"workspace_slug": workspace.slug},
+            ),
         }
     candidates = LoanSeries.objects.filter(
         license__workspace=workspace,
@@ -418,4 +423,3 @@ def _reason_transition(request, pk, action):
         "loans/pawn/transition_form.html",
         {"loan": loan, "form": form, "action_label": labels[action]},
     )
-

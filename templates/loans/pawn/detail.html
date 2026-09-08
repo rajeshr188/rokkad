@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}{{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
+<div class="loan-workflow-grid"><div class="loan-workflow-main">
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
   <div><a class="small text-decoration-none" href="{% url 'loans:pawn_loan_list' %}">&larr; Pawn loans</a><h1 class="h3 mt-2 mb-1">{{ loan.loan_number }}</h1><div class="text-muted">{{ loan.borrower.display_name }} &middot; {{ loan.get_state_display }} &middot; Series {{ loan.series.code }}</div><nav class="btn-group btn-group-sm mt-2" aria-label="Loans in series {{ loan.series.code }}">{% if previous_loan %}<a class="btn btn-outline-secondary" rel="prev" href="{% url 'loans:pawn_loan_detail' previous_loan.pk %}">&larr; Previous <span class="d-none d-sm-inline">{{ previous_loan.loan_number }}</span></a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">&larr; Previous</span>{% endif %}{% if next_loan %}<a class="btn btn-outline-secondary" rel="next" href="{% url 'loans:pawn_loan_detail' next_loan.pk %}">Next <span class="d-none d-sm-inline">{{ next_loan.loan_number }}</span> &rarr;</a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">Next &rarr;</span>{% endif %}</nav></div>
   <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_party_statement' loan.borrower_id %}">Party statement</a>{% if loan.state != 'DRAFT' and loan.approval_snapshots.exists %}<a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_ticket_pdf' loan.pk %}">Loan ticket PDF</a>{% endif %}
@@ -67,4 +68,5 @@
 {% empty %}<li class="list-group-item text-muted">No business events yet.</li>{% endfor %}
 </ul></div>
 {% include "loans/pawn/_camera_capture.html" %}
+</div>{% include "loans/pawn/_loan_summary.html" %}</div>
 {% endblock %}

@@ -1,0 +1,4 @@
+<nav class="app-section-nav" aria-label="Rates navigation">
+  <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}">Metal rates</a>
+  <a href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Rate sources</a>
+</nav>

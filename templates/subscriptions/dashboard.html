@@ -116,6 +116,7 @@
 {% endblock %}
 
 {% block mgmt_content %}
+{% include "subscriptions/_navigation.html" %}
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">
@@ -273,7 +274,7 @@
             <h4 class="mb-3">Recent Invoices</h4>
             {% if recent_invoices %}
                 <div class="table-responsive">
-                    <table class="table table-hover invoice-table mb-0">
+                    <table class="table app-table table-hover invoice-table mb-0">
                         <thead class="bg-light">
                             <tr>
                                 <th>Invoice #</th>

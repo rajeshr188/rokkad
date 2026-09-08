@@ -3,7 +3,8 @@
 {% block title %}Loan products{% endblock %}
 
 {% block workspace_content %}
-<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+{% include "loans/setup/_navigation.html" %}
+<div class="app-heading">
   <div>
     <h1 class="h3 mb-1">Loan products</h1>
     <p class="text-muted mb-0">Review immutable contract terms before making a version available for new PawnLoans.</p>
@@ -23,7 +24,7 @@
     <span>{% if product.is_active %}<span class="badge text-bg-success">Catalog active</span>{% else %}<span class="badge text-bg-secondary">Catalog inactive</span>{% endif %} <a class="btn btn-sm btn-outline-primary ms-2" href="{% url 'loans:loan_product_version_create' product.pk %}">Create next draft</a></span>
   </div>
   <div class="table-responsive">
-    <table class="table align-middle mb-0">
+    <table class="table app-table align-middle mb-0">
       <thead><tr><th>Version</th><th>Repayment</th><th>Frequency</th><th>Tenor</th><th>Grace</th><th>Contract</th><th>Loans</th><th></th></tr></thead>
       <tbody>
       {% for version in product.versions.all %}

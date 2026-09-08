@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.db.models import Count
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import PawnLoanState
 from apps.tenant_apps.loans.models import PawnLoan
@@ -31,11 +32,11 @@ class PartyPawnLoanRow:
     document_links: tuple
 
 
-def _loan_row(loan: PawnLoan) -> PartyPawnLoanRow:
+def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
     balance = None
     if loan.state == PawnLoanState.ACTIVE.value:
         try:
-            balance = get_pawn_loan_balance(loan.pk)
+            balance = get_pawn_loan_balance(loan.pk, as_of_date=as_of_date)
         except (PawnLoanBalanceSelectorError, ValueError):
             balance = None
 
@@ -62,6 +63,7 @@ def _loan_row(loan: PawnLoan) -> PartyPawnLoanRow:
 
 def get_party_pawn_loan_history_summary(party, *, limit=20):
     """Return Party-owned Loans history without consulting retired Girvi."""
+    as_of_date = timezone.localdate()
     loans = list(
         PawnLoan.objects.filter(borrower=party)
         .annotate(collateral_items_count=Count("collateral_items", distinct=True))
@@ -74,8 +76,8 @@ def get_party_pawn_loan_history_summary(party, *, limit=20):
     }
     active = [loan for loan in loans if loan.state in active_states]
     closed = [loan for loan in loans if loan.state not in active_states]
-    active_rows = tuple(_loan_row(loan) for loan in active[:limit])
-    closed_rows = tuple(_loan_row(loan) for loan in closed[:limit])
+    active_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in active[:limit])
+    closed_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in closed[:limit])
     outstanding = sum(
         (row.total_outstanding for row in active_rows if row.total_outstanding is not None),
         Decimal("0"),

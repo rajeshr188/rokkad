@@ -3,6 +3,7 @@
 {% block title %}{% if license %}Edit license{% else %}Add license{% endif %}{% endblock %}
 
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
   <a class="small text-decoration-none" href="{% url 'loans:license_list' %}">← Loan setup</a>
   <h1 class="h3 mt-2">{% if license %}Edit {{ license.name }}{% else %}Add regulatory loan license{% endif %}</h1>

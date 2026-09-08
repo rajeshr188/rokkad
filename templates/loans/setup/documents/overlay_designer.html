@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Visual overlay editor · {{ revision.layout.name }}{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Visual overlay editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · {{ layout.page_size }} · coordinates from top-left</p></div>
   <div class="d-flex gap-2">{% if sample_loan and has_background %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Assets, JSON, and publishing</a></div>

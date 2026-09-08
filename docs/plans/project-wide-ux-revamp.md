@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: active
 owner: project
 updated: 2026-09-08
 tags: [ux, ui, product, roadmap]
@@ -7,6 +7,27 @@ related: [active.md, ../implementation/browser-acceptance.md, ../STATUS.md]
 ---
 
 # Project-wide UI/UX revamp
+
+## Current design checkpoint
+
+The user approved the counter-first visual direction and asked to implement the
+shared navigation and loan workflow, with more collateral detail in the summary.
+Implementation is now underway in ordinary Django templates and Bootstrap.
+The first slice applies the shared Workspace presentation and navigation, live
+draft summary, and persisted summaries through loan detail and financial/release
+actions. The next slice now extends Party records/KYC navigation, Rates quote
+and source screens, and Notify delivery/settings screens. Team, billing, account,
+and setup screens now use the shared design after operator approval. Management
+navigation is grouped by Workspace, Team, Configuration, Billing, and Account;
+loan setup separates configuration, documents/printing, and operations/custody.
+
+The counter-first [interactive prototype](../ui/prototypes/counter/index.html)
+and [walkthrough](../ui/prototypes/counter/README.md) remain the design reference.
+The functional checkpoint is committed as `9acb865` with 802 tests passing.
+Prototype browser checks pass at desktop and narrow widths. The sample sequence
+and visual direction are accepted for the shared shell and first-loan vertical
+slice. Reference/setup screens currently demonstrate navigation and
+layout only; their full workflows belong to later slices.
 
 ## When to start
 
@@ -85,6 +106,6 @@ must not revive retired Girvi, Contact, DEA/accounting, or inventory modules.
 - Existing access, isolation, money/evidence, and browser regression checks pass.
 - Secondary details remain available without overwhelming the primary task.
 
-No calendar estimate is set until the screen inventory and prototype scope are
-agreed. The recommended next UX deliverable is the first-loan prototype, not a
-simultaneous rewrite of every page.
+The first-loan prototype is approved and implemented locally. Review the live
+administration and setup slice next, then refine labels, ordering, and
+frequent-task shortcuts from operator feedback. Physical acceptance remains deferred.

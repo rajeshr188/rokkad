@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.utils import timezone
+
 from apps.tenant_apps.loans.domain import PawnLoanState
 from apps.tenant_apps.loans.models import PawnLoan
 
@@ -8,6 +10,7 @@ from .balances import PawnLoanBalanceSelectorError, get_pawn_loan_balance
 
 def get_workspace_pawn_loan_dashboard_summary(*, workspace):
     """Return conservative PawnLoan metrics for the workspace dashboard."""
+    as_of_date = timezone.localdate()
     loans = list(PawnLoan.objects.filter(workspace=workspace).order_by("pk"))
     active = [loan for loan in loans if loan.state == PawnLoanState.ACTIVE.value]
     closed_count = sum(loan.state == PawnLoanState.CLOSED.value for loan in loans)
@@ -15,7 +18,7 @@ def get_workspace_pawn_loan_dashboard_summary(*, workspace):
     balances = []
     for loan in active:
         try:
-            balances.append(get_pawn_loan_balance(loan.pk))
+            balances.append(get_pawn_loan_balance(loan.pk, as_of_date=as_of_date))
         except (PawnLoanBalanceSelectorError, ValueError):
             continue
 

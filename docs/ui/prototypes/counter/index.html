@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Rokkad — Counter workflow concept</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+  <script src="camera.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <aside class="sidebar" id="navigation" aria-label="Workspace navigation">
+    <a class="brand" href="#" aria-label="Rokkad counter home"><span class="brand-mark">r</span>rokkad<span class="brand-dot">.</span></a>
+    <div class="workspace-label">YOUR WORKSPACE</div>
+    <button class="workspace-picker" id="workspace-picker"><span class="workspace-icon">AJ</span><span><strong id="workspace-name">Amudha Jewellers</strong><small>Anna Nagar · Chennai</small></span><span aria-hidden="true">⌄</span></button>
+    <nav>
+      <span class="nav-section">WORK</span>
+      <button data-view="counter" class="nav-item active" aria-current="page"><span class="nav-icon">▦</span>Counter<span class="live-dot"></span></button>
+      <button data-view="loans" class="nav-item"><span class="nav-icon">▤</span>Loans</button>
+      <button data-view="parties" class="nav-item"><span class="nav-icon">♙</span>Parties</button>
+      <span class="nav-section">REFERENCE & COMMUNICATION</span>
+      <button data-view="rates" class="nav-item"><span class="nav-icon">↗</span>Rates</button>
+      <button data-view="notify" class="nav-item"><span class="nav-icon">✉</span>Notify</button>
+    </nav>
+    <button class="setup-shortcut" data-view="setup"><span class="check-circle">✓</span><span><strong>Ready to lend</strong><small>View Workspace setup →</small></span></button>
+    <div class="sidebar-bottom"><span class="avatar small">RK</span><span><strong>Rajesh</strong><small>Owner · Counter access</small></span></div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-button menu-toggle" id="menu-toggle" aria-label="Toggle navigation" aria-controls="navigation" aria-expanded="false">☰</button>
+      <div class="breadcrumb">Workspace <span>/</span> <strong id="section-label">Counter</strong></div>
+      <div class="topbar-right"><span class="concept-badge"><span></span>Interactive concept · Sample data</span><button class="text-button" id="reset">Reset demo ↺</button></div>
+    </header>
+    <main id="main" tabindex="-1">
+      <div id="screen"></div>
+      <footer class="prototype-note">Design review 01 <span>All amounts and records are illustrative. Nothing is saved or sent.</span></footer>
+    </main>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="borrower-dialog" aria-labelledby="borrower-title">
+    <form id="borrower-form">
+      <div class="dialog-heading"><div><span class="eyebrow">PARTY RECORD</span><h2 id="borrower-title">Add a borrower</h2></div><button type="button" class="icon-button" data-close aria-label="Close">×</button></div>
+      <p class="muted">Start with the details you need at the counter. KYC can be completed in the Party record.</p>
+      <label for="borrower-name">Full name</label><input id="borrower-name" name="name" required maxlength="80" autocomplete="off" placeholder="Borrower’s full name">
+      <label for="borrower-phone">Mobile number</label><input id="borrower-phone" name="phone" type="tel" required pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" autocomplete="off">
+      <p class="field-hint">Use fictional details for this prototype.</p>
+      <div class="dialog-footer"><button class="button secondary" type="button" data-close>Cancel</button><button class="button primary" type="submit">Add & select borrower</button></div>
+    </form>
+  </dialog>
+  <dialog id="workspace-dialog" aria-labelledby="workspace-title"><div class="dialog-heading"><h2 id="workspace-title">Your Workspace</h2><button class="icon-button" data-close aria-label="Close">×</button></div><div class="notice"><strong>Amudha Jewellers · Anna Nagar</strong><p>You’re working in this sample Workspace. Real Workspace switching will preserve the same clear identity in the application.</p></div><button class="button primary" data-close>Continue at the counter</button></dialog>
+<dialog id="camera-dialog" aria-labelledby="camera-title">
+    <div class="dialog-heading"><div><span class="eyebrow">COLLATERAL PHOTO</span><h2 id="camera-title">Take a photo</h2></div><button class="icon-button" data-close aria-label="Close camera">?</button></div>
+    <p id="camera-status" role="status">Allow camera access to take a photo.</p>
+    <video id="camera-video" autoplay muted playsinline aria-label="Live camera preview" style="width:100%;border-radius:8px;background:#202b2a" hidden></video>
+    <img id="camera-still" alt="Captured collateral photo for review" style="width:100%;border-radius:8px" hidden>
+    <div class="dialog-footer"><button class="button secondary" id="camera-upload">Upload instead</button><button class="button secondary" id="camera-retake" hidden>Retake</button><button class="button primary" id="camera-capture" disabled>Capture photo</button><button class="button primary" id="camera-use" hidden>Use photo</button></div>
+  </dialog>
+</body>
+</html>

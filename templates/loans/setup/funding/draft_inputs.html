@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Complete FundingLoan draft{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
   <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_detail' funding_loan_id %}">&larr; FundingLoan detail</a>
   <h1 class="h3 mt-2 mb-1">Complete FundingLoan draft</h1>

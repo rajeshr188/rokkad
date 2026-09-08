@@ -168,7 +168,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         )
 
         expected_hrefs = [
-            reverse("app_workspaces"),
+            reverse("app_workspaces") + "?show_all=1",
             reverse("app_workspace_create"),
             reverse(
                 "workspace_slug_settings",
@@ -202,11 +202,6 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         for href in expected_hrefs:
             self.assertIn(f'href="{href}"', html)
 
-        billing_action = reverse(
-            "workspace_select",
-            kwargs={"workspace_id": workspace.id},
-        )
-        self.assertIn(f'action="{billing_action}"', html)
         billing_dashboard = reverse(
             "workspace_subscriptions:dashboard",
             kwargs={"workspace_slug": workspace.slug},
@@ -215,8 +210,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             "workspace_subscriptions:plan-list",
             kwargs={"workspace_slug": workspace.slug},
         )
-        self.assertIn(f'value="{billing_dashboard}"', html)
-        self.assertNotIn(f'href="{billing_dashboard}"', html)
+        self.assertIn(f'href="{billing_dashboard}"', html)
         self.assertNotIn(f'href="{billing_plans}"', html)
 
         for label in (
@@ -383,13 +377,17 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
 
     def test_authenticated_tenant_shell_renders_workspace_switcher(self):
         workspace = _workspace()
+        request = _authenticated_request(
+            f"/w/{workspace.slug}/loans/internal/", url_name="pawn_loan_list"
+        )
+        request.workspace = workspace
         html = _render(
             """
             {% extends "base_tenant.html" %}
             {% block title %}Tenant Auth Smoke{% endblock %}
             {% block workspace_content %}<section id="tenant-auth-smoke">Tenant shell</section>{% endblock %}
             """,
-            request=_authenticated_request("/loans/", url_name="pawn_loan_list"),
+            request=request,
             context={
                 "in_tenant": True,
                 "show_sidebar": False,

@@ -3,6 +3,7 @@
 {% block title %}{% if series %}Configure series{% else %}Add series{% endif %}{% endblock %}
 
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
   <a class="small text-decoration-none" href="{% url 'loans:license_detail' license.pk %}">← {{ license.name }}</a>
   <h1 class="h3 mt-2">{% if series %}Configure {{ series.code }}{% else %}Add numbering series{% endif %}</h1>

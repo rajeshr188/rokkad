@@ -1,9 +1,10 @@
 {% extends 'base_tenant.html' %}
 {% load crispy_forms_tags %}
 {% block workspace_content %}
-<div class="container mt-4">
+{% include 'rates/_navigation.html' %}
+<div class="rate-source-page">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1 class="h3 mb-0">Rate Source Form</h1>
+        <h1 class="h3 mb-0">{% if form.instance.pk %}Edit rate source{% else %}Add rate source{% endif %}</h1>
         <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Rate Sources</a>
     </div>
     <div class="card">

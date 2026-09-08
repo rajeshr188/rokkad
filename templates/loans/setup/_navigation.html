@@ -1,0 +1,6 @@
+<nav class="app-section-nav" aria-label="PawnLoan setup">
+  <a  href="{% url 'workspace_slug_loans_dispatch' workspace_slug=request.workspace.slug loans_path='setup/' %}">Licenses &amp; numbering</a>
+  <a  href="{% url 'workspace_slug_loans_dispatch' workspace_slug=request.workspace.slug loans_path='setup/economics/' %}">Economic setup</a>
+  <a  href="{% url 'workspace_slug_loans_dispatch' workspace_slug=request.workspace.slug loans_path='setup/products/' %}">Loan products</a>
+  <a  href="{% url 'workspace_slug_loan_list' workspace_slug=request.workspace.slug %}">Back to PawnLoans</a>
+</nav>

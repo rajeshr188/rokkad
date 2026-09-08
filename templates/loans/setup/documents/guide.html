@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Loan document printing guide{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Loan document printing guide</h1><p class="text-muted mb-0">Layouts, physical print profiles, official issues, and safe recovery for Owners and Admins.</p></div>
   <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'loans:document_print_profile_list' %}">Print profiles</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a></div>

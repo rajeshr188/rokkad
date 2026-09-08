@@ -1,9 +1,10 @@
 {% extends 'base_tenant.html' %}
+{% load static %}
 
 {% block title %}{{ party.display_name }}{% endblock %}
 
 {% block workspace_content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-3">
+<div class="app-heading">
     <div class="d-flex align-items-center gap-3">
         {% if party.profile_photo %}
             <img src="{{ party.profile_photo.url }}" alt="" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
@@ -33,22 +34,22 @@
     </div>
 </div>
 
-<ul class="nav nav-tabs" id="party-tabs" role="tablist">
+<ul class="nav nav-tabs app-tabs" id="party-tabs" role="tablist">
     <li class="nav-item"><button class="nav-link {% if active_tab == 'overview' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#overview" type="button">Overview</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'loans' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#loans" type="button">Loans</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'kyc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#kyc" type="button">Documents / KYC</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'roles' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#roles" type="button">Roles</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'relationships' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#relationships" type="button">Relationships</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'contacts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#contacts" type="button">Contacts</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'addresses' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#addresses" type="button">Addresses</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'transactions' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#transactions" type="button">Transactions</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'loans' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#loans" type="button">Loans</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'kyc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#kyc" type="button">Documents / KYC</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'activity' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#activity" type="button">Notes / Activity</button></li>
     <li class="nav-item"><button class="nav-link {% if active_tab == 'merge' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#merge" type="button">Merge</button></li>
 </ul>
 
 <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
     <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="overview">
-        <div class="border rounded p-3 mb-3">
+        <details class="border rounded p-3 mb-3" id="party-photo-editor" {% if photo_form.errors %}open{% endif %}><summary class="fw-semibold mb-3">Update profile photo &mdash; camera or upload</summary>
             <form id="party-photo-form" method="post" enctype="multipart/form-data" action="{% url 'workspace_party:party_photo_update' request.workspace.slug party.pk %}" class="row g-3 align-items-end">
                 {% csrf_token %}
                 <input type="hidden" id="party-photo-image-data" name="image_data">
@@ -90,7 +91,7 @@
                 <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Remove Photo</button>
             </form>
             {% endif %}
-        </div>
+        </details>
         <div class="row g-3">
             <div class="col-md-4"><div class="text-muted small">Legal Name</div><div class="fw-semibold">{{ party.legal_name|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Relation</div><div class="fw-semibold">{{ party.relation_display|default:"-" }}</div></div>
@@ -623,3 +624,5 @@
 })();
 </script>
 {% endblock %}
+
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/entry-summary.js' %}"></script>{% endblock %}

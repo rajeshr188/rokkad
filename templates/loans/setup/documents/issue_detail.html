@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Document issue {{ issue.pk }}{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 mb-1">Document issue {{ issue.pk }}</h1><p class="text-muted mb-0">{{ issue.get_document_type_display }} · {{ issue.get_issue_kind_display }} · {{ issue.issued_at }}</p></div><div class="d-flex gap-2"><a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_issue_artifact' issue.pk %}">Open exact PDF</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">All issues</a></div></div>
 <div class="row g-4"><div class="col-lg-6"><div class="card"><div class="card-header">Source and layout</div><div class="card-body"><dl class="row mb-0">
   <dt class="col-sm-5">Source</dt><dd class="col-sm-7">{{ issue.source_type }}:{{ issue.source_id }}</dd>

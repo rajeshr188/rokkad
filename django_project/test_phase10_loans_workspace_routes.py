@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import Client, TestCase, override_settings
-from django.urls import resolve
+from django.urls import resolve, reverse
 
 from apps.orgs.models import Company, Domain, Membership, Role
 from apps.subscriptions.models import Plan, Subscription
@@ -103,6 +103,68 @@ class LoansWorkspaceRouteContractTests(TestCase):
         match = resolve(f"/w/{self.workspace_a.slug}/loans/list/")
 
         self.assertEqual(match.url_name, "workspace_slug_loan_list")
+
+    def test_create_setup_link_keeps_workspace_on_global_host(self):
+        self.user.profile.workspace = self.workspace_b
+        self.user.profile.save(update_fields=["workspace"])
+        response = self.client.get(reverse(
+            "workspace_slug_loan_create",
+            kwargs={"workspace_slug": self.workspace_a.slug},
+        ))
+        setup_url = f"/w/{self.workspace_a.slug}/loans/setup/economics/"
+        self.assertContains(response, f'href="{setup_url}"')
+        setup = self.client.get(setup_url)
+        self.assertEqual(setup.status_code, 200)
+        self.assertEqual(setup.wsgi_request.workspace, self.workspace_a)
+        self.assertNotContains(setup, 'href="/loans/')
+        self.assertContains(setup, 'aria-label="PawnLoan setup"')
+        self.assertContains(setup, f'/w/{self.workspace_a.slug}/loans/setup/products/')
+
+    def test_named_loan_pages_keep_local_navigation_scoped(self):
+        for name, extra in [
+            ("workspace_slug_loan_list", {}),
+            ("workspace_slug_loan_detail", {"pk": self.loan_a.pk}),
+            ("workspace_slug_settings_numbering", {}),
+        ]:
+            with self.subTest(name=name):
+                response = self.client.get(reverse(name, kwargs={
+                    "workspace_slug": self.workspace_a.slug, **extra,
+                }))
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, 'href="/loans/')
+                self.assertNotContains(response, 'action="/loans/')
+                if name == "workspace_slug_loan_list":
+                    self.assertContains(response, "data-loan-setup-link")
+
+    def test_missing_borrower_action_keeps_workspace(self):
+        with workspace_context(self.workspace_a.pk):
+            Party.objects.filter(workspace=self.workspace_a).update(
+                status=Party.PartyStatus.INACTIVE,
+            )
+        response = self.client.get(reverse("workspace_slug_loan_create", kwargs={
+            "workspace_slug": self.workspace_a.slug,
+        }))
+        party_url = reverse("workspace_party:party_create", kwargs={
+            "workspace_slug": self.workspace_a.slug,
+        })
+        self.assertContains(response, f'href="{party_url}"')
+        self.assertEqual(self.client.get(party_url).status_code, 200)
+
+    def test_loan_section_redirects_keep_workspace_and_fragment(self):
+        for section, fragment in [
+            ("items", "#collateral"),
+            ("payments", "#financial-events"),
+            ("transactions", "#financial-events"),
+            ("statement", ""),
+        ]:
+            with self.subTest(section=section):
+                kwargs = {"workspace_slug": self.workspace_a.slug, "pk": self.loan_a.pk}
+                response = self.client.get(reverse(
+                    f"workspace_slug_loan_detail_{section}", kwargs=kwargs,
+                ))
+                self.assertRedirects(response, reverse(
+                    "workspace_slug_loan_detail", kwargs=kwargs,
+                ) + fragment)
 
     def test_wrong_workspace_cannot_read_known_loan_id(self):
         response = self.client.get(self._detail_url(self.workspace_b, self.loan_a))

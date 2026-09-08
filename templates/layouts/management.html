@@ -3,9 +3,14 @@
 
 {# Control-plane layout for account and workspace management. #}
 
+{% block body_class %}rokkad-workspace rokkad-management{% endblock %}
+{% block footer %}{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/management.css' %}">
 {% block mgmt_extra_css %}{% endblock %}
+<link rel="stylesheet" href="{% static 'css/workspace-ui.css' %}">
+<link rel="stylesheet" href="{% static 'css/management-ui.css' %}">
 {% endblock %}
 
 {% block main_wrapper_class %}container-fluid p-0 mt-0{% endblock %}
@@ -67,17 +72,11 @@
     </aside>
 
     <div class="mgmt-content">
+        <div class="d-lg-none mb-4"><button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas" aria-controls="mgmtOffcanvas" aria-label="Navigation"><i class="bi bi-list me-2"></i>Navigation</button></div>
         {% block breadcrumbs %}{% endblock %}
         {% block page_header %}{% endblock %}
         {% block mgmt_content %}{% endblock %}
     </div>
-</div>
-
-<div class="d-lg-none position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
-    <button class="btn btn-primary shadow mgmt-mobile-toggle"
-            type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas">
-        <i class="bi bi-list fs-5"></i>
-    </button>
 </div>
 
 <div class="offcanvas offcanvas-start mgmt-offcanvas" tabindex="-1" id="mgmtOffcanvas">

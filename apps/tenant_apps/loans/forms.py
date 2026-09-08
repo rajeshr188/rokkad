@@ -703,7 +703,7 @@ class PawnDraftForm(forms.Form):
             product__is_active=True,
             status=LoanProductVersionStatus.ACTIVE.value,
         ).select_related("product").order_by("product__name", "version")
-        if instance is not None and not self.is_bound:
+        if instance is not None:
             self.initial.update(
                 {
                     "borrower": instance.borrower_id,

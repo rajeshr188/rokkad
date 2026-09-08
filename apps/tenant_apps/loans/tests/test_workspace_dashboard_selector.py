@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -11,7 +12,7 @@ from apps.tenant_apps.loans.selectors.workspace_dashboard import (
 
 
 class WorkspacePawnLoanDashboardSelectorTests(SimpleTestCase):
-    @patch("apps.tenant_apps.loans.selectors.workspace_dashboard.get_pawn_loan_balance")
+    @patch("apps.tenant_apps.loans.selectors.workspace_dashboard.get_pawn_loan_balance", autospec=True)
     @patch("apps.tenant_apps.loans.selectors.workspace_dashboard.PawnLoan.objects.filter")
     def test_uses_active_canonical_balances_and_closed_progress(self, filter_loans, get_balance):
         active = SimpleNamespace(pk=1, state=PawnLoanState.ACTIVE.value)
@@ -24,9 +25,11 @@ class WorkspacePawnLoanDashboardSelectorTests(SimpleTestCase):
         )
         workspace = SimpleNamespace(pk=7)
 
-        result = get_workspace_pawn_loan_dashboard_summary(workspace=workspace)
+        with patch("django.utils.timezone.localdate", return_value=date(2026, 9, 8)):
+            result = get_workspace_pawn_loan_dashboard_summary(workspace=workspace)
 
         filter_loans.assert_called_once_with(workspace=workspace)
+        get_balance.assert_called_once_with(active.pk, as_of_date=date(2026, 9, 8))
         self.assertEqual(result["loan_count"], 1)
         self.assertEqual(result["total_loan_amount"], Decimal("150.00"))
         self.assertEqual(result["total_interest"], Decimal("20.00"))

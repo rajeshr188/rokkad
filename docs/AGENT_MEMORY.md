@@ -8,6 +8,49 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+The counter prototype direction is approved for live implementation. Shared
+Workspace styling lives in `static/css/workspace-ui.css`; ordinary Django and
+Bootstrap remain in place. Loan drafts use `pawn-draft-summary.js` to display
+entered borrower/series/product and per-item collateral facts; it never resolves
+interest, LTV, fees, or net cash. Server economic previews are invalidated visually
+when inputs change. Detail/financial/release pages share the persisted loan summary.
+
+Party, Rates, and Notify now share the counter page patterns. `entry-summary.js`
+mirrors Party and Rate form facts with text nodes; it never calculates or saves
+domain data. Party photo controls remain available in an expandable section,
+and closing it stops the existing camera stream. Notify keeps delivery batches
+primary and provider configuration secondary, preserving all action permissions.
+
+Administration uses `layouts/management.html` with the shared counter styles and
+`management-ui.css`. Desktop and mobile reuse the same Workspace settings and
+account navigation. Billing links carry an explicit Workspace slug; My Workspaces
+links include `show_all=1` to avoid the one-Workspace automatic dashboard redirect.
+Loan setup groups configuration, documents/printing, and operations/custody;
+setup subpages retain the shared setup navigation.
+
+PawnLoan setup is a persistent destination, not a one-time wizard: the loan list
+has an action checked against `workspace.settings.manage`, and the setup,
+economics, and product pages share explicit Workspace-scoped navigation.
+
+PawnDraftForm edit instances must initialize and disable series/product on both
+GET and bound POST. Browsers omit disabled controls; disabling only on GET loses
+those values on validation redisplay. Bound borrower values remain user-entered.
+Draft form redisplay keeps DELETE-marked collateral hidden and explains that new
+file selections must be made again; persisted collateral photos remain attached.
+
+Named Loans list/create/detail and numbering-settings aliases must use
+`workspace_slug_loans_dispatch` too: directly calling their business views skips
+canonical response handling and emits unscoped setup links, form targets, and
+redirects. Loan section aliases retain the Workspace slug and fragment; the
+missing-borrower readiness action uses `workspace_party:party_create`.
+
+UX work (2026-09-08): the user selected counter workflow first. The isolated
+interactive concept in `docs/ui/prototypes/counter/index.html` is the accepted
+design reference; it is sample-only and does not redefine financial/KYC rules.
+Apply the reviewed direction to the shared shell and first-loan journey before
+rolling it across Party, Rates, Notify, and account/setup screens. Physical phone
+and printer checks remain deferred by user request.
+
 Current checkpoint: Phase 11 replaced `Company.schema_name` as path authority
 with immutable `Company.slug`. Phase 9 app authorization conformance and Phase
 10 Loans routing are complete. Older phase-next statements below are historical;

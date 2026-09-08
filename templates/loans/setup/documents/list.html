@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Loan document layouts{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Loan document layouts</h1><p class="text-muted mb-0">Published revisions are immutable. Fixed PDFs remain available as recovery output.</p></div>
   <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">Issued documents</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_print_profile_list' %}">Print profiles</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_guide' %}">Starter guide</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a><a class="btn btn-primary" href="{% url 'loans:document_layout_create' %}">Create starter layout</a></div>

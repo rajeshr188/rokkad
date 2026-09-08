@@ -3,7 +3,8 @@
 {% block title %}{{ license.name }}{% endblock %}
 
 {% block workspace_content %}
-<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+{% include "loans/setup/_navigation.html" %}
+<div class="app-heading">
   <div>
     <a class="small text-decoration-none" href="{% url 'loans:license_list' %}">← Loan setup</a>
     <h1 class="h3 mt-2 mb-1">{{ license.name }}</h1>
@@ -36,7 +37,7 @@
   <div><h2 class="h5 mb-1">Regulatory history</h2><div class="small text-muted">Append-only issue, amendment, and renewal evidence.</div></div>
 </div>
 <div class="card mb-4"><div class="table-responsive">
-  <table class="table align-middle mb-0">
+  <table class="table app-table align-middle mb-0">
     <thead><tr><th>Revision</th><th>Kind</th><th>Validity</th><th>Evidence</th><th>Recorded</th></tr></thead>
     <tbody>
     {% for revision in revisions %}
@@ -57,7 +58,7 @@
   <a class="btn btn-primary" href="{% url 'loans:series_create' license.pk %}">Add series</a>
 </div>
 <div class="card"><div class="table-responsive">
-  <table class="table align-middle mb-0">
+  <table class="table app-table align-middle mb-0">
     <thead><tr><th>Series</th><th>Pawn loan next</th><th>Release next</th><th>Readiness</th><th></th></tr></thead>
     <tbody>
     {% for row in series_rows %}

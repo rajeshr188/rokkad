@@ -208,6 +208,11 @@ class MVPOperatorJourneyTests(TransactionTestCase):
             self.assertEqual(loan.state, "ACTIVE")
             self.assertEqual(get_pawn_loan_balance(loan.pk, as_of_date=self.today).principal_outstanding, Decimal("10000"))
         ticket_url = self._loan_url("pawn_loan_ticket_pdf", loan.pk)
+        dashboard = self._get(reverse("workspace_slug_dashboard", kwargs={
+            "workspace_slug": self.workspace.slug,
+        }))
+        self.assertEqual(dashboard.context["loan_count"], 1)
+        self.assertEqual(dashboard.context["total_loan_amount"], Decimal("10000"))
         ticket = self._get(ticket_url)
         ticket_bytes = self._pdf_bytes(ticket)
         self.assertIn("X-Rokkad-Document-Issue", ticket)

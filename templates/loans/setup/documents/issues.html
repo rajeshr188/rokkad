@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Issued loan documents{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 mb-1">Issued loan documents</h1><p class="text-muted mb-0">Immutable evidence for official and regenerated PDFs. This screen never rerenders an artifact.</p></div><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document setup</a></div>
 <div class="card mb-3"><div class="card-body">
   <form method="get" class="row g-3 align-items-end">
@@ -14,7 +15,7 @@
   </form>
   {% if issue_filter.form.errors %}<div class="text-danger small mt-3">Check the highlighted filters and try again.</div>{% endif %}
 </div></div>
-<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Issued</th><th>Document</th><th>Source</th><th>Layout</th><th>Print profile</th><th></th></tr></thead><tbody>
+<div class="card"><div class="table-responsive"><table class="table app-table table-hover align-middle mb-0"><thead><tr><th>Issued</th><th>Document</th><th>Source</th><th>Layout</th><th>Print profile</th><th></th></tr></thead><tbody>
 {% for issue in issues %}<tr>
   <td>{{ issue.issued_at }}<div class="small text-muted">{{ issue.get_issue_kind_display }}</div></td>
   <td>{{ issue.get_document_type_display }}</td>

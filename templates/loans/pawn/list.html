@@ -1,9 +1,9 @@
 {% extends "base_tenant.html" %}
 {% block title %}PawnLoan drafts{% endblock %}
 {% block workspace_content %}
-<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="h3 mb-1">PawnLoans</h1><p class="text-muted mb-0">Find and continue loans in this workspace.</p></div>
-  <div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
+  <div class="d-flex flex-wrap gap-2">{% if can_manage_loan_setup %}<a class="btn btn-outline-primary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">PawnLoan setup</a>{% endif %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
 </div>
 {% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}</div>{% endif %}
 <div class="card mb-3">

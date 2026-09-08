@@ -1,0 +1,27 @@
+/* Shared counter presentation for account and Workspace administration. */
+.rokkad-management .mgmt-shell{background:#f5f7f3}
+.rokkad-management .mgmt-accent-bar{background:#fff;color:#304a3c;border-bottom:1px solid #dfe5df;flex-wrap:wrap;padding:14px 24px}
+.rokkad-management .mgmt-accent-bar a{color:#146653}
+.rokkad-management .mgmt-accent-bar>span{flex-wrap:wrap}
+.rokkad-management .mgmt-sidebar{width:232px;min-width:232px;padding:16px 12px;border-color:#dfe5df;top:0;max-height:100vh}
+.rokkad-management .mgmt-nav-link{border-radius:7px;margin:2px 0;font-size:13px;color:#53635a}
+.rokkad-management .mgmt-nav-link.active,.rokkad-management .mgmt-nav-link:hover{background:#e8f2ec;color:#146653}
+.rokkad-management .mgmt-content{flex:1;min-width:0;padding:32px;max-width:none}
+.rokkad-management .mgmt-content>.container,.rokkad-management .mgmt-content>.container-fluid{padding:0;max-width:none}
+.rokkad-management .card,.rokkad-management .dashboard-card,.rokkad-management .mgmt-workspace-card,.rokkad-management .mgmt-summary-tile{border:1px solid #dfe5df;border-radius:12px;box-shadow:none!important;background:#fff}
+.rokkad-management .card-header{background:#f8faf6;color:#304a3c;border-color:#dfe5df;padding:16px 20px}
+.rokkad-management .mgmt-workspace-hero{background:transparent;border:0;padding:0;flex-wrap:wrap;gap:16px}
+.rokkad-management .mgmt-workspace-summary{gap:16px}
+.rokkad-management .d-flex{min-width:0}
+.rokkad-management .mgmt-content h1,.rokkad-management .mgmt-content h4,.rokkad-management .mgmt-content h5{overflow-wrap:anywhere}
+.rokkad-management .mgmt-content .d-flex.justify-content-between{flex-wrap:wrap;gap:12px}
+.rokkad-management input[type=file]{max-width:100%;min-width:0}
+@media(max-width:991px){.rokkad-management .mgmt-content{padding:20px 15px}.rokkad-management .mgmt-accent-bar{padding:12px 15px}.rokkad-management .mgmt-shell{display:block}.rokkad-management .mgmt-workspace-summary{grid-template-columns:1fr}.rokkad-management .mgmt-content .col-md-8,.rokkad-management .mgmt-content .col-lg-10{max-width:100%}}
+
+.rokkad-management .trial-banner{background:#e8f2ec;color:#146653;border:1px solid #ccded1;border-radius:12px}
+.rokkad-management .usage-item{border-left-color:#146653}
+.rokkad-management .role-badge{background:#e8f2ec;color:#146653}
+.rokkad-management .mgmt-content>.container.py-5{padding-top:0!important}
+.rokkad-management .table-responsive>.app-table{min-width:580px}
+.rokkad-management .plan-card{border-color:#dfe5df;border-radius:12px;box-shadow:none}
+.rokkad-management .plan-card.featured,.rokkad-management .plan-card.recommended{border-color:#146653}

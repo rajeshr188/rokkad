@@ -236,6 +236,8 @@ def workspace_slug_settings_setup_state(request, workspace_slug):
 
 @login_required
 def workspace_slug_settings_preferences(request, workspace_slug):
+    from apps.configuration.views import WorkspacePreferenceBuilder
+
     workspace = _get_workspace_from_slug(workspace_slug)
     return WorkspacePreferenceBuilder.as_view()(request, workspace_id=workspace.id)
 
@@ -287,10 +289,7 @@ def workspace_slug_settings_roles(request, workspace_slug):
 
 @login_required
 def workspace_slug_settings_numbering(request, workspace_slug):
-    _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.loans.views import license_list
-
-    return license_list(request)
+    return workspace_slug_loans_dispatch(request, workspace_slug, "setup/")
 
 
 @login_required
@@ -395,18 +394,12 @@ def workspace_slug_loans_dispatch(request, workspace_slug, loans_path):
 
 @login_required
 def workspace_slug_loan_list(request, workspace_slug):
-    _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.loans.views import pawn_loan_list
-
-    return pawn_loan_list(request)
+    return workspace_slug_loans_dispatch(request, workspace_slug, "internal/")
 
 
 @login_required
 def workspace_slug_loan_create(request, workspace_slug):
-    _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_loan_create
-
-    return pawn_loan_create(request)
+    return workspace_slug_loans_dispatch(request, workspace_slug, "internal/create/")
 
 
 @login_required
@@ -417,34 +410,31 @@ def workspace_slug_loan_table(request, workspace_slug):
 
 @login_required
 def workspace_slug_loan_detail(request, workspace_slug, pk):
-    _get_workspace_from_slug(workspace_slug)
-    from apps.tenant_apps.loans.views import pawn_loan_detail
-
-    return pawn_loan_detail(request, pk=pk)
+    return workspace_slug_loans_dispatch(request, workspace_slug, f"internal/{pk}/")
 
 
 @login_required
 def workspace_slug_loan_detail_items(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#collateral")
+    return redirect(f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': workspace_slug, 'pk': pk})}#collateral")
 
 
 @login_required
 def workspace_slug_loan_detail_payments(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#financial-events")
+    return redirect(f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': workspace_slug, 'pk': pk})}#financial-events")
 
 
 @login_required
 def workspace_slug_loan_detail_transactions(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#financial-events")
+    return redirect(f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': workspace_slug, 'pk': pk})}#financial-events")
 
 
 @login_required
 def workspace_slug_loan_detail_statement(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:pawn_loan_detail", pk=pk)
+    return redirect("workspace_slug_loan_detail", workspace_slug=workspace_slug, pk=pk)
 
 
 @login_required

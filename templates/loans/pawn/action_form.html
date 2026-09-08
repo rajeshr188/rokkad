@@ -1,8 +1,9 @@
 {% extends "base_tenant.html" %}
 {% block title %}{{ action_label }} · {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
+<div class="loan-workflow-grid"><div class="loan-workflow-main">
 <div class="row justify-content-center">
-  <div class="col-xl-8">
+  <div class="col-12">
     <a class="small text-decoration-none" href="{% url 'loans:pawn_loan_detail' loan.pk %}">&larr; {{ loan.loan_number }}</a>
     <h1 class="h3 mt-2 mb-1">{{ action_label }}</h1>
     <p class="text-muted mb-4">{{ description }}</p>
@@ -101,4 +102,5 @@
     </div></form>
   </div>
 </div>
+</div>{% include "loans/pawn/_loan_summary.html" %}</div>
 {% endblock %}

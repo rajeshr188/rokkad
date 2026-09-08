@@ -1,13 +1,14 @@
 {% extends 'base_tenant.html' %}
 
 {% block workspace_content %}
-  <div class="container card mt-4">
+{% include 'rates/_navigation.html' %}
+  <div class="card p-4">
     <h1>Confirm Delete</h1>
-  <p>Are you sure you want to delete this ratesource?</p>
+  <p>Are you sure you want to delete {{ ratesource.name }} and its associated rate records?</p>
   <form action="{% url 'workspace_rates:ratesource_delete' request.workspace.slug ratesource.id %}" method="post">
     {% csrf_token %}
-    <input type="submit" value="Delete">
-    <a class = "btn btn-danger" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Cancel</a>
+    <button class="btn btn-danger" type="submit">Delete</button>
+    <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Cancel</a>
   </form>
   </div>
 {% endblock %}

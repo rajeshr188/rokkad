@@ -1,9 +1,10 @@
 {% extends 'base_tenant.html' %}
+{% load static %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block workspace_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="app-heading">
     <div>
         <h1 class="h3 mb-1">{{ title }}</h1>
         {% if party %}<div class="text-muted small">{{ party.party_code }} · {{ party.display_name }}</div>{% endif %}
@@ -13,12 +14,13 @@
     </a>
 </div>
 
-<form method="post" enctype="multipart/form-data" class="border rounded p-3 bg-white">
+<div class="record-grid"><div class="card"><form method="post" enctype="multipart/form-data" class="card-body" data-entry-form>
     {% csrf_token %}
     {% if form.non_field_errors %}
         <div class="alert alert-danger">{{ form.non_field_errors }}</div>
     {% endif %}
 
+    <h2 class="h5 mb-3">Identity</h2>
     <div class="row g-3">
         <div class="col-md-3">
             <label class="form-label" for="{{ form.party_code.id_for_label }}">Code</label>
@@ -51,6 +53,9 @@
             {{ form.relation_name }}
             {{ form.relation_name.errors }}
         </div>
+    </div>
+    <h2 class="h5 mt-4 mb-3">Contact details</h2>
+    <div class="row g-3">
         <div class="col-md-3">
             <label class="form-label" for="{{ form.primary_phone.id_for_label }}">Phone</label>
             {{ form.primary_phone }}
@@ -66,6 +71,9 @@
             {{ form.profile_photo }}
             {{ form.profile_photo.errors }}
         </div>
+    </div>
+    <h2 class="h5 mt-4 mb-3">Tax details and account status</h2>
+    <div class="row g-3">
         <div class="col-md-3">
             <label class="form-label" for="{{ form.tax_pan.id_for_label }}">PAN</label>
             {{ form.tax_pan }}
@@ -101,5 +109,6 @@
             <i class="bi bi-check2"></i> {{ submit_label }}
         </button>
     </div>
-</form>
+</form></div>{% include "party/_entry_summary.html" %}</div>
+<script src="{% static 'js/entry-summary.js' %}"></script>
 {% endblock %}

@@ -28,7 +28,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <!-- Main Navigation Bar -->
     {% block navbar %}
         {% include 'components/navigation/main_nav.html' %}

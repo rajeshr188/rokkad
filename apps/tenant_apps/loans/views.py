@@ -241,6 +241,7 @@ def pawn_loan_list(request):
             "loan_filter": loan_filter,
             "page_obj": page_obj,
             "readiness": readiness,
+            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
     )
 

@@ -1,0 +1,10 @@
+<aside class="loan-summary" aria-label="Loan summary">
+  <div class="card"><div class="card-body">
+    <h2>Loan summary</h2><span class="badge text-bg-light mb-3">{{ loan.get_state_display }}</span>
+    <div class="loan-summary-label">Original principal</div><div class="loan-summary-amount">{{ loan.principal_amount }}</div>
+    <dl><dt>Borrower</dt><dd>{{ loan.borrower.display_name }}</dd><dt>Loan number</dt><dd>{{ loan.loan_number }}</dd><dt>License / series</dt><dd>{{ loan.license.license_number }} / {{ loan.series.code }}</dd><dt>Monthly rate</dt><dd>{{ loan.monthly_interest_rate }}%</dd><dt>Tenure</dt><dd>{{ loan.tenure_months }} months</dd></dl>
+    <div class="loan-summary-label">{{ loan.collateral_items.count }} collateral item{{ loan.collateral_items.count|pluralize }}</div>
+    <ul class="loan-summary-items">{% for item in loan.collateral_items.all %}<li><strong>{{ item.description }}</strong><small>{{ item.get_metal_display }} · Purity {{ item.purity_percentage }}%</small><small>Gross {{ item.gross_weight }} g · Net {{ item.net_weight }} g</small><small>Allocated principal {{ item.allocated_principal }}</small><small>{{ item.get_custody_state_display }}</small></li>{% endfor %}</ul>
+    <div class="loan-summary-note">Original loan and collateral details. Use the current repayment or settlement quote for the amount to collect.</div>
+  </div></div>
+</aside>

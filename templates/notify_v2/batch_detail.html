@@ -2,15 +2,15 @@
 {% block title %}{{ object.name }}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="app-heading">
   <div>
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-1">
-        <li class="breadcrumb-item"><a href="{% url 'workspace_notify:notify_v2_batch_list' request.workspace.slug %}">Notify V2 Batches</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'workspace_notify:notify_v2_batch_list' request.workspace.slug %}">Notify delivery batches</a></li>
         <li class="breadcrumb-item active">{{ object.name }}</li>
       </ol>
     </nav>
-    <h4 class="mb-0">{{ object.name }}</h4>
+    <h1 class="h3 mb-1">{{ object.name }}</h1>
     <div class="text-muted small">{{ object.event_type.name }} · {{ object.event_type.key }}</div>
   </div>
   <div class="d-flex gap-2 flex-wrap justify-content-end">
@@ -45,6 +45,7 @@
 {% endblock %}
 
 {% block workspace_content %}
+{% include 'notify_v2/_navigation.html' %}
 <div class="row g-3 mb-4">
   <div class="col-md-3">
     <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Status</div><div class="fs-5 fw-bold">{{ object.get_status_display }}</div></div></div>
@@ -60,12 +61,12 @@
   </div>
 </div>
 
-<div class="row g-3">
-  <div class="col-lg-8">
+<div class="record-grid">
+  <div>
     <div class="card">
       <div class="card-header fw-semibold">Jobs</div>
       <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0">
+        <table class="table app-table table-hover mb-0">
           <thead class="table-light">
             <tr>
               <th>Recipient</th>
@@ -116,7 +117,7 @@
       </div>
     </div>
   </div>
-  <div class="col-lg-4">
+  <div class="record-context">
     <div class="card mb-3">
       <div class="card-header fw-semibold">Batch Details</div>
       <div class="card-body">

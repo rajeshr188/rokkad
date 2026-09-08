@@ -10,8 +10,8 @@ class RateSourceSetupUITests(SimpleTestCase):
     def test_rate_list_links_to_rate_source_setup(self):
         content = self.template("rate_list.html")
 
-        self.assertIn("Add Source", content)
-        self.assertIn("No rate source exists yet", content)
+        self.assertIn("Add Rate Source", content)
+        self.assertIn("Add a source before entering your first metal rate", content)
         self.assertIn("ratesource_create", content)
 
     def test_rate_create_guides_user_to_add_rate_source(self):

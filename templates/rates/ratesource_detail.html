@@ -1,21 +1,21 @@
 {% extends 'base_tenant.html' %}
 
 {% block workspace_content %}
-  <div class="container card mt-4">
+{% include 'rates/_navigation.html' %}
+  <div class="card">
     <div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-      <h1 class="h3 mb-0">Rate Source Detail</h1>
+      <h1 class="h3 mb-0">{{ ratesource.name }}</h1>
       <div class="d-flex gap-2">
         <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Back to list</a>
         <a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">Add Rate</a>
       </div>
     </div>
-    <ul>
-      <li><strong>ID:</strong> {{ ratesource.id }}</li>
-      <li><strong>Name:</strong> {{ ratesource.name }}</li>
-      <li><strong>Location:</strong> {{ ratesource.location }}</li>
-      <li><strong>Taxed?:</strong> {{ ratesource.tax_included }}</li>
-    </ul>
+    <dl class="record-facts">
+      <dt>Location</dt><dd>{{ ratesource.location }}</dd>
+      <dt>Tax included in quotes</dt><dd>{{ ratesource.tax_included|yesno:"Yes,No" }}</dd>
+    </dl>
+    <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk %}">Edit source</a>
     </div>
   </div>
 {% endblock %}

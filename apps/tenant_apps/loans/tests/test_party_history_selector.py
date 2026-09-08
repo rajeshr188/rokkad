@@ -12,7 +12,7 @@ from apps.tenant_apps.loans.selectors.party_history import (
 
 class PartyPawnLoanHistorySelectorTests(SimpleTestCase):
     @patch("apps.tenant_apps.loans.selectors.party_history.reverse")
-    @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance")
+    @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", autospec=True)
     @patch("apps.tenant_apps.loans.selectors.party_history.PawnLoan.objects.filter")
     def test_uses_loans_balance_for_active_party_loan(
         self, filter_loans, get_balance, reverse
@@ -41,7 +41,7 @@ class PartyPawnLoanHistorySelectorTests(SimpleTestCase):
         self.assertEqual(result["active_loans"][0].loan_id, "PL-008")
 
     @patch("apps.tenant_apps.loans.selectors.party_history.reverse")
-    @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance")
+    @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", autospec=True)
     @patch("apps.tenant_apps.loans.selectors.party_history.PawnLoan.objects.filter")
     def test_draft_does_not_claim_posted_outstanding(
         self, filter_loans, get_balance, reverse

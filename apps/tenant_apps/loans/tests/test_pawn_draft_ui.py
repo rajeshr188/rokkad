@@ -232,6 +232,36 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(response, "Open Economic Setup")
         self.assertContains(response, reverse("loans:pawn_economics_setup"))
 
+    def test_missing_photo_preserves_create_selections(self):
+        license, series = self._configured_setup()
+        payload = self._payload(license, series)
+        del payload["collateral-0-photograph"]
+        response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+        self.assertContains(response, "New collateral requires a JPEG or PNG photograph.")
+        for field in ("borrower", "series", "product_version", "loan_date", "tenure_months"):
+            self.assertEqual(str(response.context["form"][field].value()), str(payload[field]))
+        self.assertFalse(PawnLoan.objects.exists())
+
+    def test_edit_post_keeps_disabled_series_and_product_and_borrower(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        item = loan.collateral_items.get()
+        payload = self._payload(license, series)
+        for field in ("series", "product_version", "collateral-0-photograph"):
+            del payload[field]
+        payload["collateral-0-collateral_item_id"] = item.pk
+        payload["collateral-0-net_weight"] = "invalid"
+        response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"]["series"].value(), series.pk)
+        self.assertEqual(response.context["form"]["product_version"].value(), self.product_version.pk)
+        self.assertEqual(str(response.context["form"]["borrower"].value()), str(self.party.pk))
+        self.assertFalse(response.context["form"].errors)
+        payload["collateral-0-net_weight"] = "9.0000"
+        corrected = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        self.assertEqual(corrected.status_code, 302)
+
     def test_create_uses_active_party_autocomplete_and_supports_preselection(self):
         self._configured_setup()
         self.party.primary_phone = "+919876543210"

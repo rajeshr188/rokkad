@@ -3,6 +3,7 @@
 {% block title %}New loan product version{% endblock %}
 
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
   <h1 class="h3 mb-1">New draft for {{ product.code }}</h1>
   <p class="text-muted mb-0">This creates a new immutable contract version. It will not affect existing loans or become selectable until explicitly activated.</p>

@@ -13,6 +13,13 @@
 {% endblock %}
 
 {% block mgmt_content %}
+<nav class="app-section-nav" aria-label="Workspace administration">
+<a href="{% url 'workspace_slug_settings_setup' workspace_slug=company.slug %}">Setup checklist</a>
+<a href="{% url 'workspace_slug_settings_team' workspace_slug=company.slug %}">Team</a>
+{% if company.owner_id == request.user.id %}<a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=company.slug %}">Billing</a>{% endif %}
+<a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/' %}">PawnLoan setup</a>
+<a href="{% url 'workspace_slug_dashboard' workspace_slug=company.slug %}">Return to workspace</a>
+</nav>
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
@@ -44,7 +51,7 @@
                     <div class="row mt-4 g-3">
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="app-heading">
                                     <div>
                                         <div class="text-muted small">Team Members</div>
                                         <div class="h4 mb-0">{{ company.memberships.count }}</div>
@@ -55,7 +62,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="app-heading">
                                     <div>
                                         <div class="text-muted small">Pending Invitations</div>
                                         <div class="h4 mb-0">{{ company.invitations.count }}</div>
@@ -66,7 +73,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="app-heading">
                                     <div>
                                         <div class="text-muted small">Your Role</div>
                                         <div class="h4 mb-0">
@@ -124,7 +131,7 @@
 
                             {% if company.memberships.all %}
                             <div class="table-responsive">
-                                <table class="table table-hover">
+                                <table class="table app-table table-hover">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Member</th>
@@ -187,7 +194,7 @@
                         <div class="tab-pane fade" id="invitations-pane" role="tabpanel">
                             {% if company.invitations.all %}
                             <div class="table-responsive">
-                                <table class="table table-hover">
+                                <table class="table app-table table-hover">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Invited Email</th>

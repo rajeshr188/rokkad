@@ -1,7 +1,8 @@
 {% extends "base_tenant.html" %}
 {% block title %}{{ detail.summary.funding_number }}{% endblock %}
 {% block workspace_content %}
-<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+{% include "loans/setup/_navigation.html" %}
+<div class="app-heading">
   <div>
     <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_console' %}">&larr; FundingLoan read console</a>
     <h1 class="h3 mt-2 mb-1">{{ detail.summary.funding_number }}</h1>
@@ -128,7 +129,7 @@
 
 <h2 class="h5">Pledged collateral</h2>
 <div class="table-responsive mb-4">
-  <table class="table align-middle">
+  <table class="table app-table align-middle">
     <thead><tr><th>Collateral</th><th>Source PawnLoan</th><th>Description</th><th>Custody</th><th>Membership</th><th class="text-end">Selected value</th></tr></thead>
     <tbody>{% for item in detail.collateral %}<tr><td>#{{ item.collateral_item_id }}</td><td>{{ item.source_loan_number }}</td><td>{{ item.description }}</td><td>{{ item.custody_state }}</td><td>{% if item.active %}Active{% else %}Released{% endif %}</td><td class="text-end">{{ item.selected_collateral_value }}</td></tr>{% empty %}<tr><td colspan="6" class="text-center py-4 text-muted">No pledge evidence exists.</td></tr>{% endfor %}</tbody>
   </table>
@@ -136,7 +137,7 @@
 
 <h2 class="h5">Funding statement</h2>
 <div class="table-responsive mb-4">
-  <table class="table align-middle">
+  <table class="table app-table align-middle">
     <thead><tr><th>Seq.</th><th>Effective</th><th>Operation</th><th class="text-end">Principal effect</th><th class="text-end">Interest effect</th><th class="text-end">Fee effect</th><th class="text-end">Balance</th><th>Actor</th></tr></thead>
     <tbody>{% for row in detail.statement %}<tr><td>{{ row.sequence }}</td><td>{{ row.effective_date }}</td><td>{{ row.operation }}{% if row.operation == "RECORD_REPAYMENT" %} <a class="small" href="{% url 'loans:funding_loan_repayment_receipt_pdf' detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td class="text-end">{{ row.principal_effect }}</td><td class="text-end">{{ row.interest_effect }}</td><td class="text-end">{{ row.fee_effect }}</td><td class="text-end fw-semibold">{{ row.total_balance }}</td><td>{{ row.actor_name }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">No financial events exist.</td></tr>{% endfor %}</tbody>
   </table>
@@ -144,7 +145,7 @@
 
 <h2 class="h5">Evidence timeline</h2>
 <div class="table-responsive">
-  <table class="table align-middle">
+  <table class="table app-table align-middle">
     <thead><tr><th>Recorded</th><th>Effective</th><th>Type</th><th>Operation</th><th>Evidence</th></tr></thead>
     <tbody>{% for row in detail.timeline %}<tr><td>{{ row.occurred_at }}</td><td>{{ row.effective_date }}</td><td>{{ row.entry_type }}</td><td>{{ row.operation }}{% if row.reversal %} <span class="badge text-bg-warning">Reversal</span>{% endif %}{% if row.operation == "RETURN_COLLATERAL" %} <a class="small" href="{% url 'loans:funding_loan_return_receipt_pdf' detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td>{{ row.summary }}</td></tr>{% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No operational evidence exists.</td></tr>{% endfor %}</tbody>
   </table>

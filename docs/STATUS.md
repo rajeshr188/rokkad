@@ -8,6 +8,179 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Approved UI revamp checkpoint
+
+The operator approved the administration/navigation slice and authorized committing
+the complete revamp. This checkpoint includes the counter prototype/reference,
+shared Workspace and management layouts, loan summaries and validation recovery,
+Party/Rates/Notify presentation, grouped setup/team/billing/account navigation,
+and the reproduced dashboard/history/Preferences fixes. Earlier uncommitted
+notes below describe the work before this checkpoint.
+
+Validation is unchanged from the completed runs below: all recorded browser
+acceptance passes; the expanded regression run passes 608/610 checks, with two
+independently reproduced failures in unchanged legacy preference tests. No new
+application changes were made during checkpoint review. Next: resolve those stale
+preference tests against the supported configuration contract, then publish the
+approved branch checkpoint when requested. Physical acceptance remains deferred.
+
+## 2026-09-08 - Administration design and navigation organization
+
+The user reviewed and approved the Party/Rates/Notify slice. Team, invitations,
+billing/plans/invoices/checkout, account/profile, Workspace settings, and remaining
+loan setup templates now use the counter presentation. Management uses shared
+styles, responsive tables, and an in-flow mobile Navigation button. Desktop and
+mobile reuse the same settings/account navigation, including Account Settings.
+
+Navigation groups Workspace settings, Team, Configuration, Billing, and Account.
+The counter sidebar adds Team under Administration. Billing links use explicit
+Workspace URLs; My Workspaces opens the list with `show_all=1`. PawnLoan setup
+has configuration, documents/printing, and operations/custody groups, with a
+persistent setup navigation on subpages. Existing mutation and authorization
+behavior is preserved. Browser acceptance exposed and fixed a missing import
+for the canonical Preferences view, and styling now makes Owner badges legible.
+
+Desktop and narrow Chromium acceptance passes across 13 management destinations
+and three loan setup destinations, including mobile menu access, with no page
+overflow or JavaScript errors. Screenshots: `%TEMP%/rokkad-admin-ux`. No invitations
+or payments were submitted. The expanded regression run passed 608/610 checks
+(orgs, subscriptions, configuration, shell/routes, and Loans). Two unchanged
+legacy preference tests fail because `Loan__Default_Date` and
+`Loan__Accrual_Timing` are no longer registered; both failures reproduce in an
+isolated two-test run. No retired settings were restored to satisfy those tests.
+The initial navigation-fixture failure was corrected for direct billing links;
+that shell check passes in the expanded run.
+Changes remain local and uncommitted. Next: operator review of organization and
+frequent-task access, then a coherent commit checkpoint. Physical camera/printer
+acceptance remains deferred.
+
+## 2026-09-08 - Counter design extended to Party, Rates, and Notify
+
+Implemented locally: Party list and grouped entry/edit forms with a live record
+summary, borrower tabs prioritizing Loans and Documents/KYC, and an expandable
+photo/camera editor. Rates now has shared quote/source navigation, clearer quote
+lists and details, setup guidance, and a live rate-entry summary. Notify batch,
+detail, settings, and integration pages adopt the shared presentation; delivery
+work is primary and provider configuration is collapsible. Existing commands,
+permissions, tenancy, camera controls, and provider behavior remain in place.
+
+All 154 focused Party/Rates/Notify and shell/route checks pass. Chromium acceptance
+passes at 1440px and 390px for Party creation and tabs, source/quote creation and
+live summaries, and Notify batch/settings/detail pages, with no page overflow or
+JavaScript errors. The full lending browser regression also passes through release
+and exact PDF reprints. Screenshots are in `%TEMP%/rokkad-apps-ux`.
+Only isolated test records were created; no real messages were sent.
+Changes remain uncommitted. Next: operator review, then team, billing, account,
+and remaining setup screens. Physical camera/printer checks remain deferred.
+
+## 2026-09-08 - Active-loan dashboard balance date fix
+
+Reproduced the dashboard TypeError: its active-loan balance call omitted the
+required `as_of_date`. Dashboard and borrower-history summaries now capture the
+current local date once and pass it to every balance read. A call-site audit found
+the same omission in borrower history and no other direct omissions.
+Selector mocks now enforce the real function signature. The first-loan HTTP
+acceptance also opens the Workspace dashboard after actual disbursal and asserts
+its active-loan count and outstanding total. All 10 dashboard/operator checks
+and the 3 dashboard/history selector checks pass. No balances or records changed;
+these are read-path fixes, still local and uncommitted.
+
+## 2026-09-08 - Approved counter design implemented in the live loan flow
+
+The user approved the prototype direction. The first live slice adds a full-width
+light Workspace shell, counter-first navigation, persistent setup access, and a
+sticky loan summary. Draft summaries include borrower/series/product, tenure,
+entered allocation total, and per-item description, metal, gross/net weight,
+purity, allocation, and photo status. Input changes hide stale server economic
+previews. Detail, disbursal, repayment, release, and transition screens share
+persisted original-loan/collateral summaries; dues and commands stay service-owned.
+
+Both Chromium acceptance tests pass: full desktop/narrow lending through release
+and identical PDF reprints, plus missing-photo recovery and stale-preview checks.
+The new shell also resolves the previously observed narrow Party-detail overflow.
+An overlapping mobile navigation control was moved into the page flow.
+The shared shell is applied across Workspace pages; individual Party/Rate/Notify
+redesigns follow after live operator feedback. See
+`docs/implementation/counter-ux-first-slice.md`. Physical camera/printer acceptance
+and external private-media deployment verification remain pending.
+
+The consolidated run passed 807/808 tests in 156.934s. Its only failure was an
+old shell fixture that set template Workspace context without `request.workspace`;
+the banner now deliberately reads resolved request authority. Correcting the
+fixture produced a passing 30-test shell/routing rerun. Both browser acceptance
+tests pass separately. Implementation and earlier fixes remain local/uncommitted;
+no production data, configuration, or deployment was changed.
+
+## 2026-09-08 - Camera capture in the counter prototype
+
+The prototype collateral step now offers Take photo alongside upload. A dialog
+supports live preview, capture, review, retake, and use-photo; denial/unavailable
+states offer retry and upload. Capture requests video only and stops the stream
+on capture, close, or page exit. Photos remain in browser memory only.
+Simulated-camera checks pass at 1440px and 390px for capture/retake, accepting the
+image, cleanup, permission denial, and upload fallback. Physical device testing
+remains deferred. Refresh the local prototype to load the new controls.
+The existing sample journey checks also pass, including keyboard continuation
+after correcting an invalid weight.
+
+## 2026-09-08 - Persistent PawnLoan setup navigation
+
+The PawnLoans list now exposes a persistent PawnLoan setup button to users with
+`workspace.settings.manage`, and the existing sidebar entry uses the same label.
+The setup home is titled PawnLoan setup; it and the economics/product pages share
+direct Workspace-scoped links to licenses/numbering, economic setup, products,
+and the loan list. Setup remains reachable after initial configuration.
+All 46 focused Workspace-route and setup UI tests pass. Changes remain local
+and uncommitted.
+
+## 2026-09-08 - Draft collateral validation recovery
+
+Reproduced an edit-form reset: series and product were disabled only on GET, so
+the browser omitted them on POST and the bound form treated them as missing.
+Their instance values and disabled state now apply on every edit request.
+Removed collateral rows remain hidden on redisplay, and the form explains that
+new upload selections must be made again after a reload; saved photos remain.
+
+All 31 draft UI tests pass, including missing-photo selection retention and an
+invalid edit followed by successful correction. Customer selection loss was not
+reproduced in the tested create path. A focused Chromium recovery test passes at
+1440px and 390px: borrower/series labels survive a missing-photo response, removed
+rows stay hidden, and adding the photo successfully saves the draft. The broader browser run completed the
+desktop journey but stopped on an unrelated Party-detail overflow at 390px;
+that responsive finding remains open and is not a passing full-browser gate.
+
+## 2026-09-08 - PawnLoan setup link retains the active Workspace
+
+Reproduced the reported economic-setup navigation failure with a plain client on
+a global host: the named loan-create alias bypassed the canonical Loans dispatcher
+and emitted `/loans/setup/economics/`, losing explicit Workspace identity.
+Named list/create/detail and numbering-settings aliases now reuse that dispatcher
+for HTML targets and redirects. Loan section redirects preserve their slug and
+fragment. Missing-borrower readiness explicitly checks the requested Workspace
+and links to its canonical Party creation route.
+
+The original failing regression now passes. All 90 focused route, business-entry,
+setup UI, and draft UI tests pass, including different profile preference,
+Workspace isolation, authorization, setup saves, and related navigation. No
+economic settings or user data were changed. These fixes remain uncommitted.
+
+## 2026-09-08 - Counter-first interactive UX concept ready for review
+
+Functional checkpoint committed locally as `9acb865` after the 802-test gate.
+The isolated [counter prototype](ui/prototypes/counter/index.html) now covers
+borrower search/creation, collateral entry and local photo preview, terms review,
+draft approval, separate disbursal, repayment, and explicit item handoff. Shared
+navigation includes sample Loans/Parties and reference/setup layout previews.
+It has no backend connection or persistence and changes no production templates.
+
+Playwright passed the sample journey, validation, confirmations, navigation, and
+overflow checks at 1440×1000 and 390×844 with no JavaScript page errors. See the
+[review guide](ui/prototypes/counter/README.md). The next milestone is operator
+review of this direction, followed by the shared shell and first-loan vertical
+slice. Physical phone/camera and printer checks remain deferred; external media
+privacy verification remains required before a real-data pilot. The functional
+checkpoint has not been pushed; prototype work remains uncommitted for review.
+
 ## 2026-09-08 - Functional checkpoint before UI/UX prototyping
 
 The consolidated gate passes 802/802 tests across orgs, subscriptions, onboarding,

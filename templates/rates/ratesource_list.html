@@ -1,6 +1,7 @@
 {% extends 'base_tenant.html' %}
 {% block workspace_content %}
-<div class="container mt-4">
+{% include 'rates/_navigation.html' %}
+<div class="rate-source-page">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h1 class="h3 mb-1">Rate Sources</h1>
@@ -11,23 +12,21 @@
             <a class="btn btn-primary" href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add Source</a>
         </div>
     </div>
-    <table class="table table-sm">
+    <div class="card table-responsive"><table class="table app-table mb-0">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Name</th>
                 <th>Location</th>
-                <th>Taxed?</th>
+                <th>Tax included</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for ratesource in ratesources %}
             <tr>
-                <td>{{ ratesource.id }}</td>
-                <td>{{ ratesource.name }}</td>
+                <td><a class="fw-semibold" href="{% url 'workspace_rates:ratesource_detail' request.workspace.slug ratesource.id %}">{{ ratesource.name }}</a></td>
                 <td>{{ ratesource.location }}</td>
-                <td>{{ratesource.tax_included}}</td>
+                <td>{{ ratesource.tax_included|yesno:"Yes,No" }}</td>
                 <td>
                     <a href="{% url 'workspace_rates:ratesource_detail' request.workspace.slug ratesource.id %}">View</a>
                     <span class="text-muted mx-1">|</span>
@@ -36,12 +35,12 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" class="text-center text-muted py-4">
+                <td colspan="4" class="text-center text-muted py-4">
                     No rate sources yet. <a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add the first source</a>.
                 </td>
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+    </table></div>
 </div>
 {%endblock%}

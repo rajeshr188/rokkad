@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}{{ revision.layout.name }} revision {{ revision.version }}{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">{{ revision.layout.name }}</h1><p class="text-muted mb-0">Revision {{ revision.version }} · {{ revision.get_state_display }} · {{ revision.content_hash|slice:':16' }}</p></div>
   <a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">All layouts</a>

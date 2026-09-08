@@ -26,8 +26,12 @@ Desktop/mobile Chromium acceptance is recorded in
 [the browser record](../implementation/browser-acceptance.md). Physical camera,
 phone, printer, and handoff checks remain; mobile/printer checks are deferred
 by the operator. Rates/Notify routing and application-level Notify boundary fixes
-are complete. Next: review/commit the checkpoint and prototype the shared shell
-and first-loan UX. External media privacy remains a real-data pilot requirement.
+are complete. The counter prototype is approved; the shared shell and loan
+workflow are implemented locally, followed by Party, Rates, and Notify screens.
+Team, billing, account, and setup presentation now follows the same design,
+with grouped administration navigation, reviewed and approved by the operator.
+The complete revamp is the next commit checkpoint. Follow up on the two stale
+legacy preference tests recorded in STATUS before the next release gate. External media privacy remains a real-data pilot requirement.
 
 The entries below preserve earlier planning context; their active/proposed
 labels are historical and do not override this checkpoint or current ADRs.

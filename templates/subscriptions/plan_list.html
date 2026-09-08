@@ -94,6 +94,7 @@
 {% endblock %}
 
 {% block mgmt_content %}
+{% include "subscriptions/_navigation.html" %}
 <div class="container py-5">
     <div class="row mb-5">
         <div class="col-12">
@@ -174,7 +175,7 @@
         <div class="col-12">
             <h3 class="mb-4">Detailed Feature Comparison</h3>
             <div class="table-responsive">
-                <table class="table table-hover comparison-table">
+                <table class="table app-table table-hover comparison-table">
                     <thead>
                         <tr>
                             <th>Feature</th>

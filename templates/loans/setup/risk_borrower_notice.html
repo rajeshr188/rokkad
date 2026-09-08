@@ -1,6 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block title %}Create borrower notice{% endblock %}
 {% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
 <div class="row justify-content-center"><div class="col-xl-8">
   <a class="small text-decoration-none" href="{% url 'loans:pawn_risk_portfolio' %}">&larr; Risk portfolio</a>
   <h1 class="h3 mt-2 mb-1">Create borrower notice</h1>

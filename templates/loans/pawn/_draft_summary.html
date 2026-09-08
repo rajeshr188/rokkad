@@ -1,0 +1,13 @@
+<aside class="loan-summary" aria-label="Loan summary" id="draft-loan-summary">
+  <div class="card"><div class="card-body">
+    <h2>Loan summary</h2>
+    <div class="loan-summary-label">Entered principal</div>
+    <div class="loan-summary-amount" data-summary-principal>—</div>
+    <dl><dt>Borrower</dt><dd data-summary-borrower>Choose a borrower</dd><dt>License / series</dt><dd data-summary-series>Choose a series</dd><dt>Loan product</dt><dd data-summary-product>Choose a product</dd><dt>Tenure</dt><dd data-summary-tenure>—</dd></dl>
+    <div class="loan-summary-label" data-summary-count>Collateral</div>
+    <ul class="loan-summary-items" data-summary-items></ul>
+    <div class="loan-summary-note">Entered details only. Preview economics to validate valuation, interest, deductions, and net cash before saving.</div>
+    {% if economics_preview %}<div data-validated-summary class="mt-3"><div class="loan-summary-label">Validated preview · net cash</div><strong>{{ economics_preview.economics.net_disbursed }}</strong><div class="small text-muted">Advance interest {{ economics_preview.economics.advance_interest }} · Fees {{ economics_preview.economics.deducted_fees }}</div></div>{% endif %}
+    <noscript><p class="small text-muted">Live summary needs JavaScript. Your entered fields and the economic preview remain available in the form.</p></noscript>
+  </div></div>
+</aside>

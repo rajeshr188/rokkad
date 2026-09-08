@@ -1,0 +1,68 @@
+/* Shared Workspace presentation. Bootstrap and existing permission-aware routes remain. */
+.rokkad-workspace{--rk-ink:#202b2a;--rk-teal:#146653;--rk-line:#dfe5df;background:#f6f7f4;color:var(--rk-ink);font-family:"Segoe UI",Arial,sans-serif}
+.rokkad-workspace .modern-nav{background:#fff;border-bottom:1px solid var(--rk-line);--bs-navbar-color:#42594d;--bs-navbar-brand-color:#202b2a;--bs-navbar-brand-hover-color:#146653;--bs-navbar-hover-color:#146653;--bs-navbar-active-color:#146653;--bs-navbar-toggler-border-color:#aab9b0}
+.rokkad-workspace .modern-nav .nav-pill{background:#f1f5f1;color:#365448;border-color:var(--rk-line)}
+.rokkad-workspace .modern-nav .navbar-toggler-icon{filter:invert(1)}
+.rokkad-workspace .modern-nav .user-chip{background:#146653}
+.rokkad-workspace .workspace-shell{background:#f6f7f4;margin:0;max-width:none;width:100%}
+.rokkad-workspace .workspace-context-bar{background:#fff;color:#344e41;border-bottom:1px solid var(--rk-line);padding:12px 24px;gap:12px;flex-wrap:wrap}
+.rokkad-workspace .workspace-switch-link{color:#146653}
+.rokkad-workspace .workspace-role-pill{background:#e9f3ed;border-color:#d3e3d8;color:#146653}
+.rokkad-workspace .workspace-content{min-width:0;max-width:1500px;padding-top:30px!important}
+.rokkad-workspace .workspace-sidebar{border-color:var(--rk-line);top:0;max-height:100vh}
+.rokkad-workspace .workspace-sidebar-wrapper{padding:22px 12px}
+.rokkad-workspace .workspace-identity{background:#fafbf8;border:1px solid var(--rk-line);border-radius:10px}
+.rokkad-workspace .workspace-nav-link{border-radius:7px;padding:11px 13px;font-size:13px;color:#53635a}
+.rokkad-workspace .workspace-nav-link.active{background:#e9f3ed;color:#146653;border-color:transparent}
+.rokkad-workspace .workspace-nav-section-title{font-size:10px;letter-spacing:1.3px;color:#65716d}
+.rokkad-workspace .card{border-color:var(--rk-line);border-radius:12px;box-shadow:none;min-width:0}
+.rokkad-workspace .card-header{background:#f8faf6;border-bottom-color:var(--rk-line)}
+.rokkad-workspace .card-body{padding:22px}
+.rokkad-workspace h1{font-size:29px;letter-spacing:-.7px;font-weight:650}
+.rokkad-workspace .form-control,.rokkad-workspace .form-select{border-color:#cbd5ce;min-height:42px;border-radius:6px}
+.rokkad-workspace .btn-primary{--bs-btn-bg:#146653;--bs-btn-border-color:#146653;--bs-btn-hover-bg:#0c483b;--bs-btn-hover-border-color:#0c483b;--bs-btn-active-bg:#0c483b;--bs-btn-active-border-color:#0c483b}
+.rokkad-workspace .btn-outline-primary{--bs-btn-color:#146653;--bs-btn-border-color:#91b2a2;--bs-btn-hover-bg:#146653;--bs-btn-hover-border-color:#146653;--bs-btn-active-bg:#146653}
+.rokkad-workspace .btn{border-radius:6px}
+.rokkad-workspace a:focus-visible,.rokkad-workspace button:focus-visible,.rokkad-workspace summary:focus-visible{outline:3px solid #aa7c27;outline-offset:3px}
+.loan-workflow-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.loan-workflow-main{min-width:0}
+.loan-summary{position:sticky;top:20px;min-width:0}
+.loan-summary h2{font-size:16px;margin:0 0 18px}
+.loan-summary-label{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#65716d}
+.loan-summary-amount{font-size:30px;font-weight:650;letter-spacing:-.8px;overflow-wrap:anywhere}
+.loan-summary dl{font-size:12px;margin-top:20px}
+.loan-summary dt{font-weight:400;color:#65716d;margin-top:12px}
+.loan-summary dd{margin-bottom:0;overflow-wrap:anywhere;font-weight:600}
+.loan-summary-items{list-style:none;margin:16px 0 0;padding:0}
+.loan-summary-items li{border-top:1px solid var(--rk-line);padding:13px 0;font-size:12px;overflow-wrap:anywhere}
+.loan-summary-items strong{display:block;margin-bottom:5px}
+.loan-summary-items small{display:block;color:#65716d;line-height:1.7}
+.loan-summary-note{font-size:11px;color:#586c60;background:#f2f6ef;border-radius:6px;padding:12px;margin-top:15px}
+.loan-workflow-nav{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 24px;font-size:12px}
+.loan-workflow-nav a{color:#146653;text-decoration:none;border-bottom:2px solid #ccded1;padding:8px 12px}
+.loan-workflow-actions{display:flex;gap:10px;flex-wrap:wrap;padding:16px 0}
+.loan-workflow-grid .input-group{flex-wrap:wrap}
+.loan-workflow-grid input[type=file]{min-width:0}
+.rokkad-workspace .d-flex{min-width:0}
+.rokkad-workspace .text-muted{overflow-wrap:anywhere}
+@media(min-width:992px){.rokkad-workspace .workspace-page>.row{display:grid;grid-template-columns:232px minmax(0,1fr)}.rokkad-workspace .workspace-page>.row>.workspace-sidebar,.rokkad-workspace .workspace-page>.row>.workspace-content{width:auto}.rokkad-workspace .workspace-page>.row>.workspace-content{padding:32px!important}}
+@media(max-width:1199px){.loan-workflow-grid{grid-template-columns:minmax(0,1fr) 260px;gap:18px}}
+@media(max-width:767px){.loan-workflow-grid{grid-template-columns:minmax(0,1fr)}.loan-summary{position:static}.rokkad-workspace h1{font-size:25px}.rokkad-workspace .card-body{padding:17px}.rokkad-workspace .workspace-content{padding-top:22px!important}.rokkad-workspace .workspace-content>.d-flex{flex-wrap:wrap}.rokkad-workspace .workspace-content>.d-flex>div{max-width:100%}.rokkad-workspace .workspace-context-bar{padding:12px 16px}}
+
+.rokkad-workspace .workspace-mobile-nav .workspace-sidebar-toggle{width:auto;height:auto;padding:10px 14px;border-radius:7px;display:inline-flex;align-items:center;gap:7px}
+
+/* Party, Rates, and Notify use the same task-focused page patterns. */
+.app-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:25px}
+.app-heading h1{margin:5px 0 8px}.app-heading p{color:#65716d;margin:0;max-width:680px}.app-heading>.d-flex{flex-wrap:wrap}
+.app-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#65716d;font-weight:650}
+.app-section-nav{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;border-bottom:1px solid #dfe5df;padding-bottom:12px}
+.app-section-nav a{color:#146653;text-decoration:none;font-size:13px;padding:6px 10px;border-radius:6px;background:#eaf2eb}
+.record-grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;align-items:start;gap:24px}.record-grid>*{min-width:0}
+.record-context{position:sticky;top:20px}.record-facts{font-size:13px;margin:20px 0 0}.record-facts dt{font-weight:400;color:#65716d;margin-top:15px}.record-facts dd{font-weight:600;overflow-wrap:anywhere;margin-top:4px}
+.app-filter-panel{background:#fff;padding:20px 15px;border:1px solid #dfe5df;border-radius:10px;margin-left:0;margin-right:0}
+.app-table th{font-size:11px;letter-spacing:.4px;color:#65716d;background:#f8faf6;white-space:nowrap}.app-table td,.app-table th{padding:16px}
+.app-empty{text-align:center;padding:42px 20px!important;color:#65716d}.app-empty strong{display:block;color:#304a3c;margin-bottom:8px}.app-empty p{margin:0}
+.app-tabs{gap:4px}.app-tabs .nav-link{color:#53635a;font-size:13px;border-radius:7px 7px 0 0;padding:11px 13px}.app-tabs .nav-link.active{color:#146653;font-weight:600;background:#fff}
+.rokkad-workspace details>summary{color:#146653;cursor:pointer}.rokkad-workspace .record-grid .errorlist{color:#a52929;font-size:12px;padding-left:18px}
+@media(max-width:1100px){.record-grid{grid-template-columns:minmax(0,1fr) 250px;gap:18px}}
+@media(max-width:767px){.record-grid{grid-template-columns:minmax(0,1fr)}.record-context{position:static}.app-table td,.app-table th{padding:12px}.app-heading>.d-flex{width:100%}.app-tabs{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap}.app-tabs .nav-item{flex-shrink:0}}

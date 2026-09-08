@@ -1,11 +1,10 @@
-{% if workspace_settings_sidebar_variant == "desktop" %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
    href="{% url 'workspace_slug_settings' workspace_slug=ew.slug %}">
-    <i class="bi bi-gear"></i> Settings
+    <i class="bi bi-gear"></i> Workspace settings
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' or request.resolver_match.url_name == 'workspace_slug_settings_setup' %}active{% endif %}"
    href="{% url 'workspace_slug_settings_setup' workspace_slug=ew.slug %}">
-    <i class="bi bi-list-check"></i> Setup
+    <i class="bi bi-list-check"></i> Setup checklist
 </a>
 {% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
@@ -13,6 +12,7 @@
     <i class="bi bi-sliders"></i> Preferences
 </a>
 {% endif %}
+<div class="mgmt-section-title">Team</div>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' or request.resolver_match.url_name == 'workspace_slug_settings_team' %}active{% endif %}"
    href="{% url 'workspace_slug_settings_team' workspace_slug=ew.slug %}">
     <i class="bi bi-people"></i> Team Members
@@ -25,6 +25,7 @@
    href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.slug %}">
     <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
 </a>
+<div class="mgmt-section-title">Configuration</div>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_modules' or request.resolver_match.url_name == 'workspace_slug_settings_modules' %}active{% endif %}"
    href="{% url 'workspace_slug_settings_modules' workspace_slug=ew.slug %}">
     <i class="bi bi-grid-3x3-gap"></i> Modules
@@ -39,45 +40,8 @@
     <i class="bi bi-archive"></i> Archive Workspace
 </a>
 {% endif %}
-{% elif workspace_settings_sidebar_variant == "mobile" %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_detail' or request.resolver_match.url_name == 'workspace_settings_home' or request.resolver_match.url_name == 'workspace_slug_settings' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings' workspace_slug=ew.slug %}">
-    <i class="bi bi-gear"></i> Settings
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_setup' or request.resolver_match.url_name == 'workspace_settings_setup' or request.resolver_match.url_name == 'workspace_slug_settings_setup' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_setup' workspace_slug=ew.slug %}">
-    <i class="bi bi-list-check"></i> Setup
-</a>
-{% if role_name == 'Owner' or role_name == 'Admin' or role_name == 'Superuser' %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_preferences' or request.resolver_match.url_name == 'workspace_settings_preferences' or request.resolver_match.url_name == 'workspace_slug_settings_preferences' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_preferences' workspace_slug=ew.slug %}">
-    <i class="bi bi-sliders"></i> Preferences
-</a>
-{% endif %}
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_members_list' or request.resolver_match.url_name == 'workspace_settings_team' or request.resolver_match.url_name == 'workspace_slug_settings_team' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_team' workspace_slug=ew.slug %}">
-    <i class="bi bi-people"></i> Team Members
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invite' or request.resolver_match.url_name == 'workspace_settings_invite' or request.resolver_match.url_name == 'workspace_slug_settings_invite' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_invite' workspace_slug=ew.slug %}">
-    <i class="bi bi-person-plus"></i> Invite Member
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations_list' or request.resolver_match.url_name == 'workspace_settings_invitations' or request.resolver_match.url_name == 'workspace_slug_settings_invitations' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_invitations' workspace_slug=ew.slug %}">
-    <i class="bi bi-envelope-arrow-up"></i> Sent Invitations
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_modules' or request.resolver_match.url_name == 'workspace_slug_settings_modules' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_modules' workspace_slug=ew.slug %}">
-    <i class="bi bi-grid-3x3-gap"></i> Modules
-</a>
-<a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_settings_security' or request.resolver_match.url_name == 'workspace_slug_settings_security' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_security' workspace_slug=ew.slug %}">
-    <i class="bi bi-shield-check"></i> Security
-</a>
-{% if role_name == 'Owner' or role_name == 'Superuser' %}
-<a class="nav-link mgmt-nav-link text-danger {% if request.resolver_match.url_name == 'workspace_delete' or request.resolver_match.url_name == 'workspace_slug_settings_archive' %}active{% endif %}"
-   href="{% url 'workspace_slug_settings_archive' workspace_slug=ew.slug %}">
-    <i class="bi bi-archive"></i> Archive Workspace
-</a>
-{% endif %}
+
+{% if role_name == 'Owner' %}
+<div class="mgmt-section-title">Billing</div>
+<a class="nav-link mgmt-nav-link {% if request.resolver_match.namespace == 'workspace_subscriptions' %}active{% endif %}" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.slug %}"><i class="bi bi-credit-card"></i>Subscription &amp; invoices</a>
 {% endif %}

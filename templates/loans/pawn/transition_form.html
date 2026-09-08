@@ -1,6 +1,8 @@
 {% extends "base_tenant.html" %}
 {% block title %}{{ action_label }} {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
+<div class="loan-workflow-grid"><div class="loan-workflow-main">
 <div class="mb-4"><a class="small text-decoration-none" href="{% url 'loans:pawn_loan_detail' loan.pk %}">&larr; {{ loan.loan_number }}</a><h1 class="h3 mt-2">{{ action_label }}</h1><p class="text-muted">This action is audited. Returning an approved loan to draft preserves its approval snapshot and requires approval again after correction.</p></div>
 <div class="card"><div class="card-body"><form method="post" novalidate>{% csrf_token %}{% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}<button class="btn btn-primary" type="submit">{{ action_label }}</button> <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></form></div></div>
+</div>{% include "loans/pawn/_loan_summary.html" %}</div>
 {% endblock %}
