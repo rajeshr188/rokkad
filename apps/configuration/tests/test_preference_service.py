@@ -4,9 +4,10 @@ from django.test import TestCase
 
 from apps.configuration.models import PreferenceAuditLog, WorkspacePreferenceModel
 from apps.configuration.services import PreferenceService
-from apps.orgs.models import Company, CompanyPreferenceModel
-from apps.orgs.preferences import CompanyPreferences
-from apps.orgs.registries import company_preference_registry
+from dynamic_preferences.registries import global_preferences_registry
+
+from apps.configuration.registries import workspace_preferences_registry
+from apps.orgs.models import Company
 
 
 class PreferenceServiceTests(TestCase):
@@ -176,30 +177,38 @@ class PreferenceServiceTests(TestCase):
         self.assertEqual(audit.changed_by, self.user)
         self.assertEqual(audit.new_value, "False")
 
-    def test_legacy_company_preferences_resolve_workspace_override_through_service(self):
-        company_preference_registry.manager(instance=self.workspace)[
-            "Loan__Default_Date"
-        ] = "L"
-
-        self.assertEqual(CompanyPreferences(self.workspace).loan_default_date, "L")
-        self.assertTrue(
-            CompanyPreferenceModel.objects.filter(
-                instance=self.workspace,
-                section="Loan",
-                name="Default_Date",
-            ).exists()
+    def _get_registry_page_size(self, workspace, *, global_registry=global_preferences_registry):
+        return PreferenceService.get_workspace_from_registry(
+            workspace=workspace,
+            key="ui__default_table_page_size",
+            workspace_registry=workspace_preferences_registry,
+            workspace_preference_model=WorkspacePreferenceModel,
+            global_registry=global_registry,
+            default=10,
         )
 
-    def test_legacy_company_preferences_keep_global_fallback_through_service(self):
-        self.assertEqual(CompanyPreferences(self.workspace).loan_default_date, "N")
+    def test_registry_resolver_prefers_workspace_override(self):
+        PreferenceService.set_workspace(self.workspace, "ui__default_table_page_size", 50)
 
-    def test_legacy_company_preferences_are_workspace_scoped_through_service(self):
-        company_preference_registry.manager(instance=self.workspace)[
-            "Loan__Accrual_Timing"
-        ] = "BOM"
+        self.assertEqual(self._get_registry_page_size(self.workspace), 50)
+        self.assertTrue(WorkspacePreferenceModel.objects.filter(
+            instance=self.workspace, section="ui", name="default_table_page_size",
+        ).exists())
 
-        self.assertEqual(CompanyPreferences(self.workspace).loan_accrual_timing, "BOM")
-        self.assertEqual(
-            CompanyPreferences(self.other_workspace).loan_accrual_timing,
-            "EOM",
-        )
+    def test_registry_resolver_uses_global_fallback(self):
+        key = "ui__default_table_page_size"
+        previous = PreferenceService.get_global(key)
+        self.addCleanup(PreferenceService.set_global, key, previous)
+        PreferenceService.set_global(key, 75)
+
+        self.assertEqual(self._get_registry_page_size(self.workspace), 75)
+
+    def test_registry_resolver_keeps_workspace_overrides_isolated(self):
+        PreferenceService.set_workspace(self.workspace, "ui__default_table_page_size", 50)
+        PreferenceService.set_workspace(self.other_workspace, "ui__default_table_page_size", 100)
+
+        self.assertEqual(self._get_registry_page_size(self.workspace), 50)
+        self.assertEqual(self._get_registry_page_size(self.other_workspace), 100)
+
+    def test_registry_resolver_uses_code_default_without_global_registry(self):
+        self.assertEqual(self._get_registry_page_size(self.workspace, global_registry=None), 10)

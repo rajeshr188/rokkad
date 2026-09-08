@@ -30,8 +30,10 @@ are complete. The counter prototype is approved; the shared shell and loan
 workflow are implemented locally, followed by Party, Rates, and Notify screens.
 Team, billing, account, and setup presentation now follows the same design,
 with grouped administration navigation, reviewed and approved by the operator.
-The complete revamp is the next commit checkpoint. Follow up on the two stale
-legacy preference tests recorded in STATUS before the next release gate. External media privacy remains a real-data pilot requirement.
+The complete revamp is committed as `ede6c88`. The stale legacy preference
+fixtures now use a supported registry and retain override/isolation/fallback
+coverage. The next checkpoint includes that cleanup and the dashboard breadcrumb
+correction, with publication authorized by the operator. External media privacy remains a real-data pilot requirement.
 
 The entries below preserve earlier planning context; their active/proposed
 labels are historical and do not override this checkpoint or current ADRs.

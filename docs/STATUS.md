@@ -8,6 +8,31 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Preference regression cleanup and publication checkpoint
+
+The operator authorized fixing the two legacy preference failures and pushing
+`rls-mvp`. The obsolete tests depended on unregistered Girvi Loan settings.
+Registry-resolution coverage now uses the supported `ui__default_table_page_size`
+key and verifies explicit Workspace overrides, isolation between two Workspaces,
+global fallback, and the caller default without a global registry. No runtime
+configuration or financial behavior changed, and no retired keys were restored.
+
+The expanded gate passes **620/620 tests** in 98.649s: orgs, subscriptions,
+configuration, shell/routes, Loans, and the full HTTP operator journey, including
+the dashboard breadcrumb assertion. This supersedes the earlier 608/610 result.
+The publication checkpoint includes the breadcrumb correction, preference test
+cleanup, and the two pending UI/browser commits. Remote `rls-mvp` had no divergent
+commits at the pre-push check. Physical camera/printer acceptance remains deferred.
+
+## 2026-09-08 - Dashboard breadcrumb correction
+
+Removed the dashboard view's redundant breadcrumb list: it used `name` keys
+where the shared component expects `label`, producing two empty items alongside
+the template's own Home / Workspace / Dashboard trail. The template now provides
+the single trail. Both first-loan HTTP acceptance variants pass with an assertion
+that the rendered trail contains exactly those three nonempty labels.
+This follow-up is local and uncommitted.
+
 ## 2026-09-08 - Approved UI revamp checkpoint
 
 The operator approved the administration/navigation slice and authorized committing

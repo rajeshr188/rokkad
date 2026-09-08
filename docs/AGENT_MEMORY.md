@@ -28,6 +28,11 @@ links include `show_all=1` to avoid the one-Workspace automatic dashboard redire
 Loan setup groups configuration, documents/printing, and operations/custody;
 setup subpages retain the shared setup navigation.
 
+Registry-resolution tests in `apps.configuration` use the supported
+`ui__default_table_page_size` preference to verify Workspace overrides, isolation,
+global fallback, and code defaults. They must not register retired Girvi Loan
+keys just to preserve obsolete fixtures; runtime configuration is unchanged.
+
 PawnLoan setup is a persistent destination, not a one-time wizard: the loan list
 has an action checked against `workspace.settings.manage`, and the setup,
 economics, and product pages share explicit Workspace-scoped navigation.

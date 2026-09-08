@@ -3,6 +3,7 @@
 from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
+import re
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
@@ -12,6 +13,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection, transaction
 from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
+from django.utils.html import strip_tags
 from django.utils import timezone
 
 from apps.orgs.models import Company, Membership, Role
@@ -213,6 +215,16 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         }))
         self.assertEqual(dashboard.context["loan_count"], 1)
         self.assertEqual(dashboard.context["total_loan_amount"], Decimal("10000"))
+        breadcrumb = re.search(
+            r'<nav aria-label="breadcrumb"[^>]*>(.*?)</nav>',
+            dashboard.content.decode(), re.S,
+        )
+        self.assertIsNotNone(breadcrumb)
+        labels = [
+            strip_tags(item).strip()
+            for item in re.findall(r"<li\b[^>]*>(.*?)</li>", breadcrumb.group(1), re.S)
+        ]
+        self.assertEqual(labels, ["Home", self.workspace.name, "Dashboard"])
         ticket = self._get(ticket_url)
         ticket_bytes = self._pdf_bytes(ticket)
         self.assertIn("X-Rokkad-Document-Issue", ticket)

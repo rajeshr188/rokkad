@@ -1982,10 +1982,4 @@ def workspace_dashboard(request, workspace_id):
             checklist=context["setup_checklist"],
         )
 
-    # Breadcrumb context
-    context["breadcrumb_items"] = [
-        {"name": "Dashboard", "url": "dashboard"},
-        {"name": workspace.name, "url": None},
-    ]
-
     return render(request, "company/workspace_dashboard.html", context)
