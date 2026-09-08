@@ -252,6 +252,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 200)
         field = response.context["form"].fields["borrower"]
         self.assertIsInstance(field.widget, PartyAutocompleteWidget)
+        self.assertEqual(response.context["formset"].total_form_count(), 1)
+        self.assertEqual(field.widget.get_url(), reverse("workspace_party:party_autocomplete", args=[self.tenant.slug]))
         self.assertEqual(
             response.context["form"].initial["borrower"],
             str(self.party.pk),

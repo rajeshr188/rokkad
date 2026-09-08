@@ -6,7 +6,7 @@
   <div>
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-1">
-        <li class="breadcrumb-item"><a href="{% url 'notify_v2_batch_list' %}">Notify V2 Batches</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'workspace_notify:notify_v2_batch_list' request.workspace.slug %}">Notify V2 Batches</a></li>
         <li class="breadcrumb-item active">{{ object.name }}</li>
       </ol>
     </nav>
@@ -15,7 +15,7 @@
   </div>
   <div class="d-flex gap-2 flex-wrap justify-content-end">
     {% if can_send_digital %}
-    <form method="post" action="{% url 'notify_v2_batch_send_digital' object.pk %}">
+    <form method="post" action="{% url 'workspace_notify:notify_v2_batch_send_digital' request.workspace.slug object.pk %}">
       {% csrf_token %}
       <button class="btn btn-sm btn-primary" type="submit">
         <i class="bi bi-send me-1"></i>Send Digital
@@ -23,20 +23,20 @@
     </form>
     {% endif %}
     {% if artifact_count %}
-    <a class="btn btn-sm btn-outline-dark" href="{% url 'notify_v2_batch_download_artifacts' object.pk %}">
+    <a class="btn btn-sm btn-outline-dark" href="{% url 'workspace_notify:notify_v2_batch_download_artifacts' request.workspace.slug object.pk %}">
       <i class="bi bi-file-earmark-zip me-1"></i>Download ZIP
     </a>
     {% endif %}
     {% if latest_artifact and latest_artifact.file %}
-    <a class="btn btn-sm btn-outline-dark" href="{{ latest_artifact.file.url }}" target="_blank" download>
+    <a class="btn btn-sm btn-outline-dark" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk latest_artifact.pk %}" target="_blank" download>
       <i class="bi bi-download me-1"></i>Download Latest PDF
     </a>
     {% endif %}
-    <form method="post" action="{% url 'notify_v2_batch_mark_printed' object.pk %}">
+    <form method="post" action="{% url 'workspace_notify:notify_v2_batch_mark_printed' request.workspace.slug object.pk %}">
       {% csrf_token %}
       <button class="btn btn-sm btn-outline-primary" type="submit">Mark Printed</button>
     </form>
-    <form method="post" action="{% url 'notify_v2_batch_mark_posted' object.pk %}">
+    <form method="post" action="{% url 'workspace_notify:notify_v2_batch_mark_posted' request.workspace.slug object.pk %}">
       {% csrf_token %}
       <button class="btn btn-sm btn-success" type="submit">Mark Posted</button>
     </form>
@@ -93,7 +93,7 @@
                     <div class="d-flex flex-wrap gap-1">
                       {% for artifact in job_artifacts %}
                         {% if artifact.file %}
-                        <a class="btn btn-sm btn-outline-secondary py-0 px-2" href="{{ artifact.file.url }}" target="_blank" download>
+                        <a class="btn btn-sm btn-outline-secondary py-0 px-2" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk artifact.pk %}" target="_blank" download>
                           <i class="bi bi-download me-1"></i>{{ artifact.artifact_type }}
                         </a>
                         {% else %}
@@ -144,7 +144,7 @@
             <div class="fw-semibold">{{ artifact.job.event.recipient.name_snapshot|default:'Batch Recipient' }}</div>
             <div class="text-muted mb-1">{{ artifact.artifact_type }} · {{ artifact.created|date:"d M Y, H:i"|default:'Generated' }}</div>
             {% if artifact.file %}
-            <a class="btn btn-sm btn-outline-primary" href="{{ artifact.file.url }}" target="_blank" download>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk artifact.pk %}" target="_blank" download>
               <i class="bi bi-download me-1"></i>Download
             </a>
             {% else %}

@@ -22,9 +22,22 @@ Same-Workspace nested scopes leave that check to the outer scope. Default fixed
 loan documents now persist ordinary official issues just like custom layouts,
 so reprints use stored bytes. Do not restore stateless default PDF generation.
 Party action forms use named `workspace_party:*` URLs; success redirects retain
-the validated Workspace slug and active detail tab. Real browser/printer
-acceptance remains pending and is tracked in
-`docs/implementation/mvp-operator-acceptance.md`.
+the validated Workspace slug and active detail tab. Physical phone, camera, and
+printer acceptance remains pending. Chromium viewport acceptance and
+its two resulting fixes are documented in `docs/implementation/browser-acceptance.md`.
+Borrower autocomplete must use the Workspace-scoped Party lookup URL; cached
+widget tokens are URL-bound. Draft collateral starts with one required row,
+with additional rows added explicitly.
+Rates and Notify operator URLs now use `workspace_rates:*` and `workspace_notify:*`.
+Party, Rates, and Notify share the existing Workspace adapter in
+`apps/orgs/route_adapters.py`. Notify artifact links use guarded Workspace/batch
+downloads. Exact registered WhatsApp callback routes use provider authentication
+instead of browser Membership, retaining identity/lifecycle/RLS and signatures;
+see `docs/adr/2026-09-08-notify-provider-request-boundary.md`. Admin links use a
+registered Workspace domain. Django development media denies raw Notify artifacts;
+external storage privacy still needs deployment verification. UI/UX discovery
+starts now; the next product milestone is the shared-shell/first-loan prototype
+in `docs/plans/project-wide-ux-revamp.md`.
 
 Phase 7 residue cleanup is complete. `request.workspace` is now the sole
 HTTP Workspace attribute; never restore `request.tenant`. Middleware helpers

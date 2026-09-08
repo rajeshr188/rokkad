@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("batches/<int:pk>/artifacts/<int:artifact_pk>/", views.artifact_download, name="notify_v2_artifact_download"),
     path("", views.index, name="notify_v2_index"),
     path("settings/", views.settings_overview, name="notify_v2_settings"),
     path("settings/whatsapp-cloud/", views.whatsapp_cloud_integration_setup, name="notify_v2_whatsapp_cloud_integration"),

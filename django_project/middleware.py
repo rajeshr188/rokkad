@@ -110,6 +110,10 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                 or current_view.startswith("subscriptions:")
                 or current_view.startswith("workspace_subscriptions:")
                 or current_view.startswith("admin:")
+                or current_view in {
+                    "workspace_notify:notify_v2_whatsapp_cloud_webhook",
+                    "notify_v2_whatsapp_cloud_webhook",
+                }
             ):
                 return None
         except Exception:

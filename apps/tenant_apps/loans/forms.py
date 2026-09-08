@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.urls import reverse
 from django_select2 import forms as s2forms
 
 from apps.tenant_apps.loans.domain import (
@@ -688,6 +689,9 @@ class PawnDraftForm(forms.Form):
 
     def __init__(self, *args, workspace, instance=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["borrower"].widget.data_url = reverse(
+            "workspace_party:party_autocomplete", args=[workspace.slug]
+        )
         self.fields["borrower"].queryset = Party.objects.filter(
             status=Party.PartyStatus.ACTIVE
         ).order_by("display_name", "party_code")
@@ -909,7 +913,7 @@ class PawnPhysicalVerificationResolutionForm(forms.Form):
 
 PawnCollateralDraftFormSet = forms.formset_factory(
     PawnCollateralDraftForm,
-    extra=1,
+    extra=0,
     can_delete=True,
     min_num=1,
     validate_min=True,

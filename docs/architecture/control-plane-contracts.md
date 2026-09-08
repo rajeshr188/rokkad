@@ -102,6 +102,16 @@ Membership removal denies the next Workspace request and clears an invalid
 navigation preference. It cannot retroactively cancel a transaction already in
 progress; long-running work must revalidate at its own authorization boundary.
 
+### 2.3 Provider callback exception
+
+The exact registered WhatsApp callback endpoints authenticate provider tokens or
+signed payloads instead of browser Membership. Explicit Workspace identity,
+domain/path agreement, active lifecycle, and numeric RLS context remain required.
+Callback signatures and configured phone identity are checked before processing.
+No neighboring route or URL prefix gains this exception. Receipt processing is
+independent of browser subscription availability. See
+[the provider-boundary ADR](../adr/2026-09-08-notify-provider-request-boundary.md).
+
 ## 3. `UserProfile.workspace`
 
 `UserProfile.workspace` remains a nullable navigation preference meaning “last

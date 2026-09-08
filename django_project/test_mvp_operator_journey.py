@@ -320,3 +320,143 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         Membership.objects.create(user=outsider, company=self.workspace, role=denied_role)
         self.client.force_login(outsider)
         self.assertEqual(self.client.post(add, {**data, "csrfmiddlewaretoken": self.client.cookies["csrftoken"].value}).status_code, 403)
+
+    def test_borrower_autocomplete_is_workspace_scoped(self):
+        from apps.tenant_apps.loans.forms import PawnDraftForm
+
+        self.workspace = self._workspace("Search First")
+        party = self._party()
+        other = self._workspace("Search Second")
+        with workspace_context(other.pk):
+            Party.objects.create(display_name="MVP Other Borrower")
+        with workspace_context(self.workspace.pk):
+            form = PawnDraftForm(workspace=self.workspace)
+            str(form["borrower"])
+            widget = form.fields["borrower"].widget
+            url = widget.get_url()
+            token = widget.field_id
+        response = self.client.get(url, {"field_id": token, "term": "MVP"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([str(row["id"]) for row in response.json()["results"]], [str(party.pk)])
+        wrong = reverse("workspace_party:party_autocomplete", args=[other.slug])
+        self.assertEqual(self.client.get(wrong, {"field_id": token, "term": "MVP"}).status_code, 404)
+        self.assertEqual(self.client.get(url, {"field_id": "invalid", "term": "MVP"}).status_code, 404)
+        denied_role, _ = Role.objects.get_or_create(name="NoAccess")
+        denied = get_user_model().objects.create_user(username="search-denied")
+        Membership.objects.create(user=denied, company=self.workspace, role=denied_role)
+        self.client.force_login(denied)
+        self.assertEqual(self.client.get(url, {"field_id": token, "term": "MVP"}).status_code, 403)
+
+    def test_rates_navigation_and_mutations_keep_workspace(self):
+        from apps.tenant_apps.rates.models import Rate, RateSource
+        self.workspace = self._workspace("Rates First")
+        other = self._workspace("Rates Second")
+        def url(name, *args, workspace=None):
+            return reverse("workspace_rates:" + name, args=[(workspace or self.workspace).slug, *args])
+        self.assertContains(self._get(url("rate_list")), url("ratesource_create"))
+        self._get(url("ratesource_create"))
+        source_data = {"name": "Local source", "location": "Counter", "tax_included": "on"}
+        response = self._post(url("ratesource_create"), source_data)
+        with workspace_context(self.workspace.pk):
+            source = RateSource.objects.get()
+        self.assertEqual(response.url, url("ratesource_detail", source.pk))
+        rate_data = {"rate_source": source.pk, "metal": "Gold", "currency": "INR", "purity": "24k", "buying_rate": "100", "selling_rate": "110"}
+        self.assertContains(self._get(url("rate_create")), url("rate_list"))
+        self._post(url("rate_create"), rate_data)
+        with workspace_context(self.workspace.pk):
+            rate = Rate.objects.get()
+        rate_data["buying_rate"] = "101"
+        self._post(url("rate_update", rate.pk), rate_data, expected_url=url("rate_detail", rate.pk))
+        self.assertEqual(self.client.get(url("rate_update", rate.pk, workspace=other)).status_code, 404)
+        self.assertEqual(self.client.post(url("rate_delete", rate.pk)).status_code, 403)
+        self._post(url("rate_delete", rate.pk), expected_url=url("rate_list"))
+        self._post(url("ratesource_delete", source.pk), expected_url=url("ratesource_list"))
+
+    def test_notify_navigation_artifacts_and_actions_keep_workspace(self):
+        from apps.tenant_apps.notify_v2.models import NotificationArtifact, NotificationBatch, NotificationEvent, NotificationEventType, NotificationJob, NotificationRecipient
+        self.workspace = self._workspace("Notify First")
+        other = self._workspace("Notify Second")
+        with workspace_context(self.workspace.pk):
+            kind = NotificationEventType.objects.create(key="acceptance", name="Acceptance", domain="LOAN")
+            batch = NotificationBatch.objects.create(event_type=kind, name="Test letters")
+            recipient = NotificationRecipient.objects.create(name_snapshot="Test Recipient")
+            event = NotificationEvent.objects.create(event_type=kind, recipient=recipient, batch=batch)
+            job = NotificationJob.objects.create(event=event, batch=batch, channel="LETTER")
+            artifact = NotificationArtifact.objects.create(job=job, artifact_type="PDF", file=SimpleUploadedFile("test.pdf", b"%PDF-test", content_type="application/pdf"))
+            empty = NotificationBatch.objects.create(event_type=kind, name="Empty")
+        def url(name, *args, workspace=None):
+            return reverse("workspace_notify:notify_v2_" + name, args=[(workspace or self.workspace).slug, *args])
+        detail = url("batch_detail", batch.pk)
+        self.assertContains(self._get(url("batch_list")), detail)
+        download = url("artifact_download", batch.pk, artifact.pk)
+        response = self._get(detail)
+        self.assertContains(response, download)
+        self.assertNotContains(response, artifact.file.url)
+        self.assertEqual(self._pdf_bytes(self._get(download)), b"%PDF-test")
+        wrong_batch = url("artifact_download", empty.pk, artifact.pk)
+        self.assertEqual(self.client.get(wrong_batch).status_code, 404)
+        self.assertEqual(self.client.get(url("artifact_download", batch.pk, artifact.pk, workspace=other)).status_code, 404)
+        self.assertEqual(self.client.post(url("batch_mark_printed", batch.pk)).status_code, 403)
+        self._post(url("batch_mark_printed", batch.pk), expected_url=detail)
+        self._post(url("batch_mark_posted", batch.pk), expected_url=detail)
+        self.assertContains(self._get(url("settings")), url("whatsapp_cloud_integration"))
+        self._get(url("whatsapp_cloud_integration"))
+        denied = get_user_model().objects.create_user(username="notify-route-denied")
+        role, _ = Role.objects.get_or_create(name="NoAccess")
+        Membership.objects.create(user=denied, company=self.workspace, role=role)
+        self.client.force_login(denied)
+        self.assertEqual(self.client.get(download).status_code, 403)
+
+    @override_settings(WORKSPACE_SECRET_ENCRYPTION_KEY="lHcKWFYTr7srGTRy2gq31ALX5RzzX_UkI95mGaSeP-8=")
+    def test_anonymous_signed_notify_callback_and_replay(self):
+        import hashlib, hmac, json
+        from apps.orgs.models import Domain
+        from apps.tenant_apps.notify_v2.models import WhatsAppCloudWebhookReceipt
+        from apps.tenant_apps.notify_v2.services.whatsapp_integration import set_whatsapp_cloud_integration
+        self.workspace = self._workspace("Webhook First")
+        other = self._workspace("Webhook Other")
+        for workspace, phone, secret in ((self.workspace, "phone-first", "first-secret"), (other, "phone-other", "other-secret")):
+            with workspace_context(workspace.pk):
+                set_whatsapp_cloud_integration(workspace_id=workspace.pk, actor=self.owner,
+                    api_version="v20.0", phone_number_id=phone, access_token="test-token",
+                    webhook_verify_token="test-verify", app_secret=secret, is_enabled=True)
+        endpoint = reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[self.workspace.slug])
+        client = Client(enforce_csrf_checks=True)
+        verified = client.get(endpoint, {"hub.mode": "subscribe", "hub.verify_token": "test-verify", "hub.challenge": "challenge"})
+        self.assertEqual(verified.status_code, 200)
+        self.assertEqual(verified.content, b"challenge")
+        payload = {"object": "whatsapp_business_account", "entry": [{"changes": [{"value": {
+            "metadata": {"phone_number_id": "phone-first"},
+            "statuses": [{"id": "test-message", "status": "delivered", "timestamp": "123"}],
+        }}]}]}
+        body = json.dumps(payload).encode()
+        signature = "sha256=" + hmac.new(b"first-secret", body, hashlib.sha256).hexdigest()
+        self.assertEqual(client.post(endpoint, body, content_type="application/json").status_code, 403)
+        accepted = client.post(endpoint, body, content_type="application/json", HTTP_X_HUB_SIGNATURE_256=signature)
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(client.post(endpoint, body, content_type="application/json", HTTP_X_HUB_SIGNATURE_256=signature).json()["duplicate_statuses"], 1)
+        wrong = reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[other.slug])
+        self.assertEqual(client.post(wrong, body, content_type="application/json", HTTP_X_HUB_SIGNATURE_256=signature).status_code, 403)
+        self.assertIsNone(current_workspace_id())
+        with workspace_context(self.workspace.pk):
+            self.assertEqual(WhatsAppCloudWebhookReceipt.objects.count(), 1)
+        with workspace_context(other.pk):
+            self.assertEqual(WhatsAppCloudWebhookReceipt.objects.count(), 0)
+        self.assertEqual(client.get(reverse("workspace_notify:notify_v2_settings", args=[self.workspace.slug])).status_code, 302)
+        Domain.objects.create(tenant=other, domain="other-webhook.test")
+        with override_settings(ALLOWED_HOSTS=["testserver", "other-webhook.test"]):
+            self.assertEqual(client.get(endpoint, HTTP_HOST="other-webhook.test").status_code, 403)
+        Company.all_objects.filter(pk=self.workspace.pk).update(lifecycle_state=Company.LifecycleState.SUSPENDED)
+        self.assertEqual(client.get(endpoint).status_code, 403)
+
+    def test_notify_admin_links_require_registered_workspace_domain(self):
+        from apps.orgs.models import Domain
+        self.workspace = self._workspace("Admin Links")
+        Domain.objects.filter(tenant=self.workspace).delete()
+        self.owner.is_staff = True
+        self.owner.save(update_fields=["is_staff"])
+        settings_url = reverse("workspace_notify:notify_v2_settings", args=[self.workspace.slug])
+        self.assertNotContains(self._get(settings_url), '>Manage Templates</a>')
+        Domain.objects.create(tenant=self.workspace, domain="admin-links.test")
+        response = self._get(settings_url)
+        self.assertContains(response, 'http://admin-links.test' + reverse("admin:notify_v2_notificationtemplate_changelist"))

@@ -8,6 +8,95 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Functional checkpoint before UI/UX prototyping
+
+The consolidated gate passes 802/802 tests across orgs, subscriptions, onboarding,
+tenancy, all four supported apps, first-loan HTTP acceptance, private media,
+control-plane contracts, and shell/route/invitation coverage. The reviewed
+checkpoint includes browser-found fixes, Rates/Notify canonical navigation,
+provider callbacks, and guarded artifact access. External media privacy and
+physical device/printer acceptance remain pilot requirements.
+
+The user selected counter workflow first for the next prototype. The next design
+slice is shared navigation and the borrower-to-release journey using sample data.
+
+## 2026-09-08 - Notify request boundaries and UI/UX starting point
+
+Exact registered WhatsApp callbacks now reach provider authentication without a
+browser login or Membership. They retain explicit Workspace identity, path/domain
+conflict rejection, active lifecycle, numeric RLS context, token/signature and
+phone-number checks. Operator settings show the canonical callback URL. Signed
+receipt processing does not depend on a browser subscription. The exception is
+recorded in `docs/adr/2026-09-08-notify-provider-request-boundary.md`.
+
+Notify admin links now use a registered Workspace domain and require authorized
+staff; no-domain Workspaces do not receive unusable links. Django's development
+media view rejects raw Notify artifact paths while guarded downloads remain
+available. External web-server/object-store privacy and domain reachability still
+require deployment verification before a real-data pilot.
+
+The expanded gate passed 235 of 236 checks; the remaining admin-link test assumed
+Workspace creation supplied no Domain. After explicitly removing that fixture
+Domain, its focused rerun passes. Coverage includes anonymous signed receipts,
+replay, wrong Workspace/signature, lifecycle, domain conflict, ordinary-route login,
+admin-domain links, and raw media denial. No real provider messages were sent.
+
+UI/UX discovery and the design brief start now. The recommended next product
+workstream is a reviewed shared-shell/first-loan prototype after reviewing and
+committing this functional checkpoint. See `docs/plans/project-wide-ux-revamp.md`.
+Deferred hardware and production-media checks remain pilot requirements, not
+open-ended blockers to design. No project-wide visual rewrite has begun.
+
+## 2026-09-08 - Rates and Notify operator routing
+
+Rates and Notify operator links, forms, model URLs, and redirects now retain
+explicit Workspace slugs through named route includes. Party's existing adapter
+is shared without changing its identity check. Notify individual artifacts now
+use guarded downloads scoped to both Workspace and batch. Existing authorization
+and domain workflows remain in place; no provider or physical printer action
+was performed.
+
+Validation: all 161 non-shell checks in the expanded gate passed. The sole
+shell failure was a fixture missing `request.workspace`; after correcting it,
+the 13-test shell suite passes. Django system checks, migration drift, and
+whitespace checks pass.
+
+The audit and remaining admin/provider/private-storage boundaries are recorded
+in `docs/implementation/rates-notify-workspace-routing.md`. Mobile and printer
+acceptance remain deferred. The next bounded review is Notify's admin and
+provider callback entrypoints on the shared host, plus artifact storage access.
+
+## 2026-09-08 - Physical acceptance preparation
+
+The operator identified a Redmi Note 14 Pro, then explicitly deferred mobile
+checks and subsequently printer tests. Windows inventory lists a Canon G3010.
+A five-page synthetic-data print pack and source hash manifest are prepared in
+the browser artifact directory. No print job was submitted; physical capture
+and paper-output acceptance remain deferred. See
+`docs/implementation/browser-acceptance.md` for the prepared operator checks.
+
+## 2026-09-08 - Desktop/mobile browser acceptance
+
+An opt-in Chromium harness now exercises borrower creation, autocomplete,
+collateral add/remove and photo upload, draft validation, approval/disbursal,
+repayment, full release, and PDF download/reprint at desktop and mobile widths.
+It runs on an isolated test database with restricted-role server connections.
+Workspace/trial/lending setup and login use the existing HTTP fixtures.
+
+Browser findings fixed: borrower autocomplete now carries the Workspace slug
+and enforces Party view access; new drafts start with one collateral row, avoiding
+validation of an unintended extra row. Regression coverage checks lookup token
+isolation, invalid tokens, and permission denial. The focused regression gate
+passes 510/510 tests across Loans, Party, MVP journeys, and route/access contracts.
+The final browser scenario passes at both widths, including simulated camera
+denial/upload fallback and all three PDF downloads with identical reprints.
+Django system and whitespace checks pass.
+
+See `docs/implementation/browser-acceptance.md` for commands, artifact locations,
+results, and limits. Real phone/camera, paper printing, and physical handoff are
+still pending. The next operator step is those physical checks; the next bounded
+code audit of Rates/Notify operator navigation is recorded above.
+
 ## 2026-09-08 - Party Workspace action routes
 
 Party detail forms now use named `workspace_party:*` URLs under
@@ -20,9 +109,8 @@ actions. Primary aliases remain available. No models or business rules changed.
 Restricted-role HTTP acceptance now covers named routes, rendered forms,
 contact CRUD, invalid input, CSRF, cross-Workspace denial, and role denial.
 The focused gate passes 90/90 tests (Party, MVP journeys, and route intent);
-Django system checks pass. Browser/device acceptance remains pending.
-Cached browser binaries exist, but
-the project Python environment has no Playwright package.
+Django system checks pass. Browser acceptance is recorded in the newer entry
+above; physical-device acceptance remains pending.
 
 ## 2026-09-08 — MVP first-loan acceptance
 

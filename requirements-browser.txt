@@ -1,0 +1,2 @@
+# Optional acceptance tooling; not required by web or worker processes.
+playwright==1.62.0

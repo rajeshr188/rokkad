@@ -25,17 +25,21 @@ tracks are retired. Their historical plans are not current implementation work.
   repayment, full release, and immutable PDF reprints under a restricted role.
 - Fix reproducible journey blockers while preserving service-owned financial
   calculations, custody evidence, idempotency, and Workspace isolation.
-- Complete browser/device and physical-printer checks with an operator. Automated
-  HTTP tests establish server behavior, not visual or hardware acceptance.
+- Desktop/mobile Chromium viewport acceptance is recorded in
+  [the browser record](implementation/browser-acceptance.md). Complete physical
+  phone/camera and printer checks with an operator.
 - Follow the [acceptance checklist and findings](implementation/mvp-operator-acceptance.md).
 
 ## Priority 2: Remaining operator navigation and setup
 
-- Party action URLs now preserve Workspace identity. Audit Rates/Notify deep
-  links next.
+- Party, Rates, and Notify operator URLs now preserve Workspace identity.
+  Notify application-boundary fixes are complete; verify external private-media
+  serving before a real-data pilot.
 - Improve setup guidance using actual lending prerequisites and clearly separate
   general checklist completion from loan readiness.
-- Use observed operator friction to scope the deferred Loans UI redesign.
+- Start [project-wide UI/UX discovery](plans/project-wide-ux-revamp.md) now.
+  Prototype the shared shell and first-loan journey after the functional checkpoint
+  is reviewed and committed; then roll out the reviewed patterns across the apps.
 
 ## Priority 3: Controlled operational pilots
 

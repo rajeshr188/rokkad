@@ -8,15 +8,15 @@
       <div class="text-muted">Current metal rates used by Girvi collateral valuation.</div>
     </div>
     <div class="d-flex gap-2">
-      <a class="btn btn-outline-secondary" href="{% url 'ratesource_list' %}">Rate Sources</a>
-      <a class="btn btn-outline-primary" href="{% url 'ratesource_create' %}">Add Source</a>
-      <a class="btn btn-primary" href="{% url 'rate_create' %}">Add Rate</a>
+      <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Rate Sources</a>
+      <a class="btn btn-outline-primary" href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add Source</a>
+      <a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">Add Rate</a>
     </div>
   </div>
   {% if not has_rate_sources %}
   <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>No rate source exists yet. Add a source before adding metal rates.</div>
-    <a class="btn btn-sm btn-warning" href="{% url 'ratesource_create' %}">Add Rate Source</a>
+    <a class="btn btn-sm btn-warning" href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add Rate Source</a>
   </div>
   {% endif %}
   <table class="table table-sm table-hover">
@@ -42,13 +42,13 @@
             <td>{{ rate.timestamp }}</td>
             <td>{{ rate.buying_rate }}</td>
             <td>{{ rate.selling_rate }}</td>
-            <td><a href="{% url 'ratesource_detail' rate.rate_source.id%}">{{ rate.rate_source }}</a></td>
+            <td><a href="{% url 'workspace_rates:ratesource_detail' request.workspace.slug rate.rate_source.id%}">{{ rate.rate_source }}</a></td>
             <td>{{ rate.metal }}</td>
             <td>{{ rate.currency }}</td>
             <td>{{ rate.purity }}</td>
-            <td><a href="{% url 'rate_detail' rate.id %}">View</a></td>
-            <td><a href="{% url 'rate_update' rate.id %}">Edit</a></td>
-            <td><a href="{% url 'rate_delete' rate.id %}">Delete</a></td>
+            <td><a href="{% url 'workspace_rates:rate_detail' request.workspace.slug rate.id %}">View</a></td>
+            <td><a href="{% url 'workspace_rates:rate_update' request.workspace.slug rate.id %}">Edit</a></td>
+            <td><a href="{% url 'workspace_rates:rate_delete' request.workspace.slug rate.id %}">Delete</a></td>
             </tr>
         {% endfor %}
     </tbody>

@@ -48,6 +48,13 @@ PARTY_EXPORT_FORMATS = {
 }
 
 
+@party_action_required("view")
+def party_autocomplete(request):
+    from django_select2.views import AutoResponseView
+
+    return AutoResponseView.as_view()(request)
+
+
 def _party_detail_url(request, party, tab="overview"):
     url = reverse("workspace_slug_party_detail", kwargs={
         "workspace_slug": request.workspace.slug, "pk": party.pk,

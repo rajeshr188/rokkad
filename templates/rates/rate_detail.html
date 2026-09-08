@@ -25,7 +25,7 @@
             <p class="card-text"><strong>Metal:</strong> {{ rate.metal }}</p>
             <p class="card-text"><strong>Currency:</strong> {{ rate.currency }}</p>
             <p class="card-text"><strong>Purity:</strong> {{ rate.purity }}</p>
-            <a href="{% url 'rate_list' %}" class="btn btn-primary mt-3">Back to list</a>
+            <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" class="btn btn-primary mt-3">Back to list</a>
         </div>
     </div>
 </div>

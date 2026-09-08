@@ -10,7 +10,7 @@ from django.conf import settings
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib import messages
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -21,6 +21,7 @@ from apps.tenancy.context import current_workspace_id
 from .access import notify_v2_action_required, notify_v2_admin_required
 
 from .models import (
+    NotificationArtifact,
     NotificationBatch,
     NotificationEventType,
     NotificationPolicy,
@@ -136,18 +137,34 @@ def _notify_settings_summary():
 
 
 @notify_v2_action_required("view")
-def index(_request):
-    return redirect("notify_v2_batch_list")
+def index(request):
+    return redirect("workspace_notify:notify_v2_batch_list", workspace_slug=request.workspace.slug)
+
+
+def _notify_admin_urls(request):
+    if not request.user.is_staff or not request.notify_v2_workspace_access.can("workspace.settings.manage"):
+        return {}
+    from apps.orgs.models import Domain
+    domain = Domain.objects.filter(tenant=request.workspace).order_by("-is_primary", "pk").first()
+    if domain is None:
+        return {}
+    return {
+        key: f"{request.scheme}://{domain.domain}" + reverse(f"admin:notify_v2_{model}_changelist")
+        for key, model in {
+            "templates": "notificationtemplate", "policies": "notificationpolicy",
+            "event_types": "notificationeventtype", "recipients": "notificationrecipient",
+        }.items()
+    }
 
 
 @notify_v2_action_required("view")
 def settings_overview(request):
     settings_summary = _notify_settings_summary()
+    settings_summary["webhook_url"] = reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[request.workspace.slug])
     whatsapp_readiness = assess_whatsapp_cloud_readiness()
     workspace = getattr(request, "workspace", None)
-    can_manage_admin_models = bool(
-        request.user.is_staff and workspace
-    )
+    admin_urls = _notify_admin_urls(request)
+    can_manage_admin_models = bool(admin_urls)
     context = {
         "notify_settings": settings_summary,
         "whatsapp_readiness": whatsapp_readiness,
@@ -162,12 +179,7 @@ def settings_overview(request):
             "templates": NotificationTemplate.objects.filter(is_active=True).count(),
             "recipients": NotificationRecipient.objects.filter(is_active=True).count(),
         },
-        "admin_urls": {
-            "templates": reverse("admin:notify_v2_notificationtemplate_changelist"),
-            "policies": reverse("admin:notify_v2_notificationpolicy_changelist"),
-            "event_types": reverse("admin:notify_v2_notificationeventtype_changelist"),
-            "recipients": reverse("admin:notify_v2_notificationrecipient_changelist"),
-        },
+        "admin_urls": admin_urls,
     }
     return render(request, "notify_v2/settings.html", context)
 
@@ -189,10 +201,10 @@ def whatsapp_cloud_integration_setup(request):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Workspace WhatsApp Cloud integration updated.")
-            return redirect("notify_v2_settings")
+            return redirect("workspace_notify:notify_v2_settings", workspace_slug=request.workspace.slug)
     return render(request, "notify_v2/whatsapp_cloud_integration.html", {
         "form": form, "integration": integration,
-        "webhook_url": request.build_absolute_uri(reverse("notify_v2_whatsapp_cloud_webhook")),
+        "webhook_url": request.build_absolute_uri(reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[request.workspace.slug])),
     })
 
 
@@ -255,12 +267,14 @@ def batch_list(request):
         "jobs"
     )
     notify_settings = _notify_settings_summary()
+    notify_settings["webhook_url"] = reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[request.workspace.slug])
     return render(
         request,
         "notify_v2/batch_list.html",
         {
             "objects": batches,
             "notify_settings": notify_settings,
+            "admin_urls": _notify_admin_urls(request),
         },
     )
 
@@ -315,7 +329,19 @@ def batch_send_digital(request, pk):
         _flash(request, messages.WARNING, f"No jobs were sent; {result.failed_count} failed.")
     else:
         _flash(request, messages.INFO, "No eligible digital jobs were waiting to be sent.")
-    return redirect("notify_v2_batch_detail", pk=batch.pk)
+    return redirect("workspace_notify:notify_v2_batch_detail", workspace_slug=request.workspace.slug, pk=batch.pk)
+
+
+@notify_v2_action_required("view")
+def artifact_download(request, pk, artifact_pk):
+    artifact = get_object_or_404(NotificationArtifact, pk=artifact_pk, job__batch_id=pk)
+    if not artifact.file:
+        raise Http404
+    try:
+        source = artifact.file.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404 from exc
+    return FileResponse(source, as_attachment=True, filename=os.path.basename(artifact.file.name))
 
 
 @notify_v2_action_required("view")
@@ -328,7 +354,7 @@ def batch_download_artifacts(request, pk):
     artifacts = [artifact for artifact in _collect_artifacts(jobs) if getattr(artifact, "file", None)]
     if not artifacts:
         _flash(request, messages.WARNING, "No rendered artifact files are available for download yet.")
-        return redirect("notify_v2_batch_detail", pk=batch.pk)
+        return redirect("workspace_notify:notify_v2_batch_detail", workspace_slug=request.workspace.slug, pk=batch.pk)
 
     zip_buffer = io.BytesIO()
     added_files = 0
@@ -347,7 +373,7 @@ def batch_download_artifacts(request, pk):
 
     if not added_files:
         _flash(request, messages.WARNING, "The batch artifacts could not be read for download.")
-        return redirect("notify_v2_batch_detail", pk=batch.pk)
+        return redirect("workspace_notify:notify_v2_batch_detail", workspace_slug=request.workspace.slug, pk=batch.pk)
 
     response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="notify_v2_batch_{batch.pk}_artifacts.zip"'
@@ -360,7 +386,7 @@ def batch_mark_printed(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
     batch.mark_printed()
     _flash(request, messages.SUCCESS, "Batch marked as printed.")
-    return redirect("notify_v2_batch_detail", pk=batch.pk)
+    return redirect("workspace_notify:notify_v2_batch_detail", workspace_slug=request.workspace.slug, pk=batch.pk)
 
 
 @notify_v2_action_required("edit")
@@ -369,4 +395,4 @@ def batch_mark_posted(request, pk):
     batch = get_object_or_404(NotificationBatch, pk=pk)
     batch.mark_posted()
     _flash(request, messages.SUCCESS, "Batch marked as posted.")
-    return redirect("notify_v2_batch_detail", pk=batch.pk)
+    return redirect("workspace_notify:notify_v2_batch_detail", workspace_slug=request.workspace.slug, pk=batch.pk)

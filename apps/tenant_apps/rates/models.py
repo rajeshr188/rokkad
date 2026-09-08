@@ -68,7 +68,7 @@ class Rate(WorkspaceOwnedModel):
         return f" {self.timestamp.date()} {self.metal} {self.purity} {self.buying_rate}"
 
     def get_absolute_url(self):
-        return reverse("rate_detail", kwargs={"pk": self.pk})
+        return reverse("workspace_rates:rate_detail", kwargs={"workspace_slug": self.workspace.slug, "pk": self.pk})
 
     def for_purity(self, desired_purity):
         # Calculate the rate for the desired purity

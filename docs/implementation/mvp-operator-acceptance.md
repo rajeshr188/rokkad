@@ -77,7 +77,9 @@ starts a real trial, preserving the runtime billing boundary.
    contact CRUD, route/form coverage, CSRF, permissions, and cross-Workspace
    mutation denial. The follow-up gate passes 90/90 Party, MVP journey, and
    route-intent tests. Other Party workflows retain their focused domain tests.
-2. **P1: Browser and counter acceptance.** Run the checklist on desktop and a
+2. **P1: Physical-device and counter acceptance.** Chromium desktop/mobile
+   viewport acceptance is documented in [the browser record](browser-acceptance.md).
+   Run the remaining checklist on a real desktop and a
    mobile device, verify borrower search/select2, dynamic collateral forms,
    camera permission/fallback, validation messages, and actual print alignment.
    Record device/browser/printer, outcome, and operator observations.
@@ -95,9 +97,9 @@ starts a real trial, preserving the runtime billing boundary.
 
 | Check | Status | Evidence to record |
 | --- | --- | --- |
-| Desktop and mobile forms/search | Pending | Browser/device, scenario, usability findings. |
-| Camera capture and denied-permission fallback | Pending | Device, permission path, saved-photo verification. |
-| Ticket/receipt/release print | Pending | Printer/paper, readable fields, alignment, Original/Duplicate copies. |
+| Desktop and mobile forms/search | Chromium viewport checks passed; physical devices pending | See browser-acceptance.md. |
+| Camera capture and denied-permission fallback | Simulated denial/upload passed; capture pending | Device, permission path, saved-photo verification. |
+| Ticket/receipt/release print | PDF download/reprint passed; paper output pending | Printer/paper, readable fields, alignment, Original/Duplicate copies. |
 | Physical handoff | Pending | Operator confirms UI settlement and actual item return procedure. |
 | Real notification delivery/callback | Pending | Authorized recipient, provider attempt and delivery/callback evidence. |
 

@@ -5,6 +5,7 @@ from . import views
 app_name = "party"
 
 urlpatterns = [
+    path("autocomplete/", views.party_autocomplete, name="party_autocomplete"),
     path("", views.party_list, name="party_list"),
     path("create/", views.party_create, name="party_create"),
     path("<int:pk>/", views.party_detail, name="party_detail"),

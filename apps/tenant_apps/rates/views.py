@@ -46,7 +46,7 @@ def rate_create(request):
         form = RateForm(request.POST)
         if form.is_valid():
             rate = form.save()
-            return redirect("rate_detail", pk=rate.pk)
+            return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
     else:
         form = RateForm()
     return render(
@@ -63,7 +63,7 @@ def rate_update(request, pk):
         form = RateForm(request.POST, instance=rate)
         if form.is_valid():
             rate = form.save()
-            return redirect("rate_detail", pk=rate.pk)
+            return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
     else:
         form = RateForm(instance=rate)
     return render(
@@ -78,7 +78,7 @@ def rate_delete(request, pk):
     rate = get_object_or_404(Rate, pk=pk)
     if request.method == "POST":
         rate.delete()
-        return redirect("rate_list")
+        return redirect("workspace_rates:rate_list", workspace_slug=request.workspace.slug)
     return render(request, "rates/rate_confirm_delete.html", {"rate": rate})
 
 
@@ -100,7 +100,7 @@ def ratesource_create(request):
         form = RateSourceForm(request.POST)
         if form.is_valid():
             ratesource = form.save()
-            return redirect("ratesource_detail", pk=ratesource.pk)
+            return redirect("workspace_rates:ratesource_detail", workspace_slug=request.workspace.slug, pk=ratesource.pk)
     else:
         form = RateSourceForm()
     return render(request, "rates/ratesource_form.html", {"form": form})
@@ -113,7 +113,7 @@ def ratesource_update(request, pk):
         form = RateSourceForm(request.POST, instance=ratesource)
         if form.is_valid():
             ratesource = form.save()
-            return redirect("ratesource_detail", pk=ratesource.pk)
+            return redirect("workspace_rates:ratesource_detail", workspace_slug=request.workspace.slug, pk=ratesource.pk)
     else:
         form = RateSourceForm(instance=ratesource)
     return render(request, "rates/ratesource_form.html", {"form": form})
@@ -124,7 +124,7 @@ def ratesource_delete(request, pk):
     ratesource = get_object_or_404(RateSource, pk=pk)
     if request.method == "POST":
         ratesource.delete()
-        return redirect("ratesource_list")
+        return redirect("workspace_rates:ratesource_list", workspace_slug=request.workspace.slug)
     return render(
         request, "rates/ratesource_confirm_delete.html", {"ratesource": ratesource}
     )

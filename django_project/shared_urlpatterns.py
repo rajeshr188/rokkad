@@ -406,6 +406,7 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         org_views.workspace_slug_rate_source_detail,
         name="workspace_slug_rate_source_detail",
     ),
+    path("w/<str:workspace_slug>/rates/", include("apps.tenant_apps.rates.workspace_urls")),
     path(
         "w/<str:workspace_slug>/notifications/",
         org_views.workspace_slug_notifications,
@@ -426,6 +427,7 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         org_views.workspace_slug_notice_group_detail,
         name="workspace_slug_notice_group_detail",
     ),
+    path("w/<str:workspace_slug>/notifications/", include("apps.tenant_apps.notify_v2.workspace_urls")),
     path(
         "w/<str:workspace_slug>/data-tools/export/",
         org_views.workspace_slug_data_tools_export,

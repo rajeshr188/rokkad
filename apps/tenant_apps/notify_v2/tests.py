@@ -746,7 +746,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/batches/")
         request.user = self.user
-        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
 
         response = batch_list(request)
 
@@ -795,7 +795,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/batches/7/")
         request.user = self.user
-        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
 
         response = batch_detail(request, pk=7)
 
@@ -814,12 +814,12 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.post("/notify-v2/batches/7/send/")
         request.user = self.user
-        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
 
         response = batch_send_digital(request, pk=7)
 
         self.assertIsInstance(response, HttpResponseRedirect)
-        self.assertEqual(response.url, "/notify-v2/batches/7/")
+        self.assertEqual(response.url, "/w/notify-test/notifications/batches/7/")
         mock_dispatch_batch_jobs.assert_called_once_with(batch)
 
     @patch("apps.tenant_apps.notify_v2.views.get_object_or_404")
@@ -844,7 +844,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/batches/7/artifacts.zip")
         request.user = self.user
-        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
 
         response = batch_download_artifacts(request, pk=7)
 
@@ -864,10 +864,10 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         print_request = self.factory.post("/notify-v2/batches/7/mark-printed/")
         print_request.user = self.user
-        print_request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        print_request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
         posted_request = self.factory.post("/notify-v2/batches/7/mark-posted/")
         posted_request.user = self.user
-        posted_request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        posted_request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
 
         print_response = batch_mark_printed(print_request, pk=7)
         posted_response = batch_mark_posted(posted_request, pk=7)
@@ -913,7 +913,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
 
         request = self.factory.get("/notify-v2/settings/")
         request.user = self.user
-        request.workspace = SimpleNamespace(pk=1, owner=self.user, owner_id=None)
+        request.workspace = SimpleNamespace(pk=1, slug="notify-test", owner=self.user, owner_id=None)
 
         response = settings_overview(request)
 

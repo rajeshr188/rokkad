@@ -20,9 +20,14 @@ The combined acceptance/regression gate passes 795/795 tests.
 
 The supported apps are Party, Loans, Notify v2, and Rates. Shared-schema
 PostgreSQL forced RLS is implemented; Contact, Girvi, legacy Notify, and
-DEA/accounting are retired. The Loans UI redesign remains deferred pending
-operator findings. Party action routes now retain Workspace identity. Next is browser/counter
-acceptance and the Rates/Notify deep-link audit.
+DEA/accounting are retired. UI/UX discovery now starts from the browser findings;
+see [the project-wide revamp brief](project-wide-ux-revamp.md). Party action routes and borrower autocomplete now retain Workspace identity.
+Desktop/mobile Chromium acceptance is recorded in
+[the browser record](../implementation/browser-acceptance.md). Physical camera,
+phone, printer, and handoff checks remain; mobile/printer checks are deferred
+by the operator. Rates/Notify routing and application-level Notify boundary fixes
+are complete. Next: review/commit the checkpoint and prototype the shared shell
+and first-loan UX. External media privacy remains a real-data pilot requirement.
 
 The entries below preserve earlier planning context; their active/proposed
 labels are historical and do not override this checkpoint or current ADRs.

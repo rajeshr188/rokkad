@@ -4,10 +4,10 @@
   <div class="container card mt-4">
     <h1>Confirm Delete</h1>
   <p>Are you sure you want to delete this ratesource?</p>
-  <form action="{% url 'ratesource_delete' ratesource.id %}" method="post">
+  <form action="{% url 'workspace_rates:ratesource_delete' request.workspace.slug ratesource.id %}" method="post">
     {% csrf_token %}
     <input type="submit" value="Delete">
-    <a class = "btn btn-danger" href="{% url 'ratesource_list' %}">Cancel</a>
+    <a class = "btn btn-danger" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Cancel</a>
   </form>
   </div>
 {% endblock %}

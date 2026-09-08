@@ -14,8 +14,8 @@ import re
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import DisallowedHost
-from django.http import HttpResponseForbidden, HttpResponseRedirect
-from django.urls import reverse, set_urlconf
+from django.http import HttpResponseForbidden, HttpResponseNotFound, HttpResponseRedirect
+from django.urls import Resolver404, resolve, reverse, set_urlconf
 from django.utils.deprecation import MiddlewareMixin
 
 from apps.orgs.audit import AuditLog
@@ -135,6 +135,25 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
 
         # Keep a clear signal for downstream code and diagnostics.
         request.workspace_resolution_source = source
+
+        # Provider callbacks authenticate their payload, not a browser session.
+        # Resolve the exact registered endpoint; never exempt a URL prefix.
+        try:
+            provider_callback = resolve(request.path, urlconf=settings.ROOT_URLCONF).view_name in {
+                "workspace_notify:notify_v2_whatsapp_cloud_webhook",
+                "notify_v2_whatsapp_cloud_webhook",
+            }
+        except Resolver404:
+            provider_callback = False
+        if provider_callback:
+            if not workspace or workspace.slug == PUBLIC_WORKSPACE_SLUG:
+                self._set_public_context(request)
+                return HttpResponseNotFound()
+            if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
+                self._set_public_context(request)
+                return HttpResponseForbidden("Workspace is not active.")
+            self._set_workspace_context(request, workspace)
+            return None
 
         # Unauthenticated requests can still be served in the resolved tenant schema.
         if not request.user.is_authenticated:

@@ -7,8 +7,8 @@
             <div class="text-muted">Sources identify where each metal rate was obtained.</div>
         </div>
         <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="{% url 'rate_list' %}">Rates</a>
-            <a class="btn btn-primary" href="{% url 'ratesource_create' %}">Add Source</a>
+            <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_list' request.workspace.slug %}">Rates</a>
+            <a class="btn btn-primary" href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add Source</a>
         </div>
     </div>
     <table class="table table-sm">
@@ -29,15 +29,15 @@
                 <td>{{ ratesource.location }}</td>
                 <td>{{ratesource.tax_included}}</td>
                 <td>
-                    <a href="{% url 'ratesource_detail' ratesource.id %}">View</a>
+                    <a href="{% url 'workspace_rates:ratesource_detail' request.workspace.slug ratesource.id %}">View</a>
                     <span class="text-muted mx-1">|</span>
-                    <a href="{% url 'ratesource_update' ratesource.id %}">Edit</a>
+                    <a href="{% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.id %}">Edit</a>
                 </td>
             </tr>
             {% empty %}
             <tr>
                 <td colspan="5" class="text-center text-muted py-4">
-                    No rate sources yet. <a href="{% url 'ratesource_create' %}">Add the first source</a>.
+                    No rate sources yet. <a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add the first source</a>.
                 </td>
             </tr>
             {% endfor %}

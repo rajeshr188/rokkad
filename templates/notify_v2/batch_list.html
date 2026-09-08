@@ -8,7 +8,7 @@
     <div class="text-muted small">Notification batches and retained delivery evidence.</div>
   </div>
   <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-sm btn-outline-primary" href="{% url 'notify_v2_settings' %}">
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">
       <i class="bi bi-sliders me-1"></i>Settings
     </a>
   </div>
@@ -16,7 +16,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-{% if request.user.is_staff and request.workspace %}
+{% if admin_urls %}
 <div class="card mb-3 border-warning-subtle">
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -27,19 +27,19 @@
         </p>
       </div>
       <div class="d-flex gap-2 flex-wrap">
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'notify_v2_settings' %}">
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">
           Settings
         </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationtemplate_changelist' %}">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.templates }}">
           Templates
         </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationpolicy_changelist' %}">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.policies }}">
           Policies
         </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationeventtype_changelist' %}">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.event_types }}">
           Event Types
         </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:notify_v2_notificationrecipient_changelist' %}">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.recipients }}">
           Recipients
         </a>
       </div>
@@ -107,7 +107,7 @@
       <tbody>
         {% for i in objects %}
         <tr>
-          <td><a href="{{ i.get_absolute_url }}">{{ i.name }}</a></td>
+          <td><a href="{% url 'workspace_notify:notify_v2_batch_detail' request.workspace.slug i.pk %}">{{ i.name }}</a></td>
           <td>{{ i.event_type.name }}</td>
           <td>
             <span class="badge {% if i.status == 'POSTED' %}bg-success{% elif i.status == 'PRINTED' %}bg-info{% elif i.status == 'RENDERED' %}bg-primary{% elif i.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
@@ -117,7 +117,7 @@
           <td>{{ i.job_count }}</td>
           <td>{{ i.created_by|default:'—' }}</td>
           <td class="text-muted small">{{ i.created|date:"d M Y, H:i" }}</td>
-          <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ i.get_absolute_url }}">Open</a></td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_notify:notify_v2_batch_detail' request.workspace.slug i.pk %}">Open</a></td>
         </tr>
         {% empty %}
         <tr><td colspan="7" class="text-center text-muted py-4">No notify_v2 batches yet.</td></tr>

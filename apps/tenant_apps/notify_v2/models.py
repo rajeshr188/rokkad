@@ -254,7 +254,7 @@ class NotificationBatch(TimestampedModel):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("notify_v2_batch_detail", args=[self.pk])
+        return reverse("workspace_notify:notify_v2_batch_detail", args=[self.workspace.slug, self.pk])
 
     def save(self, *args, **kwargs):
         _inherit_workspace(self, self.event_type)

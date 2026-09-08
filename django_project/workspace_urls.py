@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from django_project.shared_urlpatterns import shared_urlpatterns
+from django_project.media import serve_public_media
 
 WORKSPACE_ADMIN_URLPATTERNS = [
     path("admin/", admin.site.urls),
@@ -26,7 +27,7 @@ WORKSPACE_APP_URLPATTERNS = [
 urlpatterns = WORKSPACE_ADMIN_URLPATTERNS + WORKSPACE_APP_URLPATTERNS + shared_urlpatterns
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, view=serve_public_media, document_root=settings.MEDIA_ROOT)
     import debug_toolbar
 
     urlpatterns = [

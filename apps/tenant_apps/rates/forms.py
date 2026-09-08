@@ -1,5 +1,4 @@
 from django import forms
-from django.urls import reverse_lazy
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Div, HTML, Layout, Row, Submit
@@ -35,7 +34,7 @@ class RateForm(forms.ModelForm):
             HTML(
                 '<div class="border rounded bg-light p-3 mb-3">'
                 '<div class="fw-semibold">Metal rate details</div>'
-                '<div class="small text-muted">Rates are used by Girvi to calculate collateral value.</div>'
+                '<div class="small text-muted">Workspace reference rates for supported metals.</div>'
                 "</div>"
             ),
             Row(
@@ -51,10 +50,10 @@ class RateForm(forms.ModelForm):
             Div(
                 Submit("submit", "Save Rate", css_class="btn btn-primary"),
                 HTML(
-                    f'<a class="btn btn-outline-secondary ms-2" href="{reverse_lazy("rate_list")}">Cancel</a>'
+                    '<a class="btn btn-outline-secondary ms-2" href="{% url \'workspace_rates:rate_list\' request.workspace.slug %}">Cancel</a>'
                 ),
                 HTML(
-                    f'<a class="btn btn-link ms-2" href="{reverse_lazy("ratesource_create")}">Add rate source</a>'
+                    '<a class="btn btn-link ms-2" href="{% url \'workspace_rates:ratesource_create\' request.workspace.slug %}">Add rate source</a>'
                 ),
                 css_class="d-flex flex-wrap align-items-center gap-1 mt-3",
             ),
@@ -88,7 +87,7 @@ class RateSourceForm(forms.ModelForm):
             Div(
                 Submit("submit", "Save Source", css_class="btn btn-primary"),
                 HTML(
-                    f'<a class="btn btn-outline-secondary ms-2" href="{reverse_lazy("ratesource_list")}">Cancel</a>'
+                    '<a class="btn btn-outline-secondary ms-2" href="{% url \'workspace_rates:ratesource_list\' request.workspace.slug %}">Cancel</a>'
                 ),
                 css_class="d-flex flex-wrap align-items-center gap-1 mt-3",
             ),

@@ -2,7 +2,7 @@
 {% block title %}Workspace WhatsApp Cloud{% endblock %}
 {% block workspace_content %}
 <div class="row justify-content-center"><div class="col-xl-8">
-  <a class="small text-decoration-none" href="{% url 'notify_v2_settings' %}">&larr; Notify settings</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">&larr; Notify settings</a>
   <h1 class="h3 mt-2">Workspace WhatsApp Cloud</h1>
   <div class="alert alert-info">Credentials belong only to this workspace. Stored secrets are encrypted and are never displayed again.</div>
   <div class="card mb-3"><div class="card-body"><div class="small text-muted">Meta webhook callback URL</div><code>{{ webhook_url }}</code></div></div>

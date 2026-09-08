@@ -440,14 +440,15 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             is_complete=False,
             is_dismissed=False,
         )
+        request = _authenticated_request(
+            "/orgs/workspace/1/dashboard/", url_name="workspace_dashboard"
+        )
+        request.workspace = workspace
         html = _render(
             """
             {% include "company/workspace_dashboard.html" %}
             """,
-            request=_authenticated_request(
-                "/orgs/workspace/1/dashboard/",
-                url_name="workspace_dashboard",
-            ),
+            request=request,
             context={
                 "in_tenant": True,
                 "show_sidebar": False,

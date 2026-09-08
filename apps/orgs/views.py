@@ -596,19 +596,19 @@ def workspace_slug_notifications(request, workspace_slug):
 @login_required
 def workspace_slug_notification_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("notify_v2_batch_list")
+    return redirect("workspace_notify:notify_v2_batch_list", workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_notice_groups(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("notify_v2_batch_list")
+    return redirect("workspace_notify:notify_v2_batch_list", workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_notice_group_detail(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("notify_v2_batch_list")
+    return redirect("workspace_notify:notify_v2_batch_list", workspace_slug=workspace_slug)
 
 
 @login_required
