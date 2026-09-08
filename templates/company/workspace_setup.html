@@ -88,6 +88,19 @@
     </div>
 </section>
 
+<section class="card mb-4" aria-labelledby="first-loan-setup-title">
+    <div class="card-body">
+        <h2 id="first-loan-setup-title" class="h5">Before your first loan</h2>
+        <p class="text-muted">Complete these lending settings as the Workspace owner or administrator.</p>
+        <ol class="mb-2">
+            <li><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/' %}">Create a licence and numbering series</a>.</li>
+            <li><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/economics/' %}">Set calculation policies and gold/silver interest rates</a>.</li>
+            <li><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/products/' %}">Review and activate a loan product</a>.</li>
+        </ol>
+        <p class="small text-muted mb-0">The general checklist below does not verify lending readiness. Loan creation and approval check the required settings.</p>
+    </div>
+</section>
+
 <div class="mgmt-setup-grid">
     {% for item in setup_checklist.items %}
     {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id workspace_slug=company.slug task_id_prefix="setup-task" heading_level="h2" %}

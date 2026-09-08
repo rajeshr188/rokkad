@@ -14,6 +14,18 @@ with immutable `Company.slug`. Phase 9 app authorization conformance and Phase
 use the latest Phase 11 section in `docs/STATUS.md` and the current checkpoint
 in `docs/plans/active.md` when resuming work.
 
+MVP acceptance (2026-09-08) runs the first-loan HTTP journey under a restricted
+database role with real commits, CSRF, and a real trial. The outermost logical
+`workspace_context()` must check deferred constraints before clearing its SQL
+context; custody projection triggers read RLS-owned rows at that boundary.
+Same-Workspace nested scopes leave that check to the outer scope. Default fixed
+loan documents now persist ordinary official issues just like custom layouts,
+so reprints use stored bytes. Do not restore stateless default PDF generation.
+Party action forms use named `workspace_party:*` URLs; success redirects retain
+the validated Workspace slug and active detail tab. Real browser/printer
+acceptance remains pending and is tracked in
+`docs/implementation/mvp-operator-acceptance.md`.
+
 Phase 7 residue cleanup is complete. `request.workspace` is now the sole
 HTTP Workspace attribute; never restore `request.tenant`. Middleware helpers
 and diagnostics use Workspace terminology. Empty django-tenants settings are

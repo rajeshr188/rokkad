@@ -50,6 +50,10 @@ def workspace_context(workspace_id: int):
                 # failed work, restoring any surrounding transaction value.
                 raise
             else:
+                if active_id is None:
+                    # Deferred projection guards read RLS-owned rows. Settle
+                    # them before restoring the surrounding Workspace context.
+                    connection.check_constraints()
                 with connection.cursor() as cursor:
                     cursor.execute(
                         "SELECT set_config('app.workspace_id', %s, true)",

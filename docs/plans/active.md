@@ -13,10 +13,16 @@ immutable Workspace slug migration (Phase 11) are complete. The September 8
 checkpoint review passes 664 regression tests. See [current status](../STATUS.md)
 and [the migration record](../implementation/workspace-slug-migration.md).
 
+The current follow-up is [MVP operator acceptance](../implementation/mvp-operator-acceptance.md):
+an end-to-end restricted-role HTTP journey, fixes for reproduced blockers, and
+an explicit list of browser/hardware acceptance steps still requiring an operator.
+The combined acceptance/regression gate passes 795/795 tests.
+
 The supported apps are Party, Loans, Notify v2, and Rates. Shared-schema
 PostgreSQL forced RLS is implemented; Contact, Girvi, legacy Notify, and
-DEA/accounting are retired. The Loans UI redesign remains deferred. A new
-development phase has not yet been selected.
+DEA/accounting are retired. The Loans UI redesign remains deferred pending
+operator findings. Party action routes now retain Workspace identity. Next is browser/counter
+acceptance and the Rates/Notify deep-link audit.
 
 The entries below preserve earlier planning context; their active/proposed
 labels are historical and do not override this checkpoint or current ADRs.

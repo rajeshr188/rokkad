@@ -1,5 +1,5 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.test import SimpleTestCase, TestCase
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -34,6 +34,37 @@ class WorkspaceContextValidationTests(SimpleTestCase):
 
 
 class WorkspaceContextDatabaseTests(TestCase):
+    def test_deferred_failure_rolls_back_before_context_is_cleared(self):
+        from apps.orgs.models import Company
+
+        with self.assertRaises(IntegrityError):
+            with workspace_context(17):
+                Company.all_objects.create(
+                    name="Invalid boundary owner", schema_name="invalid-boundary-owner",
+                    owner_id=9876543, creator_id=9876543,
+                )
+
+        self.assertFalse(Company.all_objects.filter(name="Invalid boundary owner").exists())
+        self.assertIsNone(current_workspace_id())
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT current_setting('app.workspace_id', true)")
+            self.assertIn(cursor.fetchone()[0], (None, ""))
+
+    def test_same_workspace_nested_scope_waits_for_outer_completion(self):
+        from django.contrib.auth import get_user_model
+        from apps.orgs.models import Company
+
+        with workspace_context(17):
+            with workspace_context(17):
+                workspace = Company.all_objects.create(
+                    name="Deferred boundary owner", schema_name="deferred-boundary-owner",
+                    owner_id=9876543, creator_id=9876543,
+                )
+            get_user_model().objects.create(pk=9876543, username="deferred-boundary-owner")
+
+        self.assertTrue(Company.all_objects.filter(pk=workspace.pk).exists())
+        self.assertIsNone(current_workspace_id())
+
     def test_sets_transaction_local_database_and_python_context(self):
         self.assertIsNone(current_workspace_id())
 

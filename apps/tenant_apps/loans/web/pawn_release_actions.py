@@ -44,7 +44,8 @@ def pawn_loan_release_full(request, pk):
         else quote.minimum_settlement
     )
     if minimum_settlement is not None:
-        initial["settlement_amount"] = minimum_settlement
+        # Event arithmetic can retain trailing scale beyond the form's cents.
+        initial["settlement_amount"] = format(minimum_settlement, ".2f")
     form = PawnFullReleaseForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:

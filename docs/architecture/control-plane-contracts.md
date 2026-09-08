@@ -146,6 +146,14 @@ Its contract is:
 - roll back and reset Python context on exceptions;
 - leave no Workspace context after the outermost scope exits.
 
+The outermost logical Workspace scope settles deferred database constraints
+before restoring the prior context, including when it is nested in a caller's
+transaction. Same-Workspace nested scopes defer that check to their outer scope.
+It uses Django's immediate-check/deferred-reset behavior; pending constraint
+dependencies must not cross Workspace scope boundaries, and callers cannot rely
+on a custom constraint-timing mode surviving the boundary. See the
+[constraint-boundary acceptance decision](../adr/2026-09-08-workspace-constraint-boundary-and-default-document-evidence.md).
+
 HTTP middleware owns this scope for request processing. Background jobs and
 management commands must receive an explicit `workspace_id` in their payload or
 arguments and open one context per atomic unit. Tests use the same API; RLS

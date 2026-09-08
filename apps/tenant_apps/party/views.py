@@ -48,8 +48,11 @@ PARTY_EXPORT_FORMATS = {
 }
 
 
-def _party_detail_url(party, tab="overview"):
-    return f"{reverse('party:party_detail', args=[party.pk])}?tab={tab}"
+def _party_detail_url(request, party, tab="overview"):
+    url = reverse("workspace_slug_party_detail", kwargs={
+        "workspace_slug": request.workspace.slug, "pk": party.pk,
+    })
+    return f"{url}?tab={tab}"
 
 
 def _can_export_party_data(request):
@@ -334,7 +337,11 @@ def party_create(request):
         party.updated_by = request.user
         party.save()
         messages.success(request, "Party created.")
-        return redirect("party:party_detail", pk=party.pk)
+        return redirect(
+            "workspace_slug_party_detail",
+            workspace_slug=request.workspace.slug,
+            pk=party.pk,
+        )
 
     return render(
         request,
@@ -352,7 +359,11 @@ def party_update(request, pk):
         party.updated_by = request.user
         party.save()
         messages.success(request, "Party updated.")
-        return redirect("party:party_detail", pk=party.pk)
+        return redirect(
+            "workspace_slug_party_detail",
+            workspace_slug=request.workspace.slug,
+            pk=party.pk,
+        )
 
     return render(
         request,
@@ -379,7 +390,7 @@ def party_role_add(request, pk):
             messages.success(request, "Role added.")
         except IntegrityError:
             messages.error(request, "An active role of that type already exists.")
-    return redirect("party:party_detail", pk=party.pk)
+    return redirect(_party_detail_url(request, party))
 
 
 @party_action_required("edit")
@@ -391,7 +402,7 @@ def party_role_end(request, pk, role_pk):
         role.effective_to = role.effective_to or timezone.localdate()
         role.save(update_fields=["status", "effective_to", "updated_at"])
         messages.success(request, "Role ended.")
-    return redirect("party:party_detail", pk=party.pk)
+    return redirect(_party_detail_url(request, party))
 
 
 @party_action_required("edit")
@@ -405,7 +416,7 @@ def party_profile_photo_update(request, pk):
             party.profile_photo = _image_file_from_data_uri(image_data)
             party.save(update_fields=["profile_photo", "updated_at"])
             messages.success(request, "Profile photo updated.")
-            return redirect(_party_detail_url(party, "overview"))
+            return redirect(_party_detail_url(request, party, "overview"))
         except Exception as exc:
             messages.error(request, f"Captured photo could not be processed: {exc}")
             return _render_party_detail(request, party, active_tab="overview")
@@ -414,7 +425,7 @@ def party_profile_photo_update(request, pk):
     if form.is_valid() and request.FILES.get("profile_photo"):
         form.save()
         messages.success(request, "Profile photo updated.")
-        return redirect(_party_detail_url(party, "overview"))
+        return redirect(_party_detail_url(request, party, "overview"))
 
     messages.error(request, "Capture a photo or choose a file before saving.")
     return _render_party_detail(request, party, active_tab="overview", photo_form=form)
@@ -429,7 +440,7 @@ def party_profile_photo_remove(request, pk):
         party.profile_photo = ""
         party.save(update_fields=["profile_photo", "updated_at"])
     messages.success(request, "Profile photo removed.")
-    return redirect(_party_detail_url(party, "overview"))
+    return redirect(_party_detail_url(request, party, "overview"))
 
 
 @party_action_required("edit")
@@ -444,7 +455,7 @@ def party_contact_save(request, pk, contact_pk=None):
         try:
             _save_contact_form(form, party)
             messages.success(request, "Contact saved.")
-            return redirect(_party_detail_url(party, "contacts"))
+            return redirect(_party_detail_url(request, party, "contacts"))
         except IntegrityError:
             form.add_error(None, "A primary contact of this type already exists.")
     messages.error(request, "Contact could not be saved.")
@@ -464,7 +475,7 @@ def party_contact_delete(request, pk, contact_pk):
     _sync_party_primary_contact(party, contact, deleted=True)
     contact.delete()
     messages.success(request, "Contact deleted.")
-    return redirect(_party_detail_url(party, "contacts"))
+    return redirect(_party_detail_url(request, party, "contacts"))
 
 
 @party_action_required("edit")
@@ -479,7 +490,7 @@ def party_address_save(request, pk, address_pk=None):
         try:
             _save_address_form(form, party)
             messages.success(request, "Address saved.")
-            return redirect(_party_detail_url(party, "addresses"))
+            return redirect(_party_detail_url(request, party, "addresses"))
         except IntegrityError:
             form.add_error(None, "A default address of this type already exists.")
     messages.error(request, "Address could not be saved.")
@@ -498,7 +509,7 @@ def party_address_delete(request, pk, address_pk):
     address = get_object_or_404(PartyAddress, pk=address_pk, party=party)
     address.delete()
     messages.success(request, "Address deleted.")
-    return redirect(_party_detail_url(party, "addresses"))
+    return redirect(_party_detail_url(request, party, "addresses"))
 
 
 @party_action_required("edit")
@@ -514,7 +525,7 @@ def party_identifier_save(request, pk, identifier_pk=None):
         identifier.party = party
         identifier.save()
         messages.success(request, "Identifier saved.")
-        return redirect(_party_detail_url(party, "kyc"))
+        return redirect(_party_detail_url(request, party, "kyc"))
     messages.error(request, "Identifier could not be saved.")
     return _render_party_detail(
         request,
@@ -531,7 +542,7 @@ def party_identifier_delete(request, pk, identifier_pk):
     identifier = get_object_or_404(PartyIdentifier, pk=identifier_pk, party=party)
     identifier.delete()
     messages.success(request, "Identifier deleted.")
-    return redirect(_party_detail_url(party, "kyc"))
+    return redirect(_party_detail_url(request, party, "kyc"))
 
 
 @party_action_required("edit")
@@ -547,7 +558,7 @@ def party_document_save(request, pk, document_pk=None):
         document.party = party
         document.save()
         messages.success(request, "Document saved.")
-        return redirect(_party_detail_url(party, "kyc"))
+        return redirect(_party_detail_url(request, party, "kyc"))
     messages.error(request, "Document could not be saved.")
     return _render_party_detail(
         request,
@@ -564,7 +575,7 @@ def party_document_delete(request, pk, document_pk):
     document = get_object_or_404(PartyDocument, pk=document_pk, party=party)
     document.delete()
     messages.success(request, "Document deleted.")
-    return redirect(_party_detail_url(party, "kyc"))
+    return redirect(_party_detail_url(request, party, "kyc"))
 
 
 @party_action_required("edit")
@@ -588,7 +599,7 @@ def party_relationship_save(request, pk, relationship_pk=None):
         relationship.from_party = party
         relationship.save()
         messages.success(request, "Relationship saved.")
-        return redirect(_party_detail_url(party, "relationships"))
+        return redirect(_party_detail_url(request, party, "relationships"))
     messages.error(request, "Relationship could not be saved.")
     return _render_party_detail(
         request,
@@ -609,7 +620,7 @@ def party_relationship_delete(request, pk, relationship_pk):
     )
     relationship.delete()
     messages.success(request, "Relationship deleted.")
-    return redirect(_party_detail_url(party, "relationships"))
+    return redirect(_party_detail_url(request, party, "relationships"))
 
 
 @party_action_required("edit")
@@ -630,7 +641,7 @@ def party_merge(request, pk):
             if result.skipped:
                 message = f"{message} Some relationship or role duplicates were skipped."
             messages.success(request, message)
-            return redirect(_party_detail_url(party, "merge"))
+            return redirect(_party_detail_url(request, party, "merge"))
         except ValidationError as exc:
             for error in exc.messages:
                 form.add_error(None, error)

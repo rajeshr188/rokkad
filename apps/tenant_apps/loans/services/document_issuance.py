@@ -1,6 +1,8 @@
 """Application service for configurable official document issuance."""
 
 from dataclasses import dataclass
+import hashlib
+from types import SimpleNamespace
 
 from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer,
@@ -9,6 +11,7 @@ from apps.tenant_apps.loans.documents import (
     legacy_print_profile,
 )
 from apps.tenant_apps.loans.services.document_layouts import LoanDocumentLayoutService
+from apps.tenant_apps.loans.services.documents import PawnLoanDocumentService
 from apps.tenant_apps.loans.services.print_profiles import (
     LoanDocumentPrintProfileService,
     ResolvedPrintProfile,
@@ -45,7 +48,20 @@ def issue_configurable_document(
         license=loan.license, series=loan.series,
     )
     if revision is None:
-        return ConfigurableDocumentIssueResult(None, use_fixed_renderer=True)
+        result = PawnLoanDocumentService.render_payload(payload)
+        rendered = SimpleNamespace(
+            pdf=result.pdf, renderer_version="fixed-pawn-v1",
+            payload_hash=hashlib.sha256(repr(payload).encode()).hexdigest(),
+            layout_hash="", asset_hashes={},
+        )
+        issue = LoanDocumentLayoutService.issue(
+            workspace=workspace, document_type=payload.document_type,
+            source_type=source_type, source_id=source_id,
+            source_fingerprint=source_fingerprint,
+            payload_schema_version=payload.schema_version, render_result=rendered,
+            filename=payload.file_name, actor=actor,
+        )
+        return ConfigurableDocumentIssueResult(issue)
     layout = DocumentLayoutValidator.load(revision.definition)
     print_profile = None
     assets = _revision_assets(revision)

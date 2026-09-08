@@ -68,6 +68,7 @@ class PartyUITests(WorkspaceTestCase):
 
     def setUp(self):
         super().setUp()
+        self.start_active_trial()
         self.client = WorkspaceClient(self.tenant)
         self.factory = RequestFactory()
         self.user = User.objects.get(username="party-ui-owner")

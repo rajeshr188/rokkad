@@ -8,6 +8,58 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Party Workspace action routes
+
+Party detail forms now use named `workspace_party:*` URLs under
+`/w/<slug>/parties/` for photos, roles, contacts, addresses, identifiers,
+documents, relationships, and merge. A small adapter reuses the existing URL
+patterns and decorated views and checks the middleware-selected Workspace.
+Success redirects retain the slug and active tab; invalid forms retain canonical
+actions. Primary aliases remain available. No models or business rules changed.
+
+Restricted-role HTTP acceptance now covers named routes, rendered forms,
+contact CRUD, invalid input, CSRF, cross-Workspace denial, and role denial.
+The focused gate passes 90/90 tests (Party, MVP journeys, and route intent);
+Django system checks pass. Browser/device acceptance remains pending.
+Cached browser binaries exist, but
+the project Python environment has no Playwright package.
+
+## 2026-09-08 — MVP first-loan acceptance
+
+The new `django_project.test_mvp_operator_journey` exercises Workspace creation,
+real trial activation, lending setup, Party create/edit, photographed loan
+origination, approval/disbursal, repayment retry, full release, and immutable
+ticket/receipt/memo reprints. It runs with CSRF checks, a restricted PostgreSQL
+role, real commits, and a second variant inside a caller transaction. A third
+scenario verifies independent Workspace URLs, cross-Workspace denial, Member
+access restrictions, and access loss after Membership removal.
+
+Reproduced blockers are fixed: Party create/edit redirects retain the slug;
+release's prefilled amount respects the two-decimal input; default fixed-layout
+documents now persist official exact-byte issues; and deferred RLS-dependent
+constraints execute before Workspace context is cleared. Constraint failure
+rolls back, and same-Workspace nesting still lets the outer workflow finish.
+The accepted boundary decision is
+`docs/adr/2026-09-08-workspace-constraint-boundary-and-default-document-evidence.md`.
+
+The setup page now links licence/series, economic policies, and product
+activation in order and distinguishes general checklist completion from lending
+readiness. `docs/ROADMAP.md` now describes the supported product instead of
+retired Girvi/DEA work. The acceptance checklist and prioritized findings are
+in `docs/implementation/mvp-operator-acceptance.md`.
+
+The initial 795-test broad gate exposed 23 Party UI fixture failures caused by
+missing commercial access before the business view. The fixture now explicitly
+starts a real trial. The final combined gate passes 795/795 tests across orgs,
+subscriptions, onboarding, tenancy, Party, Loans, Rates, Notify v2, control-plane
+contracts, shell/routes, and the three new operator acceptance scenarios.
+Django system checks (one configured silencing), migration drift, and whitespace
+checks pass; no migration or development-data change is required.
+
+Automated HTTP acceptance does not establish visual browser, camera, physical
+custody, printer, or real-provider acceptance. Those operator checks remain
+explicitly pending. The Party action route follow-up is completed in the entry above.
+
 ## 2026-09-08 — Phase 11 checkpoint verification
 
 Reviewed the immutable Workspace slug migration, creation services, canonical

@@ -77,6 +77,13 @@ class PawnLoanDocumentService:
             payload = builder(source)
         except DocumentProjectionError as exc:
             raise PawnLoanDocumentError(str(exc)) from exc
+        return cls.render_payload(payload, copy_labels=copy_labels)
+
+    @classmethod
+    def render_payload(cls, payload, *, copy_labels=None):
+        """Render an already validated projection with the standard fixed layout."""
+        if copy_labels is None:
+            copy_labels = ("Original", "Duplicate") if payload.document_type == "loan_ticket" else ()
         pdf = cls._build_pdf(
             title=payload.title,
             details=payload.details,

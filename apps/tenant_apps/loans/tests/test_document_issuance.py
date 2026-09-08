@@ -52,11 +52,18 @@ class ConfigurableDocumentIssuanceTests(SimpleTestCase):
         "LoanDocumentLayoutService.find_official_issue",
         return_value=None,
     )
-    def test_missing_assignment_requests_normal_fixed_fallback(self, _find, _resolve):
-        result = self._issue()
+    def test_missing_assignment_persists_an_official_fixed_issue(self, _find, _resolve):
+        module = "apps.tenant_apps.loans.services.document_issuance."
+        with patch(module + "PawnLoanDocumentService.render_payload") as render, patch(
+            module + "LoanDocumentLayoutService.issue"
+        ) as issue:
+            render.return_value = SimpleNamespace(pdf=b"%PDF-fixed")
+            result = self._issue()
 
-        self.assertTrue(result.use_fixed_renderer)
-        self.assertIsNone(result.issue)
+        self.assertFalse(result.use_fixed_renderer)
+        self.assertIs(result.issue, issue.return_value)
+        self.assertEqual(issue.call_args.kwargs["render_result"].pdf, b"%PDF-fixed")
+        self.assertEqual(issue.call_args.kwargs["render_result"].renderer_version, "fixed-pawn-v1")
 
     def _issue(self, **changes):
         values = {

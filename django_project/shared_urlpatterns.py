@@ -238,6 +238,10 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         name="workspace_slug_party_merge",
     ),
     path(
+        "w/<str:workspace_slug>/parties/",
+        include("apps.tenant_apps.party.workspace_urls"),
+    ),
+    path(
         "w/<str:workspace_slug>/sales/",
         org_views.workspace_slug_sales,
         name="workspace_slug_sales",

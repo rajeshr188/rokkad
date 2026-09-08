@@ -49,7 +49,7 @@
 <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
     <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="overview">
         <div class="border rounded p-3 mb-3">
-            <form id="party-photo-form" method="post" enctype="multipart/form-data" action="{% url 'party:party_photo_update' party.pk %}" class="row g-3 align-items-end">
+            <form id="party-photo-form" method="post" enctype="multipart/form-data" action="{% url 'workspace_party:party_photo_update' request.workspace.slug party.pk %}" class="row g-3 align-items-end">
                 {% csrf_token %}
                 <input type="hidden" id="party-photo-image-data" name="image_data">
                 <div class="col-lg-5">
@@ -85,7 +85,7 @@
                 </div>
             </form>
             {% if party.profile_photo %}
-            <form method="post" action="{% url 'party:party_photo_remove' party.pk %}" class="mt-2">
+            <form method="post" action="{% url 'workspace_party:party_photo_remove' request.workspace.slug party.pk %}" class="mt-2">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Remove Photo</button>
             </form>
@@ -120,7 +120,7 @@
                                 <td>{{ role.effective_to|default:"-" }}</td>
                                 <td class="text-end">
                                     {% if role.status == "ACTIVE" %}
-                                    <form method="post" action="{% url 'party:party_role_end' party.pk role.pk %}">
+                                    <form method="post" action="{% url 'workspace_party:party_role_end' request.workspace.slug party.pk role.pk %}">
                                         {% csrf_token %}
                                         <button class="btn btn-sm btn-outline-secondary" type="submit">End</button>
                                     </form>
@@ -135,7 +135,7 @@
                 </div>
             </div>
             <div class="col-lg-5">
-                <form method="post" action="{% url 'party:party_role_add' party.pk %}" class="border rounded p-3">
+                <form method="post" action="{% url 'workspace_party:party_role_add' request.workspace.slug party.pk %}" class="border rounded p-3">
                     {% csrf_token %}
                     <h2 class="h6 mb-3">Add Role</h2>
                     <div class="mb-2">{{ role_form.role_type.label_tag }}{{ role_form.role_type }}</div>
@@ -152,7 +152,7 @@
     </div>
 
     <div class="tab-pane fade {% if active_tab == 'relationships' %}show active{% endif %}" id="relationships">
-        <form method="post" action="{% if edit_relationship %}{% url 'party:party_relationship_update' party.pk edit_relationship.pk %}{% else %}{% url 'party:party_relationship_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+        <form method="post" action="{% if edit_relationship %}{% url 'workspace_party:party_relationship_update' request.workspace.slug party.pk edit_relationship.pk %}{% else %}{% url 'workspace_party:party_relationship_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
             {% csrf_token %}
             {{ relationship_form.non_field_errors }}
             <div class="row g-2 align-items-end">
@@ -186,7 +186,7 @@
                                 <td>{{ relationship.notes|default:"-" }}</td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=relationships&edit_relationship={{ relationship.pk }}"><i class="bi bi-pencil"></i></a>
-                                    <form method="post" action="{% url 'party:party_relationship_delete' party.pk relationship.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                                    <form method="post" action="{% url 'workspace_party:party_relationship_delete' request.workspace.slug party.pk relationship.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                                 </td>
                             </tr>
                             {% empty %}<tr><td colspan="5" class="text-muted">No outgoing relationships found.</td></tr>{% endfor %}
@@ -215,7 +215,7 @@
     </div>
 
     <div class="tab-pane fade {% if active_tab == 'contacts' %}show active{% endif %}" id="contacts">
-        <form method="post" action="{% if edit_contact %}{% url 'party:party_contact_update' party.pk edit_contact.pk %}{% else %}{% url 'party:party_contact_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+        <form method="post" action="{% if edit_contact %}{% url 'workspace_party:party_contact_update' request.workspace.slug party.pk edit_contact.pk %}{% else %}{% url 'workspace_party:party_contact_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
             {% csrf_token %}
             {{ contact_form.non_field_errors }}
             <div class="row g-2 align-items-end">
@@ -244,7 +244,7 @@
                         <td>{{ contact.is_verified|yesno:"Yes,No" }}</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=contacts&edit_contact={{ contact.pk }}"><i class="bi bi-pencil"></i></a>
-                            <form method="post" action="{% url 'party:party_contact_delete' party.pk contact.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                            <form method="post" action="{% url 'workspace_party:party_contact_delete' request.workspace.slug party.pk contact.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                         </td>
                     </tr>
                     {% empty %}<tr><td colspan="6" class="text-muted">No contact methods found.</td></tr>{% endfor %}
@@ -254,7 +254,7 @@
     </div>
 
     <div class="tab-pane fade {% if active_tab == 'addresses' %}show active{% endif %}" id="addresses">
-        <form method="post" action="{% if edit_address %}{% url 'party:party_address_update' party.pk edit_address.pk %}{% else %}{% url 'party:party_address_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+        <form method="post" action="{% if edit_address %}{% url 'workspace_party:party_address_update' request.workspace.slug party.pk edit_address.pk %}{% else %}{% url 'workspace_party:party_address_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
             {% csrf_token %}
             {{ address_form.non_field_errors }}
             <div class="row g-2">
@@ -286,7 +286,7 @@
                         <td>{{ address.is_verified|yesno:"Yes,No" }}</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=addresses&edit_address={{ address.pk }}"><i class="bi bi-pencil"></i></a>
-                            <form method="post" action="{% url 'party:party_address_delete' party.pk address.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                            <form method="post" action="{% url 'workspace_party:party_address_delete' request.workspace.slug party.pk address.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                         </td>
                     </tr>
                     {% empty %}<tr><td colspan="6" class="text-muted">No addresses found.</td></tr>{% endfor %}
@@ -401,7 +401,7 @@
         <div class="row g-3">
             <div class="col-lg-6">
                 <h2 class="h6">Identifiers</h2>
-                <form method="post" action="{% if edit_identifier %}{% url 'party:party_identifier_update' party.pk edit_identifier.pk %}{% else %}{% url 'party:party_identifier_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+                <form method="post" action="{% if edit_identifier %}{% url 'workspace_party:party_identifier_update' request.workspace.slug party.pk edit_identifier.pk %}{% else %}{% url 'workspace_party:party_identifier_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
                     {% csrf_token %}
                     {{ identifier_form.non_field_errors }}
                     <div class="row g-2">
@@ -421,7 +421,7 @@
                             <td>{{ identifier.is_verified|yesno:"Verified,Pending" }}</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_identifier={{ identifier.pk }}"><i class="bi bi-pencil"></i></a>
-                                <form method="post" action="{% url 'party:party_identifier_delete' party.pk identifier.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                                <form method="post" action="{% url 'workspace_party:party_identifier_delete' request.workspace.slug party.pk identifier.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                             </td>
                         </tr>
                         {% empty %}<tr><td class="text-muted">No identifiers found.</td></tr>{% endfor %}
@@ -430,7 +430,7 @@
             </div>
             <div class="col-lg-6">
                 <h2 class="h6">Documents</h2>
-                <form method="post" enctype="multipart/form-data" action="{% if edit_document %}{% url 'party:party_document_update' party.pk edit_document.pk %}{% else %}{% url 'party:party_document_add' party.pk %}{% endif %}" class="border rounded p-3 mb-3">
+                <form method="post" enctype="multipart/form-data" action="{% if edit_document %}{% url 'workspace_party:party_document_update' request.workspace.slug party.pk edit_document.pk %}{% else %}{% url 'workspace_party:party_document_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
                     {% csrf_token %}
                     {{ document_form.non_field_errors }}
                     <div class="row g-2">
@@ -451,7 +451,7 @@
                             <td>{{ document.is_verified|yesno:"Verified,Pending" }}</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>
-                                <form method="post" action="{% url 'party:party_document_delete' party.pk document.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                                <form method="post" action="{% url 'workspace_party:party_document_delete' request.workspace.slug party.pk document.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
                             </td>
                         </tr>
                         {% empty %}<tr><td class="text-muted">No documents found.</td></tr>{% endfor %}
@@ -475,7 +475,7 @@
     <div class="tab-pane fade {% if active_tab == 'merge' %}show active{% endif %}" id="merge">
         <div class="row g-3">
             <div class="col-lg-7">
-                <form method="post" action="{% url 'party:party_merge' party.pk %}" class="border rounded p-3">
+                <form method="post" action="{% url 'workspace_party:party_merge' request.workspace.slug party.pk %}" class="border rounded p-3">
                     {% csrf_token %}
                     <h2 class="h6 mb-3">Merge Duplicate Party Into This Party</h2>
                     {{ merge_form.non_field_errors }}
