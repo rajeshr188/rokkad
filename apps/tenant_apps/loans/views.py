@@ -1737,12 +1737,15 @@ from apps.tenant_apps.loans.web.pawn_renewal_actions import (
 
 @loans_setup_required
 def license_list(request):
+    from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
+
     register_rows = get_loan_license_register(request.loans_workspace.pk)
     return render(
         request,
         "loans/setup/license_list.html",
         {
             "register_rows": register_rows,
+            "loan_setup": get_pawn_setup_checklist(request.loans_workspace),
             "as_of_date": timezone.localdate(),
         },
     )

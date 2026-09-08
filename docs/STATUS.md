@@ -8,6 +8,30 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Navigation published; first-loan setup guidance
+
+Published navigation checkpoint `df26e6b` on `origin/rls-mvp` after operator
+approval. The reviewed first-loan follow-up adds a Settings > Loan setup
+ordered checklist for license, numbering, current economics, and active products,
+with separate buying-rate and document/printing review steps. The general
+Workspace checklist links directly to it and labels its own progress accurately.
+
+The read-only Loans selector reuses non-consuming numbering previews and existing
+effective-policy resolvers for a usable series. It also checks active product
+availability dates; draft creation explains missing products before presenting an
+empty selection. Each loan still validates its own date, metal, terms, and
+evidence. Review-only items do not claim complete readiness or require custom
+documents. Staff get an owner/admin handoff instead of inaccessible setup links.
+All 436 Loans, shell, business-entry-point, and HTTP operator checks pass in a
+fresh disposable test database. A reused test database had stale fixture rows;
+the fresh run removes that source of count/duplicate failures. Coverage includes
+missing products, staff handoff, expired licenses, and non-consuming previews.
+Both Chromium scenarios pass: administration/setup screens and complete lending
+at desktop and narrow widths. Checklist styling was visually reviewed, with a
+final alignment and register-anchor follow-up. The final administration browser
+rerun and `git diff --check` pass. The operator reviewed the changes and approved
+committing and publishing this checkpoint. See `docs/flows/first-loan-setup.md`.
+
 ## 2026-09-08 - Workspace navigation simplification implemented
 
 Implemented the approved navigation proposal. Workspace apps and administration

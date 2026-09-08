@@ -53,6 +53,16 @@
 </div>
 {% endif %}
 
+<section class="card mb-4" aria-labelledby="first-loan-setup-title">
+    <div class="card-body">
+        <h2 id="first-loan-setup-title" class="h5">Before your first loan</h2>
+        <a class="btn btn-primary mb-3" href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">Open first-loan setup checklist</a>
+        <p class="text-muted">Complete these lending settings as the Workspace owner or administrator.</p>
+        <p class="small text-muted">Follow the license, numbering, economics, and product checks, then review buying rates and documents.</p>
+        <p class="small text-muted mb-0">The general checklist below does not verify lending readiness. Loan creation and approval check the required settings.</p>
+    </div>
+</section>
+
 <section class="mgmt-setup-hero mb-4" aria-labelledby="setup-progress-title">
     <div class="mgmt-setup-summary">
         <div>
@@ -62,7 +72,7 @@
         </div>
         <div class="text-lg-end">
             <div class="mgmt-progress-value">{{ setup_checklist.completion_percentage }}%</div>
-            <div class="small text-muted">workspace readiness</div>
+            <div class="small text-muted">general setup progress</div>
         </div>
     </div>
     <div class="mgmt-progress-track mt-3">
@@ -85,19 +95,6 @@
             <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss dashboard card</button>
         </form>
         {% endif %}
-    </div>
-</section>
-
-<section class="card mb-4" aria-labelledby="first-loan-setup-title">
-    <div class="card-body">
-        <h2 id="first-loan-setup-title" class="h5">Before your first loan</h2>
-        <p class="text-muted">Complete these lending settings as the Workspace owner or administrator.</p>
-        <ol class="mb-2">
-            <li><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/' %}">Create a licence and numbering series</a>.</li>
-            <li><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/economics/' %}">Set calculation policies and gold/silver interest rates</a>.</li>
-            <li><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/products/' %}">Review and activate a loan product</a>.</li>
-        </ol>
-        <p class="small text-muted mb-0">The general checklist below does not verify lending readiness. Loan creation and approval check the required settings.</p>
     </div>
 </section>
 

@@ -38,6 +38,11 @@ keys just to preserve obsolete fixtures; runtime configuration is unchanged.
 PawnLoan setup is a persistent destination, not a one-time wizard: the loan list
 has an action checked against `workspace.settings.manage`, and the setup,
 economics, and product pages share explicit Workspace-scoped navigation.
+`loans/selectors/setup.py` supplies first-loan guidance using non-consuming
+number previews and effective policy resolution for the same usable series.
+Active product availability is checked before opening a new draft. Buying rates
+and documents remain explicit review tasks; do not claim their readiness from
+mere row existence. Staff without setup permission receive an owner/admin handoff.
 
 PawnDraftForm edit instances must initialize and disable series/product on both
 GET and bound POST. Browsers omit disabled controls; disabling only on GET loses

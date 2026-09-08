@@ -1,5 +1,5 @@
 ---
-status: implemented-locally
+status: implemented
 owner: project
 updated: 2026-09-08
 tags: [navigation, ux, workspace, account, saas]
@@ -159,7 +159,7 @@ remain a secondary destination for users allowed to recover them.
 
 No data migration or tenancy redesign is needed for this proposal. Renaming the
 legacy profile field can be a separate cleanup after all its callers are reviewed.
-Implementation was authorized after the analysis; changes remain local pending review.
+Implementation was authorized after the analysis and published as `df26e6b`.
 
 PostgreSQL policies govern row access, not how many menus an application has:
 https://www.postgresql.org/docs/current/sql-createpolicy.html . The repository's

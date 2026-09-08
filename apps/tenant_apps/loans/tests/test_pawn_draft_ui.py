@@ -229,8 +229,35 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PawnLoan setup required")
-        self.assertContains(response, "Open Economic Setup")
-        self.assertContains(response, reverse("loans:pawn_economics_setup"))
+        self.assertContains(response, "Review licenses")
+        self.assertContains(response, "#license-register")
+
+    def test_checklist_detects_missing_product_without_consuming_numbers(self):
+        self._configured_setup()
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="DRAFT")
+        before = list(LoanNumberSequence.objects.order_by("pk").values())
+        page = self.client.get(reverse("loans:license_list"))
+        self.assertContains(page, "First-loan setup checklist")
+        checks = {step["key"]: step["complete"] for step in page.context["loan_setup"]["steps"]}
+        self.assertEqual(checks, {"license": True, "series": True, "economics": True, "product": False})
+        blocked = self.client.get(reverse("loans:pawn_loan_create"))
+        self.assertContains(blocked, "Review loan products")
+        self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
+        ready = self.client.get(reverse("loans:license_list"))
+        self.assertTrue(ready.context["loan_setup"]["ready"])
+        self.assertContains(ready, "Start first loan")
+
+    def test_staff_gets_owner_handoff_instead_of_setup_link(self):
+        member = get_user_model().objects.create_user(username="setup-handoff-staff")
+        role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=member, company=self.tenant, role=role)
+        self.client.force_login(member)
+        for name in ("pawn_loan_create", "pawn_loan_list"):
+            page = self.client.get(reverse(f"loans:{name}"))
+            self.assertContains(page, "Ask your Workspace owner or administrator")
+            self.assertNotContains(page, "#license-register")
+        self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
 
     def test_missing_photo_preserves_create_selections(self):
         license, series = self._configured_setup()

@@ -115,6 +115,19 @@ class LoansSetupUiTests(WorkspaceTestCase):
     def tenant_post(self, url, data=None):
         return self.client.workspace_post(url, data or {})
 
+    def test_checklist_distinguishes_numbering_from_missing_economics(self):
+        license, series = self._configured_setup()
+        page = self.tenant_get(reverse("loans:license_list"))
+        checks = {step["key"]: step["complete"] for step in page.context["loan_setup"]["steps"]}
+        self.assertEqual(checks, {"license": True, "series": True, "economics": False, "product": False})
+        self.assertContains(page, "Open Economic Setup")
+        LoanLicense.objects.filter(pk=license.pk).update(issued_on=date(2019, 1, 1), expires_on=date(2020, 1, 1))
+        expired = self.tenant_get(reverse("loans:license_list"))
+        checks = {step["key"]: step["complete"] for step in expired.context["loan_setup"]["steps"]}
+        self.assertFalse(checks["license"])
+        self.assertFalse(checks["series"])
+        self.assertFalse(expired.context["loan_setup"]["ready"])
+
     def test_owner_can_seed_review_activate_and_retire_loan_products(self):
         response = self.tenant_post(reverse("loans:loan_product_seed_defaults"))
         self.assertEqual(response.status_code, 302)

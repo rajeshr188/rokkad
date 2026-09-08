@@ -3,9 +3,9 @@
 {% block workspace_content %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="h3 mb-1">PawnLoans</h1><p class="text-muted mb-0">Find and continue loans in this workspace.</p></div>
-  <div class="d-flex flex-wrap gap-2">{% if can_manage_loan_setup %}<a class="btn btn-outline-primary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">PawnLoan setup</a>{% endif %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% else %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
+  <div class="d-flex flex-wrap gap-2">{% if can_manage_loan_setup %}<a class="btn btn-outline-primary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">PawnLoan setup</a>{% endif %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% elif not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
 </div>
-{% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}</div>{% endif %}
+{% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}{% if readiness.requires_setup and not can_manage_loan_setup %} Ask your Workspace owner or administrator to complete Settings &rarr; Loan setup. You can continue servicing existing loans.{% endif %}</div>{% endif %}
 <div class="card mb-3">
   <div class="card-body">
     <form method="get" class="row g-3 align-items-end">

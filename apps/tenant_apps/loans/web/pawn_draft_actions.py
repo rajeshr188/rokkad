@@ -15,14 +15,13 @@ from apps.tenant_apps.loans.forms import (
     PawnCollateralDraftFormSet, PawnCollateralPhotoForm, PawnDraftForm,
     PawnDraftSplitForm, PawnTransitionReasonForm,
 )
-from apps.tenant_apps.loans.models import LoanSeries, PawnCollateralItem, PawnLoan
+from apps.tenant_apps.loans.models import PawnCollateralItem, PawnLoan
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput, CreatePawnDraftCommand, DraftCollateralPhotoInput,
     NumberAllocationError, PawnCollateralMediaError, PawnDraftError,
     PawnLifecycleError, UpdatePawnDraftCommand, append_collateral_photo,
     approve_pawn_loan, cancel_pawn_loan, create_pawn_draft_with_photos,
     preview_number, reopen_pawn_loan, resolve_pawn_draft_economics,
-    resolve_pawn_loan_economic_policy, resolve_pawn_metal_interest_rate_policy,
     update_pawn_draft_with_photos,
 )
 from apps.tenant_apps.loans.services.pawn_draft_split import (
@@ -44,7 +43,10 @@ def _pawn_loan_for_workspace(request, pk):
 def pawn_loan_create(request):
     readiness = get_pawn_draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
-        return render(request, "loans/pawn/blocked.html", {"readiness": readiness})
+        return render(request, "loans/pawn/blocked.html", {
+            "readiness": readiness,
+            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
+        })
     initial = {"loan_date": timezone.localdate()}
     if request.method == "GET" and request.GET.get("party"):
         initial["borrower"] = request.GET["party"]
@@ -260,6 +262,16 @@ def _safe_preview(series, kind):
 def get_pawn_draft_readiness(workspace):
     from apps.tenant_apps.party.models import Party
 
+    from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
+
+    checklist = get_pawn_setup_checklist(workspace)
+    for step in checklist["steps"]:
+        if not step["complete"]:
+            return {
+                "ready": False, "requires_setup": True,
+                "message": step["description"],
+                "action_label": step["action_label"], "action_url": step["action_url"],
+            }
     if not Party.objects.filter(
         workspace=workspace, status=Party.PartyStatus.ACTIVE,
     ).exists():
@@ -272,38 +284,7 @@ def get_pawn_draft_readiness(workspace):
                 kwargs={"workspace_slug": workspace.slug},
             ),
         }
-    candidates = LoanSeries.objects.filter(
-        license__workspace=workspace,
-        license__is_active=True,
-        is_active=True,
-    ).select_related("license")
-    for series in candidates:
-        try:
-            preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
-            if series.license.is_expired():
-                continue
-            today = timezone.localdate()
-            resolve_pawn_loan_economic_policy(
-                workspace_id=workspace.pk,
-                license_id=series.license_id,
-                as_of_date=today,
-            )
-            for metal in ("GOLD", "SILVER"):
-                resolve_pawn_metal_interest_rate_policy(
-                    workspace_id=workspace.pk,
-                    license_id=series.license_id,
-                    metal=metal,
-                    as_of_date=today,
-                )
-            return {"ready": True}
-        except (NumberAllocationError, ValueError):
-            continue
-    return {
-        "ready": False,
-        "message": "Configure numbering and current PawnLoan economics before drafting.",
-        "action_label": "Open Economic Setup",
-        "action_url": reverse("loans:pawn_economics_setup"),
-    }
+    return {"ready": True}
 
 
 def _collateral_inputs(formset):

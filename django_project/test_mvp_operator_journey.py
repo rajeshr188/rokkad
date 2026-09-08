@@ -111,6 +111,9 @@ class MVPOperatorJourneyTests(TransactionTestCase):
 
     def _setup_loans(self):
         setup = self._get(reverse("workspace_slug_settings_setup", kwargs={"workspace_slug": self.workspace.slug}))
+        checklist_url = reverse("workspace_slug_settings_numbering", kwargs={"workspace_slug": self.workspace.slug})
+        self.assertContains(setup, checklist_url)
+        setup = self._get(checklist_url)
         for name in ("license_list", "pawn_economics_setup", "loan_product_list"):
             self.assertContains(setup, self._loan_url(name))
         self._get(self._loan_url("license_list"))
