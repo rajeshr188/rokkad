@@ -1,5 +1,5 @@
 ---
-status: active
+status: historical
 owner: project
 updated: 2026-07-04
 tags: [cleanup, mvp, audit, legacy-import]
@@ -7,6 +7,10 @@ related: [../STATUS.md, ../AGENT_MEMORY.md, ../apps/girvi/refactor-plan.md, ../a
 ---
 
 # MVP Cleanup Audit
+
+Historical audit from before app retirement. Use [the current active plan](active.md)
+and [Status](../STATUS.md) for current work. The old root ledger diagnostic is
+now archived at `docs/archive/dea/_check_ledger_cols.py`.
 
 ## Goal
 

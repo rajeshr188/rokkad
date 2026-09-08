@@ -1,5 +1,3 @@
-{% with ew=workspace|default:user_workspace %}
-{% firstof user_role "Member" as role_name %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' or request.resolver_match.url_name == 'app_invitations' %}active{% endif %}"
    href="{% url 'app_invitations' %}">
     <i class="bi bi-envelope-open"></i> My Invitations
@@ -15,4 +13,3 @@
    href="{% url 'profile' %}">
     <i class="bi bi-person-gear"></i> Profile
 </a>
-{% endwith %}

@@ -1,11 +1,14 @@
 ---
-status: investigation
+status: archived
 date: 2026-06-26
 scope: Commodity UI gaps and Business Event workflow completeness
 tags: [dea, commodity, business-events, ui, forms]
 ---
 
 # Commodity Management UI & Business Event Workflow Investigation
+
+Historical investigation for the retired DEA application. Code paths and findings
+below describe that revision; they are not current implementation instructions.
 
 ## 1. COMMODITY MANAGEMENT UI STATUS
 
@@ -30,7 +33,7 @@ Commodities are **read-only** in the user-facing application. There is **zero su
 
 #### Model Definition
 
-**File**: [apps/tenant_apps/dea/models/commodity.py](apps/tenant_apps/dea/models/commodity.py#L28-L90)
+**File**: [apps/tenant_apps/dea/models/commodity.py](../../../apps/tenant_apps/dea/models/commodity.py#L28-L90)
 
 **Structure**:
 ```python
@@ -52,7 +55,7 @@ class Commodity(models.Model):
 
 #### Admin Interface
 
-**File**: [apps/tenant_apps/dea/admin.py](apps/tenant_apps/dea/admin.py#L21-L26)
+**File**: [apps/tenant_apps/dea/admin.py](../../../apps/tenant_apps/dea/admin.py#L21-L26)
 
 - Registered in Django admin
 - List display: code, name, type, uom, is_active
@@ -62,7 +65,7 @@ class Commodity(models.Model):
 
 #### Seeding Process
 
-**File**: [apps/tenant_apps/dea/management/commands/seed_dea_commodities.py](apps/tenant_apps/dea/management/commands/seed_dea_commodities.py)
+**File**: [apps/tenant_apps/dea/management/commands/seed_dea_commodities.py](../../../apps/tenant_apps/dea/management/commands/seed_dea_commodities.py)
 
 **Default commodities created**:
 - GOLD (Metal, Gram)
@@ -101,7 +104,7 @@ class Commodity(models.Model):
 ### Form Field Completeness
 
 #### Fixed Purchase Form
-**File**: [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py#L18-L82)
+**File**: [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py#L18-L82)
 
 ```
 ✅ source_reference (CharField)
@@ -126,7 +129,7 @@ Validation:
 ```
 
 #### Unfixed Purchase Form
-**File**: [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py#L85-L158)
+**File**: [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py#L85-L158)
 
 ```
 ✅ source_reference
@@ -148,7 +151,7 @@ Validation:
 ```
 
 #### Purchase & Sale Rate Fixing Forms
-**File**: [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py#L161-L350)
+**File**: [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py#L161-L350)
 
 ```
 Purchase Rate Fixing:
@@ -172,7 +175,7 @@ Sale Rate Fixing:
 ```
 
 #### Fixed & Unfixed Sale Forms
-**File**: [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py#L353-L496)
+**File**: [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py#L353-L496)
 
 ```
 Fixed Sale:
@@ -193,7 +196,7 @@ Unfixed Sale:
 ```
 
 #### Monetary Settlement Form
-**File**: [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py#L502-L615)
+**File**: [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py#L502-L615)
 
 ```
 ✅ settlement_type (CUSTOMER_RECEIPT | SUPPLIER_PAYMENT)
@@ -214,7 +217,7 @@ Validation:
 ```
 
 #### Karigar Movement Form
-**File**: [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py#L618-L720)
+**File**: [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py#L618-L720)
 
 ```
 ✅ movement_type (KARIGAR_ISSUE | KARIGAR_RECEIPT)
@@ -299,7 +302,7 @@ Each event type has a **detail page** at `/<draft_id>/` showing:
 
 ### Confirm Handoff Services (Complete But UI Disabled)
 
-**File**: [apps/tenant_apps/dea/services/business_event_posting.py](apps/tenant_apps/dea/services/business_event_posting.py)
+**File**: [apps/tenant_apps/dea/services/business_event_posting.py](../../../apps/tenant_apps/dea/services/business_event_posting.py)
 
 All 8 event types have handoff services that:
 1. Row-lock the previewed `BusinessEventDraft`
@@ -321,7 +324,7 @@ confirm_karigar_movement_draft(draft_id, actor)
 
 ### Confirm Endpoints (Wired But Disabled in UI)
 
-**File**: [apps/tenant_apps/dea/views/business_events.py](apps/tenant_apps/dea/views/business_events.py)
+**File**: [apps/tenant_apps/dea/views/business_events.py](../../../apps/tenant_apps/dea/views/business_events.py)
 
 All 8 event types have POST-only routes:
 - `/dea/business-events/fixed-purchase/<draft_id>/confirm/`
@@ -353,7 +356,7 @@ All 8 event types have POST-only routes:
     Confirm posting
 </button>
 ```
-**View Logic** [business_events.py](apps/tenant_apps/dea/views/business_events.py#L193-L207):
+**View Logic** [business_events.py](../../../apps/tenant_apps/dea/views/business_events.py#L193-L207):
 ```python
 confirm_disabled = True  # Hardcoded in all preview views
 ```
@@ -431,13 +434,13 @@ confirm_disabled = True  # Hardcoded in all preview views
 ## Appendix: File Inventory
 
 ### Models
-- [apps/tenant_apps/dea/models/commodity.py](apps/tenant_apps/dea/models/commodity.py) - Commodity, CommodityAccount, CommodityMovement
+- [apps/tenant_apps/dea/models/commodity.py](../../../apps/tenant_apps/dea/models/commodity.py) - Commodity, CommodityAccount, CommodityMovement
 
 ### Forms
-- [apps/tenant_apps/dea/forms_business_events.py](apps/tenant_apps/dea/forms_business_events.py) - All 8 event form classes (720 lines)
+- [apps/tenant_apps/dea/forms_business_events.py](../../../apps/tenant_apps/dea/forms_business_events.py) - All 8 event form classes (720 lines)
 
 ### Views
-- [apps/tenant_apps/dea/views/business_events.py](apps/tenant_apps/dea/views/business_events.py) - All preview/detail/confirm routes
+- [apps/tenant_apps/dea/views/business_events.py](../../../apps/tenant_apps/dea/views/business_events.py) - All preview/detail/confirm routes
 
 ### Services
 - `apps/tenant_apps/dea/services/fixed_purchase.py`
@@ -450,12 +453,12 @@ confirm_disabled = True  # Hardcoded in all preview views
 - `apps/tenant_apps/dea/services/business_event_posting.py` - Handoff services
 
 ### Templates
-- [templates/dea/business_events/](templates/dea/business_events/) - 17 templates
+- [templates/dea/business_events/](../../../templates/dea/business_events/) - 17 templates
   - 8 `*_preview.html` (input forms + previews)
   - 8 `*_detail.html` (read-only results)
   - 1 `dashboard.html` (event list)
 
 ### Tests
-- [apps/tenant_apps/dea/tests/test_business_event_scaffold_views.py](apps/tenant_apps/dea/tests/test_business_event_scaffold_views.py) - UI/route tests
-- [apps/tenant_apps/dea/tests/test_business_event_posting_service.py](apps/tenant_apps/dea/tests/test_business_event_posting_service.py) - Handoff service tests
-- [apps/tenant_apps/dea/tests/test_*_service.py](apps/tenant_apps/dea/tests/) - Individual service tests (5 tests each)
+- [apps/tenant_apps/dea/tests/test_business_event_scaffold_views.py](../../../apps/tenant_apps/dea/tests/test_business_event_scaffold_views.py) - UI/route tests
+- [apps/tenant_apps/dea/tests/test_business_event_posting_service.py](../../../apps/tenant_apps/dea/tests/test_business_event_posting_service.py) - Handoff service tests
+- [apps/tenant_apps/dea/tests/test_*_service.py](../../../apps/tenant_apps/dea/tests/) - Individual service tests (5 tests each)

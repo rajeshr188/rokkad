@@ -8,6 +8,23 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-08 - Post-revamp repository cleanup
+
+Completed a conservative housekeeping pass after the published `2d5c121`
+checkpoint. Workspace-manager navigation now has one shared desktop/mobile
+partial; unused navigation variant arguments and account context variables are
+removed. All 13 shell-render checks pass, preserving the existing destinations.
+
+Repaired `.gitignore` by removing repeated backup blocks and a NUL-corrupted
+image entry, and covering numbered virtual environments and pytest caches.
+Verified ignore behavior for secrets, environments, generated assets, media,
+dumps, and the reference image. No local database, media, or backup was deleted.
+Archived the root commodity/DEA investigation, TODO notes, and ledger diagnostic;
+the archive index records their location and historical purpose. Updated the
+active plan to remove obsolete next-step instructions and conflicting test totals.
+`git diff --check` passes. The operator approved committing and publishing this
+housekeeping checkpoint on `rls-mvp`.
+
 ## 2026-09-08 - Preference regression cleanup and publication checkpoint
 
 The operator authorized fixing the two legacy preference failures and pushing

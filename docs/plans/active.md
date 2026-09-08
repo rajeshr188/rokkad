@@ -8,32 +8,20 @@ related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, conta
 
 ## Current checkpoint
 
-Control-plane Phases 8 and 9, Loans Workspace routing (Phase 10), and the
-immutable Workspace slug migration (Phase 11) are complete. The September 8
-checkpoint review passes 664 regression tests. See [current status](../STATUS.md)
-and [the migration record](../implementation/workspace-slug-migration.md).
+The approved counter UI, shared navigation, business-app and administration
+redesign, dashboard breadcrumbs, and preference test cleanup are published on
+`rls-mvp` through `2d5c121`. The latest expanded gate passes **620/620 tests**;
+see [current status](../STATUS.md) for its scope and prior browser acceptance.
 
-The current follow-up is [MVP operator acceptance](../implementation/mvp-operator-acceptance.md):
-an end-to-end restricted-role HTTP journey, fixes for reproduced blockers, and
-an explicit list of browser/hardware acceptance steps still requiring an operator.
-The combined acceptance/regression gate passes 795/795 tests.
+Party, Loans, Notify v2, and Rates are the supported business apps. Workspace
+slug routing, action authorization, and PostgreSQL forced RLS remain the active
+boundaries. Contact, Girvi, legacy Notify, and DEA/accounting are retired.
 
-The supported apps are Party, Loans, Notify v2, and Rates. Shared-schema
-PostgreSQL forced RLS is implemented; Contact, Girvi, legacy Notify, and
-DEA/accounting are retired. UI/UX discovery now starts from the browser findings;
-see [the project-wide revamp brief](project-wide-ux-revamp.md). Party action routes and borrower autocomplete now retain Workspace identity.
-Desktop/mobile Chromium acceptance is recorded in
-[the browser record](../implementation/browser-acceptance.md). Physical camera,
-phone, printer, and handoff checks remain; mobile/printer checks are deferred
-by the operator. Rates/Notify routing and application-level Notify boundary fixes
-are complete. The counter prototype is approved; the shared shell and loan
-workflow are implemented locally, followed by Party, Rates, and Notify screens.
-Team, billing, account, and setup presentation now follows the same design,
-with grouped administration navigation, reviewed and approved by the operator.
-The complete revamp is committed as `ede6c88`. The stale legacy preference
-fixtures now use a supported registry and retain override/isolation/fallback
-coverage. The next checkpoint includes that cleanup and the dashboard breadcrumb
-correction, with publication authorized by the operator. External media privacy remains a real-data pilot requirement.
+Current work is repository housekeeping after the approved revamp: simplify
+shared navigation, repair ignore rules, and archive obsolete root notes and
+diagnostics. Next review is operator feedback on navigation and routine work.
+Physical phone/camera and printer checks remain deferred; external private-media
+serving still needs deployment verification before a real-data pilot.
 
 The entries below preserve earlier planning context; their active/proposed
 labels are historical and do not override this checkpoint or current ADRs.
