@@ -1262,6 +1262,7 @@ def pawn_loan_detail(request, pk):
         loan,
         can_administer=context["can_administer"],
     )
+    context["can_delete_draft_photos"] = loan.state == "DRAFT" and request.loans_workspace_access.can("data.edit")
     context["can_approve"] = request.loans_workspace_access.can("loan.approve")
     context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
     context["simple_owner"] = request.loans_workspace.loan_workflow == "SIMPLE" and request.loans_workspace_access.can("workspace.transfer")
@@ -1278,8 +1279,9 @@ def pawn_collateral_photo_document(request, pk, item_pk, photo_pk):
         collateral_item_id=item_pk,
         collateral_item__loan=loan,
     )
-    photo.file.open("rb")
-    response = HttpResponse(photo.file.read(), content_type=photo.mime_type)
+    with photo.file.open("rb") as photo_file:
+        content = photo_file.read()
+    response = HttpResponse(content, content_type=photo.mime_type)
     response["Content-Disposition"] = content_disposition_header(
         request.GET.get("inline") != "1",
         photo.original_filename,

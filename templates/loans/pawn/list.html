@@ -24,7 +24,11 @@
   <thead><tr><th>Loan</th><th>Borrower</th><th>Principal</th><th>State</th><th>Date</th><th></th></tr></thead>
   <tbody>{% for loan in loans %}<tr>
     <td><strong>{{ loan.loan_number }}</strong><div class="small text-muted">{{ loan.license.license_number }}/{{ loan.series.code }}</div></td>
-    <td>{{ loan.borrower.display_name }}<div class="small text-muted">{{ loan.borrower.party_code }}</div></td>
+    <td><div class="d-flex align-items-center gap-2">
+      {% if loan.borrower.profile_photo %}<img class="loan-list-photo rounded-circle" width="48" height="48" loading="lazy" src="{{ loan.borrower.profile_photo.url }}" alt="Photo of {{ loan.borrower.display_name }}">
+      {% else %}<span class="loan-list-photo loan-list-photo-placeholder rounded-circle" role="img" aria-label="No borrower photo"><i class="bi bi-person" aria-hidden="true"></i></span>{% endif %}
+      <div>{{ loan.borrower.display_name }}<div class="small text-muted">{{ loan.borrower.party_code }}</div></div>
+    </div></td>
     <td>{{ loan.principal_amount }}</td><td><span class="badge text-bg-secondary">{{ loan.get_state_display }}</span></td><td>{{ loan.loan_date }}</td>
     <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Open</a></td>
   </tr>{% empty %}<tr><td colspan="6" class="text-center py-5 text-muted">No PawnLoans match the current filters.</td></tr>{% endfor %}</tbody>

@@ -206,6 +206,23 @@ def pawn_loan_split(request, pk):
     return render(request, template, {"loan": loan, "form": form, "preview": preview})
 
 
+@loans_action_required("data.edit")
+@require_POST
+def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
+    from apps.tenant_apps.loans.models import PawnCollateralPhoto
+    from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
+    loan = _pawn_loan_for_workspace(request, pk)
+    item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
+    get_object_or_404(PawnCollateralPhoto, pk=photo_pk, collateral_item=item)
+    try:
+        delete_draft_collateral_photo(item.pk, photo_pk, actor=request.user)
+    except (PawnCollateralMediaError, ValidationError) as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Draft photograph deleted. Each collateral item needs a photograph before approval.")
+    return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
+
+
 @loans_workspace_required
 @require_POST
 def pawn_collateral_photo_add(request, pk, item_pk):

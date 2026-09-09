@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django_cleanup import cleanup
 
 from apps.tenancy.models import WorkspaceOwnedModel
 
@@ -15,7 +16,9 @@ def collateral_photo_upload_to(instance, filename):
     )
 
 
+@cleanup.ignore
 class PawnCollateralPhoto(WorkspaceOwnedModel):
+    # Renewal rows may share files; draft services own reference-aware cleanup.
     class WorkflowSource(models.TextChoices):
         DRAFT = "DRAFT", "Draft capture"
         RENEWAL = "RENEWAL", "Release and renew"

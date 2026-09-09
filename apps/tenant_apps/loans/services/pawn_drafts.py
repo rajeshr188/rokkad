@@ -335,13 +335,15 @@ def _delete_draft_collateral(item):
     stored_files = tuple(
         (photo.file.storage, photo.file.name)
         for photo in item.photos.all()
-        if photo.file.name
+        if photo.file.name and not photo.inherited_from_id
     )
     item.label_issues.all().delete()
     item.photos.all().delete()
     item.delete()
+    from apps.tenant_apps.loans.models import PawnCollateralPhoto
     for storage, name in stored_files:
-        transaction.on_commit(lambda storage=storage, name=name: storage.delete(name))
+        if not PawnCollateralPhoto.objects.filter(file=name).exists():
+            transaction.on_commit(lambda storage=storage, name=name: storage.delete(name))
 
 
 def _require_active_workspace(expected_workspace_id=None) -> int:

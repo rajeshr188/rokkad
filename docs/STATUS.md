@@ -8,6 +8,33 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-09 - Photos in collateral and loan lists
+
+Collateral rows show the latest captured photo beside the item identity, loaded
+through the existing Workspace-protected image route. A sliced photo prefetch
+avoids per-row database lookups. Loan borrower cells reuse the Party profile image
+and existing selected borrower relation. Both lists use compact lazy-loaded images
+and clear missing-photo placeholders. Desktop/mobile lending browser acceptance
+confirmed image loading, missing borrower-photo fallback, HTMX results and record
+links; the restricted-role browse/isolation test also passed. Layout screenshots
+were reviewed and whitespace checks are clean. Changes remain uncommitted.
+
+## 2026-09-09 - Draft collateral photograph deletion
+
+Saved loan detail pages offer Delete photo to editors while the loan is DRAFT.
+The POST-only action scopes loan/item/photo to the Workspace and locks the loan
+before removing photo evidence, with a DRAFT_UPDATED audit entry. Deleting the
+last photograph is allowed, but existing approval validation requires a replacement.
+Approved-loan photographs remain protected by service and PostgreSQL guards.
+File removal happens after commit; inherited/shared files are preserved. The photo
+model opts out of django-cleanup because renewal rows can share file paths; draft
+services handle file cleanup for both photo and whole-item deletion. No migration
+is required. Photo downloads now close their file handles, preventing Windows
+locks from blocking deletion. All 53 media/draft UI and desktop/mobile browser
+acceptance tests passed, including delete/replace, approval protection, rollback,
+edit authorization and shared-file retention. Migration drift and whitespace
+checks are clean. Changes remain uncommitted.
+
 ## 2026-09-09 - Lending usability checkpoint
 
 This checkpoint consolidates the completed work below: daily loan dashboard,

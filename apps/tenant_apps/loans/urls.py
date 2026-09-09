@@ -2,11 +2,13 @@ from django.urls import path
 
 from apps.tenant_apps.loans import views, browse
 from apps.tenant_apps.loans.web import workflow
+from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 
 app_name = "loans"
 
 urlpatterns = [
+    path("internal/<int:pk>/collateral/<int:item_pk>/photos/<int:photo_pk>/delete/", pawn_collateral_photo_delete, name="pawn_collateral_photo_delete"),
     path("collateral/", browse.collateral_list, name="pawn_collateral_list"),
     path("releases/", browse.release_list, name="pawn_release_list"),
     path("releases/<int:release_pk>/", browse.release_detail, name="pawn_release_detail"),

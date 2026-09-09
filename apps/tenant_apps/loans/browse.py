@@ -2,14 +2,14 @@
 import django_filters
 import django_tables2 as tables
 from django import forms
-from django.db.models import Q, CharField, Value
+from django.db.models import Q, CharField, Value, Prefetch
 from django.db.models.functions import Cast, Replace
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET
 from django.views.decorators.vary import vary_on_headers
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.filters import _within_storage_hierarchy
-from apps.tenant_apps.loans.models import PawnCollateralItem, PawnLoan, PawnLoanRelease, PawnStorageLocation
+from apps.tenant_apps.loans.models import PawnCollateralItem, PawnCollateralPhoto, PawnLoan, PawnLoanRelease, PawnStorageLocation
 
 
 class CollateralFilter(django_filters.FilterSet):
@@ -61,7 +61,7 @@ class ReleaseFilter(django_filters.FilterSet):
 
 
 class CollateralTable(tables.Table):
-    description = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'loans:pawn_collateral_scan' record.public_id %}">{{ record.description }}</a><div class="small text-muted">CI-{{ record.public_id|cut:"-"|slice:":12"|upper }}</div>""", verbose_name="Collateral", order_by="description")
+    description = tables.TemplateColumn(template_name="loans/browse/_collateral_identity.html", verbose_name="Collateral", order_by="description")
     borrower = tables.Column(accessor="loan.borrower.display_name", verbose_name="Borrower")
     loan = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'loans:pawn_loan_detail' record.loan_id %}">{{ record.loan.loan_number }}</a><div class="small text-muted">{{ record.loan.get_state_display }}</div>""", order_by="loan__loan_number")
     class Meta:
@@ -103,7 +103,9 @@ def _list(request, filterset, table_class, title, description):
 @require_GET
 @vary_on_headers("HX-Request", "HX-History-Restore-Request")
 def collateral_list(request):
-    queryset = PawnCollateralItem.objects.filter(workspace=request.loans_workspace).select_related("loan__borrower", "current_storage_location").order_by("-created_at", "-pk")
+    queryset = PawnCollateralItem.objects.filter(workspace=request.loans_workspace).select_related("loan__borrower", "current_storage_location").prefetch_related(
+        Prefetch("photos", queryset=PawnCollateralPhoto.objects.order_by("-captured_at", "-pk")[:1], to_attr="list_photos")
+    ).order_by("-created_at", "-pk")
     return _list(request, CollateralFilter(request.GET, queryset=queryset, workspace=request.loans_workspace), CollateralTable, "Collateral", "Browse pledged items, their loan status and current custody. Weights are in grams; purity is a percentage.")
 
 

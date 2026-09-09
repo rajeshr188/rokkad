@@ -19,6 +19,12 @@ draft media/label evidence may be deleted only while the PawnLoan remains
 `DRAFT`. Approval is the immutability boundary for retained collateral identity
 and photographs.
 
+On the saved draft loan, editors can use **Delete photo** beside an image and
+confirm its removal. This is a POST action with a draft-state check and audit entry.
+The last image may be removed to correct a mistake, but approval requires a new
+image. Photographs on approved loans have no delete action. File deletion waits
+for commit and preserves files referenced by inherited renewal evidence.
+
 P3 preserves the mature physical identity outcome without copying Girvi's
 document internals:
 

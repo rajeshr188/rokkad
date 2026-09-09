@@ -470,6 +470,10 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                     try:
                         visit(reverse("workspace_slug_party_create", kwargs={"workspace_slug": slug}))
                         page.locator('[name="display_name"]').fill(f"Browser Borrower {width}")
+                        if width == 1440:
+                            page.locator('[name="profile_photo"]').set_input_files({
+                                "name": "borrower.jpg", "mimeType": "image/jpeg", "buffer": photograph.getvalue(),
+                            })
                         page.locator('button[type="submit"]').last.click()
                         expect(page.locator("h1")).to_contain_text(f"Browser Borrower {width}")
                         capture("party")
@@ -522,6 +526,17 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                         page.get_by_role("button", name="Save draft", exact=True).click()
                         expect(page.locator("[data-pawn-draft-error-summary]")).to_have_count(0)
                         capture("draft-saved")
+                        if width == 1440:
+                            page.once("dialog", lambda dialog: dialog.accept())
+                            page.get_by_role("button", name="Delete photo", exact=True).click()
+                            expect(page.get_by_role("button", name="Delete photo", exact=True)).to_have_count(0)
+                            expect(page.get_by_text("Required before approval.", exact=True)).to_be_visible()
+                            page.locator('.js-collateral-photo-input').set_input_files({
+                                "name": "replacement.jpg", "mimeType": "image/jpeg", "buffer": photograph.getvalue(),
+                            })
+                            page.get_by_role("button", name="Save photo", exact=True).click()
+                            expect(page.get_by_role("button", name="Delete photo", exact=True)).to_have_count(1)
+                            capture("draft-photo-replaced")
                         if width == 390:
                             detail_url = page.url
                             visit(f"/w/{slug}/loans/setup/workflow/")
@@ -560,6 +575,14 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                             self.assertTrue(copies[0].startswith(b"%PDF"))
                             self.assertEqual(copies[0], copies[1])
                             report["documents"].append({"width": width, "type": name, "bytes": len(copies[0]), "identical_reprint": True})
+                        visit(self._loan_url("pawn_loan_list") + f"?q=Browser+Borrower+{width}")
+                        if width == 1440:
+                            expect(page.locator('tbody img.loan-list-photo')).to_have_count(1)
+                            page.locator('tbody img.loan-list-photo').scroll_into_view_if_needed()
+                            page.wait_for_function("document.querySelector('tbody img.loan-list-photo').naturalWidth > 0")
+                        else:
+                            expect(page.locator('tbody [aria-label="No borrower photo"]')).to_have_count(1)
+                        capture("loan-list-photos")
                         visit(self._loan_url("pawn_collateral_list"))
                         page.locator('[name="q"]').fill(f"Browser Borrower {width}")
                         page.get_by_role("button", name="Search", exact=True).click()
@@ -567,6 +590,10 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                         expect(page).to_have_url(re.compile(r"q=Browser"))
                         page.get_by_role("link", name="Net weight", exact=True).click()
                         expect(page).to_have_url(re.compile(r"sort=net_weight"))
+                        expect(page.locator('tbody img.loan-list-photo')).to_have_count(1)
+                        expect(page.locator('tbody img.loan-list-photo')).to_be_visible()
+                        page.locator('tbody img.loan-list-photo').scroll_into_view_if_needed()
+                        page.wait_for_function("document.querySelector('tbody img.loan-list-photo').naturalWidth > 0")
                         capture("collateral-list")
                         page.get_by_role("link", name="Browser gold chain", exact=True).click()
                         expect(page.get_by_role("link", name="Review event history", exact=True)).to_be_visible()

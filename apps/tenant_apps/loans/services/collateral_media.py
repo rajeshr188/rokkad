@@ -97,6 +97,38 @@ def append_collateral_photo(
     )
 
 
+@transaction.atomic
+def delete_draft_collateral_photo(collateral_item_id, photo_id, *, actor):
+    from apps.orgs.access import resolve_workspace_access
+    from apps.tenant_apps.loans.models import LoanChangeLog, PawnLoan
+
+    # Match approval's lock order so approval and removal cannot race.
+    workspace_id = current_tenant_workspace_id()
+    item_ref = PawnCollateralItem.objects.filter(pk=collateral_item_id, workspace_id=workspace_id).first() if workspace_id else None
+    if item_ref is None:
+        raise PawnCollateralMediaError("Collateral item was not found in the active workspace.")
+    loan = PawnLoan.objects.select_for_update().get(pk=item_ref.loan_id, workspace_id=workspace_id)
+    resolve_workspace_access(actor=actor, workspace=loan.workspace).require("data.edit")
+    if loan.state != PawnLoanState.DRAFT.value:
+        raise PawnCollateralMediaError("Photographs can only be deleted while the loan is a draft.")
+    if not PawnCollateralItem.objects.select_for_update().filter(pk=collateral_item_id, loan=loan).exists():
+        raise PawnCollateralMediaError("Collateral changed loans. Reload the loan before deleting a photograph.")
+    photo = PawnCollateralPhoto.objects.select_for_update().filter(pk=photo_id, collateral_item_id=collateral_item_id).first()
+    if photo is None:
+        raise PawnCollateralMediaError("Photograph was not found on this collateral item.")
+    if photo.renewal_copies.exists():
+        raise PawnCollateralMediaError("This photograph is retained as renewal evidence and cannot be deleted.")
+    storage, name = photo.file.storage, photo.file.name
+    metadata = {"action": "collateral_photo_deleted", "collateral_item_id": collateral_item_id,
+                "photo_id": photo.pk, "original_filename": photo.original_filename, "sha256": photo.sha256}
+    # Deliberate queryset deletion, using the existing draft-only PostgreSQL guard.
+    PawnCollateralPhoto.objects.filter(pk=photo.pk).delete()
+    LoanChangeLog.objects.create(loan=loan, actor=actor, event_kind="DRAFT_UPDATED",
+                                from_state="DRAFT", to_state="DRAFT", metadata=metadata)
+    if name and not photo.inherited_from_id and not PawnCollateralPhoto.objects.filter(file=name).exists():
+        transaction.on_commit(lambda: storage.delete(name))
+
+
 def inherit_collateral_photos(source_item, successor_item, *, actor=None):
     inherited = []
     for source in source_item.photos.order_by("captured_at", "pk"):

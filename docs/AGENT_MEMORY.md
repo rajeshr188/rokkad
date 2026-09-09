@@ -8,6 +8,16 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Collateral list thumbnails use the latest captured photograph, prefetched one per
+item and served through the protected loan/photo route. Loan lists reuse the Party
+profile_photo for borrower thumbnails. Missing photos use explicit placeholders.
+
+Saved collateral photographs can be deleted by data.edit users only while the loan
+is DRAFT, through a POST service that locks the loan before checking state. Removing
+the final photo requires a replacement before approval. PawnCollateralPhoto opts out
+of django-cleanup: inherited renewal rows share files, so draft services delete only
+unshared original files after commit, preserving originals for inherited rows.
+
 Collateral and Releases have Workspace sidebar browsing routes at loans/collateral/
 and loans/releases/. django-filter and django-tables2 provide GET filters, sorting
 and 25-row pagination; HTMX fragments retain URL/history support. Record links use

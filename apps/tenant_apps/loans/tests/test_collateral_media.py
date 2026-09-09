@@ -170,6 +170,80 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
                 public_id=uuid.uuid4()
             )
 
+    def test_draft_photo_delete_is_post_only_and_blocks_approval_until_replaced(self):
+        photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        storage, name = photo.file.storage, photo.file.name
+        url = reverse("loans:pawn_collateral_photo_delete", args=[self.loan.pk, self.item.pk, photo.pk])
+        self.assertContains(self.client.get(reverse("loans:pawn_loan_detail", args=[self.loan.pk])), "Delete photo")
+        self.assertEqual(self.client.get(url).status_code, 405)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(url).status_code, 302)
+        self.assertFalse(PawnCollateralPhoto.objects.filter(pk=photo.pk).exists())
+        self.assertFalse(storage.exists(name))
+        self.assertTrue(self.loan.change_log.filter(metadata__action="collateral_photo_deleted").exists())
+        with self.assertRaisesRegex(PawnLifecycleError, "requires at least one photograph"):
+            approve_pawn_loan(self.loan.pk, actor=self.owner)
+        append_collateral_photo(self.item.pk, upload=self.photo("replacement.jpg"), actor=self.owner)
+        approve_pawn_loan(self.loan.pk, actor=self.owner)
+
+    def test_photo_delete_preserves_approved_evidence_and_rejects_wrong_item(self):
+        from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
+        photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        wrong = reverse("loans:pawn_collateral_photo_delete", args=[self.loan.pk, self.item.pk + 999999, photo.pk])
+        self.assertEqual(self.client.post(wrong).status_code, 404)
+        approve_pawn_loan(self.loan.pk, actor=self.owner)
+        with self.assertRaisesRegex(PawnCollateralMediaError, "only be deleted"):
+            delete_draft_collateral_photo(self.item.pk, photo.pk, actor=self.owner)
+        self.assertNotContains(self.client.get(reverse("loans:pawn_loan_detail", args=[self.loan.pk])), "Delete photo")
+        url = reverse("loans:pawn_collateral_photo_delete", args=[self.loan.pk, self.item.pk, photo.pk])
+        self.assertEqual(self.client.post(url).status_code, 302)
+        self.assertTrue(PawnCollateralPhoto.objects.filter(pk=photo.pk).exists())
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            PawnCollateralPhoto.objects.filter(pk=photo.pk).delete()
+
+    def test_photo_delete_rollback_preserves_record_and_file(self):
+        from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
+        photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        with self.captureOnCommitCallbacks(execute=True):
+            with self.assertRaises(RuntimeError), transaction.atomic():
+                delete_draft_collateral_photo(self.item.pk, photo.pk, actor=self.owner)
+                raise RuntimeError("rollback")
+        self.assertTrue(PawnCollateralPhoto.objects.filter(pk=photo.pk).exists())
+        self.assertTrue(photo.file.storage.exists(photo.file.name))
+
+    def test_photo_delete_keeps_shared_renewal_file(self):
+        from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo, inherit_collateral_photos
+        source = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        copy = inherit_collateral_photos(self.item, self.item, actor=self.owner)[0]
+        with self.assertRaisesRegex(PawnCollateralMediaError, "renewal evidence"):
+            delete_draft_collateral_photo(self.item.pk, source.pk, actor=self.owner)
+        with self.captureOnCommitCallbacks(execute=True):
+            delete_draft_collateral_photo(self.item.pk, copy.pk, actor=self.owner)
+        self.assertTrue(source.file.storage.exists(source.file.name))
+        self.assertTrue(PawnCollateralPhoto.objects.filter(pk=source.pk).exists())
+
+    def test_removing_draft_item_preserves_inherited_file(self):
+        from apps.tenant_apps.loans.services.collateral_media import inherit_collateral_photos
+        from apps.tenant_apps.loans.services.pawn_drafts import _delete_draft_collateral
+        source = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        other = PawnCollateralItem.objects.create(loan=self.loan, description="Inherited ring", metal="GOLD",
+            gross_weight=2, net_weight=2, purity_percentage=90)
+        inherit_collateral_photos(self.item, other, actor=self.owner)
+        with self.captureOnCommitCallbacks(execute=True):
+            _delete_draft_collateral(other)
+        self.assertTrue(source.file.storage.exists(source.file.name))
+        self.assertTrue(PawnCollateralPhoto.objects.filter(pk=source.pk).exists())
+
+    def test_photo_delete_requires_edit_permission(self):
+        photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        viewer = get_user_model().objects.create_user(username="photo-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        url = reverse("loans:pawn_collateral_photo_delete", args=[self.loan.pk, self.item.pk, photo.pk])
+        self.assertEqual(self.client.post(url).status_code, 403)
+        self.assertTrue(PawnCollateralPhoto.objects.filter(pk=photo.pk).exists())
+
     def test_invalid_photo_is_rejected_without_evidence(self):
         with self.assertRaisesRegex(PawnCollateralMediaError, "valid JPEG or PNG"):
             append_collateral_photo(
