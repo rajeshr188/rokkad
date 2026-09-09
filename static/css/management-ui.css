@@ -3,7 +3,7 @@
 .rokkad-management .mgmt-accent-bar{background:#fff;color:#304a3c;border-bottom:1px solid #dfe5df;flex-wrap:wrap;padding:14px 24px}
 .rokkad-management .mgmt-accent-bar a{color:#146653}
 .rokkad-management .mgmt-accent-bar>span{flex-wrap:wrap}
-.rokkad-management .mgmt-sidebar{width:232px;min-width:232px;padding:16px 12px;border-color:#dfe5df;top:0;max-height:100vh}
+.rokkad-management .mgmt-sidebar{width:232px;min-width:232px;padding:0;border-color:#dfe5df;top:0;max-height:100vh}
 .rokkad-management .mgmt-nav-link{border-radius:7px;margin:2px 0;font-size:13px;color:#53635a}
 .rokkad-management .mgmt-nav-link.active,.rokkad-management .mgmt-nav-link:hover{background:#e8f2ec;color:#146653}
 .rokkad-management .mgmt-content{flex:1;min-width:0;padding:32px;max-width:none}

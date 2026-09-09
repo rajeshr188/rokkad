@@ -1261,7 +1261,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         response = self.tenant_get(reverse("loans:document_layout_guide"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Understand the LPD7 boundary")
+        self.assertContains(response, "Layout and print profile responsibilities")
         self.assertContains(response, "Print profile owns")
         self.assertContains(response, "Resolution order:")
         self.assertContains(response, "Series &rarr; License &rarr; Workspace")

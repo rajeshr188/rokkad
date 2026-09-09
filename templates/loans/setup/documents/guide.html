@@ -3,14 +3,17 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
-  <div><h1 class="h3 mb-1">Loan document printing guide</h1><p class="text-muted mb-0">Layouts, physical print profiles, official issues, and safe recovery for Owners and Admins.</p></div>
+  <div><h1 class="h3 mb-1">Loan document printing guide</h1><p class="text-muted mb-0">From your first draft to a custom background, tested PDF, and assigned counter printout.</p></div>
   <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'loans:document_print_profile_list' %}">Print profiles</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a></div>
 </div>
 
-<div class="alert alert-primary"><strong>The safe workflow:</strong> Design and publish logical content &rarr; create and test a physical print profile &rarr; assign both &rarr; use the normal loan Print button &rarr; verify the immutable issue evidence.</div>
+{% include "loans/setup/documents/_beginner_guide.html" %}
+
+<details class="mb-4" id="reference">
+<summary class="h5">Advanced reference and recovery</summary>
 
 <div class="card card-body mb-3">
-  <h2 class="h5">Understand the LPD7 boundary</h2>
+  <h2 class="h5">Layout and print profile responsibilities</h2>
   <div class="row g-3">
     <div class="col-md-6"><strong>Document layout owns</strong><ul class="mb-0"><li>Legal wording, fields, tables, signatures, and QR</li><li>Original, Duplicate, Terms, and D3 logical surfaces</li><li>Flow geometry or exact PDF-overlay backgrounds</li></ul></div>
     <div class="col-md-6"><strong>Print profile owns</strong><ul class="mb-0"><li>A5 sequential or A4 landscape side-by-side packaging</li><li>Simplex/duplex page order and selected logical surfaces</li><li>Scaling, flip-edge, and printer guidance</li></ul></div>
@@ -132,5 +135,6 @@
   </ol>
 </div>
 
+</details>
 <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{% url 'loans:document_layout_create' %}">Create starter layout</a><a class="btn btn-outline-primary" href="{% url 'loans:document_print_profile_create' %}">Create print profile</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">Issued documents</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a></div>
 {% endblock %}

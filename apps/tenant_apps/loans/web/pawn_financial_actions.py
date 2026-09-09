@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.tenant_apps.loans.access import (
-    LOANS_ADMIN_ACTION,
+    LOANS_ADMIN_ACTION, loans_action_required,
     loans_setup_required,
     loans_workspace_required,
 )
@@ -70,7 +70,7 @@ def _accrual_preview_rows(loan, previews):
 def _can_administer(request):
     return request.loans_workspace_access.can(LOANS_ADMIN_ACTION)
 
-@loans_workspace_required
+@loans_action_required("loan.disburse")
 def pawn_loan_disburse(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnDisbursalForm(

@@ -1,6 +1,7 @@
 """Opt-in Chromium acceptance; run this class explicitly, never against live data."""
 
 import json
+import re
 import gc
 import traceback
 import os
@@ -49,6 +50,119 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
         self.addCleanup(connection_created.disconnect, restrict_browser_connection)
         self.workspace = self._workspace("Browser Counter")
         self._setup_loans()
+
+    def test_collateral_appraisal_prefill_and_manual_override(self):
+        from playwright.sync_api import sync_playwright, expect
+        from apps.tenancy.context import workspace_context
+        from apps.tenant_apps.rates.models import Rate, RateSource
+        MVPOperatorJourneyTests._party(self)
+        with workspace_context(self.workspace.pk):
+            source = RateSource.objects.create(name="Appraisal reference", location="Local")
+            Rate.objects.create(rate_source=source, metal="Gold", currency="INR", purity="24k", buying_rate="7000", selling_rate="7100")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                context = browser.new_context(viewport={"width": 390, "height": 844})
+                context.add_cookies([{"name": "sessionid", "value": self.client.cookies["sessionid"].value, "url": self.live_server_url}])
+                page = context.new_page()
+                page.goto(self.live_server_url + reverse("workspace_slug_loan_create", kwargs={"workspace_slug": self.workspace.slug}))
+                first = page.locator('[data-collateral-form]').first
+                first.locator('[name$="-gross_weight"]').fill("10")
+                first.locator('[name$="-net_weight"]').fill("9")
+                first.locator('[name$="-purity_percentage"]').fill("90")
+                appraisal = first.locator('[name$="-latest_appraised_value"]')
+                expect(appraisal).to_have_value("56700.00")
+                appraisal.fill("50000")
+                first.locator('[name$="-net_weight"]').fill("8")
+                expect(first.locator('[data-appraisal-result]')).to_have_attribute('data-value', '50400.00')
+                expect(appraisal).to_have_value("50000")
+                first.get_by_role('button', name='Use suggestion').click()
+                expect(appraisal).to_have_value("50400.00")
+                page.locator('#add-collateral').click()
+                second = page.locator('[data-collateral-form]').nth(1)
+                second.locator('[name$="-gross_weight"]').fill("20")
+                second.locator('[name$="-net_weight"]').fill("18")
+                second.locator('[name$="-purity_percentage"]').fill("50")
+                expect(second.locator('[name$="-latest_appraised_value"]')).to_have_value("63000.00")
+                second.locator('[name$="-metal"]').select_option("SILVER")
+                expect(second.locator('[data-appraisal-result]')).to_contain_text("No usable INR")
+                expect(second.locator('[name$="-latest_appraised_value"]')).to_have_value("")
+                expect(appraisal).to_have_value("50400.00")
+                first.locator('[name$="-net_weight"]').fill("11")
+                expect(first.locator('[data-appraisal-result]')).to_contain_text("Enter valid")
+                expect(appraisal).to_have_value("")
+                context.close()
+            finally:
+                browser.close()
+
+    def test_public_landing_matches_current_product(self):
+        from playwright.sync_api import sync_playwright, expect
+
+        artifacts = Path(gettempdir()) / "rokkad-landing-ux"
+        artifacts.mkdir(exist_ok=True)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                for width in (1440, 390):
+                    page = browser.new_page(viewport={"width": width, "height": 900})
+                    response = page.goto(self.live_server_url + reverse("home"))
+                    self.assertEqual(response.status, 200)
+                    expect(page.get_by_role("heading", name="Manage pawn loans from application to repayment and release.")).to_be_visible()
+                    for app in ("PawnLoans", "Parties", "Rates", "Notify"):
+                        expect(page.get_by_role("heading", name=app, exact=True)).to_be_visible()
+                    self.assertNotIn("Accounting core", page.locator("body").inner_text())
+                    self.assertNotIn("Inventory purchase", page.locator("body").inner_text())
+                    page.screenshot(path=str(artifacts / f"{width}-landing.png"), full_page=True)
+                    self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), width + 1)
+                    page.close()
+            finally:
+                browser.close()
+
+    def test_counter_dashboard_queues_and_search(self):
+        from playwright.sync_api import sync_playwright, expect
+        from apps.tenancy.context import workspace_context
+        from apps.tenant_apps.loans.models import PawnLoan
+
+        party = MVPOperatorJourneyTests._party(self)
+        with workspace_context(self.workspace.pk):
+            for index in range(23):
+                PawnLoan.objects.create(
+                    workspace=self.workspace, product_version=self.product,
+                    license_id=self.series.license_id, series=self.series, borrower=party,
+                    loan_number=f"BROWSER-WORK-{index:03d}", state="DRAFT",
+                    principal_amount=1000, monthly_interest_rate=2,
+                    loan_date=self.today, created_by=self.owner,
+                )
+        artifacts = Path(gettempdir()) / "rokkad-counter-dashboard"
+        artifacts.mkdir(exist_ok=True)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                for width in (1440, 390):
+                    context = browser.new_context(viewport={"width": width, "height": 1000})
+                    context.add_cookies([{"name": "sessionid", "value": self.client.cookies["sessionid"].value, "url": self.live_server_url}])
+                    page = context.new_page()
+                    errors = []
+                    page.on("pageerror", lambda error: errors.append(str(error)))
+                    url = self.live_server_url + reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
+                    page.goto(url)
+                    expect(page.locator("#queue-title")).to_have_text("Drafts to review")
+                    expect(page.get_by_role("link", name="BROWSER-WORK-000", exact=True)).to_be_visible()
+                    page.get_by_role("link", name="Next", exact=True).click()
+                    expect(page.get_by_role("link", name="BROWSER-WORK-022", exact=True)).to_be_visible()
+                    page.screenshot(path=str(artifacts / f"{width}-drafts.png"), full_page=True)
+                    self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), width + 1)
+                    page.get_by_role("link", name="Payments due today 0", exact=True).click()
+                    expect(page.locator("#queue-title")).to_have_text("Payments due today")
+                    expect(page.get_by_text("No items in this queue.", exact=True)).to_be_visible()
+                    page.locator("#counter-search").fill("BROWSER-WORK-022")
+                    page.get_by_role("button", name="Find loan / repayment", exact=True).click()
+                    expect(page.locator("tbody")).to_contain_text("BROWSER-WORK-022")
+                    expect(page.locator("tbody")).not_to_contain_text("BROWSER-WORK-021")
+                    self.assertEqual(errors, [])
+                    context.close()
+            finally:
+                browser.close()
 
     def test_workspace_navigation_scope_and_unsaved_switch(self):
         from playwright.sync_api import sync_playwright, expect
@@ -408,10 +522,21 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                         page.get_by_role("button", name="Save draft", exact=True).click()
                         expect(page.locator("[data-pawn-draft-error-summary]")).to_have_count(0)
                         capture("draft-saved")
-                        page.get_by_role("button", name="Approve loan", exact=True).click()
-                        capture("approved")
-                        page.get_by_role("link", name="Disburse loan", exact=True).click()
-                        page.locator('button[type="submit"]').last.click()
+                        if width == 390:
+                            detail_url = page.url
+                            visit(f"/w/{slug}/loans/setup/workflow/")
+                            page.locator('input[value="SIMPLE"]').check()
+                            page.get_by_role("button", name="Save workflow", exact=True).click()
+                            page.goto(detail_url)
+                            page.get_by_role("link", name="Review and disburse", exact=True).click()
+                            capture("review-disburse")
+                            page.get_by_label("I have reviewed the terms and paid the borrower the amount shown.").check()
+                            page.get_by_role("button", name="Confirm disbursal", exact=True).click()
+                        else:
+                            page.get_by_role("button", name="Approve loan", exact=True).click()
+                            capture("approved")
+                            page.get_by_role("link", name="Disburse loan", exact=True).click()
+                            page.locator('button[type="submit"]').last.click()
                         capture("active")
                         page.get_by_role("link", name="Repayment", exact=True).click()
                         page.locator('[name="amount"]').fill("1000")
@@ -435,6 +560,26 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                             self.assertTrue(copies[0].startswith(b"%PDF"))
                             self.assertEqual(copies[0], copies[1])
                             report["documents"].append({"width": width, "type": name, "bytes": len(copies[0]), "identical_reprint": True})
+                        visit(self._loan_url("pawn_collateral_list"))
+                        page.locator('[name="q"]').fill(f"Browser Borrower {width}")
+                        page.get_by_role("button", name="Search", exact=True).click()
+                        expect(page.locator('#browse-content [role="status"]')).to_have_text("1 matching record")
+                        expect(page).to_have_url(re.compile(r"q=Browser"))
+                        page.get_by_role("link", name="Net weight", exact=True).click()
+                        expect(page).to_have_url(re.compile(r"sort=net_weight"))
+                        capture("collateral-list")
+                        page.get_by_role("link", name="Browser gold chain", exact=True).click()
+                        expect(page.get_by_role("link", name="Review event history", exact=True)).to_be_visible()
+                        visit(self._loan_url("pawn_release_list"))
+                        page.locator('[name="q"]').fill(f"Browser Borrower {width}")
+                        page.get_by_role("button", name="Search", exact=True).click()
+                        expect(page.locator('#browse-content [role="status"]')).to_have_text("1 matching record")
+                        capture("release-list")
+                        page.locator('tbody tr td a').first.click()
+                        expect(page.get_by_role("heading", name="Settlement details")).to_be_visible()
+                        capture("release-detail")
+                        page.go_back()
+                        expect(page.get_by_role("heading", name="Releases", exact=True)).to_be_visible()
                     except Exception:
                         report["failure"] = traceback.format_exc()
                         try:

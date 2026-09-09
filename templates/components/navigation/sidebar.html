@@ -3,15 +3,19 @@
 {% with effective_workspace=request.workspace %}
 {% if effective_workspace %}
 <nav class="workspace-nav p-3" aria-label="Workspace navigation">
-  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}" href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-speedometer2"></i> Overview</a>
+  <div class="workspace-nav-group-label">Work</div>
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}" href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-speedometer2"></i> Dashboard</a>
   {% if 'data.view' in nav_actions %}
-  <a class="workspace-nav-link {% if '/internal/create/' in request.path or request.resolver_match.url_name == 'pawn_loan_create' or request.resolver_match.url_name == 'workspace_slug_loan_create' %}active{% endif %}" href="{% url 'workspace_slug_loan_create' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-plus-circle"></i> Counter / New loan</a>
-  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'pawn_loan_list' or request.resolver_match.url_name == 'workspace_slug_loan_list' or '/loans/internal/' in request.path and '/create/' not in request.path %}active{% endif %}" href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-cash-coin"></i> PawnLoans</a>
+  {% if 'data.create' in nav_actions %}<a class="workspace-nav-link {% if '/internal/create/' in request.path or request.resolver_match.url_name == 'pawn_loan_create' or request.resolver_match.url_name == 'workspace_slug_loan_create' %}active{% endif %}" href="{% url 'workspace_slug_loan_create' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-plus-circle"></i> New loan</a>{% endif %}
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'pawn_loan_list' or request.resolver_match.url_name == 'workspace_slug_loan_list' or '/loans/internal/' in request.path and '/create/' not in request.path %}active{% endif %}" href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-cash-coin"></i> Loans</a>
+  <a class="workspace-nav-link {% if '/loans/collateral/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_loans_dispatch' workspace_slug=effective_workspace.slug loans_path='collateral/' %}"><i aria-hidden="true" class="bi bi-gem"></i> Collateral</a>
+  <a class="workspace-nav-link {% if '/loans/releases/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_loans_dispatch' workspace_slug=effective_workspace.slug loans_path='releases/' %}"><i aria-hidden="true" class="bi bi-box-arrow-up"></i> Releases</a>
   {% endif %}
   {% if 'data.view' in nav_actions or 'contact.view' in nav_actions %}
   <a class="workspace-nav-link {% if '/parties/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-person-vcard"></i> Parties</a>
   {% endif %}
   {% if 'data.view' in nav_actions %}
+  <div class="workspace-nav-group-label">Reference &amp; communication</div>
   <a class="workspace-nav-link {% if '/rates/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-coin"></i> Rates</a>
   <a class="workspace-nav-link {% if '/notify/' in request.path or '/notifications/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-envelope-paper"></i> Notifications</a>
   {% endif %}

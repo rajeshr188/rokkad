@@ -120,12 +120,6 @@ See templates/layouts/base.html for the current base template.
               {%trans "Rates"%}
             </a>
             <ul class="dropdown-menu">
-              {%if request.grate%}<li class="dropdown-item"><a
-                  href="{% url 'rate_detail' request.grate.id%}">{{request.grate}}</a></li>{%endif%}
-              {%if request.srate%}<li class="dropdown-item"><a
-                  href="{% url 'rate_detail' request.srate.id%}">{{request.srate}}</a></li>{%endif%}
-              {%if request.brate%}<li class="dropdown-item"><a
-                  href="{% url 'rate_detail' request.brate.id%}">{{request.brate}}</a></li>{%endif%}
               <li class="dropdown-item"><a href="{% url 'rate_create'%}"><svg xmlns="http://www.w3.org/2000/svg"
                     width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
                     <path

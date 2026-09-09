@@ -517,3 +517,7 @@
         padding: 1.5rem;
     }
 }
+/* Four supported business apps, with readable cards at every viewport. */
+@media (min-width: 992px) {
+    .public-card-grid.public-app-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

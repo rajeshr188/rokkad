@@ -1,11 +1,8 @@
-from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.test import SimpleTestCase
 
-from apps.tenant_apps.rates.middleware import RateMiddleware
 from apps.tenant_apps.rates.models import Rate, RateSource
 
 
@@ -32,22 +29,3 @@ class RateWorkspaceIsolationTests(SimpleTestCase):
 
         with self.assertRaises(ValidationError):
             rate.save()
-
-
-@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
-class RateCacheIsolationTests(SimpleTestCase):
-    def setUp(self):
-        cache.clear()
-
-    def test_middleware_reads_only_workspace_cache_keys(self):
-        cache.set("workspace:1:gold_rate", "workspace-one")
-        cache.set("workspace:2:gold_rate", "workspace-two")
-        request = RequestFactory().get("/")
-        request.user = SimpleNamespace(is_authenticated=True)
-        request.workspace = SimpleNamespace(pk=2)
-
-        with patch("apps.tenant_apps.rates.middleware.Rate.objects") as objects:
-            objects.filter.return_value.values.return_value.annotate.return_value = []
-            RateMiddleware(lambda _request: None).process_request(request)
-
-        self.assertEqual(request.grate, "workspace-two")

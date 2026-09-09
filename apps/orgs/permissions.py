@@ -174,6 +174,11 @@ CONTACT_PERMISSIONS: List[PermissionDef] = [
 # ALL PERMISSIONS COMBINED
 # ============================================================================
 
+LOAN_PERMISSIONS: List[PermissionDef] = [
+    ("loan_approve", "Can approve loans", "Review and approve loan terms"),
+    ("loan_disburse", "Can disburse loans", "Record loan disbursal"),
+]
+
 ALL_PERMISSIONS: List[PermissionDef] = (
     WORKSPACE_PERMISSIONS
     + TEAM_PERMISSIONS
@@ -184,6 +189,7 @@ ALL_PERMISSIONS: List[PermissionDef] = (
     + DEA_PERMISSIONS
     + STANDALONE_ACCOUNTING_PERMISSIONS
     + CONTACT_PERMISSIONS
+    + LOAN_PERMISSIONS
 )
 
 # ============================================================================
@@ -195,6 +201,7 @@ class RolePermissions:
     """Maps roles to their default permissions"""
 
     OWNER = [
+        "loan_approve", "loan_disburse",
         # Workspace - Full Access
         "workspace_view",
         "workspace_list",
@@ -270,6 +277,7 @@ class RolePermissions:
     ]
 
     ADMIN = [
+        "loan_approve", "loan_disburse",
         # Workspace - Edit only
         "workspace_view",
         "workspace_list",
@@ -485,6 +493,7 @@ def get_permissions_by_category() -> Dict[str, List[PermissionDef]]:
         "Workspace": WORKSPACE_PERMISSIONS,
         "Team": TEAM_PERMISSIONS,
         "Data": DATA_PERMISSIONS,
+        "Loans": LOAN_PERMISSIONS,
         "Billing": BILLING_PERMISSIONS,
         "Reports": REPORT_PERMISSIONS,
         "Girvi (Loans)": GIRVI_PERMISSIONS,

@@ -50,9 +50,28 @@ PARTY_EXPORT_FORMATS = {
 
 @party_action_required("view")
 def party_autocomplete(request):
+    from django.core import signing
+    from django.http import Http404
     from django_select2.views import AutoResponseView
+    from .widgets import PartyAutocompleteWidget
 
-    return AutoResponseView.as_view()(request)
+    class PartyResponseView(AutoResponseView):
+        def get_widget_or_404(self):
+            try:
+                url = signing.loads(
+                    request.GET.get("field_id", ""),
+                    salt=PartyAutocompleteWidget.token_salt,
+                    max_age=PartyAutocompleteWidget.token_max_age,
+                )
+            except signing.BadSignature as exc:
+                raise Http404("Invalid or expired borrower search token.") from exc
+            if url != request.path:
+                raise Http404("Borrower search token belongs to another URL.")
+            widget = PartyAutocompleteWidget(data_url=request.path)
+            self.queryset = widget.get_queryset()
+            return widget
+
+    return PartyResponseView.as_view()(request)
 
 
 def _party_detail_url(request, party, tab="overview"):

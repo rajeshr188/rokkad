@@ -86,6 +86,98 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.product_version = seed_default_loan_products()[0]
         type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
 
+    def test_owner_simple_workflow_is_atomic_and_replay_safe(self):
+        from apps.tenant_apps.loans.services.loan_workflow import make_review
+        setup = reverse("loans:loan_workflow_settings")
+        self.assertEqual(self.client.post(setup, {"mode": "SIMPLE"}).status_code, 302)
+        self.tenant.refresh_from_db()
+        self.assertEqual(self.tenant.loan_workflow, "SIMPLE")
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
+        response = self.client.get(url)
+        self.assertContains(response, "Confirm disbursal")
+        self.assertContains(response, "9800.00")
+        _, token = make_review(loan)
+        data = {"effective_date": "2026-07-18", "review_token": token, "confirmed": "on"}
+        with patch("apps.tenant_apps.loans.services.loan_workflow.disburse_pawn_loan", side_effect=ValueError("Payment record failed")):
+            self.assertContains(self.client.post(url, data), "Payment record failed")
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "DRAFT")
+        self.assertEqual(loan.approval_snapshots.count(), 0)
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
+        self.assertEqual(loan.approval_snapshots.count(), 1)
+        self.assertEqual(loan.loan_events.filter(event_kind="DISBURSAL").count(), 1)
+
+    def test_simple_review_rejects_stale_terms_and_workflow_switch(self):
+        from apps.tenant_apps.loans.services.loan_workflow import make_review
+        setup = reverse("loans:loan_workflow_settings")
+        self.client.post(setup, {"mode": "SIMPLE"})
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
+        _, token = make_review(loan)
+        PawnLoan.objects.filter(pk=loan.pk).update(tenure_months=4)
+        data = {"effective_date": "2026-07-18", "review_token": token, "confirmed": "on"}
+        self.assertContains(self.client.post(url, data), "changed")
+        self.client.post(setup, {"mode": "EXTENDED"})
+        self.assertContains(self.client.post(url, data), "separate approval")
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "DRAFT")
+        self.assertEqual(loan.approval_snapshots.count(), 0)
+
+    def test_staff_cannot_choose_workflow_or_use_owner_shortcut(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        staff = get_user_model().objects.create_user(username="workflow-staff")
+        role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=staff, company=self.tenant, role=role)
+        self.client.force_login(staff)
+        for name in ("loan_workflow_settings", "pawn_loan_review_disburse", "pawn_loan_approve", "pawn_loan_disburse", "pawn_loan_renew"):
+            url = reverse("loans:" + name, args=[] if name == "loan_workflow_settings" else [loan.pk])
+            self.assertEqual(self.client.post(url, {"mode": "SIMPLE"}).status_code, 403)
+
+    def test_extended_workflow_delegates_approval_and_disbursal_independently(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from apps.orgs.models import Company
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        staff = get_user_model().objects.create_user(username="workflow-approver")
+        role = Role.objects.create(name="LoanApproverOnly")
+        content_type = ContentType.objects.get_for_model(Company)
+        for code in ("data_view", "loan_approve"):
+            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            role.permissions.add(permission)
+        membership = Membership.objects.create(user=staff, company=self.tenant, role=role)
+        self.client.force_login(staff)
+        approve_url = reverse("loans:pawn_loan_approve", args=[loan.pk])
+        disburse_url = reverse("loans:pawn_loan_disburse", args=[loan.pk])
+        self.assertEqual(self.client.post(approve_url).status_code, 302)
+        self.assertEqual(self.client.post(disburse_url, {"effective_date": "2026-07-18"}).status_code, 403)
+        self.client.force_login(self.owner)
+        self.client.post(reverse("loans:loan_workflow_settings"), {"mode": "SIMPLE"})
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "APPROVED")
+        disburser = Role.objects.create(name="LoanDisburserOnly")
+        for code in ("data_view", "loan_disburse"):
+            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            disburser.permissions.add(permission)
+        membership.role = disburser
+        membership.save(update_fields=["role"])
+        self.client.force_login(staff)
+        self.assertEqual(self.client.post(approve_url).status_code, 403)
+        self.assertEqual(self.client.post(disburse_url, {"effective_date": "2026-07-18"}).status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
+
     def test_list_filters_workspace_loans_and_preserves_filters_while_paging(self):
         license, series = self._configured_setup()
         for sequence in range(26):

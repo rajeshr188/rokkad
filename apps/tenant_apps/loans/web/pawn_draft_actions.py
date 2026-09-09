@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.tenant_apps.loans.access import loans_workspace_required
+from apps.tenant_apps.loans.access import loans_workspace_required, loans_action_required
 from apps.tenant_apps.loans.domain import CollateralEconomicsError, LoanDocumentKind, PawnLoanState
 from apps.tenant_apps.loans.forms import (
     PawnCollateralDraftFormSet, PawnCollateralPhotoForm, PawnDraftForm,
@@ -39,7 +39,7 @@ def _pawn_loan_for_workspace(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("data.create")
 def pawn_loan_create(request):
     readiness = get_pawn_draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
@@ -94,7 +94,7 @@ def pawn_loan_create(request):
     )
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 def pawn_loan_update(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     if loan.state != PawnLoanState.DRAFT.value:
@@ -228,7 +228,7 @@ def pawn_collateral_photo_add(request, pk, item_pk):
     return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
 
 
-@loans_workspace_required
+@loans_action_required("loan.approve")
 @require_POST
 def pawn_loan_approve(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)

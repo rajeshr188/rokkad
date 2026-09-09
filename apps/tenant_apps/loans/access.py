@@ -13,6 +13,17 @@ LOANS_OWNER_ACTION = "workspace.transfer"
 LOANS_WORKSPACE_ACTION = "data.view"
 
 
+def loans_action_required(action):
+    def decorate(view_func):
+        @functools.wraps(view_func)
+        @loans_workspace_required
+        def wrapped(request, *args, **kwargs):
+            request.loans_workspace_access.require(action)
+            return view_func(request, *args, **kwargs)
+        return wrapped
+    return decorate
+
+
 def _resolve_loans_access(request):
     workspace = resolve_request_workspace(request)
     if workspace is None:

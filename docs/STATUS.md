@@ -1,12 +1,203 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-09-09
 tags: [status, architecture]
 related: [ROADMAP.md, plans/completed.md, plans/active.md]
 ---
 
 # Status
+
+## 2026-09-09 - Lending usability checkpoint
+
+This checkpoint consolidates the completed work below: daily loan dashboard,
+shared navigation and landing updates, detailed document/overlay printing guide,
+optional Redis caching with stateless borrower autocomplete, configurable owner
+or separate approval/disbursal workflows, starter economic values, HTMX appraisal
+suggestions, and searchable collateral/release records. It supersedes the interim
+uncommitted notes in the individual entries below. No physical camera or printer
+acceptance is claimed; those checks remain deferred by the owner.
+
+Final verification: all 460 combined Loans, Rates isolation, HTTP operator,
+Workspace entrypoint and shell/auth regression tests passed in a fresh database.
+Migration drift and whitespace checks are clean. Browser acceptance passed for
+desktop and mobile viewport lending, appraisal suggestions and collateral/release
+browsing. The checkpoint is ready for commit and push on rls-mvp.
+
+## 2026-09-09 - Collateral and release browsing
+
+Added Workspace sidebar entries for Collateral and Releases, using django-filter
+and django-tables2 for searching, filtering, sorting and fixed 25-row pagination.
+HTMX replaces results while retaining shareable URLs and ordinary GET fallbacks.
+Collateral searches include short printed CI identifiers, borrower/loan references,
+metal, custody, loan status and hierarchical storage. Item links open the existing
+loan/item section with photographs and custody details. Release browsing includes
+full/partial, date and recorded/reversed filters. Release details show settlement
+components, returned items, actor/time and reversal evidence, with memo/loan links.
+Views require Loans data-view access and explicit Workspace query scope under RLS;
+no lifecycle mutations or new tables were introduced. The restricted-role HTTP
+browse test and desktop/mobile lending browser acceptance pass, including search,
+sorting, record navigation, browser Back, reversal display and cross-Workspace
+isolation. Changes remain uncommitted.
+
+## 2026-09-09 - HTMX collateral appraisal suggestions
+
+New and dynamically added collateral rows request a server-calculated appraisal
+after metal/weights/purity or loan date changes. The endpoint uses the Rates facade
+under Workspace access/RLS, INR 24k buying rate as of the loan date, net weight,
+purity, and paise rounding. It validates gross/net weights and displays rate date.
+Suggestions fill blank/automatic appraisal fields, preserve manual and persisted
+values, and offer explicit Use suggestion. Stale responses are discarded and
+automatic values are cleared when inputs become invalid or a rate is missing.
+GET performs no writes; loan save/approval retains normal valuation validation.
+Validation: two focused input/calculation tests passed, plus the HTMX browser
+scenario, existing desktop/mobile lending journeys, and restricted-role HTTP
+checks for Workspace rate isolation, loan-date lookup, and viewer denial (three
+acceptance tests). Changes remain uncommitted.
+
+## 2026-09-09 - Economic setup starter values
+
+New economic configuration forms prefill gold 2% monthly and silver 4% monthly.
+Fee setup prefills DOCUMENT_CHARGE / Document charge, FIXED, INR 10; the existing
+deduct-at-disbursal default remains checked. Guidance explains that configuration
+and fee policy are saved separately. No automatic policy creation, migration, or
+existing-policy changes occur. Bound user values remain authoritative. All three
+defaults/override and economics checks pass; `git diff --check` is clean. Changes
+remain uncommitted.
+
+## 2026-09-09 - Configurable loan workflow implemented
+
+Added explicit owner-controlled loan workflow choice, defaulting to separate
+approval/disbursal. SIMPLE mode offers a reviewed owner confirmation using the
+existing approval and disbursal services inside one transaction. Signed reviews
+detect changed loan details/economics; failures roll back and active-loan replays
+reuse existing evidence. Independent approval/disbursal permissions replace the
+previous broad data-view check; Owner/Admin defaults include both. Draft create/
+edit now require corresponding data permissions. Existing loan states survive
+switches and previously approved loans remain disbursable separately.
+Owner-only migration orgs.0006 is applied. All 147 Workspace/draft/HTTP operator
+checks and the broader 466 Loans/shell/authorization checks pass. Browser lending
+passes for extended desktop and simple mobile, continuing through repayment and
+release. The mobile review was visually checked. Renewal additionally requires
+both permissions because it activates a successor. All 37 final draft UI checks
+pass in a fresh disposable database; a reused database contained stale fixtures
+and caused lookup/count failures. Migration drift and `git diff --check` are clean.
+No existing Workspace was switched to simple mode. See the workflow ADR and
+`docs/flows/loan-workflow-choice.md`. Changes remain uncommitted.
+
+## 2026-09-09 - Plain loan labels and sole-owner workflow direction
+
+Renamed shared navigation to Dashboard, New loan, and Loans; replaced counter
+terminology in the dashboard and landing page with everyday lending language.
+Landing copy explicitly supports sole owners and teams. The recommended next UX
+step is a review-and-disburse action for authorized owners, using existing approval
+and disbursal services and preserving both evidence records. This is a proposal;
+loan lifecycle behavior has not changed. Printing should remain a follow-up action.
+All 23 shell/public rendering checks pass. Edits remain uncommitted.
+
+## 2026-09-08 - Prototype sidebar rhythm and current-product landing page
+
+Restored the prototype's navigation grouping, 232px sidebar rhythm, stronger
+active state, separate desktop Settings placement, and spacious main-content
+padding. Removed Bootstrap row gutters from the Workspace frame; management
+screens share the navigation spacing. Existing switcher, permissions, routes,
+mobile offcanvas navigation, and Settings destinations are retained.
+Landing copy now describes PawnLoans, Parties, Rates, and Notify and the
+counter-to-release journey. Removed accounting/ERP, inventory purchasing, stock,
+and ledger promises; the preview is explicitly illustrative rather than live data.
+All 23 shell/public rendering checks and four desktop/mobile Chromium scenarios
+pass: landing, counter queues, Workspace switching/unsaved protection, and
+administration. Desktop counter and mobile landing screenshots were visually
+reviewed; `git diff --check` passes. Changes remain local and uncommitted.
+
+## 2026-09-08 - Optional Redis and stateless borrower autocomplete
+
+General cache configuration now uses explicit CACHE_URL, defaulting to local memory.
+Borrower autocomplete retains Select2 UI/filtering/pagination but uses 24-hour
+signed endpoint tokens rather than cached widget/queryset state. The authorized
+Party endpoint rebuilds its fixed active-Party query under request Workspace/RLS.
+Workers share signing keys, not cache state. No schema/data migration is required.
+Old open forms need reloading after deployment. Redis remains an explicit option;
+its client packages remain available. All 11 restricted-role HTTP operator checks
+pass, including search during cache outage, a token issued by another process,
+and wrong-Workspace/expired/missing/invalid-token and authorization failures.
+The desktop/mobile Chromium lending scenario passes with CDN access and no page
+errors or failed requests; a sandboxed attempt failed a Party layout check.
+Local-memory and Redis CACHE_URL settings both resolve to their intended backends.
+`git diff --check` passes. Changes remain local and uncommitted. See the stateless
+autocomplete ADR and `docs/implementation/cache-configuration.md`.
+
+## 2026-09-08 - Legacy Rates cache removed
+
+Removed RateMiddleware from the request chain, deleted its implementation and
+the Rate post-save cache receiver, and removed their legacy header consumers.
+Rates app startup no longer registers cache signals. The database-backed Rates
+facade and Loans calculations are unchanged; cache backend settings are unchanged.
+Replaced the obsolete middleware-cache test with a real HTTP regression covering
+rate list/create/detail/update/delete and valuation lookups while default-cache
+get/set/delete raise connection errors. All 28 focused Rates, business-entrypoint,
+economics, and release-readiness checks pass. All 32 additional draft-service and
+restricted-role HTTP operator journey tests pass (60 total); `git diff --check`
+is clean.
+Select2/default-cache Redis configuration is a separate follow-up. Changes remain
+local and uncommitted alongside the earlier counter dashboard and guide work.
+
+## 2026-09-08 - Rates and cache dependency reviewed
+
+Traced Loans valuation to the database-backed Rates facade; it does not consume
+middleware cache values. Confirmed with mocked outages that both RateMiddleware
+and the Rate post-save cache receiver propagate cache failures. Identified stale/
+ambiguous quote caching and separate Select2/default-cache dependencies. Recommended
+retiring legacy Rates caching first, then addressing shared cache configuration
+and borrower autocomplete separately. No runtime behavior changed. Findings and
+scope are in `docs/implementation/rates-cache-review.md`.
+
+## 2026-09-08 - Beginner document layout and print-profile guide
+
+Expanded the in-app Starter guide with an ordered walkthrough for Flow and
+exact PDF overlays: blank-form preparation, revision-scoped asset upload and
+selection, A4/A5 geometry, saving field positions, separate copy/back backgrounds,
+profile composition/scaling, preview prerequisites, publishing, assignments, and
+immutable official reprints. Includes measured placement examples and troubleshooting.
+Contextual links now appear beside asset uploads, the overlay editor, and layout/
+profile creation; removed the obsolete schema-v1 claim on layout creation.
+Advanced reference remains expandable. Guide content follows current implementation,
+including the Original-front-only canvas and manual printer-driver settings.
+All four focused guide, layout creation/publishing/assignment, overlay starter,
+and print-profile lifecycle/preview tests pass; `git diff --check` is clean.
+Physical printer checks remain deferred by the user.
+See `docs/flows/loan-document-printing.md`. These edits and the earlier counter
+dashboard work remain local and uncommitted.
+
+## 2026-09-08 - Daily counter dashboard
+
+First-loan setup was published in `c72a787`. The next approved improvement is
+implemented locally: the dashboard leads with borrower/loan search and queues for
+drafts, approved loans awaiting disbursal, scheduled payments due today, overdue
+payments, and schedules requiring review. Queues sort oldest first and paginate
+20 loans per page; actions open the existing review, disbursal, and repayment
+screens. Search reuses the current loan-number/borrower-name/party-code filter.
+
+Due/overdue amounts come from canonical repayment obligations and allocations,
+including reversal effects, rather than legacy maturity-only overdue flags.
+They exclude unscheduled fees and are clearly separated from collection quotes.
+Schedule integrity findings remain visible. The view checks `data.view` before
+querying queues; authorized setup stays below daily work. Removed obsolete
+dashboard placeholders and the unused per-loan recorded-balance aggregation from
+page composition. No financial commands or authorization rules were changed.
+
+All 539 Workspace, Loans, shell, business-entry-point, and restricted-role HTTP
+operator checks pass in a fresh disposable database. Coverage includes schedule
+dates and allocation reversals, loan-state transitions, 20-row pagination,
+cross-Workspace isolation, and skipping queue queries for roles without loan
+access. All three Chromium scenarios pass: counter queues/search, two-Workspace
+navigation/unsaved-switch protection, and full desktop/mobile lending. Visual
+review led to removing the blank amount column from non-payment queues and
+shortening the draft action. All 18 final shell, HTTP lending/payment-link, and
+counter-browser checks pass; the final narrow layout was visually reviewed and
+`git diff --check` is clean. Changes remain local and uncommitted for review.
+The selector scans current Workspace loans for accurate counts; this is not a
+materialized dashboard projection. See `docs/flows/daily-counter-dashboard.md`.
 
 ## 2026-09-08 - Navigation published; first-loan setup guidance
 

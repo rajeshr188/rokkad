@@ -1,0 +1,12 @@
+{% load django_tables2 %}
+<div id="browse-content">
+<div class="card mb-3"><div class="card-body">
+<form method="get" action="{{ request.path }}" hx-get="{{ request.path }}" hx-target="#browse-content" hx-swap="outerHTML" hx-push-url="true" class="row g-3 align-items-end">
+{% for field in filter.form %}<div class="col-12 col-md-6 col-xl-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>{% endfor %}
+<div class="col-auto"><button class="btn btn-primary" type="submit">Search</button> <a class="btn btn-outline-secondary" href="{{ request.path }}">Clear</a></div>
+</form></div></div>
+<p class="small text-muted" role="status">{{ table.paginator.count }} matching record{{ table.paginator.count|pluralize }}</p>
+<div class="card"><div class="table-responsive" hx-boost="true" hx-target="#browse-content" hx-swap="outerHTML" hx-push-url="true">
+{% render_table table %}
+</div></div>
+</div>

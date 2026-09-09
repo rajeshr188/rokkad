@@ -6,6 +6,7 @@ from io import BytesIO
 import re
 from tempfile import TemporaryDirectory
 from uuid import uuid4
+from unittest.mock import patch
 
 from PIL import Image
 from django.contrib.auth import get_user_model
@@ -206,7 +207,14 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         detail_url = self._loan_url("pawn_loan_detail", loan.pk)
         self.assertEqual(response.url, detail_url)
         self._get(detail_url)
+        dashboard_url = reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
+        draft_work = self._get(dashboard_url)
+        self.assertEqual(draft_work.context["counter_work"]["queues"]["draft"]["count"], 1)
+        self.assertContains(draft_work, loan.loan_number)
         self._post(self._loan_url("pawn_loan_approve", loan.pk), expected_url=detail_url)
+        approved_work = self._get(dashboard_url + "?queue=approved")
+        self.assertEqual(approved_work.context["counter_work"]["queues"]["approved"]["count"], 1)
+        self.assertContains(approved_work, self._loan_url("pawn_loan_disburse", loan.pk))
         self._post(self._loan_url("pawn_loan_disburse", loan.pk), {"effective_date": self.today.isoformat()}, expected_url=detail_url)
         with workspace_context(self.workspace.pk):
             loan.refresh_from_db()
@@ -216,8 +224,22 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         dashboard = self._get(reverse("workspace_slug_dashboard", kwargs={
             "workspace_slug": self.workspace.slug,
         }))
-        self.assertEqual(dashboard.context["loan_count"], 1)
-        self.assertEqual(dashboard.context["total_loan_amount"], Decimal("10000"))
+        self.assertEqual(dashboard.context["counter_work"]["queues"]["approved"]["count"], 0)
+        self.assertEqual(dashboard.context["counter_work"]["queues"]["review"]["count"], 0)
+        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
+        from apps.tenant_apps.loans.selectors.obligation_state import get_active_repayment_schedule_as_of
+        with workspace_context(self.workspace.pk):
+            schedule = get_active_repayment_schedule_as_of(loan, self.today)
+            due_date = schedule.obligations.order_by("due_date").first().due_date
+            due_work = get_workspace_counter_work(workspace=self.workspace, as_of_date=due_date)
+            self.assertEqual(due_work["queues"]["due"]["count"], 1)
+            self.assertEqual(due_work["queues"]["overdue"]["count"], 0)
+            overdue_work = get_workspace_counter_work(workspace=self.workspace, as_of_date=due_date + timedelta(days=1))
+            self.assertEqual(overdue_work["queues"]["overdue"]["count"], 1)
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work", return_value=due_work):
+            payment_queue = self._get(dashboard_url + "?queue=due")
+        self.assertContains(payment_queue, self._loan_url("pawn_loan_repay", loan.pk))
+        self.assertContains(payment_queue, "Record repayment")
         breadcrumb = re.search(
             r'<nav aria-label="breadcrumb"[^>]*>(.*?)</nav>',
             dashboard.content.decode(), re.S,
@@ -277,6 +299,49 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertTrue(content.startswith(b"%PDF"))
         return content
 
+    def test_collateral_and_release_browsing_is_workspace_scoped(self):
+        from apps.tenant_apps.loans.models import PawnCollateralItem
+        from apps.tenant_apps.loans.services.pawn_reversal import reverse_pawn_loan_event
+        self._complete_first_loan()
+        with workspace_context(self.workspace.pk):
+            release = PawnLoanRelease.objects.get()
+            item = PawnCollateralItem.objects.get()
+            for index in range(26):
+                PawnCollateralItem.objects.create(workspace=self.workspace, loan=item.loan,
+                    description=f"Browse fixture {index:02d}", metal="SILVER", gross_weight=10,
+                    net_weight=9, purity_percentage=90)
+        collateral_url = self._loan_url("pawn_collateral_list")
+        releases_url = self._loan_url("pawn_release_list")
+        detail_url = self._loan_url("pawn_release_detail", release.pk)
+        page = self._get(collateral_url)
+        self.assertEqual(page.context["table"].paginator.count, 27)
+        self.assertEqual(len(page.context["table"].page.object_list), 25)
+        self.assertEqual(len(self._get(collateral_url + "?page=2").context["table"].page.object_list), 2)
+        page = self._get(collateral_url + "?q=CI-" + item.public_id.hex[:12].upper())
+        self.assertEqual(page.context["table"].paginator.count, 1)
+        self.assertEqual(self._get(collateral_url + "?metal=SILVER").context["table"].paginator.count, 26)
+        fragment = self.client.get(releases_url, {"q": release.release_number}, HTTP_HX_REQUEST="true")
+        self.assertContains(fragment, release.release_number)
+        self.assertNotContains(fragment, '<html')
+        self.assertIn("HX-Request", fragment.headers["Vary"])
+        self.assertContains(self._get(detail_url), item.description)
+        self.assertContains(self._get(detail_url), "Settlement details")
+        self.assertEqual(self._get(releases_url + "?kind=partial").context["table"].paginator.count, 0)
+        self.assertEqual(self._get(releases_url + "?date_from=invalid").context["table"].paginator.count, 0)
+        with workspace_context(self.workspace.pk):
+            reverse_pawn_loan_event(release.loan_event_id, reason="Browse reversal fixture", actor=self.owner)
+        self.assertContains(self._get(detail_url), "Browse reversal fixture")
+        self.assertEqual(self._get(releases_url + "?status=reversed").context["table"].paginator.count, 1)
+        self.assertEqual(self._get(releases_url + "?status=recorded").context["table"].paginator.count, 0)
+        self.workspace = self._workspace("Other browse workspace")
+        self.assertEqual(self._get(self._loan_url("pawn_collateral_list")).context["table"].paginator.count, 0)
+        self.assertEqual(self._get(self._loan_url("pawn_release_list")).context["table"].paginator.count, 0)
+        self.assertEqual(self.client.get(self._loan_url("pawn_release_detail", release.pk)).status_code, 404)
+        self.assertEqual(self.client.get(self._loan_url("pawn_collateral_scan", item.public_id)).status_code, 404)
+        self.client.force_login(get_user_model().objects.create_user(username="browse-outsider"))
+        self.assertEqual(self.client.get(collateral_url).status_code, 302)
+        self.assertEqual(self.client.get(releases_url).status_code, 302)
+
     def test_workspace_list_and_account_do_not_change_selected_workspace(self):
         first = self._workspace("Navigation First")
         second = self._workspace("Navigation Second")
@@ -292,6 +357,39 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertRedirects(self.client.get(reverse("workspace_management")), reverse("workspace_selector"))
         landing = self.client.get(reverse("dashboard"))
         self.assertRedirects(landing, reverse("workspace_slug_dashboard", kwargs={"workspace_slug": first.slug}))
+
+    def test_counter_dashboard_permissions_and_workspace_queues(self):
+        self.workspace = self._workspace("Counter Queue First")
+        self._setup_loans()
+        party = self._party()
+        with workspace_context(self.workspace.pk):
+            for number in range(23):
+                PawnLoan.objects.create(
+                    workspace=self.workspace, product_version=self.product, license_id=self.series.license_id,
+                    series=self.series, borrower=party, loan_number=f"QUEUE-{number:03d}",
+                    state="DRAFT", principal_amount=1000, monthly_interest_rate=2,
+                    loan_date=self.today, created_by=self.owner,
+                )
+        url = reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
+        page = self._get(url + "?queue=draft&page=2")
+        self.assertEqual(page.context["selected_queue"]["count"], 23)
+        self.assertEqual(len(page.context["work_page"]), 3)
+        self.assertContains(page, "QUEUE-022")
+        other = self._workspace("Counter Queue Other")
+        other_page = self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": other.slug}))
+        self.assertEqual(other_page.context["counter_work"]["queues"]["draft"]["count"], 0)
+        member = get_user_model().objects.create_user(username="counter-queue-member")
+        membership = Membership.objects.create(user=member, company=self.workspace, role=self.member_role)
+        self.client.force_login(member)
+        self.assertContains(self._get(url), "QUEUE-000")
+        limited_role = Role.objects.create(name="Counter no loan access")
+        membership.role = limited_role
+        membership.save(update_fields=["role"])
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work") as counter_query:
+            denied = self._get(url)
+        counter_query.assert_not_called()
+        self.assertNotContains(denied, "QUEUE-000")
+        self.assertContains(denied, "does not include access to loan operations")
 
     def test_two_workspaces_and_member_permissions_remain_independent(self):
         self.workspace = self._workspace("MVP First")
@@ -358,6 +456,11 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertEqual(self.client.post(add, {**data, "csrfmiddlewaretoken": self.client.cookies["csrftoken"].value}).status_code, 403)
 
     def test_borrower_autocomplete_is_workspace_scoped(self):
+        import subprocess
+        import sys
+        from django.core import signing
+        from django_select2.cache import cache
+        from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
         from apps.tenant_apps.loans.forms import PawnDraftForm
 
         self.workspace = self._workspace("Search First")
@@ -365,6 +468,8 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         other = self._workspace("Search Second")
         with workspace_context(other.pk):
             Party.objects.create(display_name="MVP Other Borrower")
+        for operation in ("get", "set", "delete"):
+            self.enterContext(patch.object(cache, operation, side_effect=ConnectionError("Cache unavailable")))
         with workspace_context(self.workspace.pk):
             form = PawnDraftForm(workspace=self.workspace)
             str(form["borrower"])
@@ -374,6 +479,21 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         response = self.client.get(url, {"field_id": token, "term": "MVP"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual([str(row["id"]) for row in response.json()["results"]], [str(party.pk)])
+        # A separate worker can issue a token without populating any shared cache.
+        worker = subprocess.run(
+            [sys.executable, "-c", (
+                "import os,sys; os.environ['DJANGO_SETTINGS_MODULE']='django_project.settings.test'; "
+                "from django.core import signing; "
+                "print(signing.dumps(sys.argv[1], salt='party.autocomplete.v1'))"
+            ), url], capture_output=True, text=True, check=True,
+        )
+        response = self.client.get(url, {"field_id": worker.stdout.strip(), "term": "MVP"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([str(row["id"]) for row in response.json()["results"]], [str(party.pk)])
+        with patch("django.core.signing.time.time", return_value=0):
+            expired = signing.dumps(url, salt=PartyAutocompleteWidget.token_salt)
+        self.assertEqual(self.client.get(url, {"field_id": expired, "term": "MVP"}).status_code, 404)
+        self.assertEqual(self.client.get(url, {"term": "MVP"}).status_code, 404)
         wrong = reverse("workspace_party:party_autocomplete", args=[other.slug])
         self.assertEqual(self.client.get(wrong, {"field_id": token, "term": "MVP"}).status_code, 404)
         self.assertEqual(self.client.get(url, {"field_id": "invalid", "term": "MVP"}).status_code, 404)
@@ -382,6 +502,26 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         Membership.objects.create(user=denied, company=self.workspace, role=denied_role)
         self.client.force_login(denied)
         self.assertEqual(self.client.get(url, {"field_id": token, "term": "MVP"}).status_code, 403)
+
+    def test_appraisal_suggestion_reads_only_current_workspace_rates(self):
+        from apps.tenant_apps.rates.models import Rate, RateSource
+        first = self._workspace("Appraisal First")
+        second = self._workspace("Appraisal Second")
+        for workspace, value in ((first, "7000"), (second, "1000")):
+            with workspace_context(workspace.pk):
+                source = RateSource.objects.create(name="Reference", location="Local")
+                Rate.objects.create(rate_source=source, metal="Gold", currency="INR", purity="24k", buying_rate=value, selling_rate=value)
+        values = {"metal": "GOLD", "gross_weight": "10", "net_weight": "9", "purity": "90", "as_of": timezone.localdate().isoformat(), "request_key": "1"}
+        for workspace, amount in ((first, "56700.00"), (second, "8100.00")):
+            url = f"/w/{workspace.slug}/loans/internal/appraisal-suggestion/"
+            self.assertContains(self.client.get(url, values), f'data-value="{amount}"')
+        values["as_of"] = "2000-01-01"
+        self.assertContains(self.client.get(url, values), "No usable INR")
+        denied = get_user_model().objects.create_user(username="appraisal-readonly")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=denied, company=second, role=role)
+        self.client.force_login(denied)
+        self.assertEqual(self.client.get(url, values).status_code, 403)
 
     def test_rates_navigation_and_mutations_keep_workspace(self):
         from apps.tenant_apps.rates.models import Rate, RateSource

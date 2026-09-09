@@ -1,12 +1,59 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-09-09
 tags: [agents, context, architecture]
 related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implementation/dependency-policy.md]
 ---
 
 # Agent Memory
+
+Collateral and Releases have Workspace sidebar browsing routes at loans/collateral/
+and loans/releases/. django-filter and django-tables2 provide GET filters, sorting
+and 25-row pagination; HTMX fragments retain URL/history support. Record links use
+ordinary navigation. Collateral identity links reuse the scan-to-loan anchor route.
+Release details preserve original evidence and visibly distinguish reversed records;
+current item custody is labelled separately from the historical return timestamp.
+
+Draft collateral appraisal suggestions use a read-only Workspace HTMX endpoint:
+INR 24k buying rate as of loan date × net weight × purity / 100, rounded down to
+paise. Gross weight validates net weight. Auto-filled values refresh on input/date
+changes; manual/persisted values are preserved unless Use suggestion is selected.
+Missing/invalid rates clear only automatic values. Never calculate authoritative
+valuation in JavaScript or write appraisal records from a suggestion GET.
+
+Economic setup forms start with gold 2% monthly, silver 4% monthly, and a fixed
+INR 10 DOCUMENT_CHARGE fee deducted at disbursal. These are editable form defaults,
+not automatic persisted policies or overrides of existing loans. Configuration
+and fee policy are saved separately with explicit scope/effective date.
+
+Use straightforward user-facing labels: Dashboard, New loan, and Loans. "Counter"
+is historical prototype shorthand, not required product terminology. The app must
+read naturally for a sole owner as well as a staffed business. Company.loan_workflow
+defaults to EXTENDED. Owners can explicitly choose SIMPLE for atomic review and
+disbursal; both evidence records remain. Independent loan.approve/loan.disburse
+permissions guard separate HTTP actions; data.view alone is insufficient. See
+`docs/flows/loan-workflow-choice.md`. Adding staff never changes workflow mode.
+
+The shared live sidebar follows the counter prototype's 232px navigation column,
+Work and Reference & communication groups, and separate Settings access. The
+landing page describes PawnLoans, Parties, Rates, and Notify; do not restore
+accounting/ERP or inventory-purchasing promises while those apps are retired.
+
+Rates has no request middleware or cache-writing signal. Loans valuation reads
+the Workspace-scoped Rates facade directly from PostgreSQL. Do not restore the
+legacy request.grate/srate/brate header cache. CACHE_URL configures optional Redis;
+the default local-memory display cache needs no external service. Party borrower
+autocomplete uses 24-hour signed endpoint tokens and rebuilds its fixed queryset
+under request authorization/RLS; it must not store widget state in cache. See
+`docs/implementation/cache-configuration.md` and the stateless-autocomplete ADR.
+
+The in-app document Starter guide is the operator walkthrough for custom Flow/
+overlay layouts and loan-ticket print profiles. Its beginner steps live in
+`templates/loans/setup/documents/_beginner_guide.html`, with advanced reference in
+`guide.html`; asset/editor/profile screens link to relevant anchors. Keep the
+guide aligned with actual upload, geometry, preview, and assignment behavior.
+See `docs/flows/loan-document-printing.md` for maintenance scope.
 
 The counter prototype direction is approved for live implementation. Shared
 Workspace styling lives in `static/css/workspace-ui.css`; ordinary Django and
@@ -29,6 +76,15 @@ request-scoped permission context. Personal pages have a separate personal sideb
 saved preference. Create/onboarding completion target explicit setup URLs. Do not
 restore Clear Workspace as a prerequisite for account or Workspace management.
 `workspace-navigation.js` warns before discarding unsaved inputs during switching.
+
+The Workspace dashboard prioritizes counter work. `loans/selectors/counter_work.py`
+uses current loan states and the canonical as-of repayment schedule/allocation
+fold for due-today and overdue queues. Scheduled amounts exclude unscheduled fees
+and are not payoff quotes. Missing/empty schedules or integrity findings go to a
+visible review queue. Do not use legacy maturity-only balance overdue flags here.
+Queue data is composed only for `data.view`; each existing action still enforces
+its own access and lifecycle rules. Queue presentation is paginated, but accurate
+counts currently require reading the Workspace's draft/approved/active loans.
 
 Registry-resolution tests in `apps.configuration` use the supported
 `ui__default_table_page_size` preference to verify Workspace overrides, isolation,
@@ -80,8 +136,8 @@ Party action forms use named `workspace_party:*` URLs; success redirects retain
 the validated Workspace slug and active detail tab. Physical phone, camera, and
 printer acceptance remains pending. Chromium viewport acceptance and
 its two resulting fixes are documented in `docs/implementation/browser-acceptance.md`.
-Borrower autocomplete must use the Workspace-scoped Party lookup URL; cached
-widget tokens are URL-bound. Draft collateral starts with one required row,
+Borrower autocomplete must use the Workspace-scoped Party lookup URL; signed
+search tokens are URL-bound. Draft collateral starts with one required row,
 with additional rows added explicitly.
 Rates and Notify operator URLs now use `workspace_rates:*` and `workspace_notify:*`.
 Party, Rates, and Notify share the existing Workspace adapter in

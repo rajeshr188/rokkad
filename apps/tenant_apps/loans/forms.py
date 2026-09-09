@@ -992,10 +992,12 @@ class PawnEconomicConfigurationForm(forms.Form):
         help_text="Use 0.01 for paise-level currency rounding.",
     )
     gold_monthly_interest_rate = forms.DecimalField(
-        max_digits=9, decimal_places=6, min_value=0, max_value=100
+        max_digits=9, decimal_places=6, min_value=0, max_value=100,
+        initial=Decimal("2"), help_text="Monthly percentage. Starts at 2%; change before saving if needed.",
     )
     silver_monthly_interest_rate = forms.DecimalField(
-        max_digits=9, decimal_places=6, min_value=0, max_value=100
+        max_digits=9, decimal_places=6, min_value=0, max_value=100,
+        initial=Decimal("4"), help_text="Monthly percentage. Starts at 4%; change before saving if needed.",
     )
     effective_from = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
 
@@ -1050,15 +1052,19 @@ class PawnFeePolicyForm(forms.Form):
         required=False,
         help_text="Leave blank to create the workspace default.",
     )
-    code = forms.CharField(max_length=32)
-    name = forms.CharField(max_length=100)
+    code = forms.CharField(max_length=32, initial="DOCUMENT_CHARGE")
+    name = forms.CharField(max_length=100, initial="Document charge")
     calculation_type = forms.ChoiceField(
+        initial=FeeCalculationType.FIXED.value,
         choices=[
             (item.value, item.name.replace("_", " ").title())
             for item in FeeCalculationType
         ]
     )
-    value = forms.DecimalField(max_digits=18, decimal_places=6, min_value=0)
+    value = forms.DecimalField(
+        max_digits=18, decimal_places=6, min_value=0, initial=Decimal("10"),
+        help_text="The starter document charge is a fixed INR 10 per loan. Change it before saving if needed.",
+    )
     deducted_at_disbursal = forms.BooleanField(required=False, initial=True)
     effective_from = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
 

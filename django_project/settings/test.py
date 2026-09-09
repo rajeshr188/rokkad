@@ -9,8 +9,4 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "rokkad-tests",
     },
-    "select2": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "rokkad-select2-tests",
-    },
 }

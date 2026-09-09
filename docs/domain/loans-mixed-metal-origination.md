@@ -27,6 +27,16 @@ related:
 
 ## Operator Flow
 
+Draft collateral rows offer an editable suggested appraisal when gross/net weight
+and purity are entered. HTMX retrieves the latest usable Workspace INR 24k buying
+rate at or before the loan date, multiplied by net weight and purity percentage,
+rounded down to paise. Gross weight is checked but does not value stones/non-metal.
+The rate date is displayed. This is a metal-value estimate for operator review,
+not an automatically approved appraisal. Manually entered or persisted values are
+not overwritten; Use suggestion explicitly adopts the estimate. Missing rates or
+invalid inputs never become a zero valuation. Only normal draft saving persists
+the entered appraisal, and approval still validates/freezes the required evidence.
+
 1. Select Party, license, series, loan date, and tenure. Before saving, the
    page shows the non-consuming next expected PawnLoan number for every
    available series. After saving, the edit page shows the permanently

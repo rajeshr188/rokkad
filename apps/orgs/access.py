@@ -12,6 +12,8 @@ from apps.orgs.permissions import (
 
 
 ACTION_ALIASES = {
+    "loan_approve": "loan.approve",
+    "loan_disburse": "loan.disburse",
     "workspace_view": "workspace.view",
     "workspace_edit": "workspace.edit",
     "workspace_settings": "workspace.settings.manage",

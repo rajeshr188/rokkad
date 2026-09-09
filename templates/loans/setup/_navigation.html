@@ -1,4 +1,6 @@
 <nav class="app-section-nav" aria-label="PawnLoan setup">
+  {% load orgs_tags %}{% navigation_actions as workflow_actions %}
+  {% if 'workspace.transfer' in workflow_actions %}<a href="{% url 'loans:loan_workflow_settings' %}">Workflow</a>{% endif %}
   <a href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">Setup checklist</a>
   <a  href="{% url 'workspace_slug_loans_dispatch' workspace_slug=request.workspace.slug loans_path='setup/' %}#license-register">Licenses &amp; numbering</a>
   <a  href="{% url 'workspace_slug_loans_dispatch' workspace_slug=request.workspace.slug loans_path='setup/economics/' %}">Economic setup</a>

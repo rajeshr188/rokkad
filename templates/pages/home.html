@@ -1,16 +1,16 @@
 {% extends 'base_public.html' %}
 {% load i18n %}
-{% block title %}Rokkad - Accounting-First SaaS ERP{% endblock title %}
+{% block title %}Rokkad - Manage pawn loans from application to release{% endblock title %}
 
 {% block content %}
 <section class="public-hero">
     <div class="container-lg">
         <div class="public-hero-grid">
             <div>
-                <div class="public-kicker">SaaS ERP for finance-led small businesses</div>
-                <h1 class="public-title">Run loans, inventory, commodity, and accounting in one workspace.</h1>
+                <div class="public-kicker">A workspace for your pawn-lending business</div>
+                <h1 class="public-title">Manage pawn loans from application to repayment and release.</h1>
                 <p class="public-lede">
-                    Rokkad gives jewellery, gold-loan, trading, and operations teams a clear ERP workspace where every major document stays connected to accounting, inventory, commodity movement, and audit impact.
+                    Bring borrowers, collateral photos, loan terms, repayments, and documents together. Run your business on your own or with a team, with a clear path from the first application to repayment and collateral release.
                 </p>
                 <div class="public-actions">
                     <a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">
@@ -23,8 +23,8 @@
 
                 <div class="public-proof-row">
                     <div>
-                        <div class="public-proof-label">Core model</div>
-                        <div class="public-proof-value">Accounting first</div>
+                        <div class="public-proof-label">Daily work</div>
+                        <div class="public-proof-value">Loans made clear</div>
                     </div>
                     <div>
                         <div class="public-proof-label">Workspace access</div>
@@ -32,29 +32,29 @@
                     </div>
                     <div>
                         <div class="public-proof-label">Business fit</div>
-                        <div class="public-proof-value">Gold + ERP</div>
+                        <div class="public-proof-value">Pawn lending</div>
                     </div>
                 </div>
             </div>
 
             <div class="public-product-preview" aria-label="Rokkad product preview">
                 <div class="public-preview-topbar">
-                    <div class="public-preview-title">Workspace dashboard</div>
-                    <div class="public-preview-status">Live controls</div>
+                    <div class="public-preview-title">Your loan workflow</div>
+                    <div class="public-preview-status">Illustrative workflow</div>
                 </div>
                 <div class="public-preview-body">
                     <div class="public-metric-grid">
                         <div class="public-metric">
-                            <div class="public-metric-label">Receivable</div>
-                            <div class="public-metric-value">INR 18.4L</div>
+                            <div class="public-metric-label">01 ? Prepare</div>
+                            <div class="public-metric-value">Borrower</div>
                         </div>
                         <div class="public-metric">
-                            <div class="public-metric-label">Gold stock</div>
-                            <div class="public-metric-value">2.8kg</div>
+                            <div class="public-metric-label">02 ? Review</div>
+                            <div class="public-metric-value">Collateral</div>
                         </div>
                         <div class="public-metric">
-                            <div class="public-metric-label">Open loans</div>
-                            <div class="public-metric-value">126</div>
+                            <div class="public-metric-label">03 ? Complete</div>
+                            <div class="public-metric-value">Loan</div>
                         </div>
                     </div>
 
@@ -62,26 +62,26 @@
                         <div class="public-flow-item">
                             <div class="public-flow-icon"><i class="bi bi-receipt"></i></div>
                             <div class="public-flow-copy">
-                                <div class="public-flow-name">Gold loan disbursal</div>
-                                <div class="public-flow-note">Loan, party, collateral, and voucher linked</div>
+                                <div class="public-flow-name">Prepare a loan</div>
+                                <div class="public-flow-note">Borrower, collateral photos, and terms together</div>
                             </div>
-                            <div class="public-flow-impact">Posted</div>
+                            <div class="public-flow-impact">Draft</div>
                         </div>
                         <div class="public-flow-item">
                             <div class="public-flow-icon"><i class="bi bi-box-seam"></i></div>
                             <div class="public-flow-copy">
-                                <div class="public-flow-name">Inventory purchase</div>
-                                <div class="public-flow-note">Stock, supplier payable, commodity impact</div>
+                                <div class="public-flow-name">Review and disburse</div>
+                                <div class="public-flow-note">Check valuation, allocations, and cash to pay</div>
                             </div>
-                            <div class="public-flow-impact">Checked</div>
+                            <div class="public-flow-impact">Review</div>
                         </div>
                         <div class="public-flow-item">
                             <div class="public-flow-icon"><i class="bi bi-journal-check"></i></div>
                             <div class="public-flow-copy">
-                                <div class="public-flow-name">Accounting period</div>
-                                <div class="public-flow-note">Reports and audit trail ready</div>
+                                <div class="public-flow-name">Collect and release</div>
+                                <div class="public-flow-note">Record repayments and check release readiness</div>
                             </div>
-                            <div class="public-flow-impact">Open</div>
+                            <div class="public-flow-impact">Follow up</div>
                         </div>
                     </div>
                 </div>
@@ -93,27 +93,32 @@
 <section class="public-section alt" id="operations">
     <div class="container-lg">
         <div class="public-section-header">
-            <h2 class="public-section-title">Built around the workflows that create books.</h2>
+            <h2 class="public-section-title">The essentials for everyday pawn lending.</h2>
             <p class="public-section-copy">
-                Operational teams can work in familiar business areas while the system keeps accounting, stock, commodity, and audit context close to every document.
+                Move between customer records, loans, reference prices, and communication in one Workspace.
             </p>
         </div>
 
-        <div class="public-card-grid">
+        <div class="public-card-grid public-app-grid">
             <div class="public-card">
                 <div class="public-card-icon"><i class="bi bi-person-vcard"></i></div>
-                <h3 class="public-card-title">Parties and loans</h3>
-                <p class="public-card-copy">Manage customers, suppliers, borrowers, collateral, dues, receipts, and statements with clear workspace ownership.</p>
+                <h3 class="public-card-title">PawnLoans</h3>
+                <p class="public-card-copy">Create loans with collateral photos and clear summaries. Handle disbursal, repayment, renewal, release, and loan documents.</p>
             </div>
             <div class="public-card">
                 <div class="public-card-icon"><i class="bi bi-boxes"></i></div>
-                <h3 class="public-card-title">Inventory and commodity</h3>
-                <p class="public-card-copy">Track products, stock movement, gold and silver positions, rate fixing, and custody workflows from one operating surface.</p>
+                <h3 class="public-card-title">Parties</h3>
+                <p class="public-card-copy">Keep borrower identity, contact details, photos, and loan history together so the next visit starts with context.</p>
             </div>
             <div class="public-card">
                 <div class="public-card-icon"><i class="bi bi-calculator"></i></div>
-                <h3 class="public-card-title">Accounting core</h3>
-                <p class="public-card-copy">Keep vouchers, journals, ledgers, trial balance, reports, and audit trails connected to source business events.</p>
+                <h3 class="public-card-title">Rates</h3>
+                <p class="public-card-copy">Maintain gold and silver reference buying prices for collateral valuation. Configure lending interest separately in Loan setup.</p>
+            </div>
+            <div class="public-card">
+                <div class="public-card-icon"><i class="bi bi-envelope-paper"></i></div>
+                <h3 class="public-card-title">Notify</h3>
+                <p class="public-card-copy">Prepare customer communication, manage delivery batches, and review delivery status with Workspace messaging configuration.</p>
             </div>
         </div>
     </div>
@@ -123,9 +128,9 @@
     <div class="container-lg">
         <div class="public-impact-grid">
             <div>
-                <h2 class="public-section-title text-white">Designed for controlled growth, not spreadsheet drift.</h2>
+                <h2 class="public-section-title text-white">Know what needs attention today.</h2>
                 <p class="public-impact-copy">
-                    Start with one Workspace, invite the team, configure lending operations, and expand into business modules without losing data-isolation boundaries or source-document traceability.
+                    Find borrowers and loans quickly. Review drafts, loans awaiting disbursal, payments due today, and overdue schedules from your dashboard.
                 </p>
             </div>
             <div>
@@ -134,11 +139,11 @@
             </div>
             <div>
                 <div class="public-impact-number">4</div>
-                <div class="public-impact-label">Core impact tracks</div>
+                <div class="public-impact-label">Connected apps</div>
             </div>
             <div>
-                <div class="public-impact-number">24/7</div>
-                <div class="public-impact-label">Cloud access target</div>
+                <div class="public-impact-number">One</div>
+                <div class="public-impact-label">Place for daily work</div>
             </div>
         </div>
     </div>
@@ -147,27 +152,27 @@
 <section class="public-section">
     <div class="container-lg">
         <div class="public-section-header">
-            <h2 class="public-section-title">A serious control plane for owners and finance teams.</h2>
+            <h2 class="public-section-title">Easy to start. Clear to manage.</h2>
             <p class="public-section-copy">
-                Rokkad separates public marketing, account management, Workspace settings, and business screens so users know where they are and what data they are touching.
+                Manage loans in your Workspace. Open Settings for loan configuration, documents, billing, and team access when needed; keep personal preferences in My account.
             </p>
         </div>
 
         <div class="public-card-grid">
             <div class="public-card alt">
                 <div class="public-card-icon"><i class="bi bi-buildings"></i></div>
-                <h3 class="public-card-title">Workspace manager</h3>
-                <p class="public-card-copy">Create Workspaces, switch between companies, review pending invitations, and manage account settings outside Workspace business data.</p>
+                <h3 class="public-card-title">Your Workspaces</h3>
+                <p class="public-card-copy">Create a Workspace for each business and switch between them with a clear view of which business you are working in.</p>
             </div>
             <div class="public-card alt">
                 <div class="public-card-icon"><i class="bi bi-shield-check"></i></div>
                 <h3 class="public-card-title">Roles and permissions</h3>
-                <p class="public-card-copy">Keep owner, admin, accountant, and member access explicit as the business adds workflows and people.</p>
+                <p class="public-card-copy">Give team members access to the work they need, with separate controls for lending operations and Workspace administration.</p>
             </div>
             <div class="public-card alt">
                 <div class="public-card-icon"><i class="bi bi-clipboard2-check"></i></div>
                 <h3 class="public-card-title">Setup guidance</h3>
-                <p class="public-card-copy">Use a practical checklist for business profile, accounting setup, parties, products, stock, rates, team, and first transactions.</p>
+                <p class="public-card-copy">Follow the setup checklist for licenses, loan numbering, economic policies, and loan products. Revisit settings and document layouts whenever needed.</p>
             </div>
         </div>
 

@@ -113,7 +113,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     # 🔒 SECURITY FIX: Using secure middleware with membership validation
     "apps.orgs.middleware_v2.SecureWorkspaceMiddleware",
-    "apps.tenant_apps.rates.middleware.RateMiddleware",
     # Phase 2: Subscription validation (must come after MessageMiddleware)
     "django_project.middleware.SubscriptionValidationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -321,24 +320,11 @@ SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 
 CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    },
-    "select2": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/2",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    },
+    "default": env.cache_url("CACHE_URL", default="locmemcache://rokkad"),
 }
 
-# Set the cache backend to select2
-SELECT2_CACHE_BACKEND = "select2"
+# Borrower autocomplete uses signed URL-bound tokens, not cached widget state.
+SELECT2_CACHE_BACKEND = "default"
 
 SLICK_REPORTING_SETTINGS = {
     "CHARTS": {

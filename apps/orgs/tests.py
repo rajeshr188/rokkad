@@ -584,7 +584,7 @@ class OrgNavigationFlowTests(SimpleTestCase):
 			"apps.tenant_apps.rates.facade.get_workspace_rate_dashboard_summary",
 			return_value={"gold_rate": None, "silver_rate": None},
 		):
-			context = get_workspace_dashboard_context(workspace=workspace)
+			context = get_workspace_dashboard_context(workspace=workspace, access=SimpleNamespace(can=lambda action: True))
 
 		self.assertEqual(2, context["team_count"])
 		self.assertEqual(1, context["pending_invitations"])

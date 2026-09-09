@@ -1,0 +1,6 @@
+{% extends "base_tenant.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">{{ title }}</h1><p class="text-muted">{{ description }}</p>
+{% include "loans/browse/_content.html" %}
+{% endblock %}

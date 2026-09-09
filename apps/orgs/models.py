@@ -65,6 +65,10 @@ class Company(models.Model):
     )
     lifecycle_changed_at = models.DateTimeField(default=timezone.now)
     lifecycle_reason = models.TextField(blank=True)
+    loan_workflow = models.CharField(
+        max_length=10, default="EXTENDED",
+        choices=[("EXTENDED", "Separate approval and disbursal"), ("SIMPLE", "Owner review and disburse")],
+    )
 
     objects = CompanyManager()  # Use custom manager
     all_objects = models.Manager()  # Include soft-deleted instances

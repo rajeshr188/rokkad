@@ -20,8 +20,10 @@ boundaries. Contact, Girvi, legacy Notify, and DEA/accounting are retired.
 The authorized [navigation simplification](workspace-navigation-simplification.md)
 is published in `df26e6b`: explicit Workspace labels, one shared app/settings sidebar,
 personal account scope, predictable landing/list/create routes, and unsaved-switch
-protection. First-loan setup guidance is reviewed and approved for publication;
-its 436-test regression gate and desktop/mobile browser checks pass. See the
+protection. First-loan setup guidance is published in `c72a787`; its 436-test
+regression gate and desktop/mobile browser checks pass. The approved daily
+counter dashboard is implemented locally: 539 regression checks, three Chromium
+scenarios, and 18 final focused checks pass. It is ready for operator review. See the
 latest status for the exact scope.
 Physical phone/camera and printer checks remain deferred; external private-media
 serving still needs deployment verification before a real-data pilot.

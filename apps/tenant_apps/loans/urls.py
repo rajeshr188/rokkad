@@ -1,10 +1,18 @@
 from django.urls import path
 
-from apps.tenant_apps.loans import views
+from apps.tenant_apps.loans import views, browse
+from apps.tenant_apps.loans.web import workflow
+from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 
 app_name = "loans"
 
 urlpatterns = [
+    path("collateral/", browse.collateral_list, name="pawn_collateral_list"),
+    path("releases/", browse.release_list, name="pawn_release_list"),
+    path("releases/<int:release_pk>/", browse.release_detail, name="pawn_release_detail"),
+    path("internal/appraisal-suggestion/", collateral_appraisal_suggestion, name="collateral_appraisal_suggestion"),
+    path("setup/workflow/", workflow.loan_workflow_settings, name="loan_workflow_settings"),
+    path("internal/<int:pk>/review-disburse/", workflow.pawn_loan_review_disburse, name="pawn_loan_review_disburse"),
     path("internal/", views.pawn_loan_list, name="pawn_loan_list"),
     path("internal/reports/", views.pawn_loan_reports, name="pawn_loan_reports"),
     path("internal/reports/export/<str:section>.<str:export_format>", views.pawn_loan_report_export, name="pawn_loan_report_export"),

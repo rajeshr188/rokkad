@@ -1,0 +1,122 @@
+<div class="alert alert-primary"><strong>Your first setup:</strong> Create layout &rarr; add content/background &rarr; preview &rarr; publish layout &rarr; preview print profile &rarr; publish profile &rarr; assign both.</div>
+<nav class="card card-body mb-3" aria-label="Printing guide contents">
+  <strong class="mb-2">Jump to a step</strong>
+  <div class="d-flex flex-wrap gap-3">
+    <a href="#choose-layout">1. Choose a layout</a><a href="#backgrounds">2. Upload a background</a>
+    <a href="#overlay">3. Position fields</a><a href="#copies">4. Copies and backs</a>
+    <a href="#profiles">5. Create a print profile</a><a href="#assign">6. Assign and print</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+  </div>
+</nav>
+
+<section class="card card-body mb-3" id="choose-layout">
+  <h2 class="h5">1. Choose a layout and create a draft</h2>
+  <p>In the required Workspace, open <strong>Settings &rarr; Documents &amp; printing &rarr; Document layouts</strong>. Setup is for Owners and Admins. You will need an approved PawnLoan in this Workspace to preview loan tickets. Use a representative existing loan; creating a real loan solely as dummy print data is unnecessary.</p>
+  <p>A <strong>layout</strong> defines what appears on one document: wording, borrower fields, collateral, signatures, and background. A <strong>print profile</strong> arranges loan-ticket copies on physical pages and controls PDF scaling. Profiles currently apply to loan tickets; layouts also support repayment receipts, release memos, auction documents, and renewal agreements.</p>
+  <div class="table-responsive"><table class="table table-sm">
+    <thead><tr><th scope="col">Choose</th><th scope="col">When to use it</th><th scope="col">How you edit it</th></tr></thead>
+    <tbody><tr><th scope="row">Flow document</th><td>A new design whose content should move and paginate as names or tables grow.</td><td>Visual Flow editor: arrange blocks and change page/theme settings. No background PDF is required.</td></tr>
+    <tr><th scope="row">Exact PDF overlay</th><td>An existing blank form with boxes that need values at fixed positions.</td><td>Upload the form as a background, then place field rectangles over it. Rokkad does not automatically detect boxes or import PDF form fields.</td></tr></tbody>
+  </table></div>
+  <ol class="mb-0">
+    <li>Select <a href="{% url 'loans:document_layout_create' %}">Create starter layout</a>.</li>
+    <li>Enter a name such as <em>Main Counter Loan Ticket</em>, choose <strong>Loan ticket</strong>, and choose a layout mode. Select <strong>Create draft</strong>.</li>
+    <li>The next screen is the <strong>revision page</strong>: it contains the editor button, Assets upload form, structured definition, and publishing actions. A draft is editable and is not yet the counter default.</li>
+    <li>For Flow, open <strong>Visual Flow editor</strong>, keep the required starter fields, edit and save the design, then preview. Continue at <a href="#profiles">step 5</a>. For an overlay, follow steps 2&ndash;4.</li>
+  </ol>
+</section>
+
+<section class="card card-body mb-3" id="backgrounds">
+  <h2 class="h5">2. Prepare, upload, and select an overlay background</h2>
+  <p>Prepare a clean blank form containing static headings, lines, and wording. Remove example borrower names, amounts, and signatures: anything baked into the file will appear on every print. Export a PDF at the intended page size; if scanning paper, straighten it and remove unwanted borders. Start with a <strong>single-page PDF for one copy</strong>.</p>
+  <p>The upload supports PDF backgrounds up to <strong>10 MiB and 4 pages</strong>, or PNG/JPEG images up to <strong>5 MiB and 20 million pixels</strong>. A multi-page PDF does not automatically map its pages to Original, Duplicate, Terms, and D3. Separate one-page files are easier to configure and verify.</p>
+  <ol>
+    <li>On the draft revision page, find <strong>Assets</strong>. From the overlay editor, return using <strong>Assets, JSON, and publishing</strong>.</li>
+    <li>Enter <strong>Key</strong> = <code>form.background</code>, <strong>Kind</strong> = <strong>Page background</strong>, and choose your PDF in <strong>File</strong>.</li>
+    <li>Select <strong>Validate and upload</strong>. Confirm the key appears in the Assets list. Assets belong to this revision; uploading to another layout will not make them available here.</li>
+    <li>Open <strong>Visual overlay editor</strong>. In <strong>Logical page and backgrounds</strong>, check <strong>Shared logical background</strong> is <code>form.background</code>, then select <strong>Save settings</strong>.</li>
+  </ol>
+  <p>The starter already references <code>form.background</code>, so uploading with that exact key satisfies its default reference. If you use another key, select that key explicitly in the editor. Uploading a file alone does not change an existing selection. A key is an internal name, not a filename or URL: start with a lowercase letter, then use lowercase letters, digits, dots, underscores, or hyphens (64 characters maximum).</p>
+  <p class="mb-0">For a replacement background, upload under a new key such as <code>form.background.v2</code> and select it; there is no replace-file control. For a logo, upload a PNG/JPEG as <strong>Image / logo</strong> with a key such as <code>brand.logo</code>, then reference that key in an Image block. Uploading a logo does not automatically place it on the page.</p>
+</section>
+
+<section class="card card-body mb-3" id="overlay">
+  <h2 class="h5">3. Match the page size and position fields</h2>
+  <p><strong>New overlay starters use A4.</strong> Begin with an A4 background to learn the editor without changing the starter geometry. For exact physical alignment in a loan-ticket profile, design an A5 logical page instead: A5 profiles and each half of the A4 landscape profiles use an A5 copy. Do not upload an already combined A4 Original/Duplicate form as one copy.</p>
+  <p>Choose <strong>Logical surface size</strong> to match the background (A4: 210 &times; 297 mm; A5: 148 &times; 210 mm). Changing this setting does not automatically resize existing blocks. When converting the A4 starter to A5, first reduce/reposition <em>all</em> blocks, including tables, verification, and signatures, to fit inside A5, saving each change; then change the page size and save settings. Otherwise validation can reject rectangles outside the page.</p>
+  <p>Coordinates are measured from the <strong>top-left corner of the logical page</strong>. X moves right; Y moves down. Width and Height describe the space reserved for a block. Use whole millimetres. Font size is in points, not millimetres.</p>
+  <div class="table-responsive"><table class="table table-sm">
+    <caption>Example only: a borrower field in a blank box 20 mm from the left and 35 mm from the top.</caption>
+    <thead><tr><th scope="col">X mm</th><th scope="col">Y mm</th><th scope="col">Width mm</th><th scope="col">Height mm</th><th scope="col">Font pt</th><th scope="col">Align</th></tr></thead>
+    <tbody><tr><td>20</td><td>35</td><td>90</td><td>8</td><td>10</td><td>Left</td></tr></tbody>
+  </table></div>
+  <ol>
+    <li>Find the existing field block for the value you want. Its <strong>Binding</strong> identifies the loan data supplied at print time; keep the starter binding unless you know the replacement is registered. Do not enter an actual customer's name as fixed Text.</li>
+    <li>Drag its rectangle near the target box, or enter the measured X/Y/Width/Height values in that block's controls.</li>
+    <li>Select <strong>Save block</strong> for that block. <strong>Dragging only changes the form inputs; it does not save.</strong> Save before editing another block or reloading.</li>
+    <li>Use <strong>Preview PDF</strong> to check real text, wrapping, and tables. The canvas rectangles are positioning aids, not the final printed text.</li>
+    <li>Repeat for the remaining required fields, collateral table, verification, and signatures. Use <strong>Add overlay block</strong> for additional content. Do not remove required evidence merely to make a small form fit.</li>
+  </ol>
+  <p class="mb-0">Check a long name, several collateral rows, regional text, and signature space. Detailed table columns, overflow rules, conditions, and back-page blocks use <strong>Structured layout definition</strong> on the revision page, followed by <strong>Validate and save draft</strong>. The visual editor does not expose every advanced setting.</p>
+</section>
+
+<section class="card card-body mb-3" id="copies">
+  <h2 class="h5">4. Configure Original, Duplicate, and back pages</h2>
+  <p>A <strong>surface</strong> means one face of one copy. The four loan-ticket surfaces are Original front, Duplicate front, Original Terms (the Original back), and Duplicate D3 (the Duplicate back).</p>
+  <ol>
+    <li>For identical fronts, keep the shared background. For different forms, upload each as <strong>Page background</strong>, using distinct keys such as <code>form.original</code>, <code>form.duplicate</code>, <code>form.terms</code>, and <code>form.d3</code>.</li>
+    <li>In the overlay editor, select each key in its matching background dropdown and select <strong>Save settings</strong>. A surface-specific selection overrides the shared background; a blank selection falls back to the shared one.</li>
+    <li>Use a front block's <strong>Copy scope</strong> to show it on Both copies, Original only, or Duplicate only. Save each changed block.</li>
+    <li>Start with simplex (fronts only). Before selecting duplex, supply and preview the Terms and D3 surfaces, including any required back-page content. A shared background alone does not establish the required back surfaces: select explicit Terms/D3 backgrounds or supply back-page blocks. Advanced back-page content is configured through <code>back_blocks</code> in the structured definition, not by adding another front block.</li>
+  </ol>
+  <p class="mb-0"><strong>Editor limitation:</strong> the canvas shows the Original front background's first page and front blocks. It is not a four-surface editor. Inspect Duplicate, Terms, and D3 in the <em>print-profile PDF preview</em>. A back background is static artwork; uploading it does not create dynamic back-page fields.</p>
+</section>
+
+<section class="card card-body mb-3" id="profiles">
+  <h2 class="h5">5. Publish the layout, then create and preview a print profile</h2>
+  <p>Once the layout preview looks correct, return to its revision page and select <strong>Publish and freeze</strong>. Publishing makes the revision available for profile previews; it does <strong>not</strong> assign it as the counter default. To change a published layout, use <strong>Clone to new draft</strong>.</p>
+  <ol>
+    <li>Open <a href="{% url 'loans:document_print_profile_list' %}">Print profiles</a> &rarr; <strong>Create print profile</strong>. Give it a useful name such as <em>Counter A5 fronts</em>.</li>
+    <li>Choose a Composition from the table below, Scaling policy, Flip edge guidance, and optional Printer guidance. Select <strong>Create validated draft</strong>.</li>
+    <li>On the profile revision page, under <strong>Preview and test print</strong>, select your published logical layout and an approved sample loan. Select <strong>Preview PDF</strong> or <strong>Download test print</strong>. These previews are watermarked and do not create official issued documents.</li>
+    <li>Correct profile settings with <strong>Validate and save draft</strong>. When the PDF is ready, test it on the intended printer and paper before production use, then select <strong>Publish and freeze</strong>.</li>
+  </ol>
+  <div class="table-responsive"><table class="table table-sm">
+    <thead><tr><th scope="col">Composition</th><th scope="col">PDF arrangement</th></tr></thead>
+    <tbody><tr><th scope="row">A5 Original + Duplicate (simplex)</th><td>Original front, then Duplicate front on separate A5 pages.</td></tr>
+    <tr><th scope="row">A5 Original/Terms + Duplicate/D3 (duplex)</th><td>Original front, Terms, Duplicate front, D3 in that order for front/back printing.</td></tr>
+    <tr><th scope="row">A4 landscape side-by-side (simplex)</th><td>Original on the left, Duplicate on the right of an A4 landscape page.</td></tr>
+    <tr><th scope="row">A4 landscape side-by-side (duplex)</th><td>Front: Original and Duplicate. Back: Terms and D3.</td></tr></tbody>
+  </table></div>
+  <p><strong>Fit proportionally to the profile slot</strong> scales the whole logical page, including background and fields, to fit. This is a practical first example with an A4 starter and blank paper, but it changes physical distances. <strong>Actual size (layout page must match)</strong> requires a matching logical page; use A5 for these profiles. An A4 logical page with Actual size will be rejected.</p>
+  <p class="mb-0"><strong>PDF scaling and printer scaling are separate.</strong> In the PDF viewer/printer dialog, use the output paper size and 100%/actual-size printing to avoid a second fit-to-page adjustment. Set duplex and flip edge in the printer dialog as needed: profile guidance does not control the driver or enable automatic duplex. Background artwork is included in the PDF; there is no background-on-screen-only toggle for preprinted stationery. Complete physical alignment checks later if a printer is unavailable.</p>
+</section>
+
+<section class="card card-body mb-3" id="assign">
+  <h2 class="h5">6. Assign both defaults and use normal Print</h2>
+  <ol>
+    <li>Open the published <strong>layout</strong> revision. Under <strong>Assign default scope</strong>, leave License and Series blank for the Workspace default, select License for its default, or select Series for one numbering series. Select <strong>Assign layout</strong>.</li>
+    <li>Open the published <strong>print profile</strong> revision. Leave Series blank for the Workspace default, or select the same Series for a limited rollout. Select <strong>Assign print profile</strong>. Profiles have no License-level assignment.</li>
+    <li>Open an eligible loan and use its normal <strong>Print/PDF</strong> action. Inspect the resulting pages and <a href="{% url 'loans:document_issue_list' %}">Issued documents</a> for the recorded layout and profile revisions.</li>
+  </ol>
+  <p>A Series-specific layout overrides a License default, which overrides the Workspace layout. A Series-specific profile overrides the Workspace profile. Check both when an unexpected design appears. Assignments are validated against compatible layouts and required surfaces; publication alone does not make an incompatible pair usable.</p>
+  <p class="mb-0"><strong>Existing official PDFs stay unchanged.</strong> Reprinting an already issued document returns its stored PDF, even after changing defaults. Use preview while designing; evaluate new defaults on a document that has not yet been officially issued. For later corrections, clone, edit, preview, publish, and assign the new revision. Never edit stored issue files.</p>
+</section>
+
+<section class="card card-body mb-4" id="troubleshooting">
+  <h2 class="h5">Troubleshooting your first custom print</h2>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th scope="col">What you see</th><th scope="col">What to check</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Background missing</th><td>Upload succeeded on this draft; Kind is Page background; selected key matches exactly. Check Original front overrides as well as the shared selection. Save settings.</td></tr>
+      <tr><th scope="row">Dragged field moves back after reload</th><td>Select Save block after each move. Save settings applies page/background settings, not unsaved block positions.</td></tr>
+      <tr><th scope="row">Page-size change rejected</th><td>Fit every rectangle within the new width and height first. The A4 starter's tables and signatures need adjustment before switching to A5.</td></tr>
+      <tr><th scope="row">No preview or empty profile selectors</th><td>Layout preview needs an approved loan in this Workspace. Profile preview additionally needs a published loan-ticket layout. Overlay preview needs its referenced background assets.</td></tr>
+      <tr><th scope="row">Actual-size mismatch</th><td>Match the logical page to the profile's A5 copy size, or deliberately choose proportional fit when physical dimensions need not be preserved.</td></tr>
+      <tr><th scope="row">Back page missing or assignment rejected</th><td>Verify Terms and D3 are supplied for a duplex profile and review the validation error. The front canvas cannot prove the backs are correct.</td></tr>
+      <tr><th scope="row">Text overlaps or gets cut off</th><td>Preview longer values and more collateral rows. Increase available space or configure supported overflow/table settings; do not hide required fields.</td></tr>
+      <tr><th scope="row">PDF looks right; paper is shifted or reduced</th><td>Check driver paper size, scaling, margins, and duplex orientation. Do not compensate in field coordinates until the printer settings are consistent.</td></tr>
+      <tr><th scope="row">Old design still prints</th><td>Check both assignments and their Series/License overrides, then check whether this is a stored official reprint.</td></tr>
+    </tbody>
+  </table></div>
+</section>

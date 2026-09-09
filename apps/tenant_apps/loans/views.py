@@ -1262,6 +1262,9 @@ def pawn_loan_detail(request, pk):
         loan,
         can_administer=context["can_administer"],
     )
+    context["can_approve"] = request.loans_workspace_access.can("loan.approve")
+    context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
+    context["simple_owner"] = request.loans_workspace.loan_workflow == "SIMPLE" and request.loans_workspace_access.can("workspace.transfer")
     context["primary_action"] = _primary_action(loan, context)
     return render(request, "loans/pawn/detail.html", context)
 
@@ -2172,6 +2175,10 @@ def _pawn_renewal_for_workspace(request, pk):
 
 def _primary_action(loan, context):
     if loan.state == PawnLoanState.DRAFT.value:
+        if context.get("simple_owner"):
+            return {"label": "Review and disburse", "url": reverse("loans:pawn_loan_review_disburse", args=[loan.pk]), "message": "Review the summary and confirm payment in one action."}
+        if not context.get("can_approve", False):
+            return None
         return {
             "label": "Approve loan",
             "url": reverse("loans:pawn_loan_approve", args=[loan.pk]),
@@ -2179,6 +2186,8 @@ def _primary_action(loan, context):
             "message": "Review the frozen terms, then approve this draft.",
         }
     if loan.state == PawnLoanState.APPROVED.value:
+        if not context.get("can_disburse", False):
+            return None
         return {
             "label": "Disburse loan",
             "url": reverse("loans:pawn_loan_disburse", args=[loan.pk]),

@@ -21,7 +21,7 @@ class Phase7PublicAuthRenderSmokeTests(TestCase):
         self.assertIn("css/public.css", html)
         self.assertIn("public-shell", html)
         self.assertIn("public-hero", html)
-        self.assertIn("Run loans, inventory, commodity, and accounting", html)
+        self.assertIn("Manage pawn loans from application to repayment and release.", html)
         self.assertIn("public-product-preview", html)
         self.assertIn("/accounts/signup/", html)
         self.assertNotIn("https://via.placeholder.com", html)

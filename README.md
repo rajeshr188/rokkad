@@ -34,7 +34,7 @@ security isolates Workspaces under a restricted runtime database role.
 - PostgreSQL using Django's standard backend plus forced RLS
 - Django apps: orgs, onboarding, subscriptions, accounts, Party, Loans, Notify v2, Rates
 - Frontend tooling: Django templates, HTMX, crispy forms, select2
-- Infra/runtime: WhiteNoise, Redis cache support, Docker files, GitHub Actions CI smoke workflow
+- Infra/runtime: WhiteNoise, optional Redis via [cache configuration](docs/implementation/cache-configuration.md), Docker files, GitHub Actions CI smoke workflow
 
 ## Repository Highlights
 

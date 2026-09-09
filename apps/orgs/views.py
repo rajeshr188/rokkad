@@ -1949,7 +1949,21 @@ def workspace_dashboard(request, workspace_id):
 
     # Check if user can view detailed metrics (Owner/Admin)
     context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
-    context.update(get_workspace_dashboard_context(workspace=workspace))
+    access = access_context["access"]
+    context.update(get_workspace_dashboard_context(workspace=workspace, access=access))
+    context["can_use_counter"] = access.can("data.view")
+    context["can_create_loan"] = access.can("data.view") and access.can("data.create")
+    if context["can_use_counter"]:
+        from django.core.paginator import Paginator
+        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
+
+        work = get_workspace_counter_work(workspace=workspace)
+        default_queue = next((key for key in ("overdue", "due", "approved", "draft", "review") if work["queues"][key]["count"]), "draft")
+        selected = work["queues"].get(request.GET.get("queue"), work["queues"][default_queue])
+        context["counter_work"] = work
+        context["work_queues"] = work["queues"].values()
+        context["selected_queue"] = selected
+        context["work_page"] = Paginator(selected["rows"], 20).get_page(request.GET.get("page"))
     if context.get("setup_checklist") is not None:
         context["setup_state"] = build_workspace_setup_display_state(
             user=request.user,

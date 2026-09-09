@@ -1,0 +1,11 @@
+{% extends "base_tenant.html" %}
+{% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
+<h1>Loan workflow</h1>
+<p>Choose how your business approves and disburses loans. Adding staff does not change this choice.</p>
+<form method="post" class="card card-body" style="max-width:48rem">{% csrf_token %}{{ form.as_p }}
+<p><strong>Owner review and disburse:</strong> the owner confirms one summary; approval and disbursal are recorded together.</p>
+<p><strong>Separate approval and disbursal:</strong> each action is performed separately by someone with the appropriate permission. Draft preparation uses data create/edit access; approval uses Can approve loans; disbursal uses Can disburse loans. Owners and Admins have both by default.</p>
+<p>Switching preserves drafts, already approved loans, active loans, and history. Already approved loans can still be disbursed separately in either workflow. This setting does not require different people for each step.</p>
+<div><button class="btn btn-primary">Save workflow</button></div></form>
+{% endblock %}

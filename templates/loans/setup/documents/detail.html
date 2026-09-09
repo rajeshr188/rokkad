@@ -22,6 +22,7 @@
   </div></div></div>
   <div class="col-lg-4">
     <div class="card mb-3"><div class="card-header">Assets</div><div class="card-body">
+      <p class="small"><a href="{% url 'loans:document_layout_guide' %}#backgrounds">How to upload and select a background or logo</a></p>
       <ul>{% for asset in revision.assets.all %}<li>{{ asset.key }} · {{ asset.mime_type }} · {{ asset.sha256|slice:':10' }}</li>{% empty %}<li class="text-muted">No assets</li>{% endfor %}</ul>
       {% if revision.state == 'DRAFT' %}<form method="post" enctype="multipart/form-data" action="{% url 'loans:document_layout_asset_add' revision.pk %}">{% csrf_token %}{{ asset_form.as_p }}<button class="btn btn-outline-primary">Validate and upload</button></form>{% endif %}
     </div></div>
