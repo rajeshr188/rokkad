@@ -8,6 +8,22 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Multiple-loan full release groups up to 20 current-date releases atomically through
+the existing full-release service. One payer funds the combined exact settlement;
+each loan has its own verified collector and immutable batch-line snapshot. No
+separate repayment, deferred collection or automatic notification is introduced.
+Signed quotes expire after ten minutes; identical completed retries return the
+original batch. Both new tables have direct Workspace ownership, forced RLS and
+database immutability/scope/total guards. Individual releases and reversals remain
+authoritative. See [the flow](flows/multiple-loan-release.md) and
+[decision](adr/2026-09-09-multiple-loan-full-release.md).
+
+Use [Future work](plans/future-work.md) as the main register for shelved ideas,
+with stable IDs, decisions, approval state and restart steps. License scoping is
+FW-001 and remains shelved until the owner chooses to revisit it; completing other
+work does not reactivate it. Link active delivery plans back to their future-work
+entry. The legacy backlog is historical input, not a current implementation queue.
+
 Public `.env.example` must contain only placeholders, never actual credentials.
 The 2026-09-09 Google OAuth exposure alert was traced locally to the same credential
 in commit `4359311` dated 2024-03-31. The owner confirmed rotation completed,

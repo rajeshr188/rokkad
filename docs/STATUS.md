@@ -8,6 +8,46 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-09 - Multiple-loan full release
+
+Implemented the approved behavior under Loans/Releases > Release multiple loans.
+Select2 searches active loans in the current Workspace without Redis; HTMX refreshes
+per-loan settlements and collateral. A batch records one payer and a separately
+verified collector for every loan, including another person's relationship and
+authorization confirmation. All selected exact full releases complete in one
+transaction through the existing service, retaining individual release numbers,
+events, custody history and documents. No duplicate repayment or automatic notice
+is created. Changed/expired quotes require review; identical retries return the
+completed batch. Batch history links to individual releases and shows reversals.
+
+Both new tables have non-null ownership, forced RLS, registry coverage and immutable
+database evidence with scope/date/total guards. The RLS check now gates these new
+models on their introducing migration and reports missing tables as check errors.
+Migration loans.0005 is applied locally with the owner-only migration settings.
+No license scoping was introduced. See [the guide](flows/multiple-loan-release.md)
+and [ADR](adr/2026-09-09-multiple-loan-full-release.md).
+
+Validation: 458 loan/registry regression tests passed, followed by 11 focused
+batch/registry tests covering expiry, replay, rollback, authorization, HTTP flow,
+restricted-role RLS, SQL immutability and migration-check behavior. Django system
+and local database checks pass; no migration drift. Automated browser inspection
+was unavailable because no browser was connected. The owner subsequently reviewed
+the workflow and confirmed it works as expected. Physical printer tests remain
+deferred. The owner approved cleanup, commit and push of this checkpoint, including
+the operator guide and future-work register; final cleanup changes documentation only.
+
+## 2026-09-09 - Future-work register
+
+Added [Future work](plans/future-work.md) as the primary register for shelved ideas.
+FW-001 records optional license scoping, current behavior, open decisions, explicit
+owner approval requirements and a concrete restart step. Includes a reusable entry
+template and state transitions linked to active/completed work. Documentation index,
+roadmap, active plan, delivery register and agent memory link to it. The older backlog
+is clearly marked historical; its entries are preserved for review, not reactivated.
+
+Documentation-only change; local links and whitespace checked. No application code
+or license scope changed. Included in the multiple-loan release checkpoint.
+
 ## 2026-09-09 - Access, private media and business setup checkpoint
 
 Checkpoint combines the incremental service/action-permission review, Workspace-local

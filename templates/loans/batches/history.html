@@ -1,0 +1,9 @@
+{% extends "base_tenant.html" %}{% load orgs_tags %}
+{% block title %}Release batches{% endblock %}
+{% block workspace_content %}
+{% navigation_actions as actions %}
+<div class="app-heading"><h1 class="h3">Release batches</h1>{% if 'loan.release' in actions %}<a class="btn btn-primary" href="{% url 'loans:release_batch_create' %}">Release multiple loans</a>{% endif %}</div>
+<table class="table"><thead><tr><th>Batch</th><th>Date</th><th>Paid by</th><th>Recorded collection (INR)</th></tr></thead><tbody>{% for batch in page %}<tr><td><a href="{% url 'loans:release_batch_detail' batch.pk %}">{{ batch.pk }}</a></td><td>{{ batch.effective_date }}</td><td>{{ batch.paid_by }}</td><td>{{ batch.total_amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No release batches yet.</td></tr>{% endfor %}</tbody></table>
+{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Previous</a>{% endif %} Page {{ page.number }} / {{ page.paginator.num_pages }} {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next</a>{% endif %}
+<p class="mt-3"><a href="{% url 'loans:pawn_release_list' %}">All releases</a></p>
+{% endblock %}

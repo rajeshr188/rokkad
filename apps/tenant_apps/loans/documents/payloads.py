@@ -49,6 +49,9 @@ class DocumentPayload:
 class PawnLoanDocumentProjectionBuilder:
     SCHEMA_VERSION = 1
     FIELD_KEYS = {
+        "Release batch": "release.batch_id", "Paid by": "release.paid_by",
+        "Collected by": "release.collector_name", "Collector relationship": "release.collector_relationship",
+        "Collection authorization": "release.collection_authorization",
         "Workspace": "workspace.name", "Workspace source ID": "workspace.source_id",
         "Regulatory license": "license.display", "License source ID": "license.source_id",
         "License authority": "license.authority", "License validity": "license.validity",
@@ -233,6 +236,14 @@ class PawnLoanDocumentProjectionBuilder:
             ("Fees settled", cls._money(release.fee_amount)),
             ("Total settlement", cls._money(release.settlement_amount)),
         )
+        batch_line = cls._related_or_none(release, "batch_line")
+        if batch_line is not None:
+            details += (
+                ("Release batch", batch_line.batch_id), ("Paid by", batch_line.batch.paid_by),
+                ("Collected by", batch_line.collector_name),
+                ("Collector relationship", "Borrower" if batch_line.collector_is_borrower else batch_line.relationship),
+                ("Collection authorization", batch_line.authorization_note or "Borrower verified; items ready for handover"),
+            )
         item_rows = [("Item ID", "Description", "Value at release", "Returned at")]
         for item in release.items.all():
             snapshot = item.valuation_snapshot or {}

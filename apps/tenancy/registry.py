@@ -13,6 +13,11 @@ RLS_MIGRATION_BY_APP = {
     "party": "0002_enable_workspace_rls",
     "rates": "0002_enable_workspace_rls",
 }
+# Models introduced after their app's original RLS rollout have their own gate.
+RLS_MIGRATION_BY_MODEL = {
+    "loans.pawnreleasebatch": "0005_pawnreleasebatch_pawnreleasebatchline_and_more",
+    "loans.pawnreleasebatchline": "0005_pawnreleasebatch_pawnreleasebatchline_and_more",
+}
 
 
 def workspace_owned_models(app_registry=apps):

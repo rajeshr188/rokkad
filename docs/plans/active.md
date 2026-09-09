@@ -8,8 +8,14 @@ related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, conta
 
 ## Current checkpoint
 
-The lending usability checkpoint is published on `rls-mvp` in `8d70c75`, followed
-by draft-photo deletion and list thumbnails in `6d27fa1`. See [current status](../STATUS.md)
+Multiple-loan full release is implemented and the owner confirmed it works as
+expected; see [the operator guide](../flows/multiple-loan-release.md) and validation
+in [Status](../STATUS.md). The owner approved this checkpoint for commit and push,
+including the future-work register. License scoping remains shelved.
+
+The preceding checkpoint is published on `rls-mvp` in `4d15477`, including Workspace
+permissions, private media and business setup. Earlier usability/photo checkpoints
+are `8d70c75` and `6d27fa1`. See [current status](../STATUS.md)
 for exact regression/browser evidence. Party, Loans, Notify v2 and Rates remain the
 supported apps; Workspace membership, action authorization and forced PostgreSQL
 RLS remain the foundation. Physical phone/camera and printer checks remain deferred.
@@ -20,8 +26,10 @@ Private business-media application work is verified (157 tests). See the
 [media inventory](../implementation/private-media-access.md) for delivery boundaries
 and the remaining production storage/CDN acceptance. Resumable business onboarding and single-option loan defaults are implemented and
 verified (249 broad + 1 focused tests); see [the flow](../flows/business-setup.md).
-Next review the live experience and checkpoint when requested. Optional license
-scope still requires a separate review and explicit owner approval.
+Next review the live experience. License scoping is shelved as
+[FW-001](future-work.md#fw-001-optional-owner-configurable-license-scope); it is not
+automatically the next implementation task. It requires a fresh review and explicit
+owner approval. Use [Future work](future-work.md) for newly shelved ideas.
 
 Follow the [incremental delivery register](saas-access-media-and-onboarding.md).
 The [accepted decision](../adr/2026-09-09-organization-tenant-and-license-access.md)
@@ -32,11 +40,11 @@ not universal; current organization-wide access remains subject to action permis
 1. Action/service fixes and AP-06 local stored grants are implemented, including
    the Owner permission editor and capability-based invitation checks. See the
    [role delivery record](workspace-role-migration.md). Keep future role presets separate.
-2. Audit and secure media delivery, including deployed serving verification.
-3. Simplify "Set up your business" using the existing onboarding services and
-   valid single-license/series defaults; separate optional staff setup.
-4. Review optional scope modes with the owner; implement and test only after
-   explicit approval. No license/branch restriction changes before that gate.
+2. Application media fixes are implemented; deployed serving verification remains
+   a separate pre-production acceptance gate.
+3. Resumable business setup and single-option defaults are implemented and verified.
+4. Optional license scoping is parked in FW-001, with the existing SCP review
+   criteria retained. Resume only when the owner chooses to revisit it.
 
 Do not collapse these concerns into a single completion flag. Each work item has
 its own acceptance evidence in the register. The entries below preserve historical

@@ -1,6 +1,8 @@
 {% extends "base_tenant.html" %}
 {% block title %}PawnLoan drafts{% endblock %}
 {% block workspace_content %}
+{% load orgs_tags %}{% navigation_actions as batch_actions %}
+<div class="d-flex gap-3 mb-3">{% if 'loan.release' in batch_actions %}<a href="{% url 'loans:release_batch_create' %}">Release multiple loans</a>{% endif %}<a href="{% url 'loans:release_batch_list' %}">Release batches</a></div>
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="h3 mb-1">PawnLoans</h1><p class="text-muted mb-0">Find and continue loans in this workspace.</p></div>
   <div class="d-flex flex-wrap gap-2">{% if can_manage_loan_setup %}<a class="btn btn-outline-primary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">PawnLoan setup</a>{% endif %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% elif not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>

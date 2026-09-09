@@ -6,6 +6,7 @@ from django.db.migrations.recorder import MigrationRecorder
 
 from .registry import (
     RLS_MIGRATION_BY_APP,
+    RLS_MIGRATION_BY_MODEL,
     rls_protected_models,
     workspace_owned_models,
 )
@@ -65,7 +66,9 @@ def check_workspace_rls(app_configs, databases=None, **kwargs):
         protected_models = tuple(
             model
             for model in rls_protected_models()
-            if (model._meta.app_label, RLS_MIGRATION_BY_APP[model._meta.app_label])
+            if (model._meta.app_label, RLS_MIGRATION_BY_MODEL.get(
+                model._meta.label_lower, RLS_MIGRATION_BY_APP[model._meta.app_label]
+            ))
             in applied
         )
         with connection.cursor() as cursor:
@@ -78,7 +81,7 @@ def check_workspace_rls(app_configs, databases=None, **kwargs):
                     FROM pg_class c
                     LEFT JOIN pg_policy p
                       ON p.polrelid = c.oid AND p.polname = 'workspace_isolation'
-                    WHERE c.oid = %s::regclass
+                    WHERE c.oid = to_regclass(%s)
                     """,
                     [model._meta.db_table],
                 )

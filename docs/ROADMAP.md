@@ -49,6 +49,7 @@ tracks are retired. Their historical plans are not current implementation work.
   auctions, and storage/verification journeys using existing domain services.
 - Reconcile remaining historical documentation as each live area is reviewed.
 
-See [active](plans/active.md), [backlog](plans/backlog.md), and [completed](plans/completed.md).
+See [active](plans/active.md), [future work](plans/future-work.md) for shelved ideas
+and restart points, and [completed](plans/completed.md).
 
 See [README](../README.md) for the project entry point.

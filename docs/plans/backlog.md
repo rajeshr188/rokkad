@@ -1,12 +1,18 @@
 ---
-status: active
+status: historical
 owner: project
 updated: 2026-06-17
 tags: [plans, backlog]
 related: [../ROADMAP.md, ../STATUS.md]
 ---
 
-# Backlog
+# Legacy backlog
+
+New shelved ideas belong in [Future work](future-work.md). This older list is
+preserved as historical input and has not been revalidated against the current
+application. Several entries refer to retired Girvi/DEA/inventory modules; do not
+resume them from this list alone. Review current status and accepted ADRs first,
+then capture any still-relevant idea in Future work with its source link.
 
 - Standardize Girvi lifecycle status language across models, transitions, templates, and tests.
 - Audit remaining direct cross-app imports and reads; move them behind facades/selectors.

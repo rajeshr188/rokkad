@@ -21,7 +21,8 @@ This folder is the living documentation system. Historical notes, audits, and su
 - [GLOSSARY](GLOSSARY.md) - shared domain language.
 - [AGENT_MEMORY](AGENT_MEMORY.md) - stable context for AI coding agents.
 - [Active plan](plans/active.md) - current work in progress.
-- [Backlog](plans/backlog.md) - deferred ideas and risks.
+- [Future work](plans/future-work.md) - shelved ideas, decisions and restart points.
+- [Legacy backlog](plans/backlog.md) - historical items requiring current-context review.
 - [Completed work](plans/completed.md) - implementation history.
 
 ## Domain Docs
@@ -51,6 +52,7 @@ This folder is the living documentation system. Historical notes, audits, and su
 ## Flow Docs
 
 - [User flow](flows/user-flow.md)
+- [Release multiple loans: selection, collectors and settlement](flows/multiple-loan-release.md)
 - [Workspace onboarding](flows/workspace-onboarding.md)
 - [Girvi loan lifecycle](flows/girvi-loan-lifecycle.md)
 - [DEA posting flow](flows/dea-posting-flow.md)

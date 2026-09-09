@@ -159,6 +159,10 @@ never bypass server validation, entitlements or membership checks.
 
 ## SCP: optional scope, last and subject to explicit owner approval
 
+Shelved as [FW-001](future-work.md#fw-001-optional-owner-configurable-license-scope).
+That entry owns the restart state; the criteria below remain the detailed review
+checklist. Finishing other phases does not automatically reactivate this work.
+
 Do not implement license/branch scoping now. After action permissions, private media
 and onboarding are addressed, return to the owner with a concrete design covering:
 

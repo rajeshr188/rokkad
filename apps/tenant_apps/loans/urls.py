@@ -1,13 +1,17 @@
 from django.urls import path
 
 from apps.tenant_apps.loans import views, browse
-from apps.tenant_apps.loans.web import workflow
+from apps.tenant_apps.loans.web import workflow, release_batches
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 
 app_name = "loans"
 
 urlpatterns = [
+    path("releases/batch/new/", release_batches.create, name="release_batch_create"),
+    path("releases/batch/search/", release_batches.search, name="release_batch_search"),
+    path("releases/batch/", release_batches.history, name="release_batch_list"),
+    path("releases/batch/<int:batch_pk>/", release_batches.detail, name="release_batch_detail"),
     path("internal/<int:pk>/collateral/<int:item_pk>/photos/<int:photo_pk>/delete/", pawn_collateral_photo_delete, name="pawn_collateral_photo_delete"),
     path("collateral/", browse.collateral_list, name="pawn_collateral_list"),
     path("releases/", browse.release_list, name="pawn_release_list"),

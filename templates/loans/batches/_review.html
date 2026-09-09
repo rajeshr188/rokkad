@@ -1,0 +1,34 @@
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if form_errors %}<div class="alert alert-danger">{{ form_errors }}</div>{% endif %}
+{% if preview %}
+<form method="post" action="{% url 'loans:release_batch_create' %}" id="batch-confirm">
+{% csrf_token %}<input type="hidden" name="action" value="complete">
+{{ confirmation_form.request_key }}{{ confirmation_form.quote_token }}
+{% if confirmation_errors %}<div class="alert alert-warning">{{ confirmation_errors }}</div>{% endif %}
+{% for row in preview.rows %}
+<section class="card mb-3"><div class="card-body">
+<h2 class="h5"><a href="{% url 'loans:pawn_loan_detail' row.loan.pk %}" target="_blank" rel="noopener">{{ row.loan.loan_number }}</a> &middot; {{ row.loan.borrower.display_name }}</h2>
+<p class="small text-muted">License {{ row.loan.license.license_number }} / {{ row.loan.series.code }}</p>
+{% if row.error %}<div class="alert alert-warning">Cannot release: {{ row.error }}</div>{% else %}
+<p><strong>Settlement: INR {{ row.amount|floatformat:2 }}</strong> &middot; Principal: {{ row.quote.principal_reduction_required|floatformat:2 }} &middot; Interest: {{ row.interest|floatformat:2 }} &middot; Fees: {{ row.fees|floatformat:2 }}</p>
+{% endif %}
+<div class="d-flex flex-wrap gap-3 mb-3">{% for item in row.loan.collateral_items.all %}<div class="border rounded p-2">{% with photo=item.photos.last %}{% if photo %}<img width="64" height="64" style="object-fit:cover" alt="{{ item.description }}" src="{% url 'loans:pawn_collateral_photo_document' row.loan.pk item.pk photo.pk %}?inline=1">{% endif %}{% endwith %}<span>{{ item.description }} &middot; {{ item.net_weight }} g</span><div class="small text-muted">CI-{{ item.public_id }} &middot; {{ item.get_custody_state_display }}</div></div>{% endfor %}</div>
+<div class="collector-fields" data-borrower="{{ row.loan.borrower.display_name }}">
+{{ row.collector_form.loan_id }}{{ row.collector_form.non_field_errors }}
+<p class="small">Borrower collecting: <strong>{{ row.loan.borrower.display_name }}</strong>. Select another person below if applicable.</p>
+<div class="row g-3"><div class="col-md-4">{{ row.collector_form.collector_type.label_tag }}{{ row.collector_form.collector_type }}</div>
+<div class="col-md-4 collector-other">{{ row.collector_form.collector_name.label_tag }}{{ row.collector_form.collector_name }}{{ row.collector_form.collector_name.errors }}</div>
+<div class="col-md-4 collector-other">{{ row.collector_form.relationship.label_tag }}{{ row.collector_form.relationship }}{{ row.collector_form.relationship.errors }}</div>
+<div class="col-12 collector-other">{{ row.collector_form.authorization_note.label_tag }}{{ row.collector_form.authorization_note }}{{ row.collector_form.authorization_note.errors }}</div>
+<div class="col-12">{{ row.collector_form.handover_confirmed }} {{ row.collector_form.handover_confirmed.label_tag }}{{ row.collector_form.handover_confirmed.errors }}</div></div>
+</div></div></section>
+{% endfor %}
+<div class="card"><div class="card-body">
+{% if preview.ready %}<h2 class="h4">Total to collect: INR {{ preview.total|floatformat:2 }}</h2><p>{{ preview.rows|length }} loan(s) &middot; {{ preview.date }}. Quote valid for 10 minutes; all amounts are rechecked on completion.</p>{% else %}<h2 class="h5">Resolve or remove blocked loans</h2><p>Amounts shown for ready loans are not a complete batch total.</p>{% endif %}
+<div class="row g-3 mb-3"><div class="col-md-6">{{ confirmation_form.paid_by.label_tag }}{{ confirmation_form.paid_by }}</div><div class="col-md-6">{{ confirmation_form.payment_reference.label_tag }}{{ confirmation_form.payment_reference }}</div></div>
+<p>{{ confirmation_form.payment_confirmed }} {{ confirmation_form.payment_confirmed.label_tag }}</p>
+<p class="small text-muted">Completion records settlement, return of every remaining item and closure for each loan. If someone will collect later, remove that loan and handle it separately. No notifications are sent automatically.</p>
+<button class="btn btn-primary" type="submit" {% if not preview.ready %}disabled{% endif %}>Complete selected releases</button>
+</div></div>
+</form>
+{% else %}<p class="text-muted">Select loans to see their settlements and collateral.</p>{% endif %}

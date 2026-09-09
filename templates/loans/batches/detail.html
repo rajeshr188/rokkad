@@ -1,0 +1,9 @@
+{% extends "base_tenant.html" %}
+{% block title %}Release batch {{ batch.pk }}{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Release batch {{ batch.pk }}</h1>
+<p>{{ batch.effective_date }} &middot; Recorded by {{ batch.created_by.get_username }} at {{ batch.created_at }}</p>
+<div class="card mb-3"><div class="card-body"><h2 class="h5">Recorded collection: INR {{ batch.total_amount|floatformat:2 }}</h2><p>Paid by: {{ batch.paid_by }}{% if batch.payment_reference %} &middot; Reference: {{ batch.payment_reference }}{% endif %}</p><p class="small mb-0">This summary records the original batch. Any later reversal remains on its individual release; it does not rewrite this collection record.</p></div></div>
+{% for line in batch.lines.all %}<section class="card mb-3"><div class="card-body"><h2 class="h5">{{ line.release.loan.loan_number }} &middot; {{ line.borrower_name }}</h2><p>Release {{ line.release.release_number }} &middot; INR {{ line.release.settlement_amount|floatformat:2 }}{% if line.release.reversal %} <strong class="text-danger">Reversed</strong>{% endif %}</p><p>Collected by: <strong>{{ line.collector_name }}</strong> {% if line.collector_is_borrower %}(borrower){% else %}({{ line.relationship }}){% endif %}</p>{% if line.authorization_note %}<p>Authorization confirmed: {{ line.authorization_note }}</p>{% endif %}<p class="small">Collector verified and all items confirmed ready for handover by {{ batch.created_by.get_username }}.</p><a href="{% url 'loans:pawn_release_detail' line.release_id %}" class="btn btn-outline-primary btn-sm">Release and items</a> <a href="{% url 'loans:pawn_release_memo_pdf' line.release_id %}" class="btn btn-outline-primary btn-sm">Individual release receipt PDF</a></div></section>{% endfor %}
+<a href="{% url 'loans:release_batch_list' %}">Batch history</a> &middot; <a href="{% url 'loans:pawn_release_list' %}">All releases</a>
+{% endblock %}
