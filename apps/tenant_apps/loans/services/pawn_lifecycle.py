@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import PawnLoanEventKind, PawnLoanState, can_transition
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
@@ -33,6 +34,7 @@ class PawnLifecycleError(ValueError):
 @transaction.atomic
 def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "loan.approve")
     _require_transition(loan, PawnLoanState.APPROVED)
     assert_series_can_issue(loan.series)
     loan.full_clean()
@@ -86,6 +88,7 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
 @transaction.atomic
 def reopen_pawn_loan(loan_id: int, *, reason: str, actor=None) -> PawnLoan:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "data.edit")
     _require_reason(reason)
     _require_transition(loan, PawnLoanState.DRAFT)
     previous = loan.state
@@ -104,6 +107,7 @@ def reopen_pawn_loan(loan_id: int, *, reason: str, actor=None) -> PawnLoan:
 @transaction.atomic
 def cancel_pawn_loan(loan_id: int, *, reason: str, actor=None) -> PawnLoan:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "data.edit")
     _require_reason(reason)
     _require_transition(loan, PawnLoanState.CANCELLED)
     previous = loan.state
@@ -129,6 +133,7 @@ def transfer_expired_draft_setup(
     actor=None,
 ) -> PawnLoan:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "data.edit")
     _require_reason(reason)
     if loan.state != PawnLoanState.DRAFT.value:
         raise PawnLifecycleError("Only a reopened draft can transfer license setup.")

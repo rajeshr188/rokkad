@@ -1,8 +1,11 @@
 from dataclasses import dataclass, field
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
+
+from apps.tenant_apps.party.access import PARTY_ACTION_PERMISSIONS
+from .action_access import require_party_service_permission
 
 from apps.tenant_apps.party.models import (
     Party,
@@ -38,6 +41,11 @@ def merge_parties(*, target, source, actor=None):
     The source Party is archived instead of deleted so audit history, skipped
     relationships, and any intentionally unresolved source data remain visible.
     """
+    if target.workspace_id != source.workspace_id:
+        raise PermissionDenied("Merged parties must belong to the same workspace.")
+    require_party_service_permission(
+        target.workspace_id, actor, *PARTY_ACTION_PERMISSIONS["edit"]
+    )
     if target.pk == source.pk:
         raise PartyMergeConflict("A party cannot be merged into itself.")
 

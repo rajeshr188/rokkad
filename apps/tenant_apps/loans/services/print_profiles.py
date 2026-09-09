@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.utils import timezone
 
+from .action_access import require_setup_administration
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.loans.documents import (
     PrintProfileDefinition,
@@ -56,6 +57,7 @@ class LoanDocumentPrintProfileService:
         cls, *, workspace, document_type, name, definition, actor=None, request=None
     ):
         _require_workspace(workspace.pk)
+        require_setup_administration(workspace.pk, actor)
         parsed = PrintProfileValidator.load(definition)
         if parsed.document_type != document_type or parsed.name != str(name).strip():
             raise PrintProfileServiceError(
@@ -88,6 +90,7 @@ class LoanDocumentPrintProfileService:
             pk=revision.profile_id
         )
         _require_workspace(profile.workspace_id)
+        require_setup_administration(revision.profile.workspace_id, actor)
         latest = profile.revisions.order_by("-version").first()
         clone = LoanDocumentPrintProfileRevision.objects.create(
             profile=profile,
@@ -110,6 +113,7 @@ class LoanDocumentPrintProfileService:
             "profile"
         ).get(pk=revision.pk)
         _require_workspace(revision.profile.workspace_id)
+        require_setup_administration(revision.profile.workspace_id, actor)
         if revision.state != revision.State.DRAFT:
             raise PrintProfileServiceError("Only draft print profile revisions can be edited.")
         parsed = PrintProfileValidator.load(definition)
@@ -139,6 +143,7 @@ class LoanDocumentPrintProfileService:
             "profile"
         ).get(pk=revision.pk)
         _require_workspace(revision.profile.workspace_id)
+        require_setup_administration(revision.profile.workspace_id, actor)
         if revision.state != revision.State.DRAFT:
             raise PrintProfileServiceError("Only draft print profile revisions can be published.")
         parsed = PrintProfileValidator.load(revision.definition)
@@ -168,6 +173,7 @@ class LoanDocumentPrintProfileService:
             "profile"
         ).get(pk=revision.pk)
         _require_workspace(revision.profile.workspace_id)
+        require_setup_administration(revision.profile.workspace_id, actor)
         if revision.state != revision.State.PUBLISHED:
             raise PrintProfileServiceError("Only published print profile revisions can be retired.")
         revision.state = revision.State.RETIRED
@@ -185,6 +191,7 @@ class LoanDocumentPrintProfileService:
         cls, *, revision, workspace, series=None, actor=None, request=None
     ):
         _require_workspace(workspace.pk)
+        require_setup_administration(workspace.pk, actor)
         if series is not None and series.license.workspace_id != workspace.pk:
             raise PrintProfileServiceError("Series belongs to another workspace.")
         revision = LoanDocumentPrintProfileRevision.objects.select_for_update().select_related(

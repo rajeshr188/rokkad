@@ -8,6 +8,345 @@ related: [ROADMAP.md, plans/completed.md, plans/active.md]
 
 # Status
 
+## 2026-09-09 - Access, private media and business setup checkpoint
+
+Checkpoint combines the incremental service/action-permission review, Workspace-local
+role grants and Owner editor, invitation safeguards, private business-file delivery,
+and resumable business setup with single-option loan defaults. It also publishes the
+sanitized .env.example; historical secret cleanup remains separate from this commit.
+
+Validation is recorded in the delivery sections below: 714 broad role/access tests,
+157 media tests, and 249 onboarding/access/first-loan tests plus one additional
+selection test passed, with focused boundary reruns as documented. No application
+code changed during checkpoint preparation; whitespace checks passed. The user
+explicitly requested commit and push to origin/rls-mvp. Production deployment and
+optional license scoping are not part of this checkpoint.
+
+
+## 2026-09-09 - Exposed Google OAuth credential: rotation confirmed by owner
+
+The owner's Google alert identifies `.env.example` at commit `8d70c75`.
+Local Git inspection confirms the same Google client ID and secret already existed
+in `4359311` (2024-03-31); public exposure timing and misuse are not established.
+Replaced credential values in the working-tree example with placeholders/blanks.
+This does not remove historical copies or revoke any credential. The agent changed
+no production configuration, Google credential, Git history, commit or remote.
+
+The owner completed rotation using the Google Cloud/live Django admin workflow,
+confirmed live sign-in works after disabling the old secret, and deleted that secret.
+This is owner-reported production verification; immediate rotation is complete.
+Current base settings do not read GOOGLE_OAUTH_CLIENT_SECRET.
+Separate repository follow-up remains: publish the sanitized example, review other
+historical example credentials for live reuse, and address history cleanup and secret
+scanning. No unrelated application deployment was needed for credential rotation.
+
+
+## 2026-09-09 - Resumable business setup and single-option loan defaults
+
+ONB-01 is implemented through existing Workspace and loan setup pages. My Workspaces
+and creation use Set up your business. The setup page derives six business/lending
+steps from persisted records and links Continue setup to the first unavailable step.
+All steps remain reviewable after completion. Loan setup navigation links back to
+Business setup. The older general checklist/reminder controls are collapsed; optional
+team invitations no longer reduce general completion, and no staff are required.
+
+New-loan forms visibly preselect a sole usable series and sole date-available active
+product. Series selection determines the license. Multiple choices remain explicit;
+submitted blanks/errors and existing draft selections are preserved. Exhausted or
+inactive series and date-ineligible licenses/products are not automatic defaults.
+Borrower choices also explicitly filter the Workspace in addition to RLS. Optional
+policy scope remains the business default, with clearer labels; no silent license
+policy override, new workflow mode, permission grant or financial mutation occurs.
+
+Validation: all 249 onboarding, orgs, draft UI, economic-policy and HTTP first-loan
+journey tests passed on a fresh database, followed by one additional exhausted-series/
+multiple-product/explicit-choice test. Resume reads preserve counts and numbering;
+missing setup and staff denials remain enforced. Updated an old role-test mock and
+changed-label expectation. Django, migration-drift and whitespace checks passed.
+No migration required. Changes uncommitted. See [business setup flow](flows/business-setup.md).
+
+Next: review the live setup experience and commit/push the checkpoint when requested.
+External media storage acceptance remains a pre-production gate. Optional license
+scope remains deferred until a separate design review and explicit owner approval.
+
+
+## 2026-09-09 - Private business media access secured in the application
+
+MED-01/MED-02 application inventory and fixes are complete. Borrower photos and KYC
+files now use explicit Workspace routes with current membership, Party view grants,
+Workspace and parent-record checks. Party and loan thumbnails use protected URLs;
+Party upload widgets no longer publish raw storage links. Documents download as
+attachments and raster photos use nosniff. Reviewed private file responses disable
+caching, including existing collateral, license, layout and notification routes.
+
+The development raw-media handler now allows only company logos and personal account
+avatars; business and unknown prefixes return 404, including normalized path variants.
+Existing files/records remain in place. Dormant cloud-storage configuration examples
+no longer request public-read ACLs. No external bucket or server configuration changed.
+The [media inventory](implementation/private-media-access.md) and accepted media ADR
+separate application enforcement from the still-open pre-production storage/CDN gate.
+
+Validation: all 157 Party, collateral-media, license, layout, Notify access and raw-media
+tests passed, including new HTTP links, authorized reads, anonymous/removed/revoked
+access, other-Workspace and parent mismatch, missing files and upload widgets. Initial
+streaming-test cleanup errors were fixed in the test harness; the final complete run
+passed. Django checks, migration drift and whitespace checks passed. No schema/data
+migration required. Changes remain uncommitted.
+
+Next: simplify resumable business onboarding and singleton license/series selection.
+Production media acceptance remains tracked for deployment; optional license scope
+still requires a separate final review and explicit owner approval.
+
+
+## 2026-09-09 - Workspace-local role permissions implemented (development cutover)
+
+Following the owner's development-only clarification, implemented stored local grants
+with fixed global role-template identities. Owner/Admin/Member/Viewer labels and
+membership/ownership references remain compatible; live grants are held by
+WorkspaceRole and WorkspaceRoleGrant. Runtime defaults are no longer unioned back
+into access. Re-seeding preserves edits. Team > Manage role permissions is Owner-only,
+audited and revision-checked; changing one business's grants does not affect another.
+
+Migrations orgs.0008/0009 are applied locally through migration settings. Both new
+tables have direct non-null ownership, forced RLS, registry coverage and SQL guards
+for grant scope and immutable role identity. Retired Girvi/DEA/accounting permission
+rows were removed; Party contact aliases remain. All 7 Workspaces and 7 memberships
+remain, with 28 local role records. No loan/borrower records were deleted. The local
+inventory now has no findings. Existing global template editing is disabled in admin.
+
+Invitations use capability-subset/protected-action checks and capture a grant
+fingerprint. Acceptance locks and revalidates current inviter authority and target
+grants; used invitations cannot restore removed membership. Pre-fingerprint pending
+invitations require reissue (none existed locally). Ownership and queued business
+notice policies remain intact. An unused billing compatibility helper was also
+aligned with the existing Owner/membership policy instead of global template grants.
+
+Validation: all 714 broad tests passed (orgs, tenancy, Loans, Party, Notify access,
+HTTP lending journey), followed by 17 focused role/invitation/RLS tests, two final
+editor-save/identity-guard reruns and one billing compatibility test. Restricted-role
+RLS coverage exercises reads, writes and cross-Workspace spoofing on both tables.
+Django checks, migration drift and whitespace checks passed. Changes uncommitted.
+
+Next: private-media delivery review and fixes, then simpler business onboarding.
+The development simplification is recorded in the accepted role ADR and delivery
+plan. Arbitrary new role labels/presets are not part of this fixed-template editor;
+optional license scope still requires the separate final review and owner approval.
+
+## 2026-09-09 - Read-only role migration preflight
+
+Implemented `python manage.py role_migration_preflight`: deterministic JSON with
+legacy defaults/stored grants/effective actions, SHA-256 fingerprints, all Workspace
+membership and historical invitation references, proposed local copies, unused roles
+and migration findings. The command uses a PostgreSQL repeatable-read/read-only
+transaction and emits no borrower data, emails, usernames or invitation tokens.
+
+Local inventory: 7 Workspaces, 7 memberships, 4 shared roles, 0 invitations and
+7 proposed local role copies. Retired permission codes occur in 3 roles; no owner
+mirror, collision or custom-delegation findings were reported. This is inventory
+evidence, not production/cutover approval. No database or access changes were made.
+
+Validation: all 6 focused preflight/role-semantics tests passed, followed by a passing
+archived-Workspace regression rerun with an explicit archived fixture. Covers
+read-only execution, deterministic output, fingerprints changing with grants,
+permission agreement, historical invitations, unknown/retired grants and delegation
+findings. Django, migration-drift and whitespace checks passed. Changes uncommitted.
+
+Next: review retired-code treatment and catalog compatibility before additive
+Workspace-role schema work. Media privacy/onboarding and the final license-scope
+approval gate remain tracked separately.
+
+## 2026-09-09 - Workspace role migration design (AP-06b/c)
+
+Documented a proposed [role ADR](adr/2026-09-09-workspace-owned-roles-and-stored-grants.md)
+and [staged delivery plan](plans/workspace-role-migration.md). The design uses local
+role/grant rows with forced RLS, stored-only authorization, protected canonical
+ownership and capability-based delegation. It covers global resolution and incoming
+invitation context ordering, invitation grant changes, exact access-parity backfill,
+seeding, audit and the rollback limit after owner edits.
+
+This checkpoint is documentation only. No runtime grants, schema, invitation policy
+or license scope changed. Local document links and whitespace were checked; no
+application tests were rerun for this design-only change. Implementation remains
+pending. Next: build a read-only role/invitation inventory and compatibility report.
+
+## 2026-09-09 - Effective-role semantics review (AP-06a)
+
+Confirmed that Role is globally shared and both access helpers union exact-name
+role defaults with stored grants. Removing a stored grant cannot revoke a default;
+Team only changes membership roles, while platform role edits affect every using
+Workspace. Added accurate Team/role-form guidance and platform role-editor help.
+
+The accepted stored-only authorization contract is not fully implemented; its
+status now explicitly records that gap. AP-06b/c/d track Workspace-owned role
+migration, delegation safeguards and a truthful owner permission editor. Existing
+permissions and role defaults are unchanged; license scope remains deferred.
+
+Validation: all 19 focused role-semantics, ownership, invitation and URL-shell tests
+passed on a fresh database, including shared-grant effects, default persistence,
+helper agreement and membership-specific demotion/removal. Django and whitespace
+checks passed. No migration; changes remain uncommitted.
+
+Next: design the access-preserving role migration and delegation policy, then
+implement incrementally. Media privacy and onboarding remain in the delivery register.
+
+## 2026-09-09 - Operational alert and Party service permissions (AP-05i/AP-05l)
+
+Operational license-expiry creation and manual retry now require setup administration
+inside the service. Verification-discrepancy creation retains Owner authority.
+The retry route calls an actor-authorized wrapper; workers still deliver queued
+intent. Party merge now checks either existing edit alias and matching Workspace.
+Portal lifecycle commands require setup administration and matching grant/request
+Workspace, then lock/reload persisted state before transition and audit.
+
+Validation: all 543 fresh-database tests passed across Loans, Party, Notify access
+and the HTTP lending journey. New coverage includes denied queue/delivery calls,
+removed-actor replay, Owner-only verification creation, worker delivery, denied
+merges, both edit aliases, portal self-administration denial, Workspace mismatch
+and stale-instance revocation protection. Django checks, migration drift and
+whitespace checks passed. No migration; changes remain uncommitted.
+
+Next: AP-06 effective-role semantics and owner-visible grant/revocation behavior.
+Media privacy and onboarding remain tracked; optional license scope remains last
+and requires fresh review and explicit owner approval.
+
+## 2026-09-09 - Setup service administration checks (AP-05f)
+
+License/series/numbering, economic policies, product configuration, document layouts,
+print profiles, monitoring policies and communication policy writes now enforce
+workspace.settings.manage in the active Workspace at the service boundary. Checks
+precede mutation and successful replay. Series composition forwards its actor;
+operator product bootstrap uses an explicit internal function while public seeding
+requires administration. Existing role defaults and setup HTTP policy are preserved.
+
+Validation: all 451 fresh-database Loans and HTTP lending-journey tests passed,
+then all 31 setup/product/layout regression tests passed, including four new tests
+covering missing/removed/unprivileged actors, no database/file writes on denial,
+revoked-grant replay, settings-only delegation and operator bootstrap. Django checks,
+migration drift and whitespace checks passed. No migration; changes are uncommitted.
+
+Next: operational-alert and remaining cross-app service boundaries, then effective
+role semantics. Media privacy and onboarding remain tracked separately. Optional
+license scope still requires a fresh review and explicit owner approval at the end.
+
+## 2026-09-09 - Funding service administration checks (AP-05e)
+
+All 14 funding commands now enforce workspace.settings.manage at the service
+boundary, matching existing HTTP policy. Checks precede numbering, state validation,
+replay and writes. Saved activation forwards its actor, and generic pawn-loan
+permissions do not grant funding authority. Role defaults and lifecycle rules remain.
+
+Validation: all 451 fresh-database Loans and HTTP lending-journey tests passed,
+including all-command denial without writes, missing/removed actors, revoked-grant
+replay denial, settings-only delegated lifecycle, rollback, exact reversals and
+concurrent double-pledge protection. Django checks, migration drift and whitespace
+checks passed. No migration; changes remain uncommitted.
+
+## 2026-09-09 - Draft and collateral service permissions (AP-05d)
+
+Public draft creation/update/split, setup transfer and photo operations now enforce
+create/edit grants with data.view. Label rendering checks view access. Transfer setup
+also gained its missing HTTP edit check and matching detail control. Initial photos
+remain part of create authority; renewal preserves its existing combined permissions
+through explicit internal persistence helpers. No role presets or license scope changed.
+
+Validation: all 449 fresh-database Loans and HTTP lending-journey tests passed,
+followed by two targeted reruns for the final split-permission and transfer-route
+assertions. Covers create-only initial photos, edit-only changes, single-grant split
+denial, removed/absent actors, unchanged numbers, photo-file rollback and renewal
+with release+approve+disburse alone. Django checks, migration drift and whitespace
+checks passed. No migration; changes remain uncommitted.
+
+## 2026-09-09 - Service/job and document boundary review (AP-05)
+
+Reviewed remaining Loans command families, scheduled/operator paths, provider callback
+authentication and document/artifact routes. The [permission review](implementation/action-permission-review.md)
+now tracks AP-05a through AP-05m individually, including open draft/funding/setup and Party
+service gaps. Approval/disbursal and cancel/reopen now enforce actor actions in their
+services. Configurable document issuance checks view access and Workspace agreement;
+recovery modes also check administration. Notify ZIP download now requires view and
+data.export; individual document viewing retains its existing policy.
+
+Validation: all 463 fresh-database tests passed (Loans, Notify access/batch views,
+and HTTP lending journey). Coverage includes absent/removed actors, disbursal replay,
+document Workspace mismatch and recovery override denial, and ZIP view/export grants
+checked before loading files. Existing lifecycle, document and scheduled-notice tests
+passed. Django checks, migration drift and whitespace checks passed. No migration;
+changes remain uncommitted.
+
+## 2026-09-09 - Customer notices and report exports (AP-03/AP-04)
+
+Customer notice create/manual retry now require data.edit at HTTP and service
+boundaries. Notify batch send controls match its existing edit permission. Loan
+report and borrower-statement CSV/XLSX/PDF exports require report.export; ordinary
+screen viewing remains available with data.view. Existing role defaults remain.
+Internal delivery of queued notices stays separate from user-authorized retry.
+The [permission review](implementation/action-permission-review.md) now explains
+its purpose and distinguishes historical findings, completed fixes and pending work.
+Other documents, operational alerts and service/job policies remain explicitly open.
+
+Validation: 455 fresh-database Loans, Notify access and HTTP lending-journey tests
+passed, plus all 6 focused Notify batch workflow tests (461 total). Covers all three
+report/statement export formats, independent grants, notice replay denial and manual
+retry without sending through a provider. Django checks, migration drift and whitespace
+checks passed. No migration; changes remain uncommitted.
+
+## 2026-09-09 - Explicit loan servicing permissions (AP-02)
+
+Repayment, full release, accrual and capitalization now require separate actions
+at both HTTP and service boundaries. Owner/Admin retain these operations; other
+roles require explicit grants. Renewal requires release, approval and disbursal.
+Checks run before replay, and the detail/dashboard controls reflect authorization.
+Migration orgs.0007 creates the permission records without changing tenant tables.
+No license scope or proposed role presets were introduced. Notices, exports and
+remaining service/job coverage are still open in the [permission review](implementation/action-permission-review.md).
+
+Validation: all 463 checks passed on a fresh database (Loans, HTTP lending journey,
+workspace entrypoints, shell rendering and Chromium lending acceptance at desktop
+and narrow-screen widths). Tests include independent servicing grants, omitted
+actors, removed membership, renewal missing each constituent grant, denied writes
+and grant revocation before replay. Migration orgs.0007 applied locally through
+owner-only migration settings. Django checks, migration drift and whitespace
+checks pass. Physical phone/printer checks remain deferred. This checkpoint is
+uncommitted.
+
+## 2026-09-09 - Optional scope clarification and first permission increment
+
+Owner clarification supersedes the earlier universal assigned-license interpretation:
+license scope is optional, owner-configurable, and must come last after a fresh
+review and explicit owner approval. Current organization-wide record access remains.
+ADR, memory and delivery register now preserve that approval gate; no license/branch
+scope settings, assignments, filters or migrations were introduced.
+
+The first [action-permission review](implementation/action-permission-review.md)
+records nine findings. AP-01 tightens HTTP draft cancellation/reopening and photo
+append to data.edit, and splitting to data.edit plus data.create. Loan-detail
+controls follow these checks. Existing role presets and loan lifecycle rules remain.
+Financial actions, notices, exports and service/job coverage are separate open
+findings; this is not a claim that all viewer mutation paths are closed.
+All 54 media/draft UI regression tests passed, including Viewer denial and an
+editor-only positive/negative permission case. Whitespace and new reference-link
+checks are clean. Changes remain uncommitted.
+
+## 2026-09-09 - SaaS tenant/access decisions and incremental follow-up register
+
+Documentation-only checkpoint: the owner reaffirmed organization-level RLS tenancy
+and future license-scoped staff access, with organization-wide borrower profiles.
+Superseded interpretation: assigned-license access was discussed here, but the owner
+subsequently clarified that scope must be optional, owner-configurable, and deferred
+for a fresh review and explicit approval. It is not a universal rule. The accepted [ADR](adr/2026-09-09-organization-tenant-and-license-access.md)
+records the reasoning and distinguishes the future scope model from current behavior.
+The [delivery register](plans/saas-access-media-and-onboarding.md) tracks action
+permissions, private media, onboarding, scope enforcement and integration evidence
+individually, with completion criteria and proposed role presets. Action and media
+reviews precede scoped collaboration. Onboarding can evolve existing creation and
+checklist services; team invitation should not make sole-owner lending readiness
+appear incomplete. No application behavior, permissions or schemas changed here.
+New reference links and whitespace checked; runtime tests were not needed.
+
+Photo deletion and list thumbnails below are published in `6d27fa1` on `rls-mvp`;
+that supersedes their interim uncommitted notes. Earlier usability work is published
+in `8d70c75`. The new decision/reference documents remain uncommitted.
+
 ## 2026-09-09 - Photos in collateral and loan lists
 
 Collateral rows show the latest captured photo beside the item identity, loaded

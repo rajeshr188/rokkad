@@ -26,6 +26,17 @@
         </div>
     </div>
 
+    {% if can_change_role %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6">Managing access</h2>
+            <p class="small mb-2">Changing a member's role applies that role's permissions in this workspace.
+                Remove a member to end their access. Ownership must be transferred before the owner can leave.</p>
+            <a href="{% url 'workspace_role_permissions' workspace_id=workspace.pk %}" class="btn btn-sm btn-outline-primary">Manage role permissions</a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Team Members List -->
     <div class="row">
         <div class="col-12">

@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
+from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
     InterestMethod,
     PawnLoanEventKind,
@@ -57,6 +58,7 @@ def disburse_pawn_loan(
 ) -> PawnDisbursalResult:
     """Activate an approved loan and record its once-only operational event."""
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "loan.disburse")
     if loan.state == PawnLoanState.ACTIVE.value:
         return _existing_disbursal_result(loan)
     if loan.state != PawnLoanState.APPROVED.value:

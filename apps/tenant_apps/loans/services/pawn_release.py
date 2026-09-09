@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.utils import timezone
 
+from apps.tenant_apps.loans.services.action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     PawnLoanEventKind,
@@ -134,6 +135,7 @@ def release_pawn_loan_in_full(
 ) -> PawnFullReleaseResult:
     """Settle an active loan and return every item in one durable transaction."""
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "loan.release")
     request_key = _request_key(request_key)
     amount = _money_amount(settlement_amount, loan)
     existing = loan.releases.filter(request_key=request_key).first()

@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
+from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import LoanDocumentKind, PawnLoanEventKind, PawnLoanState
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
@@ -138,6 +139,7 @@ def split_pawn_draft(
     actor=None,
 ):
     source = PawnLoan.objects.select_for_update().get(pk=source_loan_id, workspace_id=current_tenant_workspace_id())
+    require_loan_action(source, actor, "data.edit", "data.create")
     preview = preview_pawn_draft_split(
         source.pk,
         collateral_item_ids=collateral_item_ids,

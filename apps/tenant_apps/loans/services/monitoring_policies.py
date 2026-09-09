@@ -1,12 +1,14 @@
 from django.db import transaction
 from django.db.models import Max
 
+from .action_access import require_setup_administration
 from apps.tenant_apps.loans.models import LoanMonitoringPolicy
 
 
 @transaction.atomic
 def create_loan_monitoring_policy(*, workspace, actor=None, **values):
     """Create the next immutable version for a workspace/license scope."""
+    require_setup_administration(workspace.pk, actor)
 
     license = values.get("license")
     if license is not None and license.workspace_id != workspace.pk:

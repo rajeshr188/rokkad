@@ -1,3 +1,4 @@
+from apps.tenancy.testing import workspace_role_permissions
 import hashlib
 import shutil
 import tempfile
@@ -233,6 +234,43 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             _delete_draft_collateral(other)
         self.assertTrue(source.file.storage.exists(source.file.name))
         self.assertTrue(PawnCollateralPhoto.objects.filter(pk=source.pk).exists())
+
+    def test_viewer_cannot_mutate_draft_or_append_photo(self):
+        viewer = get_user_model().objects.create_user(username="draft-read-only")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[self.loan.pk]))
+        self.assertEqual(detail.status_code, 200)
+        self.assertNotContains(detail, "Append photograph")
+        for action in ("pawn_loan_cancel", "pawn_loan_reopen", "pawn_loan_split"):
+            with self.subTest(action=action):
+                url = reverse("loans:" + action, args=[self.loan.pk])
+                self.assertEqual(self.client.get(url).status_code, 403)
+                self.assertEqual(self.client.post(url, {"reason": "Forged mutation"}).status_code, 403)
+        url = reverse("loans:pawn_collateral_photo_add", args=[self.loan.pk, self.item.pk])
+        self.assertEqual(self.client.post(url, {"photograph": self.photo()}).status_code, 403)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.state, "DRAFT")
+        self.assertFalse(self.item.photos.exists())
+        self.assertFalse(self.loan.change_log.exists())
+
+    def test_edit_permission_without_create_cannot_split_draft(self):
+        from django.contrib.auth.models import Permission
+        editor = get_user_model().objects.create_user(username="draft-editor-only")
+        role = Role.objects.create(name="Draft editor only")
+        from django.contrib.contenttypes.models import ContentType
+        content_type = ContentType.objects.get_for_model(self.tenant)
+        for code in ("data_view", "data_edit"):
+            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            workspace_role_permissions(role, self.tenant).add(permission)
+        Membership.objects.create(user=editor, company=self.tenant, role=role)
+        self.client.force_login(editor)
+        url = reverse("loans:pawn_collateral_photo_add", args=[self.loan.pk, self.item.pk])
+        self.assertEqual(self.client.post(url, {"photograph": self.photo()}).status_code, 302)
+        self.assertTrue(self.item.photos.exists())
+        split_url = reverse("loans:pawn_loan_split", args=[self.loan.pk])
+        self.assertEqual(self.client.post(split_url).status_code, 403)
 
     def test_photo_delete_requires_edit_permission(self):
         photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)

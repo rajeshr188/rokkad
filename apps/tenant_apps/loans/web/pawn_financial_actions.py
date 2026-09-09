@@ -10,7 +10,6 @@ from django.utils import timezone
 from apps.tenant_apps.loans.access import (
     LOANS_ADMIN_ACTION, loans_action_required,
     loans_setup_required,
-    loans_workspace_required,
 )
 from apps.tenant_apps.loans.forms import (
     PawnAccrualForm, PawnCapitalizationForm, PawnDisbursalForm,
@@ -99,7 +98,7 @@ def pawn_loan_disburse(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("loan.repay")
 def pawn_loan_repay(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     repayment_preview = None
@@ -162,7 +161,7 @@ def pawn_loan_repay(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("loan.accrue")
 def pawn_loan_accrue(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     previews = _safe_accrual_previews(loan, include_partial=False)
@@ -196,7 +195,7 @@ def pawn_loan_accrue(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("loan.capitalize")
 def pawn_loan_capitalize(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnCapitalizationForm(request.POST or None)

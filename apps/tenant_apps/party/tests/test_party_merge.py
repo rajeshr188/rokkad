@@ -1,6 +1,8 @@
+from apps.tenancy.testing import workspace_role_permissions
 import uuid
 
 from django.contrib.auth import get_user_model
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.party.models import (
@@ -45,6 +47,9 @@ class PartyMergeTests(WorkspaceTestCase):
 
     def setUp(self):
         super().setUp()
+        self.actor = self.tenant.owner
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.actor, company=self.tenant, defaults={"role": role})
 
     def test_merge_moves_profile_children_and_archives_source(self):
         target = Party.objects.create(
@@ -90,7 +95,7 @@ class PartyMergeTests(WorkspaceTestCase):
             relationship_type=PartyRelationship.RelationshipType.FAMILY,
         )
 
-        result = merge_parties(target=target, source=source)
+        result = merge_parties(target=target, source=source, actor=self.actor)
         target.refresh_from_db()
         source.refresh_from_db()
 
@@ -125,8 +130,47 @@ class PartyMergeTests(WorkspaceTestCase):
             identifier=source_identifier,
         )
 
-        merge_parties(target=target, source=source)
+        merge_parties(target=target, source=source, actor=self.actor)
         document.refresh_from_db()
 
         self.assertEqual(document.party, target)
         self.assertEqual(document.identifier, target_identifier)
+
+    def test_merge_denial_preserves_both_profiles(self):
+        from django.core.exceptions import PermissionDenied
+        target = Party.objects.create(display_name="Target")
+        source = Party.objects.create(display_name="Source", primary_email="source@example.com")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+        for actor in (None, self.actor):
+            with self.assertRaises(PermissionDenied):
+                merge_parties(target=target, source=source, actor=actor)
+        Membership.objects.filter(user=self.actor, company=self.tenant).delete()
+        with self.assertRaises(PermissionDenied):
+            merge_parties(target=target, source=source, actor=self.actor)
+        target.refresh_from_db()
+        source.refresh_from_db()
+        self.assertFalse(target.primary_email)
+        self.assertEqual(source.status, Party.PartyStatus.ACTIVE)
+        self.assertNotIn("merged_into_party_id", source.metadata)
+
+    def test_each_existing_edit_alias_can_merge_and_scope_mismatch_is_denied(self):
+        from types import SimpleNamespace
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from django.core.exceptions import PermissionDenied
+        from apps.orgs.models import Company
+        for code in ("contact_edit", "data_edit"):
+            role = Role.objects.create(name="MergeDelegate-" + uuid.uuid4().hex[:8])
+            permission, _ = Permission.objects.get_or_create(
+                content_type=ContentType.objects.get_for_model(Company), codename=code,
+                defaults={"name": code})
+            workspace_role_permissions(role, self.tenant).add(permission)
+            Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+            target = Party.objects.create(display_name="Target")
+            source = Party.objects.create(display_name="Source")
+            with self.assertRaises(PermissionDenied):
+                merge_parties(target=target, source=SimpleNamespace(workspace_id=self.tenant.pk + 1), actor=self.actor)
+            merge_parties(target=target, source=source, actor=self.actor)
+            source.refresh_from_db()
+            self.assertEqual(source.metadata["merged_by_user_id"], self.actor.pk)

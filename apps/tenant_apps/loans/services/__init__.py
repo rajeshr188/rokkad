@@ -140,6 +140,7 @@ from .pawn_notices import (
     create_pawn_loan_notice,
     dispatch_due_pawn_loan_notices,
     dispatch_pawn_loan_notice,
+    retry_pawn_loan_notice,
 )
 from .pawn_auctions import (
     PawnAuctionCompletionResult,
@@ -180,6 +181,7 @@ from .operational_notices import (
     create_verification_discrepancy_notice,
     dispatch_due_operational_notices,
     dispatch_operational_notice,
+    retry_operational_notice,
 )
 from .report_exports import (
     PawnLoanReportDataset,
@@ -329,6 +331,7 @@ __all__ = (
     "create_verification_discrepancy_notice",
     "dispatch_due_operational_notices",
     "dispatch_operational_notice",
+    "retry_operational_notice",
     "PawnLoanReportDataset",
     "PawnLoanReportExportError",
     "build_party_statement_dataset",
@@ -391,6 +394,7 @@ __all__ = (
     "create_pawn_loan_notice",
     "dispatch_due_pawn_loan_notices",
     "dispatch_pawn_loan_notice",
+    "retry_pawn_loan_notice",
     "PawnAuctionCompletionResult",
     "PawnAuctionError",
     "PawnAuctionReversalResult",

@@ -12,6 +12,8 @@
         <span class="mgmt-status-badge done"><i class="bi bi-check-circle"></i>Done</span>
         {% elif item.status == "unknown" %}
         <span class="mgmt-status-badge check"><i class="bi bi-info-circle"></i>Check</span>
+        {% elif item.optional %}
+        <span class="mgmt-status-badge check">Optional</span>
         {% else %}
         <span class="mgmt-status-badge todo"><i class="bi bi-circle"></i>Todo</span>
         {% endif %}

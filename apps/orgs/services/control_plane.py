@@ -440,6 +440,17 @@ def accept_invitation(*, invitation, user, request):
             company=locked.company,
         ).first()
         created = False
+        if state == CompanyInvitation.Status.ACCEPTED and membership is None:
+            raise ValidationError("This invitation was already used. Ask for a new invitation.")
+        if state != CompanyInvitation.Status.ACCEPTED:
+            from apps.orgs.services.workspace_roles import role_grant_fingerprint
+            from apps.orgs.models import WorkspaceRole
+            from apps.tenancy.context import workspace_context
+            with workspace_context(locked.company_id):
+                WorkspaceRole.objects.select_for_update().get(workspace_id=locked.company_id, role_id=locked.role_id)
+            role_policy.assert_can_invite_role(actor=locked.inviter, workspace=locked.company, role=locked.role)
+            if not locked.role_fingerprint or locked.role_fingerprint != role_grant_fingerprint(locked.company_id, locked.role_id):
+                raise ValidationError("Role permissions changed. Ask the owner for a new invitation.")
         if membership is None:
             ensure_workspace_has_member_capacity(
                 workspace=locked.company,

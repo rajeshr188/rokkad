@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import (
@@ -55,6 +56,8 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             username=f"economics-user-{uuid.uuid4().hex[:8]}",
             email=f"economics-user-{uuid.uuid4().hex[:8]}@example.com",
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
         self.license = create_license(
             workspace=self.tenant,
             name="Pawn Broker License",
@@ -152,12 +155,14 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             monthly_interest_rate=Decimal("2"),
             effective_from=date(2026, 1, 1),
             effective_until=date(2026, 6, 30),
+            actor=self.user,
         )
         current_rate = create_pawn_metal_interest_rate_policy(
             workspace=self.tenant,
             metal=CollateralMetal.GOLD,
             monthly_interest_rate=Decimal("2.5"),
             effective_from=date(2026, 7, 1),
+            actor=self.user,
         )
         override = create_pawn_metal_interest_rate_policy(
             workspace=self.tenant,
@@ -165,6 +170,7 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             metal=CollateralMetal.GOLD,
             monthly_interest_rate=Decimal("1.75"),
             effective_from=date(2026, 8, 1),
+            actor=self.user,
         )
 
         june = resolve_pawn_metal_interest_rate_policy(
@@ -198,6 +204,7 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             calculation_type=FeeCalculationType.FIXED,
             value=Decimal("100"),
             effective_from=date(2026, 1, 1),
+            actor=self.user,
         )
         create_pawn_loan_fee_policy(
             workspace=self.tenant,
@@ -206,6 +213,7 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             calculation_type=FeeCalculationType.FIXED,
             value=Decimal("25"),
             effective_from=date(2026, 1, 1),
+            actor=self.user,
         )
         override = create_pawn_loan_fee_policy(
             workspace=self.tenant,
@@ -215,6 +223,7 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             calculation_type=FeeCalculationType.PERCENTAGE,
             value=Decimal("1.5"),
             effective_from=date(2026, 7, 1),
+            actor=self.user,
         )
 
         policies = resolve_pawn_loan_fee_policies(
@@ -244,6 +253,7 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
                 calculation_type=FeeCalculationType.PERCENTAGE,
                 value=Decimal("100.01"),
                 effective_from=date(2026, 1, 1),
+                actor=self.user,
             )
 
     def test_active_tenant_boundary_is_required(self):

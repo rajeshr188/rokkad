@@ -6,7 +6,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_products
 from apps.tenancy.testing import WorkspaceTestCase
+from apps.orgs.models import Membership, Role
 
 from apps.tenant_apps.loans.domain import CollateralMetal, LoanDocumentKind, PawnLoanEventKind, PawnLoanState
 from apps.tenant_apps.loans.models import CollateralAppraisal, LoanLicense, LoanNumberSequence, LoanSeries, PawnLoanApprovalSnapshot
@@ -20,7 +22,6 @@ from apps.tenant_apps.loans.services import (
     create_pawn_draft,
     reopen_pawn_loan,
     transfer_expired_draft_setup,
-    seed_default_loan_products,
 )
 from apps.tenant_apps.party.models import Party
 
@@ -53,9 +54,11 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
             username=f"lifecycle-{uuid.uuid4().hex[:8]}",
             email=f"lifecycle-{uuid.uuid4().hex[:8]}@example.com",
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.create(user=self.actor, company=self.tenant, role=role)
         self.borrower = Party.objects.create(display_name="Lifecycle Borrower")
         self.license, self.series = self._setup("A", "PL-A-")
-        product_version = seed_default_loan_products()[0]
+        product_version = _seed_default_loan_products()[0]
         type(product_version).objects.filter(pk=product_version.pk).update(status="ACTIVE")
         self.loan = create_pawn_draft(
             CreatePawnDraftCommand(

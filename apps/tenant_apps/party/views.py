@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 import uuid
 
 from django.contrib import messages
@@ -8,11 +9,12 @@ from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from apps.tenant_apps.loans.selectors import get_party_pawn_loan_history_summary
 
@@ -678,3 +680,35 @@ def party_merge(request, pk):
         active_tab="merge",
         merge_form=form,
     )
+
+
+@never_cache
+@party_action_required("view")
+def party_profile_photo(request, pk):
+    party = get_object_or_404(Party, pk=pk, workspace=request.workspace)
+    return _private_party_file(party.profile_photo, image=True)
+
+
+@never_cache
+@party_action_required("view")
+def party_document_download(request, pk, document_pk):
+    document = get_object_or_404(
+        PartyDocument, pk=document_pk, party_id=pk, workspace=request.workspace,
+    )
+    return _private_party_file(document.file)
+
+
+def _private_party_file(field, *, image=False):
+    if not field:
+        raise Http404("File unavailable.")
+    try:
+        source = field.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404("File unavailable.") from exc
+    response = FileResponse(source, as_attachment=not image, filename=Path(field.name).name)
+    # Only ordinary raster photos may render inline; uploaded documents download.
+    if image and response["Content-Type"] not in {"image/jpeg", "image/png", "image/gif", "image/webp"}:
+        source.close()
+        raise Http404("Unsupported photo format.")
+    response["X-Content-Type-Options"] = "nosniff"
+    return response

@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import LoanDocumentKind
@@ -51,6 +52,8 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
             username=f"license-user-{uuid.uuid4().hex[:8]}",
             email=f"license-user-{uuid.uuid4().hex[:8]}@example.com",
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
 
     def _create_license(self, *, number="PBL-1", expires_on=date(2027, 1, 1)):
         return create_license(
@@ -65,8 +68,8 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
     def test_workspace_can_have_multiple_active_licenses_and_series(self):
         first = self._create_license(number="PBL-1")
         second = self._create_license(number="PBL-2")
-        first_series = create_series(license=first, name="Main", code="A")
-        second_series = create_series(license=second, name="Main", code="A")
+        first_series = create_series(license=first, name="Main", code="A", actor=self.user)
+        second_series = create_series(license=second, name="Main", code="A", actor=self.user)
 
         self.assertTrue(first.is_active)
         self.assertTrue(second.is_active)
@@ -187,7 +190,7 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
 
     def test_expired_license_remains_readable_but_cannot_issue_or_reactivate(self):
         license = self._create_license(expires_on=date(2026, 6, 30))
-        series = create_series(license=license, name="Main", code="A")
+        series = create_series(license=license, name="Main", code="A", actor=self.user)
 
         with self.assertRaisesRegex(LicenseSeriesError, "expired"):
             assert_series_can_issue(series, as_of_date=date(2026, 7, 1))
@@ -198,7 +201,7 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
 
     def test_inactive_license_and_series_each_block_issuance(self):
         license = self._create_license()
-        series = create_series(license=license, name="Main", code="A")
+        series = create_series(license=license, name="Main", code="A", actor=self.user)
         expire_license(license, actor=self.user)
         with self.assertRaisesRegex(LicenseSeriesError, "inactive"):
             assert_series_can_issue(series, as_of_date=date(2026, 6, 1))
@@ -212,7 +215,7 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
     @patch("apps.tenant_apps.loans.services.license_series.AuditLog.log")
     def test_sequence_configuration_is_guarded_and_audited(self, audit_log):
         license = self._create_license()
-        series = create_series(license=license, name="Main", code="A")
+        series = create_series(license=license, name="Main", code="A", actor=self.user)
         audit_log.reset_mock()
 
         sequence = configure_sequence(
@@ -241,7 +244,7 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
 
     def test_sequence_maximum_cannot_move_below_next_number(self):
         license = self._create_license()
-        series = create_series(license=license, name="Main", code="A")
+        series = create_series(license=license, name="Main", code="A", actor=self.user)
         with patch("apps.tenant_apps.loans.services.license_series.AuditLog.log"):
             sequence = configure_sequence(
                 series=series,
@@ -260,3 +263,43 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
                     maximum_number=6,
                     actor=self.user,
                 )
+
+    def test_series_and_license_mutations_require_current_administration(self):
+        from functools import partial
+        from django.core.exceptions import PermissionDenied
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from apps.tenant_apps.loans.services.license_series import (
+            renew_license, update_series, set_series_active,
+        )
+        license = self._create_license()
+        series = create_series(license=license, name="Main", code="A", actor=self.user)
+        configured = dict(name="Changed", code="B", is_active=True,
+                          pawn_loan_prefix="P", release_prefix="R", number_width=5, maximum_number=10000)
+        commands = (
+            partial(update_license, license, name="Changed"),
+            partial(renew_license, license, issued_on=date(2027, 1, 1), expires_on=date(2028, 1, 1)),
+            partial(activate_license, license),
+            partial(expire_license, license),
+            partial(create_series, license=license, name="New", code="B"),
+            partial(update_series, series, name="Changed"),
+            partial(set_series_active, series, is_active=False),
+            partial(create_configured_series, license=license, **configured),
+            partial(update_configured_series, series, **configured),
+            partial(configure_sequence, series=series, document_kind=LoanDocumentKind.PAWN_LOAN, prefix="P"),
+        )
+        role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.filter(user=self.user, company=self.tenant).update(role=role)
+        for actor in (None, self.user):
+            for command in commands:
+                with self.subTest(actor=actor, command=command):
+                    with CaptureQueriesContext(connection) as queries:
+                        with self.assertRaises(PermissionDenied):
+                            command(actor=actor)
+                    self.assertFalse(any(q["sql"].lstrip().upper().startswith(
+                        ("INSERT ", "UPDATE ", "DELETE ")) for q in queries))
+        license.refresh_from_db()
+        series.refresh_from_db()
+        self.assertEqual(series.name, "Main")
+        self.assertTrue(license.is_active)
+        self.assertEqual(LoanNumberSequence.objects.count(), 0)

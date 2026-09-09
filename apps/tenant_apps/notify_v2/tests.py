@@ -804,6 +804,14 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
         self.assertIn("artifacts", context)
         self.assertEqual(len(context["artifacts"]), 1)
         self.assertEqual(context["artifacts"][0].file.url, "/media/notify_v2/artifacts/test.pdf")
+        job.channel = NotificationJob.Channel.EMAIL
+        with patch("apps.tenant_apps.notify_v2.access.assert_notify_v2_action_permission"):
+            request.notify_v2_workspace_access = SimpleNamespace(can=lambda action: False)
+            batch_detail(request, pk=7)
+            self.assertFalse(mock_render.call_args.args[2]["can_send_digital"])
+            request.notify_v2_workspace_access = SimpleNamespace(can=lambda action: action == "data.edit")
+            batch_detail(request, pk=7)
+            self.assertTrue(mock_render.call_args.args[2]["can_send_digital"])
 
     @patch("apps.tenant_apps.notify_v2.views.dispatch_batch_jobs")
     @patch("apps.tenant_apps.notify_v2.views.get_object_or_404")

@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.http import content_disposition_header
 
-from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION, loans_workspace_required
+from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION, loans_workspace_required, loans_action_required
 from apps.tenant_apps.loans.services import (
     PawnLoanReportExportError,
     build_party_statement_dataset,
@@ -45,13 +45,15 @@ def pawn_loan_reports(request):
         "report": report,
         "parties": parties,
         "can_administer": _can_administer(request),
+        "can_export": request.loans_workspace_access.can("report.export"),
+        "can_send_notice": request.loans_workspace_access.can("data.edit"),
         "report_is_current": as_of_date == timezone.localdate(),
         "report_export_sections": REPORT_EXPORT_SECTIONS,
         "report_export_formats": REPORT_EXPORT_FORMATS,
     })
 
 
-@loans_workspace_required
+@loans_action_required("report.export")
 def pawn_loan_report_export(request, section, export_format):
     as_of_date = _report_as_of_date(request)
     try:
@@ -70,6 +72,8 @@ def pawn_loan_report_export(request, section, export_format):
 
 @loans_workspace_required
 def pawn_party_statement(request, party_pk, export_format=None):
+    if export_format:
+        request.loans_workspace_access.require("report.export")
     party = get_object_or_404(
         Party.objects.filter(
             pawn_loans__workspace=request.loans_workspace
@@ -93,7 +97,7 @@ def pawn_party_statement(request, party_pk, export_format=None):
         )
         return response
     return render(
-        request, "loans/pawn/party_statement.html", {"statement": statement}
+        request, "loans/pawn/party_statement.html", {"statement": statement, "can_export": request.loans_workspace_access.can("report.export")}
     )
 
 

@@ -837,3 +837,28 @@ class PartyUITests(WorkspaceTestCase):
 
         with self.assertRaises(PermissionDenied):
             party_views.party_merge(request, target.pk)
+
+
+    def test_private_photo_and_document_links_use_workspace_routes(self):
+        party = Party.objects.create(party_code="PRIVATE", display_name="Private Media")
+        party.profile_photo.save("photo.png", SimpleUploadedFile("photo.png", b"photo"))
+        document = PartyDocument.objects.create(party=party, title="Identity")
+        document.file.save("identity.pdf", SimpleUploadedFile("identity.pdf", b"identity"))
+        photo_url = reverse("workspace_party:party_photo", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": party.pk,
+        })
+        document_url = reverse("workspace_party:party_document_download", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": party.pk, "document_pk": document.pk,
+        })
+        detail = self.client.get(reverse("party:party_detail", args=[party.pk]))
+        self.assertContains(detail, photo_url)
+        self.assertContains(detail, document_url)
+        self.assertNotContains(detail, party.profile_photo.url)
+        self.assertNotContains(detail, document.file.url)
+        for url, content in ((photo_url, b"photo"), (document_url, b"identity")):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            # The test client's streaming iterator closes its response safely.
+            self.assertEqual(b"".join(response.streaming_content), content)
+        self.client.logout()
+        self.assertNotEqual(self.client.get(photo_url).status_code, 200)

@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import DatabaseError, connection, transaction
 from django.test import override_settings
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
@@ -65,6 +66,8 @@ class LoanLicenseRegulatoryTests(WorkspaceTestCase):
             username=f"regulatory-user-{uuid.uuid4().hex[:8]}",
             email=f"regulatory-{uuid.uuid4().hex[:8]}@example.com",
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
         audit = patch(
             "apps.tenant_apps.loans.services.license_series.AuditLog.log"
         )
@@ -175,7 +178,7 @@ class LoanLicenseRegulatoryTests(WorkspaceTestCase):
     def test_existing_loan_keeps_original_license_revision_after_renewal(self):
         license = self.create_license()
         initial = license.revisions.get(revision_number=1)
-        series = create_series(license=license, name="Main", code="A")
+        series = create_series(license=license, name="Main", code="A", actor=self.user)
         borrower = Party.objects.create(
             party_code="P-REG-1",
             display_name="Regulatory Borrower",

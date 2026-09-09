@@ -65,7 +65,23 @@ class CompanyAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Membership)
-admin.site.register(Role)
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    """Global templates are not a live Workspace permission editor."""
+    readonly_fields = ("name", "permissions")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 admin.site.register(Domain)
 
 

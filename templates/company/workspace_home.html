@@ -13,12 +13,12 @@
             {% if has_workspaces %}
             Choose the business workspace you want to operate or manage.
             {% else %}
-            Create a Workspace for your business, or accept an invitation below.
+            Set up your business, or accept an invitation below.
             {% endif %}
         </p>
     </div>
     <a class="btn btn-primary" href="{% url 'app_workspace_create' %}">
-        <i class="bi bi-plus-circle me-1"></i>New Workspace
+        <i class="bi bi-plus-circle me-1"></i>Set up your business
     </a>
     <a class="btn btn-outline-secondary" href="{% url 'archived_workspaces' %}">
         <i class="bi bi-archive me-1"></i>Archived Workspaces
@@ -116,7 +116,7 @@
                 <h2 class="h5 fw-bold mb-2">No workspaces yet</h2>
                 <p class="text-muted mb-3">Create a Workspace to set up pawn lending and team access, or accept an invitation to an existing business.</p>
                 <a href="{% url 'app_workspace_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i>Create Workspace
+                    <i class="bi bi-plus-circle me-1"></i>Set up your business
                 </a>
             </div>
             {% endif %}

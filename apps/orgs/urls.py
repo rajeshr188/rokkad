@@ -100,6 +100,8 @@ WORKSPACE_INVITATION_URLPATTERNS = [
 # Team membership routes are workspace settings/admin surfaces. The list route
 # still uses selected-workspace fallback; mutating routes carry workspace_id.
 TEAM_MEMBER_URLPATTERNS = [
+    path("workspace/<int:workspace_id>/team/permissions/", views.workspace_role_permissions, name="workspace_role_permissions"),
+    path("workspace/<int:workspace_id>/team/permissions/<int:role_id>/", views.workspace_role_permissions, name="workspace_role_permissions_edit"),
     path(
         "workspace/<int:workspace_id>/team/member/<int:membership_id>/remove/",
         views.team_remove_member,

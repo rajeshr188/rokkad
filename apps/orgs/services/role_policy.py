@@ -38,33 +38,38 @@ def owner_membership_count(workspace) -> int:
 
 
 def actor_can_grant_role(*, actor, workspace, role) -> bool:
-    """Return whether actor may assign/invite the target role."""
-    if is_platform_admin(actor):
-        return True
-
-    target_role = role_name(role)
-    if target_role == OWNER_ROLE_NAME:
+    """Authorize the actual local grants, never just a harmless-looking label."""
+    from apps.orgs.access import normalize_action
+    from apps.orgs.models import WorkspaceRole
+    from apps.orgs.services.workspace_roles import stored_role_codes
+    from apps.tenancy.context import workspace_context
+    if role_name(role) == OWNER_ROLE_NAME:
         return False
+    with workspace_context(workspace.pk):
+        if not WorkspaceRole.objects.filter(workspace=workspace, role=role).exists():
+            return False
     access = resolve_workspace_access(actor=actor, workspace=workspace)
-
-    if target_role in ELEVATED_ROLE_NAMES:
-        return access.can("team_invite_admin") and _actor_is_owner(
-            actor,
-            workspace,
-        )
-
-    return access.can("team_invite")
+    if access.platform_override:
+        return True
+    if not access.membership:
+        return False
+    if _actor_is_owner(actor, workspace):
+        return access.can("team.invite")
+    if not access.can("team.invite"):
+        return False
+    target = {normalize_action(code) for code in stored_role_codes(workspace.pk, role.pk)}
+    protected = {"workspace.edit", "workspace.settings.manage", "workspace.archive",
+                 "workspace.delete", "workspace.transfer", "team.member.remove",
+                 "team.member.role.change", "team.invite.elevated", "billing.manage",
+                 "billing.edit", "billing.cancel", "admin.access"}
+    return not (target & protected) and target <= access.actions
 
 
 def allowed_invitation_roles(*, actor, workspace):
-    """Return Role queryset filtered to the roles actor may invite."""
     from apps.orgs.models import Role
-
-    roles = Role.objects.all().order_by("name")
-    roles = roles.exclude(name__iexact="Owner")
-    if is_platform_admin(actor) or _actor_is_owner(actor, workspace):
-        return roles
-    return roles.exclude(name__iexact="Admin")
+    allowed = [role.pk for role in Role.objects.order_by("name")
+               if actor_can_grant_role(actor=actor, workspace=workspace, role=role)]
+    return Role.objects.filter(pk__in=allowed).order_by("name")
 
 
 def assert_can_invite_role(*, actor, workspace, role):
@@ -76,6 +81,11 @@ def assert_can_invite_role(*, actor, workspace, role):
 
 def assert_can_change_role(*, actor, workspace, membership, new_role):
     """Validate role transitions before changing a membership role."""
+    from apps.orgs.models import WorkspaceRole
+    from apps.tenancy.context import workspace_context
+    with workspace_context(workspace.pk):
+        if not WorkspaceRole.objects.filter(workspace=workspace, role=new_role).exists():
+            raise PermissionDenied("Role is not available in this workspace.")
     if role_name(new_role) == OWNER_ROLE_NAME:
         raise PermissionDenied("Use ownership transfer to assign the Owner role.")
     if is_platform_admin(actor):

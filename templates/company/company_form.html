@@ -2,7 +2,7 @@
 {% load crispy_forms_tags %}
 {% load orgs_tags %}
 
-{% block title %}{% if company %}Edit {{ company.name }}{% else %}Create Workspace{% endif %} - Rokkad{% endblock %}
+{% block title %}{% if company %}Edit {{ company.name }}{% else %}Set up your business{% endif %} - Rokkad{% endblock %}
 
 {% block mgmt_content %}
 <div class="container py-4">
@@ -14,7 +14,7 @@
             <li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.slug %}">{{ company.name }}</a></li>
             <li class="breadcrumb-item active">Edit</li>
             {% else %}
-            <li class="breadcrumb-item active">Create Workspace</li>
+            <li class="breadcrumb-item active">Set up your business</li>
             {% endif %}
         </ol>
     </nav>
@@ -27,7 +27,7 @@
                         {% if company %}
                         <i class="bi bi-pencil-square"></i> Update Workspace
                         {% else %}
-                        <i class="bi bi-plus-circle"></i> Create New Workspace
+                        <i class="bi bi-plus-circle"></i> Set up your business
                         {% endif %}
                     </h4>
                 </div>
@@ -35,14 +35,14 @@
                     {% if not company %}
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle"></i>
-                        <strong>Welcome!</strong> Create your first workspace to start managing your business. 
+                        <strong>Welcome!</strong> Start with your business details. We create its workspace and guide you through lending setup.
                         You'll be assigned as the <strong>Owner</strong> with full administrative privileges.
                     </div>
                     {% endif %}
 
                     <form method="POST" enctype="multipart/form-data">
                         {% csrf_token %}
-                        
+
                         <div class="mb-4">
                             {{ form|crispy }}
                         </div>
@@ -73,7 +73,7 @@
                                 {% if company %}
                                 <i class="bi bi-check-circle"></i> Save Changes
                                 {% else %}
-                                <i class="bi bi-plus-circle"></i> Create Workspace
+                                <i class="bi bi-plus-circle"></i> Set up your business
                                 {% endif %}
                             </button>
                         </div>
@@ -86,9 +86,9 @@
                         </h6>
                         <ul class="small mb-0">
                             <li>You'll be assigned as the <strong>Owner</strong> of this workspace</li>
-                            <li>You can invite team members with different roles (Admin, Member)</li>
-                            <li>Set up your business preferences and configurations</li>
-                            <li>Start managing your data within this workspace</li>
+                            <li>Invite team members later if needed; working alone is supported</li>
+                            <li>Add your license and numbering series, then review economics and a loan product</li>
+                            <li>Return to Business setup any time to continue with saved settings</li>
                         </ul>
                     </div>
                     {% endif %}

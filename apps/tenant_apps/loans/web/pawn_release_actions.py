@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
 
-from apps.tenant_apps.loans.access import loans_workspace_required
+from apps.tenant_apps.loans.access import loans_action_required
 from apps.tenant_apps.loans.forms import PawnFullReleaseForm
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.services import (
@@ -33,7 +33,7 @@ def _full_release_quote(loan):
         return {"error": str(exc), "minimum_settlement": None}
 
 
-@loans_workspace_required
+@loans_action_required("loan.release")
 def pawn_loan_release_full(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     quote = _full_release_quote(loan)
@@ -79,7 +79,7 @@ def pawn_loan_release_full(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("loan.release")
 def pawn_loan_release_partial(request, pk):
     _pawn_loan_for_workspace(request, pk)
     return HttpResponseGone(

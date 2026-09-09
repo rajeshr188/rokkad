@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from .action_access import require_setup_administration
 from apps.tenant_apps.loans.models import PawnLoanCommunicationPolicy, current_tenant_workspace_id
 
 
@@ -10,6 +11,7 @@ class CommunicationPolicyError(ValueError):
 
 @transaction.atomic
 def set_pawn_loan_communication_policy(*, actor=None, **values):
+    require_setup_administration(current_tenant_workspace_id(), actor)
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise CommunicationPolicyError("Communication policy requires an active tenant schema.")

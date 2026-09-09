@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.db.models import Max
 
+from .action_access import require_setup_administration
 from apps.orgs.audit import AuditLog
 
 from apps.tenant_apps.loans.domain import (
@@ -74,6 +75,16 @@ def seed_default_loan_products(*, actor=None, request=None):
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise LoanProductCatalogError("Product seeding requires an active tenant schema.")
+    require_setup_administration(workspace_id, actor)
+    return _seed_default_loan_products(actor=actor, request=request)
+
+
+@transaction.atomic
+def _seed_default_loan_products(*, actor=None, request=None):
+    """Internal bootstrap used by the operator command and authorized setup."""
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise LoanProductCatalogError("Product seeding requires an active tenant schema.")
     versions = []
     for definition in DEFAULT_PRODUCTS:
         product, _ = LoanProduct.objects.get_or_create(
@@ -109,6 +120,7 @@ def seed_default_loan_products(*, actor=None, request=None):
 
 @transaction.atomic
 def activate_product_version(version_id, *, actor=None, request=None):
+    require_setup_administration(current_tenant_workspace_id(), actor)
     workspace_id = current_tenant_workspace_id()
     try:
         version = LoanProductVersion.objects.select_for_update().select_related("product__workspace").get(
@@ -134,6 +146,7 @@ def activate_product_version(version_id, *, actor=None, request=None):
 
 @transaction.atomic
 def retire_product_version(version_id, *, actor=None, request=None):
+    require_setup_administration(current_tenant_workspace_id(), actor)
     workspace_id = current_tenant_workspace_id()
     try:
         version = LoanProductVersion.objects.select_for_update().select_related("product__workspace").get(
@@ -153,6 +166,7 @@ def retire_product_version(version_id, *, actor=None, request=None):
 
 @transaction.atomic
 def create_product_version_draft(product_id, *, actor=None, request=None, **terms):
+    require_setup_administration(current_tenant_workspace_id(), actor)
     workspace_id = current_tenant_workspace_id()
     try:
         product = LoanProduct.objects.select_for_update().select_related("workspace").get(

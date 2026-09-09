@@ -241,7 +241,7 @@ answers membership and RBAC questions only. Workspace lifecycle and
 entitlements are evaluated by their own policies.
 
 The action catalog uses stable namespaced codes such as `party.view`,
-`loans.create`, and `team.member.remove`. `Role.permissions` becomes the stored
+`loans.create`, and `team.member.remove`. `WorkspaceRoleGrant` is the stored
 role-to-action assignment through an internal mapping from Django permissions.
 Hardcoded role maps may seed defaults but must not be a second runtime source.
 Direct role-name comparisons, `Company.owner` shortcuts, Guardian object checks,
@@ -269,6 +269,12 @@ helpers remains the already accepted Phase 9 cross-app conformance work.
 
 The accepted platform-admin policy remains superuser-only. Overrides require
 an explicit Workspace and auditable use.
+
+Implementation update (2026-09-09): WorkspaceAccess now reads stored grants from
+WorkspaceRole/WorkspaceRoleGrant only. Global Role remains a read-only template
+identity for Membership/invitation compatibility; it is not a live grant source.
+See the [local-role ADR](../adr/2026-09-09-workspace-owned-roles-and-stored-grants.md)
+for the development migration, forced RLS, owner editing and invitation safeguards.
 
 ### 7.1 Checks that must remain separate
 

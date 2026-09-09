@@ -15,8 +15,8 @@
 {% block page_header %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">Workspace setup</h1>
-        <p class="text-muted mb-0">Track the core setup tasks needed before routine operations.</p>
+        <h1 class="h3 fw-bold mb-1">Set up your business</h1>
+        <p class="text-muted mb-0">Continue where you left off. Saved settings stay in this business; return here any time from Settings.</p>
     </div>
 <a href="{% url 'workspace_slug_dashboard' workspace_slug=company.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-speedometer2 me-1"></i>Dashboard
@@ -25,11 +25,30 @@
 {% endblock %}
 
 {% block mgmt_content %}
+<section class="card mb-4" aria-labelledby="first-loan-setup-title">
+    <div class="card-body">
+        <h2 id="first-loan-setup-title" class="h5">Business and lending setup: {{ business_setup.completed_count }}/{{ business_setup.total_count }} available</h2>
+        <p class="text-muted">Checks are for {{ business_setup.as_of_date }}. Review license evidence, buying rates and product terms before lending. Each loan validates its own date and terms.</p>
+        {% if business_setup.next_step %}<a class="btn btn-primary mb-3" href="{{ business_setup.next_step.action_url }}">Continue setup: {{ business_setup.next_step.title }}</a>
+        {% elif can_create_loan %}<a class="btn btn-primary mb-3" href="{% url 'workspace_slug_loan_create' workspace_slug=company.slug %}">Create a loan</a>{% endif %}
+        <ol class="list-group list-group-numbered">
+        {% for step in business_setup.steps %}
+            <li class="list-group-item d-flex gap-3"><div class="flex-grow-1"><h3 class="h6">{{ step.title }} <span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}Available{% else %}Needs setup{% endif %}</span></h3><p class="small text-muted mb-2">{{ step.description }}</p><a href="{{ step.action_url }}">{{ step.action_label }}</a></div></li>
+        {% endfor %}
+        </ol>
+        <p class="small mt-3 mb-0">Economic setup starts with editable monthly interest of 2% for gold and 4% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies.</p>
+        <p class="small mt-2 mb-0">Working alone? Team invitations are optional. Your selected loan workflow stays unchanged until you explicitly change it.</p>
+        <div class="d-flex flex-wrap gap-3 mt-3"><a href="{% url 'workspace_slug_rates' workspace_slug=company.slug %}">Review buying rates</a><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/documents/' %}">Documents and printing (customization optional)</a><a href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">Full loan setup</a></div>
+    </div>
+</section>
+
+<details class="mb-4">
+<summary class="fw-semibold mb-3">General checklist and dashboard reminders</summary>
 {% if setup_state.is_complete %}
 <div class="alert alert-success mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
     <div>
-        <div class="fw-semibold">Workspace setup is marked complete.</div>
-        <div class="small">The checklist remains available for review and future adjustments.</div>
+        <div class="fw-semibold">General checklist is complete or marked complete.</div>
+        <div class="small">Lending checks below remain independent and are recalculated whenever you return.</div>
     </div>
     <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.slug %}">
         {% csrf_token %}
@@ -53,22 +72,12 @@
 </div>
 {% endif %}
 
-<section class="card mb-4" aria-labelledby="first-loan-setup-title">
-    <div class="card-body">
-        <h2 id="first-loan-setup-title" class="h5">Before your first loan</h2>
-        <a class="btn btn-primary mb-3" href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">Open first-loan setup checklist</a>
-        <p class="text-muted">Complete these lending settings as the Workspace owner or administrator.</p>
-        <p class="small text-muted">Follow the license, numbering, economics, and product checks, then review buying rates and documents.</p>
-        <p class="small text-muted mb-0">The general checklist below does not verify lending readiness. Loan creation and approval check the required settings.</p>
-    </div>
-</section>
-
 <section class="mgmt-setup-hero mb-4" aria-labelledby="setup-progress-title">
     <div class="mgmt-setup-summary">
         <div>
             <div class="mgmt-kicker mb-1">Progress</div>
             <h2 id="setup-progress-title" class="h4 fw-bold mb-1">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }} complete</h2>
-            <p class="text-muted mb-0">Complete the essentials for parties, rates, team access, and lending operations.</p>
+            <p class="text-muted mb-0">General profile, borrower and rate information. Optional team invitations do not affect this count.</p>
         </div>
         <div class="text-lg-end">
             <div class="mgmt-progress-value">{{ setup_checklist.completion_percentage }}%</div>
@@ -84,7 +93,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="complete">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" class="btn btn-sm btn-primary">Mark setup complete</button>
+            <button type="submit" class="btn btn-sm btn-primary">Hide completed general checklist</button>
         </form>
         {% endif %}
         {% if not setup_state.is_dismissed and not setup_state.is_complete %}
@@ -103,4 +112,5 @@
     {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id workspace_slug=company.slug task_id_prefix="setup-task" heading_level="h2" %}
     {% endfor %}
 </div>
+</details>
 {% endblock %}

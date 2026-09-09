@@ -135,3 +135,34 @@ class WorkspaceTestCase(TestCase):
         ).startswith(f"/w/{self.tenant.slug}/loans/"):
             expected_url = f"/w/{self.tenant.slug}{expected_url}"
         return super().assertRedirects(response, expected_url, *args, **kwargs)
+
+
+class WorkspaceRoleTestGrants:
+    """Explicit fixture writes to local grants, never global template mutation."""
+    def __init__(self, role, workspace):
+        from apps.orgs.services.workspace_roles import ensure_workspace_role
+        self.workspace = workspace
+        self.profile = ensure_workspace_role(workspace.pk, role.pk)
+
+    def add(self, *permissions):
+        from apps.orgs.models import WorkspaceRoleGrant
+        with workspace_context(self.workspace.pk):
+            for permission in permissions:
+                WorkspaceRoleGrant.objects.get_or_create(workspace=self.workspace,
+                    workspace_role=self.profile, permission=permission)
+
+    def remove(self, *permissions):
+        with workspace_context(self.workspace.pk):
+            self.profile.grants.filter(permission_id__in=[p.pk for p in permissions]).delete()
+
+    def clear(self):
+        with workspace_context(self.workspace.pk):
+            self.profile.grants.all().delete()
+
+    def set(self, permissions):
+        self.clear()
+        self.add(*permissions)
+
+
+def workspace_role_permissions(role, workspace):
+    return WorkspaceRoleTestGrants(role, workspace)

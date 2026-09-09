@@ -82,6 +82,8 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
             username=f"notice-{uuid.uuid4().hex[:8]}",
             email=f"notice-{uuid.uuid4().hex[:8]}@example.com",
         )
+        member_role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=self.actor, company=self.tenant, role=member_role)
         borrower = Party.objects.create(
             display_name="Notice Borrower",
             primary_email="borrower@example.com",
@@ -119,6 +121,28 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
             idempotency_key=f"notice-disbursal-{uuid.uuid4().hex}",
             created_by=self.actor,
         )
+
+    def test_notice_creation_and_manual_retry_recheck_actor_permissions(self):
+        from django.core.exceptions import PermissionDenied
+        from unittest.mock import patch
+        from apps.tenant_apps.loans.services import retry_pawn_loan_notice
+        notice = self._create_notice(request_key="permission-replay")
+        with patch("apps.tenant_apps.loans.services.pawn_notices.dispatch_pawn_loan_notice") as dispatch:
+            retry_pawn_loan_notice(notice.pk, actor=self.actor)
+            dispatch.assert_called_once_with(notice.pk)
+        viewer, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=viewer)
+        for actor in (self.actor, None):
+            with self.assertRaises(PermissionDenied):
+                create_pawn_loan_notice(self.loan.pk, notice_kind=notice.notice_kind,
+                    channel=notice.channel, request_key="permission-replay", actor=actor,
+                    dispatch_due=False)
+            with patch("apps.tenant_apps.loans.services.pawn_notices.dispatch_pawn_loan_notice") as dispatch:
+                with self.assertRaises(PermissionDenied):
+                    retry_pawn_loan_notice(notice.pk, actor=actor)
+                dispatch.assert_not_called()
+        self.assertEqual(PawnLoanNotice.objects.count(), 1)
+        self.assertEqual(NotificationJob.objects.count(), 1)
 
     def test_notice_intent_creates_notify_job_without_duplicating_delivery_state(self):
         notice = self._create_notice()
@@ -247,7 +271,7 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         notice = create_license_expiry_notice(
             self.loan.license_id,
             request_key="license-expiry-1",
-            actor=self.actor,
+            actor=self.tenant.owner,
             dispatch_due=False,
         )
         self.assertEqual(notice.recipient_email, self.tenant.owner.email)
@@ -258,7 +282,7 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         repeated = create_license_expiry_notice(
             self.loan.license_id,
             request_key="license-expiry-1",
-            actor=self.actor,
+            actor=self.tenant.owner,
             dispatch_due=False,
         )
         self.assertEqual(repeated.pk, notice.pk)
@@ -302,7 +326,7 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         notice = create_verification_discrepancy_notice(
             observation.pk,
             request_key="verification-alert-1",
-            actor=self.actor,
+            actor=self.tenant.owner,
             dispatch_due=False,
         )
         self.assertEqual(notice.payload_snapshot["verification"]["classification"], "MISSING")
@@ -310,6 +334,49 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         job = NotificationJob.objects.get(pk=notice.notification_job_id)
         self.assertEqual(job.event.event_type.key, "loans.verification_discrepancy")
         self.assertEqual(job.event.source_model, "PawnPhysicalVerificationObservation")
+
+    def test_operational_alert_commands_deny_before_queue_or_delivery(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services import retry_operational_notice
+        from functools import partial
+        commands = (
+            partial(create_license_expiry_notice, self.loan.license_id, request_key="denied"),
+            partial(create_verification_discrepancy_notice, 999999, request_key="denied"),
+            partial(retry_operational_notice, 999999),
+        )
+        with patch("apps.tenant_apps.loans.services.operational_notices.create_operational_notice_job") as queue:
+            with patch("apps.tenant_apps.loans.services.operational_notices.dispatch_operational_notice") as dispatch:
+                for actor in (None, self.actor):
+                    for command in commands:
+                        with self.assertRaises(PermissionDenied):
+                            command(actor=actor)
+                queue.assert_not_called()
+                dispatch.assert_not_called()
+        self.assertEqual(LoanOperationalNotice.objects.count(), 0)
+
+    def test_operational_alert_replay_revalidates_admin_and_keeps_worker_delivery(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services import retry_operational_notice
+        from apps.tenant_apps.loans.services.operational_notices import dispatch_operational_notice
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+        self.loan.license.expires_on = timezone.localdate() + timedelta(days=10)
+        self.loan.license.save(update_fields=["expires_on", "updated_at"])
+        notice = create_license_expiry_notice(self.loan.license_id, request_key="replay", actor=self.actor, dispatch_due=False)
+        with patch("apps.tenant_apps.loans.services.operational_notices.dispatch_operational_notice") as dispatch:
+            retry_operational_notice(notice.pk, actor=self.actor)
+            dispatch.assert_called_once_with(notice.pk)
+        # Verification creation retains its stricter Owner policy.
+        with self.assertRaises(PermissionDenied):
+            create_verification_discrepancy_notice(999999, request_key="owner-only", actor=self.actor)
+        Membership.objects.filter(user=self.actor, company=self.tenant).delete()
+        with self.assertRaises(PermissionDenied):
+            create_license_expiry_notice(self.loan.license_id, request_key="replay", actor=self.actor)
+        with self.assertRaises(PermissionDenied):
+            retry_operational_notice(notice.pk, actor=self.actor)
+        with patch("apps.tenant_apps.loans.services.operational_notices.dispatch_linked_notice") as deliver:
+            dispatch_operational_notice(notice.pk)
+            deliver.assert_called_once()
 
     def _create_notice(
         self,

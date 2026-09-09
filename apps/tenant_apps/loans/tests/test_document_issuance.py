@@ -10,8 +10,12 @@ from apps.tenant_apps.loans.services.document_issuance import (
 
 class ConfigurableDocumentIssuanceTests(SimpleTestCase):
     def setUp(self):
+        access = patch("apps.tenant_apps.loans.services.document_issuance.require_loan_action")
+        access.start()
+        self.addCleanup(access.stop)
         self.workspace = SimpleNamespace(pk=1)
         self.loan = SimpleNamespace(
+            workspace_id=1, workspace=self.workspace,
             license=SimpleNamespace(pk=2), series=SimpleNamespace(pk=3)
         )
         self.payload = SimpleNamespace(

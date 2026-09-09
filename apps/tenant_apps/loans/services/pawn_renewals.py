@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 
+from apps.tenant_apps.loans.services.action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     PawnLoanEventKind,
@@ -52,7 +53,7 @@ from apps.tenant_apps.loans.services.pawn_disbursal import (
 from apps.tenant_apps.loans.services.pawn_drafts import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
-    create_pawn_draft,
+    _create_pawn_draft,
 )
 from apps.tenant_apps.loans.services.pawn_economics import (
     resolve_pawn_draft_economics,
@@ -66,8 +67,8 @@ from apps.tenant_apps.loans.services.pawn_interest import (
 )
 from apps.tenant_apps.loans.services.pawn_lifecycle import approve_pawn_loan
 from apps.tenant_apps.loans.services.collateral_media import (
-    append_collateral_photo,
-    inherit_collateral_photos,
+    _append_collateral_photo,
+    _inherit_collateral_photos,
 )
 from apps.tenant_apps.loans.services.storage_operations import (
     carry_storage_to_renewal_successor,
@@ -391,6 +392,7 @@ def renew_pawn_loan(
     actor=None,
 ) -> PawnRenewalResult:
     source = _locked_loan(source_loan_id)
+    require_loan_action(source, actor, "loan.release", "loan.approve", "loan.disburse")
     request_key = _request_key(request_key)
     request_fingerprint = _renewal_request_fingerprint(
         mode=mode,
@@ -548,7 +550,7 @@ def renew_pawn_loan(
     except Exception as exc:
         raise PawnRenewalError(str(exc)) from exc
 
-    successor = create_pawn_draft(
+    successor = _create_pawn_draft(
         CreatePawnDraftCommand(
             workspace_id=source.workspace_id,
             borrower_id=source.borrower_id,
@@ -577,7 +579,7 @@ def renew_pawn_loan(
     ):
         new_item.renewed_from = source_by_id[source_item_id]
         new_item.save(update_fields=["renewed_from", "updated_at"])
-        inherit_collateral_photos(
+        _inherit_collateral_photos(
             source_by_id[source_item_id], new_item, actor=actor
         )
     additional_items = successor_items[len(retained_ids_in_order):]
@@ -586,7 +588,7 @@ def renew_pawn_loan(
             "Every additional renewal collateral item requires one photograph."
         )
     for item, upload in zip(additional_items, additional_photo_uploads, strict=True):
-        append_collateral_photo(
+        _append_collateral_photo(
             item.pk,
             upload=upload,
             actor=actor,

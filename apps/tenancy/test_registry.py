@@ -8,10 +8,10 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
     def test_registry_accounts_for_every_surviving_business_model(self):
         models = workspace_owned_models()
 
-        self.assertEqual(len(models), 95)
+        self.assertEqual(len(models), 97)
         self.assertEqual(
             {model._meta.app_label for model in models},
-            {"party", "loans", "notify_v2", "rates"},
+            {"party", "loans", "notify_v2", "rates", "orgs"},
         )
         for model in models:
             with self.subTest(model=model._meta.label):
@@ -22,10 +22,10 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
     def test_rls_rollout_registry_covers_every_surviving_model(self):
         labels = {model._meta.label_lower for model in rls_protected_models()}
 
-        self.assertEqual(len(labels), 95)
+        self.assertEqual(len(labels), 97)
         self.assertEqual(
             {label.split(".", 1)[0] for label in labels},
-            {"loans", "notify_v2", "party", "rates"},
+            {"loans", "notify_v2", "party", "rates", "orgs"},
         )
 
 

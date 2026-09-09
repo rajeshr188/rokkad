@@ -159,7 +159,8 @@ def pawn_loan_update(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
+@loans_action_required("data.create")
 def pawn_loan_split(request, pk):
     from apps.tenant_apps.loans.forms import PawnDraftSplitForm
     from apps.tenant_apps.loans.services.pawn_draft_split import (
@@ -223,7 +224,7 @@ def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
     return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 @require_POST
 def pawn_collateral_photo_add(request, pk, item_pk):
     loan = _pawn_loan_for_workspace(request, pk)
@@ -257,12 +258,12 @@ def pawn_loan_approve(request, pk):
     return redirect("loans:pawn_loan_detail", pk=loan.pk)
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 def pawn_loan_reopen(request, pk):
     return _reason_transition(request, pk, "reopen")
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 def pawn_loan_cancel(request, pk):
     return _reason_transition(request, pk, "cancel")
 

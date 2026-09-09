@@ -16,7 +16,7 @@ def get_pawn_setup_checklist(workspace):
     if current_tenant_workspace_id() != workspace.pk:
         raise ValueError("Loan setup must belong to the active Workspace.")
     today = timezone.localdate()
-    licenses = LoanLicense.objects.filter(workspace=workspace, is_active=True, expires_on__gte=today)
+    licenses = LoanLicense.objects.filter(workspace=workspace, is_active=True, issued_on__lte=today, expires_on__gte=today)
     series_ready = False
     economics_ready = False
     for series in LoanSeries.objects.filter(license__in=licenses, is_active=True).select_related("license"):
@@ -37,13 +37,15 @@ def get_pawn_setup_checklist(workspace):
     def url(path):
         return reverse("workspace_slug_loans_dispatch", kwargs={"workspace_slug": workspace.slug, "loans_path": path})
 
+    license_choices = list(licenses[:2])
+    series_url = url(f"setup/licenses/{license_choices[0].pk}/") if len(license_choices) == 1 else url("setup/") + "#license-register"
     steps = [
         {"key": "license", "title": "License", "complete": licenses.exists(),
          "description": "Add an active, unexpired license and its supporting evidence. Review evidence warnings in the license register.",
-         "action_label": "Review licenses", "action_url": url("setup/") + "#license-register"},
+         "action_label": "Review licenses" if license_choices else "Add license", "action_url": url("setup/") + "#license-register" if license_choices else url("setup/licenses/create/")},
         {"key": "series", "title": "Numbering series", "complete": series_ready,
          "description": "Open a license and add an active series with an available PawnLoan number. Configure release numbering there too.",
-         "action_label": "Set up a series", "action_url": url("setup/") + "#license-register"},
+         "action_label": "Set up a series", "action_url": series_url},
         {"key": "economics", "title": "Calculation and interest policies", "complete": economics_ready,
          "description": "Set policies effective today, including gold and silver interest, for at least one usable series. Review fees if your business charges them.",
          "action_label": "Open Economic Setup", "action_url": url("setup/economics/")},

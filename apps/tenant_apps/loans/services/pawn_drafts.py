@@ -7,6 +7,8 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from apps.orgs.models import Company
+from .action_access import require_loan_action, require_workspace_action
 from apps.tenant_apps.loans.domain import (
     CollateralMetal,
     LoanProductVersionStatus,
@@ -27,7 +29,7 @@ from apps.tenant_apps.loans.services.number_allocation import (
     allocate_pawn_loan_number,
 )
 from apps.tenant_apps.loans.services.collateral_media import (
-    append_collateral_photo,
+    _append_collateral_photo,
     validate_collateral_photo,
 )
 from apps.tenant_apps.loans.services.pawn_economics import (
@@ -140,7 +142,7 @@ def _save_draft_with_photos(save_draft, *, photos, actor):
                         raise PawnDraftError(
                             "Collateral photograph identity does not belong to this draft."
                         ) from exc
-                persisted = append_collateral_photo(
+                persisted = _append_collateral_photo(
                     item.pk,
                     upload=photo.upload,
                     actor=actor,
@@ -157,6 +159,13 @@ def _save_draft_with_photos(save_draft, *, photos, actor):
 
 @transaction.atomic
 def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoan:
+    workspace_id = _require_active_workspace(command.workspace_id)
+    require_workspace_action(Company.objects.get(pk=workspace_id), actor, "data.create")
+    return _create_pawn_draft(command, actor=actor)
+
+
+def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor) -> PawnLoan:
+    """Internal draft construction inside an authorized atomic command."""
     workspace_id = _require_active_workspace(command.workspace_id)
     borrower = _active_party(command.borrower_id)
     license, series = _setup_for_workspace(
@@ -230,6 +239,7 @@ def update_pawn_draft(
         )
     except PawnLoan.DoesNotExist as exc:
         raise PawnDraftError("PawnLoan draft was not found in the active workspace.") from exc
+    require_loan_action(loan, actor, "data.edit")
     if loan.state != PawnLoanState.DRAFT.value:
         raise PawnDraftError("Only a draft PawnLoan can be edited.")
 

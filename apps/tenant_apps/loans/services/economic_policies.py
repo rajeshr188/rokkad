@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from .action_access import require_setup_administration
 from apps.tenant_apps.loans.domain import (
     CollateralMetal,
     FeeCalculationType,
@@ -48,6 +49,7 @@ def create_pawn_economic_configuration(
     **policy_values,
 ) -> PawnEconomicConfiguration:
     """Append one complete operator configuration as an atomic policy set."""
+    require_setup_administration(workspace.pk, actor)
 
     economic_policy = create_pawn_loan_economic_policy(
         workspace=workspace, actor=actor, **policy_values
@@ -95,6 +97,7 @@ def create_pawn_loan_economic_policy(
     actor=None,
 ) -> PawnLoanEconomicPolicy:
     _require_scope(workspace.pk, license)
+    require_setup_administration(workspace.pk, actor)
     policy = PawnLoanEconomicPolicy(
         workspace=workspace,
         license=license,
@@ -128,6 +131,7 @@ def create_pawn_metal_interest_rate_policy(
     actor=None,
 ) -> PawnMetalInterestRatePolicy:
     _require_scope(workspace.pk, license)
+    require_setup_administration(workspace.pk, actor)
     policy = PawnMetalInterestRatePolicy(
         workspace=workspace,
         license=license,
@@ -156,6 +160,7 @@ def create_pawn_loan_fee_policy(
     actor=None,
 ) -> PawnLoanFeePolicy:
     _require_scope(workspace.pk, license)
+    require_setup_administration(workspace.pk, actor)
     policy = PawnLoanFeePolicy(
         workspace=workspace,
         license=license,

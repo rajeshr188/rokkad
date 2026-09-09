@@ -17,6 +17,7 @@ NOTIFY_V2_ACTION_PERMISSIONS = {
     "delete": ("data.delete",),
     "send": ("data.edit",),
     "print": ("data.view",),
+    "export": ("data.export",),
 }
 
 

@@ -1,7 +1,9 @@
+from apps.tenancy.testing import workspace_role_permissions
 import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.domain import LoanProductVersionStatus
@@ -39,10 +41,13 @@ class LoanProductCatalogTests(WorkspaceTestCase):
 
     def setUp(self):
         super().setUp()
+        self.actor = self.tenant.owner
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.actor, company=self.tenant, defaults={"role": role})
 
     def test_seed_creates_four_draft_versions_idempotently(self):
-        first = seed_default_loan_products()
-        second = seed_default_loan_products()
+        first = seed_default_loan_products(actor=self.actor)
+        second = seed_default_loan_products(actor=self.actor)
 
         self.assertEqual(len(first), 4)
         self.assertEqual(tuple(item.pk for item in first), tuple(item.pk for item in second))
@@ -57,7 +62,7 @@ class LoanProductCatalogTests(WorkspaceTestCase):
         )
 
     def test_product_version_cannot_be_updated_or_deleted(self):
-        version = seed_default_loan_products()[0]
+        version = seed_default_loan_products(actor=self.actor)[0]
         version.operational_grace_days = 4
 
         with self.assertRaisesMessage(ValidationError, "immutable"):
@@ -66,8 +71,8 @@ class LoanProductCatalogTests(WorkspaceTestCase):
             version.delete()
 
     def test_activation_and_retirement_change_availability_not_contract(self):
-        version = seed_default_loan_products()[0]
-        activated = activate_product_version(version.pk)
+        version = seed_default_loan_products(actor=self.actor)[0]
+        activated = activate_product_version(version.pk, actor=self.actor)
         self.assertEqual(activated.status, LoanProductVersionStatus.ACTIVE.value)
         self.assertEqual(
             LoanProductVersion.objects.filter(
@@ -76,7 +81,7 @@ class LoanProductCatalogTests(WorkspaceTestCase):
             ).count(),
             1,
         )
-        retired = retire_product_version(version.pk)
+        retired = retire_product_version(version.pk, actor=self.actor)
         self.assertEqual(retired.status, LoanProductVersionStatus.RETIRED.value)
         self.assertFalse(
             LoanProductVersion.objects.filter(
@@ -85,15 +90,15 @@ class LoanProductCatalogTests(WorkspaceTestCase):
         )
 
     def test_retired_version_cannot_be_reactivated(self):
-        version = seed_default_loan_products()[0]
-        activate_product_version(version.pk)
-        retire_product_version(version.pk)
+        version = seed_default_loan_products(actor=self.actor)[0]
+        activate_product_version(version.pk, actor=self.actor)
+        retire_product_version(version.pk, actor=self.actor)
         with self.assertRaisesMessage(ValueError, "Only a draft"):
-            activate_product_version(version.pk)
+            activate_product_version(version.pk, actor=self.actor)
 
     def test_new_terms_create_next_draft_without_changing_active_version(self):
-        active = seed_default_loan_products()[0]
-        activate_product_version(active.pk)
+        active = seed_default_loan_products(actor=self.actor)[0]
+        activate_product_version(active.pk, actor=self.actor)
         draft = create_product_version_draft(
             active.product_id,
             available_from=None,
@@ -106,6 +111,7 @@ class LoanProductCatalogTests(WorkspaceTestCase):
             operational_grace_days=active.operational_grace_days,
             extra_payment_rule=active.extra_payment_rule,
             calculation_contract_version="RBI-GOLD-V2",
+            actor=self.actor,
         )
         active.refresh_from_db()
         self.assertEqual(active.status, LoanProductVersionStatus.ACTIVE.value)
@@ -114,7 +120,79 @@ class LoanProductCatalogTests(WorkspaceTestCase):
         self.assertEqual(draft.maximum_tenor_months, 6)
 
     def test_activated_product_is_available_in_pawn_draft_form(self):
-        version = seed_default_loan_products()[0]
-        activate_product_version(version.pk)
+        version = seed_default_loan_products(actor=self.actor)[0]
+        activate_product_version(version.pk, actor=self.actor)
         form = PawnDraftForm(workspace=self.tenant)
         self.assertIn(version, form.fields["product_version"].queryset)
+
+    def test_setup_families_reject_missing_unprivileged_and_removed_actors(self):
+        from functools import partial
+        from datetime import date
+        from django.core.exceptions import PermissionDenied
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from apps.tenant_apps.loans.services.license_series import create_license
+        from apps.tenant_apps.loans.services.economic_policies import create_pawn_economic_configuration
+        from apps.tenant_apps.loans.services.document_layouts import LoanDocumentLayoutService
+        from apps.tenant_apps.loans.services.print_profiles import LoanDocumentPrintProfileService
+        from apps.tenant_apps.loans.services.monitoring_policies import create_loan_monitoring_policy
+        from apps.tenant_apps.loans.services.communication_policy import set_pawn_loan_communication_policy
+
+        version = seed_default_loan_products(actor=self.actor)[0]
+        commands = (
+            seed_default_loan_products,
+            partial(activate_product_version, version.pk),
+            partial(retire_product_version, version.pk),
+            partial(create_product_version_draft, version.product_id),
+            partial(create_license, workspace=self.tenant, name="Denied", license_number="DENIED",
+                    issued_on=date(2026, 1, 1), expires_on=date(2027, 1, 1)),
+            partial(create_pawn_economic_configuration, workspace=self.tenant,
+                    gold_monthly_interest_rate=2, silver_monthly_interest_rate=4),
+            partial(LoanDocumentLayoutService.create_layout, workspace=self.tenant,
+                    document_type="PAWN_TICKET", name="Denied", definition={}),
+            partial(LoanDocumentPrintProfileService.create_profile, workspace=self.tenant,
+                    document_type="PAWN_TICKET", name="Denied", definition={}),
+            partial(create_loan_monitoring_policy, workspace=self.tenant),
+            set_pawn_loan_communication_policy,
+        )
+        for role_name in ("Member", "Viewer", None):
+            membership = Membership.objects.filter(user=self.actor, company=self.tenant)
+            if role_name:
+                role, _ = Role.objects.get_or_create(name=role_name)
+                membership.update(role=role)
+            else:
+                membership.delete()
+            for actor in (None, self.actor):
+                for command in commands:
+                    with self.subTest(role=role_name, actor=actor, command=command):
+                        with CaptureQueriesContext(connection) as queries:
+                            with self.assertRaises(PermissionDenied):
+                                command(actor=actor)
+                        writes = [q["sql"] for q in queries if q["sql"].lstrip().upper().startswith(
+                            ("INSERT ", "UPDATE ", "DELETE "))]
+                        self.assertEqual(writes, [])
+
+    def test_settings_only_delegate_and_revoked_seed_replay(self):
+        from io import StringIO
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from django.core.exceptions import PermissionDenied
+        from django.core.management import call_command
+        from apps.orgs.models import Company
+
+        role = Role.objects.create(name="SetupDelegate-" + uuid.uuid4().hex[:8])
+        permission, _ = Permission.objects.get_or_create(
+            content_type=ContentType.objects.get_for_model(Company), codename="workspace_settings",
+            defaults={"name": "Manage workspace settings"})
+        workspace_role_permissions(role, self.tenant).add(permission)
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+        version = seed_default_loan_products(actor=self.actor)[0]
+        activate_product_version(version.pk, actor=self.actor)
+        workspace_role_permissions(role, self.tenant).clear()
+        with self.assertRaises(PermissionDenied):
+            seed_default_loan_products(actor=self.actor)
+        with self.assertRaises(PermissionDenied):
+            activate_product_version(version.pk, actor=self.actor)
+        # Operator bootstrap is an explicit command, not an actor=None bypass.
+        call_command("seed_default_loan_products", stdout=StringIO())
+        self.assertEqual(LoanProduct.objects.count(), 4)

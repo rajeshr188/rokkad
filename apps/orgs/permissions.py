@@ -110,52 +110,6 @@ REPORT_PERMISSIONS: List[PermissionDef] = [
     ("report_schedule", "Can schedule reports", "Schedule automated report generation"),
 ]
 
-# ============================================================================
-# FEATURE-SPECIFIC PERMISSIONS (GIRVI MODULE)
-# ============================================================================
-
-GIRVI_PERMISSIONS: List[PermissionDef] = [
-    # Loan Management
-    ("girvi_loan_view", "Can view loans", "View loan details"),
-    ("girvi_loan_create", "Can create loans", "Create new loan entries"),
-    ("girvi_loan_edit", "Can edit loans", "Edit loan details"),
-    ("girvi_loan_delete", "Can delete loans", "Delete loan entries"),
-    # Loan Operations
-    ("girvi_loan_approve", "Can approve loans", "Approve loan applications"),
-    ("girvi_loan_release", "Can release loans", "Release completed loans"),
-    ("girvi_loan_payment", "Can record payments", "Record loan payments"),
-    # Advanced Features
-    ("girvi_loan_bulk", "Can bulk operations", "Perform bulk loan operations"),
-    ("girvi_report_view", "Can view loan reports", "View loan reports and analytics"),
-]
-
-# ============================================================================
-# FEATURE-SPECIFIC PERMISSIONS (DEA MODULE - Accounting)
-# ============================================================================
-
-DEA_PERMISSIONS: List[PermissionDef] = [
-    # Journal Entries
-    ("dea_entry_view", "Can view entries", "View accounting entries"),
-    ("dea_entry_create", "Can create entries", "Create journal entries"),
-    ("dea_entry_edit", "Can edit entries", "Edit accounting entries"),
-    ("dea_entry_delete", "Can delete entries", "Delete accounting entries"),
-    # Financial Operations
-    ("dea_reconciliation", "Can reconcile accounts", "Perform account reconciliation"),
-    ("dea_close_period", "Can close periods", "Close accounting periods"),
-    # Reports
-    ("dea_report_view", "Can view financial reports", "View financial reports"),
-    ("dea_report_export", "Can export financial reports", "Export financial reports"),
-]
-
-# FEATURE-SPECIFIC PERMISSIONS (STANDALONE ACCOUNTING)
-STANDALONE_ACCOUNTING_PERMISSIONS: List[PermissionDef] = [
-    ("accounting_voucher_create", "Can create accounting vouchers", "Create draft vouchers and their transactions"),
-    ("accounting_voucher_authorize", "Can authorize accounting vouchers", "Authorize complete draft vouchers"),
-    ("accounting_voucher_post", "Can post accounting vouchers", "Post authorized vouchers to the accounting book"),
-    ("accounting_voucher_reverse", "Can reverse accounting vouchers", "Create an append-only reversal of a posted voucher"),
-    ("accounting_period_manage", "Can manage accounting periods", "Transition accounting periods and bootstrap the MVP book"),
-]
-
 # FEATURE-SPECIFIC PERMISSIONS (CONTACT MODULE)
 # ============================================================================
 
@@ -175,6 +129,10 @@ CONTACT_PERMISSIONS: List[PermissionDef] = [
 # ============================================================================
 
 LOAN_PERMISSIONS: List[PermissionDef] = [
+    ("loan_repay", "Can record loan repayments", "Collect and allocate loan repayments"),
+    ("loan_release", "Can release loan collateral", "Settle a loan and return collateral"),
+    ("loan_accrue", "Can finalize loan interest", "Finalize eligible interest accrual periods"),
+    ("loan_capitalize", "Can capitalize loan interest", "Add eligible unpaid interest to principal"),
     ("loan_approve", "Can approve loans", "Review and approve loan terms"),
     ("loan_disburse", "Can disburse loans", "Record loan disbursal"),
 ]
@@ -185,9 +143,6 @@ ALL_PERMISSIONS: List[PermissionDef] = (
     + DATA_PERMISSIONS
     + BILLING_PERMISSIONS
     + REPORT_PERMISSIONS
-    + GIRVI_PERMISSIONS
-    + DEA_PERMISSIONS
-    + STANDALONE_ACCOUNTING_PERMISSIONS
     + CONTACT_PERMISSIONS
     + LOAN_PERMISSIONS
 )
@@ -202,6 +157,7 @@ class RolePermissions:
 
     OWNER = [
         "loan_approve", "loan_disburse",
+        "loan_repay", "loan_release", "loan_accrue", "loan_capitalize",
         # Workspace - Full Access
         "workspace_view",
         "workspace_list",
@@ -243,30 +199,8 @@ class RolePermissions:
         "report_export",
         "report_schedule",
         # Girvi - Full Access
-        "girvi_loan_view",
-        "girvi_loan_create",
-        "girvi_loan_edit",
-        "girvi_loan_delete",
-        "girvi_loan_approve",
-        "girvi_loan_release",
-        "girvi_loan_payment",
-        "girvi_loan_bulk",
-        "girvi_report_view",
         # DEA - Full Access
-        "dea_entry_view",
-        "dea_entry_create",
-        "dea_entry_edit",
-        "dea_entry_delete",
-        "dea_reconciliation",
-        "dea_close_period",
-        "dea_report_view",
-        "dea_report_export",
         # Standalone accounting - Full operational access
-        "accounting_voucher_create",
-        "accounting_voucher_authorize",
-        "accounting_voucher_post",
-        "accounting_voucher_reverse",
-        "accounting_period_manage",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -278,6 +212,7 @@ class RolePermissions:
 
     ADMIN = [
         "loan_approve", "loan_disburse",
+        "loan_repay", "loan_release", "loan_accrue", "loan_capitalize",
         # Workspace - Edit only
         "workspace_view",
         "workspace_list",
@@ -311,30 +246,8 @@ class RolePermissions:
         "report_export",
         "report_schedule",
         # Girvi - Full operational access
-        "girvi_loan_view",
-        "girvi_loan_create",
-        "girvi_loan_edit",
-        "girvi_loan_delete",
-        "girvi_loan_approve",
-        "girvi_loan_release",
-        "girvi_loan_payment",
-        "girvi_loan_bulk",
-        "girvi_report_view",
         # DEA - Full operational access
-        "dea_entry_view",
-        "dea_entry_create",
-        "dea_entry_edit",
-        "dea_entry_delete",
-        "dea_reconciliation",
-        "dea_close_period",
-        "dea_report_view",
-        "dea_report_export",
         # Standalone accounting - Full operational access
-        "accounting_voucher_create",
-        "accounting_voucher_authorize",
-        "accounting_voucher_post",
-        "accounting_voucher_reverse",
-        "accounting_period_manage",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -363,17 +276,8 @@ class RolePermissions:
         "report_view_basic",
         "report_export",
         # Girvi - Basic operations
-        "girvi_loan_view",
-        "girvi_loan_create",
-        "girvi_loan_edit",
-        "girvi_loan_payment",
-        "girvi_report_view",
         # DEA - Basic operations
-        "dea_entry_view",
-        "dea_entry_create",
-        "dea_entry_edit",
         # Standalone accounting - Draft preparation only
-        "accounting_voucher_create",
         # Contact - Full Access
         "contact_view",
         "contact_create",
@@ -394,9 +298,6 @@ class RolePermissions:
         "report_view",
         "report_view_basic",
         # All modules - View only
-        "girvi_loan_view",
-        "girvi_report_view",
-        "dea_entry_view",
         "contact_view",
     ]
 
@@ -435,20 +336,10 @@ def get_effective_permissions(user, workspace) -> set[str]:
     if is_platform_admin(user):
         return set(get_all_permission_codenames()) | {"admin_access"}
 
-    from apps.orgs.models import Membership
+    from apps.orgs.access import resolve_workspace_access
+    access = resolve_workspace_access(actor=user, workspace=workspace)
+    return {code for code in get_all_permission_codenames() if access.can(code)}
 
-    try:
-        membership = Membership.objects.select_related("role").get(
-            user=user, company=workspace
-        )
-    except Membership.DoesNotExist:
-        return set()
-
-    perms = set(get_permissions_for_role(membership.role.name))
-    if hasattr(membership.role, "permissions"):
-        perms |= set(membership.role.permissions.values_list("codename", flat=True))
-
-    return perms
 
 
 def get_workspace_role_name(user, workspace) -> str | None:
@@ -496,8 +387,5 @@ def get_permissions_by_category() -> Dict[str, List[PermissionDef]]:
         "Loans": LOAN_PERMISSIONS,
         "Billing": BILLING_PERMISSIONS,
         "Reports": REPORT_PERMISSIONS,
-        "Girvi (Loans)": GIRVI_PERMISSIONS,
-        "DEA (Accounting)": DEA_PERMISSIONS,
-        "Standalone Accounting": STANDALONE_ACCOUNTING_PERMISSIONS,
         "Contacts": CONTACT_PERMISSIONS,
     }

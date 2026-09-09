@@ -1,3 +1,4 @@
+from apps.tenancy.testing import workspace_role_permissions
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
@@ -9,7 +10,7 @@ from django.test import TransactionTestCase
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenancy.context import without_workspace_context, workspace_context
 
-from apps.orgs.models import Company, Domain
+from apps.orgs.models import Company, Domain, Membership, Role
 from apps.tenant_apps.loans.domain import CollateralCustodyState, CollateralMetal, PawnLoanState
 from apps.tenant_apps.loans.domain.future_funding import FundingLoanState
 from apps.tenant_apps.loans.models import (
@@ -105,6 +106,8 @@ class FundingLoanServiceTests(WorkspaceTestCase):
             username=f"funding-service-{uuid.uuid4().hex[:8]}",
             email=f"funding-service-{uuid.uuid4().hex[:8]}@example.com",
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.create(user=self.actor, company=self.tenant, role=role)
         self.lender = Party.objects.create(
             display_name="Funding lender",
             status=Party.PartyStatus.ACTIVE,
@@ -181,6 +184,85 @@ class FundingLoanServiceTests(WorkspaceTestCase):
         }
         values.update(changes)
         return ActivateFundingLoan(**values)
+
+    def _grant_settings_only(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        role = Role.objects.create(name="FundingDelegate-" + uuid.uuid4().hex[:8])
+        permission, _ = Permission.objects.get_or_create(
+            content_type=ContentType.objects.get_for_model(Company), codename="workspace_settings",
+            defaults={"name": "Manage workspace settings"})
+        workspace_role_permissions(role, self.tenant).add(permission)
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+        return role
+
+    def test_all_funding_commands_require_administration_before_writes(self):
+        from dataclasses import asdict
+        from django.core.exceptions import PermissionDenied
+        from unittest.mock import patch
+        loan = self._draft()
+        workspace_id, loan_id = self.tenant.pk, loan.pk
+        day = date(2026, 9, 8)
+        activation = self._activation(loan)
+        draft_values = asdict(activation)
+        draft_values.pop("request_key")
+        draft_values["collateral"] = activation.collateral
+        commands = (
+            (create_funding_loan_draft, CreateFundingLoanDraft(workspace_id, self.lender.pk)),
+            (cancel_funding_loan_draft, CancelFundingLoanDraft(workspace_id, loan_id, "Denied")),
+            (save_funding_loan_draft_inputs, SaveFundingLoanDraftInputs(**draft_values)),
+            (activate_funding_loan, activation),
+            (activate_saved_funding_loan_draft, ActivateSavedFundingLoanDraft(workspace_id, loan_id)),
+            (accrue_funding_interest, AccrueFundingInterest(workspace_id, loan_id, 1, day, "denied")),
+            (assess_funding_fee, AssessFundingFee(workspace_id, loan_id, Decimal("10"), day, "denied")),
+            (record_funding_repayment, RecordFundingRepayment(workspace_id, loan_id, Decimal("100"), day, "denied")),
+            (reverse_funding_event, ReverseFundingEvent(workspace_id, loan_id, 999, day, "Denied", "denied")),
+            (begin_funding_settlement, BeginFundingSettlement(workspace_id, loan_id)),
+            (return_funding_collateral, ReturnFundingCollateral(workspace_id, loan_id, (self.first_item.pk,), day, "denied")),
+            (reverse_funding_pledge, ReverseFundingPledge(workspace_id, loan_id, day, "Denied", "denied")),
+            (reverse_funding_return, ReverseFundingReturn(workspace_id, loan_id, 999, day, "Denied", "denied")),
+            (close_funding_loan, CloseFundingLoan(workspace_id, loan_id)),
+        )
+        for role_name in ("Member", "Viewer"):
+            role, _ = Role.objects.get_or_create(name=role_name)
+            Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+            for command, values in commands:
+                with self.subTest(role=role_name, command=command.__name__):
+                    with self.assertRaises(PermissionDenied):
+                        command(values, actor=self.actor)
+        Membership.objects.filter(user=self.actor, company=self.tenant).delete()
+        with patch("apps.tenant_apps.loans.services.funding_loans.NullFundingOutboundAdapter.record") as outbound:
+            for actor in (None, self.actor):
+                for command, values in commands:
+                    with self.subTest(actor=actor, command=command.__name__):
+                        with self.assertRaises(PermissionDenied):
+                            command(values, actor=actor)
+            outbound.assert_not_called()
+        self.assertEqual(FundingLoan.objects.count(), 1)
+        self.assertEqual(FundingLoanSequence.objects.get(workspace=self.tenant).next_value, 2)
+        for model in (FundingLoanCancellation, FundingLoanDraftTerms, FundingLoanDraftCollateral,
+                      FundingLoanTermsSnapshot, FundingLoanEvent, FundingPledge, PawnCollateralCustodyEvent):
+            self.assertEqual(model.objects.count(), 0, model.__name__)
+        loan.refresh_from_db()
+        self.first_item.refresh_from_db()
+        self.assertEqual(loan.state, FundingLoanState.DRAFT.value)
+        self.assertEqual(self.first_item.custody_state, CollateralCustodyState.IN_VAULT.value)
+
+    def test_funding_replay_rechecks_revoked_administration(self):
+        from django.core.exceptions import PermissionDenied
+        role = self._grant_settings_only()
+        loan = self._draft()
+        activation = self._activation(loan)
+        activate_funding_loan(activation, actor=self.actor)
+        command = RecordFundingRepayment(self.tenant.pk, loan.pk, Decimal("100"), date(2026, 9, 8), "replay")
+        original = record_funding_repayment(command, actor=self.actor)
+        self.assertEqual(record_funding_repayment(command, actor=self.actor).pk, original.pk)
+        before = FundingLoanEvent.objects.count()
+        workspace_role_permissions(role, self.tenant).clear()
+        for function, value in ((activate_funding_loan, activation), (record_funding_repayment, command)):
+            with self.assertRaises(PermissionDenied):
+                function(value, actor=self.actor)
+        self.assertEqual(FundingLoanEvent.objects.count(), before)
 
     def test_draft_allocates_workspace_sequence_and_cancel_is_idempotent(self):
         first = self._draft()
@@ -428,6 +510,7 @@ class FundingLoanServiceTests(WorkspaceTestCase):
         self.assertEqual(funding_loan.state, FundingLoanState.DRAFT.value)
 
     def test_complete_operational_lifecycle_closes_without_accounting(self):
+        self._grant_settings_only()
         funding_loan = self._draft()
         activate_funding_loan(self._activation(funding_loan), actor=self.actor)
 
@@ -978,6 +1061,8 @@ class FundingLoanConcurrencyTests(TransactionTestCase):
         self.actor = get_user_model().objects.create_user(
             username=f"funding-race-actor-{token}"
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.create(user=self.actor, company=self.tenant, role=role)
         self.lender = Party.objects.create(
             display_name="Concurrent funding lender",
             status=Party.PartyStatus.ACTIVE,

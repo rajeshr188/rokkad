@@ -25,7 +25,7 @@
   <tbody>{% for loan in loans %}<tr>
     <td><strong>{{ loan.loan_number }}</strong><div class="small text-muted">{{ loan.license.license_number }}/{{ loan.series.code }}</div></td>
     <td><div class="d-flex align-items-center gap-2">
-      {% if loan.borrower.profile_photo %}<img class="loan-list-photo rounded-circle" width="48" height="48" loading="lazy" src="{{ loan.borrower.profile_photo.url }}" alt="Photo of {{ loan.borrower.display_name }}">
+      {% if loan.borrower.profile_photo %}<img class="loan-list-photo rounded-circle" width="48" height="48" loading="lazy" src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=loan.borrower_id %}" alt="Photo of {{ loan.borrower.display_name }}">
       {% else %}<span class="loan-list-photo loan-list-photo-placeholder rounded-circle" role="img" aria-label="No borrower photo"><i class="bi bi-person" aria-hidden="true"></i></span>{% endif %}
       <div>{{ loan.borrower.display_name }}<div class="small text-muted">{{ loan.borrower.party_code }}</div></div>
     </div></td>

@@ -14,6 +14,10 @@ from apps.tenant_apps.loans.models import (
     PawnPhysicalVerificationSession,
     current_tenant_workspace_id,
 )
+from .action_access import require_setup_administration
+from apps.orgs.access import resolve_workspace_access
+from apps.orgs.models import Company
+from apps.tenant_apps.loans.access import LOANS_OWNER_ACTION
 from .notice_dispatch import dispatch_due_notices, dispatch_linked_notice
 
 
@@ -37,6 +41,7 @@ def create_license_expiry_notice(
     dispatch_due=True,
 ):
     workspace_id = _workspace_id()
+    require_setup_administration(workspace_id, actor)
     license = LoanLicense.objects.select_for_update().select_related("workspace__owner").get(
         pk=license_id, workspace_id=workspace_id
     )
@@ -80,6 +85,8 @@ def create_verification_discrepancy_notice(
     dispatch_due=True,
 ):
     workspace_id = _workspace_id()
+    workspace = Company.objects.get(pk=workspace_id)
+    resolve_workspace_access(actor=actor, workspace=workspace).require(LOANS_OWNER_ACTION)
     observation = PawnPhysicalVerificationObservation.objects.select_for_update().get(
         pk=observation_id, session__workspace_id=workspace_id
     )
@@ -118,6 +125,12 @@ def create_verification_discrepancy_notice(
         actor=actor,
         dispatch_due=dispatch_due,
     )
+
+
+def retry_operational_notice(notice_id, *, actor):
+    """Authorize a member-triggered retry; scheduled delivery stays internal."""
+    require_setup_administration(_workspace_id(), actor)
+    return dispatch_operational_notice(notice_id)
 
 
 def dispatch_operational_notice(notice_id, *, delivery_handler=None, as_of=None):
@@ -217,4 +230,5 @@ __all__ = [
     "create_verification_discrepancy_notice",
     "dispatch_due_operational_notices",
     "dispatch_operational_notice",
+    "retry_operational_notice",
 ]

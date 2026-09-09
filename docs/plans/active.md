@@ -1,35 +1,46 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-09-09
 tags: [plans, active, retirement, girvi, contact, notify, dea, party, configuration]
 related: [../domain/girvi.md, ../domain/accounting.md, ../domain/party.md, contact-girvi-legacy-notify-retirement.md, django-tenants-removal.md]
 ---
 
 ## Current checkpoint
 
-The approved counter UI, shared navigation, business-app and administration
-redesign, dashboard breadcrumbs, and preference test cleanup are published on
-`rls-mvp` through navigation commit `df26e6b`. The navigation checkpoint's expanded gate passes **653/653 tests**;
-see [current status](../STATUS.md) for its scope and prior browser acceptance.
+The lending usability checkpoint is published on `rls-mvp` in `8d70c75`, followed
+by draft-photo deletion and list thumbnails in `6d27fa1`. See [current status](../STATUS.md)
+for exact regression/browser evidence. Party, Loans, Notify v2 and Rates remain the
+supported apps; Workspace membership, action authorization and forced PostgreSQL
+RLS remain the foundation. Physical phone/camera and printer checks remain deferred.
 
-Party, Loans, Notify v2, and Rates are the supported business apps. Workspace
-slug routing, action authorization, and PostgreSQL forced RLS remain the active
-boundaries. Contact, Girvi, legacy Notify, and DEA/accounting are retired.
+## Current priority: SaaS access, private media and onboarding
 
-The authorized [navigation simplification](workspace-navigation-simplification.md)
-is published in `df26e6b`: explicit Workspace labels, one shared app/settings sidebar,
-personal account scope, predictable landing/list/create routes, and unsaved-switch
-protection. First-loan setup guidance is published in `c72a787`; its 436-test
-regression gate and desktop/mobile browser checks pass. The approved daily
-counter dashboard is implemented locally: 539 regression checks, three Chromium
-scenarios, and 18 final focused checks pass. It is ready for operator review. See the
-latest status for the exact scope.
-Physical phone/camera and printer checks remain deferred; external private-media
-serving still needs deployment verification before a real-data pilot.
+Private business-media application work is verified (157 tests). See the
+[media inventory](../implementation/private-media-access.md) for delivery boundaries
+and the remaining production storage/CDN acceptance. Resumable business onboarding and single-option loan defaults are implemented and
+verified (249 broad + 1 focused tests); see [the flow](../flows/business-setup.md).
+Next review the live experience and checkpoint when requested. Optional license
+scope still requires a separate review and explicit owner approval.
 
-The entries below preserve earlier planning context; their active/proposed
-labels are historical and do not override this checkpoint or current ADRs.
+Follow the [incremental delivery register](saas-access-media-and-onboarding.md).
+The [accepted decision](../adr/2026-09-09-organization-tenant-and-license-access.md)
+keeps organizations as tenants and licenses within them. License scope is optional and owner-configurable, deferred to the end and requiring
+a fresh review and explicit owner approval. The earlier assigned-license rule is
+not universal; current organization-wide access remains subject to action permissions.
+
+1. Action/service fixes and AP-06 local stored grants are implemented, including
+   the Owner permission editor and capability-based invitation checks. See the
+   [role delivery record](workspace-role-migration.md). Keep future role presets separate.
+2. Audit and secure media delivery, including deployed serving verification.
+3. Simplify "Set up your business" using the existing onboarding services and
+   valid single-license/series defaults; separate optional staff setup.
+4. Review optional scope modes with the owner; implement and test only after
+   explicit approval. No license/branch restriction changes before that gate.
+
+Do not collapse these concerns into a single completion flag. Each work item has
+its own acceptance evidence in the register. The entries below preserve historical
+planning context and do not override the current checkpoint or accepted ADRs.
 
 ## Historical: control-plane Phase 9 app conformance
 

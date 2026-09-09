@@ -204,22 +204,13 @@ class Subscription(models.Model):
         return enabled(self.company, feature_name)
 
     def is_billing_manager(self, user):
-        """Check if user can manage billing (company owner or billing admin)"""
-        from apps.orgs.models import Membership
+        """Compatibility check matching the current Owner-only billing boundary."""
+        from apps.orgs.access import resolve_workspace_access
 
-        # Owner can always manage billing
-        if self.company.owner == user:
-            return True
-
-        # Check if user has billing admin role in company
-        membership = Membership.objects.filter(company=self.company, user=user).first()
-        if membership and membership.role:
-            # Check if role has billing permissions
-            return membership.role.permissions.filter(
-                codename="manage_company_billing"
-            ).exists()
-
-        return False
+        access = resolve_workspace_access(actor=user, workspace=self.company)
+        return access.platform_override or bool(
+            access.membership and self.company.owner_id == user.pk
+        )
 
 
 class BillingAccount(models.Model):

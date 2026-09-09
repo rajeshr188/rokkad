@@ -74,7 +74,7 @@
             <tr>
                 <td style="width: 44px;">
                     {% if party.profile_photo %}
-                        <img src="{{ party.profile_photo.url }}" alt="" class="rounded-circle" style="width:32px;height:32px;object-fit:cover;">
+                        <img src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=party.pk %}" alt="" class="rounded-circle" style="width:32px;height:32px;object-fit:cover;">
                     {% else %}
                         <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:.8rem;">
                             {{ party.display_name|first|upper }}

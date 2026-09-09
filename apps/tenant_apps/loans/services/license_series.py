@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from .action_access import require_setup_administration
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.loans.domain import LoanDocumentKind
 from apps.tenant_apps.loans.models import (
@@ -43,6 +44,7 @@ def create_license(
     request=None,
 ) -> LoanLicense:
     _require_active_workspace(workspace.pk)
+    require_setup_administration(workspace.pk, actor)
     license = LoanLicense(
         workspace=workspace,
         name=name,
@@ -82,6 +84,7 @@ def update_license(
             f"Unsupported license fields: {', '.join(sorted(unexpected))}."
         )
     _require_active_workspace(license.workspace_id)
+    require_setup_administration(license.workspace_id, actor)
     license = LoanLicense.objects.select_for_update().get(pk=license.pk)
     for field, value in changes.items():
         setattr(license, field, value)
@@ -113,6 +116,7 @@ def renew_license(
 ) -> LoanLicense:
     """Append renewal evidence and update the current license projection."""
     _require_active_workspace(license.workspace_id)
+    require_setup_administration(license.workspace_id, actor)
     if supporting_document is None:
         raise LicenseSeriesError("A supporting license document is required for renewal.")
     if expires_on < timezone.localdate():
@@ -154,6 +158,7 @@ def activate_license(
     license: LoanLicense, *, actor=None, as_of_date: date | None = None
 ) -> LoanLicense:
     _require_active_workspace(license.workspace_id)
+    require_setup_administration(license.workspace_id, actor)
     if license.is_expired(as_of_date):
         raise LicenseSeriesError("An expired license cannot be activated.")
     if not license.is_active:
@@ -165,6 +170,7 @@ def activate_license(
 
 def expire_license(license: LoanLicense, *, actor=None) -> LoanLicense:
     _require_active_workspace(license.workspace_id)
+    require_setup_administration(license.workspace_id, actor)
     if license.is_active:
         license.is_active = False
         license.updated_by = actor
@@ -173,17 +179,19 @@ def expire_license(license: LoanLicense, *, actor=None) -> LoanLicense:
 
 
 def create_series(
-    *, license: LoanLicense, name: str, code: str, is_active: bool = True
+    *, license: LoanLicense, name: str, code: str, is_active: bool = True, actor=None
 ) -> LoanSeries:
     _require_active_workspace(license.workspace_id)
+    require_setup_administration(license.workspace_id, actor)
     series = LoanSeries(license=license, name=name, code=code, is_active=is_active)
     series.full_clean()
     series.save()
     return series
 
 
-def update_series(series: LoanSeries, *, name: str | None = None, code: str | None = None) -> LoanSeries:
+def update_series(series: LoanSeries, *, name: str | None = None, code: str | None = None, actor=None) -> LoanSeries:
     _require_active_workspace(series.workspace_id)
+    require_setup_administration(series.workspace_id, actor)
     update_fields = ["updated_at"]
     if name is not None:
         series.name = name
@@ -196,8 +204,9 @@ def update_series(series: LoanSeries, *, name: str | None = None, code: str | No
     return series
 
 
-def set_series_active(series: LoanSeries, *, is_active: bool) -> LoanSeries:
+def set_series_active(series: LoanSeries, *, is_active: bool, actor=None) -> LoanSeries:
     _require_active_workspace(series.workspace_id)
+    require_setup_administration(series.workspace_id, actor)
     if series.is_active != is_active:
         series.is_active = is_active
         series.save(update_fields=["is_active", "updated_at"])
@@ -219,9 +228,10 @@ def create_configured_series(
     request=None,
 ) -> LoanSeries:
     """Create a series and both required document sequences atomically."""
+    require_setup_administration(license.workspace_id, actor)
 
     series = create_series(
-        license=license, name=name, code=code, is_active=is_active
+        license=license, name=name, code=code, is_active=is_active, actor=actor
     )
     _configure_required_sequences(
         series,
@@ -250,9 +260,10 @@ def update_configured_series(
     request=None,
 ) -> LoanSeries:
     """Update series identity, availability, and both sequences atomically."""
+    require_setup_administration(series.workspace_id, actor)
 
-    update_series(series, name=name, code=code)
-    set_series_active(series, is_active=is_active)
+    update_series(series, name=name, code=code, actor=actor)
+    set_series_active(series, is_active=is_active, actor=actor)
     _configure_required_sequences(
         series,
         pawn_loan_prefix=pawn_loan_prefix,
@@ -305,6 +316,7 @@ def configure_sequence(
     request=None,
 ) -> LoanNumberSequence:
     _require_active_workspace(series.workspace_id)
+    require_setup_administration(series.workspace_id, actor)
     kind = LoanDocumentKind(document_kind).value
     with transaction.atomic():
         sequence, created = LoanNumberSequence.objects.select_for_update().get_or_create(

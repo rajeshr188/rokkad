@@ -11,6 +11,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -24,6 +25,7 @@ from apps.tenant_apps.loans.access import (
     loans_owner_required,
     loans_setup_required,
     loans_workspace_required,
+    loans_action_required,
 )
 from apps.tenant_apps.loans.domain import (
     LoanDocumentKind,
@@ -196,7 +198,7 @@ from apps.tenant_apps.loans.services import (
     create_pawn_economic_configuration,
     create_pawn_loan_fee_policy,
     create_product_version_draft,
-    dispatch_operational_notice,
+    retry_operational_notice,
     expire_license,
     issue_configurable_document,
     preview_number,
@@ -574,6 +576,7 @@ def document_issue_detail(request, issue_pk):
 
 
 @loans_setup_required
+@never_cache
 def document_issue_artifact(request, issue_pk):
     issue = _document_issue(request, issue_pk)
     issue.artifact.open("rb")
@@ -705,6 +708,7 @@ def document_layout_designer(request, revision_pk):
 
 
 @loans_setup_required
+@never_cache
 def document_layout_overlay_background(request, revision_pk):
     revision = _document_revision(request, revision_pk)
     layout = DocumentLayoutValidator.load(revision.definition)
@@ -975,6 +979,7 @@ def _revision_assets(revision):
 
 
 @loans_setup_required
+@never_cache
 def document_layout_preview(request, revision_pk):
     revision = _document_revision(request, revision_pk)
     try:
@@ -1098,6 +1103,7 @@ def _issued_document_response(issue, payload):
     issue.artifact.close()
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{payload.file_name}"'
+    response["Cache-Control"] = "private, no-store"
     response["X-Rokkad-Verification-ID"] = payload.verification_id
     response["X-Rokkad-Document-Issue"] = str(issue.pk)
     if issue.print_profile_hash:
@@ -1262,6 +1268,15 @@ def pawn_loan_detail(request, pk):
         loan,
         can_administer=context["can_administer"],
     )
+    for action in ("repay", "release", "accrue", "capitalize"):
+        context["can_" + action] = request.loans_workspace_access.can("loan." + action)
+    context["can_renew"] = all(
+        request.loans_workspace_access.can(action)
+        for action in ("loan.release", "loan.approve", "loan.disburse")
+    )
+    context["can_send_notice"] = request.loans_workspace_access.can("data.edit")
+    context["can_edit_loan"] = request.loans_workspace_access.can("data.edit")
+    context["can_split_draft"] = context["can_edit_loan"] and request.loans_workspace_access.can("data.create")
     context["can_delete_draft_photos"] = loan.state == "DRAFT" and request.loans_workspace_access.can("data.edit")
     context["can_approve"] = request.loans_workspace_access.can("loan.approve")
     context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
@@ -1271,6 +1286,7 @@ def pawn_loan_detail(request, pk):
 
 
 @loans_workspace_required
+@never_cache
 def pawn_collateral_photo_document(request, pk, item_pk, photo_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     photo = get_object_or_404(
@@ -1590,7 +1606,7 @@ def pawn_loan_renewal_pdf(request, renewal_pk):
     return PawnLoanDocumentService.build_pdf_response(PawnLoanDocumentService.render_renewal_memo(renewal))
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 def pawn_loan_transfer_setup(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnSetupTransferForm(request.POST or None, workspace=request.loans_workspace)
@@ -1913,7 +1929,7 @@ def operational_notice_retry(request, notice_pk):
         workspace=request.loans_workspace,
     )
     try:
-        result = dispatch_operational_notice(notice.pk)
+        result = retry_operational_notice(notice.pk, actor=request.user)
     except (LoanOperationalNoticeError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
     else:
@@ -2005,6 +2021,7 @@ def license_renew(request, pk):
 
 
 @loans_setup_required
+@never_cache
 def license_revision_document(request, pk, revision_pk):
     license = _license_for_workspace(request, pk)
     revision = get_object_or_404(
@@ -2196,6 +2213,8 @@ def _primary_action(loan, context):
             "message": "Record disbursal to activate the loan.",
         }
     if loan.state == PawnLoanState.ACTIVE.value:
+        if not context.get("can_repay", False):
+            return None
         return {
             "label": "Record repayment",
             "url": reverse("loans:pawn_loan_repay", args=[loan.pk]),

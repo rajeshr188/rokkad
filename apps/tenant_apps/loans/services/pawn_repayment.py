@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.utils import timezone
 
+from apps.tenant_apps.loans.services.action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
     PawnLoanEventKind,
     PawnLoanState,
@@ -113,6 +114,7 @@ def record_pawn_loan_repayment(
     actor=None,
 ) -> PawnRepaymentResult:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "loan.repay")
     request_key = _request_key(request_key)
     amount = _money_amount(amount, loan)
     existing = _existing_result(loan, request_key, amount)

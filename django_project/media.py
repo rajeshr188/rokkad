@@ -1,4 +1,4 @@
-"""Public development media excludes private notification artifacts."""
+"""Development media serving: business uploads require authorized app routes."""
 
 import posixpath
 
@@ -6,8 +6,11 @@ from django.http import Http404
 from django.views.static import serve
 
 
+PUBLIC_MEDIA_PREFIXES = ("company_logos/", "profile_pictures/")
+
+
 def serve_public_media(request, path, **kwargs):
     normalized = posixpath.normpath(path.replace("\\", "/")).lstrip("/")
-    if normalized == "notify_v2/artifacts" or normalized.startswith("notify_v2/artifacts/"):
+    if not normalized.startswith(PUBLIC_MEDIA_PREFIXES):
         raise Http404
-    return serve(request, path=path, **kwargs)
+    return serve(request, path=normalized, **kwargs)

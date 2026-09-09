@@ -58,7 +58,8 @@ def _render_action(request, loan, form, title, description, extra_context=None):
 
 @loans_workspace_required
 def pawn_loan_renew(request, pk):
-    # Renewal approves and activates a successor loan internally.
+    # Renewal releases the source and approves/activates its successor.
+    request.loans_workspace_access.require("loan.release")
     request.loans_workspace_access.require("loan.approve")
     request.loans_workspace_access.require("loan.disburse")
     loan = _pawn_loan_for_workspace(request, pk)

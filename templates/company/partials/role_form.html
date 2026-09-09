@@ -2,6 +2,7 @@
 <form method="post" hx-post="{% url 'team_change_role' company.id membership.id %}" hx-trigger="change from:select[name='role']" hx-target="this">
     {% csrf_token %}
     
+    <p class="small text-muted">This changes the member's role in this workspace. It does not edit the permissions included in the role.</p>
     <div class="form-group">
         <label for="id_role">Role</label>
         <select name="role" id="id_role" class="form-control">

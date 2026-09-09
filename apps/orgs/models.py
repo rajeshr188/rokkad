@@ -158,8 +158,36 @@ class Membership(models.Model):
 
         # ]
 
+    def save(self, *args, **kwargs):
+        from apps.orgs.services.workspace_roles import ensure_workspace_role, seed_workspace_roles
+        with transaction.atomic():
+            seed_workspace_roles(self.company_id)
+            ensure_workspace_role(self.company_id, self.role_id)
+            super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user} as {self.role} in {self.company} since {self.date_joined}"
+
+
+class WorkspaceRole(models.Model):
+    workspace = models.ForeignKey("Company", on_delete=models.PROTECT, related_name="local_roles")
+    role = models.ForeignKey("Role", on_delete=models.PROTECT, related_name="workspace_roles")
+    revision = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["workspace", "role"], name="orgs_workspace_role_unique")]
+
+    def __str__(self):
+        return self.role.name
+
+
+class WorkspaceRoleGrant(models.Model):
+    workspace = models.ForeignKey("Company", on_delete=models.PROTECT, related_name="+")
+    workspace_role = models.ForeignKey(WorkspaceRole, on_delete=models.CASCADE, related_name="grants")
+    permission = models.ForeignKey(Permission, on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["workspace_role", "permission"], name="orgs_workspace_role_grant_unique")]
 
 
 class Role(models.Model):
@@ -208,6 +236,7 @@ class CompanyInvitation(AbstractBaseInvitation):
         db_index=True,
     )
     responded_at = models.DateTimeField(null=True, blank=True)
+    role_fingerprint = models.CharField(max_length=64, blank=True)
 
     class Meta:
         constraints = [
@@ -216,6 +245,14 @@ class CompanyInvitation(AbstractBaseInvitation):
                 name="orgs_companyinvitation_unique_email_company",
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        from apps.orgs.services.workspace_roles import ensure_workspace_role, role_grant_fingerprint
+        with transaction.atomic():
+            if self._state.adding:
+                ensure_workspace_role(self.company_id, self.role_id)
+                self.role_fingerprint = role_grant_fingerprint(self.company_id, self.role_id)
+            super().save(*args, **kwargs)
 
     @classmethod
     def pending_queryset(cls):

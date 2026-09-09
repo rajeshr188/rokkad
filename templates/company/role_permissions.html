@@ -1,0 +1,31 @@
+{% extends 'base_workspace_settings.html' %}
+{% block title %}Role permissions - Rokkad{% endblock %}
+{% block mgmt_content %}
+{% include "company/_team_navigation.html" %}
+<h1 class="h3">Role permissions</h1>
+<p>These permissions apply only to {{ workspace.name }}. Changes affect every member with the selected role.</p>
+<div class="row g-4">
+    <div class="col-md-3"><div class="list-group">
+    {% for local in roles %}
+        <a class="list-group-item list-group-item-action{% if local.pk == selected_role.pk %} active{% endif %}"
+           href="{% url 'workspace_role_permissions_edit' workspace_id=workspace.pk role_id=local.role_id %}">{{ local.role.name }}</a>
+    {% endfor %}
+    </div></div>
+    <div class="col-md-9"><div class="card"><div class="card-body">
+    {% if editable %}
+        <h2 class="h5">{{ selected_role.role.name }}</h2>
+        <p class="text-muted">Loan actions also require data viewing. Renewals require approval, disbursal and release.
+            Party editing accepts either Edit contacts or Edit data; clear both to remove that access.
+            Ownership, member removal and role assignment retain their Owner-only safeguards.</p>
+        <form method="post">{% csrf_token %}{{ form.non_field_errors }}{{ form.revision }}
+            {{ form.actions.errors }}{{ form.actions }}
+            <button class="btn btn-primary mt-3" type="submit">Save permissions</button>
+        </form>
+    {% elif selected_role %}
+        <p>Owner permissions are protected. To change who owns this business, use ownership transfer.</p>
+    {% else %}
+        <p>Select a role to review its permissions.</p>
+    {% endif %}
+    </div></div></div>
+</div>
+{% endblock %}

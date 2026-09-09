@@ -22,7 +22,7 @@
       </button>
     </form>
     {% endif %}
-    {% if artifact_count %}
+    {% if artifact_count and can_export_artifacts %}
     <a class="btn btn-sm btn-outline-dark" href="{% url 'workspace_notify:notify_v2_batch_download_artifacts' request.workspace.slug object.pk %}">
       <i class="bi bi-file-earmark-zip me-1"></i>Download ZIP
     </a>

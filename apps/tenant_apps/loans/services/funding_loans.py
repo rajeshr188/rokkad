@@ -10,6 +10,9 @@ from typing import Protocol
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 
+from apps.orgs.access import resolve_workspace_access
+from apps.orgs.models import Company
+from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION
 from apps.tenant_apps.loans.domain import CollateralCustodyState, PawnLoanState
 from apps.tenant_apps.loans.domain.future_funding import (
     FundingCollateralCandidate,
@@ -217,6 +220,7 @@ def create_funding_loan_draft(
     actor=None,
 ) -> FundingLoan:
     workspace_id = _require_workspace(command.workspace_id)
+    _require_funding_administration(workspace_id, actor)
     lender = _active_party(command.lender_id)
     funding_number = _allocate_funding_number(workspace_id)
     return FundingLoan.objects.create(
@@ -238,6 +242,7 @@ def cancel_funding_loan_draft(
     funding_loan = _locked_funding_loan(
         command.funding_loan_id,
         command.workspace_id,
+        actor=actor,
     )
     if funding_loan.state == FundingLoanState.CANCELLED.value:
         return funding_loan
@@ -266,6 +271,7 @@ def save_funding_loan_draft_inputs(
     funding_loan = _locked_funding_loan(
         command.funding_loan_id,
         command.workspace_id,
+        actor=actor,
     )
     if funding_loan.state != FundingLoanState.DRAFT.value:
         raise FundingLoanServiceError("Only a draft FundingLoan can be edited.")
@@ -359,6 +365,7 @@ def activate_funding_loan(
     funding_loan = _locked_funding_loan(
         command.funding_loan_id,
         command.workspace_id,
+        actor=actor,
     )
     request_key = str(command.request_key or "").strip()
     if not request_key:
@@ -521,6 +528,7 @@ def activate_saved_funding_loan_draft(
     funding_loan = _locked_funding_loan(
         command.funding_loan_id,
         command.workspace_id,
+        actor=actor,
     )
     if funding_loan.state != FundingLoanState.DRAFT.value:
         raise FundingLoanServiceError("Only a draft FundingLoan can be activated.")
@@ -576,7 +584,8 @@ def accrue_funding_interest(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingLoanEvent:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     fingerprint = _fingerprint(command)
     replay = _event_replay(
@@ -618,7 +627,8 @@ def assess_funding_fee(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingLoanEvent:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     fingerprint = _fingerprint(command)
     replay = _event_replay(funding_loan, "ASSESS_FEE", command.request_key, fingerprint)
@@ -652,7 +662,8 @@ def record_funding_repayment(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingLoanEvent:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     fingerprint = _fingerprint(command)
     replay = _event_replay(
@@ -695,7 +706,8 @@ def reverse_funding_event(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingLoanEvent:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     fingerprint = _fingerprint(command)
     replay = _event_replay(
@@ -750,7 +762,7 @@ def begin_funding_settlement(
     *,
     actor=None,
 ) -> FundingLoan:
-    funding_loan = _locked_funding_loan(command.funding_loan_id, command.workspace_id)
+    funding_loan = _locked_funding_loan(command.funding_loan_id, command.workspace_id, actor=actor)
     if funding_loan.state == FundingLoanState.SETTLEMENT_PENDING.value:
         return funding_loan
     if funding_loan.state != FundingLoanState.ACTIVE.value:
@@ -782,7 +794,8 @@ def return_funding_collateral(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingReturn:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     fingerprint = _return_fingerprint(command)
     replay = funding_loan.returns.filter(
@@ -895,7 +908,8 @@ def reverse_funding_pledge(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingPledgeReversal:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     pledge = FundingPledge.objects.select_for_update().get(funding_loan=funding_loan)
     fingerprint = _fingerprint(command)
@@ -982,7 +996,8 @@ def reverse_funding_return(
     outbound: FundingOutboundPort | None = None,
 ) -> FundingReturnReversal:
     funding_loan, _ = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id
+        command.funding_loan_id, command.workspace_id,
+        actor=actor,
     )
     try:
         funding_return = FundingReturn.objects.select_for_update().get(
@@ -1062,7 +1077,8 @@ def reverse_funding_return(
 @transaction.atomic
 def close_funding_loan(command: CloseFundingLoan, *, actor=None) -> FundingLoan:
     funding_loan, events = _locked_open_funding_events(
-        command.funding_loan_id, command.workspace_id, allow_closed=True
+        command.funding_loan_id, command.workspace_id, allow_closed=True,
+        actor=actor,
     )
     if funding_loan.state == FundingLoanState.CLOSED.value:
         return funding_loan
@@ -1108,8 +1124,14 @@ def _allocate_funding_number(workspace_id: int) -> str:
     return value
 
 
-def _locked_funding_loan(funding_loan_id: int, workspace_id: int) -> FundingLoan:
+def _require_funding_administration(workspace_id, actor):
+    workspace = Company.objects.get(pk=workspace_id)
+    resolve_workspace_access(actor=actor, workspace=workspace).require(LOANS_ADMIN_ACTION)
+
+
+def _locked_funding_loan(funding_loan_id: int, workspace_id: int, *, actor) -> FundingLoan:
     active_workspace_id = _require_workspace(workspace_id)
+    _require_funding_administration(active_workspace_id, actor)
     try:
         return FundingLoan.objects.select_for_update().get(
             pk=funding_loan_id,
@@ -1171,8 +1193,8 @@ def _activation_replay(funding_loan, request_key, fingerprint):
         ) from exc
 
 
-def _locked_open_funding_events(funding_loan_id, workspace_id, *, allow_closed=False):
-    funding_loan = _locked_funding_loan(funding_loan_id, workspace_id)
+def _locked_open_funding_events(funding_loan_id, workspace_id, *, actor, allow_closed=False):
+    funding_loan = _locked_funding_loan(funding_loan_id, workspace_id, actor=actor)
     allowed = {
         FundingLoanState.ACTIVE.value,
         FundingLoanState.SETTLEMENT_PENDING.value,

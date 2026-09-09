@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError
 from django.template.loader import render_to_string
-from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from apps.orgs.middleware_v2 import SecureWorkspaceMiddleware
@@ -193,52 +193,38 @@ class PermissionResolutionTests(SimpleTestCase):
 		self.assertIn("admin_access", perms)
 		self.assertEqual(get_workspace_role_name(user, workspace), "Superuser")
 
-	def test_membership_permissions_include_role_defaults_and_db_permissions(self):
+	def test_compatibility_permissions_use_stored_access_only(self):
 		user = SimpleNamespace(is_authenticated=True, is_superuser=False)
 		workspace = SimpleNamespace(id=9)
-		role = SimpleNamespace(
-			name="Member",
-			permissions=SimpleNamespace(
-				values_list=lambda *_args, **_kwargs: ["custom_override"]
-			),
-		)
-		membership = SimpleNamespace(role=role)
-		fake_qs = SimpleNamespace(get=lambda **_kwargs: membership)
+		access = SimpleNamespace(can=lambda code: code == "data_view")
+		with patch("apps.orgs.access.resolve_workspace_access", return_value=access):
+			self.assertEqual(get_effective_permissions(user, workspace), {"data_view"})
 
-		with patch.object(Membership.objects, "select_related", return_value=fake_qs):
-			perms = get_effective_permissions(user, workspace)
-			role_name = get_workspace_role_name(user, workspace)
-
-		self.assertIn("workspace_view", perms)
-		self.assertIn("data_create", perms)
-		self.assertIn("custom_override", perms)
-		self.assertEqual(role_name, "Member")
-
-	def test_non_member_gets_no_permissions_and_no_role(self):
+	def test_non_member_gets_no_permissions(self):
 		user = SimpleNamespace(is_authenticated=True, is_superuser=False)
-		workspace = SimpleNamespace(id=11)
-		fake_qs = SimpleNamespace(get=lambda **_kwargs: (_ for _ in ()).throw(Membership.DoesNotExist()))
-
-		with patch.object(Membership.objects, "select_related", return_value=fake_qs):
-			self.assertEqual(get_effective_permissions(user, workspace), set())
-			self.assertIsNone(get_workspace_role_name(user, workspace))
+		with patch("apps.orgs.access.resolve_workspace_access", return_value=SimpleNamespace(can=lambda code: False)):
+			self.assertEqual(get_effective_permissions(user, SimpleNamespace(id=11)), set())
 
 
 class WorkspaceAccessPolicyTests(SimpleTestCase):
 	def setUp(self):
 		self.factory = RequestFactory()
+		self.grants = patch("apps.orgs.services.workspace_roles.stored_role_codes", return_value={"workspace_view"})
+		self.grants.start()
+		self.addCleanup(self.grants.stop)
 
 	def _make_request(self, *, is_superuser=False):
 		return SimpleNamespace(
 			user=SimpleNamespace(
 				is_authenticated=True,
 				is_superuser=is_superuser,
+				pk=2,
 			)
 		)
 
 	def test_workspace_access_denies_non_member(self):
 		request = self._make_request(is_superuser=False)
-		workspace = SimpleNamespace(id=1)
+		workspace = SimpleNamespace(id=1, pk=1, owner_id=99)
 		fake_filtered = SimpleNamespace(first=lambda: None)
 		fake_qs = SimpleNamespace(filter=lambda **_kwargs: fake_filtered)
 
@@ -249,8 +235,8 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 
 	def test_workspace_access_allows_member_with_required_permission(self):
 		request = self._make_request(is_superuser=False)
-		workspace = SimpleNamespace(id=1)
-		membership = SimpleNamespace(role=SimpleNamespace(name="Member"))
+		workspace = SimpleNamespace(id=1, pk=1, owner_id=99)
+		membership = SimpleNamespace(role_id=1, role=SimpleNamespace(name="Member"))
 		fake_filtered = SimpleNamespace(first=lambda: membership)
 		fake_qs = SimpleNamespace(filter=lambda **_kwargs: fake_filtered)
 
@@ -267,8 +253,8 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 
 	def test_workspace_access_denies_missing_required_permission(self):
 		request = self._make_request(is_superuser=False)
-		workspace = SimpleNamespace(id=1)
-		membership = SimpleNamespace(role=SimpleNamespace(name="Member"))
+		workspace = SimpleNamespace(id=1, pk=1, owner_id=99)
+		membership = SimpleNamespace(role_id=1, role=SimpleNamespace(name="Member"))
 		fake_filtered = SimpleNamespace(first=lambda: membership)
 		fake_qs = SimpleNamespace(filter=lambda **_kwargs: fake_filtered)
 
@@ -283,7 +269,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 
 	def test_workspace_access_allows_platform_admin_without_membership(self):
 		request = self._make_request(is_superuser=True)
-		workspace = SimpleNamespace(id=1)
+		workspace = SimpleNamespace(id=1, pk=1, owner_id=99)
 
 		with patch("apps.orgs.views.get_effective_permissions", return_value={"workspace_view", "admin_access"}):
 			result = _assert_workspace_access(
@@ -406,73 +392,36 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 					mock_redirect.assert_called_once_with(expected_redirect)
 
 
-class RolePolicyTests(SimpleTestCase):
+class RolePolicyTests(TestCase):
+	def setUp(self):
+		from django.contrib.auth import get_user_model
+		from apps.orgs.models import Company, Role
+		self.owner = get_user_model().objects.create_user(username="role-policy-owner")
+		self.member = get_user_model().objects.create_user(username="role-policy-member")
+		self.workspace = Company.objects.create(name="Role Policy", schema_name="role-policy",
+			owner=self.owner, creator=self.owner)
+		owner_role, _ = Role.objects.get_or_create(name="Owner")
+		Membership.objects.create(user=self.owner, company=self.workspace, role=owner_role)
+		self.admin = Role.objects.get(name="Admin")
+		self.member_role = Role.objects.get(name="Member")
+		self.membership = Membership.objects.create(user=self.member, company=self.workspace, role=self.member_role)
+
 	def test_non_owner_cannot_grant_admin_role(self):
-		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
-		workspace = SimpleNamespace(id=1)
-		role = SimpleNamespace(name="Admin")
+		self.assertFalse(role_policy.actor_can_grant_role(actor=self.member, workspace=self.workspace, role=self.admin))
 
-		with patch("apps.orgs.services.role_policy.resolve_workspace_access", return_value=SimpleNamespace(can=lambda action: action == "team_invite")), \
-			 patch("apps.orgs.services.role_policy._actor_is_owner", return_value=False):
-			self.assertFalse(
-				role_policy.actor_can_grant_role(
-					actor=actor,
-					workspace=workspace,
-					role=role,
-				)
-			)
-
-	def test_owner_can_grant_admin_role_with_admin_invite_permission(self):
-		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
-		workspace = SimpleNamespace(id=1)
-		role = SimpleNamespace(name="Admin")
-
-		with patch("apps.orgs.services.role_policy.resolve_workspace_access", return_value=SimpleNamespace(can=lambda action: action in {"team_invite", "team_invite_admin"})), \
-			 patch("apps.orgs.services.role_policy._actor_is_owner", return_value=True):
-			self.assertTrue(
-				role_policy.actor_can_grant_role(
-					actor=actor,
-					workspace=workspace,
-					role=role,
-				)
-			)
+	def test_owner_can_grant_admin_role(self):
+		self.assertTrue(role_policy.actor_can_grant_role(actor=self.owner, workspace=self.workspace, role=self.admin))
 
 	def test_non_owner_cannot_change_member_role(self):
-		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
-		workspace = SimpleNamespace(id=1)
-		membership = SimpleNamespace(
-			company=workspace,
-			user=SimpleNamespace(id=2),
-			role=SimpleNamespace(name="Member"),
-		)
-
-		with patch("apps.orgs.services.role_policy._actor_is_owner", return_value=False):
-			with self.assertRaises(PermissionDenied):
-				role_policy.assert_can_change_role(
-					actor=actor,
-					workspace=workspace,
-					membership=membership,
-					new_role=SimpleNamespace(name="Admin"),
-				)
+		with self.assertRaises(PermissionDenied):
+			role_policy.assert_can_change_role(actor=self.member, workspace=self.workspace,
+				membership=self.membership, new_role=self.admin)
 
 	def test_last_owner_cannot_be_demoted(self):
-		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
-		workspace = SimpleNamespace(id=1)
-		membership = SimpleNamespace(
-			company=workspace,
-			user=SimpleNamespace(id=2),
-			role=SimpleNamespace(name="Owner"),
-		)
-
-		with patch("apps.orgs.services.role_policy._actor_is_owner", return_value=True), \
-			 patch("apps.orgs.services.role_policy.owner_membership_count", return_value=1):
-			with self.assertRaises(PermissionDenied):
-				role_policy.assert_can_change_role(
-					actor=actor,
-					workspace=workspace,
-					membership=membership,
-					new_role=SimpleNamespace(name="Member"),
-				)
+		membership = Membership.objects.get(user=self.owner, company=self.workspace)
+		with self.assertRaises(PermissionDenied):
+			role_policy.assert_can_change_role(actor=self.owner, workspace=self.workspace,
+				membership=membership, new_role=self.member_role)
 
 	def test_owner_self_leave_is_blocked(self):
 		actor = SimpleNamespace(is_authenticated=True, is_superuser=False)
@@ -559,7 +508,7 @@ class OrgNavigationFlowTests(SimpleTestCase):
 
 		self.assertIn("{% extends 'base_workspace_settings.html' %}", setup_html)
 		self.assertIn("setup_checklist", setup_html)
-		self.assertIn("Workspace setup", setup_html)
+		self.assertIn("Set up your business", setup_html)
 		self.assertIn("workspace_slug_settings", setup_html)
 		self.assertIn("workspace_slug_settings_setup_state", setup_html)
 		self.assertIn("setup_checklist_task.html", setup_html)
@@ -1210,9 +1159,9 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 	def test_member_list_uses_explicit_workspace_context_when_alias_passes_id(self):
 		from apps.orgs import views as org_views
 
-		workspace = SimpleNamespace(id=9)
+		workspace = SimpleNamespace(id=9, owner_id=1)
 		request = self.factory.get("/workspace/9/settings/team/")
-		request.user = SimpleNamespace(id=1)
+		request.user = SimpleNamespace(id=1, pk=1)
 
 		class FakeMembershipQuerySet:
 			def filter(self, **kwargs):

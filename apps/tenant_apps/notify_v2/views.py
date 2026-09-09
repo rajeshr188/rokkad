@@ -12,6 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.contrib import messages
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -303,9 +304,10 @@ def batch_detail(request, pk):
             "jobs": jobs,
             "artifacts": artifacts,
             "artifact_count": len(artifacts),
+            "can_export_artifacts": request.notify_v2_workspace_access.can("data.export"),
             "latest_artifact": latest_artifact,
             "digital_job_count": digital_job_count,
-            "can_send_digital": digital_job_count > 0,
+            "can_send_digital": digital_job_count > 0 and request.notify_v2_workspace_access.can("data.edit"),
             "selection_count": selection_count,
             "recipient_count": recipient_count or batch.job_count,
         },
@@ -333,6 +335,7 @@ def batch_send_digital(request, pk):
 
 
 @notify_v2_action_required("view")
+@never_cache
 def artifact_download(request, pk, artifact_pk):
     artifact = get_object_or_404(NotificationArtifact, pk=artifact_pk, job__batch_id=pk)
     if not artifact.file:
@@ -345,6 +348,8 @@ def artifact_download(request, pk, artifact_pk):
 
 
 @notify_v2_action_required("view")
+@notify_v2_action_required("export")
+@never_cache
 def batch_download_artifacts(request, pk):
     batch = get_object_or_404(
         NotificationBatch.objects.prefetch_related("jobs__event__recipient", "jobs__artifacts"),

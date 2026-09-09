@@ -693,7 +693,7 @@ class PawnDraftForm(forms.Form):
             "workspace_party:party_autocomplete", args=[workspace.slug]
         )
         self.fields["borrower"].queryset = Party.objects.filter(
-            status=Party.PartyStatus.ACTIVE
+            workspace=workspace, status=Party.PartyStatus.ACTIVE
         ).order_by("display_name", "party_code")
         self.fields["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
@@ -715,8 +715,49 @@ class PawnDraftForm(forms.Form):
             )
             self.fields["series"].disabled = True
             self.fields["product_version"].disabled = True
+        elif not self.is_bound:
+            self._select_single_options()
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control")
+
+
+    def _select_single_options(self):
+        from django.core.exceptions import ValidationError
+        from django.db.models import Q
+        from django.utils import timezone
+        from .services.number_allocation import preview_number
+        from .domain import LoanDocumentKind
+
+        try:
+            loan_date = self.fields["loan_date"].clean(self.initial.get("loan_date", timezone.localdate()))
+        except ValidationError:
+            return
+        if "series" not in self.initial:
+            candidates = []
+            for series in self.fields["series"].queryset.filter(
+                is_active=True, license__is_active=True,
+                license__issued_on__lte=loan_date, license__expires_on__gte=loan_date,
+            ):
+                try:
+                    preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
+                except ValueError:
+                    continue
+                candidates.append(series.pk)
+                if len(candidates) > 1:
+                    break
+            if len(candidates) == 1:
+                self.initial["series"] = candidates[0]
+                self.fields["series"].help_text += " Selected automatically because only one series is currently usable. Review it for your loan date."
+        if "product_version" not in self.initial:
+            candidates = list(self.fields["product_version"].queryset.filter(
+                Q(available_from__isnull=True) | Q(available_from__lte=loan_date),
+            ).filter(
+                Q(available_until__isnull=True) | Q(available_until__gte=loan_date),
+            ).values_list("pk", flat=True)[:2])
+            if len(candidates) == 1:
+                self.initial["product_version"] = candidates[0]
+                self.fields["product_version"].help_text = "The only product available for this date is selected. Review its terms and tenure."
+
 
 class PawnCollateralDraftForm(forms.ModelForm):
     collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
@@ -932,7 +973,9 @@ class PawnEconomicConfigurationForm(forms.Form):
     license = forms.ModelChoiceField(
         queryset=LoanLicense.objects.none(),
         required=False,
-        help_text="Leave blank to create the workspace default.",
+        label="Policy scope",
+        empty_label="Business default (all licenses)",
+        help_text="Keep the business default unless this policy should apply only to a particular license.",
     )
     valuation_method = forms.ChoiceField(
         choices=[(item.value, item.name.replace("_", " ").title()) for item in ValuationMethod],
@@ -1050,7 +1093,9 @@ class PawnFeePolicyForm(forms.Form):
     license = forms.ModelChoiceField(
         queryset=LoanLicense.objects.none(),
         required=False,
-        help_text="Leave blank to create the workspace default.",
+        label="Policy scope",
+        empty_label="Business default (all licenses)",
+        help_text="Keep the business default unless this policy should apply only to a particular license.",
     )
     code = forms.CharField(max_length=32, initial="DOCUMENT_CHARGE")
     name = forms.CharField(max_length=100, initial="Document charge")

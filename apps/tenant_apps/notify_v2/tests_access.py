@@ -132,3 +132,29 @@ class NotifyV2AccessTests(SimpleTestCase):
         protected = notify_v2_admin_required(lambda request: "allowed")
 
         self.assertEqual(protected(self.request), "allowed")
+
+
+class NotifyBulkDownloadAccessTests(SimpleTestCase):
+    def test_bulk_download_requires_view_and_export_before_loading_files(self):
+        from django.test import RequestFactory
+        from apps.orgs.access import WorkspaceAccess
+        from apps.tenant_apps.notify_v2.views import batch_download_artifacts
+        user = SimpleNamespace(is_authenticated=True)
+        workspace = SimpleNamespace(pk=1, slug="test")
+        request = RequestFactory().get("/notify/batch/1/download/")
+        request.user = user
+        request.workspace = workspace
+        with patch("apps.tenant_apps.notify_v2.access.resolve_request_workspace", return_value=workspace), patch(
+            "apps.tenant_apps.notify_v2.access.resolve_workspace_access"
+        ) as resolve, patch("apps.tenant_apps.notify_v2.views.get_object_or_404") as lookup:
+            for actions in ({"data.view"}, {"data.export"}, set()):
+                resolve.return_value = WorkspaceAccess(user, workspace, object(), False, frozenset(actions))
+                with self.assertRaises(PermissionDenied):
+                    batch_download_artifacts(request, 1)
+                lookup.assert_not_called()
+            resolve.return_value = WorkspaceAccess(user, workspace, object(), False, frozenset({"data.view", "data.export"}))
+            from django.http import Http404
+            lookup.side_effect = Http404
+            with self.assertRaises(Http404):
+                batch_download_artifacts(request, 1)
+            lookup.assert_called_once()

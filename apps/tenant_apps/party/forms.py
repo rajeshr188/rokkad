@@ -2,6 +2,7 @@ from django import forms
 from django.core.validators import URLValidator, validate_email
 from phonenumber_field.formfields import PhoneNumberField
 
+from .widgets import PrivateFileInput
 from .models import (
     Party,
     PartyAddress,
@@ -64,7 +65,7 @@ class PartyForm(forms.ModelForm):
             "relation_name": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "primary_phone": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "primary_email": forms.EmailInput(attrs={"class": CONTROL_CLASS}),
-            "profile_photo": forms.ClearableFileInput(attrs={"class": CONTROL_CLASS}),
+            "profile_photo": PrivateFileInput(attrs={"class": CONTROL_CLASS}),
             "tax_pan": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "gstin": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "risk_level": forms.TextInput(attrs={"class": CONTROL_CLASS}),
@@ -140,7 +141,7 @@ class PartyProfilePhotoForm(forms.ModelForm):
         model = Party
         fields = ["profile_photo"]
         widgets = {
-            "profile_photo": forms.ClearableFileInput(attrs={"class": CONTROL_CLASS}),
+            "profile_photo": PrivateFileInput(attrs={"class": CONTROL_CLASS}),
         }
 
 
@@ -245,7 +246,7 @@ class PartyDocumentForm(forms.ModelForm):
             "document_type": forms.Select(attrs={"class": SELECT_CLASS}),
             "title": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "identifier": forms.Select(attrs={"class": SELECT_CLASS}),
-            "file": forms.ClearableFileInput(attrs={"class": CONTROL_CLASS}),
+            "file": PrivateFileInput(attrs={"class": CONTROL_CLASS}),
             "expires_on": forms.DateInput(
                 attrs={"class": CONTROL_CLASS, "type": "date"}
             ),

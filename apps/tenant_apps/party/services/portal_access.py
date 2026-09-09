@@ -3,8 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.db import transaction
+from django.core.exceptions import PermissionDenied
 
 from apps.orgs.audit import AuditLog
+from apps.tenant_apps.party.access import PARTY_ADMIN_ACTION
+from .action_access import require_party_service_permission
 from apps.tenant_apps.party.models import PartyPortalAccess
 
 
@@ -23,6 +26,7 @@ class PortalAccessLifecycleResult:
     changed: bool
 
 
+@transaction.atomic
 def activate_portal_access(
     grant: PartyPortalAccess,
     *,
@@ -30,6 +34,8 @@ def activate_portal_access(
     request=None,
     workspace=None,
 ) -> PortalAccessLifecycleResult:
+    workspace = _authorize_portal_change(grant, actor, workspace, request)
+    grant = PartyPortalAccess.objects.select_for_update().get(pk=grant.pk)
     if grant.status == PartyPortalAccess.Status.REVOKED:
         raise PortalAccessLifecycleError("Revoked portal access cannot be activated.")
 
@@ -50,6 +56,7 @@ def activate_portal_access(
     return PortalAccessLifecycleResult(grant=grant, changed=changed)
 
 
+@transaction.atomic
 def suspend_portal_access(
     grant: PartyPortalAccess,
     *,
@@ -57,6 +64,8 @@ def suspend_portal_access(
     request=None,
     workspace=None,
 ) -> PortalAccessLifecycleResult:
+    workspace = _authorize_portal_change(grant, actor, workspace, request)
+    grant = PartyPortalAccess.objects.select_for_update().get(pk=grant.pk)
     if grant.status == PartyPortalAccess.Status.REVOKED:
         raise PortalAccessLifecycleError("Revoked portal access cannot be suspended.")
 
@@ -77,6 +86,7 @@ def suspend_portal_access(
     return PortalAccessLifecycleResult(grant=grant, changed=changed)
 
 
+@transaction.atomic
 def revoke_portal_access(
     grant: PartyPortalAccess,
     *,
@@ -84,6 +94,8 @@ def revoke_portal_access(
     request=None,
     workspace=None,
 ) -> PortalAccessLifecycleResult:
+    workspace = _authorize_portal_change(grant, actor, workspace, request)
+    grant = PartyPortalAccess.objects.select_for_update().get(pk=grant.pk)
     previous_status = grant.status
     changed = previous_status != PartyPortalAccess.Status.REVOKED
     if changed:
@@ -98,6 +110,13 @@ def revoke_portal_access(
             previous_status=previous_status,
         )
     return PortalAccessLifecycleResult(grant=grant, changed=changed)
+
+
+def _authorize_portal_change(grant, actor, workspace, request):
+    for supplied in (workspace, getattr(request, "workspace", None)):
+        if supplied is not None and supplied.pk != grant.workspace_id:
+            raise PermissionDenied("Portal access workspace does not match the grant.")
+    return require_party_service_permission(grant.workspace_id, actor, PARTY_ADMIN_ACTION)
 
 
 def _log_portal_access_event(

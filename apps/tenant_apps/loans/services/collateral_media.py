@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import landscape
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
+from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import PawnLoanState
 from apps.tenant_apps.loans.models import (
     PawnCollateralItem,
@@ -69,6 +70,15 @@ def append_collateral_photo(
     workflow_source: str | None = None,
 ) -> PawnCollateralPhoto:
     item = _locked_item(collateral_item_id)
+    require_loan_action(item.loan, actor, "data.edit")
+    return _append_collateral_photo(collateral_item_id, upload=upload, actor=actor,
+                                    workflow_source=workflow_source)
+
+
+@transaction.atomic
+def _append_collateral_photo(collateral_item_id, *, upload, actor, workflow_source=None):
+    """Internal photo persistence for an already-authorized draft/renewal command."""
+    item = _locked_item(collateral_item_id)
     mime_type = validate_collateral_photo(upload)
     if workflow_source is None:
         workflow_source = (
@@ -99,7 +109,6 @@ def append_collateral_photo(
 
 @transaction.atomic
 def delete_draft_collateral_photo(collateral_item_id, photo_id, *, actor):
-    from apps.orgs.access import resolve_workspace_access
     from apps.tenant_apps.loans.models import LoanChangeLog, PawnLoan
 
     # Match approval's lock order so approval and removal cannot race.
@@ -108,7 +117,7 @@ def delete_draft_collateral_photo(collateral_item_id, photo_id, *, actor):
     if item_ref is None:
         raise PawnCollateralMediaError("Collateral item was not found in the active workspace.")
     loan = PawnLoan.objects.select_for_update().get(pk=item_ref.loan_id, workspace_id=workspace_id)
-    resolve_workspace_access(actor=actor, workspace=loan.workspace).require("data.edit")
+    require_loan_action(loan, actor, "data.edit")
     if loan.state != PawnLoanState.DRAFT.value:
         raise PawnCollateralMediaError("Photographs can only be deleted while the loan is a draft.")
     if not PawnCollateralItem.objects.select_for_update().filter(pk=collateral_item_id, loan=loan).exists():
@@ -129,7 +138,15 @@ def delete_draft_collateral_photo(collateral_item_id, photo_id, *, actor):
         transaction.on_commit(lambda: storage.delete(name))
 
 
+@transaction.atomic
 def inherit_collateral_photos(source_item, successor_item, *, actor=None):
+    require_loan_action(source_item.loan, actor, "data.edit")
+    require_loan_action(successor_item.loan, actor, "data.edit")
+    return _inherit_collateral_photos(source_item, successor_item, actor=actor)
+
+
+def _inherit_collateral_photos(source_item, successor_item, *, actor):
+    """Internal evidence copy used by an authorized renewal."""
     inherited = []
     for source in source_item.photos.order_by("captured_at", "pk"):
         inherited.append(
@@ -157,6 +174,7 @@ def render_collateral_label(
     actor=None,
 ) -> PawnCollateralLabelResult:
     item = _locked_item(collateral_item_id)
+    require_loan_action(item.loan, actor, "data.view")
     try:
         action = PawnCollateralLabelIssue.Action(action)
     except ValueError as exc:

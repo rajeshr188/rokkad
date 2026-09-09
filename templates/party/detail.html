@@ -7,7 +7,7 @@
 <div class="app-heading">
     <div class="d-flex align-items-center gap-3">
         {% if party.profile_photo %}
-            <img src="{{ party.profile_photo.url }}" alt="" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
+            <img src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=party.pk %}" alt="" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
         {% else %}
             <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:72px;height:72px;font-size:1.75rem;">
                 {{ party.display_name|first|upper }}
@@ -448,7 +448,7 @@
                         {% for document in party.documents.all %}
                         <tr>
                             <td>{{ document.get_document_type_display }}</td>
-                            <td>{% if document.file %}<a href="{{ document.file.url }}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}</td>
+                            <td>{% if document.file %}<a href="{% url 'workspace_party:party_document_download' workspace_slug=request.workspace.slug pk=party.pk document_pk=document.pk %}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}</td>
                             <td>{{ document.is_verified|yesno:"Verified,Pending" }}</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>

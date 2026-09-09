@@ -6,6 +6,7 @@ from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
 
+from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
     PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
@@ -61,6 +62,7 @@ def create_pawn_loan_notice(
     payload_snapshot_override=None,
 ) -> PawnLoanNotice:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "data.edit")
     request_key = str(request_key or "").strip()
     if not request_key or len(request_key) > 120:
         raise PawnLoanNoticeError("A notice request key of at most 120 characters is required.")
@@ -158,12 +160,28 @@ def create_pawn_loan_notice(
     return notice
 
 
+def retry_pawn_loan_notice(notice_id: int, *, actor):
+    """Authorize a user's retry before invoking internal delivery."""
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnLoanNoticeError("Notice retry requires an active workspace.")
+    try:
+        notice = PawnLoanNotice.objects.select_related("loan__workspace").get(
+            pk=notice_id, workspace_id=workspace_id,
+        )
+    except PawnLoanNotice.DoesNotExist as exc:
+        raise PawnLoanNoticeError("Notice was not found in the active workspace.") from exc
+    require_loan_action(notice.loan, actor, "data.edit")
+    return dispatch_pawn_loan_notice(notice.pk)
+
+
 def dispatch_pawn_loan_notice(
     notice_id: int,
     *,
     delivery_handler=None,
     as_of=None,
 ) -> PawnLoanNoticeDispatchResult:
+    """Internal delivery of an existing intent; user retries use retry_pawn_loan_notice."""
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise PawnLoanNoticeError("PawnLoan notice delivery requires an active tenant schema.")
@@ -283,4 +301,5 @@ __all__ = [
     "create_pawn_loan_notice",
     "dispatch_due_pawn_loan_notices",
     "dispatch_pawn_loan_notice",
+    "retry_pawn_loan_notice",
 ]

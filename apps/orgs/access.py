@@ -6,12 +6,15 @@ from django.core.exceptions import PermissionDenied
 
 from apps.orgs.permissions import (
     get_all_permission_codenames,
-    get_permissions_for_role,
     is_platform_admin,
 )
 
 
 ACTION_ALIASES = {
+    "loan_repay": "loan.repay",
+    "loan_release": "loan.release",
+    "loan_accrue": "loan.accrue",
+    "loan_capitalize": "loan.capitalize",
     "loan_approve": "loan.approve",
     "loan_disburse": "loan.disburse",
     "workspace_view": "workspace.view",
@@ -77,10 +80,10 @@ def resolve_workspace_access(*, actor, workspace) -> WorkspaceAccess:
     if membership is None:
         return WorkspaceAccess(actor, workspace, None, False, frozenset())
 
-    codes = set(get_permissions_for_role(membership.role.name))
-    role_permissions = getattr(membership.role, "permissions", None)
-    if role_permissions is not None:
-        codes.update(role_permissions.values_list("codename", flat=True))
+    from apps.orgs.services.workspace_roles import stored_role_codes
+    codes = stored_role_codes(workspace.pk, membership.role_id) & set(get_all_permission_codenames())
+    if workspace.owner_id != actor.pk:
+        codes = {code for code in codes if normalize_action(code) != "workspace.transfer"}
     return WorkspaceAccess(
         actor,
         workspace,

@@ -35,7 +35,8 @@ CLOUDFLARE_R2_CONFIG_OPTIONS = {
     "access_key": CLOUDFLARE_R2_ACCESS_KEY,
     "secret_key": CLOUDFLARE_R2_SECRET_KEY,
     "endpoint_url": CLOUDFLARE_R2_BUCKET_ENDPOINT,
-    "default_acl": "public-read",  # "private"
+    "default_acl": None,  # Do not request public ACLs; the bucket must remain private.
+    "querystring_auth": True,
     "signature_version": "s3v4",
 }
 

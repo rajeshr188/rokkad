@@ -1,3 +1,4 @@
+from apps.tenancy.testing import workspace_role_permissions
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -7,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_products
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Membership, Role
@@ -55,7 +57,6 @@ from apps.tenant_apps.loans.services import (
     initiate_pawn_loan_auction,
     renew_pawn_loan,
     reverse_pawn_loan_auction,
-    seed_default_loan_products,
     release_pawn_loan_in_full,
     reverse_pawn_loan_event,
     start_pawn_loan_auction,
@@ -101,6 +102,8 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             username=f"draft-actor-{uuid.uuid4().hex[:8]}",
             email=f"draft-actor-{uuid.uuid4().hex[:8]}@example.com",
         )
+        admin_role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.create(user=self.actor, company=self.tenant, role=admin_role)
         self.borrower = Party.objects.create(
             display_name="Active Borrower",
             status=Party.PartyStatus.ACTIVE,
@@ -124,7 +127,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             width=5,
             maximum_number=10000,
         )
-        self.product_version = seed_default_loan_products()[0]
+        self.product_version = _seed_default_loan_products()[0]
         type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
         self.product_version.refresh_from_db()
 
@@ -167,6 +170,89 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                 ),
                 actor=self.actor,
             )
+
+    def _set_actor_grants(self, *codes):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from apps.orgs.models import Company
+        role = Role.objects.create(name="DraftDelegate-" + uuid.uuid4().hex[:8])
+        ct = ContentType.objects.get_for_model(Company)
+        for code in ("data_view", *codes):
+            permission, _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+            workspace_role_permissions(role, self.tenant).add(permission)
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+        return role
+
+    def test_draft_create_and_edit_grants_preserve_initial_photo_workflow(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
+        self._set_actor_grants("data_create")
+        photo = lambda: SimpleUploadedFile("initial.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg")
+        loan = create_pawn_draft_with_photos(self.command(), actor=self.actor,
+            photos=(DraftCollateralPhotoInput(collateral_item_id=None, upload=photo()),))
+        item = loan.collateral_items.get()
+        self.assertEqual(item.photos.count(), 1)
+        from apps.tenant_apps.loans.services.pawn_draft_split import split_pawn_draft
+        def split():
+            return split_pawn_draft(loan.pk, collateral_item_ids=[item.pk], series=self.series,
+                product_version=self.product_version, loan_date=loan.loan_date,
+                tenure_months=3, expected_fingerprint="stale",
+                actor=self.actor,
+            )
+        with self.assertRaises(PermissionDenied):
+            split()
+        command = UpdatePawnDraftCommand(borrower_id=self.borrower.pk,
+            principal_amount=loan.principal_amount, monthly_interest_rate=loan.monthly_interest_rate,
+            loan_date=loan.loan_date, tenure_months=loan.tenure_months,
+            collateral=(self.collateral(collateral_item_id=item.pk),))
+        with self.assertRaises(PermissionDenied):
+            append_collateral_photo(item.pk, upload=photo(), actor=self.actor)
+        with self.assertRaises(PermissionDenied):
+            update_pawn_draft(loan.pk, command, actor=self.actor)
+        self._set_actor_grants("data_edit")
+        with self.assertRaises(PermissionDenied):
+            split()
+        update_pawn_draft(loan.pk, command, actor=self.actor)
+        added = append_collateral_photo(item.pk, upload=photo(), actor=self.actor)
+        delete_draft_collateral_photo(item.pk, added.pk, actor=self.actor)
+        self.assertEqual(item.photos.count(), 1)
+        with self.assertRaises(PermissionDenied):
+            create_pawn_draft(self.command(), actor=self.actor)
+        self.sequence.refresh_from_db()
+        self.assertEqual(self.sequence.next_number, 2)
+
+    def test_draft_direct_commands_deny_missing_and_removed_actor_without_writes(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services.pawn_draft_split import split_pawn_draft
+        from apps.tenant_apps.loans.services.pawn_lifecycle import transfer_expired_draft_setup
+        from apps.tenant_apps.loans.services.collateral_media import render_collateral_label, inherit_collateral_photos
+        loan = create_pawn_draft(self.command(), actor=self.actor)
+        item = loan.collateral_items.get()
+        command = UpdatePawnDraftCommand(borrower_id=self.borrower.pk,
+            principal_amount=loan.principal_amount, monthly_interest_rate=loan.monthly_interest_rate,
+            loan_date=loan.loan_date, tenure_months=loan.tenure_months,
+            collateral=(self.collateral(collateral_item_id=item.pk),))
+        Membership.objects.filter(user=self.actor, company=self.tenant).delete()
+        for actor in (None, self.actor):
+            calls = (
+                lambda: create_pawn_draft(self.command(), actor=actor),
+                lambda: update_pawn_draft(loan.pk, command, actor=actor),
+                lambda: split_pawn_draft(loan.pk, collateral_item_ids=[item.pk], series=self.series,
+                    product_version=self.product_version, loan_date=loan.loan_date,
+                    tenure_months=3, expected_fingerprint="stale", actor=actor),
+                lambda: append_collateral_photo(item.pk, upload=None, actor=actor),
+                lambda: inherit_collateral_photos(item, item, actor=actor),
+                lambda: render_collateral_label(item.pk, qr_target="https://example.test/scan", action="PRINT", actor=actor),
+                lambda: transfer_expired_draft_setup(loan.pk, license_id=self.license.pk,
+                    series_id=self.series.pk, reason="test", actor=actor),
+            )
+            for call in calls:
+                with self.assertRaises(PermissionDenied):
+                    call()
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        self.assertEqual(item.photos.count(), 0)
+        self.sequence.refresh_from_db()
+        self.assertEqual(self.sequence.next_number, 2)
 
     def test_create_is_atomic_and_allocates_official_number_with_audit(self):
         loan = create_pawn_draft(self.command(), actor=self.actor)
@@ -233,7 +319,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             return photo
 
         with patch(
-            "apps.tenant_apps.loans.services.pawn_drafts.append_collateral_photo",
+            "apps.tenant_apps.loans.services.pawn_drafts._append_collateral_photo",
             side_effect=persist_then_fail,
         ):
             with self.assertRaisesRegex(RuntimeError, "second photo failed"):
@@ -755,6 +841,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
             return_value=(),
         ):
+            self._set_actor_grants("loan_release", "loan_approve", "loan_disburse")
             first = renew_pawn_loan(loan.pk, **call)
             second = renew_pawn_loan(loan.pk, **call)
 
@@ -912,6 +999,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             maximum_ltv_ratio=Decimal("0.80"),
             advance_interest_periods=1,
             effective_from=date(2026, 1, 1),
+            actor=self.actor,
         )
         for metal, rate in (
             (CollateralMetal.GOLD, Decimal("2")),
@@ -923,6 +1011,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                 metal=metal,
                 monthly_interest_rate=rate,
                 effective_from=date(2026, 1, 1),
+                actor=self.actor,
             )
 
     def test_full_release_freezes_item_principal_closing_evidence(self):

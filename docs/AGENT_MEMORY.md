@@ -8,6 +8,92 @@ related: [README.md, STATUS.md, constitution.md, domain/accounting.md, implement
 
 # Agent Memory
 
+Public `.env.example` must contain only placeholders, never actual credentials.
+The 2026-09-09 Google OAuth exposure alert was traced locally to the same credential
+in commit `4359311` dated 2024-03-31. The owner confirmed rotation completed,
+live sign-in worked after disabling the old secret, and the old secret was deleted.
+Working-tree sanitization remains local; historical repository cleanup is separate.
+Confirm the deployed allauth credential source before rotation; current base settings
+do not consume the example's GOOGLE_OAUTH_CLIENT_SECRET variable.
+
+Organization/Workspace remains the SaaS tenant with licenses inside it. License
+scope is OPTIONAL and OWNER-CONFIGURABLE, deferred until the end of action-permission,
+private-media and onboarding work. A fresh review and explicit owner approval are
+required BEFORE implementing license/branch scope. The earlier assigned-license
+statement is not a universal rule; exact scope modes remain open. Current loan access
+remains organization-wide subject to action permissions; shared borrower profiles
+remain organization-wide. Do not silently restrict existing members or infer
+creator-only loan access. Track decisions in the [tenant/access ADR](adr/2026-09-09-organization-tenant-and-license-access.md)
+and each incremental concern in the [delivery register](plans/saas-access-media-and-onboarding.md).
+Role presets remain proposals; fix existing permission mismatches independently.
+AP-06 is implemented using fixed global Role template identities and per-Workspace
+WorkspaceRole/WorkspaceRoleGrant records. Runtime access reads local stored grants
+only; defaults seed once and never overwrite existing grants. Global Role admin is
+read-only. Team > Manage role permissions is Owner-only, with revision checks and
+audit; Owner authority is protected and cannot be assigned via ordinary grants.
+Membership/invitation role FKs remain template identities for control-plane
+compatibility. Capability-based invitation checks require non-owner targets to be a
+subset of the inviter's grants with no protected admin actions. Acceptance rechecks
+the inviter and grant fingerprint; used invitations cannot restore removed members.
+The owner confirmed all data is experimental development data. Migrations orgs.0008
+and 0009 are applied locally; retired Girvi/DEA/accounting codes were removed while
+Party contact aliases remain. Both local grant tables have forced RLS, direct
+ownership, registry coverage and SQL scope/identity guards. No loan data was deleted.
+role_migration_preflight v2 reports local grants plus separate legacy templates.
+Do not revert to the old default-union resolver after local edits. The accepted
+local-role ADR and migration delivery plan document the development simplification.
+Private business media application fixes and ONB-01 onboarding are complete. Party
+photos/KYC use Workspace routes and Party view aliases; templates and upload widgets
+must not expose storage URLs. Raw development media allows only company_logos/ and
+profile_pictures/ (personal account avatars); business/unknown prefixes are denied.
+Existing files stay in place. Reviewed private responses disable caching. Dormant
+cloud options no longer request public ACLs. External bucket/proxy/CDN acceptance
+remains a pre-production gate; see implementation/private-media-access.md. All 157
+focused cross-app/media tests passed. License scope still needs final approval.
+Set up your business uses existing creation and setup services. The setup page derives
+saved lending progress and Continue setup without writes; optional team invitations
+are excluded from general completion and the older general reminders are collapsed.
+The setup path stays available after completion. Unbound new-loan forms preselect
+only a sole usable series/date-available product; bound values and explicit initial
+choices are never replaced, and edit series/product stay fixed. Borrower queryset is
+explicitly Workspace-filtered. Policy scope keeps the business-wide default instead
+of silently selecting a sole license. Date changes require reviewing visible choices;
+services remain authoritative. See flows/business-setup.md. Validated with 249 broad
+tests plus one focused default-selection test. No new schema or license scope.
+First HTTP permission increment requires data.edit for draft cancel/reopen and photo
+append; draft split also requires data.create. Servicing commands and HTTP actions now require
+loan.repay/release/accrue/capitalize; Owner/Admin retain defaults and other roles
+need explicit grants. Renewal requires release+approve+disburse. Checks precede
+idempotent replay; actor=None is denied. Release includes necessary catch-up
+interest without requiring a separate accrual grant. Customer notice creation and
+manual retry require data.edit at HTTP/service boundaries; internal scheduled delivery
+remains separate. Loan report and borrower-statement exports require report.export;
+onscreen reads retain data.view. The permission review tracks service/document
+coverage and the completed local-grant implementation. Approval/disbursal and
+cancel/reopen services now check approve/disburse/edit before transition/replay.
+Configurable document issuance checks data.view and loan/workspace agreement;
+recovery overrides require settings administration. Notify bulk artifact ZIP requires
+view+data.export; individual documents retain existing view access. AP-05 now lists
+reviewed service/job families; AP-06 local stored grants are implemented.
+AP-05i operational notice creation/retry now enforces setup administration, with
+verification-discrepancy creation retaining Owner authority. Workers still deliver
+already-queued intent. AP-05l Party merge requires either existing edit alias;
+portal lifecycle requires settings administration, matching active/explicit/request
+Workspace and locked persisted state. Portal grants never grant staff authority.
+AP-05f setup writes now require workspace.settings.manage and active Workspace agreement.
+License/series/economic/product/layout/profile/monitoring/communication services
+check actors before mutation/replay. Public product seeding requires administration;
+operator bootstrap explicitly uses internal _seed_default_loan_products.
+AP-05e funding commands now require workspace.settings.manage, matching their
+existing HTTP administration boundary (no additional data.view requirement).
+Authorization precedes numbering, state/replay and writes; internal saved activation
+passes actor through. Missing/removed actors and revoked custom grants are denied.
+AP-05d draft/photo services now enforce create/edit grants: split needs both;
+setup transfer and standalone photo append/delete/inherit need edit. Label rendering
+requires view. Initial draft photos are covered by create; renewal uses internal
+composition under release+approve+disburse without extra create/edit grants.
+Private persistence helpers must not be exposed as public commands.
+
 Collateral list thumbnails use the latest captured photograph, prefetched one per
 item and served through the protected loan/photo route. Loan lists reuse the Party
 profile_photo for borrower thumbnails. Missing photos use explicit placeholders.

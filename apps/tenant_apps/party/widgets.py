@@ -1,3 +1,4 @@
+from django import forms
 from django.core import signing
 from django_select2 import forms as s2forms
 
@@ -39,3 +40,12 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
         if obj.party_code:
             parts.append(obj.party_code)
         return " | ".join(parts)
+
+
+class PrivateFileInput(forms.ClearableFileInput):
+    """Keep replacement/clear controls without publishing a storage URL."""
+
+    template_name = "party/widgets/private_file_input.html"
+
+    def is_initial(self, value):
+        return bool(value and getattr(value, "name", None))

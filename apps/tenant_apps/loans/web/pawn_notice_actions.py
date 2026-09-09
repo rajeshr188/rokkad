@@ -8,14 +8,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.tenant_apps.loans.access import loans_workspace_required
+from apps.tenant_apps.loans.access import loans_action_required
 from apps.tenant_apps.loans.forms import PawnLoanNoticeForm
 from apps.tenant_apps.loans.models import PawnLoan, PawnLoanNotice
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.loans.services import (
     PawnLoanNoticeError,
     create_pawn_loan_notice,
-    dispatch_pawn_loan_notice,
+    retry_pawn_loan_notice,
 )
 
 
@@ -36,7 +36,7 @@ def _safe_balance(loan):
         return None
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 def pawn_loan_notice_create(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     requested_kind = request.GET.get("kind", "")
@@ -79,7 +79,7 @@ def pawn_loan_notice_create(request, pk):
     )
 
 
-@loans_workspace_required
+@loans_action_required("data.edit")
 @require_POST
 def pawn_loan_notice_retry(request, pk, notice_pk):
     loan = _pawn_loan_for_workspace(request, pk)
@@ -90,7 +90,7 @@ def pawn_loan_notice_retry(request, pk, notice_pk):
         workspace=request.loans_workspace,
     )
     try:
-        result = dispatch_pawn_loan_notice(notice.pk)
+        result = retry_pawn_loan_notice(notice.pk, actor=request.user)
     except (PawnLoanNoticeError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
     else:

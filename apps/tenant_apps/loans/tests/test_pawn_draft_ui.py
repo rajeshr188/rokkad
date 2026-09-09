@@ -1,3 +1,4 @@
+from apps.tenancy.testing import workspace_role_permissions
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -8,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
+from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_products
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Company, Membership, Role
@@ -29,7 +31,6 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
 from apps.tenant_apps.loans.services import (
     record_loan_event,
-    seed_default_loan_products,
 )
 from apps.tenant_apps.loans.services.pawn_draft_split import (
     preview_pawn_draft_split,
@@ -83,8 +84,231 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.client = self.make_workspace_client()
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
-        self.product_version = seed_default_loan_products()[0]
+        self.product_version = _seed_default_loan_products()[0]
         type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
+
+    def test_servicing_permissions_block_http_and_direct_commands(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services import (
+            record_pawn_loan_repayment, release_pawn_loan_in_full,
+            approve_pawn_loan, disburse_pawn_loan, reopen_pawn_loan, cancel_pawn_loan,
+            finalize_pawn_loan_accrual, capitalize_pawn_loan_interest, renew_pawn_loan,
+        )
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
+        viewer = get_user_model().objects.create_user(username="servicing-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        membership = Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        routes = ("pawn_loan_repay", "pawn_loan_release_full", "pawn_loan_release_partial",
+                  "pawn_loan_accrue", "pawn_loan_capitalize", "pawn_loan_renew", "pawn_loan_transfer_setup")
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
+        self.assertEqual(detail.status_code, 200)
+        for route in routes:
+            url = reverse("loans:" + route, args=[loan.pk])
+            self.assertNotContains(detail, 'href="' + url + '"')
+            self.assertEqual(self.client.get(url).status_code, 403, route)
+            self.assertEqual(self.client.post(url, {}).status_code, 403, route)
+        commands = (
+            (approve_pawn_loan, {}),
+            (disburse_pawn_loan, {"effective_date": date(2026, 7, 18)}),
+            (reopen_pawn_loan, {"reason": "denied"}),
+            (cancel_pawn_loan, {"reason": "denied"}),
+            (record_pawn_loan_repayment, {"amount": "100", "request_key": "denied"}),
+            (release_pawn_loan_in_full, {"settlement_amount": "10000", "request_key": "denied"}),
+            (finalize_pawn_loan_accrual, {"period_number": 1}),
+            (capitalize_pawn_loan_interest, {"through_period_number": 1}),
+            (renew_pawn_loan, {"mode": "RENEW", "renewal_date": date(2026, 9, 9),
+                "principal_paid": "0", "top_up_amount": "0", "successor_license_id": license.pk,
+                "successor_series_id": series.pk, "tenure_months": 3, "request_key": "denied"}),
+        )
+        before = loan.loan_events.count()
+        for actor in (viewer, None):
+            for command, kwargs in commands:
+                with self.subTest(command=command.__name__, actor=actor):
+                    with self.assertRaises(PermissionDenied):
+                        command(loan.pk, actor=actor, **kwargs)
+        # Membership removal also prevents a formerly authorized actor from calling services.
+        admin, _ = Role.objects.get_or_create(name="Admin")
+        membership.role = admin
+        membership.save(update_fields=["role"])
+        membership.delete()
+        for command, kwargs in commands:
+            with self.assertRaises(PermissionDenied):
+                command(loan.pk, actor=viewer, **kwargs)
+        # Renewal needs every constituent grant, including release when approval
+        # and disbursal are already delegated.
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        ct = ContentType.objects.get_for_model(Company)
+        delegated = Role.objects.create(name="RenewalDelegate")
+        Membership.objects.create(user=viewer, company=self.tenant, role=delegated)
+        codes = ("data_view", "loan_release", "loan_approve", "loan_disburse")
+        grants = {}
+        for code in codes:
+            grants[code], _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+        for missing in codes[1:]:
+            delegated.permissions.set([grant for code, grant in grants.items() if code != missing])
+            self.assertEqual(self.client.post(reverse("loans:pawn_loan_renew", args=[loan.pk]), {}).status_code, 403)
+            command, kwargs = commands[-1]
+            with self.assertRaises(PermissionDenied):
+                command(loan.pk, actor=viewer, **kwargs)
+        self.assertEqual(loan.loan_events.count(), before)
+        self.assertEqual(loan.releases.count(), 0)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
+
+    def test_repayment_grant_is_independent_and_revocation_blocks_replay(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services import record_pawn_loan_repayment
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        staff = get_user_model().objects.create_user(username="repayment-only")
+        role = Role.objects.create(name="RepaymentOnly")
+        content_type = ContentType.objects.get_for_model(Company)
+        for code in ("data_view", "loan_repay"):
+            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            workspace_role_permissions(role, self.tenant).add(permission)
+        Membership.objects.create(user=staff, company=self.tenant, role=role)
+        self.client.force_login(staff)
+        self.assertEqual(self.client.get(reverse("loans:pawn_loan_repay", args=[loan.pk])).status_code, 200)
+        for route in ("pawn_loan_release_full", "pawn_loan_accrue", "pawn_loan_capitalize", "pawn_loan_renew"):
+            self.assertEqual(self.client.post(reverse("loans:" + route, args=[loan.pk]), {}).status_code, 403)
+        result = record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
+        replay = record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
+        self.assertEqual(result.loan_event.pk, replay.loan_event.pk)
+        before = loan.loan_events.count()
+        workspace_role_permissions(role, self.tenant).remove(Permission.objects.get(content_type=content_type, codename="loan_repay"))
+        with self.assertRaises(PermissionDenied):
+            record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_repay", args=[loan.pk]), {}).status_code, 403)
+        self.assertEqual(loan.loan_events.count(), before)
+
+    def test_interest_and_release_grants_are_independent(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services import (
+            finalize_pawn_loan_accrual, capitalize_pawn_loan_interest,
+            preview_pawn_loan_full_release, release_pawn_loan_in_full,
+        )
+        from apps.tenant_apps.loans.services.pawn_interest import PawnInterestError
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        staff = get_user_model().objects.create_user(username="interest-release-delegate")
+        role = Role.objects.create(name="ServicingDelegate")
+        ct = ContentType.objects.get_for_model(Company)
+        grants = {}
+        for code in ("data_view", "loan_accrue", "loan_capitalize", "loan_release"):
+            grants[code], _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+        Membership.objects.create(user=staff, company=self.tenant, role=role)
+        self.client.force_login(staff)
+        workspace_role_permissions(role, self.tenant).set([grants["data_view"], grants["loan_accrue"]])
+        with patch("apps.tenant_apps.loans.services.pawn_interest.timezone.localdate", return_value=date(2026, 9, 9)):
+            result = finalize_pawn_loan_accrual(loan.pk, period_number=1, actor=staff)
+        self.assertEqual(result.accrual.period_number, 1)
+        workspace_role_permissions(role, self.tenant).set([grants["data_view"], grants["loan_capitalize"]])
+        with self.assertRaises(PermissionDenied):
+            finalize_pawn_loan_accrual(loan.pk, period_number=1, actor=staff)
+        self.assertEqual(self.client.get(reverse("loans:pawn_loan_capitalize", args=[loan.pk])).status_code, 200)
+        # A grant permits the command but does not bypass the simple-interest policy.
+        with self.assertRaisesRegex(PawnInterestError, "Only a compound"):
+            capitalize_pawn_loan_interest(loan.pk, through_period_number=1, actor=staff)
+        workspace_role_permissions(role, self.tenant).set([grants["data_view"], grants["loan_release"]])
+        with self.assertRaises(PermissionDenied):
+            capitalize_pawn_loan_interest(loan.pk, through_period_number=1, actor=staff)
+        with patch("apps.tenant_apps.loans.services.pawn_release.timezone.localdate", return_value=date(2026, 9, 9)):
+            quote = preview_pawn_loan_full_release(loan.pk)
+            result = release_pawn_loan_in_full(loan.pk, settlement_amount=quote.minimum_settlement,
+                request_key="release-only", actor=staff)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "CLOSED")
+        workspace_role_permissions(role, self.tenant).set([grants["data_view"]])
+        with self.assertRaises(PermissionDenied):
+            release_pawn_loan_in_full(loan.pk, settlement_amount=quote.minimum_settlement,
+                request_key="release-only", actor=staff)
+        self.assertEqual(loan.releases.count(), 1)
+
+    def test_notice_and_export_http_permissions_are_independent(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        user = get_user_model().objects.create_user(username="report-reader")
+        role = Role.objects.create(name="ReportReader")
+        ct = ContentType.objects.get_for_model(Company)
+        grants = {}
+        for code in ("data_view", "data_edit", "report_export"):
+            grants[code], _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+        workspace_role_permissions(role, self.tenant).add(grants["data_view"])
+        Membership.objects.create(user=user, company=self.tenant, role=role)
+        self.client.force_login(user)
+        reports = reverse("loans:pawn_loan_reports")
+        statement = reverse("loans:pawn_party_statement", args=[self.party.pk])
+        create = reverse("loans:pawn_loan_notice_create", args=[loan.pk])
+        retry = reverse("loans:pawn_loan_notice_retry", args=[loan.pk, 999])
+        for url in (create, retry):
+            self.assertEqual(self.client.post(url, {}).status_code, 403)
+        self.assertEqual(self.client.get(create).status_code, 403)
+        exports = [reverse("loans:pawn_loan_report_export", args=["active", fmt]) for fmt in ("csv", "xlsx", "pdf")]
+        exports += [reverse("loans:pawn_party_statement_export", args=[self.party.pk, fmt]) for fmt in ("csv", "xlsx", "pdf")]
+        for url in exports:
+            self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.get(statement).status_code, 200)
+        self.assertNotContains(self.client.get(reports), exports[0])
+        self.assertNotContains(self.client.get(statement), exports[3])
+        workspace_role_permissions(role, self.tenant).add(grants["report_export"])
+        for url in exports:
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+        self.assertEqual(self.client.post(create, {}).status_code, 403)
+        workspace_role_permissions(role, self.tenant).remove(grants["report_export"])
+        workspace_role_permissions(role, self.tenant).add(grants["data_edit"])
+        self.assertEqual(self.client.get(create).status_code, 200)
+        self.assertEqual(self.client.get(exports[0]).status_code, 403)
+
+    def test_document_service_checks_reader_before_reusing_an_issue(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services.document_issuance import issue_configurable_document
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        reader = get_user_model().objects.create_user(username="document-reader")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        member = Membership.objects.create(user=reader, company=self.tenant, role=role)
+        kwargs = dict(workspace=self.tenant, loan=loan,
+            payload=SimpleNamespace(document_type="loan_ticket"), source_type="PawnLoan",
+            source_id=loan.pk, source_fingerprint="test")
+        with patch("apps.tenant_apps.loans.services.document_issuance.LoanDocumentLayoutService.find_official_issue") as find:
+            cached = object()
+            find.return_value = cached
+            self.assertIs(issue_configurable_document(actor=reader, **kwargs).issue, cached)
+            find.reset_mock()
+            for flag in ("fixed_recovery", "legacy_profile_recovery"):
+                with self.assertRaises(PermissionDenied):
+                    issue_configurable_document(actor=reader, **dict(kwargs, **{flag: True}))
+            with self.assertRaises(PermissionDenied):
+                issue_configurable_document(actor=None, **kwargs)
+            mismatched = dict(kwargs, workspace=SimpleNamespace(pk=self.tenant.pk + 1000))
+            with self.assertRaises(PermissionDenied):
+                issue_configurable_document(actor=reader, **mismatched)
+            member.delete()
+            with self.assertRaises(PermissionDenied):
+                issue_configurable_document(actor=reader, **kwargs)
+            find.assert_not_called()
 
     def test_owner_simple_workflow_is_atomic_and_replay_safe(self):
         from apps.tenant_apps.loans.services.loan_workflow import make_review
@@ -155,7 +379,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         content_type = ContentType.objects.get_for_model(Company)
         for code in ("data_view", "loan_approve"):
             permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
-            role.permissions.add(permission)
+            workspace_role_permissions(role, self.tenant).add(permission)
         membership = Membership.objects.create(user=staff, company=self.tenant, role=role)
         self.client.force_login(staff)
         approve_url = reverse("loans:pawn_loan_approve", args=[loan.pk])
@@ -321,8 +545,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PawnLoan setup required")
-        self.assertContains(response, "Review licenses")
-        self.assertContains(response, "#license-register")
+        self.assertContains(response, "Add license")
+        self.assertContains(response, "setup/licenses/create/")
 
     def test_checklist_detects_missing_product_without_consuming_numbers(self):
         self._configured_setup()
@@ -1615,3 +1839,69 @@ class PawnDraftUiTests(WorkspaceTestCase):
             }
         )
         return payload
+
+
+    def test_single_series_and_product_are_prefilled_without_allocating(self):
+        from apps.tenant_apps.loans.forms import PawnDraftForm
+        license, series = self._configured_setup()
+        before = list(LoanNumberSequence.objects.order_by("pk").values())
+        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        self.assertEqual(form["series"].value(), series.pk)
+        self.assertEqual(form["product_version"].value(), self.product_version.pk)
+        self.assertFalse(form.fields["series"].disabled)
+        self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
+        bound = PawnDraftForm({"loan_date": "bad-date", "series": "", "product_version": ""}, workspace=self.tenant)
+        self.assertEqual(bound["series"].value(), "")
+        self.assertFalse(bound.is_valid())
+
+    def test_multiple_series_and_expired_or_unavailable_options_are_not_defaults(self):
+        from apps.tenant_apps.loans.forms import PawnDraftForm
+        license, series = self._configured_setup()
+        self._configured_setup()
+        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        self.assertNotIn("series", form.initial)
+        LoanLicense.objects.all().update(expires_on=date(2026, 6, 1))
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(available_from=date(2027, 1, 1))
+        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        self.assertNotIn("series", form.initial)
+        self.assertNotIn("product_version", form.initial)
+
+    def test_business_setup_resumes_saved_steps_without_writes(self):
+        url = reverse("workspace_slug_settings_setup", kwargs={"workspace_slug": self.tenant.slug})
+        page = self.client.get(url)
+        self.assertContains(page, "Set up your business")
+        self.assertEqual(page.context["business_setup"]["next_step"]["key"], "license")
+        license, series = self._configured_setup()
+        before = list(LoanNumberSequence.objects.order_by("pk").values())
+        counts = (LoanLicense.objects.count(), LoanSeries.objects.count())
+        for _ in range(2):
+            page = self.client.get(url)
+            self.assertTrue(page.context["business_setup"]["ready"])
+            self.assertContains(page, "Create a loan")
+            self.assertContains(page, "Team invitations are optional")
+        self.assertEqual(counts, (LoanLicense.objects.count(), LoanSeries.objects.count()))
+        self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
+        self.assertEqual(Membership.objects.filter(company=self.tenant).count(), 1)
+
+    def test_business_setup_denies_staff_without_setup_permission(self):
+        staff = get_user_model().objects.create_user(username="business-setup-staff")
+        role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=staff, company=self.tenant, role=role)
+        self.client.force_login(staff)
+        self.assertEqual(self.client.get(reverse("workspace_slug_settings_setup", kwargs={"workspace_slug": self.tenant.slug})).status_code, 403)
+
+
+    def test_defaults_skip_exhausted_series_and_preserve_explicit_choices(self):
+        from apps.tenant_apps.loans.forms import PawnDraftForm
+        license, series = self._configured_setup()
+        _, exhausted = self._configured_setup()
+        LoanNumberSequence.objects.filter(series=exhausted).update(next_number=10001)
+        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        self.assertEqual(form["series"].value(), series.pk)
+        explicit = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18), "series": "", "product_version": ""})
+        self.assertEqual(explicit["series"].value(), "")
+        self.assertEqual(explicit["product_version"].value(), "")
+        other = type(self.product_version).objects.exclude(pk=self.product_version.pk).first()
+        type(self.product_version).objects.filter(pk=other.pk).update(status="ACTIVE")
+        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        self.assertNotIn("product_version", form.initial)

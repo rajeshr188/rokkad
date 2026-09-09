@@ -57,6 +57,22 @@ class CanonicalInvitationAcceptanceTests(TestCase):
             inviter=self.owner,
         )
 
+    def test_changed_grants_or_removed_inviter_block_acceptance(self):
+        from apps.tenancy.testing import workspace_role_permissions
+        workspace_role_permissions(self.member_role, self.workspace).clear()
+        with self.assertRaisesMessage(ValidationError, "Role permissions changed"):
+            accept_invitation(invitation=self.invitation, user=self.invitee, request=None)
+        Membership.objects.filter(user=self.owner, company=self.workspace).delete()
+        with self.assertRaises(ValidationError):
+            accept_invitation(invitation=self.invitation, user=self.invitee, request=None)
+        self.assertFalse(Membership.objects.filter(user=self.invitee, company=self.workspace).exists())
+
+    def test_used_invitation_cannot_restore_removed_member(self):
+        membership = accept_invitation(invitation=self.invitation, user=self.invitee, request=None)
+        membership.delete()
+        with self.assertRaisesMessage(ValidationError, "already used"):
+            accept_invitation(invitation=self.invitation, user=self.invitee, request=None)
+
     def test_acceptance_creates_membership_and_terminal_invitation_state(self):
         membership = accept_invitation(
             invitation=self.invitation,

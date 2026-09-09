@@ -38,9 +38,9 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
         self.assertEqual(INCOMPLETE, items["parties"].status)
         self.assertEqual(INCOMPLETE, items["invite_team"].status)
         self.assertEqual(1, checklist.completed_count)
-        self.assertEqual(4, checklist.total_count)
+        self.assertEqual(3, checklist.total_count)
         self.assertFalse(checklist.is_complete)
-        self.assertEqual(25, checklist.completion_percentage)
+        self.assertEqual(33, checklist.completion_percentage)
 
     def test_complete_metrics_mark_every_setup_item_complete(self):
         checklist = build_workspace_setup_checklist(
@@ -123,3 +123,12 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
         safe_model_count.assert_any_call("party", "Party")
         safe_model_count.assert_any_call("rates", "Rate")
         safe_model_count.assert_any_call("loans", "PawnLoanEvent")
+
+    def test_solo_owner_can_complete_general_checklist_without_invites(self):
+        checklist = build_workspace_setup_checklist(
+            workspace=self._workspace(),
+            metrics=WorkspaceSetupMetrics(member_count=1, invitation_count=0, party_count=1, rate_count=1),
+        )
+        self.assertTrue(checklist.is_complete)
+        self.assertTrue(self._items_by_key(checklist)["invite_team"].optional)
+        self.assertEqual(INCOMPLETE, self._items_by_key(checklist)["invite_team"].status)

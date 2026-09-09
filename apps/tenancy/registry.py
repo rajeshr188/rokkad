@@ -5,7 +5,9 @@ from django.apps import apps
 
 WORKSPACE_APP_LABELS = frozenset({"party", "loans", "notify_v2", "rates"})
 RLS_PROTECTED_APP_LABELS = WORKSPACE_APP_LABELS
+CONTROL_PLANE_OWNED_MODELS = frozenset({"orgs.workspacerole", "orgs.workspacerolegrant"})
 RLS_MIGRATION_BY_APP = {
+    "orgs": "0008_companyinvitation_role_fingerprint_workspacerole_and_more",
     "loans": "0003_enable_workspace_rls",
     "notify_v2": "0003_enable_workspace_rls",
     "party": "0002_enable_workspace_rls",
@@ -23,7 +25,7 @@ def workspace_owned_models(app_registry=apps):
                 for model in app_registry.get_models()
                 if not model._meta.abstract
                 and not model._meta.proxy
-                and model._meta.app_label in WORKSPACE_APP_LABELS
+                and (model._meta.app_label in WORKSPACE_APP_LABELS or model._meta.label_lower in CONTROL_PLANE_OWNED_MODELS)
             ),
             key=lambda model: model._meta.label_lower,
         )
@@ -34,5 +36,5 @@ def rls_protected_models(app_registry=apps):
     return tuple(
         model
         for model in workspace_owned_models(app_registry)
-        if model._meta.app_label in RLS_PROTECTED_APP_LABELS
+        if model._meta.app_label in RLS_PROTECTED_APP_LABELS or model._meta.label_lower in CONTROL_PLANE_OWNED_MODELS
     )

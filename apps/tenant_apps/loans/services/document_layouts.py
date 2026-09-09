@@ -7,6 +7,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
+from .action_access import require_setup_administration
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.loans.documents import DocumentAssetValidator, DocumentLayoutValidator
 from apps.tenant_apps.loans.models import (
@@ -79,6 +80,7 @@ class LoanDocumentLayoutService:
     @transaction.atomic
     def create_layout(cls, *, workspace, document_type, name, definition, actor=None, request=None):
         _require_workspace(workspace.pk)
+        require_setup_administration(workspace.pk, actor)
         parsed = DocumentLayoutValidator.load(definition)
         if parsed.document_type != document_type:
             raise DocumentLayoutServiceError("Definition document type does not match the layout.")
@@ -96,6 +98,7 @@ class LoanDocumentLayoutService:
     def clone_revision(cls, *, revision, actor=None, request=None):
         locked_layout = LoanDocumentLayout.objects.select_for_update().get(pk=revision.layout_id)
         _require_workspace(locked_layout.workspace_id)
+        require_setup_administration(revision.layout.workspace_id, actor)
         latest = locked_layout.revisions.order_by("-version").first()
         clone = LoanDocumentLayoutRevision.objects.create(
             layout=locked_layout, version=(latest.version if latest else 0) + 1,
@@ -117,6 +120,7 @@ class LoanDocumentLayoutService:
     def update_draft(cls, *, revision, definition, actor=None, request=None):
         revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
         _require_workspace(revision.layout.workspace_id)
+        require_setup_administration(revision.layout.workspace_id, actor)
         if revision.state != revision.State.DRAFT:
             raise DocumentLayoutServiceError("Only draft revisions can be edited.")
         current = DocumentLayoutValidator.load(revision.definition)
@@ -140,6 +144,7 @@ class LoanDocumentLayoutService:
     def add_asset(cls, *, revision, key, kind, content, filename, actor=None):
         revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
         _require_workspace(revision.layout.workspace_id)
+        require_setup_administration(revision.layout.workspace_id, actor)
         if revision.state != revision.State.DRAFT:
             raise DocumentLayoutServiceError("Assets can be added only to draft revisions.")
         value = DocumentAssetValidator.validate(key=key, kind=kind, content=content, workspace_id=revision.layout.workspace_id)
@@ -161,6 +166,7 @@ class LoanDocumentLayoutService:
     def publish(cls, *, revision, actor=None, request=None):
         revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
         _require_workspace(revision.layout.workspace_id)
+        require_setup_administration(revision.layout.workspace_id, actor)
         if revision.state != revision.State.DRAFT:
             raise DocumentLayoutServiceError("Only draft revisions can be published.")
         parsed = DocumentLayoutValidator.load(revision.definition)
@@ -185,6 +191,7 @@ class LoanDocumentLayoutService:
     def retire(cls, *, revision, actor=None, request=None):
         revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
         _require_workspace(revision.layout.workspace_id)
+        require_setup_administration(revision.layout.workspace_id, actor)
         if revision.state != revision.State.PUBLISHED:
             raise DocumentLayoutServiceError("Only published revisions can be retired.")
         revision.state = revision.State.RETIRED
@@ -198,6 +205,7 @@ class LoanDocumentLayoutService:
     @transaction.atomic
     def assign(cls, *, revision, workspace, license=None, series=None, actor=None, request=None):
         _require_workspace(workspace.pk)
+        require_setup_administration(workspace.pk, actor)
         if series is not None:
             if license is not None and series.license_id != license.pk:
                 raise DocumentLayoutServiceError("Series does not belong to the selected license.")

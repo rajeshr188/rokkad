@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import Resolver404, resolve, reverse
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.party.models import Party, PartyDocument, PartyPortalAccess
@@ -71,6 +72,9 @@ class PartyPortalAccessTests(WorkspaceTestCase):
 
     def setUp(self):
         super().setUp()
+        self.admin = self.tenant.owner
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.admin, company=self.tenant, defaults={"role": role})
         self.user = User.objects.create_user(
             username=f"portal-user-{uuid.uuid4().hex[:8]}",
             email="portal-user@example.com",
@@ -128,7 +132,7 @@ class PartyPortalAccessTests(WorkspaceTestCase):
         ) as audit_log:
             result = activate_portal_access(
                 grant,
-                actor=self.user,
+                actor=self.admin,
                 request=self._request(),
             )
 
@@ -158,7 +162,7 @@ class PartyPortalAccessTests(WorkspaceTestCase):
         ) as audit_log:
             result = suspend_portal_access(
                 grant,
-                actor=self.user,
+                actor=self.admin,
                 request=self._request(),
             )
 
@@ -182,7 +186,7 @@ class PartyPortalAccessTests(WorkspaceTestCase):
         ) as audit_log:
             result = revoke_portal_access(
                 grant,
-                actor=self.user,
+                actor=self.admin,
                 request=self._request(),
             )
 
@@ -193,9 +197,42 @@ class PartyPortalAccessTests(WorkspaceTestCase):
         with self.assertRaises(PortalIdentityDenied):
             resolve_portal_identity(self._request())
         with self.assertRaises(PortalAccessLifecycleError):
-            activate_portal_access(grant, actor=self.user, request=self._request())
+            activate_portal_access(grant, actor=self.admin, request=self._request())
         audit_log.assert_called_once()
         self.assertEqual(audit_log.call_args.args[0], "PARTY_PORTAL_ACCESS_REVOKE")
+
+    def test_portal_grant_does_not_authorize_access_administration(self):
+        from django.core.exceptions import PermissionDenied
+        grant = PartyPortalAccess.objects.create(party=self.party, user=self.user, status="ACTIVE")
+        with patch("apps.tenant_apps.party.services.portal_access.AuditLog.log") as audit:
+            for actor in (None, self.user):
+                for command in (activate_portal_access, suspend_portal_access, revoke_portal_access):
+                    with self.assertRaises(PermissionDenied):
+                        command(grant, actor=actor)
+            Membership.objects.filter(user=self.admin, company=self.tenant).delete()
+            with self.assertRaises(PermissionDenied):
+                revoke_portal_access(grant, actor=self.admin)
+            audit.assert_not_called()
+        grant.refresh_from_db()
+        self.assertEqual(grant.status, "ACTIVE")
+        self.assertIsNone(grant.revoked_at)
+
+    def test_portal_admin_rechecks_scope_and_persisted_revocation(self):
+        from types import SimpleNamespace
+        from django.core.exceptions import PermissionDenied
+        grant = PartyPortalAccess.objects.create(party=self.party, user=self.user, status="ACTIVE")
+        stale = PartyPortalAccess.objects.get(pk=grant.pk)
+        foreign = SimpleNamespace(pk=self.tenant.pk + 1)
+        for kwargs in ({"workspace": foreign}, {"request": SimpleNamespace(workspace=foreign)}):
+            with self.assertRaises(PermissionDenied):
+                revoke_portal_access(grant, actor=self.admin, **kwargs)
+        revoke_portal_access(grant, actor=self.admin)
+        with self.assertRaises(PortalAccessLifecycleError):
+            activate_portal_access(stale, actor=self.admin)
+        with self.assertRaises(PortalAccessLifecycleError):
+            suspend_portal_access(stale, actor=self.admin)
+        grant.refresh_from_db()
+        self.assertEqual(grant.status, "REVOKED")
 
     def test_document_selector_only_returns_granted_party_documents(self):
         grant = PartyPortalAccess.objects.create(

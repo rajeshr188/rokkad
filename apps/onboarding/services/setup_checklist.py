@@ -35,6 +35,7 @@ class SetupChecklistItem:
     status: str
     action_label: str
     url_name: str | None = None
+    optional: bool = False
 
     @property
     def is_complete(self) -> bool:
@@ -52,11 +53,11 @@ class WorkspaceSetupChecklist:
 
     @property
     def completed_count(self) -> int:
-        return sum(1 for item in self.items if item.is_complete)
+        return sum(1 for item in self.items if item.is_complete and not item.optional)
 
     @property
     def total_count(self) -> int:
-        return len(self.items)
+        return sum(1 for item in self.items if not item.optional)
 
     @property
     def unknown_count(self) -> int:
@@ -111,8 +112,9 @@ def build_workspace_setup_checklist(
         ),
         SetupChecklistItem(
             key="invite_team",
-            title="Invite team",
-            description="Invite at least one teammate or keep an invitation pending.",
+            title="Team (optional)",
+            description="Optional: invite staff when you need them. A sole owner can work alone.",
+            optional=True,
             status=_status_from_count(team_count, complete_at=2),
             action_label="Invite team",
             url_name="workspace_settings_invite",
@@ -185,3 +187,29 @@ def _safe_queryset_count(queryset: Iterable[object]) -> int | None:
         return queryset.count()
     except (DatabaseError, LookupError, AttributeError, TypeError, ValueError):
         return None
+
+
+def build_business_setup(*, workspace):
+    """Resume from persisted lending configuration; GET never creates setup records."""
+    from django.urls import reverse
+    from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
+    from apps.tenant_apps.party.models import Party
+
+    lending = get_pawn_setup_checklist(workspace)
+    steps = [{
+        "key": "business_profile", "title": "Business details", "complete": bool(workspace.name),
+        "description": "Review your business name and branding.",
+        "action_label": "Review business details",
+        "action_url": reverse("workspace_update", kwargs={"workspace_id": workspace.pk}),
+    }, *lending["steps"], {
+        "key": "borrower", "title": "First borrower",
+        "complete": Party.objects.filter(workspace=workspace, status=Party.PartyStatus.ACTIVE).exists(),
+        "description": "Add a borrower, then record their collateral and photos in a new loan.",
+        "action_label": "Manage borrowers",
+        "action_url": reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}),
+    }]
+    return {
+        "steps": steps, "next_step": next((step for step in steps if not step["complete"]), None),
+        "completed_count": sum(step["complete"] for step in steps), "total_count": len(steps),
+        "ready": all(step["complete"] for step in steps), "as_of_date": lending["as_of_date"],
+    }

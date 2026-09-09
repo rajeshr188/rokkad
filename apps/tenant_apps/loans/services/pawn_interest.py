@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+from apps.tenant_apps.loans.services.action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
     InterestMethod,
     PartialMonthMethod,
@@ -369,6 +370,7 @@ def finalize_pawn_loan_accrual(
     actor=None,
 ) -> AccrualFinalizationResult:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "loan.accrue")
     existing = loan.interest_accruals.filter(period_number=period_number).first()
     if existing:
         event = existing.loan_event
@@ -483,6 +485,7 @@ def capitalize_pawn_loan_interest(
     actor=None,
 ) -> CapitalizationResult:
     loan = _locked_loan(loan_id)
+    require_loan_action(loan, actor, "loan.capitalize")
     existing = loan.loan_events.filter(
         event_kind=TransactionKind.INTEREST_CAPITALIZATION.value,
         payload__capitalization__through_period_number=through_period_number,

@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.color import no_style
 from django.db import close_old_connections, connection
 from django.test import TransactionTestCase
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenancy.context import workspace_context
 
@@ -53,6 +54,8 @@ class NumberAllocationTests(WorkspaceTestCase):
             username=f"number-user-{uuid.uuid4().hex[:8]}",
             email=f"number-user-{uuid.uuid4().hex[:8]}@example.com",
         )
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
         license = create_license(
             workspace=self.tenant,
             name="Pawn Broker License",
@@ -61,7 +64,7 @@ class NumberAllocationTests(WorkspaceTestCase):
             expires_on=date(2027, 1, 1),
             actor=self.user,
         )
-        self.series = create_series(license=license, name="Main", code="A")
+        self.series = create_series(license=license, name="Main", code="A", actor=self.user)
         configure_sequence(
             series=self.series,
             document_kind=LoanDocumentKind.PAWN_LOAN,
@@ -170,6 +173,8 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
                 username=f"concurrency-user-{uuid.uuid4().hex[:8]}",
                 email=f"concurrency-user-{uuid.uuid4().hex[:8]}@example.com",
             )
+            role, _ = Role.objects.get_or_create(name="Admin")
+            Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
             license = create_license(
                 workspace=self.tenant,
                 name="Concurrent License",
@@ -178,7 +183,7 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
                 expires_on=date(2027, 1, 1),
                 actor=self.user,
             )
-            self.series = create_series(license=license, name="Concurrent", code="C")
+            self.series = create_series(license=license, name="Concurrent", code="C", actor=self.user)
             configure_sequence(
                 series=self.series,
                 document_kind=LoanDocumentKind.PAWN_LOAN,

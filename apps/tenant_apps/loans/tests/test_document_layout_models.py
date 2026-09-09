@@ -4,6 +4,7 @@ from datetime import date
 from types import SimpleNamespace
 
 from django.core.exceptions import ValidationError
+from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.tenant_apps.loans.documents import (
@@ -55,6 +56,8 @@ class LoanDocumentLayoutPersistenceTests(WorkspaceTestCase):
     def setUp(self):
         super().setUp()
         self.actor = self.tenant.owner
+        role, _ = Role.objects.get_or_create(name="Admin")
+        Membership.objects.get_or_create(user=self.actor, company=self.tenant, defaults={"role": role})
         self.license = LoanLicense.objects.create(
             workspace=self.tenant,
             name="Document License",
@@ -76,6 +79,42 @@ class LoanDocumentLayoutPersistenceTests(WorkspaceTestCase):
             definition=definition,
             actor=self.actor,
         )
+
+    def test_layout_and_profile_mutations_recheck_administration(self):
+        from functools import partial
+        from unittest.mock import patch
+        from django.core.exceptions import PermissionDenied
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        revision = self._create_revision()
+        definition = built_in_print_profile("A4_SIDE_BY_SIDE").canonical_dict()
+        profile = LoanDocumentPrintProfileService.create_profile(
+            workspace=self.tenant, document_type="loan_ticket", name=definition["name"],
+            definition=definition, actor=self.actor)
+        commands = []
+        for service, item in ((LoanDocumentLayoutService, revision),
+                              (LoanDocumentPrintProfileService, profile)):
+            commands.extend((
+                partial(service.clone_revision, revision=item),
+                partial(service.update_draft, revision=item, definition=item.definition),
+                partial(service.publish, revision=item),
+                partial(service.retire, revision=item),
+                partial(service.assign, revision=item, workspace=self.tenant),
+            ))
+        commands.append(partial(LoanDocumentLayoutService.add_asset, revision=revision,
+                                key="logo", kind="IMAGE", content=b"denied", filename="logo.png"))
+        Membership.objects.filter(user=self.actor, company=self.tenant).delete()
+        with patch("django.db.models.fields.files.FieldFile.save") as save_file:
+            for actor in (None, self.actor):
+                for command in commands:
+                    with self.subTest(actor=actor, command=command):
+                        with CaptureQueriesContext(connection) as queries:
+                            with self.assertRaises(PermissionDenied):
+                                command(actor=actor)
+                        self.assertFalse(any(q["sql"].lstrip().upper().startswith(
+                            ("INSERT ", "UPDATE ", "DELETE ")) for q in queries))
+            save_file.assert_not_called()
 
     def test_publish_is_immutable_and_clone_creates_next_draft(self):
         revision = self._create_revision()

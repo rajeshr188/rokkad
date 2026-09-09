@@ -4,6 +4,9 @@ from dataclasses import dataclass
 import hashlib
 from types import SimpleNamespace
 
+from django.core.exceptions import PermissionDenied
+from .action_access import require_loan_action
+
 from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer,
     DocumentAsset,
@@ -29,6 +32,12 @@ def issue_configurable_document(
     actor=None, request=None, fixed_recovery=False, legacy_profile_recovery=False,
 ) -> ConfigurableDocumentIssueResult:
     """Resolve, render, and persist an official issue, or request fixed fallback."""
+
+    if workspace.pk != loan.workspace_id:
+        raise PermissionDenied("Document workspace does not match the loan.")
+    require_loan_action(loan, actor, "data.view")
+    if fixed_recovery or legacy_profile_recovery:
+        require_loan_action(loan, actor, "workspace.settings.manage")
 
     if fixed_recovery:
         LoanDocumentLayoutService.audit_fixed_recovery(
