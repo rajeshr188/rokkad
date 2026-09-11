@@ -47,7 +47,25 @@ No Razorpay setup is needed for the remaining review cleanup. Resume delivery wi
    See [module map](../implementation/loans-view-organization.md). Broader R12
    orgs workspace/role settings and access helpers are now extracted. Team and
    invitations are also extracted; orgs view organization is now complete, including account/preferences and slug adapters; see the [orgs module map](../implementation/orgs-view-organization.md).
-   Broader model/form/renewal-service work remains separate.
+   The remaining-module review below selects the next bounded increment.
+
+## Remaining R12 module review
+
+Reviewed after publishing orgs checkpoint `38eb1e3`; no application code changed
+during this review. File size is supporting context, not a reason by itself to split.
+
+| Candidate | Evidence and recommendation |
+| --- | --- |
+| Loans forms | `forms.py` mixes document layout/overlay/print-profile editing, license setup, funding, pawn intake, custody and lifecycle inputs. Its first 13 classes form a coherent document-editing group (lines 36–414), with an internal print-profile inheritance relationship. Extract this group first into a focused web form module, retaining public imports from `loans.forms`. |
+| Core models | `models/core.py` mixes numbering/economic policies, loan/collateral records, immutable evidence, releases, auctions and renewals. The existing model package already separates other features. Defer moving these classes until a concrete change benefits from it; preserve Django model identity, relationships, constraints, default-callable paths and public imports, with no generated schema migration for organization alone. |
+| Renewal service | `services/pawn_renewals.py` contains previews, atomic execution/reversal, fingerprints and shared validation. Execution and reversal depend on row locking, replay handling, custody evidence and compensating events. Keep the transaction orchestration together for now; a later preview/helper extraction needs explicit dependency mapping and renewal/reversal regression coverage. |
+
+The next form increment must preserve fields, validation, widgets, constructor
+arguments and public class identities. Inspect callers and mock targets, compare
+class bodies, then run existing document-layout/print-profile and affected web
+tests plus import checks. Do not introduce a generic form framework or change
+document behavior as part of the move. Remaining form families can follow only
+where they offer similarly coherent boundaries.
 
 
 

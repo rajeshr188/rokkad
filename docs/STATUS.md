@@ -9,13 +9,11 @@ tags: [status, architecture]
 
 ## Current checkpoint
 
-Branch: `rls-mvp`. Published application checkpoint: `fb3db63` (2026-09-11).
-All six checkpoints after `4b08c3f` were pushed: foundation/operator/billing,
-branding, documentation/onboarding/legacy cleanup, Loans routing and complete
-Loans view organization. Publication record af22f23 is also pushed. The first
-orgs workspace/role settings extraction is committed locally as ee31dda; team and
-invitation handlers are committed as 0177fc3. Lifecycle/navigation are committed as e434828. The final account/preferences and
-slug-adapter extraction completes orgs view organization locally.
+Branch: `rls-mvp`. Published application checkpoint: `38eb1e3` (2026-09-11).
+All four orgs checkpoints are pushed: workspace/role settings (`ee31dda`),
+team/invitations (`0177fc3`), lifecycle/navigation (`e434828`), and final
+account/preferences, slug adapters and unused backup-view removal (`38eb1e3`).
+Both Loans and orgs view organization are complete and published.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -37,6 +35,11 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- [Workspace RLS checks for 38eb1e3](https://github.com/rajeshr188/rokkad/actions/runs/34591042913)
+  passed: dependencies/docs/import boundaries, owner migrations and restricted
+  runtime checks, boundary/first-loan checks, Loans regressions, image build and
+  image runtime/static assets. Publication/review documentation passes all 138
+  checked local links; no application changes were made during this review.
 - Orgs views completion: all 229 orgs, invitations, ownership, role-grant, lifecycle,
   context/platform-override, shell, Loans-route and retirement checks passed
   (29.893 seconds). All 14 route-map source checks passed after the path update.
@@ -188,9 +191,11 @@ reconstructions. Refund issuance, proration and chargebacks are not automated.
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).
 The orgs view split is also complete; see the
-[orgs module map](implementation/orgs-view-organization.md). Next delivery step:
-publish these local orgs checkpoints when requested and inspect CI. Review remaining
-model/form/renewal-service responsibilities separately before choosing more changes.
+[orgs module map](implementation/orgs-view-organization.md). Publication and CI
+verification are complete. The remaining-module review selects
+document layout and print-profile forms as the next bounded extraction; see the
+[review and validation scope](plans/project-hardening.md#remaining-r12-module-review).
+Model and renewal-service restructuring are lower priority and remain unimplemented.
 Razorpay and license scoping remain shelved.
 
 Keep this file short: update current state and relevant evidence; move superseded
