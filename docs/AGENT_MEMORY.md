@@ -157,6 +157,8 @@ See [module map](implementation/loans-view-organization.md). No business rules c
 R12 orgs extraction has started: web/workspace_settings.py owns workspace setup,
 profile/module/security pages; web/role_settings.py owns role editing; shared access
 helpers live in web/access_helpers.py. views.py retains public imports. See the
-[orgs module map](implementation/orgs-view-organization.md). Team/invitations are
-next. Model/form/renewal-service review remains separate; do not split for size. Preserve history and avoid speculative abstractions
+[orgs module map](implementation/orgs-view-organization.md). Team membership and
+invitation handlers now live in web/team_members.py and web/invitations.py, with
+unchanged owner protections, capacity and acceptance service calls. Lifecycle and
+navigation are next. Model/form/renewal-service review remains separate; do not split for size. Preserve history and avoid speculative abstractions
 or blanket package upgrades. Prefer Django services/selectors, templates and HTMX.

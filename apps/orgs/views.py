@@ -17,15 +17,13 @@ from render_block import render_block_to_string
 
 from apps.onboarding.services import build_workspace_setup_display_state
 
-from .audit import AuditLog, audit_log
+from .audit import AuditLog
 from .decorators_v2 import permission_required
-from .forms import ArchiveWorkspaceForm, CompanyInvitationForm, MembershipForm, company_preference_form_builder
-from .models import Company, CompanyInvitation, Membership, Role
+from .forms import ArchiveWorkspaceForm, company_preference_form_builder
+from .models import Company, CompanyInvitation, Membership
 from .permissions import get_effective_permissions, is_platform_admin
 from .registries import company_preference_registry
 from .services import control_plane
-from .services.membership_capacity import get_workspace_seat_capacity_snapshot
-from .services import role_policy
 from .services.dashboard_selectors import get_workspace_dashboard_context
 from .tenant_context import resolve_preferred_workspace, resolve_request_workspace
 from apps.subscriptions.billing import effective_billing_state
@@ -50,6 +48,25 @@ from apps.orgs.web.access_helpers import (
     _assert_owner_access,
 )
 
+from apps.orgs.web.team_members import (
+    team_remove_member,
+    team_change_role,
+    membership_list,
+    my_memberships,
+    workspace_leave,
+    _is_owner_membership,
+    _owner_membership_count,
+)
+from apps.orgs.web.invitations import (
+    companyinvitations_list,
+    team_invite,
+    invite_success,
+    team_accept_invitation,
+    invitation_delete,
+    team_invitations,
+    _get_workspace_from_query,
+)
+
 # Compatibility imports above preserve existing URLs and Python callers.
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -66,23 +83,6 @@ def has_role(user, tenant, role_name):
         company=tenant,
         role__name__iexact=role_name,
     ).exists()
-
-
-def _is_owner_membership(membership):
-    return role_policy.is_owner_membership(membership)
-
-
-def _owner_membership_count(workspace):
-    return role_policy.owner_membership_count(workspace)
-
-
-def _get_workspace_from_query(request):
-    workspace_id = request.GET.get("workspace_id")
-    if not workspace_id:
-        return None
-    if not workspace_id.isdigit():
-        raise Http404("Invalid workspace ID")
-    return get_object_or_404(Company, id=workspace_id)
 
 
 def _get_workspace_from_slug(workspace_slug, *, include_inactive=False):
@@ -667,202 +667,6 @@ def workspace_lifecycle_transition(request, workspace_id, target_state):
     return redirect("archived_workspaces")
 
 
-@login_required
-def companyinvitations_list(request, workspace_id=None):
-    workspace = None
-    if workspace_id is not None:
-        workspace = get_object_or_404(Company, id=workspace_id)
-    if workspace is None:
-        workspace = _get_workspace_from_query(request)
-    if workspace is None:
-        workspace = resolve_request_workspace(request, include_public=False)
-
-    if workspace is not None:
-        _assert_workspace_access(
-            request,
-            workspace,
-            required_permissions={"team_invite"},
-            allow_platform_admin=True,
-        )
-
-    seat_capacity = None
-    if isinstance(workspace, Company):
-        seat_capacity = get_workspace_seat_capacity_snapshot(workspace=workspace)
-
-    invitations = CompanyInvitation.objects.select_related(
-        "company", "role", "inviter"
-    ).order_by("-created")
-
-    if workspace is not None:
-        invitations = invitations.filter(company=workspace)
-    else:
-        invitations = invitations.filter(inviter=request.user)
-
-    invitations_with_state = []
-    for invitation in invitations:
-        invitations_with_state.append(
-            {
-                "invitation": invitation,
-                "state": invitation.lifecycle_state(),
-            }
-        )
-
-    return render(
-        request,
-        "company/company_invitations_list.html",
-        {
-            "invitations": invitations_with_state,
-            "current_workspace": workspace,
-            "workspace": workspace,
-            "seat_capacity": seat_capacity,
-        },
-    )
-
-
-@login_required
-@permission_required("team_invite")
-@audit_log("TEAM_INVITE", description="Send team invitation")
-def team_invite(request, workspace_id=None, company_id=None):
-    """
-    Send team invitation to new member.
-    Requires team_invite permission (Owner/Admin).
-    """
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"team_invite"},
-        allow_platform_admin=True,
-    )
-    seat_capacity = get_workspace_seat_capacity_snapshot(workspace=company)
-
-    if request.method == "POST":
-        form = CompanyInvitationForm(
-            request.POST, inviter=request.user, request=request, company=company
-        )
-        if form.is_valid():
-            try:
-                control_plane.send_team_invitation(
-                    form=form,
-                    actor=request.user,
-                    company=company,
-                    request=request,
-                )
-                messages.success(request, "Invitation sent successfully")
-                return redirect(
-                    "workspace_slug_settings_invitations",
-                    workspace_slug=company.slug,
-                )
-            except (ValidationError, ValueError) as exc:
-                form.add_error(None, str(exc))
-                messages.error(request, "Unable to send invitation. Please review errors.")
-        else:
-            messages.error(request, "Please correct the errors below.")
-    else:
-        form = CompanyInvitationForm(inviter=request.user, company=company)
-    return render(
-        request,
-        "company/invitation_form.html",
-        {
-            "form": form,
-            "company": company,
-            "workspace": company,
-            "seat_capacity": seat_capacity,
-            "url": reverse("team_invite", kwargs={"workspace_id": workspace_id}),
-        },
-    )
-
-
-@login_required
-def invite_success(request):
-    workspace = None
-    sent_invitations_url = reverse("team_invitations_list")
-    workspace = _get_workspace_from_query(request)
-    if workspace is not None:
-        _assert_workspace_access(
-            request,
-            workspace,
-            required_permissions={"team_invite"},
-            allow_platform_admin=True,
-        )
-        sent_invitations_url = reverse(
-            "workspace_slug_settings_invitations",
-            kwargs={"workspace_slug": workspace.slug},
-        )
-
-    return render(
-        request,
-        "company/invite_success.html",
-        {
-            "workspace": workspace,
-            "current_workspace": workspace,
-            "sent_invitations_url": sent_invitations_url,
-        },
-    )
-
-
-def team_accept_invitation(request, key):
-    if not request.user.is_authenticated:
-        accept_url = reverse("team_accept_invitation", kwargs={"key": key})
-        return redirect(f"{reverse('account_login')}?next={accept_url}")
-
-    invitation = (
-        CompanyInvitation.objects.select_related("company", "role")
-        .filter(key=key.lower())
-        .first()
-    )
-    if invitation is None:
-        messages.error(request, "Invitation not found.")
-        return redirect("team_invitations")
-
-    if invitation.email.casefold() != request.user.email.casefold():
-        messages.error(request, "This invitation was sent to a different email address.")
-        return redirect("team_invitations")
-
-    current_state = invitation.lifecycle_state()
-    if current_state == "expired":
-        messages.error(request, f"Invitation from {invitation.company.name} has expired.")
-        return redirect("team_invitations")
-
-    if current_state != CompanyInvitation.Status.PENDING:
-        messages.info(request, f"Invitation is already {current_state}.")
-        return redirect("team_invitations")
-
-    if request.method != "POST":
-        return render(
-            request,
-            "company/invitation_accept_confirm.html",
-            {"invitation": invitation},
-        )
-
-    try:
-        control_plane.accept_invitation(
-            invitation=invitation,
-            user=request.user,
-            request=request,
-        )
-    except ValidationError as exc:
-        messages.error(request, str(exc))
-        return redirect("team_invitations")
-
-    if hasattr(request.user, "profile"):
-        request.user.profile.workspace = invitation.company
-        request.user.profile.save()
-
-    messages.success(
-        request,
-        f"Added to {invitation.company.name} as {invitation.role.name}",
-    )
-    return redirect(
-        "workspace_slug_dashboard",
-        workspace_slug=invitation.company.slug,
-    )
-
-
 @method_decorator(login_required, name="dispatch")
 @method_decorator(permission_required("workspace_settings"), name="dispatch")
 class CompanyPreferenceBuilder(PreferenceFormView):
@@ -942,205 +746,6 @@ class CompanyPreferenceBuilder(PreferenceFormView):
 
 
 @login_required
-@permission_required("team_remove")
-@require_POST
-def team_remove_member(request, workspace_id=None, membership_id=None, company_id=None):
-    """
-    Remove team member from workspace.
-    Requires team_remove permission (Owner only).
-    """
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"team_remove"},
-        allow_platform_admin=True,
-    )
-
-    membership = get_object_or_404(Membership, id=membership_id, company=company)
-
-    is_self_leave = membership.user == request.user
-    try:
-        control_plane.remove_membership(
-            membership=membership,
-            actor=request.user,
-            request=request,
-        )
-    except PermissionDenied as exc:
-        messages.error(request, str(exc))
-        return redirect("workspace_detail", workspace_id=workspace_id)
-
-    # If removed member had this workspace selected, clear stale selection.
-    if hasattr(membership.user, "profile") and membership.user.profile.workspace == company:
-        membership.user.profile.workspace = None
-        membership.user.profile.save(update_fields=["workspace"])
-
-    if is_self_leave:
-        messages.success(request, "You have left the workspace.")
-        return redirect("workspace_selector")
-
-    return redirect("workspace_list")  # Redirect to the list of workspaces
-
-
-@login_required
-@permission_required("team_change_role")
-def team_change_role(request, workspace_id=None, membership_id=None, company_id=None):
-    """
-    Change team member's role.
-    Requires team_change_role permission (Owner only).
-    """
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"team_change_role"},
-        allow_platform_admin=True,
-    )
-
-    membership = get_object_or_404(Membership, id=membership_id, company=company)
-    roles = role_policy.allowed_invitation_roles(actor=request.user, workspace=company)
-
-    if request.method in ["POST", "PATCH"]:
-        role_id = request.POST.get("role")
-        role = get_object_or_404(Role, id=role_id)
-
-        try:
-            control_plane.change_membership_role(
-                membership=membership,
-                new_role=role,
-                actor=request.user,
-                request=request,
-            )
-        except ValidationError as exc:
-            messages.error(request, str(exc))
-            if request.htmx:
-                return JsonResponse(
-                    {"success": False, "error": str(exc)},
-                    status=400,
-                )
-            return redirect("workspace_detail", workspace_id=workspace_id)
-        except PermissionDenied as exc:
-            messages.error(request, str(exc))
-            if request.htmx:
-                return JsonResponse(
-                    {"success": False, "error": str(exc)},
-                    status=400,
-                )
-            return redirect("workspace_detail", workspace_id=workspace_id)
-
-        if request.htmx:
-            return JsonResponse({"success": True, "role": role.name})
-        return redirect("workspace_detail", workspace_id=workspace_id)
-    else:
-        form = MembershipForm(instance=membership)
-    return render(
-        request,
-        "company/partials/role_form.html",
-        {"form": form, "membership": membership, "company": company, "roles": roles},
-    )
-
-
-@login_required
-def membership_list(request, workspace_id=None):
-    if workspace_id is not None:
-        workspace = get_object_or_404(Company, id=workspace_id)
-    else:
-        workspace = resolve_request_workspace(request, include_public=False)
-
-    if not workspace:
-        messages.info(request, "Select a workspace to view team members.")
-        return redirect("workspace_selector")
-
-    try:
-        access = _assert_workspace_access(
-            request,
-            workspace,
-            required_permissions={"team_list"},
-            allow_platform_admin=True,
-        )
-    except PermissionDenied:
-        messages.error(request, "You do not have permission to view team members.")
-        return redirect("workspace_selector")
-
-    memberships = (
-        Membership.objects.select_related("user", "role", "company")
-        .filter(company=workspace)
-        .order_by("role__name", "user__username")
-    )
-
-    context = {
-        "workspace": workspace,
-        "memberships": memberships,
-        "workspace_count": memberships.count(),
-        "seat_capacity": get_workspace_seat_capacity_snapshot(workspace=workspace),
-        "can_change_role": (workspace.owner_id == request.user.pk or access["access"].platform_override),
-        "can_remove_member": (workspace.owner_id == request.user.pk or access["access"].platform_override),
-    }
-    return render(request, "company/membership_list.html", context)
-
-
-@login_required
-def my_memberships(request):
-    return redirect("workspace_selector")
-
-
-@login_required
-def workspace_leave(request, workspace_id):
-    """
-    Allow any workspace member to leave a workspace themselves.
-    Owners must transfer ownership before leaving.
-    """
-    company = get_object_or_404(Company, id=workspace_id)
-    membership = get_object_or_404(Membership, user=request.user, company=company)
-
-    if request.method == "GET":
-        return render(request, "company/workspace_leave_confirm.html", {
-            "company": company,
-            "workspace": company,
-            "membership": membership,
-        })
-
-    if request.method == "POST":
-        if _is_owner_membership(membership):
-            if _owner_membership_count(company) <= 1:
-                messages.error(
-                    request,
-                    "You are the only owner. Transfer ownership to another member before leaving.",
-                )
-                return redirect("workspace_detail", workspace_id=workspace_id)
-            messages.error(
-                request,
-                "Owner must transfer ownership before leaving the workspace.",
-            )
-            return redirect("workspace_detail", workspace_id=workspace_id)
-
-        try:
-            control_plane.remove_membership(
-                membership=membership,
-                actor=request.user,
-                request=request,
-            )
-        except PermissionDenied as exc:
-            messages.error(request, str(exc))
-            return redirect("workspace_detail", workspace_id=workspace_id)
-
-        if request.user.profile.workspace == company:
-            request.user.profile.workspace = None
-            request.user.profile.save(update_fields=["workspace"])
-
-        messages.success(request, f"You have left {company.name}.")
-        return redirect("workspace_selector")
-
-
-@login_required
 def profile(request):
     user = request.user
     workspace = resolve_preferred_workspace(request.user)
@@ -1166,48 +771,6 @@ def profile(request):
 @login_required
 def account_settings(request):
     return render(request, "company/account_settings.html")
-
-
-@login_required
-@require_POST
-def invitation_delete(request, invitation_id):
-    invitation = get_object_or_404(CompanyInvitation, id=invitation_id)
-
-    # Inviter can always revoke. Workspace admins/owners can also revoke.
-    can_revoke = request.user == invitation.inviter
-    if not can_revoke:
-        try:
-            _assert_workspace_access(
-                request,
-                invitation.company,
-                required_permissions={"team_invite"},
-                allow_platform_admin=True,
-            )
-            can_revoke = True
-        except PermissionDenied:
-            can_revoke = False
-
-    if not can_revoke:
-        messages.error(request, "You do not have permission to revoke this invitation.")
-        return redirect("workspace_selector")
-
-    control_plane.revoke_invitation(
-        invitation=invitation,
-        actor=request.user,
-        request=request,
-    )
-
-    messages.success(request, "Invitation revoked successfully")
-
-    if request.headers.get("HX-Request"):
-        return HttpResponse("Invitation revoked successfully")
-
-    return redirect(
-        reverse(
-            "workspace_slug_settings_invitations",
-            kwargs={"workspace_slug": invitation.company.slug},
-        )
-    )
 
 
 from io import StringIO
@@ -1303,106 +866,6 @@ def workspace_selector(request):
     }
 
     return render(request, "company/workspace_home.html", context)
-
-
-@login_required
-def team_invitations(request):
-    """
-    Manage pending invitations to workspaces.
-    Allow user to accept or decline invitations.
-    """
-    user = request.user
-
-    # Get pending invitations
-    pending_invitations = CompanyInvitation.objects.filter(
-        email=user.email,
-        status=CompanyInvitation.Status.PENDING,
-        accepted=False,
-    ).select_related("company", "role")
-
-    # Filter valid (not expired)
-    invitations_data = []
-    for inv in pending_invitations:
-        if not inv.key_expired():
-            invitations_data.append(
-                {
-                    "invitation": inv,
-                    "is_expired": False,
-                }
-            )
-
-    if request.method == "POST":
-        action = request.POST.get("action")
-        invitation_id = request.POST.get("invitation_id")
-
-        try:
-            invitation = CompanyInvitation.objects.get(
-                id=invitation_id, email__iexact=user.email
-            )
-
-            current_state = invitation.lifecycle_state()
-            if current_state == "expired":
-                messages.error(
-                    request,
-                    f"Invitation from {invitation.company.name} has expired.",
-                )
-                return redirect("team_invitations")
-
-            if current_state != CompanyInvitation.Status.PENDING:
-                messages.info(
-                    request,
-                    f"Invitation is already {current_state}.",
-                )
-                return redirect("team_invitations")
-
-            if action == "accept":
-                try:
-                    control_plane.accept_invitation(
-                        invitation=invitation,
-                        user=user,
-                        request=request,
-                    )
-                except ValidationError as exc:
-                    messages.error(request, str(exc))
-                    return redirect("team_invitations")
-
-                # Set as active workspace
-                user.profile.workspace = invitation.company
-                user.profile.save()
-
-                messages.success(
-                    request,
-                    f"✅ Added to {invitation.company.name} as {invitation.role.name}",
-                )
-
-                return redirect(
-                    "workspace_slug_dashboard",
-                    workspace_slug=invitation.company.slug,
-                )
-
-            elif action == "decline":
-                control_plane.decline_invitation(
-                    invitation=invitation,
-                    actor=user,
-                    request=request,
-                )
-
-                messages.info(
-                    request, f"Declined invitation from {invitation.company.name}"
-                )
-
-                return redirect("team_invitations")
-
-        except CompanyInvitation.DoesNotExist:
-            messages.error(request, "Invitation not found")
-            return redirect("workspace_list")
-
-    context = {
-        "invitations": invitations_data,
-        "invitation_count": len(invitations_data),
-    }
-
-    return render(request, "company/workspace_invitations.html", context)
 
 
 @login_required

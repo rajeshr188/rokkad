@@ -581,3 +581,19 @@ Local validation: all 174 selected orgs/settings, role-grant, ownership, lifecyc
 shell and Loans-route checks passed (29.900 seconds). Two entitlement mocks needed
 their owning-module targets corrected; assertions were retained. System check,
 migration drift, 532-file import guard, 136 current-doc links and whitespace pass.
+
+## R12 team/invitation extraction (2026-09-11)
+
+Eleven handlers and three helpers moved from orgs.views into web/team_members.py
+and web/invitations.py with identical function/decorator ASTs. Public imports and
+slug adapters remain intact. Member role changes/removal and invitation
+send/accept/decline/revoke still use the same control-plane services. Owner guards,
+seat-capacity checks, verified acceptance, profile-preference cleanup and HTMX
+responses are unchanged. Test mocks follow the moved dependencies, including tests
+that unwrap handlers through local helper methods. No service/model/template or
+permission changes; no invitation mail sent outside tests. Lifecycle/navigation
+is the next family in the [module map](../implementation/orgs-view-organization.md).
+
+Validation: all 161 selected orgs, invitation/verified-email, ownership, role-grant,
+lifecycle and shell tests passed (14.363 seconds). System check, migration drift,
+import guard, current-doc links and whitespace checks pass.

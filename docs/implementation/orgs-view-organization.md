@@ -12,7 +12,7 @@ This is a responsibility split, not a change to authorization or user navigation
 The [control-plane contracts](../architecture/control-plane-contracts.md) remain
 authoritative.
 
-## Implemented first family
+## Implemented families
 
 Paths are relative to `apps/orgs/`.
 
@@ -21,9 +21,12 @@ Paths are relative to `apps/orgs/`.
 | `web/workspace_settings.py` | Workspace create/list/detail/update, resumable setup/checklist state, module availability, security activity; module registry and evaluation helper |
 | `web/role_settings.py` | Owner/platform role-grant editing and its existing form |
 | `web/access_helpers.py` | Existing Workspace access-context and owner-access helpers, reused by both extracted and remaining views |
-| `views.py` | Compatibility imports for moved handlers; remaining team, invitations, preferences, lifecycle, selection/dashboard and routing handlers |
+| `web/team_members.py` | Member list, role change/removal, self-leave and owner-membership helpers |
+| `web/invitations.py` | Sent/received invitation lists, send, confirmation, accept, decline and revoke; explicit query lookup helper |
+| `views.py` | Compatibility imports for moved handlers; remaining preferences, lifecycle, selection/dashboard and routing handlers |
 
-Nine handlers and three helpers moved with identical function/decorator ASTs.
+The first family moved nine handlers and three helpers. Team/invitations added
+eleven handlers and three helpers, all with identical function/decorator ASTs.
 All route names and decorated public handler imports remain intact. The new
 modules use absolute project imports and never import `orgs.views`. The shared
 helpers still delegate to existing access/permission policy; this move does not
@@ -37,14 +40,11 @@ of this extraction.
 
 ## Remaining families and dependency review
 
-1. Team and invitations: membership lists/role changes/removal, capacity,
-   acceptance, verified identity and invitation actions. Keep service calls and
-   access checks intact; inspect shared owner/membership helpers before moving.
-2. Lifecycle and navigation: archive/restore/transitions, selector, preference
+1. Lifecycle and navigation: archive/restore/transitions, selector, preference
    changes and dashboard. Preserve independent explicit browser-tab identity.
-3. Account/preferences and backup surfaces: inspect class-based views and existing
+2. Account/preferences and backup surfaces: inspect class-based views and existing
    retirement behavior before extraction.
-4. Slug adapters and legacy compatibility: move only after their handler imports
+3. Slug adapters and legacy compatibility: move only after their handler imports
    are stable. Preserve retired responses and old names; do not recreate the
    removed Loans response-rewriting dispatcher.
 

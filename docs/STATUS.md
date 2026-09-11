@@ -13,7 +13,8 @@ Branch: `rls-mvp`. Published application checkpoint: `fb3db63` (2026-09-11).
 All six checkpoints after `4b08c3f` were pushed: foundation/operator/billing,
 branding, documentation/onboarding/legacy cleanup, Loans routing and complete
 Loans view organization. Publication record af22f23 is also pushed. The first
-orgs workspace/role settings extraction is complete locally.
+orgs workspace/role settings extraction is committed locally as ee31dda; team and
+invitation handlers are now extracted locally.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -31,9 +32,15 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 | R09/R10 onboarding and legacy configuration/guardrails | Completed locally: current tour choices, six unused settings removed, tracked-source import guard in CI |
 | R13 dependencies/templates | Completed locally: four unused direct packages and 14 unreachable templates removed |
 | R11 dashboard reliability | Incomplete-queue warning and explicit unavailable monetary totals implemented; batching complete with shared calculations and restricted-role verification |
-| R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. Loans views portion of R12 complete: compatibility imports plus focused web modules; orgs workspace/role settings extracted locally; remaining families pending |
+| R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. Loans views portion of R12 complete: compatibility imports plus focused web modules; orgs workspace/role settings and team/invitations extracted locally; remaining families pending |
 
 ## Latest validation
+
+- Team/invitation extraction: all 161 orgs, invitation/verified-email, ownership,
+  role-grant, lifecycle, slug-shell and shell-render checks passed (14.363 seconds).
+  Eleven handlers and three helpers retain identical ASTs; mock targets were
+  updated without changing assertions. System check, migration drift, import guard,
+  documentation links and staged whitespace checks pass. No policy/schema changes.
 
 - First orgs extraction: all 174 workspace/settings, role-grant, ownership,
   lifecycle, shell and Loans-route tests passed in the final run (29.900 seconds).
@@ -165,9 +172,9 @@ reconstructions. Refund issuance, proration and chargebacks are not automated.
 
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).
-Next: extract orgs team/invitation handlers after reviewing their shared ownership,
-capacity and verified-acceptance dependencies. Workspace/role settings are already
-extracted; see the [orgs module map](implementation/orgs-view-organization.md).
+Next: extract orgs lifecycle and navigation handlers, preserving archive/restore
+rules, preference-only selection and explicit Workspace identity. See the
+[orgs module map](implementation/orgs-view-organization.md).
 Broader model/form/renewal-service work remains separate.
 Razorpay and license scoping remain shelved.
 
