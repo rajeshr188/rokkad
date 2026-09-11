@@ -81,7 +81,7 @@ def pawn_loan_create(request):
         else:
             if loan is not None:
                 messages.success(request, f"Draft {loan.loan_number} created.")
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
+                return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return render(
         request,
         "loans/pawn/form.html",
@@ -99,7 +99,7 @@ def pawn_loan_update(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     if loan.state != PawnLoanState.DRAFT.value:
         messages.error(request, "Only draft PawnLoans can be edited.")
-        return redirect("loans:pawn_loan_detail", pk=loan.pk)
+        return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     form = PawnDraftForm(request.POST or None, workspace=request.loans_workspace, instance=loan)
     existing_items = tuple(loan.collateral_items.all())
     initial = [
@@ -145,7 +145,7 @@ def pawn_loan_update(request, pk):
         else:
             if request.POST.get("action") != "preview":
                 messages.success(request, f"Draft {loan.loan_number} updated.")
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
+                return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return render(
         request,
         "loans/pawn/form.html",
@@ -171,7 +171,7 @@ def pawn_loan_split(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     if loan.state != PawnLoanState.DRAFT.value:
         messages.error(request, "Only a draft PawnLoan can be split.")
-        return redirect("loans:pawn_loan_detail", pk=loan.pk)
+        return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     initial = {"series": loan.series_id, "product_version": loan.product_version_id, "loan_date": loan.loan_date, "tenure_months": loan.tenure_months}
     if request.method == "GET" and request.GET.get("item"):
         initial["collateral_items"] = [request.GET["item"]]
@@ -200,7 +200,7 @@ def pawn_loan_split(request, pk):
                     expected_fingerprint=request.POST.get("fingerprint", ""), actor=request.user,
                 )
                 messages.success(request, f"Moved selected collateral into new draft {new_loan.loan_number}.")
-                return redirect("loans:pawn_loan_detail", pk=new_loan.pk)
+                return redirect('workspace_loans:pawn_loan_detail', pk=new_loan.pk, workspace_slug=request.workspace.slug)
         except (PawnDraftSplitError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
     template = "loans/pawn/_split_form.html" if request.headers.get("HX-Request") else "loans/pawn/split.html"
@@ -221,7 +221,7 @@ def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, "Draft photograph deleted. Each collateral item needs a photograph before approval.")
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
+    return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}")
 
 
 @loans_action_required("data.edit")
@@ -243,7 +243,7 @@ def pawn_collateral_photo_add(request, pk, item_pk):
             messages.success(request, f"Photograph appended to {item.description}.")
     else:
         messages.error(request, "Select a valid collateral photograph.")
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}")
+    return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}")
 
 
 @loans_action_required("loan.approve")
@@ -255,7 +255,7 @@ def pawn_loan_approve(request, pk):
         messages.success(request, f"{loan.loan_number} approved. Its economic payload is frozen.")
     except (PawnLifecycleError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
-    return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_action_required("data.edit")
@@ -416,7 +416,7 @@ def _reason_transition(request, pk, action):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"{loan.loan_number}: {labels[action].lower()} completed.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return render(
         request,
         "loans/pawn/transition_form.html",

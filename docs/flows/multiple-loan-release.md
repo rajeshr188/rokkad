@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-11
 tags: [loans, releases, operator-guide]
 ---
 
@@ -42,3 +42,6 @@ If someone will collect later, remove that loan and handle it separately. This w
 does not introduce deferred collection, partial collateral release, renewal or automatic
 notifications. Users without loan.release can view existing records when they have
 data.view, but cannot search for or complete a new release batch.
+
+Batch search, review, confirmation and completion links retain the current Workspace
+through named routes. HTMX history restoration returns the full selection page.

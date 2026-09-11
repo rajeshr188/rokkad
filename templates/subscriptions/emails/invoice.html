@@ -22,13 +22,13 @@
         
         .header {
             text-align: center;
-            border-bottom: 2px solid #007bff;
+            border-bottom: 2px solid #103f3a;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
         
         .header h1 {
-            color: #007bff;
+            color: #103f3a;
             margin: 0;
             font-size: 24px;
         }
@@ -39,7 +39,7 @@
         
         .invoice-section {
             background-color: #f0f7ff;
-            border-left: 4px solid #007bff;
+            border-left: 4px solid #103f3a;
             padding: 15px;
             margin: 20px 0;
             border-radius: 4px;
@@ -47,7 +47,7 @@
         
         .invoice-section h3 {
             margin-top: 0;
-            color: #007bff;
+            color: #103f3a;
         }
         
         .invoice-number {
@@ -110,7 +110,7 @@
         
         .cta-button {
             display: inline-block;
-            background-color: #007bff;
+            background-color: #103f3a;
             color: white;
             padding: 12px 30px;
             text-decoration: none;
@@ -133,7 +133,7 @@
         }
         
         .footer a {
-            color: #007bff;
+            color: #103f3a;
             text-decoration: none;
         }
         
@@ -147,6 +147,7 @@
 <body>
     <div class="email-container">
         <div class="header">
+            <p style="color:#103f3a;font-size:24px;font-weight:bold">Rokkad <span lang="hi">रोक्कड़</span></p>
             <h1>Invoice #{{ invoice.invoice_number }}</h1>
         </div>
         
@@ -175,7 +176,7 @@
                 <tbody>
                     <tr>
                         <td>
-                            <strong>{{ subscription.plan.name }}</strong>
+                            <strong>{{ invoice.billed_plan_name }}</strong>
                             <br>
                             <small style="color: #999;">Monthly subscription</small>
                         </td>
@@ -230,7 +231,7 @@
             
             <!-- Download Invoice -->
             <div style="text-align: center; margin-top: 20px;">
-                <a href="{{ invoice_pdf_url|default:"https://rokkad.com/subscriptions/invoices/" }}{{ invoice.id }}/pdf/" style="color: #007bff; text-decoration: none;">
+                <a href="{{ invoice_pdf_url|default:"https://rokkad.com/subscriptions/invoices/" }}{{ invoice.id }}/pdf/" style="color: #103f3a; text-decoration: none;">
                     📥 Download Full Invoice (PDF)
                 </a>
             </div>
@@ -238,10 +239,10 @@
             <!-- Account Information -->
             <div style="background-color: #f8f9fa; border-radius: 4px; padding: 15px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #333;">Account Information</h3>
-                <p><strong>Billed To:</strong> {{ user.get_full_name }}</p>
-                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Billed To:</strong> {{ invoice.billing_contact_name }}</p>
+                <p><strong>Email:</strong> {{ invoice.billing_contact_email }}</p>
                 <p><strong>Organization:</strong> {{ subscription.company.name }}</p>
-                <p><strong>Plan:</strong> {{ subscription.plan.name }}</p>
+                <p><strong>Plan:</strong> {{ invoice.billed_plan_name }}</p>
             </div>
             
             <p>If you have any questions regarding this invoice or your subscription, please contact us at <a href="mailto:billing@rokkad.com">billing@rokkad.com</a>.</p>

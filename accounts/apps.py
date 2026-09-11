@@ -6,7 +6,4 @@ class AccountsConfig(AppConfig):
     name = "accounts"
 
     def ready(self):
-        # from actstream import registry
         import accounts.signals
-
-        # registry.register(self.get_model("CustomUser"))

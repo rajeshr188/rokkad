@@ -1,0 +1,17 @@
+{% extends 'base_workspace_settings.html' %}
+{% block title %}Billing reviews{% endblock %}
+{% block mgmt_content %}
+<h1>Billing reviews</h1>
+<p>Review full refunds and unpaid checkouts. An unpaid checkout may simply be abandoned;
+check provider records before treating it as a payment problem.</p>
+<table class="table">
+    <thead><tr><th>Invoice</th><th>Plan</th><th>Amount</th><th>Review</th></tr></thead>
+    <tbody>{% for invoice in invoices %}
+    <tr><td><a href="{% url 'workspace_subscriptions:invoice-detail' workspace_slug=request.workspace.slug pk=invoice.pk %}">{{ invoice.invoice_number }}</a></td>
+        <td>{{ invoice.billed_plan_name }}</td><td>INR {{ invoice.total_amount }}</td>
+        <td>{% if invoice.payment.status == 'refunded' %}Full refund — access review{% else %}Unpaid checkout — check payment{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4">No invoices awaiting review.</td></tr>{% endfor %}</tbody>
+</table>
+{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+{% endblock %}

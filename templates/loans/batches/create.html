@@ -1,8 +1,8 @@
 {% extends "base_tenant.html" %}{% load static %}
 {% block title %}Release multiple loans{% endblock %}
 {% block workspace_content %}
-<div class="app-heading"><div><h1 class="h3">Release multiple loans</h1><p class="text-muted">Collect one exact total and confirm a collector for each loan. All selected loans complete together.</p></div><a href="{% url 'loans:release_batch_list' %}" class="btn btn-outline-secondary">Batch history</a></div>
-<form method="post" id="batch-selection" hx-post="{% url 'loans:release_batch_create' %}" hx-trigger="submit, selection-changed" hx-target="#batch-review" hx-sync="this:replace" hx-include="#batch-confirm input:not([name=action]), #batch-confirm select">
+<div class="app-heading"><div><h1 class="h3">Release multiple loans</h1><p class="text-muted">Collect one exact total and confirm a collector for each loan. All selected loans complete together.</p></div><a href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}" class="btn btn-outline-secondary">Batch history</a></div>
+<form method="post" action="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}" id="batch-selection" hx-post="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}" hx-trigger="submit, selection-changed" hx-target="#batch-review" hx-sync="this:replace" hx-include="#batch-confirm input:not([name=action]), #batch-confirm select">
   {% csrf_token %}<input type="hidden" name="action" value="preview">
   <label class="form-label" for="batch-loans">{{ selection_form.loans.label }}</label>{{ selection_form.loans }}
   <p class="small text-muted mt-2">Choose up to {{ max_loans }} active loans. They may have different borrowers or licenses within this business. Remove a loan if its collector is not ready.</p>

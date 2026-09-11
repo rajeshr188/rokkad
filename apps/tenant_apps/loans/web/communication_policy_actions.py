@@ -49,7 +49,7 @@ def pawn_communication_policy(request):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "PawnLoan communication policy updated. Automation remains disabled.")
-            return redirect("loans:pawn_communication_policy")
+            return redirect('workspace_loans:pawn_communication_policy', workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/communication_policy.html", {"form": form, "policy": policy})
 
 

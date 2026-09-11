@@ -87,7 +87,7 @@ def pawn_loan_disburse(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"{loan.loan_number} disbursed successfully.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         loan,
@@ -132,7 +132,7 @@ def pawn_loan_repay(request, pk):
                     f"overdue interest {allocation.overdue_interest}, current interest "
                     f"{allocation.current_interest}, principal {allocation.principal}.",
                 )
-                return redirect("loans:pawn_loan_detail", pk=loan.pk)
+                return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     balance = _safe_balance(loan)
     item_by_id = {item.pk: item for item in loan.collateral_items.all()}
     return _render_action(
@@ -181,7 +181,7 @@ def pawn_loan_accrue(request, pk):
                 request,
                 "Interest accrual finalized.",
             )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         loan,
@@ -210,7 +210,7 @@ def pawn_loan_capitalize(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Interest capitalization recorded.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         loan,
@@ -247,7 +247,7 @@ def pawn_loan_reverse_event(request, pk, event_pk):
                 request,
                 f"Reversal event #{result.reversal_event.pk} recorded.{balance_text}",
             )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         loan,

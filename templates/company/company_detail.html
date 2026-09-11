@@ -17,7 +17,7 @@
 <a href="{% url 'workspace_slug_settings_setup' workspace_slug=company.slug %}">Setup checklist</a>
 <a href="{% url 'workspace_slug_settings_team' workspace_slug=company.slug %}">Team</a>
 {% if company.owner_id == request.user.id %}<a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=company.slug %}">Billing</a>{% endif %}
-<a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/' %}">PawnLoan setup</a>
+<a href="{% url 'workspace_loans:license_list' request.workspace.slug %}">PawnLoan setup</a>
 <a href="{% url 'workspace_slug_dashboard' workspace_slug=company.slug %}">Return to workspace</a>
 </nav>
     <div class="row mb-4">

@@ -2,7 +2,7 @@
 {% block title %}PawnLoan operations runbook{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
-<a class="small text-decoration-none" href="{% url 'loans:pawn_operations_console' %}">&larr; Operations console</a><h1 class="h3 mt-2">PawnLoan support runbook</h1>
+<a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_operations_console' request.workspace.slug %}">&larr; Operations console</a><h1 class="h3 mt-2">PawnLoan support runbook</h1>
 <div class="alert alert-info">Girvi and Loans operate independently during coexistence. Service each loan in the application that owns it; never move or dual-write records between them.</div>
 <div class="card mb-3"><div class="card-body">
   <h2 class="h5">Scheduled risk reassessment</h2>

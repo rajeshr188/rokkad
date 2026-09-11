@@ -194,8 +194,7 @@ class TourPreferencesForm(forms.Form):
     ROLE_CHOICES = [
         ("owner", "Owner/Founder - I manage everything"),
         ("manager", "Manager - I oversee operations"),
-        ("accountant", "Accountant - I handle finances"),
-        ("sales", "Sales - I create invoices"),
+        ("staff", "Staff - I help with borrowers and loans"),
         ("other", "Other"),
     ]
 
@@ -204,16 +203,15 @@ class TourPreferencesForm(forms.Form):
         widget=forms.RadioSelect(),
         required=False,
         label="What best describes your role?",
-        help_text="This helps us customize your experience",
+        help_text="A preference only; this does not change your Workspace permissions.",
     )
 
     interested_features = forms.MultipleChoiceField(
         choices=[
-            ("girvi", "Loan/Girvi Management"),
-            ("dea", "Accounting/Ledger"),
-            ("sales", "Sales & Invoicing"),
-            ("purchase", "Purchase Management"),
-            ("contact", "Customer/Supplier Management"),
+            ("loans", "Loans and Collateral"),
+            ("party", "Borrower Profiles"),
+            ("rates", "Gold and Silver Reference Rates"),
+            ("notify_v2", "Notifications and Reminders"),
             ("reports", "Reports & Analytics"),
         ],
         widget=forms.CheckboxSelectMultiple(),

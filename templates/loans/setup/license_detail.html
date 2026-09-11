@@ -6,18 +6,18 @@
 {% include "loans/setup/_navigation.html" %}
 <div class="app-heading">
   <div>
-    <a class="small text-decoration-none" href="{% url 'loans:license_list' %}">← Loan setup</a>
+    <a class="small text-decoration-none" href="{% url 'workspace_loans:license_list' request.workspace.slug %}">← Loan setup</a>
     <h1 class="h3 mt-2 mb-1">{{ license.name }}</h1>
     <div class="text-muted">{{ license.license_number }} · {{ license.issuing_authority|default:"Issuing authority not recorded" }}</div>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'loans:license_update' license.pk %}">Edit</a>
-    <a class="btn btn-primary" href="{% url 'loans:license_renew' license.pk %}">Record renewal</a>
-    <form method="post" action="{% url 'loans:license_expiry_notice_create' license.pk %}">{% csrf_token %}<button class="btn btn-outline-warning" type="submit">Alert Owner of expiry</button></form>
+    <a class="btn btn-outline-primary" href="{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}">Edit</a>
+    <a class="btn btn-primary" href="{% url 'workspace_loans:license_renew' request.workspace.slug license.pk %}">Record renewal</a>
+    <form method="post" action="{% url 'workspace_loans:license_expiry_notice_create' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-warning" type="submit">Alert Owner of expiry</button></form>
     {% if license.is_active %}
-      <form method="post" action="{% url 'loans:license_expire' license.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Deactivate</button></form>
+      <form method="post" action="{% url 'workspace_loans:license_expire' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Deactivate</button></form>
     {% elif not license.is_expired %}
-      <form method="post" action="{% url 'loans:license_activate' license.pk %}">{% csrf_token %}<button class="btn btn-outline-success" type="submit">Activate</button></form>
+      <form method="post" action="{% url 'workspace_loans:license_activate' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-success" type="submit">Activate</button></form>
     {% endif %}
   </div>
 </div>
@@ -31,7 +31,7 @@
   </div>
 </div></div>
 
-{% if expiry_notices %}<div class="card mb-4"><div class="card-header"><strong>Expiry alerts</strong></div><div class="card-body">{% for notice in expiry_notices %}<div class="d-flex justify-content-between align-items-center mb-2"><span>{{ notice.created_at }} · {{ notice.recipient_email }}</span><form method="post" action="{% url 'loans:operational_notice_retry' notice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Retry delivery</button></form></div>{% endfor %}</div></div>{% endif %}
+{% if expiry_notices %}<div class="card mb-4"><div class="card-header"><strong>Expiry alerts</strong></div><div class="card-body">{% for notice in expiry_notices %}<div class="d-flex justify-content-between align-items-center mb-2"><span>{{ notice.created_at }} · {{ notice.recipient_email }}</span><form method="post" action="{% url 'workspace_loans:operational_notice_retry' request.workspace.slug notice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Retry delivery</button></form></div>{% endfor %}</div></div>{% endif %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div><h2 class="h5 mb-1">Regulatory history</h2><div class="small text-muted">Append-only issue, amendment, and renewal evidence.</div></div>
@@ -45,7 +45,7 @@
         <td>#{{ revision.revision_number }}</td>
         <td>{{ revision.get_kind_display }}</td>
         <td>{{ revision.issued_on }} &ndash; {{ revision.expires_on }}</td>
-        <td>{% if revision.has_document %}<a href="{% url 'loans:license_revision_document' license.pk revision.pk %}">{{ revision.original_filename }}</a><div class="small text-muted font-monospace">{{ revision.sha256|slice:":12" }}</div>{% else %}<span class="text-warning">No document</span>{% endif %}</td>
+        <td>{% if revision.has_document %}<a href="{% url 'workspace_loans:license_revision_document' request.workspace.slug license.pk revision.pk %}">{{ revision.original_filename }}</a><div class="small text-muted font-monospace">{{ revision.sha256|slice:":12" }}</div>{% else %}<span class="text-warning">No document</span>{% endif %}</td>
         <td>{{ revision.created_at }}<div class="small text-muted">{{ revision.created_by|default:"System" }}</div></td>
       </tr>
     {% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No revision evidence has been recorded.</td></tr>{% endfor %}
@@ -55,7 +55,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div><h2 class="h5 mb-1">Numbering series</h2><div class="small text-muted">Loan and release counters are independent and previews do not consume numbers.</div></div>
-  <a class="btn btn-primary" href="{% url 'loans:series_create' license.pk %}">Add series</a>
+  <a class="btn btn-primary" href="{% url 'workspace_loans:series_create' request.workspace.slug license.pk %}">Add series</a>
 </div>
 <div class="card"><div class="table-responsive">
   <table class="table app-table align-middle mb-0">
@@ -67,7 +67,7 @@
         <td>{% if row.loan_preview.value %}<code>{{ row.loan_preview.value }}</code>{% else %}<span class="text-danger small">{{ row.loan_preview.error }}</span>{% endif %}</td>
         <td>{% if row.release_preview.value %}<code>{{ row.release_preview.value }}</code>{% else %}<span class="text-danger small">{{ row.release_preview.error }}</span>{% endif %}</td>
         <td>{% if row.series.is_active and license.is_active and not license.is_expired and row.loan_preview.value and row.release_preview.value %}<span class="badge text-bg-success">Ready</span>{% else %}<span class="badge text-bg-warning">Not ready</span>{% endif %}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:series_update' row.series.pk %}">Configure</a></td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_loans:series_update' request.workspace.slug row.series.pk %}">Configure</a></td>
       </tr>
     {% empty %}<tr><td colspan="5" class="text-center py-5 text-muted">Add a series to configure loan and release numbering.</td></tr>{% endfor %}
     </tbody>

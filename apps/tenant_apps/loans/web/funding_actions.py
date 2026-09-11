@@ -68,7 +68,7 @@ def funding_loan_draft_create(request):
                 request,
                 f"FundingLoan draft {funding_loan.funding_number} created.",
             )
-            return redirect("loans:funding_loan_read_detail", pk=funding_loan.pk)
+            return redirect('workspace_loans:funding_loan_read_detail', pk=funding_loan.pk, workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/funding/form.html", {"form": form})
 
 
@@ -115,7 +115,7 @@ def funding_loan_draft_inputs(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "FundingLoan draft inputs saved and ready for review.")
-            return redirect("loans:funding_loan_read_detail", pk=pk)
+            return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     return render(
         request,
         "loans/setup/funding/draft_inputs.html",
@@ -129,7 +129,7 @@ def funding_loan_draft_cancel(request, pk):
     form = FundingLoanCancellationForm(request.POST)
     if not form.is_valid():
         messages.error(request, "A cancellation reason is required.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
+        return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     try:
         funding_loan = cancel_funding_loan_draft(
             CancelFundingLoanDraft(
@@ -143,7 +143,7 @@ def funding_loan_draft_cancel(request, pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"FundingLoan draft {funding_loan.funding_number} cancelled.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -152,7 +152,7 @@ def funding_loan_draft_activate(request, pk):
     form = FundingLoanActivationForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Enter ACTIVATE exactly to confirm activation.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
+        return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     try:
         result = activate_saved_funding_loan_draft(
             ActivateSavedFundingLoanDraft(
@@ -169,7 +169,7 @@ def funding_loan_draft_activate(request, pk):
             f"FundingLoan {result.funding_loan.funding_number} activated; "
             f"{result.pledge.items.count()} collateral item(s) handed to the lender.",
         )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -178,7 +178,7 @@ def funding_loan_repayment(request, pk):
     form = FundingLoanRepaymentForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Enter a valid repayment amount and effective date.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
+        return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     try:
         event = record_funding_repayment(
             RecordFundingRepayment(
@@ -199,7 +199,7 @@ def funding_loan_repayment(request, pk):
             f"fees {event.fee_amount}, interest {event.interest_amount}, "
             f"principal {event.principal_amount}.",
         )
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -217,7 +217,7 @@ def funding_loan_begin_settlement(request, pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"FundingLoan {funding_loan.funding_number} entered settlement review.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -229,13 +229,13 @@ def funding_loan_return_collateral(request, pk):
         raise Http404(str(exc)) from exc
     if detail.summary.state != "SETTLEMENT_PENDING":
         messages.error(request, "Begin settlement review before returning collateral.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
+        return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     form = FundingCollateralReturnForm(
         request.POST, collateral_rows=detail.collateral, include_inactive=True
     )
     if not form.is_valid():
         messages.error(request, "Select valid active collateral and an effective date.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
+        return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     try:
         funding_return = return_funding_collateral(
             ReturnFundingCollateral(
@@ -253,7 +253,7 @@ def funding_loan_return_collateral(request, pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"Returned {funding_return.items.count()} collateral item(s) to the branch vault.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -262,7 +262,7 @@ def funding_loan_close(request, pk):
     form = FundingLoanClosureForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Enter CLOSE exactly to confirm closure.")
-        return redirect("loans:funding_loan_read_detail", pk=pk)
+        return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
     try:
         funding_loan = close_funding_loan(
             CloseFundingLoan(
@@ -275,7 +275,7 @@ def funding_loan_close(request, pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"FundingLoan {funding_loan.funding_number} closed.")
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 def _correction_redirect(request, pk, form, action, success_message):
@@ -288,7 +288,7 @@ def _correction_redirect(request, pk, form, action, success_message):
             messages.error(request, str(exc))
         else:
             messages.success(request, success_message)
-    return redirect("loans:funding_loan_read_detail", pk=pk)
+    return redirect('workspace_loans:funding_loan_read_detail', pk=pk, workspace_slug=request.workspace.slug)
 
 
 @require_POST

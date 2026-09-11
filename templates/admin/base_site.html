@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | Rokkad{% endblock %}
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/brand.css' %}">
+    <style>
+        html[data-theme="light"], :root {
+            --primary: #103f3a;
+            --secondary: #103f3a;
+            --accent: #d5ab57;
+            --header-bg: #103f3a;
+            --header-color: #faf8f2;
+        }
+    </style>
+{% endblock %}
+{% block extrahead %}{{ block.super }}{% include 'components/brand_head.html' %}{% endblock %}
+{% block branding %}
+    <div id="site-name"><a href="{% url 'admin:index' %}">{% include 'components/brand.html' %}</a></div>
+{% endblock %}

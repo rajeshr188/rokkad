@@ -60,6 +60,44 @@ class Phase4BillingTests(TestCase):
         self.assertFalse(decision.commercially_available)
         self.assertEqual(self.subscription.status, Subscription.StatusChoices.TRIAL)
 
+    def test_paid_access_expires_at_exact_end_without_mutating_evidence(self):
+        Subscription.objects.filter(pk=self.subscription.pk).update(status="active")
+        self.subscription.refresh_from_db()
+        end = self.subscription.end_date
+        revision = self.subscription.updated_at
+        self.assertTrue(effective_billing_state(self.subscription, at=end - timedelta(microseconds=1)).commercially_available)
+        for at in (end, end + timedelta(seconds=1)):
+            decision = effective_billing_state(self.subscription, at=at)
+            self.assertEqual(decision.status, "expired")
+            self.assertEqual(decision.reason, "SUBSCRIPTION_EXPIRED")
+            self.assertFalse(decision.commercially_available)
+            self.assertTrue(decision.recovery_only)
+        self.subscription.refresh_from_db()
+        self.assertEqual(self.subscription.status, "active")
+        self.assertEqual(self.subscription.updated_at, revision)
+        self.assertFalse(SubscriptionEvent.objects.exists())
+
+    def test_missing_paid_end_fails_closed_and_future_end_does_not_override_status(self):
+        from types import SimpleNamespace
+        self.assertFalse(effective_billing_state(SimpleNamespace(status="active", end_date=None)).commercially_available)
+        for status in ("cancelled", "expired", "past_due"):
+            decision = effective_billing_state(SimpleNamespace(status=status, end_date=timezone.now() + timedelta(days=30)))
+            self.assertFalse(decision.commercially_available)
+            self.assertEqual(decision.status, status)
+
+    def test_expired_paid_term_denies_features_and_limits_even_with_override(self):
+        ensure_entitlements_for_subscription(self.subscription)
+        row = self.subscription.entitlements.get(feature_code="workspace.max_members")
+        row.source = "override"
+        row.override_reason = "Test capacity override"
+        row.override_actor = self.owner
+        row.save()
+        Subscription.objects.filter(pk=self.subscription.pk).update(status="active", end_date=timezone.now() - timedelta(seconds=1))
+        self.assertFalse(entitlements.enabled(self.workspace, "api.access"))
+        self.assertIsNone(entitlements.limit(self.workspace, "workspace.max_members"))
+        row.refresh_from_db()
+        self.assertEqual(row.source, "override")
+
     def test_transition_is_locked_event_backed_and_idempotent(self):
         activated, changed = transition_subscription(
             subscription=self.subscription,
@@ -284,6 +322,19 @@ class BillingMiddlewareAcceptanceTests(TestCase):
             "/w/no-billing-workspace/settings/billing/dashboard/",
             fetch_redirect_response=False,
         )
+
+    def test_expired_paid_term_blocks_business_but_preserves_owner_recovery(self):
+        self.create_subscription(status=Subscription.StatusChoices.ACTIVE)
+        Subscription.objects.filter(company=self.workspace).update(end_date=timezone.now() - timedelta(seconds=1))
+        response = self.client.get("/w/no-billing-workspace/parties/")
+        self.assertRedirects(response, "/w/no-billing-workspace/settings/billing/dashboard/", fetch_redirect_response=False)
+        dashboard = self.client.get("/w/no-billing-workspace/settings/billing/dashboard/")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "Expired")
+        self.assertContains(dashboard, "Renew or View Plans")
+        self.assertEqual(self.client.get("/w/no-billing-workspace/settings/billing/plans/").status_code, 200)
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.lifecycle_state, Company.LifecycleState.ACTIVE)
 
     @override_settings(BILLING_ALLOW_TRIAL_START=True)
     def test_owner_can_explicitly_start_trial_with_projected_entitlements(self):

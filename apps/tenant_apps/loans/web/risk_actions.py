@@ -56,7 +56,7 @@ def pawn_risk_borrower_notice_create(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"{notice.get_notice_kind_display()} created and queued through Notify.")
-            return redirect("loans:pawn_loan_detail", pk=notice.loan_id)
+            return redirect('workspace_loans:pawn_loan_detail', pk=notice.loan_id, workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/risk_borrower_notice.html", {
         "form": form, "preview": preview, "alert": preview.readiness.alert,
     })

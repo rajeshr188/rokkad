@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
+from apps.tenant_apps.loans.management.workspace import command_workspace
 
 from apps.tenant_apps.loans.services.product_catalog import (
     LoanProductCatalogError,
@@ -7,11 +8,15 @@ from apps.tenant_apps.loans.services.product_catalog import (
 
 
 class Command(BaseCommand):
-    help = "Idempotently seed the four draft loan products in the active tenant schema."
+    help = "Idempotently seed four draft loan products in one explicit active Workspace."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--workspace-id", type=int, required=True)
 
     def handle(self, *args, **options):
         try:
-            versions = _seed_default_loan_products()
+            with command_workspace(options["workspace_id"]):
+                versions = _seed_default_loan_products()
         except LoanProductCatalogError as exc:
             raise CommandError(str(exc)) from exc
-        self.stdout.write(self.style.SUCCESS(f"Ready product versions: {len(versions)}"))
+        self.stdout.write(self.style.SUCCESS(f"Workspace {options['workspace_id']} ready product versions: {len(versions)}"))

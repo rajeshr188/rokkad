@@ -1,9 +1,9 @@
 <div class="d-flex align-items-center gap-2">
-<a hx-boost="false" href="{% url 'loans:pawn_collateral_scan' record.public_id %}">
+<a hx-boost="false" href="{% url 'workspace_loans:pawn_collateral_scan' request.workspace.slug record.public_id %}">
 {% with photo=record.list_photos.0 %}
-{% if photo %}<img class="loan-list-photo" width="48" height="48" loading="lazy" src="{% url 'loans:pawn_collateral_photo_document' record.loan_id record.pk photo.pk %}?inline=1" alt="Photo of {{ record.description }}">
+{% if photo %}<img class="loan-list-photo" width="48" height="48" loading="lazy" src="{% url 'workspace_loans:pawn_collateral_photo_document' request.workspace.slug record.loan_id record.pk photo.pk %}?inline=1" alt="Photo of {{ record.description }}">
 {% else %}<span class="loan-list-photo loan-list-photo-placeholder" role="img" aria-label="No collateral photo"><i class="bi bi-image" aria-hidden="true"></i></span>{% endif %}
 {% endwith %}
 </a>
-<div><a hx-boost="false" href="{% url 'loans:pawn_collateral_scan' record.public_id %}">{{ record.description }}</a><div class="small text-muted">CI-{{ record.public_id|cut:"-"|slice:":12"|upper }}</div></div>
+<div><a hx-boost="false" href="{% url 'workspace_loans:pawn_collateral_scan' request.workspace.slug record.public_id %}">{{ record.description }}</a><div class="small text-muted">CI-{{ record.public_id|cut:"-"|slice:":12"|upper }}</div></div>
 </div>

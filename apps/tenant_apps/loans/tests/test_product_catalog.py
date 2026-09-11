@@ -194,5 +194,5 @@ class LoanProductCatalogTests(WorkspaceTestCase):
         with self.assertRaises(PermissionDenied):
             activate_product_version(version.pk, actor=self.actor)
         # Operator bootstrap is an explicit command, not an actor=None bypass.
-        call_command("seed_default_loan_products", stdout=StringIO())
+        call_command("seed_default_loan_products", workspace_id=self.tenant.pk, stdout=StringIO())
         self.assertEqual(LoanProduct.objects.count(), 4)

@@ -10,6 +10,8 @@ __pycache__/
 
 # Local secrets and Django runtime files
 .env
+.env.container
+.env.production.*
 *.log
 *.db
 *.sqlite

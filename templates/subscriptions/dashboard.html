@@ -32,7 +32,7 @@
         color: #0c5460;
     }
     
-    .status-past-due {
+    .status-past_due, .status-expired {
         background-color: #f8d7da;
         color: #721c24;
     }
@@ -116,6 +116,7 @@
 {% endblock %}
 
 {% block mgmt_content %}
+<a class="btn btn-outline-primary mb-3" href="{% url 'workspace_subscriptions:reviews' workspace_slug=request.workspace.slug %}">Billing reviews</a>
 {% include "subscriptions/_navigation.html" %}
 <div class="container py-5">
     <div class="row mb-4">
@@ -152,8 +153,8 @@
                     <p class="text-muted mb-3">{{ plan.get_tier_display }}</p>
                     
                     <div class="mb-3">
-                        <span class="status-badge status-{{ subscription.status }}">
-                            {{ subscription.get_status_display }}
+                        <span class="status-badge status-{{ billing_decision.status }}">
+                            {{ billing_status_label }}
                         </span>
                     </div>
                     
@@ -164,17 +165,20 @@
                         <strong class="h5">₹{{ plan.price }}</strong>
                     </div>
                     
-                    {% if days_until_renewal >= 0 %}
+                    {% if billing_decision.recovery_only %}
+                    <p class="text-danger">{{ billing_decision.message }}</p>
+                    {% endif %}
+                    {% if subscription.end_date %}
                     <p class="text-muted small">
-                        Next billing date: <strong>{{ subscription.next_billing_date|date:"M d, Y" }}</strong>
+                        Period ends: <strong>{{ subscription.end_date|date:"M d, Y H:i T" }}</strong>
                     </p>
                     {% endif %}
                     
                     <div class="mt-4">
                         <a href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.slug %}" class="btn btn-outline-primary btn-sm">
-                            Change Plan
+                            Renew or View Plans
                         </a>
-                        {% if subscription.status == 'active' %}
+                        {% if billing_decision.status == 'active' %}
                         <button class="btn btn-outline-danger btn-sm" onclick="confirmCancel()">
                             Cancel Subscription
                         </button>

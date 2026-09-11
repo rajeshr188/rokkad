@@ -2,7 +2,7 @@
 {% block title %}Release and renew {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'loans:pawn_loan_detail' loan.pk %}">&larr; {{ loan.loan_number }}</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
   <h1 class="h3 mt-2 mb-1">Release and renew</h1>
   <p class="text-muted">Close the old contract, return omitted items, and create a newly numbered loan for retained and additional collateral.</p>
 </div>
@@ -62,7 +62,7 @@
   <button class="btn btn-outline-primary mb-3" id="calculate-renewal" type="button">Calculate exact renewal</button>
   <div class="form-check mb-3">{{ form.confirm_renewal_plan }}<label class="form-check-label" for="{{ form.confirm_renewal_plan.id_for_label }}">{{ form.confirm_renewal_plan.label }}</label>{% for error in form.confirm_renewal_plan.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
   <button class="btn btn-primary" type="submit">Complete release and renew</button>
-  <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a>
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Cancel</a>
 </form>
 {% include "loans/pawn/_camera_capture.html" %}
 {% if not renewal_quote.error %}<script>

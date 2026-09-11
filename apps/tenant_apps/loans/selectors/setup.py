@@ -34,27 +34,27 @@ def get_pawn_setup_checklist(workspace):
         economics_ready = True
         break
 
-    def url(path):
-        return reverse("workspace_slug_loans_dispatch", kwargs={"workspace_slug": workspace.slug, "loans_path": path})
+    def url(name, **kwargs):
+        return reverse("workspace_loans:" + name, kwargs={"workspace_slug": workspace.slug, **kwargs})
 
     license_choices = list(licenses[:2])
-    series_url = url(f"setup/licenses/{license_choices[0].pk}/") if len(license_choices) == 1 else url("setup/") + "#license-register"
+    series_url = url("license_detail", pk=license_choices[0].pk) if len(license_choices) == 1 else url("license_list") + "#license-register"
     steps = [
         {"key": "license", "title": "License", "complete": licenses.exists(),
          "description": "Add an active, unexpired license and its supporting evidence. Review evidence warnings in the license register.",
-         "action_label": "Review licenses" if license_choices else "Add license", "action_url": url("setup/") + "#license-register" if license_choices else url("setup/licenses/create/")},
+         "action_label": "Review licenses" if license_choices else "Add license", "action_url": url("license_list") + "#license-register" if license_choices else url("license_create")},
         {"key": "series", "title": "Numbering series", "complete": series_ready,
          "description": "Open a license and add an active series with an available PawnLoan number. Configure release numbering there too.",
          "action_label": "Set up a series", "action_url": series_url},
         {"key": "economics", "title": "Calculation and interest policies", "complete": economics_ready,
          "description": "Set policies effective today, including gold and silver interest, for at least one usable series. Review fees if your business charges them.",
-         "action_label": "Open Economic Setup", "action_url": url("setup/economics/")},
+         "action_label": "Open Economic Setup", "action_url": url("pawn_economics_setup")},
         {"key": "product", "title": "Loan product", "complete": LoanProductVersion.objects.filter(
             workspace=workspace, product__workspace=workspace, product__is_active=True, status="ACTIVE",
          ).filter(Q(available_from__isnull=True) | Q(available_from__lte=today)).filter(
              Q(available_until__isnull=True) | Q(available_until__gte=today),
          ).exists(),
          "description": "Review product terms, activate a version, and check its availability dates. A new loan needs a product available for its loan date.",
-         "action_label": "Review loan products", "action_url": url("setup/products/")},
+         "action_label": "Review loan products", "action_url": url("loan_product_list")},
     ]
     return {"steps": steps, "ready": all(step["complete"] for step in steps), "as_of_date": today}

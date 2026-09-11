@@ -5,12 +5,12 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'loans:license_detail' license.pk %}">← {{ license.name }}</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">← {{ license.name }}</a>
   <h1 class="h3 mt-2">{% if series %}Configure {{ series.code }}{% else %}Add numbering series{% endif %}</h1>
   <p class="text-muted">Each series has separate bounded sequences for pawn loans and releases.</p>
 </div>
 <div class="card"><div class="card-body">
-  <form method="post" novalidate>{% csrf_token %}
+  <form method="post" action="{% if series %}{% url 'workspace_loans:series_update' request.workspace.slug series.pk %}{% else %}{% url 'workspace_loans:series_create' request.workspace.slug license.pk %}{% endif %}" novalidate>{% csrf_token %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <div class="row g-3">
     {% for field in form %}
@@ -22,7 +22,7 @@
     {% endfor %}
     </div>
     <div class="alert alert-info mt-4 mb-0">The maximum is final for this series. Once exhausted, create another series; numbers never wrap or recycle.</div>
-    <div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit">Save series setup</button><a class="btn btn-outline-secondary" href="{% url 'loans:license_detail' license.pk %}">Cancel</a></div>
+    <div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit">Save series setup</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">Cancel</a></div>
   </form>
 </div></div>
 {% endblock %}

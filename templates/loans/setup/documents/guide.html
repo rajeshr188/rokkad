@@ -4,7 +4,7 @@
 {% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Loan document printing guide</h1><p class="text-muted mb-0">From your first draft to a custom background, tested PDF, and assigned counter printout.</p></div>
-  <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'loans:document_print_profile_list' %}">Print profiles</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_list' %}">Document layouts</a></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">Print profiles</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">Document layouts</a></div>
 </div>
 
 {% include "loans/setup/documents/_beginner_guide.html" %}
@@ -47,7 +47,7 @@
 <div class="card card-body mb-3">
   <h2 class="h5">3. Create, test, and assign the loan-ticket print profile</h2>
   <ol class="mb-2">
-    <li>Open <a href="{% url 'loans:document_print_profile_list' %}">Print profiles</a> and create a draft.</li>
+    <li>Open <a href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">Print profiles</a> and create a draft.</li>
     <li>Choose A5 or A4 side-by-side packaging, simplex or duplex, scaling, and printer guidance.</li>
     <li>Preview and download a test print using a published logical layout and an approved sample loan.</li>
     <li>Publish the validated draft, then assign it to the workspace or one Series.</li>
@@ -58,7 +58,7 @@
 <div class="card card-body mb-3">
   <h2 class="h5">4. Print and inspect official evidence</h2>
   <p>Staff continue using the existing Print/PDF actions on the loan, repayment, release, auction, and renewal screens. Loans resolves the applicable published layout and, for configurable loan tickets, the physical print profile.</p>
-  <p class="mb-0">The first official issue is stored exactly. Open <a href="{% url 'loans:document_issue_list' %}">Issued documents</a> to inspect its layout/profile revisions and hashes or download the exact stored PDF. Later reprints return those same bytes even if assignments change.</p>
+  <p class="mb-0">The first official issue is stored exactly. Open <a href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">Issued documents</a> to inspect its layout/profile revisions and hashes or download the exact stored PDF. Later reprints return those same bytes even if assignments change.</p>
 </div>
 
 <div class="card card-body mb-3">
@@ -127,7 +127,7 @@
 <div class="card card-body mb-4">
   <h2 class="h5">If a print fails</h2>
   <ol class="mb-0">
-    <li>Open <a href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a>.</li>
+    <li>Open <a href="{% url 'workspace_loans:document_layout_diagnostics' request.workspace.slug %}">Integrity diagnostics</a>.</li>
     <li>Clone and correct the defective layout or profile revision; do not alter stored issue files.</li>
     <li>For a schema-v1/v2 loan-ticket packaging problem, an Owner/Admin can explicitly add <code>?print_profile=legacy</code> to use the published layout's embedded composition. Schema-v3 layouts have no embedded packaging, and runtime never selects legacy recovery silently.</li>
     <li>For urgent fixed-renderer recovery, an Owner/Admin can add <code>?renderer=fixed</code> to the normal PDF URL. Both recovery paths are audited.</li>
@@ -136,5 +136,5 @@
 </div>
 
 </details>
-<div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{% url 'loans:document_layout_create' %}">Create starter layout</a><a class="btn btn-outline-primary" href="{% url 'loans:document_print_profile_create' %}">Create print profile</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_issue_list' %}">Issued documents</a><a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_diagnostics' %}">Integrity diagnostics</a></div>
+<div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{% url 'workspace_loans:document_layout_create' request.workspace.slug %}">Create starter layout</a><a class="btn btn-outline-primary" href="{% url 'workspace_loans:document_print_profile_create' request.workspace.slug %}">Create print profile</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">Issued documents</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_diagnostics' request.workspace.slug %}">Integrity diagnostics</a></div>
 {% endblock %}

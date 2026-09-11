@@ -3,7 +3,7 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_detail' funding_loan_id %}">&larr; FundingLoan detail</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:funding_loan_read_detail' request.workspace.slug funding_loan_id %}">&larr; FundingLoan detail</a>
   <h1 class="h3 mt-2 mb-1">Complete FundingLoan draft</h1>
   <p class="text-muted mb-0">Capture proposed terms and eligible branch-vault collateral for review.</p>
 </div>
@@ -23,6 +23,6 @@
     {% endfor %}
   </div>
   <button class="btn btn-primary" type="submit">Save for review</button>
-  <a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_read_detail' funding_loan_id %}">Back</a>
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:funding_loan_read_detail' request.workspace.slug funding_loan_id %}">Back</a>
 </form>
 {% endblock %}

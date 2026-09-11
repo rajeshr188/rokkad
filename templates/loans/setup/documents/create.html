@@ -4,6 +4,6 @@
 {% include "loans/setup/_navigation.html" %}
 <h1 class="h3">Create starter loan document layout</h1>
 <p class="text-muted">Creates an editable draft with the required document fields. Choose Flow for automatic pagination or Exact PDF overlay to fill an existing form.</p>
-<p><a href="{% url 'loans:document_layout_guide' %}#choose-layout">Step-by-step guide: choose a layout and get started</a></p>
-<form method="post" class="card card-body" style="max-width:42rem">{% csrf_token %}{{ form.as_p }}<div><button class="btn btn-primary">Create draft</button> <a class="btn btn-link" href="{% url 'loans:document_layout_list' %}">Cancel</a></div></form>
+<p><a href="{% url 'workspace_loans:document_layout_guide' request.workspace.slug %}#choose-layout">Step-by-step guide: choose a layout and get started</a></p>
+<form method="post" class="card card-body" style="max-width:42rem">{% csrf_token %}{{ form.as_p }}<div><button class="btn btn-primary">Create draft</button> <a class="btn btn-link" href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">Cancel</a></div></form>
 {% endblock %}

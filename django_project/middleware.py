@@ -179,7 +179,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
                 days_left = (subscription.end_date - timezone.now()).days
                 if 0 <= days_left <= 7:
                     messages.info(
-                        request, f"Your subscription will renew in {days_left} days."
+                        request, f"Your current subscription period ends in {days_left} days. Open Billing to renew."
                     )
 
         except Exception:

@@ -3,7 +3,7 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_console' %}">&larr; FundingLoan read console</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:funding_loan_read_console' request.workspace.slug %}">&larr; FundingLoan read console</a>
   <h1 class="h3 mt-2 mb-1">Create FundingLoan draft</h1>
   <p class="text-muted mb-0">Choose the lender now. Terms and collateral are captured during a separate activation step.</p>
 </div>
@@ -20,6 +20,6 @@
     {% for error in form.lender.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
   </div>
   <button class="btn btn-primary" type="submit">Save draft</button>
-  <a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_read_console' %}">Cancel</a>
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:funding_loan_read_console' request.workspace.slug %}">Cancel</a>
 </form>
 {% endblock %}

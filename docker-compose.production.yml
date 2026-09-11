@@ -1,0 +1,23 @@
+# External PostgreSQL and TLS proxy are configured by the deployment operator.
+name: rokkad
+services:
+  web:
+    image: ${ROKKAD_IMAGE:?Set an explicitly versioned ROKKAD_IMAGE}
+    env_file: .env.production.runtime
+    environment:
+      DJANGO_SETTINGS_MODULE: django_project.settings.prod
+    ports: ["127.0.0.1:8000:8000"]
+    volumes:
+      - media:/var/www/rokkad/media
+      - staticfiles:/var/www/rokkad/static
+    restart: unless-stopped
+  migrate:
+    image: ${ROKKAD_IMAGE:?Set an explicitly versioned ROKKAD_IMAGE}
+    profiles: [tools]
+    env_file: .env.production.migration
+    environment:
+      DJANGO_SETTINGS_MODULE: django_project.settings.migration
+    command: ["python", "manage.py", "migrate", "--settings", "django_project.settings.migration", "--noinput"]
+volumes:
+  media:
+  staticfiles:

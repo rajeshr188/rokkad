@@ -63,7 +63,7 @@ class ReleaseFilter(django_filters.FilterSet):
 class CollateralTable(tables.Table):
     description = tables.TemplateColumn(template_name="loans/browse/_collateral_identity.html", verbose_name="Collateral", order_by="description")
     borrower = tables.Column(accessor="loan.borrower.display_name", verbose_name="Borrower")
-    loan = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'loans:pawn_loan_detail' record.loan_id %}">{{ record.loan.loan_number }}</a><div class="small text-muted">{{ record.loan.get_state_display }}</div>""", order_by="loan__loan_number")
+    loan = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'workspace_slug_loan_detail' request.workspace.slug record.loan_id %}">{{ record.loan.loan_number }}</a><div class="small text-muted">{{ record.loan.get_state_display }}</div>""", order_by="loan__loan_number")
     class Meta:
         model = PawnCollateralItem
         fields = ("description", "borrower", "loan", "metal", "gross_weight", "net_weight", "purity_percentage", "latest_appraised_value", "custody_state", "current_storage_location")
@@ -73,9 +73,9 @@ class CollateralTable(tables.Table):
 
 
 class ReleaseTable(tables.Table):
-    release_number = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'loans:pawn_release_detail' record.pk %}">{{ record.release_number }}</a>""", order_by="release_number")
+    release_number = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'workspace_loans:pawn_release_detail' request.workspace.slug record.pk %}">{{ record.release_number }}</a>""", order_by="release_number")
     borrower = tables.Column(accessor="loan.borrower.display_name", verbose_name="Borrower")
-    loan = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'loans:pawn_loan_detail' record.loan_id %}">{{ record.loan.loan_number }}</a>""", order_by="loan__loan_number")
+    loan = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'workspace_slug_loan_detail' request.workspace.slug record.loan_id %}">{{ record.loan.loan_number }}</a>""", order_by="loan__loan_number")
     kind = tables.TemplateColumn("""{% if record.is_full_release %}Full{% else %}Partial{% endif %}""", verbose_name="Type", order_by="is_full_release")
     settlement_amount = tables.TemplateColumn("{{ record.settlement_amount|floatformat:2 }}", verbose_name="Settlement (INR)", order_by="settlement_amount")
     status = tables.TemplateColumn("""{% if record.reversal %}Reversed{% else %}Recorded{% endif %}""", orderable=False)

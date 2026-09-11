@@ -27,6 +27,8 @@
     <script src="{% static 'django_select2/django_select2.js' %}"></script>
     
     {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/brand.css' %}">
+    {% include 'components/brand_head.html' %}
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <!-- Main Navigation Bar -->
@@ -50,7 +52,8 @@
             <div class="container-lg">
                 <div class="row gy-3 align-items-center">
                     <div class="col-12 col-md-4 text-center text-md-start">
-                        <span>&copy; 2026 <a href="#" class="text-light-emphasis">Rokkad</a></span>
+                        <a class="rk-footer-brand" href="{% url 'home' %}">{% include 'components/brand.html' %}</a>
+                        <span>&copy; {% now "Y" %} <a href="#" class="text-light-emphasis">Rokkad</a></span>
                     </div>
                     <div class="col-12 col-md-4 text-center">
                         <div class="social-links">

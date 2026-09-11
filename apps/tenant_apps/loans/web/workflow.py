@@ -28,7 +28,7 @@ def loan_workflow_settings(request):
     if request.method == "POST" and form.is_valid():
         set_loan_workflow(actor=request.user, mode=form.cleaned_data["mode"])
         messages.success(request, "Loan workflow updated. Existing loans and their history are unchanged.")
-        return redirect("loans:loan_workflow_settings")
+        return redirect('workspace_loans:loan_workflow_settings', workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/workflow.html", {"form": form})
 
 
@@ -43,7 +43,7 @@ def pawn_loan_review_disburse(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Loan approved and disbursed. You can now print its documents.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     economics = None
     review_error = None
     available = loan.state == "DRAFT" and request.loans_workspace.loan_workflow == "SIMPLE"

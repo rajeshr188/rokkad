@@ -4,9 +4,8 @@ Includes checkout, payment confirmation, and invoice management.
 """
 
 import json
-from decimal import Decimal
-from datetime import datetime
-from django.views.generic import ListView, DetailView, CreateView, TemplateView
+from decimal import Decimal, ROUND_HALF_UP
+from django.views.generic import ListView, DetailView, TemplateView
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -14,54 +13,24 @@ from django.http import JsonResponse, HttpResponse, Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
-from .models import Plan, Subscription, Invoice, Payment, ProviderWebhookEvent
-from .razorpay_service import RazorpayService
+from .models import Plan, Subscription, Invoice, ProviderWebhookEvent
+from .razorpay_service import BillingProviderError, RazorpayService
 from .services import get_workspace_member_usage
 from apps.orgs.tenant_context import resolve_request_workspace
 
 
 class BillingPermissionMixin:
-    """Require workspace owner role in current workspace for billing pages."""
-
-    OWNER_ROLE_NAMES = {"Owner"}
+    """Require canonical ownership in the explicit Workspace for billing pages."""
 
     def dispatch(self, request, *args, **kwargs):
-        workspace = resolve_request_workspace(request)
-
-        from apps.orgs.models import Membership
-
-        if not workspace:
-            messages.error(request, "Open billing from an explicit Workspace.")
-            return redirect("workspace_selector")
-
-        # Platform admins always have access
-        from apps.orgs.permissions import is_platform_admin
-
-        if is_platform_admin(request.user):
-            return super().dispatch(request, *args, **kwargs)
-
-        try:
-            membership = Membership.objects.select_related("role").get(
-                user=request.user,
-                company=workspace,
-            )
-        except Membership.DoesNotExist:
-            raise PermissionDenied("Not a workspace member")
-
-        # Billing is strictly owner-only.
-        role_name = membership.role.name if membership.role else ""
-        if role_name not in self.OWNER_ROLE_NAMES:
-            raise PermissionDenied("Only workspace owners can access billing")
-
+        from .checkout import require_billing_owner
+        require_billing_owner(workspace=resolve_request_workspace(request), actor=request.user)
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -162,7 +131,7 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
 
         # Calculate GST
         gst_rate = Decimal(str(getattr(settings, "BILLING_TAX_RATE", "18")))
-        gst_amount = amount * (gst_rate / Decimal("100"))
+        gst_amount = (amount * (gst_rate / Decimal("100"))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         total_amount = amount + gst_amount
 
         context.update(
@@ -180,94 +149,51 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
         return context
 
 
-class PaymentView(LoginRequiredMixin, BillingPermissionMixin, CreateView):
-    """Process payment and create subscription"""
-
-    model = Subscription
-    fields = []
-
-    @require_POST
+class OrderView(LoginRequiredMixin, BillingPermissionMixin, View):
     def post(self, request, *args, **kwargs):
-        """Handle payment creation"""
-
+        from .checkout import create_checkout
         try:
-            data = json.loads(request.body)
-
-            plan_id = data.get("plan_id")
-            razorpay_payment_id = data.get("razorpay_payment_id")
-            razorpay_order_id = data.get("razorpay_order_id")
-            razorpay_signature = data.get("razorpay_signature")
-
-            # Verify payment signature
-            if not RazorpayService.verify_payment_signature(
-                razorpay_order_id, razorpay_payment_id, razorpay_signature
-            ):
-                return JsonResponse(
-                    {"success": False, "error": "Payment verification failed"},
-                    status=400,
-                )
-
-            plan = get_object_or_404(Plan, id=plan_id)
-            workspace = resolve_request_workspace(request)
-            if workspace is None:
-                return JsonResponse(
-                    {"success": False, "error": "Explicit Workspace required"},
-                    status=400,
-                )
-
-            # Create or update subscription
-            subscription, created = Subscription.objects.update_or_create(
-                company=workspace,
-                defaults={
-                    "plan": plan,
-                },
+            data = _payment_json(request)
+            invoice = create_checkout(
+                workspace=resolve_request_workspace(request), actor=request.user,
+                plan_id=data.get("plan_id"), billing_cycle=data.get("billing_cycle"),
+                request_key=data.get("checkout_key"),
             )
-            from apps.subscriptions.services import (
-                ensure_billing_account_for_subscription,
-                ensure_entitlements_for_subscription,
+            return JsonResponse({"order_id": invoice.razorpay_order_id,
+                                 "amount": invoice.checkout_snapshot["amount"], "currency": "INR"})
+        except ValidationError as exc:
+            return JsonResponse({"success": False, "error": exc.messages[0]}, status=400)
+        except BillingProviderError as exc:
+            return JsonResponse({"success": False, "error": str(exc)}, status=502)
+
+
+class PaymentView(LoginRequiredMixin, BillingPermissionMixin, View):
+    def post(self, request, *args, **kwargs):
+        from .checkout import confirm_checkout
+        workspace = resolve_request_workspace(request)
+        try:
+            data = _payment_json(request)
+            invoice = confirm_checkout(
+                workspace=workspace, actor=request.user, order_id=data.get("razorpay_order_id"),
+                payment_id=data.get("razorpay_payment_id"), signature=data.get("razorpay_signature"),
             )
+            return JsonResponse({"success": True, "subscription_id": invoice.subscription_id,
+                                 "redirect_url": reverse("workspace_subscriptions:dashboard",
+                                                         kwargs={"workspace_slug": workspace.slug})})
+        except ValidationError as exc:
+            return JsonResponse({"success": False, "error": exc.messages[0]}, status=400)
+        except BillingProviderError as exc:
+            return JsonResponse({"success": False, "error": str(exc)}, status=502)
 
-            ensure_billing_account_for_subscription(subscription)
-            ensure_entitlements_for_subscription(subscription)
 
-            # Update invoice as paid
-            try:
-                invoice = Invoice.objects.get(razorpay_order_id=razorpay_order_id)
-                invoice.mark_as_paid(razorpay_payment_id)
-            except Invoice.DoesNotExist:
-                return JsonResponse(
-                    {"success": False, "error": "Invoice not found"}, status=400
-                )
-
-            # Create payment record
-            Payment.objects.get_or_create(
-                razorpay_payment_id=razorpay_payment_id,
-                defaults={
-                    "invoice": invoice,
-                    "razorpay_order_id": razorpay_order_id,
-                    "amount": invoice.total_amount,
-                    "status": Payment.PaymentStatusChoices.CAPTURED,
-                    "payment_date": timezone.now(),
-                },
-            )
-
-            # Send confirmation email
-            _send_subscription_confirmation_email(request.user, subscription)
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Payment successful",
-                    "subscription_id": subscription.id,
-                    "redirect_url": reverse(
-                        "workspace_subscriptions:dashboard",
-                        kwargs={"workspace_slug": workspace.slug},
-                    ),
-                }
-            )
-
-        except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)}, status=500)
+def _payment_json(request):
+    try:
+        data = json.loads(request.body)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise ValidationError("Provide a JSON object.") from exc
+    if not isinstance(data, dict):
+        raise ValidationError("Provide a JSON object.")
+    return data
 
 
 class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
@@ -289,6 +215,11 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
             subscription = workspace.subscription
             context["subscription"] = subscription
             context["plan"] = subscription.plan
+            from .billing import effective_billing_state
+            context["billing_decision"] = effective_billing_state(subscription)
+            context["billing_status_label"] = Subscription.StatusChoices(
+                context["billing_decision"].status
+            ).label
 
             # Get recent invoices
             context["recent_invoices"] = Invoice.objects.filter(
@@ -354,7 +285,58 @@ class InvoiceDetailView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
         invoice = self.get_object()
         context["subscription"] = invoice.subscription
         context["gst_percentage"] = invoice.gst_rate
+        context["review_revision"] = invoice.subscription.updated_at.isoformat()
         return context
+
+
+class BillingReviewListView(LoginRequiredMixin, BillingPermissionMixin, ListView):
+    template_name = "subscriptions/reviews.html"
+    context_object_name = "invoices"
+    paginate_by = 25
+
+    def get_queryset(self):
+        from django.db.models import Q
+        return Invoice.objects.filter(
+            subscription__company=resolve_request_workspace(self.request), billing_resolution__isnull=True,
+        ).exclude(checkout_snapshot={}).filter(
+            Q(payment__status="refunded") | Q(status="issued"),
+        ).select_related("payment").order_by("-created_at", "-pk")
+
+
+class ResolveBillingReviewView(LoginRequiredMixin, BillingPermissionMixin, View):
+    def post(self, request, *args, **kwargs):
+        from .reviews import resolve_billing_review
+        workspace = resolve_request_workspace(request)
+        try:
+            resolve_billing_review(
+                workspace=workspace, actor=request.user, invoice_id=kwargs["pk"],
+                action=request.POST.get("decision"), reason=request.POST.get("reason"),
+                revision=request.POST.get("revision"), payment_id=request.POST.get("payment_id") or None,
+                refund_ids=request.POST.get("refund_ids", "").split(),
+            )
+        except (ValidationError, BillingProviderError) as exc:
+            messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else str(exc))
+        else:
+            messages.success(request, "Billing review decision recorded.")
+        return redirect("workspace_subscriptions:invoice-detail", workspace_slug=workspace.slug, pk=kwargs["pk"])
+
+
+class ReconcileInvoiceView(LoginRequiredMixin, BillingPermissionMixin, View):
+    def post(self, request, *args, **kwargs):
+        from .recovery import reconcile_payment
+        workspace = resolve_request_workspace(request)
+        try:
+            result = reconcile_payment(
+                workspace=workspace, actor=request.user, invoice_id=kwargs["pk"],
+                payment_id=request.POST.get("payment_id"), refund_id=request.POST.get("refund_id") or None,
+                reason=request.POST.get("reason"), apply=request.POST.get("action") == "apply",
+            )
+        except (ValidationError, BillingProviderError) as exc:
+            messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else str(exc))
+        else:
+            messages.success(request, "Provider records reconciled." if result["applied"] else
+                             "Provider identifiers and amounts verified. No changes saved; apply to reconcile.")
+        return redirect("workspace_subscriptions:invoice-detail", workspace_slug=workspace.slug, pk=kwargs["pk"])
 
 
 class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
@@ -393,13 +375,13 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
             pdf.drawString(50, 720, f"Invoice #: {invoice.invoice_number}")
             pdf.drawString(50, 705, f"Date: {invoice.invoice_date}")
             pdf.drawString(
-                50, 690, f"Customer: {invoice.subscription.user.get_full_name()}"
+                50, 690, f"Customer: {invoice.billing_contact_name}"
             )
 
             # Amount details
-            pdf.drawString(50, 650, f"Subtotal: ₹{invoice.subtotal}")
-            pdf.drawString(50, 635, f"GST ({invoice.gst_rate}%): ₹{invoice.gst_amount}")
-            pdf.drawString(50, 620, f"Total: ₹{invoice.total_amount}")
+            pdf.drawString(50, 650, f"Subtotal: INR {invoice.subtotal}")
+            pdf.drawString(50, 635, f"GST ({invoice.gst_rate}%): INR {invoice.gst_amount}")
+            pdf.drawString(50, 620, f"Total: INR {invoice.total_amount}")
 
             pdf.save()
 
@@ -414,7 +396,7 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
             messages.error(request, f"Error generating PDF: {str(e)}")
             return redirect(
                 "workspace_subscriptions:invoice-detail",
-                workspace_slug=workspace.slug,
+                workspace_slug=invoice.subscription.company.slug,
                 pk=invoice.id,
             )
 
@@ -422,117 +404,44 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
 @csrf_exempt
 @require_POST
 def razorpay_webhook(request):
-    """
-    Handle Razorpay webhook events.
-    https://razorpay.com/docs/webhooks/
-    """
+    import hashlib
+    import hmac
+    import logging
 
+    secret = settings.RAZORPAY_WEBHOOK_SECRET
+    signature = request.headers.get("X-Razorpay-Signature", "")
+    expected = hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
+    if not secret or not signature.isascii() or not hmac.compare_digest(expected, signature):
+        return HttpResponse("Signature verification failed", status=400)
     try:
-        # Get webhook signature
-        razorpay_signature = request.META.get("HTTP_X_RAZORPAY_SIGNATURE")
-        webhook_body = request.body
-
-        # Verify webhook signature
-        import hmac
-        import hashlib
-
-        key = settings.RAZORPAY_WEBHOOK_SECRET.encode("utf-8")
-        generated_signature = hmac.new(key, webhook_body, hashlib.sha256).hexdigest()
-
-        if generated_signature != razorpay_signature:
-            return HttpResponse("Signature verification failed", status=400)
-
-        # Persist the provider identity before processing so replay is harmless.
-        event_data = json.loads(webhook_body)
-        provider_event_id = request.META.get("HTTP_X_RAZORPAY_EVENT_ID") or hashlib.sha256(
-            webhook_body
-        ).hexdigest()
-        webhook_event, created = ProviderWebhookEvent.objects.get_or_create(
-            provider="razorpay",
-            provider_event_id=provider_event_id,
-            defaults={
-                "event_type": event_data.get("event", ""),
-                "payload": event_data,
-            },
+        data = _payment_json(request)
+    except ValidationError:
+        return HttpResponse("Invalid payload", status=400)
+    event_id = request.headers.get("X-Razorpay-Event-Id") or hashlib.sha256(request.body).hexdigest()
+    if len(event_id) > 255 or not isinstance(data.get("event"), str) or len(data["event"]) > 100:
+        return HttpResponse("Invalid event identity", status=400)
+    with transaction.atomic():
+        event, _ = ProviderWebhookEvent.objects.get_or_create(
+            provider="razorpay", provider_event_id=event_id,
+            defaults={"event_type": data["event"], "payload": data},
         )
-        if not created and webhook_event.status == ProviderWebhookEvent.StatusChoices.PROCESSED:
+        event = ProviderWebhookEvent.objects.select_for_update().get(pk=event.pk)
+        if event.payload != data:
+            return HttpResponse("Event identity already has a different payload", status=400)
+        if event.status == ProviderWebhookEvent.StatusChoices.PROCESSED:
             return HttpResponse("Webhook already processed", status=200)
-
-        with transaction.atomic():
-            processed = RazorpayService.handle_payment_webhook(event_data)
-            webhook_event.status = (
-                ProviderWebhookEvent.StatusChoices.PROCESSED
-                if processed
-                else ProviderWebhookEvent.StatusChoices.FAILED
-            )
-            webhook_event.error_message = "" if processed else "Provider event processing failed"
-            webhook_event.processed_at = timezone.now() if processed else None
-            webhook_event.save(
-                update_fields=["status", "error_message", "processed_at", "updated_at"]
-            )
-        if not processed:
-            return HttpResponse("Webhook processing failed", status=500)
-
-        return HttpResponse("Webhook processed", status=200)
-
-    except Exception as e:
-        print(f"Webhook error: {str(e)}")
-        return HttpResponse("Webhook processing failed", status=500)
-
-
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-
-def _send_subscription_confirmation_email(user, subscription):
-    """Send subscription confirmation email"""
-
-    subject = f"Welcome to {subscription.plan.name} Plan!"
-
-    context = {
-        "user": user,
-        "plan": subscription.plan,
-        "subscription": subscription,
-        "support_email": getattr(
-            settings, "BILLING_EMAIL_SUPPORT", "support@rokkad.com"
-        ),
-    }
-
-    html_message = render_to_string(
-        "subscriptions/emails/subscription_confirmation.html", context
-    )
-    plain_message = strip_tags(html_message)
-
-    send_mail(
-        subject,
-        plain_message,
-        getattr(settings, "BILLING_EMAIL_SENDER", "billing@rokkad.com"),
-        [user.email],
-        html_message=html_message,
-        fail_silently=True,
-    )
-
-
-def _send_invoice_email(invoice):
-    """Send invoice email to customer"""
-
-    subject = f"Invoice {invoice.invoice_number} from Rokkad"
-
-    context = {
-        "user": invoice.subscription.user,
-        "invoice": invoice,
-        "subscription": invoice.subscription,
-    }
-
-    html_message = render_to_string("subscriptions/emails/invoice.html", context)
-    plain_message = strip_tags(html_message)
-
-    send_mail(
-        subject,
-        plain_message,
-        getattr(settings, "BILLING_EMAIL_SENDER", "billing@rokkad.com"),
-        [invoice.subscription.user.email],
-        html_message=html_message,
-        fail_silently=True,
-    )
+        try:
+            with transaction.atomic():
+                if not RazorpayService.handle_payment_webhook(data):
+                    raise ValidationError("Event requires operator review.")
+        except Exception:
+            logging.getLogger(__name__).exception("Billing webhook needs review: event %s", event.pk)
+            event.status = ProviderWebhookEvent.StatusChoices.FAILED
+            event.error_message = "Processing failed; reconcile with provider before retrying."
+        else:
+            event.status = ProviderWebhookEvent.StatusChoices.PROCESSED
+            event.error_message = ""
+            event.processed_at = timezone.now()
+        event.save(update_fields=["status", "error_message", "processed_at", "updated_at"])
+    return HttpResponse("Webhook processed" if not event.error_message else "Webhook needs review",
+                        status=200 if not event.error_message else 500)

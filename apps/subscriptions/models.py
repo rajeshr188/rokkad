@@ -138,8 +138,10 @@ class Subscription(models.Model):
         if not self.id:
             # First time creation - set dates
             self.start_date = timezone.now()
-            self.trial_end_date = self.start_date + timedelta(days=self.plan.trial_days)
-            self.status = self.StatusChoices.TRIAL
+            self.trial_end_date = (
+                self.start_date + timedelta(days=self.plan.trial_days)
+                if self.status == self.StatusChoices.TRIAL else None
+            )
 
             # Set end date based on billing cycle
             if self.plan.billing_cycle == Plan.BillingCycleChoices.MONTHLY:
@@ -377,6 +379,8 @@ class Invoice(models.Model):
         related_name="invoices",
         verbose_name=_("Subscription"),
     )
+    checkout_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    checkout_snapshot = models.JSONField(default=dict, blank=True, editable=False)
 
     # Invoice details
     invoice_number = models.CharField(
@@ -422,7 +426,7 @@ class Invoice(models.Model):
         max_length=255, null=True, blank=True, verbose_name=_("Razorpay Payment ID")
     )
     razorpay_order_id = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name=_("Razorpay Order ID")
+        max_length=255, null=True, blank=True, unique=True, verbose_name=_("Razorpay Order ID")
     )
 
     # Dates
@@ -449,7 +453,8 @@ class Invoice(models.Model):
     def save(self, *args, **kwargs):
         # Calculate amounts
         self.subtotal = self.base_amount + self.overage_amount
-        self.gst_amount = self.subtotal * (self.gst_rate / Decimal("100"))
+        from decimal import ROUND_HALF_UP
+        self.gst_amount = (self.subtotal * (self.gst_rate / Decimal("100"))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         self.total_amount = self.subtotal + self.gst_amount
 
         # Auto-generate invoice number if not set
@@ -466,21 +471,20 @@ class Invoice(models.Model):
 
         super().save(*args, **kwargs)
 
-    def mark_as_paid(self, razorpay_id):
-        """Mark an invoice paid and activate through the billing transition service."""
-        self.status = self.StatusChoices.PAID
-        self.paid_at = timezone.now()
-        self.razorpay_payment_id = razorpay_id
-        self.save()
+    @property
+    def billing_contact_name(self):
+        return self.checkout_snapshot.get("contact_name") or self.subscription.company.name
 
-        from apps.subscriptions.billing import transition_subscription
+    @property
+    def billing_contact_email(self):
+        if self.checkout_snapshot:
+            return self.checkout_snapshot.get("billing_email", "")
+        account = BillingAccount.objects.filter(company_id=self.subscription.company_id).first()
+        return account.billing_email if account else self.subscription.company.owner.email
 
-        transition_subscription(
-            subscription=self.subscription,
-            target_status=Subscription.StatusChoices.ACTIVE,
-            event_type="invoice.paid",
-            payload={"invoice_id": self.pk, "provider_payment_id": razorpay_id},
-        )
+    @property
+    def billed_plan_name(self):
+        return self.checkout_snapshot.get("plan_name") or self.subscription.plan.name
 
 
 class Payment(models.Model):
@@ -561,6 +565,33 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment {self.razorpay_payment_id} - ₹{self.amount} ({self.get_status_display()})"
+
+
+class PaymentRefund(models.Model):
+    """Verified, processed provider refund evidence in the billing control plane."""
+
+    payment = models.ForeignKey(Payment, on_delete=models.PROTECT, related_name="refunds")
+    provider_refund_id = models.CharField(max_length=255, unique=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    evidence = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name="billing_refund_positive")]
+
+
+class BillingResolution(models.Model):
+    """One final, immutable owner decision for a checkout exception."""
+
+    invoice = models.OneToOneField(Invoice, on_delete=models.PROTECT, related_name="billing_resolution")
+    action = models.CharField(max_length=30, choices=[
+        ("retain_access", "Retain access"), ("end_access", "End refunded term"),
+        ("returned_payment", "Stale payment fully returned"),
+    ])
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    reason = models.TextField()
+    evidence = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class UsageMetrics(models.Model):

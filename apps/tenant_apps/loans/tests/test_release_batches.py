@@ -157,23 +157,58 @@ class ReleaseBatchTests(WorkspaceTestCase):
         with self.assertRaises(ValueError):
             preview_release_batch(workspace=self.tenant, actor=self.owner, loan_ids=[999999])
 
+    def test_direct_routes_keep_csrf_and_release_permission_checks(self):
+        url = reverse("workspace_loans:release_batch_create", kwargs={"workspace_slug": self.tenant.slug})
+        search_url = reverse("workspace_loans:release_batch_search", kwargs={"workspace_slug": self.tenant.slug})
+        self.client.handler.enforce_csrf_checks = True
+        response = self.client.post(url, {"action": "preview", "loans": [self.loans[0].pk]})
+        self.assertEqual(response.status_code, 403)
+        self.client.handler.enforce_csrf_checks = False
+        member = get_user_model().objects.create_user(username="batch-route-staff")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(company=self.tenant, user=member, role=role)
+        workspace_role_permissions(role, self.tenant).clear()
+        from django.contrib.auth.models import Permission
+        workspace_role_permissions(role, self.tenant).add(Permission.objects.get(
+            content_type__app_label="orgs", content_type__model="company", codename="data_view",
+        ))
+        self.client.force_login(member)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.get(search_url).status_code, 403)
+        self.assertEqual(self.client.post(url, {"action": "complete"}).status_code, 403)
+        self.assertFalse(PawnReleaseBatch.objects.exists())
+
     def test_http_preview_completion_history_and_search(self):
-        url = reverse("loans:release_batch_create")
-        response = self.client.get(reverse("loans:release_batch_search"), {"q": "Borrower"})
+        self.enterContext(patch("apps.orgs.views.workspace_slug_loans_dispatch", side_effect=AssertionError("legacy dispatcher used")))
+        url = reverse("workspace_loans:release_batch_create", kwargs={"workspace_slug": self.tenant.slug})
+        search_url = reverse("workspace_loans:release_batch_search", kwargs={"workspace_slug": self.tenant.slug})
+        for headers in ({}, {"HTTP_HX_REQUEST": "true", "HTTP_HX_HISTORY_RESTORE_REQUEST": "true"}):
+            page = self.client.get(url, **headers)
+            self.assertContains(page, '<form method="post" action="' + url + '"')
+            self.assertContains(page, 'data-search-url="' + search_url + '"')
+            self.assertContains(page, "<html")
+            self.assertNotContains(page, 'href="/loans/')
+        response = self.client.get(search_url, {"q": "Borrower"})
         self.assertEqual(len(response.json()["results"]), 2)
         page = self.client.post(url, {"action": "preview", "loans": [loan.pk for loan in self.loans]}, HTTP_HX_REQUEST="true")
         self.assertContains(page, "Total to collect")
         self.assertNotContains(page, "<html")
+        self.assertContains(page, 'action="' + url + '"')
+        self.assertNotContains(page, 'href="/loans/')
         header = page.context["confirmation_form"]
         payload = {"action": "complete", "request_key": header["request_key"].value(), "quote_token": header["quote_token"].value(), "paid_by": "Payer", "payment_confirmed": "on"}
         for loan in self.loans:
             payload.update({f"collector_{loan.pk}-loan_id": loan.pk, f"collector_{loan.pk}-collector_type": "borrower", f"collector_{loan.pk}-handover_confirmed": "on"})
         response = self.client.post(url, payload)
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("workspace_loans:release_batch_detail", kwargs={
+            "workspace_slug": self.tenant.slug, "batch_pk": PawnReleaseBatch.objects.get().pk,
+        }))
         self.assertContains(self.client.get(response.url), "Borrower 1")
+        self.assertNotContains(self.client.get(response.url), 'href="/loans/')
         self.assertEqual(self.client.post(url, payload).status_code, 302)
-        self.assertEqual(self.client.get(reverse("loans:release_batch_search")).json()["results"], [])
-        self.assertContains(self.client.get(reverse("loans:release_batch_list")), "Payer")
+        self.assertEqual(self.client.get(search_url).json()["results"], [])
+        self.assertContains(self.client.get(reverse("workspace_loans:release_batch_list", kwargs={"workspace_slug": self.tenant.slug})), "Payer")
 
     def test_database_guards_and_restricted_role_isolation(self):
         batch = complete_release_batch(**self.command())

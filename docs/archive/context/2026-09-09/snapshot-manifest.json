@@ -1,0 +1,56 @@
+[
+  {
+    "source": "docs/AGENT_MEMORY.md",
+    "archive": "docs/archive/context/2026-09-09/AGENT_MEMORY.md",
+    "source_sha256": "421c1eb87e27830b52314b31374e78c0147861075e2c10220aa541f1bdd15084",
+    "source_lines": 2887
+  },
+  {
+    "source": "docs/STATUS.md",
+    "archive": "docs/archive/context/2026-09-09/STATUS.md",
+    "source_sha256": "97273623812f6b3147e558133aa97daf5e96f0b29b45478d16090d637a3a4982",
+    "source_lines": 4652
+  },
+  {
+    "source": "docs/README.md",
+    "archive": "docs/archive/context/2026-09-09/README.md",
+    "source_sha256": "10402bf5097fc91bed0a9e50aa29f039d417407a8a3400b83941d17a96951239",
+    "source_lines": 92
+  },
+  {
+    "source": "docs/ROADMAP.md",
+    "archive": "docs/archive/context/2026-09-09/ROADMAP.md",
+    "source_sha256": "f8ad38552b4150ea702d0247c399f0c59d327b810cd36873a99dfa813eee2c16",
+    "source_lines": 55
+  },
+  {
+    "source": "docs/plans/active.md",
+    "archive": "docs/archive/context/2026-09-09/plans/active.md",
+    "source_sha256": "bf3b58b18c2bc5a8a5e876aad5fe31368683e59f430d55d6db6abe6523281f35",
+    "source_lines": 175
+  },
+  {
+    "source": "docs/implementation/dependency-policy.md",
+    "archive": "docs/archive/context/2026-09-09/implementation/dependency-policy.md",
+    "source_sha256": "1d00be3565bcd077feaee196057de6cee54ffa4420e50b6215257d9b2b5bd046",
+    "source_lines": 25
+  },
+  {
+    "source": "docs/implementation/testing-and-migrations.md",
+    "archive": "docs/archive/context/2026-09-09/implementation/testing-and-migrations.md",
+    "source_sha256": "ca203af882358a6657d0fa630ee3f7d819ae2e1264423517f51f4e67cf1a8090",
+    "source_lines": 25
+  },
+  {
+    "source": "docs/domain/party.md",
+    "archive": "docs/archive/context/2026-09-09/domain/party.md",
+    "source_sha256": "ecc26db5bc622239bef3f6311d2de7ab91a91433fb19c118db388c77405aa542",
+    "source_lines": 135
+  },
+  {
+    "source": "docs/domain/notifications.md",
+    "archive": "docs/archive/context/2026-09-09/domain/notifications.md",
+    "source_sha256": "14fe49c724c46a82702cf428fda059f8c9db1bf800b37903e994f765bf9e8139",
+    "source_lines": 20
+  }
+]

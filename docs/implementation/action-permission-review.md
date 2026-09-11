@@ -167,7 +167,11 @@ coverage of every Party/Rates/Notify service or operator deployment.
 ### Jobs and operator commands
 
 - `dispatch_pawn_loan_notices` processes existing queued intent/job records in an
-  active Workspace context. It is an operator command, not a public member action.
+  active Workspace context. It now requires `--workspace-id`, checks ACTIVE at
+  entry, opens/clears its own context and bounds `--limit` to 1–1000. It is an
+  operator command, not a public member action. Product bootstrap likewise requires
+  an explicit active Workspace; read-only document integrity can inspect inactive
+  Workspaces for recovery. See [operator commands](loans-operator-commands.md).
   A user's manual retry must call the actor-authorized wrapper. Revoking membership
   does not currently cancel an already-queued business notice; changing that policy
   requires a separate decision, not silently disabling scheduled delivery.
@@ -373,3 +377,21 @@ Optional license scope remains last and requires fresh owner approval.
 - [Report/export actions](../../apps/tenant_apps/loans/web/reports.py)
 - [Workspace access](../../apps/orgs/access.py)
 - [Notify access mapping](../../apps/tenant_apps/notify_v2/access.py)
+
+## Billing recovery follow-through (2026-09-09)
+
+Invoice reconciliation requires matching Workspace context and canonical current
+owner/Membership (or existing platform override), before provider I/O and again
+under the Company lock before application. The CLI requires explicit Workspace,
+actor, invoice, payment and reason and defaults to check-only. Signed refund events
+use verified provider GET evidence and the same locked refund recorder. The new
+PaymentRefund table is global billing-control-plane evidence reached only through
+a scoped Invoice/Payment; no business-app RLS boundary is replaced. See
+[recovery flow and limitations](../flows/subscription-checkout.md#recover-a-known-payment-or-refund).
+
+Final billing decisions also require current canonical ownership and matching
+Workspace context under the Company lock. The submitted subscription revision must
+match before a new decision. Ending refunded access is limited to the latest
+started current term; newer/future terms cannot be cancelled. Stale-payment returns
+require verified full refund coverage and never activate a contract. BillingResolution
+is immutable global control-plane evidence. See [review actions](../flows/subscription-checkout.md#resolve-a-billing-review).

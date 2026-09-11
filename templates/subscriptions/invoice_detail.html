@@ -198,6 +198,7 @@
         <!-- Invoice Header -->
         <div class="invoice-header">
             <div>
+                {% include 'components/brand.html' %}
                 <div class="invoice-title">INVOICE</div>
             </div>
             <div class="invoice-status">
@@ -227,8 +228,8 @@
         <div class="invoice-info">
             <div class="info-section">
                 <h5>Bill To</h5>
-                <p><strong>{{ subscription.user.get_full_name }}</strong></p>
-                <p>{{ subscription.user.email }}</p>
+                <p><strong>{{ invoice.billing_contact_name }}</strong></p>
+                <p>{{ invoice.billing_contact_email }}</p>
                 <p>{{ subscription.company.name }}</p>
             </div>
             <div class="info-section">
@@ -259,7 +260,7 @@
             <tbody>
                 <tr>
                     <td>
-                        <strong>{{ subscription.plan.name }}</strong>
+                        <strong>{{ invoice.billed_plan_name }}</strong>
                         <br>
                         <small class="text-muted">Monthly subscription for {{ invoice.period_start|date:"M Y" }}</small>
                     </td>
@@ -292,8 +293,78 @@
             </tbody>
         </table>
         
+        {% if invoice.payment.refund_amount %}
+        <div class="alert alert-warning">
+            Processed refunds: INR {{ invoice.payment.refund_amount }}.
+            {% if invoice.payment.status == 'refunded' %}
+            {% if invoice.billing_resolution %}
+            Review resolved: {{ invoice.billing_resolution.get_action_display }}.
+            {% else %}Fully refunded: access remains unchanged pending owner review.{% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if invoice.checkout_snapshot %}
+        <details class="notes-section">
+            <summary>Check or recover a payment</summary>
+            <p>Use the existing Razorpay payment ID for this invoice. For a processed refund,
+                also provide its refund ID. This does not issue a refund or start another payment.</p>
+            <form method="post" action="{% url 'workspace_subscriptions:invoice-reconcile' workspace_slug=request.workspace.slug pk=invoice.pk %}">
+                {% csrf_token %}
+                <label for="recovery-payment">Payment ID</label>
+                <input class="form-control" id="recovery-payment" name="payment_id" required maxlength="255" value="{{ invoice.razorpay_payment_id|default:'' }}">
+                <label for="recovery-refund">Refund ID (for a processed refund)</label>
+                <input class="form-control" id="recovery-refund" name="refund_id" maxlength="255">
+                <label for="recovery-reason">Reason for review</label>
+                <input class="form-control" id="recovery-reason" name="reason" required maxlength="1000">
+                <button class="btn btn-outline-primary mt-2" name="action" value="check">Check provider records</button>
+                <button class="btn btn-primary mt-2" name="action" value="apply">Verify and apply</button>
+            </form>
+        </details>
+        {% endif %}
+
+        {% if invoice.billing_resolution %}
+        <section class="notes-section">
+            <h5>Final review decision</h5>
+            <p>{{ invoice.billing_resolution.get_action_display }} ? {{ invoice.billing_resolution.created_at }}</p>
+            <p>{{ invoice.billing_resolution.reason }}</p>
+        </section>
+        {% elif invoice.checkout_snapshot %}
+        <details class="notes-section">
+            <summary>Resolve billing review</summary>
+            <p>Retaining access leaves the existing term unchanged, including its expiry.
+            Ending access cancels only the current, started, fully refunded term. A newer
+            or future paid term cannot be ended through this review.</p>
+            <p>For a stale unpaid checkout, first arrange any refund with the provider.
+            Record a full return here using all processed refund IDs. This action never
+            issues a refund, grants access or rewrites the current subscription.</p>
+            <form method="post" action="{% url 'workspace_subscriptions:resolve-review' workspace_slug=request.workspace.slug pk=invoice.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="revision" value="{{ review_revision }}">
+                <label for="billing-decision">Decision</label>
+                <select id="billing-decision" name="decision" class="form-control" required>
+                    <option value="">Choose a decision</option>
+                    {% if invoice.payment.status == 'refunded' %}
+                    <option value="retain_access">Retain existing access and expiry</option>
+                    <option value="end_access">End the current refunded term now</option>
+                    {% elif invoice.status == 'issued' %}
+                    <option value="returned_payment">Record stale payment as fully returned</option>
+                    {% endif %}
+                </select>
+                {% if invoice.status == 'issued' %}
+                <label for="review-payment">Provider payment ID</label>
+                <input id="review-payment" name="payment_id" class="form-control" maxlength="255">
+                <label for="review-refunds">Processed refund IDs (separated by spaces)</label>
+                <textarea id="review-refunds" name="refund_ids" class="form-control"></textarea>
+                {% endif %}
+                <label for="review-reason">Reason for final decision</label>
+                <textarea id="review-reason" name="reason" class="form-control" required maxlength="1000"></textarea>
+                <button class="btn btn-primary mt-2">Record final decision</button>
+            </form>
+        </details>
+        {% endif %}
+
         <!-- Payment Instructions -->
-        {% if not invoice.is_paid %}
+        {% if invoice.status != 'paid' %}
         <div class="notes-section">
             <h5>Payment Instructions</h5>
             <p>To complete payment for this invoice, please visit your <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}">billing dashboard</a> and proceed with checkout.</p>

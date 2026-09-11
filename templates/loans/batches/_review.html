@@ -1,18 +1,18 @@
 {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
 {% if form_errors %}<div class="alert alert-danger">{{ form_errors }}</div>{% endif %}
 {% if preview %}
-<form method="post" action="{% url 'loans:release_batch_create' %}" id="batch-confirm">
+<form method="post" action="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}" id="batch-confirm">
 {% csrf_token %}<input type="hidden" name="action" value="complete">
 {{ confirmation_form.request_key }}{{ confirmation_form.quote_token }}
 {% if confirmation_errors %}<div class="alert alert-warning">{{ confirmation_errors }}</div>{% endif %}
 {% for row in preview.rows %}
 <section class="card mb-3"><div class="card-body">
-<h2 class="h5"><a href="{% url 'loans:pawn_loan_detail' row.loan.pk %}" target="_blank" rel="noopener">{{ row.loan.loan_number }}</a> &middot; {{ row.loan.borrower.display_name }}</h2>
+<h2 class="h5"><a href="{% url 'workspace_slug_loan_detail' request.workspace.slug row.loan.pk %}" target="_blank" rel="noopener">{{ row.loan.loan_number }}</a> &middot; {{ row.loan.borrower.display_name }}</h2>
 <p class="small text-muted">License {{ row.loan.license.license_number }} / {{ row.loan.series.code }}</p>
 {% if row.error %}<div class="alert alert-warning">Cannot release: {{ row.error }}</div>{% else %}
 <p><strong>Settlement: INR {{ row.amount|floatformat:2 }}</strong> &middot; Principal: {{ row.quote.principal_reduction_required|floatformat:2 }} &middot; Interest: {{ row.interest|floatformat:2 }} &middot; Fees: {{ row.fees|floatformat:2 }}</p>
 {% endif %}
-<div class="d-flex flex-wrap gap-3 mb-3">{% for item in row.loan.collateral_items.all %}<div class="border rounded p-2">{% with photo=item.photos.last %}{% if photo %}<img width="64" height="64" style="object-fit:cover" alt="{{ item.description }}" src="{% url 'loans:pawn_collateral_photo_document' row.loan.pk item.pk photo.pk %}?inline=1">{% endif %}{% endwith %}<span>{{ item.description }} &middot; {{ item.net_weight }} g</span><div class="small text-muted">CI-{{ item.public_id }} &middot; {{ item.get_custody_state_display }}</div></div>{% endfor %}</div>
+<div class="d-flex flex-wrap gap-3 mb-3">{% for item in row.loan.collateral_items.all %}<div class="border rounded p-2">{% with photo=item.photos.last %}{% if photo %}<img width="64" height="64" style="object-fit:cover" alt="{{ item.description }}" src="{% url 'workspace_loans:pawn_collateral_photo_document' request.workspace.slug row.loan.pk item.pk photo.pk %}?inline=1">{% endif %}{% endwith %}<span>{{ item.description }} &middot; {{ item.net_weight }} g</span><div class="small text-muted">CI-{{ item.public_id }} &middot; {{ item.get_custody_state_display }}</div></div>{% endfor %}</div>
 <div class="collector-fields" data-borrower="{{ row.loan.borrower.display_name }}">
 {{ row.collector_form.loan_id }}{{ row.collector_form.non_field_errors }}
 <p class="small">Borrower collecting: <strong>{{ row.loan.borrower.display_name }}</strong>. Select another person below if applicable.</p>

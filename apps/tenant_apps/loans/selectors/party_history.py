@@ -55,8 +55,8 @@ def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
         notice_count=0,
         collateral_items_count=loan.collateral_items_count,
         collateral_loan_amount=None,
-        detail_url=reverse("loans:pawn_loan_detail", args=[loan.pk]),
-        repayment_url=reverse("loans:pawn_loan_repay", args=[loan.pk]),
+        detail_url=reverse("workspace_loans:pawn_loan_detail", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
+        repayment_url=reverse("workspace_loans:pawn_loan_repay", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
         document_links=(),
     )
 
@@ -65,7 +65,7 @@ def get_party_pawn_loan_history_summary(party, *, limit=20):
     """Return Party-owned Loans history without consulting retired Girvi."""
     as_of_date = timezone.localdate()
     loans = list(
-        PawnLoan.objects.filter(borrower=party)
+        PawnLoan.objects.filter(borrower=party).select_related("workspace")
         .annotate(collateral_items_count=Count("collateral_items", distinct=True))
         .order_by("-loan_date", "-pk")
     )

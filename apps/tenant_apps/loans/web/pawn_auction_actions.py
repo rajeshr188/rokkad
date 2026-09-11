@@ -57,7 +57,7 @@ def pawn_loan_auction_initiate(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Auction {auction.auction_number} initiated and notice queued.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         loan,
@@ -77,7 +77,7 @@ def pawn_loan_auction_start(request, auction_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"Auction {auction.auction_number} started.")
-    return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
+    return redirect('workspace_loans:pawn_loan_detail', pk=auction.loan_id, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -95,7 +95,7 @@ def pawn_loan_auction_cancel(request, auction_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Auction {auction.auction_number} cancelled.")
-            return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
+            return redirect('workspace_loans:pawn_loan_detail', pk=auction.loan_id, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         auction.loan,
@@ -123,7 +123,7 @@ def pawn_loan_auction_complete(request, auction_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Auction {auction.auction_number} completed and recovery recorded.")
-            return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
+            return redirect('workspace_loans:pawn_loan_detail', pk=auction.loan_id, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         auction.loan,
@@ -149,7 +149,7 @@ def pawn_loan_auction_reverse(request, auction_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Auction {auction.auction_number} reversed.")
-            return redirect("loans:pawn_loan_detail", pk=auction.loan_id)
+            return redirect('workspace_loans:pawn_loan_detail', pk=auction.loan_id, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         auction.loan,

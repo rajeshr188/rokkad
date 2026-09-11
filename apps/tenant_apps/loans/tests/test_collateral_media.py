@@ -5,6 +5,7 @@ import tempfile
 import uuid
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 import fitz
 from django.contrib.auth import get_user_model
@@ -312,7 +313,7 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         self.assertEqual(issue.action, "PRINT")
         self.assertTrue(
             issue.qr_target.endswith(
-                reverse("loans:pawn_collateral_scan", args=[self.item.public_id])
+                reverse("workspace_loans:pawn_collateral_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": self.item.public_id})
             )
         )
         self.assertEqual(
@@ -321,11 +322,11 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         )
 
         scan = self.client.get(
-            reverse("loans:pawn_collateral_scan", args=[self.item.public_id])
+            reverse("workspace_loans:pawn_collateral_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": self.item.public_id})
         )
         self.assertRedirects(
             scan,
-            f"{reverse('loans:pawn_loan_detail', args=[self.loan.pk])}#collateral-{self.item.public_id}",
+            f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': self.tenant.slug, 'pk': self.loan.pk})}#collateral-{self.item.public_id}",
             fetch_redirect_response=False,
         )
 
@@ -388,6 +389,61 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         self.assertEqual(removal.from_location, slot)
         self.assertIsNone(self.item.current_storage_location_id)
 
+    def test_direct_storage_forms_preserve_validation_and_movements(self):
+        from django.urls import resolve
+        from apps.tenant_apps.loans.web.pawn_custody_actions import _PENDING_STORAGE_ITEM_SESSION_KEY
+
+        def url(name, **kwargs):
+            return reverse(f"workspace_loans:{name}", kwargs={
+                "workspace_slug": self.tenant.slug, **kwargs,
+            })
+
+        register = url("pawn_storage_location_list")
+        create = url("pawn_storage_location_create")
+        transfer = url("pawn_collateral_storage_transfer", pk=self.loan.pk, item_pk=self.item.pk)
+        for target in (register, create, transfer):
+            self.assertEqual(resolve(target).namespace, "workspace_loans")
+            self.assertContains(self.client.get(target), f'action="{target}"')
+
+        invalid = self.client.post(create, {"level": "BOX", "code": "INVALID", "name": "Invalid"})
+        self.assertEqual(invalid.status_code, 200)
+        self.assertTrue(invalid.context["form"].errors)
+        self.assertFalse(PawnStorageLocation.objects.filter(code="INVALID").exists())
+        created = self.client.post(create, {"level": "BRANCH", "code": "FORM-BR", "name": "Form branch"})
+        self.assertRedirects(created, register, fetch_redirect_response=False)
+        branch = PawnStorageLocation.objects.get(code="FORM-BR")
+        self.assertEqual(branch.workspace_id, self.tenant.pk)
+        vault = self._location("VAULT", "FORM-V", branch)
+        cabinet = self._location("CABINET", "FORM-C", vault)
+        box = self._location("BOX", "FORM-B", cabinet)
+        slot = self._location("SLOT", "FORM-S", box)
+        invalid = self.client.post(transfer, {"destination": branch.pk})
+        self.assertTrue(invalid.context["form"].errors)
+        self.assertFalse(PawnCollateralStorageMovement.objects.filter(collateral_item=self.item).exists())
+        placed = self.client.post(transfer, {"destination": box.pk})
+        expected = reverse("workspace_slug_loan_detail", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": self.loan.pk,
+        }) + f"#collateral-{self.item.public_id}"
+        self.assertRedirects(placed, expected, fetch_redirect_response=False)
+        self.assertNotIn(_PENDING_STORAGE_ITEM_SESSION_KEY, self.client.session)
+        invalid = self.client.post(transfer, {"destination": slot.pk})
+        self.assertTrue(invalid.context["form"].errors)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.current_storage_location_id, box.pk)
+        moved = self.client.post(transfer, {"destination": slot.pk, "reason": "Dedicated slot"})
+        self.assertRedirects(moved, expected, fetch_redirect_response=False)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.current_storage_location_id, slot.pk)
+        self.assertEqual(PawnCollateralStorageMovement.objects.filter(collateral_item=self.item).count(), 2)
+        viewer = get_user_model().objects.create_user(username="storage-form-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        for target in (register, create, transfer):
+            self.assertEqual(self.client.get(target).status_code, 403)
+            self.assertEqual(self.client.post(target, {"destination": box.pk}).status_code, 403)
+        self.assertEqual(PawnCollateralStorageMovement.objects.filter(collateral_item=self.item).count(), 2)
+
     def test_storage_label_and_destination_scan(self):
         branch = self._location("BRANCH", "BR-2", None)
         vault = self._location("VAULT", "V-2", branch)
@@ -395,32 +451,39 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         box = self._location("BOX", "B-2", cabinet)
 
         label = self.client.get(
-            reverse("loans:pawn_storage_location_label", args=[box.pk])
+            reverse("workspace_loans:pawn_storage_location_label", kwargs={"workspace_slug": self.tenant.slug, "pk": box.pk})
         )
         self.assertEqual(label.status_code, 200)
         text = "".join(page.get_text() for page in fitz.open(stream=label.content, filetype="pdf"))
         self.assertIn("B-2", text)
+        from apps.tenant_apps.loans.views import render_storage_location_label
+        with patch("apps.tenant_apps.loans.views.render_storage_location_label", wraps=render_storage_location_label) as renderer:
+            self.client.get(reverse("workspace_loans:pawn_storage_location_label", kwargs={"workspace_slug": self.tenant.slug, "pk": box.pk}))
+        self.assertTrue(renderer.call_args.kwargs["qr_target"].endswith(reverse(
+            "workspace_loans:pawn_storage_location_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": box.public_id},
+        )))
+
 
         scan = self.client.get(
-            reverse("loans:pawn_storage_location_scan", args=[box.public_id]),
+            reverse("workspace_loans:pawn_storage_location_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": box.public_id}),
             {"item": self.item.public_id},
         )
         self.assertRedirects(
             scan,
-            f"{reverse('loans:pawn_collateral_storage_transfer', args=[self.loan.pk, self.item.pk])}?destination={box.pk}",
+            f"{reverse('workspace_slug_loans_dispatch', kwargs={'workspace_slug': self.tenant.slug, 'loans_path': f'internal/{self.loan.pk}/collateral/{self.item.pk}/storage/'})}?destination={box.pk}",
             fetch_redirect_response=False,
         )
 
         item_scan = self.client.get(
-            reverse("loans:pawn_collateral_scan", args=[self.item.public_id])
+            reverse("workspace_loans:pawn_collateral_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": self.item.public_id})
         )
         self.assertEqual(item_scan.status_code, 302)
         destination_scan = self.client.get(
-            reverse("loans:pawn_storage_location_scan", args=[box.public_id])
+            reverse("workspace_loans:pawn_storage_location_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": box.public_id})
         )
         self.assertRedirects(
             destination_scan,
-            f"{reverse('loans:pawn_collateral_storage_transfer', args=[self.loan.pk, self.item.pk])}?destination={box.pk}",
+            f"{reverse('workspace_slug_loans_dispatch', kwargs={'workspace_slug': self.tenant.slug, 'loans_path': f'internal/{self.loan.pk}/collateral/{self.item.pk}/storage/'})}?destination={box.pk}",
             fetch_redirect_response=False,
         )
 
@@ -430,6 +493,43 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             transfer_form.context["form"]["destination"].value(),
             str(box.pk),
         )
+
+    def test_storage_scan_scopes_fallbacks_pending_items_and_verification(self):
+        from apps.tenant_apps.loans.views import _PENDING_STORAGE_ITEM_SESSION_KEY
+        branch = self._location("BRANCH", "SCAN-BR", None)
+        vault = self._location("VAULT", "SCAN-V", branch)
+        cabinet = self._location("CABINET", "SCAN-C", vault)
+        box = self._location("BOX", "SCAN-BOX", cabinet)
+        def scan(location, **data):
+            return self.client.get(reverse("workspace_loans:pawn_storage_location_scan", kwargs={
+                "workspace_slug": self.tenant.slug, "public_id": location.public_id,
+            }), data)
+        register = reverse("workspace_slug_loans_dispatch", kwargs={
+            "workspace_slug": self.tenant.slug, "loans_path": "setup/storage/",
+        })
+        with patch("apps.orgs.views.workspace_slug_loans_dispatch", side_effect=AssertionError("dispatcher used")):
+            self.assertRedirects(scan(branch), register, fetch_redirect_response=False)
+            self.assertRedirects(scan(box), register, fetch_redirect_response=False)
+            session = self.client.session
+            session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {"workspace_id": self.tenant.pk + 10000, "item_public_id": str(self.item.public_id)}
+            session.save()
+            self.assertRedirects(scan(box), register, fetch_redirect_response=False)
+            session = self.client.session
+            session[_PENDING_STORAGE_ITEM_SESSION_KEY] = {"workspace_id": self.tenant.pk, "item_public_id": str(uuid.uuid4())}
+            session.save()
+            self.assertRedirects(scan(box), register, fetch_redirect_response=False)
+            self.assertNotIn(_PENDING_STORAGE_ITEM_SESSION_KEY, self.client.session)
+        place_or_transfer_collateral(self.item.pk, destination_id=box.pk, reason="Test setup", actor=self.owner)
+        verification = start_physical_verification(scope_location_id=vault.pk, actor=self.owner)
+        response = scan(box, verification=verification.public_id, item=self.item.public_id)
+        expected = reverse("workspace_slug_loans_dispatch", kwargs={
+            "workspace_slug": self.tenant.slug, "loans_path": f"setup/verification/{verification.pk}/",
+        }) + f"?location={box.pk}&item={self.item.pk}"
+        self.assertRedirects(response, expected, fetch_redirect_response=False)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.current_storage_location_id, box.pk)
+        self.assertEqual(scan(box, item=uuid.uuid4()).status_code, 404)
+        self.assertEqual(scan(box, verification=uuid.uuid4()).status_code, 404)
 
     def test_storage_movement_history_is_visible_on_loan_detail(self):
         branch = self._location("BRANCH", "BR-H", None)
@@ -551,14 +651,76 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         )
 
         scan = self.client.get(
-            reverse("loans:pawn_collateral_scan", args=[self.item.public_id]),
+            reverse("workspace_loans:pawn_collateral_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": self.item.public_id}),
             {"verification": session.public_id},
         )
         self.assertRedirects(
             scan,
-            f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={self.item.pk}",
+            f"{reverse('workspace_slug_loans_dispatch', kwargs={'workspace_slug': self.tenant.slug, 'loans_path': f'setup/verification/{session.pk}/'})}?item={self.item.pk}",
             fetch_redirect_response=False,
         )
+
+    def test_direct_verification_forms_preserve_evidence_and_permissions(self):
+        from django.urls import resolve
+        branch = self._location("BRANCH", "HTTP-BR", None)
+        vault = self._location("VAULT", "HTTP-V", branch)
+        cabinet = self._location("CABINET", "HTTP-C", vault)
+        box = self._location("BOX", "HTTP-B", cabinet)
+        place_or_transfer_collateral(self.item.pk, destination_id=box.pk, reason="", actor=self.owner)
+
+        def url(action, **kwargs):
+            return reverse(f"workspace_loans:pawn_physical_verification_{action}", kwargs={
+                "workspace_slug": self.tenant.slug, **kwargs,
+            })
+
+        listing = url("list")
+        self.assertContains(self.client.get(listing), f'action="{listing}"')
+        invalid = self.client.post(listing, {"scope_location": branch.pk})
+        self.assertTrue(invalid.context["form"].errors)
+        started = self.client.post(listing, {"scope_location": vault.pk})
+        self.assertEqual(started.status_code, 302)
+        detail_url = started.url
+        match = resolve(detail_url)
+        self.assertEqual(match.view_name, "workspace_loans:pawn_physical_verification_detail")
+        session_pk = match.kwargs["pk"]
+        complete = url("complete", pk=session_pk)
+        self.assertEqual(self.client.get(complete).status_code, 405)
+        self.client.handler.enforce_csrf_checks = True
+        self.assertEqual(self.client.post(complete).status_code, 403)
+        self.client.handler.enforce_csrf_checks = False
+        self.assertRedirects(self.client.post(complete), detail_url, fetch_redirect_response=False)
+        self.assertEqual(self.client.get(detail_url).context["session"].status, "OPEN")
+        invalid = self.client.post(detail_url, {"collateral_item": -1, "classification": "FOUND"})
+        self.assertTrue(invalid.context["form"].errors)
+        recorded = self.client.post(detail_url, {"collateral_item": self.item.pk, "classification": "MISSING"})
+        self.assertRedirects(recorded, detail_url, fetch_redirect_response=False)
+        observation = PawnPhysicalVerificationObservation.objects.get(session_id=session_pk)
+        self.assertRedirects(self.client.post(complete), detail_url, fetch_redirect_response=False)
+        self.assertEqual(self.client.get(detail_url).context["session"].status, "COMPLETED")
+        resolution = url("resolve", observation_pk=observation.pk)
+        notice = url("discrepancy_notice", observation_pk=observation.pk)
+        self.assertContains(self.client.get(resolution), f'action="{resolution}"')
+        invalid = self.client.post(resolution, {"outcome": "LOST_COMPENSATED", "reason": "Missing item"})
+        self.assertTrue(invalid.context["form"].errors)
+        resolved = self.client.post(resolution, {
+            "outcome": "LOST_COMPENSATED", "reason": "Search exhausted",
+            "current_market_value": "6500", "agreed_compensation": "6000",
+            "compensation_reference": "TEST-SETTLEMENT",
+        })
+        self.assertRedirects(resolved, detail_url, fetch_redirect_response=False)
+        observation.refresh_from_db()
+        self.assertEqual(observation.classification, "MISSING")
+        self.assertEqual(observation.resolution.outcome, "LOST_COMPENSATED")
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.current_storage_location_id)
+        self.assertEqual(self.client.get(notice).status_code, 405)
+        viewer = get_user_model().objects.create_user(username="verification-http-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        for target in (listing, detail_url, complete, resolution, notice):
+            self.assertEqual(self.client.get(target).status_code, 403)
+            self.assertEqual(self.client.post(target, {"reason": "Denied"}).status_code, 403)
 
     def test_verification_screen_guides_completion_and_preserves_one_alert_intent(self):
         branch = self._location("BRANCH", "BR-V3", None)
@@ -573,7 +735,8 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             scope_location_id=vault.pk, actor=self.owner
         )
         detail_url = reverse(
-            "loans:pawn_physical_verification_detail", args=[session.pk]
+            "workspace_loans:pawn_physical_verification_detail",
+            kwargs={"workspace_slug": self.tenant.slug, "pk": session.pk},
         )
 
         pending = self.client.get(detail_url)
@@ -615,11 +778,12 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         self.assertContains(blocked, "Alert Owner")
 
         alert_url = reverse(
-            "loans:pawn_physical_verification_discrepancy_notice",
-            args=[observation.pk],
+            "workspace_loans:pawn_physical_verification_discrepancy_notice",
+            kwargs={"workspace_slug": self.tenant.slug, "observation_pk": observation.pk},
         )
-        self.client.post(alert_url)
-        self.client.post(alert_url)
+        self.assertContains(blocked, f'action="{alert_url}"')
+        self.assertRedirects(self.client.post(alert_url), detail_url, fetch_redirect_response=False)
+        self.assertRedirects(self.client.post(alert_url), detail_url, fetch_redirect_response=False)
         notices = LoanOperationalNotice.objects.filter(
             source_verification_observation=observation
         )
@@ -649,6 +813,15 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         self.assertContains(failed, "Attempts 2")
         self.assertContains(failed, "Pilot provider failure")
         self.assertContains(failed, "Retry failed alert")
+        retry_url = reverse("workspace_loans:operational_notice_retry", kwargs={
+            "workspace_slug": self.tenant.slug, "notice_pk": notice.pk,
+        })
+        self.assertContains(failed, f'action="{retry_url}"')
+        from apps.tenant_apps.loans.services.operational_notices import LoanOperationalNoticeError
+        with patch("apps.tenant_apps.loans.views.retry_operational_notice",
+                   side_effect=LoanOperationalNoticeError("Delivery unavailable")) as retry:
+            self.assertRedirects(self.client.post(retry_url), detail_url, fetch_redirect_response=False)
+            retry.assert_called_once_with(notice.pk, actor=self.owner)
 
     def _location(self, level, code, parent, capacity=None):
         return create_storage_location(

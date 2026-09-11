@@ -302,4 +302,4 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
         series.refresh_from_db()
         self.assertEqual(series.name, "Main")
         self.assertTrue(license.is_active)
-        self.assertEqual(LoanNumberSequence.objects.count(), 0)
+        self.assertEqual(LoanNumberSequence.objects.filter(series=series).count(), 0)

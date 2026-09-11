@@ -10,11 +10,8 @@
     <nav class="portal-topbar" aria-label="{% trans 'Customer portal navigation' %}">
         <div class="container-lg portal-topbar-inner">
             <a class="portal-brand" href="{% url 'customer_portal_dashboard' %}" aria-label="{% trans 'Rokkad customer portal' %}">
-                <span class="portal-brand-mark">R</span>
-                <span>
-                    <span class="portal-brand-name">Rokkad</span>
-                    <span class="portal-brand-subtitle">{% trans "Customer portal" %}</span>
-                </span>
+                {% include 'components/brand.html' %}
+                <span class="portal-brand-subtitle">{% trans "Customer portal" %}</span>
             </a>
             <div class="portal-topbar-actions">
                 <span class="portal-identity-pill">

@@ -24,6 +24,7 @@ plans; shelving an idea must not hide a release blocker.
 | ID | Idea | State | Resume trigger | Where it stopped |
 | --- | --- | --- | --- | --- |
 | FW-001 | Optional owner-configurable license scope | Shelved; review and owner approval required | Owner chooses to revisit staff access across licenses | Direction documented; no license assignments or restrictions implemented |
+| FW-002 | Razorpay setup and provider test-mode acceptance | Shelved at owner request; required before real paid onboarding | Owner starts Razorpay setup and explicitly resumes provider testing | Billing implementation and mocked tests complete; no provider setup or end-to-end rehearsal |
 
 ## FW-001: Optional owner-configurable license scope
 
@@ -71,6 +72,47 @@ revocation and configuration changes without rewriting historical loan ownership
 **References:** [tenant/access ADR](../adr/2026-09-09-organization-tenant-and-license-access.md),
 [SCP-01/SCP-02 delivery register and review criteria](saas-access-media-and-onboarding.md#scp-optional-scope-last-and-subject-to-explicit-owner-approval),
 [action-permission review](../implementation/action-permission-review.md).
+
+## FW-002: Razorpay setup and provider test-mode acceptance
+
+**Captured / last reviewed:** 2026-09-09. **Decision owner:** project owner.
+**State:** Shelved. **Priority/date:** unscheduled.
+**Resume authorization:** owner chooses to resume; proceeding with other review
+improvements does not reactivate this work.
+
+**Why shelved.** The owner has not started Razorpay setup and wants to focus on the
+remaining project-review improvements. Do not request keys, create an integration,
+expose a callback endpoint or run provider calls as part of unrelated cleanup.
+
+**Where it stopped.** Workspace-bound checkout, paid-period expiry, verified known-
+payment recovery, processed refund evidence and final owner review decisions are
+implemented locally with mocked provider/mail tests. Development migrations through
+subscriptions.0009 are applied. These changes remain uncommitted as of this entry.
+No real Razorpay payment/refund or provider test-mode rehearsal has been performed.
+The implementation is not accepted for real paid onboarding yet.
+
+**What the postponed step means.** Establish the owner's Razorpay test environment,
+configure test credentials and a webhook secret privately, provide an HTTPS callback,
+and exercise checkout plus actual provider event delivery in test mode. Verify
+captured payments, failed/abandoned attempts, repeated/delayed callbacks, partial/full
+processed refunds, recovery and reviewed resolutions against the local records.
+Mocked automated tests remain available without Razorpay setup.
+
+**Preserve these constraints.** Workspace ownership/context, frozen order/amount/
+currency/plan evidence, RLS, immutable financial evidence and idempotent handling
+must remain intact. No live charges/refunds are authorized by this entry. Unknown
+orphan/legacy contracts cannot be reconstructed by guessing; refund issuance,
+chargebacks and proration remain outside current implementation.
+
+**First step when resumed.** Read current billing flow/status, confirm the owner is
+ready with a test environment, inventory the intended runtime and HTTPS callback,
+and prepare a concrete test-mode acceptance checklist. Recheck provider documentation
+at that time. Keep secrets out of Git, logs and documentation. Record the observed
+outcomes and unresolved issues before declaring paid onboarding ready.
+
+**References:** [checkout/recovery/review flow](../flows/subscription-checkout.md),
+[billing decision](../adr/2026-09-09-workspace-checkout-evidence.md),
+[hardening delivery plan](project-hardening.md), [current status](../STATUS.md).
 
 ## Maintaining and resuming entries
 

@@ -4,11 +4,11 @@
 {% include "loans/setup/_navigation.html" %}
 <div class="app-heading">
   <div>
-    <a class="small text-decoration-none" href="{% url 'loans:license_list' %}">&larr; Loan setup</a>
+    <a class="small text-decoration-none" href="{% url 'workspace_loans:license_list' request.workspace.slug %}">&larr; Loan setup</a>
     <h1 class="h3 mt-2 mb-1">FundingLoan read console</h1>
     <p class="text-muted mb-0">Operational balances, pledged collateral, and integrity evidence for FundingLoans.</p>
   </div>
-  <div class="d-flex align-items-center gap-2"><span class="badge text-bg-warning">Controlled MVP preview</span><a class="btn btn-primary" href="{% url 'loans:funding_loan_draft_create' %}">Create draft</a></div>
+  <div class="d-flex align-items-center gap-2"><span class="badge text-bg-warning">Controlled MVP preview</span><a class="btn btn-primary" href="{% url 'workspace_loans:funding_loan_draft_create' request.workspace.slug %}">Create draft</a></div>
 </div>
 
 <div class="alert alert-secondary" role="status">
@@ -25,7 +25,7 @@
     <tbody>
       {% for loan in funding_loans %}
       <tr>
-        <td><a href="{% url 'loans:funding_loan_read_detail' loan.funding_loan_id %}">{{ loan.funding_number }}</a></td>
+        <td><a href="{% url 'workspace_loans:funding_loan_read_detail' request.workspace.slug loan.funding_loan_id %}">{{ loan.funding_number }}</a></td>
         <td>{{ loan.lender_name }}</td>
         <td><span class="badge text-bg-light border">{{ loan.state }}</span></td>
         <td class="text-end">{{ loan.principal_outstanding }}</td>
@@ -47,7 +47,7 @@
 <div class="table-responsive">
   <table class="table app-table align-middle">
     <thead><tr><th>Code</th><th>Funding loan</th><th>Object</th><th>Finding</th></tr></thead>
-    <tbody>{% for finding in findings %}<tr><td><code>{{ finding.code }}</code></td><td><a href="{% url 'loans:funding_loan_read_detail' finding.funding_loan_id %}">#{{ finding.funding_loan_id }}</a></td><td>{{ finding.object_type }}:{{ finding.object_id }}</td><td>{{ finding.message }}</td></tr>{% endfor %}</tbody>
+    <tbody>{% for finding in findings %}<tr><td><code>{{ finding.code }}</code></td><td><a href="{% url 'workspace_loans:funding_loan_read_detail' request.workspace.slug finding.funding_loan_id %}">#{{ finding.funding_loan_id }}</a></td><td>{{ finding.object_type }}:{{ finding.object_id }}</td><td>{{ finding.message }}</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 {% else %}

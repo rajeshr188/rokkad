@@ -1,55 +1,28 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-09-09
 tags: [roadmap, planning]
-related: [STATUS.md, plans/active.md, plans/backlog.md, plans/completed.md]
 ---
 
 # Roadmap
 
-## Current foundation
+The [active hardening plan](plans/project-hardening.md) owns the delivery order and
+[Status](STATUS.md) owns current progress. This roadmap is direction, not a second
+list of stale milestones. Earlier priorities are [archived](archive/context/2026-09-09/ROADMAP.md).
 
-Party, Loans, Notify v2, and Rates are the supported business apps. Shared-schema
-PostgreSQL forced RLS, Workspace permissions/lifecycle, billing/entitlements,
-invitations, Loans Workspace routing, and immutable Workspace slugs are complete.
-The Phase 11 checkpoint is `c8de539`, pushed on `rls-mvp`.
+1. Keep supported-app documentation and onboarding consistent with Party, Loans,
+   Rates and Notify v2; remove confirmed obsolete configuration/guardrails.
+2. Prove package/template reachability before cleanup. Preserve intentional
+   compatibility behavior and historical migrations.
+3. Expose incomplete loan-dashboard totals, measure representative portfolios, and
+   address justified query/index issues before adding caches or projections.
+4. Convert routing/module responsibilities incrementally while preserving Workspace
+   identity, action checks, HTMX/download behavior and immutable evidence.
+5. Complete selected-deployment privacy, backup/restore and operational acceptance
+   before production. Physical phone/camera and printer checks remain deferred.
 
-Girvi, Contact, legacy Notify, DEA/accounting, and the old inventory/sales/purchase
-tracks are retired. Their historical plans are not current implementation work.
-
-## Priority 1: MVP operator acceptance
-
-- Complete and retain a real-transaction HTTP acceptance gate from Workspace
-  creation through trial, lending setup, Party creation, loan disbursal,
-  repayment, full release, and immutable PDF reprints under a restricted role.
-- Fix reproducible journey blockers while preserving service-owned financial
-  calculations, custody evidence, idempotency, and Workspace isolation.
-- Desktop/mobile Chromium viewport acceptance is recorded in
-  [the browser record](implementation/browser-acceptance.md). Complete physical
-  phone/camera and printer checks with an operator.
-- Follow the [acceptance checklist and findings](implementation/mvp-operator-acceptance.md).
-
-## Priority 2: Remaining operator navigation and setup
-
-- Party, Rates, and Notify operator URLs now preserve Workspace identity.
-  Notify application-boundary fixes are complete; verify external private-media
-  serving before a real-data pilot.
-- Improve setup guidance using actual lending prerequisites and clearly separate
-  general checklist completion from loan readiness.
-- Start [project-wide UI/UX discovery](plans/project-wide-ux-revamp.md) now.
-  Prototype the shared shell and first-loan journey after the functional checkpoint
-  is reviewed and committed; then roll out the reviewed patterns across the apps.
-
-## Priority 3: Controlled operational pilots
-
-- Exercise real email/WhatsApp delivery and callback evidence with configured
-  providers and explicit operator authorization.
-- Expand acceptance scenarios to later-date interest, reversals, renewals,
-  auctions, and storage/verification journeys using existing domain services.
-- Reconcile remaining historical documentation as each live area is reviewed.
-
-See [active](plans/active.md), [future work](plans/future-work.md) for shelved ideas
-and restart points, and [completed](plans/completed.md).
-
-See [README](../README.md) for the project entry point.
+Razorpay provider acceptance and optional license scoping are recorded in
+[Future work](plans/future-work.md). Both are shelved; provider acceptance remains
+required before real paid onboarding. General-ledger accounting, inventory,
+sales/purchase and retired Girvi/Contact/Notify modules are not current delivery.

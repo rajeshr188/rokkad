@@ -3,7 +3,7 @@
 from django.utils import timezone
 
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
-from .obligation_state import calculate_obligation_state_as_of, get_active_repayment_schedule_as_of
+from .obligation_state import get_obligation_states_for_loans
 
 
 def get_workspace_counter_work(*, workspace, as_of_date=None):
@@ -15,14 +15,17 @@ def get_workspace_counter_work(*, workspace, as_of_date=None):
         ("due", "Payments due today"), ("overdue", "Overdue payments"),
         ("review", "Schedule needs review"),
     )}
-    loans = PawnLoan.objects.filter(workspace=workspace, state__in=("DRAFT", "APPROVED", "ACTIVE")).select_related("borrower").order_by("loan_date", "pk")
+    loans = list(PawnLoan.objects.filter(workspace=workspace, state__in=("DRAFT", "APPROVED", "ACTIVE")).select_related("borrower").order_by("loan_date", "pk"))
+    states = get_obligation_states_for_loans(
+        workspace=workspace, loan_ids=[loan.pk for loan in loans if loan.state == "ACTIVE"],
+        as_of_date=today,
+    )
     for loan in loans:
         row = {"loan": loan, "date": loan.loan_date, "amount": None, "note": ""}
         if loan.state in ("DRAFT", "APPROVED"):
             queues[loan.state.lower()]["rows"].append(row)
             continue
-        schedule = get_active_repayment_schedule_as_of(loan, today)
-        state = calculate_obligation_state_as_of(schedule, today)
+        state = states[loan.pk]
         if state.schedule_id is None or not state.obligations or state.integrity_findings:
             row["note"] = "No active repayment schedule or payment rows." if state.schedule_id is None or not state.obligations else "Repayment schedule has inconsistent allocations."
             queues["review"]["rows"].append(row)

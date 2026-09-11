@@ -10,9 +10,7 @@ See templates/layouts/base.html for the current base template.
     <div class="container-lg">
       <!-- Brand -->
       <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-        <img src="{% if logo %}{{logo.url}}{%else%}{% static 'images/falconx.png' %}{%endif%}" alt="Rokkad" height="30"
-          class="me-2">
-        <span>Rokkad</span>
+        {% if logo %}<img src="{{ logo.url }}" alt="{{ request.workspace.name|default:'Workspace' }}" height="30" class="me-2">{% else %}{% include 'components/brand.html' %}{% endif %}
       </a>
       {%if user.is_authenticated%}
       <div class="dropdown ms-3">
@@ -65,14 +63,14 @@ See templates/layouts/base.html for the current base template.
               Loans
             </a>
             <ul class="dropdown-menu" aria-labelledby="girviDropdown">
-              <li><a class="dropdown-item" href="" hx-get="{% url 'loans:pawn_loan_list' %}" hx-target="#content"
+              <li><a class="dropdown-item" href="" hx-get="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" hx-target="#content"
                   hx-swap="innerHTML" hx-push-url="true">{% trans "Dashboard" %}</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="" hx-get="{% url 'loans:pawn_loan_list' %}" hx-target="#content"
+              <li><a class="dropdown-item" href="" hx-get="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" hx-target="#content"
                   hx-swap="innerHTML" hx-vals='{"use_block": "content"}' hx-push-url="true">{% trans "Loans" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'loans:pawn_operations_console' %}">{% trans "Operations" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'loans:license_list' %}">{% trans "License" %}</a></li>
-              <li><a class="dropdown-item" href="{% url 'loans:pawn_storage_location_list' %}">{% trans "Storage" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'workspace_loans:pawn_operations_console' request.workspace.slug %}">{% trans "Operations" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'workspace_loans:license_list' request.workspace.slug %}">{% trans "License" %}</a></li>
+              <li><a class="dropdown-item" href="{% url 'workspace_loans:pawn_storage_location_list' request.workspace.slug %}">{% trans "Storage" %}</a></li>
               <li><a class="dropdown-item" href="{% url 'notify_v2_batch_list' %}">{% trans "Notices" %}</a></li>
             </ul>
           </li>
@@ -241,7 +239,7 @@ See templates/layouts/base.html for the current base template.
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
                 aria-expanded="false">
                 <img
-                  src="{% if request.user.profile.social_profile_picture %}{{ request.user.profile.social_profile_picture }}{% else %}{% static 'images/falconx.png' %}{% endif %}"
+                  src="{% if request.user.profile.social_profile_picture %}{{ request.user.profile.social_profile_picture }}{% else %}{% static 'images/brand/rokkad-icon.png' %}{% endif %}"
                   alt="Profile Picture" class="rounded-circle" height="30">
                 <span class="ms-2">{{ request.user }}</span>
               </a>
@@ -432,7 +430,7 @@ document.body.addEventListener('htmx:historyRestore', function(evt) {
       </li>
       <li>
         <button type="button" class="dropdown-item d-flex align-items-center" hx-trigger="click"
-          hx-get="{% url 'loans:pawn_operations_console'%}" hx-target="#content">
+          hx-get="{% url 'workspace_loans:pawn_operations_console' request.workspace.slug%}" hx-target="#content">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
             class="bi bi-file-earmark-plus" viewBox="0 0 16 16">
             <path

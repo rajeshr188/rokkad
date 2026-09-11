@@ -545,11 +545,11 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             use_request_processors=False,
         )
 
-        self.assertIn("Workspace setup", html)
+        self.assertIn("Set up your business", html)
         self.assertIn("1/2 complete", html)
         self.assertIn("Rates", html)
         self.assertIn("Parties", html)
-        self.assertIn("Mark setup complete", html)
+        self.assertIn("Hide completed general checklist", html)
         self.assertIn("Dismiss dashboard card", html)
         self.assertIn(
             reverse(

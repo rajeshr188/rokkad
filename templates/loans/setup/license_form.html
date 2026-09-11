@@ -5,11 +5,11 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'loans:license_list' %}">← Loan setup</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:license_list' request.workspace.slug %}">← Loan setup</a>
   <h1 class="h3 mt-2">{% if license %}Edit {{ license.name }}{% else %}Add regulatory loan license{% endif %}</h1>
 </div>
 <div class="card"><div class="card-body">
-  <form method="post" enctype="multipart/form-data" novalidate>
+  <form method="post" action="{% if license %}{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}{% else %}{% url 'workspace_loans:license_create' request.workspace.slug %}{% endif %}" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <div class="row g-3">
@@ -23,7 +23,7 @@
     </div>
     <div class="d-flex gap-2 mt-4">
       <button class="btn btn-primary" type="submit">Save license</button>
-      <a class="btn btn-outline-secondary" href="{% if license %}{% url 'loans:license_detail' license.pk %}{% else %}{% url 'loans:license_list' %}{% endif %}">Cancel</a>
+      <a class="btn btn-outline-secondary" href="{% if license %}{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}{% else %}{% url 'workspace_loans:license_list' request.workspace.slug %}{% endif %}">Cancel</a>
     </div>
   </form>
 </div></div>

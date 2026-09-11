@@ -9,7 +9,7 @@
     <h1 class="h3 mb-1">Loan products</h1>
     <p class="text-muted mb-0">Review immutable contract terms before making a version available for new PawnLoans.</p>
   </div>
-  <form method="post" action="{% url 'loans:loan_product_seed_defaults' %}">
+  <form method="post" action="{% url 'workspace_loans:loan_product_seed_defaults' request.workspace.slug %}">
     {% csrf_token %}
     <button class="btn btn-primary" type="submit">Seed four standard products</button>
   </form>
@@ -21,7 +21,7 @@
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between">
     <span><strong>{{ product.code }}</strong> — {{ product.name }}</span>
-    <span>{% if product.is_active %}<span class="badge text-bg-success">Catalog active</span>{% else %}<span class="badge text-bg-secondary">Catalog inactive</span>{% endif %} <a class="btn btn-sm btn-outline-primary ms-2" href="{% url 'loans:loan_product_version_create' product.pk %}">Create next draft</a></span>
+    <span>{% if product.is_active %}<span class="badge text-bg-success">Catalog active</span>{% else %}<span class="badge text-bg-secondary">Catalog inactive</span>{% endif %} <a class="btn btn-sm btn-outline-primary ms-2" href="{% url 'workspace_loans:loan_product_version_create' request.workspace.slug product.pk %}">Create next draft</a></span>
   </div>
   <div class="table-responsive">
     <table class="table app-table align-middle mb-0">
@@ -37,8 +37,8 @@
         <td>{{ version.calculation_contract_version }}<div class="small text-muted">{{ version.available_from|default:"No start limit" }} – {{ version.available_until|default:"No end limit" }}</div></td>
         <td>{{ version.pawn_loans.count }}</td>
         <td class="text-end">
-          {% if version.status == 'DRAFT' %}<form method="post" action="{% url 'loans:loan_product_version_activate' version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit">Activate</button></form>{% endif %}
-          {% if version.status == 'ACTIVE' %}<form method="post" action="{% url 'loans:loan_product_version_retire' version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Retire</button></form>{% endif %}
+          {% if version.status == 'DRAFT' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_activate' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit">Activate</button></form>{% endif %}
+          {% if version.status == 'ACTIVE' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_retire' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Retire</button></form>{% endif %}
         </td>
       </tr>
       {% endfor %}

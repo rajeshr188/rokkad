@@ -18,7 +18,7 @@
 }
 
 .public-kicker {
-    color: #0f766e;
+    color: #103f3a;
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0;
@@ -174,7 +174,7 @@
     align-items: center;
     background: #ccfbf1;
     border-radius: 8px;
-    color: #0f766e;
+    color: #103f3a;
     display: inline-flex;
     height: 34px;
     justify-content: center;
@@ -195,7 +195,7 @@
 }
 
 .public-flow-impact {
-    color: #0f766e;
+    color: #103f3a;
     font-size: 0.78rem;
     font-weight: 800;
     white-space: nowrap;
@@ -301,7 +301,7 @@
 }
 
 .public-feature-list li::before {
-    color: #0f766e;
+    color: #103f3a;
     content: "+";
     font-weight: 800;
 }
@@ -343,7 +343,7 @@
     align-items: stretch;
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.7fr);
-    min-height: calc(100vh - 72px);
+    min-height: calc(100vh - var(--rk-nav-height, 83px));
 }
 
 .auth-story {

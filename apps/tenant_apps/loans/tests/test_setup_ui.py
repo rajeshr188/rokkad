@@ -159,7 +159,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         )
 
         self.assertEqual(response.status_code, 204)
-        self.assertEqual(response["HX-Redirect"], reverse("loans:pawn_risk_portfolio"))
+        self.assertEqual(response["HX-Redirect"], reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}))
         refresh.assert_called_once_with(loan.pk, as_of_date=date(2026, 8, 13))
 
     @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
@@ -173,7 +173,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
 
         self.assertRedirects(
             response,
-            reverse("loans:pawn_risk_portfolio"),
+            reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}),
             fetch_redirect_response=False,
         )
         reassess.assert_called_once_with(
@@ -195,7 +195,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(
             response["HX-Redirect"],
-            reverse("loans:pawn_risk_portfolio"),
+            reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}),
         )
 
     @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
@@ -470,6 +470,55 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertContains(detail, "Ready")
         self.assertContains(detail, "Loans Setup")
 
+    def test_direct_series_forms_preserve_counters_and_permissions(self):
+        from django.urls import resolve
+        license, _ = self._configured_setup()
+        create = reverse("workspace_loans:series_create", kwargs={
+            "workspace_slug": self.tenant.slug, "license_pk": license.pk,
+        })
+        detail = reverse("workspace_loans:license_detail", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": license.pk,
+        })
+        self.assertEqual(resolve(create).namespace, "workspace_loans")
+        self.assertContains(self.client.get(create), f'action="{create}"')
+        payload = {"name": "HTTP series", "code": "HTTP", "is_active": "on",
+                   "pawn_loan_prefix": "PL-H-", "release_prefix": "RL-H-",
+                   "number_width": 5, "maximum_number": 10000}
+        invalid = self.client.post(create, {**payload, "number_width": 0})
+        self.assertIn("number_width", invalid.context["form"].errors)
+        self.assertFalse(LoanSeries.objects.filter(license=license, code="HTTP").exists())
+        self.assertRedirects(self.client.post(create, payload), detail, fetch_redirect_response=False)
+        series = LoanSeries.objects.get(license=license, code="HTTP")
+        edit = reverse("workspace_loans:series_update", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": series.pk,
+        })
+        self.assertEqual(resolve(edit).namespace, "workspace_loans")
+        sequence = series.number_sequences.get(document_kind=LoanDocumentKind.PAWN_LOAN.value)
+        sequence.next_number = 7
+        sequence.save(update_fields=["next_number"])
+        page = self.client.get(edit)
+        self.assertContains(page, f'action="{edit}"')
+        self.assertEqual(page.context["form"]["pawn_loan_prefix"].value(), "PL-H-")
+        self.assertNotContains(page, 'href="/loans/')
+        self.assertRedirects(self.client.post(edit, {**payload, "name": "Renamed series"}), detail,
+                             fetch_redirect_response=False)
+        sequence.refresh_from_db()
+        series.refresh_from_db()
+        self.assertEqual(series.name, "Renamed series")
+        self.assertEqual(sequence.next_number, 7)
+        self.assertEqual(series.number_sequences.count(), 2)
+        self.assertEqual(series.number_sequences.get(document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value).next_number, 1)
+        self.client.handler.enforce_csrf_checks = True
+        self.assertEqual(self.client.post(edit, payload).status_code, 403)
+        self.client.handler.enforce_csrf_checks = False
+        viewer = get_user_model().objects.create_user(username="series-route-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        for target in (create, edit):
+            self.assertEqual(self.client.get(target).status_code, 403)
+            self.assertEqual(self.client.post(target, payload).status_code, 403)
+
     def test_detail_preview_does_not_consume_a_number(self):
         license, series = self._configured_setup()
         sequence = LoanNumberSequence.objects.get(
@@ -550,6 +599,53 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(policy.compliance_profile, "Owner-approved pilot")
         page = self.tenant_get(reverse("loans:pawn_economics_setup"))
         self.assertContains(page, "Owner-approved pilot")
+
+    def test_direct_license_routes_keep_scope_forms_and_permissions(self):
+        from django.urls import resolve
+        license, _ = self._configured_setup()
+        def url(action, **kwargs):
+            return reverse(f"workspace_loans:license_{action}", kwargs={
+                "workspace_slug": self.tenant.slug, **kwargs,
+            })
+        listing, create = url("list"), url("create")
+        detail = url("detail", pk=license.pk)
+        edit = url("update", pk=license.pk)
+        renew = url("renew", pk=license.pk)
+        for target in (listing, create, detail, edit, renew):
+            self.assertEqual(resolve(target).namespace, "workspace_loans")
+            page = self.client.get(target)
+            self.assertEqual(page.status_code, 200)
+            self.assertNotContains(page, 'href="/loans/')
+            if target in (create, edit, renew):
+                self.assertContains(page, f'action="{target}"')
+        invalid = self.client.post(create, {"name": "Incomplete license"})
+        self.assertTrue(invalid.context["form"].errors)
+        self.assertFalse(LoanLicense.objects.filter(name="Incomplete license").exists())
+        for action in ("expire", "activate", "expiry_notice_create"):
+            target = url(action, pk=license.pk)
+            self.assertEqual(self.client.get(target).status_code, 405)
+        expire = url("expire", pk=license.pk)
+        self.client.handler.enforce_csrf_checks = True
+        self.assertEqual(self.client.post(expire).status_code, 403)
+        self.client.handler.enforce_csrf_checks = False
+        self.assertRedirects(self.client.post(expire), detail, fetch_redirect_response=False)
+        license.refresh_from_db()
+        self.assertFalse(license.is_active)
+        self.assertRedirects(self.client.post(url("activate", pk=license.pk)), detail, fetch_redirect_response=False)
+        license.refresh_from_db()
+        self.assertTrue(license.is_active)
+        with patch("apps.tenant_apps.loans.views.create_license_expiry_notice") as alert:
+            self.assertRedirects(self.client.post(url("expiry_notice_create", pk=license.pk)), detail,
+                                 fetch_redirect_response=False)
+            self.assertEqual(alert.call_args.args, (license.pk,))
+            self.assertEqual(alert.call_args.kwargs["actor"], self.owner)
+        viewer = get_user_model().objects.create_user(username="license-route-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        for target in (listing, create, detail, edit, renew, url("register_pdf")):
+            self.assertEqual(self.client.get(target).status_code, 403)
+        self.assertEqual(self.client.post(expire).status_code, 403)
 
     def test_expiry_is_post_only_and_blocks_readiness_without_deleting_license(self):
         license, _ = self._configured_setup()
@@ -656,7 +752,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
             403,
         )
         self.assertEqual(
-            self.tenant_get(reverse("loans:pawn_risk_portfolio")).status_code,
+            self.client.get(reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug})).status_code,
             403,
         )
         self.assertEqual(

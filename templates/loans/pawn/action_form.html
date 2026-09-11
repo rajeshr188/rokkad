@@ -4,7 +4,7 @@
 <div class="loan-workflow-grid"><div class="loan-workflow-main">
 <div class="row justify-content-center">
   <div class="col-12">
-    <a class="small text-decoration-none" href="{% url 'loans:pawn_loan_detail' loan.pk %}">&larr; {{ loan.loan_number }}</a>
+    <a class="small text-decoration-none" href="{% url 'workspace_slug_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
     <h1 class="h3 mt-2 mb-1">{{ action_label }}</h1>
     <p class="text-muted mb-4">{{ description }}</p>
 
@@ -90,7 +90,7 @@
       </div>
     {% endif %}
 
-    <form method="post" class="card"><div class="card-body">
+    <form method="post"{% if form_action %} action="{{ form_action }}"{% endif %} class="card"><div class="card-body">
       {% csrf_token %}
       {{ form.non_field_errors }}
       {% for field in form %}
@@ -98,7 +98,7 @@
           <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
         {% endif %}
       {% endfor %}
-      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">{{ preview_action_label|default:"Preview" }}</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm" {% if reversal_readiness and not reversal_readiness.can_reverse %}disabled{% endif %}>{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Cancel</a></div>
+      <div class="d-flex gap-2">{% if supports_preview %}<button class="btn btn-outline-primary" type="submit" name="action" value="preview">{{ preview_action_label|default:"Preview" }}</button>{% endif %}<button class="btn btn-primary" type="submit" name="action" value="confirm" {% if reversal_readiness and not reversal_readiness.can_reverse %}disabled{% endif %}>{{ action_label }}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_slug_loan_detail' request.workspace.slug loan.pk %}">Cancel</a></div>
     </div></form>
   </div>
 </div>

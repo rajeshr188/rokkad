@@ -1,20 +1,22 @@
 ---
 status: active
 owner: project
-updated: 2026-06-17
+updated: 2026-09-09
 tags: [domain, notifications]
-related: [../plans/backlog.md]
 ---
 
 # Notifications
 
-Notifications handle user-facing alerts, workflow messages, batching, and future Notify V2 improvements.
+Notify v2 is the supported delivery app. Loans owns notice intent and the financial
+facts behind it; delivery attempts and provider outcomes do not determine loan
+state. Customer notice creation/retry and internal scheduled delivery have separate
+authorization boundaries. Keep batching, retries and delivery evidence testable.
 
-## Direction
+Read [action permissions](../implementation/action-permission-review.md),
+[Workspace operator commands](../implementation/loans-operator-commands.md), and
+[private media](../implementation/private-media-access.md) before changing delivery,
+exports or attachments. Provider acceptance must not be inferred from mocked tests.
 
-- Prefer explicit notification events over ad hoc messages scattered through views.
-- Keep batching and delivery workflows testable.
-- Preserve V2 redesign notes until the app is fully consolidated.
-- See [implementation audit](../implementation/whatsapp-notifications-architecture-audit.md) for the current state, risks, and target WhatsApp architecture.
-
-Archived notification sources are preserved in [archive/notifications](../archive/notifications/).
+Legacy Notify is retired. Prior redesign notes and integration investigations remain
+in the [historical snapshot](../archive/context/2026-09-09/domain/notifications.md)
+and [notification archive](../archive/notifications/).

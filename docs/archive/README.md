@@ -21,6 +21,8 @@ Use the canonical docs first:
 
 ## Archive Areas
 
+- [Context/status/memory snapshots](context/README.md)
+
 - [Root reports](root/)
 - [Multi-tenant completed phases](multi-tenant/completed-phases/)
 - [Django project](django-project/)

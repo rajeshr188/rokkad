@@ -1,87 +1,59 @@
 ---
 status: active
 owner: project
-updated: 2026-08-17
+updated: 2026-09-09
 tags: [docs, navigation, architecture]
-related: [STATUS.md, ROADMAP.md, GLOSSARY.md, AGENT_MEMORY.md]
 ---
 
-# Rokkad Documentation
+# Rokkad documentation
 
-Rokkad is a shared-schema Django SaaS application for operational pawn lending.
-Its supported business applications are Party, Loans, Notify v2, and Rates.
-PostgreSQL forced RLS isolates Workspace-owned data.
+Rokkad is shared-schema pawn-lending SaaS built around Party, Loans, Rates and
+Notify v2. Workspace-owned business data is isolated by PostgreSQL forced RLS.
+Start with current guidance below. Retired accounting/ERP material is historical,
+not an instruction to reintroduce it.
 
-This folder is the living documentation system. Historical notes, audits, and superseded plans are preserved under [archive](archive/).
+## Current work and decisions
 
-## Start Here
+- [Status](STATUS.md): checkpoint, validation and remaining acceptance.
+- [Agent memory](AGENT_MEMORY.md): stable decisions and owner constraints.
+- [Active delivery](plans/active.md) and [hardening plan](plans/project-hardening.md).
+- [Roadmap](ROADMAP.md) and [Future work](plans/future-work.md): shelved ideas and resume conditions.
+- [Project architecture review](architecture/2026-09-09-project-review.md): original findings and follow-ups.
+- [Constitution](constitution.md), [control-plane contracts](architecture/control-plane-contracts.md)
+  and [ADRs](adr/): domain invariants and accepted architecture.
+- [Dependency policy](implementation/dependency-policy.md): supported ownership/import boundaries.
 
-- [STATUS](STATUS.md) - current system status.
-- [ROADMAP](ROADMAP.md) - prioritized future work.
-- [GLOSSARY](GLOSSARY.md) - shared domain language.
-- [AGENT_MEMORY](AGENT_MEMORY.md) - stable context for AI coding agents.
-- [Active plan](plans/active.md) - current work in progress.
-- [Future work](plans/future-work.md) - shelved ideas, decisions and restart points.
-- [Legacy backlog](plans/backlog.md) - historical items requiring current-context review.
-- [Completed work](plans/completed.md) - implementation history.
+## Business and operator flows
 
-## Domain Docs
+- [Set up your business](flows/business-setup.md) and [first-loan setup](flows/first-loan-setup.md).
+- [Choose simple or extended loan workflow](flows/loan-workflow-choice.md).
+- [Browse collateral and releases](flows/collateral-and-release-browsing.md).
+- [Release multiple loans](flows/multiple-loan-release.md).
+- [Document layouts, exact overlays and print profiles](flows/loans-document-layout-operator-guide.md).
+- [Pawn-loan financial read models](domain/pawn-loan-financial-read-models.md)
+  and [regulatory/economic setup](domain/loans-regulatory-setup-and-policy.md).
+- [Party](domain/party.md), [Notifications](domain/notifications.md),
+  and [subscription checkout/recovery/reviews](flows/subscription-checkout.md).
 
-- [Accounting / DEA](domain/accounting.md)
-- [Girvi](domain/girvi.md)
-- [Contact](domain/contact.md)
-- [Inventory, Sales, Purchase](domain/inventory.md)
-- [Workspace, Auth, Authorization](domain/workspace-auth.md)
-- [Subscriptions](domain/subscriptions.md)
-- [Notifications](domain/notifications.md)
+## Development and operations
 
-## App Internals
+- [Containers, CI and runtime startup](implementation/container-and-ci.md).
+- [Testing and migrations](implementation/testing-and-migrations.md).
+- [Workspace operator commands](implementation/loans-operator-commands.md).
+- [Action permissions](implementation/action-permission-review.md).
+- [Private media](implementation/private-media-access.md).
+- [Cache configuration and optional Redis](implementation/cache-configuration.md).
+- [Document integrity and physical acceptance](implementation/loans-configurable-document-operations.md).
 
-- [Canonical SaaS control-plane contracts](architecture/control-plane-contracts.md)
-- [SaaS control-plane architecture audit](architecture/saas-control-plane-architecture-audit.md)
-- [Current Workspace resolution and PostgreSQL RLS chain](architecture/current-workspace-resolution-chain-using-postgres-rls.md)
-- [Loan exposure and risk architecture](architecture/loan-risk/README.md)
-- [Loans architecture and Girvi parity review](apps/loans/architecture-and-girvi-parity.md)
-- [Girvi app overview](apps/girvi/README.md)
-- [Girvi architecture](apps/girvi/architecture.md)
-- [Girvi models](apps/girvi/models.md)
-- [Girvi workflows](apps/girvi/workflows.md)
-- [Girvi userflows](apps/girvi/userflows.md)
-- [Girvi refactor plan](apps/girvi/refactor-plan.md)
+## History and interpretation
 
-## Flow Docs
+[Context snapshots](archive/context/README.md) preserve the previous long status,
+memory, roadmap and obsolete current guides. [Archive](archive/README.md) contains
+older app plans, migration investigations and retired Girvi/DEA/Contact material.
+[Completed work](plans/completed.md) and [legacy backlog](plans/backlog.md) are
+historical reference, not automatic current priorities. Old docs may still refer to
+files or apps that no longer exist. Prefer the current contracts and active plan.
 
-- [User flow](flows/user-flow.md)
-- [Release multiple loans: selection, collectors and settlement](flows/multiple-loan-release.md)
-- [Workspace onboarding](flows/workspace-onboarding.md)
-- [Girvi loan lifecycle](flows/girvi-loan-lifecycle.md)
-- [DEA posting flow](flows/dea-posting-flow.md)
-- [Inventory, sales, purchase flow](flows/inventory-sales-purchase-flow.md)
-
-## Implementation Docs
-
-- [Django schema tenancy to PostgreSQL RLS migration guide](implementation/django-schema-tenancy-to-postgresql-rls-guide.md)
-- [Dependency policy](implementation/dependency-policy.md)
-- [DEA vouchers](implementation/dea-vouchers.md)
-- [Girvi services](implementation/girvi-services.md)
-- [Girvi query annotations](implementation/girvi-query-annotations.md)
-- [Contact model migration](implementation/contact-model-migration.md)
-- [Template system](implementation/template-system.md)
-- [Tenant seeding](implementation/tenant-seeding.md)
-- [Testing and migrations](implementation/testing-and-migrations.md)
-- [Dynamic preferences](implementation/dynamic-preferences.md)
-- [UI principles](implementation/ui-principles.md)
-- [Workspace context](implementation/workspace-context.md)
-- [Subscription architecture blueprint](implementation/subscription-architecture-blueprint.md)
-- [Subscription implementation checklist](implementation/subscription-implementation-checklist.md)
-- [Troubleshooting](implementation/troubleshooting.md)
-
-## Product Docs
-
-- [Reverse-engineered BRD](product/business-requirements-document-reverse-engineered.md)
-- [Client and investor BRD](product/business-requirements-document-client-investor.md)
-- [BRD gap report and phased delivery plan](plans/brd-gap-report-phased-delivery-plan.md)
-
-## Decisions
-
-Accepted architecture decisions live in [ADR](adr/).
+Keep this index curated. Run `python scripts/check_current_docs.py` after changing
+current entry links; the CI check intentionally does not validate every archived
+historical claim or external URL.

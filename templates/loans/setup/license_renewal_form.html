@@ -5,12 +5,12 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'loans:license_detail' license.pk %}">&larr; License detail</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">&larr; License detail</a>
   <h1 class="h3 mt-2">Record license renewal</h1>
   <p class="text-muted">The prior license revision remains immutable. This creates a new current revision.</p>
 </div>
 <div class="card"><div class="card-body">
-  <form method="post" enctype="multipart/form-data" novalidate>
+  <form method="post" action="{% url 'workspace_loans:license_renew' request.workspace.slug license.pk %}" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <div class="row g-3">
@@ -25,7 +25,7 @@
     </div>
     <div class="d-flex gap-2 mt-4">
       <button class="btn btn-primary" type="submit">Record renewal</button>
-      <a class="btn btn-outline-secondary" href="{% url 'loans:license_detail' license.pk %}">Cancel</a>
+      <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">Cancel</a>
     </div>
   </form>
 </div></div>

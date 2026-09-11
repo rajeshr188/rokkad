@@ -4,6 +4,6 @@
 <div class="card"><div class="card-body py-5 text-center">
   <h1 class="h3">PawnLoan setup required</h1><p class="text-muted">{{ readiness.message }}</p>
   {% if not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% else %}<p class="alert alert-info">Ask your Workspace owner or administrator to complete Settings &rarr; Loan setup. You can continue servicing existing loans.</p>{% endif %}
-  <a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_list' %}">Back to drafts</a>
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">Back to drafts</a>
 </div></div>
 {% endblock %}

@@ -34,7 +34,7 @@
 
 .portal-brand-mark {
     align-items: center;
-    background: #0f766e;
+    background: #103f3a;
     border-radius: 8px;
     color: #ffffff;
     display: inline-flex;
@@ -146,7 +146,7 @@
 
 .portal-nav-link.active i,
 .portal-nav-link:hover i {
-    color: #0f766e;
+    color: #103f3a;
 }
 
 .portal-pending-badge {

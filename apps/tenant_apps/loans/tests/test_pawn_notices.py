@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import DatabaseError, connection, transaction
 from django.core.management import call_command
 from django.utils import timezone
+from django.test import override_settings
 from apps.tenancy.testing import WorkspaceTestCase
 
 from apps.orgs.models import Membership, Role
@@ -256,6 +257,7 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         ) as scheduler:
             call_command(
                 "dispatch_pawn_loan_notices",
+                workspace_id=self.tenant.pk,
                 as_of="2026-08-06T10:00:00+05:30",
                 limit=25,
                 stdout=output,
@@ -264,6 +266,111 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         self.assertIn("due=2, sent=1, failed=1", output.getvalue())
         scheduler.assert_called_once()
         self.assertEqual(scheduler.call_args.kwargs["limit"], 25)
+
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_direct_notice_register_and_operational_retry_routes(self):
+        from django.urls import reverse, resolve
+        from django.contrib.staticfiles.storage import StaticFilesStorage, staticfiles_storage
+        from apps.tenant_apps.loans.services.operational_notices import LoanOperationalNoticeError
+        staticfiles_storage._wrapped = StaticFilesStorage()
+        self.start_active_trial()
+        client = self.make_workspace_client()
+        client.force_login(self.tenant.owner)
+        customer_notice = self._create_notice(request_key="register-http")
+        listing = reverse("workspace_loans:pawn_loan_notice_list", kwargs={"workspace_slug": self.tenant.slug})
+        self.assertEqual(resolve(listing).namespace, "workspace_loans")
+        page = client.get(listing)
+        self.assertContains(page, f'action="{listing}"')
+        self.assertContains(page, customer_notice.loan.loan_number)
+        self.assertNotContains(page, 'href="/loans/')
+        self.assertNotContains(client.get(listing, {"q": "no-matching-notice"}), customer_notice.loan.loan_number)
+        self.loan.license.expires_on = timezone.localdate() + timedelta(days=10)
+        self.loan.license.save(update_fields=["expires_on", "updated_at"])
+        notice = create_license_expiry_notice(self.loan.license_id, request_key="retry-http",
+                                             actor=self.tenant.owner, dispatch_due=False)
+        retry = reverse("workspace_loans:operational_notice_retry", kwargs={
+            "workspace_slug": self.tenant.slug, "notice_pk": notice.pk,
+        })
+        destination = reverse("workspace_slug_loans_dispatch", kwargs={
+            "workspace_slug": self.tenant.slug, "loans_path": f"setup/licenses/{self.loan.license_id}/",
+        })
+        self.assertEqual(client.get(retry).status_code, 405)
+        client.handler.enforce_csrf_checks = True
+        self.assertEqual(client.post(retry).status_code, 403)
+        client.handler.enforce_csrf_checks = False
+        with patch("apps.tenant_apps.loans.services.operational_notices.dispatch_operational_notice",
+                   return_value=SimpleNamespace(delivery=SimpleNamespace(status="SENT"))) as dispatch:
+            self.assertRedirects(client.post(retry), destination, fetch_redirect_response=False)
+            dispatch.assert_called_once_with(notice.pk)
+        with patch("apps.tenant_apps.loans.views.retry_operational_notice",
+                   side_effect=LoanOperationalNoticeError("Scheduled for later")):
+            self.assertRedirects(client.post(retry), destination, fetch_redirect_response=False)
+        missing = reverse("workspace_loans:operational_notice_retry", kwargs={
+            "workspace_slug": self.tenant.slug, "notice_pk": notice.pk + 100000,
+        })
+        self.assertEqual(client.post(missing).status_code, 404)
+        viewer, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=viewer)
+        client.force_login(self.actor)
+        with patch("apps.tenant_apps.loans.views.retry_operational_notice") as retry_service:
+            self.assertEqual(client.get(listing).status_code, 403)
+            self.assertEqual(client.post(retry).status_code, 403)
+            retry_service.assert_not_called()
+
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_direct_customer_notice_creation_and_retry(self):
+        from django.urls import reverse, resolve
+        from django.contrib.staticfiles.storage import StaticFilesStorage, staticfiles_storage
+        staticfiles_storage._wrapped = StaticFilesStorage()
+        self.start_active_trial()
+        client = self.make_workspace_client()
+        client.force_login(self.actor)
+        create = reverse("workspace_loans:pawn_loan_notice_create", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": self.loan.pk,
+        })
+        detail = reverse("workspace_slug_loan_detail", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": self.loan.pk,
+        })
+        page = client.get(create, {"kind": "REPAYMENT_REMINDER"})
+        self.assertEqual(resolve(create).namespace, "workspace_loans")
+        self.assertContains(page, f'action="{create}"')
+        self.assertNotContains(page, 'href="/loans/')
+        self.assertEqual(page.context["form"]["notice_kind"].value(), "REPAYMENT_REMINDER")
+        payload = {"notice_kind": "REPAYMENT_REMINDER", "channel": "EMAIL", "request_key": "http-customer",
+                   "scheduled_for": (timezone.now() + timedelta(days=1)).isoformat()}
+        invalid = client.post(create, payload)
+        self.assertIn("confirm_notice_snapshot", invalid.context["form"].errors)
+        self.assertFalse(PawnLoanNotice.objects.filter(request_key="http-customer").exists())
+        payload["confirm_notice_snapshot"] = "on"
+        self.assertRedirects(client.post(create, payload), detail, fetch_redirect_response=False)
+        self.assertRedirects(client.post(create, payload), detail, fetch_redirect_response=False)
+        notice = PawnLoanNotice.objects.get(request_key="http-customer")
+        retry = reverse("workspace_loans:pawn_loan_notice_retry", kwargs={
+            "workspace_slug": self.tenant.slug, "pk": self.loan.pk, "notice_pk": notice.pk,
+        })
+        self.assertEqual(client.get(retry).status_code, 405)
+        client.handler.enforce_csrf_checks = True
+        self.assertEqual(client.post(retry).status_code, 403)
+        self.assertEqual(client.post(create, payload).status_code, 403)
+        client.handler.enforce_csrf_checks = False
+        with patch("apps.tenant_apps.loans.services.pawn_notices.dispatch_pawn_loan_notice",
+                   return_value=SimpleNamespace(delivery=SimpleNamespace(status="SENT"))) as delivery:
+            self.assertRedirects(client.post(retry), detail, fetch_redirect_response=False)
+            delivery.assert_called_once_with(notice.pk)
+        with patch("apps.tenant_apps.loans.web.pawn_notice_actions.retry_pawn_loan_notice",
+                   side_effect=PawnLoanNoticeError("Scheduled for later")):
+            self.assertRedirects(client.post(retry), detail, fetch_redirect_response=False)
+        viewer, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=viewer)
+        self.assertEqual(client.get(create).status_code, 403)
+        self.assertEqual(client.post(create, payload).status_code, 403)
+        self.assertEqual(client.post(retry).status_code, 403)
 
     def test_license_expiry_alert_is_owner_addressed_and_notify_backed(self):
         self.loan.license.expires_on = timezone.localdate() + timedelta(days=10)

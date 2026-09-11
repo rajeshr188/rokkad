@@ -1,0 +1,21 @@
+# Allow application source only; local artifacts are excluded by default.
+**
+!requirements.txt
+!manage.py
+!accounts/**
+!apps/**
+!django_project/**
+!helpers/**
+!pages/**
+!templates/**
+!static/**
+!locale/**
+!scripts/start_web.py
+!scripts/provision_runtime_role.py
+**/__pycache__/**
+**/*.pyc
+**/.env*
+**/*.log
+**/*.dump
+**/*.backup
+**/*.sqlite3

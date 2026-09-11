@@ -2,10 +2,10 @@
 {% block title %}PawnLoan drafts{% endblock %}
 {% block workspace_content %}
 {% load orgs_tags %}{% navigation_actions as batch_actions %}
-<div class="d-flex gap-3 mb-3">{% if 'loan.release' in batch_actions %}<a href="{% url 'loans:release_batch_create' %}">Release multiple loans</a>{% endif %}<a href="{% url 'loans:release_batch_list' %}">Release batches</a></div>
+<div class="d-flex gap-3 mb-3">{% if 'loan.release' in batch_actions %}<a href="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}">Release multiple loans</a>{% endif %}<a href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}">Release batches</a></div>
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="h3 mb-1">PawnLoans</h1><p class="text-muted mb-0">Find and continue loans in this workspace.</p></div>
-  <div class="d-flex flex-wrap gap-2">{% if can_manage_loan_setup %}<a class="btn btn-outline-primary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">PawnLoan setup</a>{% endif %}<a class="btn btn-outline-primary" href="{% url 'loans:pawn_loan_reports' %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'loans:pawn_loan_create' %}">Create draft</a>{% elif not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
+  <div class="d-flex flex-wrap gap-2">{% if can_manage_loan_setup %}<a class="btn btn-outline-primary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">PawnLoan setup</a>{% endif %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_reports' request.workspace.slug %}">Reports &amp; reconciliation</a>{% if readiness.ready %}<a class="btn btn-primary" href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}">Create draft</a>{% elif not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% endif %}</div>
 </div>
 {% if not readiness.ready %}<div class="alert alert-warning"><strong>Setup required.</strong> {{ readiness.message }}{% if readiness.requires_setup and not can_manage_loan_setup %} Ask your Workspace owner or administrator to complete Settings &rarr; Loan setup. You can continue servicing existing loans.{% endif %}</div>{% endif %}
 <div class="card mb-3">
@@ -17,7 +17,7 @@
       <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.series.id_for_label }}">{{ loan_filter.form.series.label }}</label>{{ loan_filter.form.series }}</div>
       <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.loan_date_from.id_for_label }}">{{ loan_filter.form.loan_date_from.label }}</label>{{ loan_filter.form.loan_date_from }}</div>
       <div class="col-6 col-md-4 col-xl-3"><label class="form-label" for="{{ loan_filter.form.loan_date_to.id_for_label }}">{{ loan_filter.form.loan_date_to.label }}</label>{{ loan_filter.form.loan_date_to }}</div>
-      <div class="col-12 col-md-auto d-flex gap-2"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-outline-secondary" href="{% url 'loans:pawn_loan_list' %}">Clear</a></div>
+      <div class="col-12 col-md-auto d-flex gap-2"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">Clear</a></div>
     </form>
     {% if loan_filter.form.errors %}<div class="text-danger small mt-3">Check the highlighted filters and try again.</div>{% endif %}
   </div>
@@ -32,7 +32,7 @@
       <div>{{ loan.borrower.display_name }}<div class="small text-muted">{{ loan.borrower.party_code }}</div></div>
     </div></td>
     <td>{{ loan.principal_amount }}</td><td><span class="badge text-bg-secondary">{{ loan.get_state_display }}</span></td><td>{{ loan.loan_date }}</td>
-    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'loans:pawn_loan_detail' loan.pk %}">Open</a></td>
+    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Open</a></td>
   </tr>{% empty %}<tr><td colspan="6" class="text-center py-5 text-muted">No PawnLoans match the current filters.</td></tr>{% endfor %}</tbody>
 </table></div>{% include "loans/_pagination.html" with page_obj=page_obj %}</div>
 {% endblock %}

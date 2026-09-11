@@ -5,6 +5,7 @@ import uuid
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -64,7 +65,7 @@ def pawn_loan_notice_create(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"{notice.get_notice_kind_display()} queued through Notify.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect("workspace_slug_loan_detail", workspace_slug=request.loans_workspace.slug, pk=loan.pk)
     return render(
         request,
         "loans/pawn/action_form.html",
@@ -75,6 +76,9 @@ def pawn_loan_notice_create(request, pk):
             "description": "Review and confirm the immutable notice source. Loans owns the intent; Notify owns templates, provider delivery, and attempts.",
             "balance": _safe_balance(loan),
             "notice_preview": True,
+            "form_action": reverse("workspace_loans:pawn_loan_notice_create", kwargs={
+                "workspace_slug": request.loans_workspace.slug, "pk": loan.pk,
+            }),
         },
     )
 
@@ -100,4 +104,4 @@ def pawn_loan_notice_retry(request, pk, notice_pk):
             messages.error(request, result.delivery.failure_reason or "Notice delivery failed.")
         else:
             messages.info(request, "PawnLoan notice remains queued.")
-    return redirect("loans:pawn_loan_detail", pk=loan.pk)
+    return redirect("workspace_slug_loan_detail", workspace_slug=request.loans_workspace.slug, pk=loan.pk)

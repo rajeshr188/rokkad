@@ -2,10 +2,10 @@
 {% block title %}Visual overlay editor · {{ revision.layout.name }}{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
-<p><a href="{% url 'loans:document_layout_guide' %}#overlay">Overlay guide: page size, field positions, and copy backgrounds</a></p>
+<p><a href="{% url 'workspace_loans:document_layout_guide' request.workspace.slug %}#overlay">Overlay guide: page size, field positions, and copy backgrounds</a></p>
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Visual overlay editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · {{ layout.page_size }} · coordinates from top-left</p></div>
-  <div class="d-flex gap-2">{% if sample_loan and has_background %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Assets, JSON, and publishing</a></div>
+  <div class="d-flex gap-2">{% if sample_loan and has_background %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_detail' request.workspace.slug revision.pk %}">Assets, JSON, and publishing</a></div>
 </div>
 {% if not has_background %}<div class="alert alert-warning">Upload a Page background using asset key <code>{{ preview_background_key }}</code> on the revision page. Geometry can be edited now, but preview and publication require that asset.</div>{% endif %}
 <div class="alert alert-info">Drag a rectangle to update its X/Y inputs, then select <strong>Save block</strong>. Use the numeric fields for exact size and typography. Always confirm with a PDF test print at 100% scale.</div>
@@ -13,7 +13,7 @@
 <div class="row g-4">
   <div class="col-xl-8">
     <div id="overlay-page" class="position-relative bg-white shadow-sm mx-auto overflow-hidden" data-page-width="{{ page_width_mm }}" data-page-height="{{ page_height_mm }}" style="aspect-ratio: {{ page_width_mm }} / {{ page_height_mm }}; max-width: 760px; border: 1px solid #94a3b8; touch-action: none;">
-      {% if has_background %}<img src="{% url 'loans:document_layout_overlay_background' revision.pk %}" alt="PDF background preview" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: fill; pointer-events:none;">{% endif %}
+      {% if has_background %}<img src="{% url 'workspace_loans:document_layout_overlay_background' request.workspace.slug revision.pk %}" alt="PDF background preview" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: fill; pointer-events:none;">{% endif %}
       {% for block in layout.blocks %}
       <div class="overlay-block position-absolute border border-primary bg-primary bg-opacity-10 small overflow-hidden" data-index="{{ forloop.counter0 }}" data-width="{{ block.width_mm }}" data-height="{{ block.height_mm }}" style="left: {% widthratio block.x_mm page_width_mm 100 %}%; top: {% widthratio block.y_mm page_height_mm 100 %}%; width: {% widthratio block.width_mm page_width_mm 100 %}%; height: {% widthratio block.height_mm page_height_mm 100 %}%; cursor: move; z-index:2;">
         <span class="badge text-bg-primary">{{ forloop.counter }} {{ block.type }}</span>{% if block.binding %} {{ block.binding }}{% elif block.text %} {{ block.text }}{% endif %}

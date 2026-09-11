@@ -14,10 +14,10 @@
 {% url 'workspace_slug_settings_numbering' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Loan setup</a>
 {% if 'workspace.transfer' in nav_actions %}
-{% url 'workspace_slug_loans_dispatch' workspace_slug=ew.slug loans_path='setup/workflow/' as workflow_href %}
+{% url 'workspace_loans:loan_workflow_settings' request.workspace.slug %}
 <a class="nav-link mgmt-nav-link {% if request.path == workflow_href %}active{% endif %}" href="{{ workflow_href }}">Loan workflow</a>
 {% endif %}
-{% url 'workspace_slug_loans_dispatch' workspace_slug=ew.slug loans_path='setup/documents/' as settings_href %}
+{% url 'workspace_loans:document_layout_list' request.workspace.slug %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Documents &amp; printing</a>
 {% url 'workspace_slug_settings_preferences' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Preferences</a>

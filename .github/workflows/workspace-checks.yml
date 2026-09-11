@@ -1,0 +1,115 @@
+name: Workspace RLS checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, rls-mvp]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEBUG: "False"
+  SECRET_KEY: ci-only-not-a-deployment-secret-012345678901234567890123456789
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+  DB_NAME: rokkad_ci
+  DB_USER: postgres
+  DB_PASSWORD: ci-owner-only
+  DB_HOST: 127.0.0.1
+  DB_PORT: "5432"
+  DB_MIGRATION_NAME: rokkad_ci
+  DB_RUNTIME_USER: rokkad_ci_runtime
+  DB_RUNTIME_PASSWORD: ci-runtime-only
+  EMAIL_HOST: localhost
+  EMAIL_PORT: "1025"
+  EMAIL_USE_TLS: "False"
+  EMAIL_HOST_USER: ci@example.invalid
+  EMAIL_HOST_PASSWORD: unused
+  DEFAULT_FROM_EMAIL: ci@example.invalid
+  ADMINS: CI <ci@example.invalid>
+  CLOUDFLARE_R2_BUCKET: unused
+  CLOUDFLARE_R2_ACCESS_KEY: unused
+  CLOUDFLARE_R2_SECRET_KEY: unused
+  CLOUDFLARE_R2_BUCKET_ENDPOINT: http://localhost:9000
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_DB: rokkad_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-owner-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rokkad_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install and verify dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Check current documentation links
+        run: python scripts/check_current_docs.py
+      - name: Check supported-app import boundaries
+        run: |
+          python scripts/check_app_boundaries.py
+          python -m unittest scripts.test_app_boundaries
+      - name: Provision runtime role before owner migrations
+        env:
+          DJANGO_SETTINGS_MODULE: django_project.settings.migration
+        run: |
+          python scripts/provision_runtime_role.py
+          python manage.py migrate --settings django_project.settings.migration --noinput
+          python manage.py makemigrations --settings django_project.settings.migration --check --dry-run
+      - name: Verify runtime and reject owner startup
+        run: |
+          DJANGO_SETTINGS_MODULE=django_project.settings.prod python scripts/start_web.py
+          if DJANGO_SETTINGS_MODULE=django_project.settings.migration python scripts/start_web.py > owner-check.log 2>&1; then
+            echo "Owner startup unexpectedly succeeded"
+            exit 1
+          fi
+          grep 'tenancy.E020' owner-check.log
+      - name: Boundary and first-loan checks
+        run: >-
+          python manage.py test --settings django_project.settings.test --noinput
+          apps.tenancy.tests apps.tenancy.test_registry
+          django_project.test_deployment_entrypoints
+          apps.onboarding.tests_tour_preferences
+          django_project.test_control_plane_contract_gate
+          django_project.test_phase9_app_conformance_gate
+          django_project.test_mvp_operator_journey
+          apps.subscriptions.tests apps.subscriptions.test_phase4_billing
+          apps.subscriptions.test_checkout apps.subscriptions.test_recovery
+          apps.subscriptions.test_reviews
+      - name: Loans regressions
+        run: >-
+          python manage.py test --settings django_project.settings.test --noinput
+          apps.tenant_apps.loans.tests
+      - name: Build application image (never publish)
+        run: docker build -t rokkad-ci .
+      - name: Verify image runtime and static assets with no owner credentials
+        run: |
+          docker run --rm --network host \
+            -e SECRET_KEY -e DJANGO_ALLOWED_HOSTS -e DEBUG \
+            -e DB_HOST -e DB_PORT -e DB_NAME \
+            -e DB_USER=rokkad_ci_runtime -e DB_PASSWORD=ci-runtime-only \
+            -e DB_RUNTIME_USER -e DB_RUNTIME_PASSWORD \
+            -e EMAIL_HOST -e EMAIL_PORT -e EMAIL_USE_TLS -e EMAIL_HOST_USER \
+            -e EMAIL_HOST_PASSWORD -e DEFAULT_FROM_EMAIL -e ADMINS \
+            -e CLOUDFLARE_R2_BUCKET -e CLOUDFLARE_R2_ACCESS_KEY \
+            -e CLOUDFLARE_R2_SECRET_KEY -e CLOUDFLARE_R2_BUCKET_ENDPOINT \
+            rokkad-ci python scripts/start_web.py python manage.py collectstatic --noinput

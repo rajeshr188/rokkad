@@ -1,0 +1,81 @@
+/* Approved bilingual artwork: display its lockup without altering the source. */
+:root {
+    --rk-brand-teal: #103f3a;
+    --rk-brand-gold: #d5ab57;
+    --rk-brand-ivory: #faf8f2;
+    --rk-nav-height: 83px;
+    --bs-primary: #103f3a;
+    --bs-primary-rgb: 16, 63, 58;
+    --bs-link-color: #103f3a;
+    --bs-link-color-rgb: 16, 63, 58;
+    --bs-link-hover-color: #0b302c;
+    --bs-link-hover-color-rgb: 11, 48, 44;
+}
+
+.rk-brand {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    width: 176px;
+    aspect-ratio: 1160 / 440;
+    flex: 0 0 auto;
+    vertical-align: middle;
+    border-radius: 4px;
+    background: var(--rk-brand-ivory);
+}
+
+.rk-brand img {
+    position: absolute;
+    width: 152.931034%;
+    max-width: none;
+    height: auto;
+    left: -26.551724%;
+    top: -58.409091%;
+}
+
+.modern-nav .navbar-brand { padding: 0; line-height: 1; }
+.modern-nav.navbar {
+    background: var(--rk-brand-ivory);
+    border-bottom: 1px solid #deded3;
+    --bs-navbar-color: #103f3a;
+    --bs-navbar-hover-color: #0b302c;
+    --bs-navbar-active-color: #0b302c;
+    --bs-navbar-toggler-border-color: #829c94;
+}
+.modern-nav.navbar .nav-pill { background: #edf2ec; border-color: #d5dfd7; color: #103f3a; }
+.modern-nav.navbar .nav-pill:hover,
+.modern-nav.navbar .nav-pill:focus { background: #e1e9df; color: #0b302c; }
+.modern-nav.navbar .navbar-toggler-icon { filter: invert(1); }
+.modern-nav.navbar .user-chip { background: #103f3a; }
+
+body .btn-primary,
+.public-actions .btn-success {
+    --bs-btn-bg: #103f3a;
+    --bs-btn-border-color: #103f3a;
+    --bs-btn-hover-bg: #0b302c;
+    --bs-btn-hover-border-color: #0b302c;
+    --bs-btn-active-bg: #0b302c;
+    --bs-btn-active-border-color: #0b302c;
+    --bs-btn-focus-shadow-rgb: 16, 63, 58;
+}
+body .btn-outline-primary {
+    --bs-btn-color: #103f3a;
+    --bs-btn-border-color: #103f3a;
+    --bs-btn-hover-bg: #103f3a;
+    --bs-btn-hover-border-color: #103f3a;
+    --bs-btn-active-bg: #103f3a;
+    --bs-btn-active-border-color: #103f3a;
+}
+.public-shell, .auth-shell, .public-hero, .portal-shell { background: var(--rk-brand-ivory); }
+.auth-story { background: var(--rk-brand-teal); }
+.auth-story-kicker { color: var(--rk-brand-gold); }
+.portal-topbar { background: var(--rk-brand-ivory); }
+.portal-topbar-inner { flex-wrap: wrap; padding-block: 8px; }
+.portal-brand { flex-wrap: wrap; gap: 8px; }
+.rk-footer-brand { display: block; margin-bottom: 10px; }
+
+@media (max-width: 575px) {
+    :root { --rk-nav-height: 75px; }
+    .rk-brand { width: 154px; }
+    .portal-topbar-actions { flex-wrap: wrap; }
+}

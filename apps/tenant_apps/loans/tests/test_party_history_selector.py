@@ -19,19 +19,20 @@ class PartyPawnLoanHistorySelectorTests(SimpleTestCase):
     ):
         loan = SimpleNamespace(
             pk=8,
+            workspace=SimpleNamespace(slug="alpha"),
             loan_number="PL-008",
             loan_date="2026-08-16",
             state=PawnLoanState.ACTIVE.value,
             collateral_items_count=2,
             get_state_display=lambda: "Active",
         )
-        filter_loans.return_value.annotate.return_value.order_by.return_value = [loan]
+        filter_loans.return_value.select_related.return_value.annotate.return_value.order_by.return_value = [loan]
         get_balance.return_value = SimpleNamespace(
             total_due=Decimal("125.00"),
             principal_outstanding=Decimal("100.00"),
             interest_outstanding=Decimal("25.00"),
         )
-        reverse.side_effect = lambda name, args: f"/{name}/{args[0]}"
+        reverse.side_effect = lambda name, kwargs: f"/w/{kwargs['workspace_slug']}/{name}/{kwargs['pk']}"
 
         result = get_party_pawn_loan_history_summary(SimpleNamespace(pk=3))
 
@@ -48,13 +49,14 @@ class PartyPawnLoanHistorySelectorTests(SimpleTestCase):
     ):
         loan = SimpleNamespace(
             pk=9,
+            workspace=SimpleNamespace(slug="alpha"),
             loan_number="PL-009",
             loan_date="2026-08-16",
             state=PawnLoanState.DRAFT.value,
             collateral_items_count=1,
             get_state_display=lambda: "Draft",
         )
-        filter_loans.return_value.annotate.return_value.order_by.return_value = [loan]
+        filter_loans.return_value.select_related.return_value.annotate.return_value.order_by.return_value = [loan]
         reverse.return_value = "/loan/9"
 
         result = get_party_pawn_loan_history_summary(SimpleNamespace(pk=4))

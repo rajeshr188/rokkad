@@ -289,7 +289,10 @@ def workspace_slug_settings_roles(request, workspace_slug):
 
 @login_required
 def workspace_slug_settings_numbering(request, workspace_slug):
-    return workspace_slug_loans_dispatch(request, workspace_slug, "setup/")
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.loans.views import license_list
+
+    return license_list(request)
 
 
 @login_required
@@ -358,48 +361,27 @@ def workspace_slug_loans(request, workspace_slug):
 
 @login_required
 def workspace_slug_loans_dispatch(request, workspace_slug, loans_path):
-    """Dispatch the established Loans URL surface under explicit Workspace identity."""
+    """Retain the old URL-builder name; all supported paths resolve before this."""
     _get_workspace_from_slug(workspace_slug)
     from django.http import Http404
-    from django.urls import Resolver404, resolve
 
-    try:
-        match = resolve(f"/loans/{loans_path}")
-    except Resolver404 as exc:
-        raise Http404 from exc
-    request.resolver_match = match
-    response = match.func(request, *match.args, **match.kwargs)
-    legacy_prefix = "/loans/"
-    canonical_prefix = f"/w/{workspace_slug}/loans/"
-
-    location = response.headers.get("Location")
-    if location and location.startswith(legacy_prefix):
-        response.headers["Location"] = location.replace(
-            legacy_prefix, canonical_prefix, 1
-        )
-
-    if (
-        not getattr(response, "streaming", False)
-        and response.status_code < 300
-        and response.headers.get("Content-Type", "").startswith("text/html")
-    ):
-        charset = response.charset
-        content = response.content.decode(charset)
-        content = content.replace(f'"{legacy_prefix}', f'"{canonical_prefix}')
-        content = content.replace(f"'{legacy_prefix}", f"'{canonical_prefix}")
-        response.content = content.encode(charset)
-
-    return response
+    raise Http404("Unknown Loans route")
 
 
 @login_required
 def workspace_slug_loan_list(request, workspace_slug):
-    return workspace_slug_loans_dispatch(request, workspace_slug, "internal/")
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.loans.views import pawn_loan_list
+
+    return pawn_loan_list(request)
 
 
 @login_required
 def workspace_slug_loan_create(request, workspace_slug):
-    return workspace_slug_loans_dispatch(request, workspace_slug, "internal/create/")
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.loans.views import pawn_loan_create
+
+    return pawn_loan_create(request)
 
 
 @login_required
@@ -410,7 +392,10 @@ def workspace_slug_loan_table(request, workspace_slug):
 
 @login_required
 def workspace_slug_loan_detail(request, workspace_slug, pk):
-    return workspace_slug_loans_dispatch(request, workspace_slug, f"internal/{pk}/")
+    _get_workspace_from_slug(workspace_slug)
+    from apps.tenant_apps.loans.views import pawn_loan_detail
+
+    return pawn_loan_detail(request, pk=pk)
 
 
 @login_required
@@ -440,13 +425,13 @@ def workspace_slug_loan_detail_statement(request, workspace_slug, pk):
 @login_required
 def workspace_slug_loan_detail_notices(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#notices")
+    return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[workspace_slug, pk])}#notices")
 
 
 @login_required
 def workspace_slug_loan_detail_release(request, workspace_slug, pk):
     _get_workspace_from_slug(workspace_slug)
-    return redirect(f"{reverse('loans:pawn_loan_detail', args=[pk])}#release")
+    return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[workspace_slug, pk])}#release")
 
 
 @login_required
@@ -468,31 +453,31 @@ def workspace_slug_loan_report(request, workspace_slug):
 @login_required
 def workspace_slug_loan_by_customer_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:pawn_loan_reports")
+    return redirect('workspace_loans:pawn_loan_reports', workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_loan_crosstab_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:pawn_loan_reports")
+    return redirect('workspace_loans:pawn_loan_reports', workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_loan_list_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:pawn_loan_reports")
+    return redirect('workspace_loans:pawn_loan_reports', workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_loan_reconciliation_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:pawn_operations_console")
+    return redirect('workspace_loans:pawn_operations_console', workspace_slug=workspace_slug)
 
 
 @login_required
 def workspace_slug_loan_operational_controls_report(request, workspace_slug):
     _get_workspace_from_slug(workspace_slug)
-    return redirect("loans:pawn_operations_console")
+    return redirect('workspace_loans:pawn_operations_console', workspace_slug=workspace_slug)
 
 
 @login_required

@@ -8,18 +8,24 @@ environ.Env.read_env()
 DEBUG = False
 BILLING_ALLOW_TRIAL_START = False
 
-ALLOWED_HOSTS = ["*", "rokkad.com", "www.rokkad.com"]
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
+if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("Production requires explicit DJANGO_ALLOWED_HOSTS without '*'.")
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": env("DB_NAME"),
-        "USER": env("DB_RUNTIME_USER", default=env("DB_USER")),
-        "PASSWORD": env("DB_RUNTIME_PASSWORD", default=env("DB_PASSWORD")),
+        "USER": env("DB_RUNTIME_USER"),
+        "PASSWORD": env("DB_RUNTIME_PASSWORD"),
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
     }
 }
+if not DATABASES["default"]["USER"] or not DATABASES["default"]["PASSWORD"]:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("DB_RUNTIME_USER and DB_RUNTIME_PASSWORD must be nonempty.")
 
 STATIC_ROOT = "/var/www/rokkad/static"
 MEDIA_ROOT = "/var/www/rokkad/media"

@@ -1490,7 +1490,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertRedirects(
             response,
-            reverse("loans:pawn_loan_detail", args=[loan.pk]),
+            reverse("workspace_slug_loan_detail", kwargs={"workspace_slug": self.tenant.slug, "pk": loan.pk}),
             fetch_redirect_response=False,
         )
         command.assert_called_once_with(

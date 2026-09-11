@@ -1,21 +1,65 @@
-version: '3.9'
+name: rokkad-dev
+
+x-app: &app
+  build: .
+  environment: &runtime
+    DJANGO_SETTINGS_MODULE: django_project.settings.container_dev
+    DEBUG: "False"
+    SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY}
+    DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+    DB_HOST: db
+    DB_PORT: "5432"
+    DB_NAME: rokkad_container_dev
+    DB_USER: rokkad_runtime
+    DB_PASSWORD: ${DB_RUNTIME_PASSWORD:?Set DB_RUNTIME_PASSWORD}
+    DB_RUNTIME_USER: rokkad_runtime
+    DB_RUNTIME_PASSWORD: ${DB_RUNTIME_PASSWORD:?Set DB_RUNTIME_PASSWORD}
+    EMAIL_HOST: localhost
+    EMAIL_PORT: "1025"
+    EMAIL_USE_TLS: "False"
+    EMAIL_HOST_USER: local@example.invalid
+    EMAIL_HOST_PASSWORD: unused
+    DEFAULT_FROM_EMAIL: local@example.invalid
+    ADMINS: Local <local@example.invalid>
+    CLOUDFLARE_R2_BUCKET: unused
+    CLOUDFLARE_R2_ACCESS_KEY: unused
+    CLOUDFLARE_R2_SECRET_KEY: unused
+    CLOUDFLARE_R2_BUCKET_ENDPOINT: http://localhost:9000
+  depends_on:
+    db:
+      condition: service_healthy
 
 services:
-  web:
-    build: .
-    command: python /code/manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/code
-    ports:
-      - 8000:8000
-    depends_on:
-      - db
   db:
-    image: postgres:13
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
+    image: postgres:16-bookworm
     environment:
-      - "POSTGRES_HOST_AUTH_METHOD=trust"
+      POSTGRES_DB: rokkad_container_dev
+      POSTGRES_USER: rokkad_owner
+      POSTGRES_PASSWORD: ${CONTAINER_OWNER_PASSWORD:?Set CONTAINER_OWNER_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rokkad_owner -d rokkad_container_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  migrate:
+    <<: *app
+    profiles: [tools]
+    environment:
+      <<: *runtime
+      DJANGO_SETTINGS_MODULE: django_project.settings.migration
+      DB_MIGRATION_NAME: rokkad_container_dev
+      DB_MIGRATION_USER: rokkad_owner
+      DB_MIGRATION_PASSWORD: ${CONTAINER_OWNER_PASSWORD:?Set CONTAINER_OWNER_PASSWORD}
+    command: ["python", "manage.py", "migrate", "--settings", "django_project.settings.migration", "--noinput"]
+  web:
+    <<: *app
+    command: ["python", "scripts/start_web.py", "python", "manage.py", "runserver", "0.0.0.0:8000", "--noreload"]
+    ports: ["127.0.0.1:8000:8000"]
+    volumes:
+      - media:/var/www/rokkad/media
 
 volumes:
   postgres_data:
+  media:

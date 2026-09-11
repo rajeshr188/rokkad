@@ -65,7 +65,7 @@ def pawn_loan_release_full(request, pk):
                 f"{result.release.items.count()} collateral item(s) returned, "
                 "loan closed.",
             )
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return render(
         request,
         "loans/pawn/action_form.html",

@@ -8,6 +8,8 @@ related: []
 
 # Rokkad
 
+<img src="static/images/brand/rokkad-hindi.png" alt="Rokkad — रोक्कड़" width="480">
+
 Living project documentation now starts at [docs/README.md](docs/README.md).
 
 Rokkad is a shared-schema Django SaaS application for operational pawn lending.
@@ -42,8 +44,8 @@ security isolates Workspaces under a restricted runtime database role.
 - `apps/onboarding`: Workspace onboarding flow
 - `apps/tenant_apps/*`: Workspace-owned Party, Loans, Notify v2, and Rates apps
 - `apps/tenancy`: Workspace context, ownership registry, RLS operations, and checks
-- `django_project/settings`: environment-based settings (`base`, `dev`)
-- `django_project/docs`: architecture and operations documentation
+- `django_project/settings`: environment-based settings (`base`, `dev`, `prod`, `migration`, `test`, `container_dev`)
+- `docs/`: current architecture, domain, operator and implementation documentation
 
 ## Quick Start (Local)
 

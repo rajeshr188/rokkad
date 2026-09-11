@@ -240,7 +240,7 @@ def pawn_loan_renew(request, pk):
                     f"{len(snapshot.get('retained_source_item_ids') or [])} retained, "
                     f"{len(snapshot.get('additional_successor_item_ids') or [])} added.",
                 )
-                return redirect("loans:pawn_loan_detail", pk=result.successor_loan.pk)
+                return redirect('workspace_loans:pawn_loan_detail', pk=result.successor_loan.pk, workspace_slug=request.workspace.slug)
     return render(
         request,
         "loans/pawn/release_and_renew.html",
@@ -270,7 +270,7 @@ def pawn_loan_renewal_reverse(request, renewal_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Renewal {renewal.renewal_number} reversed.")
-            return redirect("loans:pawn_loan_detail", pk=renewal.source_loan_id)
+            return redirect('workspace_loans:pawn_loan_detail', pk=renewal.source_loan_id, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         renewal.source_loan,

@@ -98,8 +98,11 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
         self.assertNotIn("workspace_slug=workspace.schema_name", templates)
 
     def test_phase101_slug_rollout_is_reflected_in_project_docs(self):
-        status = _read("docs/STATUS.md")
-        memory = _read("docs/AGENT_MEMORY.md")
+        # Completed rollout notes live in the linked historical snapshot.
+        for name in ("STATUS.md", "AGENT_MEMORY.md"):
+            self.assertIn(f"archive/context/2026-09-09/{name}", _read(f"docs/{name}"))
+        status = _read("docs/archive/context/2026-09-09/STATUS.md")
+        memory = _read("docs/archive/context/2026-09-09/AGENT_MEMORY.md")
         audit = _read("docs/ui/saas_information_architecture_audit.md")
 
         for content in (status, memory, audit):

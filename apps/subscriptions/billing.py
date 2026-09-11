@@ -27,8 +27,18 @@ def effective_billing_state(subscription, *, at=None):
             commercially_available=available,
             recovery_only=not available,
         )
-    available = status == Subscription.StatusChoices.ACTIVE
-    return BillingDecision(status=status, commercially_available=available, recovery_only=not available)
+    if status == Subscription.StatusChoices.ACTIVE:
+        end_date = getattr(subscription, "end_date", None)
+        if end_date is None or at >= end_date:
+            return BillingDecision(
+                status=Subscription.StatusChoices.EXPIRED,
+                commercially_available=False,
+                recovery_only=True,
+                reason="SUBSCRIPTION_EXPIRED",
+                message="Your paid subscription period has ended. Renew from Billing to continue.",
+            )
+        return BillingDecision(status=status, commercially_available=True, recovery_only=False)
+    return BillingDecision(status=status, commercially_available=False, recovery_only=True)
 
 
 ALLOWED_TRANSITIONS = {

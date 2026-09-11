@@ -35,8 +35,8 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
 
         self.assertNotIn('"route_name": "girvi:', source)
         self.assertNotIn('redirect("girvi:', source)
-        self.assertIn('"route_name": "loans:pawn_loan_list"', source)
-        self.assertIn('redirect("loans:license_list")', source)
+        self.assertIn('"route_name": "workspace_slug_loan_list"', source)
+        self.assertIn("from apps.tenant_apps.loans.views import license_list", source)
 
     def test_legacy_notify_routes_redirect_to_notify_v2(self):
         factory = RequestFactory()
@@ -74,9 +74,10 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         )[1].split("def workspace_slug_data_tools_export", 1)[0]
 
         self.assertNotIn("apps.tenant_apps.notify.views", notification_section)
+        self.assertIn("from apps.tenant_apps.notify_v2.views import batch_list", notification_section)
         self.assertEqual(
-            notification_section.count('redirect("notify_v2_batch_list")'),
-            4,
+            notification_section.count('redirect("workspace_notify:notify_v2_batch_list", workspace_slug=workspace_slug)'),
+            3,
         )
 
     def test_workspace_seed_commands_do_not_schedule_legacy_notify(self):

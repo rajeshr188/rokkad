@@ -107,12 +107,12 @@ def ensure_billing_account_for_subscription(subscription: Any, dry_run: bool = F
     return account, created
 
 
-def ensure_entitlements_for_subscription(subscription: Any, dry_run: bool = False) -> list[tuple[Any, bool]]:
+def ensure_entitlements_for_subscription(subscription: Any, dry_run: bool = False, *, projection=None) -> list[tuple[Any, bool]]:
     """Ensure the subscription has entitlement rows for its current plan."""
     from apps.subscriptions.models import SubscriptionEntitlement
 
     created_entities: list[tuple[Any, bool]] = []
-    for payload in build_entitlement_defaults(subscription):
+    for payload in (build_entitlement_defaults(subscription) if projection is None else projection):
         if dry_run:
             entitlement = SubscriptionEntitlement.objects.filter(
                 subscription=subscription,
@@ -269,11 +269,12 @@ class SubscriptionAccessService:
 
         from apps.subscriptions.billing import effective_billing_state
 
-        if not effective_billing_state(subscription).commercially_available:
+        billing = effective_billing_state(subscription)
+        if not billing.commercially_available:
             return AccessDecision(
                 False,
-                "SUBSCRIPTION_INACTIVE",
-                "This workspace subscription is not active.",
+                billing.reason,
+                billing.message,
                 membership=membership,
                 subscription=subscription,
             )

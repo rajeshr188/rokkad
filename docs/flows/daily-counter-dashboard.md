@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-09-10
 tags: [dashboard, counter, loans, workspace]
 related: [first-loan-setup.md, ../domain/pawn-loan-financial-read-models.md]
 ---
@@ -21,6 +21,9 @@ Selecting a queue opens its oldest items first, 20 loans per page.
 | Overdue payments | Unpaid schedule obligations dated before today | Open repayment form |
 | Schedule needs review | Missing/empty active schedule or allocation findings | Review loan evidence |
 
+A warning links to Schedule needs review whenever affected loans are excluded
+from payment counts and amounts. Valid payment rows remain available.
+
 Payment queues cover ACTIVE loans only. The same loan may appear in both payment
 queues for different unpaid obligations. Canonical schedule selection and
 allocation folding respect effective dates, terminations, and reversals. Fully
@@ -39,4 +42,8 @@ their existing authorization, lifecycle, validation, and CSRF requirements.
 
 Current counts require reading the Workspace's draft, approved, and active loans
 and active repayment schedules. Pagination limits display, not this calculation;
-large-portfolio query optimization can be addressed separately with measured data.
+related schedule evidence now loads in batches. Memory and calculation work still
+grow with portfolio size.
+
+See the [reliability and query baseline](../implementation/dashboard-reliability.md)
+for measured costs and batching validation.

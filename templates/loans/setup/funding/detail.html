@@ -4,14 +4,14 @@
 {% include "loans/setup/_navigation.html" %}
 <div class="app-heading">
   <div>
-    <a class="small text-decoration-none" href="{% url 'loans:funding_loan_read_console' %}">&larr; FundingLoan read console</a>
+    <a class="small text-decoration-none" href="{% url 'workspace_loans:funding_loan_read_console' request.workspace.slug %}">&larr; FundingLoan read console</a>
     <h1 class="h3 mt-2 mb-1">{{ detail.summary.funding_number }}</h1>
     <p class="text-muted mb-0">{{ detail.summary.lender_name }} &middot; {{ detail.summary.state }}</p>
   </div>
   <div class="d-flex align-items-center gap-2">
     <span class="badge text-bg-warning">Controlled MVP preview</span>
-    {% if detail.activated_on %}<a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_agreement_pdf' detail.summary.funding_loan_id %}">Agreement PDF</a><a class="btn btn-outline-secondary" href="{% url 'loans:funding_loan_statement_pdf' detail.summary.funding_loan_id %}">Statement PDF</a>{% endif %}
-    {% if draft %}<a class="btn btn-primary" href="{% url 'loans:funding_loan_draft_inputs' detail.summary.funding_loan_id %}">Complete draft</a>{% endif %}
+    {% if detail.activated_on %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:funding_loan_agreement_pdf' request.workspace.slug detail.summary.funding_loan_id %}">Agreement PDF</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:funding_loan_statement_pdf' request.workspace.slug detail.summary.funding_loan_id %}">Statement PDF</a>{% endif %}
+    {% if draft %}<a class="btn btn-primary" href="{% url 'workspace_loans:funding_loan_draft_inputs' request.workspace.slug detail.summary.funding_loan_id %}">Complete draft</a>{% endif %}
   </div>
 </div>
 
@@ -26,7 +26,7 @@
 {% endif %}
 <div class="table-responsive mb-4"><table class="table"><tbody><tr><th scope="row">Selected value</th><td>{{ draft.total_collateral_value }}</td><th scope="row">Maximum funded amount</th><td>{{ draft.maximum_funded_amount }}</td></tr></tbody></table></div>
 {% if draft.ready %}
-<form method="post" action="{% url 'loans:funding_loan_draft_activate' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+<form method="post" action="{% url 'workspace_loans:funding_loan_draft_activate' request.workspace.slug detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
   {% csrf_token %}
   <div class="col-md-6">
     <label class="form-label" for="{{ activation_form.confirmation.id_for_label }}">Activation confirmation</label>
@@ -48,7 +48,7 @@
 
 {% if detail.summary.state == "ACTIVE" or detail.summary.state == "SETTLEMENT_PENDING" %}
 <h2 class="h5">Record repayment</h2>
-<form method="post" action="{% url 'loans:funding_loan_repayment' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+<form method="post" action="{% url 'workspace_loans:funding_loan_repayment' request.workspace.slug detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
   {% csrf_token %}
   {{ repayment_form.request_key }}
   <div class="col-md-4"><label class="form-label" for="{{ repayment_form.amount.id_for_label }}">Amount</label>{{ repayment_form.amount }}</div>
@@ -64,13 +64,13 @@
   {% if settlement.blockers %}<ul class="mb-0 mt-2">{% for blocker in settlement.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
 </div>
 {% if detail.summary.state == "ACTIVE" and settlement.financially_settled %}
-<form method="post" action="{% url 'loans:funding_loan_begin_settlement' detail.summary.funding_loan_id %}" class="mb-4">
+<form method="post" action="{% url 'workspace_loans:funding_loan_begin_settlement' request.workspace.slug detail.summary.funding_loan_id %}" class="mb-4">
   {% csrf_token %}
   <button class="btn btn-outline-primary" type="submit">Begin settlement review</button>
 </form>
 {% endif %}
 {% if detail.summary.state == "SETTLEMENT_PENDING" and settlement.active_collateral_ids %}
-<form method="post" action="{% url 'loans:funding_loan_return_collateral' detail.summary.funding_loan_id %}" class="mb-4">
+<form method="post" action="{% url 'workspace_loans:funding_loan_return_collateral' request.workspace.slug detail.summary.funding_loan_id %}" class="mb-4">
   {% csrf_token %}
   {{ return_form.request_key }}
   <fieldset class="mb-3"><legend class="form-label">Collateral to return</legend>{{ return_form.collateral }}</fieldset>
@@ -81,7 +81,7 @@
 </form>
 {% endif %}
 {% if detail.summary.state == "SETTLEMENT_PENDING" and settlement.closure_ready %}
-<form method="post" action="{% url 'loans:funding_loan_close' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+<form method="post" action="{% url 'workspace_loans:funding_loan_close' request.workspace.slug detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
   {% csrf_token %}
   <div class="col-md-6">
     <label class="form-label" for="{{ closure_form.confirmation.id_for_label }}">Closure confirmation</label>
@@ -98,7 +98,7 @@
 <h2 class="h5">Corrections</h2>
 <div class="alert alert-warning">Corrections append compensating evidence; they do not edit or delete the original record.</div>
 {% if detail.financial_correction %}
-<form method="post" action="{% url 'loans:funding_loan_reverse_event' detail.summary.funding_loan_id detail.financial_correction.source_id %}" class="row g-2 align-items-end mb-3">
+<form method="post" action="{% url 'workspace_loans:funding_loan_reverse_event' request.workspace.slug detail.summary.funding_loan_id detail.financial_correction.source_id %}" class="row g-2 align-items-end mb-3">
   {% csrf_token %}{{ correction_form.request_key }}
   <div class="col-md-3"><label class="form-label" for="{{ correction_form.effective_date.id_for_label }}">Correction date</label>{{ correction_form.effective_date }}</div>
   <div class="col-md-6"><label class="form-label" for="{{ correction_form.reason.id_for_label }}">Reason for reversing {{ detail.financial_correction.operation }}</label>{{ correction_form.reason }}</div>
@@ -106,7 +106,7 @@
 </form>
 {% endif %}
 {% for target in detail.return_corrections %}
-<form method="post" action="{% url 'loans:funding_loan_reverse_return' detail.summary.funding_loan_id target.source_id %}" class="row g-2 align-items-end mb-3">
+<form method="post" action="{% url 'workspace_loans:funding_loan_reverse_return' request.workspace.slug detail.summary.funding_loan_id target.source_id %}" class="row g-2 align-items-end mb-3">
   {% csrf_token %}<input type="hidden" name="request_key" value="{{ correction_form.request_key.value }}">
   <div class="col-md-3"><label class="form-label">Correction date</label><input class="form-control" type="date" name="effective_date" value="{{ correction_form.effective_date.value|date:'Y-m-d' }}"></div>
   <div class="col-md-6"><label class="form-label">Reason for reversing return #{{ target.source_id }}</label><textarea class="form-control" rows="2" name="reason" required></textarea></div>
@@ -114,7 +114,7 @@
 </form>
 {% endfor %}
 {% if detail.pledge_correction_available %}
-<form method="post" action="{% url 'loans:funding_loan_reverse_pledge' detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
+<form method="post" action="{% url 'workspace_loans:funding_loan_reverse_pledge' request.workspace.slug detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
   {% csrf_token %}<input type="hidden" name="request_key" value="{{ correction_form.request_key.value }}">
   <div class="col-md-3"><label class="form-label">Correction date</label><input class="form-control" type="date" name="effective_date" value="{{ correction_form.effective_date.value|date:'Y-m-d' }}"></div>
   <div class="col-md-6"><label class="form-label">Reason for reversing pledge handoff</label><textarea class="form-control" rows="2" name="reason" required></textarea></div>
@@ -139,7 +139,7 @@
 <div class="table-responsive mb-4">
   <table class="table app-table align-middle">
     <thead><tr><th>Seq.</th><th>Effective</th><th>Operation</th><th class="text-end">Principal effect</th><th class="text-end">Interest effect</th><th class="text-end">Fee effect</th><th class="text-end">Balance</th><th>Actor</th></tr></thead>
-    <tbody>{% for row in detail.statement %}<tr><td>{{ row.sequence }}</td><td>{{ row.effective_date }}</td><td>{{ row.operation }}{% if row.operation == "RECORD_REPAYMENT" %} <a class="small" href="{% url 'loans:funding_loan_repayment_receipt_pdf' detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td class="text-end">{{ row.principal_effect }}</td><td class="text-end">{{ row.interest_effect }}</td><td class="text-end">{{ row.fee_effect }}</td><td class="text-end fw-semibold">{{ row.total_balance }}</td><td>{{ row.actor_name }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">No financial events exist.</td></tr>{% endfor %}</tbody>
+    <tbody>{% for row in detail.statement %}<tr><td>{{ row.sequence }}</td><td>{{ row.effective_date }}</td><td>{{ row.operation }}{% if row.operation == "RECORD_REPAYMENT" %} <a class="small" href="{% url 'workspace_loans:funding_loan_repayment_receipt_pdf' request.workspace.slug detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td class="text-end">{{ row.principal_effect }}</td><td class="text-end">{{ row.interest_effect }}</td><td class="text-end">{{ row.fee_effect }}</td><td class="text-end fw-semibold">{{ row.total_balance }}</td><td>{{ row.actor_name }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">No financial events exist.</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 
@@ -147,13 +147,13 @@
 <div class="table-responsive">
   <table class="table app-table align-middle">
     <thead><tr><th>Recorded</th><th>Effective</th><th>Type</th><th>Operation</th><th>Evidence</th></tr></thead>
-    <tbody>{% for row in detail.timeline %}<tr><td>{{ row.occurred_at }}</td><td>{{ row.effective_date }}</td><td>{{ row.entry_type }}</td><td>{{ row.operation }}{% if row.reversal %} <span class="badge text-bg-warning">Reversal</span>{% endif %}{% if row.operation == "RETURN_COLLATERAL" %} <a class="small" href="{% url 'loans:funding_loan_return_receipt_pdf' detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td>{{ row.summary }}</td></tr>{% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No operational evidence exists.</td></tr>{% endfor %}</tbody>
+    <tbody>{% for row in detail.timeline %}<tr><td>{{ row.occurred_at }}</td><td>{{ row.effective_date }}</td><td>{{ row.entry_type }}</td><td>{{ row.operation }}{% if row.reversal %} <span class="badge text-bg-warning">Reversal</span>{% endif %}{% if row.operation == "RETURN_COLLATERAL" %} <a class="small" href="{% url 'workspace_loans:funding_loan_return_receipt_pdf' request.workspace.slug detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td>{{ row.summary }}</td></tr>{% empty %}<tr><td colspan="5" class="text-center py-4 text-muted">No operational evidence exists.</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 {% if draft %}
 <hr class="my-4">
 <h2 class="h5">Cancel draft</h2>
-<form method="post" action="{% url 'loans:funding_loan_draft_cancel' detail.summary.funding_loan_id %}" class="row g-2 align-items-end">
+<form method="post" action="{% url 'workspace_loans:funding_loan_draft_cancel' request.workspace.slug detail.summary.funding_loan_id %}" class="row g-2 align-items-end">
   {% csrf_token %}
   <div class="col-md-8"><label class="form-label" for="{{ cancellation_form.reason.id_for_label }}">Reason</label>{{ cancellation_form.reason }}</div>
   <div class="col-md-auto"><button class="btn btn-outline-danger" type="submit">Cancel draft</button></div>

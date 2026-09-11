@@ -46,8 +46,8 @@
     }
     
     .billing-cycle-btn.active {
-        border-color: #007bff;
-        background-color: #007bff;
+        border-color: #103f3a;
+        background-color: #103f3a;
         color: white;
     }
     
@@ -143,12 +143,12 @@
         <!-- Billing Cycle Selector -->
         <div class="billing-cycle-selector">
             <label class="d-block mb-2"><strong>Billing Cycle</strong></label>
-            <button type="button" class="billing-cycle-btn active" data-cycle="monthly">
-                Monthly (₹{{ base_amount }})
+            <button type="button" class="billing-cycle-btn {% if billing_cycle == 'monthly' %}active{% endif %}" data-cycle="monthly">
+                Monthly (₹{{ plan.price }})
             </button>
             {% if plan.yearly_price %}
-            <button type="button" class="billing-cycle-btn" data-cycle="yearly">
-                Yearly (₹{{ plan.yearly_price }}) <span class="badge badge-success">Save 20%</span>
+            <button type="button" class="billing-cycle-btn {% if billing_cycle == 'yearly' %}active{% endif %}" data-cycle="yearly">
+                Yearly (₹{{ plan.yearly_price }})
             </button>
             {% endif %}
         </div>
@@ -157,7 +157,7 @@
         <form id="payment-form" class="payment-form">
             {% csrf_token %}
             <input type="hidden" name="plan_id" value="{{ plan.id }}">
-            <input type="hidden" name="billing_cycle" id="billing-cycle-input" value="monthly">
+            <input type="hidden" name="billing_cycle" id="billing-cycle-input" value="{{ billing_cycle }}">
             
             <!-- Razorpay Payment Button -->
             <button type="button" id="razorpay-button" class="btn btn-primary btn-lg razorpay-button">
@@ -201,7 +201,7 @@
                     </div>
                     <div id="collapse1" class="collapse" data-parent="#faqAccordion">
                         <div class="card-body">
-                            Yes! You can upgrade or downgrade your plan anytime. Changes will be reflected in your next billing cycle.
+                            You can renew your current plan here. Contact support to review a change to an active paid plan.
                         </div>
                     </div>
                 </div>
@@ -229,7 +229,7 @@
                     </div>
                     <div id="collapse3" class="collapse" data-parent="#faqAccordion">
                         <div class="card-body">
-                            Yes! All plans include a 14-day free trial. We'll ask for payment details, but won't charge until the trial ends.
+                            Trials are started separately from the plans page. This checkout charges immediately for one month or one year; it does not set up automatic renewal.
                         </div>
                     </div>
                 </div>
@@ -249,13 +249,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorText = document.getElementById('error-text');
     const loadingSpinner = document.getElementById('loading-spinner');
     
+    const checkoutKey = crypto.randomUUID();
     // Billing Cycle Selection
     document.querySelectorAll('.billing-cycle-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.billing-cycle-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             billingCycleInput.value = this.dataset.cycle;
-            // In production, you'd recalculate the total amount
+            window.location.search = '?billing_cycle=' + encodeURIComponent(this.dataset.cycle);
         });
     });
     
@@ -269,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorMsg.classList.remove('show');
         
         // Create order on backend first
-        fetch('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.slug %}', {
+        fetch('{% url "workspace_subscriptions:order-create" workspace_slug=request.workspace.slug %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -278,6 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({
                 plan_id: {{ plan.id }},
                 billing_cycle: billingCycleInput.value,
+                checkout_key: checkoutKey,
             })
         })
         .then(response => response.json())
@@ -300,12 +302,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function openRazorpayCheckout(orderData) {
         const options = {
             key: '{{ razorpay_key_id }}',
-            amount: Math.round({{ total_amount }} * 100), // Amount in paise
-            currency: 'INR',
+            amount: orderData.amount,
+            currency: orderData.currency,
             order_id: orderData.order_id,
             name: 'Rokkad',
-            description: '{{ plan.name }} Subscription',
-            image: '{% static "images/rokkad-logo.png" %}',
+            description: '{{ plan.name|escapejs }} Subscription',
+            image: '{% static "images/brand/rokkad-icon.png" %}',
             handler: function(response) {
                 // Store response values
                 document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
@@ -316,11 +318,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitPayment();
             },
             prefill: {
-                email: '{{ request.user.email }}',
+                email: '{{ request.user.email|escapejs }}',
                 contact: '{{ request.user.userprofile.phone|default:"" }}',
             },
             theme: {
-                color: '#007bff'
+                color: '#103f3a'
             },
             modal: {
                 ondismiss: function() {

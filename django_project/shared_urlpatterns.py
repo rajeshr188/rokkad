@@ -341,6 +341,7 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
         org_views.workspace_slug_loan_operational_controls_report,
         name="workspace_slug_loan_operational_controls_report",
     ),
+    path("w/<str:workspace_slug>/loans/", include("apps.tenant_apps.loans.workspace_urls")),
     path(
         "w/<str:workspace_slug>/loans/<path:loans_path>",
         org_views.workspace_slug_loans_dispatch,

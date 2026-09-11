@@ -56,7 +56,7 @@ def pawn_storage_location_create(request):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Storage location {location.code} created.")
-            return redirect("loans:pawn_storage_location_list")
+            return redirect("workspace_loans:pawn_storage_location_list", workspace_slug=request.loans_workspace.slug)
     return render(
         request,
         "loans/storage/location_form.html",
@@ -101,7 +101,7 @@ def pawn_collateral_storage_transfer(request, pk, item_pk):
                 f"{item.description} {movement.get_kind_display().lower()} recorded.",
             )
             return redirect(
-                f"{reverse('loans:pawn_loan_detail', args=[loan.pk])}#collateral-{item.public_id}"
+                f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': request.loans_workspace.slug, 'pk': loan.pk})}#collateral-{item.public_id}"
             )
     return render(
         request,
@@ -118,7 +118,7 @@ def pawn_physical_verification_complete(request, pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, "Physical-verification session completed and frozen.")
-    return redirect("loans:pawn_physical_verification_detail", pk=pk)
+    return redirect("workspace_loans:pawn_physical_verification_detail", workspace_slug=request.loans_workspace.slug, pk=pk)
 
 
 @loans_owner_required
@@ -144,7 +144,7 @@ def pawn_physical_verification_resolve(request, observation_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Immutable discrepancy resolution recorded.")
-            return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
+            return redirect("workspace_loans:pawn_physical_verification_detail", workspace_slug=request.loans_workspace.slug, pk=observation.session_id)
     return render(request, "loans/verification/resolution_form.html", {"observation": observation, "form": form})
 
 
@@ -168,4 +168,4 @@ def pawn_physical_verification_discrepancy_notice(request, observation_pk):
         messages.success(
             request, "Verification discrepancy alert intent is ready for the workspace Owner."
         )
-    return redirect("loans:pawn_physical_verification_detail", pk=observation.session_id)
+    return redirect("workspace_loans:pawn_physical_verification_detail", workspace_slug=request.loans_workspace.slug, pk=observation.session_id)

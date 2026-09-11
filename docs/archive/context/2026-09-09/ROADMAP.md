@@ -1,0 +1,60 @@
+---
+status: archived
+owner: project
+updated: 2026-09-08
+tags: [roadmap, planning]
+related: [STATUS.md, plans/active.md, plans/backlog.md, plans/completed.md]
+---
+
+> Historical snapshot from docs/ROADMAP.md before the 2026-09-09 documentation cleanup.
+> Old priorities and architecture statements are preserved as evidence, not current instructions.
+> Use [current documentation](../../../README.md) first.
+
+
+# Roadmap
+
+## Current foundation
+
+Party, Loans, Notify v2, and Rates are the supported business apps. Shared-schema
+PostgreSQL forced RLS, Workspace permissions/lifecycle, billing/entitlements,
+invitations, Loans Workspace routing, and immutable Workspace slugs are complete.
+The Phase 11 checkpoint is `c8de539`, pushed on `rls-mvp`.
+
+Girvi, Contact, legacy Notify, DEA/accounting, and the old inventory/sales/purchase
+tracks are retired. Their historical plans are not current implementation work.
+
+## Priority 1: MVP operator acceptance
+
+- Complete and retain a real-transaction HTTP acceptance gate from Workspace
+  creation through trial, lending setup, Party creation, loan disbursal,
+  repayment, full release, and immutable PDF reprints under a restricted role.
+- Fix reproducible journey blockers while preserving service-owned financial
+  calculations, custody evidence, idempotency, and Workspace isolation.
+- Desktop/mobile Chromium viewport acceptance is recorded in
+  [the browser record](../../../implementation/browser-acceptance.md). Complete physical
+  phone/camera and printer checks with an operator.
+- Follow the [acceptance checklist and findings](../../../implementation/mvp-operator-acceptance.md).
+
+## Priority 2: Remaining operator navigation and setup
+
+- Party, Rates, and Notify operator URLs now preserve Workspace identity.
+  Notify application-boundary fixes are complete; verify external private-media
+  serving before a real-data pilot.
+- Improve setup guidance using actual lending prerequisites and clearly separate
+  general checklist completion from loan readiness.
+- Start [project-wide UI/UX discovery](../../../plans/project-wide-ux-revamp.md) now.
+  Prototype the shared shell and first-loan journey after the functional checkpoint
+  is reviewed and committed; then roll out the reviewed patterns across the apps.
+
+## Priority 3: Controlled operational pilots
+
+- Exercise real email/WhatsApp delivery and callback evidence with configured
+  providers and explicit operator authorization.
+- Expand acceptance scenarios to later-date interest, reversals, renewals,
+  auctions, and storage/verification journeys using existing domain services.
+- Reconcile remaining historical documentation as each live area is reviewed.
+
+See [active](../../../plans/active.md), [future work](../../../plans/future-work.md) for shelved ideas
+and restart points, and [completed](../../../plans/completed.md).
+
+See [README](../../../../README.md) for the project entry point.

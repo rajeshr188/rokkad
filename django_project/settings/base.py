@@ -74,30 +74,10 @@ SHARED_APPS = [
     "apps.tenant_apps.loans.apps.LoansConfig",
     "apps.tenant_apps.rates",
     "apps.tenant_apps.notify_v2",
-    "slick_reporting",
     "django_cleanup.apps.CleanupConfig",
-    "viewflow",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS)
-
-# Clone mode for onboarding template provisioning.
-# Recommended for clone+seed workflow: NODATA (clone structure, seed via commands).
-ONBOARDING_TEMPLATE_CLONE_MODE = env(
-    "ONBOARDING_TEMPLATE_CLONE_MODE",
-    default="NODATA",
-)
-
-# Performance: avoid repeated search_path SET calls when tenant is unchanged.
-TENANT_LIMIT_SET_CALLS = True
-# Optional shared schemas visible to all tenants (for reference/master data).
-# Configure via .env, e.g. PG_EXTRA_SEARCH_PATHS=shared_data
-PG_EXTRA_SEARCH_PATHS = env.list("PG_EXTRA_SEARCH_PATHS", default=[])
-
-SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
-# in case using domain to set tenants us this to persist sessions.for localhost search for workaround hint:edit hosts file
-# SESSION_COOKIE_DOMAIN = '.rokkad.com'
-# CSRF_COOKIE_DOMAIN = '.rokkad.com'
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
@@ -326,23 +306,6 @@ CACHES = {
 # Borrower autocomplete uses signed URL-bound tokens, not cached widget state.
 SELECT2_CACHE_BACKEND = "default"
 
-SLICK_REPORTING_SETTINGS = {
-    "CHARTS": {
-        "apexcharts": {
-            "entryPoint": "DisplayApexPieChart",
-            "js": (
-                "https://cdn.jsdelivr.net/npm/apexcharts",
-                "slick_reporting/slick_reporting.chartsjs.js",
-            ),
-            "css": {
-                "all": (
-                    "https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.min.css",
-                )
-            },
-        },
-    },
-}
-
 CURRENCIES = ("USD", "INR", "AUD")
 DEFAULT_CURRENCY = "INR"
 
@@ -360,11 +323,6 @@ SOCIALACCOUNT_PROVIDERS = {
         "CLIENT_ID": env("GOOGLE_CLIENT_ID", default=""),  # Read from .env; empty string in dev
     }
 }
-
-MULTITENANT_RELATIVE_MEDIA_ROOT = "%s/"
-MULTITENANT_STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "tenants/%s/static"),
-]
 
 # Sets the minimum message level that will be recorded by the messages framework
 # https://docs.djangoproject.com/en/4.1/ref/settings/#message-level
@@ -421,6 +379,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ============================================================================
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="test_key_id")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="test_key_secret")
+RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET", default="")
 
 # Billing Configuration
 BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="18")  # 18% GST for India

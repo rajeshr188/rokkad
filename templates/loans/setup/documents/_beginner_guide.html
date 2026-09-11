@@ -19,7 +19,7 @@
     <tr><th scope="row">Exact PDF overlay</th><td>An existing blank form with boxes that need values at fixed positions.</td><td>Upload the form as a background, then place field rectangles over it. Rokkad does not automatically detect boxes or import PDF form fields.</td></tr></tbody>
   </table></div>
   <ol class="mb-0">
-    <li>Select <a href="{% url 'loans:document_layout_create' %}">Create starter layout</a>.</li>
+    <li>Select <a href="{% url 'workspace_loans:document_layout_create' request.workspace.slug %}">Create starter layout</a>.</li>
     <li>Enter a name such as <em>Main Counter Loan Ticket</em>, choose <strong>Loan ticket</strong>, and choose a layout mode. Select <strong>Create draft</strong>.</li>
     <li>The next screen is the <strong>revision page</strong>: it contains the editor button, Assets upload form, structured definition, and publishing actions. A draft is editable and is not yet the counter default.</li>
     <li>For Flow, open <strong>Visual Flow editor</strong>, keep the required starter fields, edit and save the design, then preview. Continue at <a href="#profiles">step 5</a>. For an overlay, follow steps 2&ndash;4.</li>
@@ -76,7 +76,7 @@
   <h2 class="h5">5. Publish the layout, then create and preview a print profile</h2>
   <p>Once the layout preview looks correct, return to its revision page and select <strong>Publish and freeze</strong>. Publishing makes the revision available for profile previews; it does <strong>not</strong> assign it as the counter default. To change a published layout, use <strong>Clone to new draft</strong>.</p>
   <ol>
-    <li>Open <a href="{% url 'loans:document_print_profile_list' %}">Print profiles</a> &rarr; <strong>Create print profile</strong>. Give it a useful name such as <em>Counter A5 fronts</em>.</li>
+    <li>Open <a href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">Print profiles</a> &rarr; <strong>Create print profile</strong>. Give it a useful name such as <em>Counter A5 fronts</em>.</li>
     <li>Choose a Composition from the table below, Scaling policy, Flip edge guidance, and optional Printer guidance. Select <strong>Create validated draft</strong>.</li>
     <li>On the profile revision page, under <strong>Preview and test print</strong>, select your published logical layout and an approved sample loan. Select <strong>Preview PDF</strong> or <strong>Download test print</strong>. These previews are watermarked and do not create official issued documents.</li>
     <li>Correct profile settings with <strong>Validate and save draft</strong>. When the PDF is ready, test it on the intended printer and paper before production use, then select <strong>Publish and freeze</strong>.</li>
@@ -97,7 +97,7 @@
   <ol>
     <li>Open the published <strong>layout</strong> revision. Under <strong>Assign default scope</strong>, leave License and Series blank for the Workspace default, select License for its default, or select Series for one numbering series. Select <strong>Assign layout</strong>.</li>
     <li>Open the published <strong>print profile</strong> revision. Leave Series blank for the Workspace default, or select the same Series for a limited rollout. Select <strong>Assign print profile</strong>. Profiles have no License-level assignment.</li>
-    <li>Open an eligible loan and use its normal <strong>Print/PDF</strong> action. Inspect the resulting pages and <a href="{% url 'loans:document_issue_list' %}">Issued documents</a> for the recorded layout and profile revisions.</li>
+    <li>Open an eligible loan and use its normal <strong>Print/PDF</strong> action. Inspect the resulting pages and <a href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">Issued documents</a> for the recorded layout and profile revisions.</li>
   </ol>
   <p>A Series-specific layout overrides a License default, which overrides the Workspace layout. A Series-specific profile overrides the Workspace profile. Check both when an unexpected design appears. Assignments are validated against compatible layouts and required surfaces; publication alone does not make an incompatible pair usable.</p>
   <p class="mb-0"><strong>Existing official PDFs stay unchanged.</strong> Reprinting an already issued document returns its stored PDF, even after changing defaults. Use preview while designing; evaluate new defaults on a document that has not yet been officially issued. For later corrections, clone, edit, preview, publish, and assign the new revision. Never edit stored issue files.</p>

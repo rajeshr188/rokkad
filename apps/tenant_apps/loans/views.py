@@ -263,7 +263,7 @@ def loan_product_seed_defaults(request):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"Default product catalog is ready with {len(versions)} version(s). Review and activate each approved draft.")
-    return redirect("loans:loan_product_list")
+    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -275,7 +275,7 @@ def loan_product_version_activate(request, version_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"{version.product.name} v{version.version} is active for new loans.")
-    return redirect("loans:loan_product_list")
+    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
 
 
 @require_POST
@@ -287,7 +287,7 @@ def loan_product_version_retire(request, version_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"{version.product.name} v{version.version} is retired from new origination. Existing loans are unchanged.")
-    return redirect("loans:loan_product_list")
+    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -308,7 +308,7 @@ def loan_product_version_create(request, product_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Created {product.name} v{version.version} as a draft. Review it before activation.")
-            return redirect("loans:loan_product_list")
+            return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/products/version_form.html", {"form": form, "product": product, "active_version": active})
 
 
@@ -354,9 +354,7 @@ def document_print_profile_create(request):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Print profile created as a validated draft.")
-            return redirect(
-                "loans:document_print_profile_detail", revision_pk=revision.pk
-            )
+            return redirect('workspace_loans:document_print_profile_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     return render(
         request, "loans/setup/print_profiles/create.html", {"form": form}
     )
@@ -421,7 +419,7 @@ def document_print_profile_update(request, revision_pk):
             messages.success(request, "Print-profile draft updated and validated.")
     else:
         messages.error(request, "Print-profile settings are invalid.")
-    return redirect("loans:document_print_profile_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_print_profile_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -432,7 +430,7 @@ def document_print_profile_clone(request, revision_pk):
         revision=revision, actor=request.user, request=request
     )
     messages.success(request, f"Created print-profile draft revision {clone.version}.")
-    return redirect("loans:document_print_profile_detail", revision_pk=clone.pk)
+    return redirect('workspace_loans:document_print_profile_detail', revision_pk=clone.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -447,7 +445,7 @@ def document_print_profile_publish(request, revision_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, "Print-profile revision published and frozen.")
-    return redirect("loans:document_print_profile_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_print_profile_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -472,7 +470,7 @@ def document_print_profile_assign(request, revision_pk):
             messages.success(request, "Published print profile assigned.")
     else:
         messages.error(request, "Print-profile assignment scope is invalid.")
-    return redirect("loans:document_print_profile_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_print_profile_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -490,7 +488,7 @@ def document_print_profile_retire(request, revision_pk):
             request,
             "Print-profile revision retired; active assignments were disabled.",
         )
-    return redirect("loans:document_print_profile_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_print_profile_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -614,7 +612,7 @@ def document_layout_create(request):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Starter document layout created as a draft.")
-            return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+            return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/documents/create.html", {"form": form})
 
 
@@ -644,14 +642,14 @@ def document_layout_designer(request, revision_pk):
         layout = DocumentLayoutValidator.load(revision.definition)
     except ValueError as exc:
         messages.error(request, str(exc))
-        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+        return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     if layout.schema_version < 2 or layout.layout_mode != "FLOW":
         messages.error(request, "The visual editor supports Flow schema-v2+ drafts only.")
-        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+        return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     if request.method == "POST":
         if revision.state != revision.State.DRAFT:
             messages.error(request, "Published revisions are immutable. Clone this revision before editing.")
-            return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+            return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
         definition = deepcopy(revision.definition)
         operation = request.POST.get("operation")
         try:
@@ -691,7 +689,7 @@ def document_layout_designer(request, revision_pk):
             messages.error(request, str(exc))
         else:
             messages.success(request, "Flow draft updated and validated.")
-        return redirect("loans:document_layout_designer", revision_pk=revision.pk)
+        return redirect('workspace_loans:document_layout_designer', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     settings_form = LoanDocumentFlowSettingsForm(initial={
         "page_size": layout.page_size, "margin_mm": layout.margin_mm,
         "primary_color": layout.primary_color, "border_color": layout.border_color,
@@ -737,16 +735,16 @@ def document_layout_overlay_designer(request, revision_pk):
         layout = DocumentLayoutValidator.load(revision.definition)
     except ValueError as exc:
         messages.error(request, str(exc))
-        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+        return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     if layout.schema_version < 2 or layout.layout_mode != "ABSOLUTE_OVERLAY":
         messages.error(request, "The overlay editor supports absolute-overlay schema-v2+ drafts only.")
-        return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+        return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     background_keys = tuple(revision.assets.filter(kind="BACKGROUND").values_list("key", flat=True))
     image_keys = tuple(revision.assets.filter(kind="IMAGE").values_list("key", flat=True))
     if request.method == "POST":
         if revision.state != revision.State.DRAFT:
             messages.error(request, "Published revisions are immutable. Clone this revision before editing.")
-            return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+            return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
         definition = deepcopy(revision.definition)
         operation = request.POST.get("operation")
         try:
@@ -835,7 +833,7 @@ def document_layout_overlay_designer(request, revision_pk):
             messages.error(request, str(exc))
         else:
             messages.success(request, "Overlay draft updated and validated.")
-        return redirect("loans:document_layout_overlay_designer", revision_pk=revision.pk)
+        return redirect('workspace_loans:document_layout_overlay_designer', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     page_width_mm, page_height_mm = _OVERLAY_PAGE_DIMENSIONS_MM[layout.page_size]
     if layout.schema_version >= 3:
         settings_form = LoanDocumentOverlayLogicalSettingsForm(
@@ -888,7 +886,7 @@ def document_layout_update(request, revision_pk):
             messages.success(request, "Draft layout validated and saved.")
     else:
         messages.error(request, "Layout JSON is invalid.")
-    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -909,7 +907,7 @@ def document_layout_asset_add(request, revision_pk):
             messages.success(request, "Validated document asset added.")
     else:
         messages.error(request, "Asset upload is invalid.")
-    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -918,7 +916,7 @@ def document_layout_clone(request, revision_pk):
     revision = _document_revision(request, revision_pk)
     clone = LoanDocumentLayoutService.clone_revision(revision=revision, actor=request.user, request=request)
     messages.success(request, f"Created draft revision {clone.version}.")
-    return redirect("loans:document_layout_detail", revision_pk=clone.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=clone.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -931,7 +929,7 @@ def document_layout_publish(request, revision_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, "Layout revision published and frozen.")
-    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -952,7 +950,7 @@ def document_layout_assign(request, revision_pk):
             messages.success(request, "Published layout assigned.")
     else:
         messages.error(request, "Assignment scope is invalid.")
-    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -965,7 +963,7 @@ def document_layout_retire(request, revision_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, "Published revision retired; its active assignments were disabled.")
-    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 def _revision_assets(revision):
@@ -1023,7 +1021,7 @@ def document_layout_import(request):
     form = LoanDocumentLayoutPackImportForm(request.POST, request.FILES)
     if not form.is_valid():
         messages.error(request, "Layout pack upload is invalid.")
-        return redirect("loans:document_layout_list")
+        return redirect('workspace_loans:document_layout_list', workspace_slug=request.workspace.slug)
     upload = form.cleaned_data["pack"]
     try:
         revision = import_layout_pack(
@@ -1032,9 +1030,9 @@ def document_layout_import(request):
         )
     except (LayoutPackError, DocumentLayoutServiceError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
-        return redirect("loans:document_layout_list")
+        return redirect('workspace_loans:document_layout_list', workspace_slug=request.workspace.slug)
     messages.success(request, "Layout pack imported as an unpublished draft for review.")
-    return redirect("loans:document_layout_detail", revision_pk=revision.pk)
+    return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_setup_required
@@ -1312,7 +1310,7 @@ def pawn_collateral_label_pdf(request, pk, item_pk):
     item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
     action = request.GET.get("action", "PREVIEW").upper()
     scan_url = request.build_absolute_uri(
-        reverse("loans:pawn_collateral_scan", args=[item.public_id])
+        reverse("workspace_loans:pawn_collateral_scan", kwargs={"workspace_slug": request.loans_workspace.slug, "public_id": item.public_id})
     )
     try:
         result = render_collateral_label(
@@ -1346,7 +1344,7 @@ def pawn_collateral_scan(request, public_id):
             workspace=request.loans_workspace,
         )
         return redirect(
-            f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}?item={item.pk}"
+            f"{reverse('workspace_loans:pawn_physical_verification_detail', kwargs={'workspace_slug': request.loans_workspace.slug, 'pk': session.pk})}?item={item.pk}"
         )
     if (
         _can_manage_storage(request)
@@ -1357,7 +1355,7 @@ def pawn_collateral_scan(request, public_id):
             "item_public_id": str(item.public_id),
         }
     return redirect(
-        f"{reverse('loans:pawn_loan_detail', args=[item.loan_id])}#collateral-{item.public_id}"
+        f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': request.loans_workspace.slug, 'pk': item.loan_id})}#collateral-{item.public_id}"
     )
 
 
@@ -1400,7 +1398,7 @@ def pawn_storage_location_label(request, pk):
         workspace=request.loans_workspace,
     )
     qr_target = request.build_absolute_uri(
-        reverse("loans:pawn_storage_location_scan", args=[location.public_id])
+        reverse("workspace_loans:pawn_storage_location_scan", kwargs={"workspace_slug": request.loans_workspace.slug, "public_id": location.public_id})
     )
     content = render_storage_location_label(location, qr_target=qr_target)
     response = HttpResponse(content, content_type="application/pdf")
@@ -1435,14 +1433,14 @@ def pawn_storage_location_scan(request, public_id):
             )
             query += f"&item={item.pk}"
         return redirect(
-            f"{reverse('loans:pawn_physical_verification_detail', args=[session.pk])}{query}"
+            f"{reverse('workspace_loans:pawn_physical_verification_detail', kwargs={'workspace_slug': request.loans_workspace.slug, 'pk': session.pk})}{query}"
         )
     if location.level not in {
         PawnStorageLocation.Level.BOX,
         PawnStorageLocation.Level.SLOT,
     }:
         messages.info(request, "Collateral can only be placed in a Box or Slot.")
-        return redirect("loans:pawn_storage_location_list")
+        return redirect("workspace_loans:pawn_storage_location_list", workspace_slug=request.loans_workspace.slug)
     if item_public_id:
         item = get_object_or_404(
             PawnCollateralItem,
@@ -1450,7 +1448,7 @@ def pawn_storage_location_scan(request, public_id):
             loan__workspace=request.loans_workspace,
         )
         return redirect(
-            f"{reverse('loans:pawn_collateral_storage_transfer', args=[item.loan_id, item.pk])}?destination={location.pk}"
+            f"{reverse('workspace_loans:pawn_collateral_storage_transfer', kwargs={'workspace_slug': request.loans_workspace.slug, 'pk': item.loan_id, 'item_pk': item.pk})}?destination={location.pk}"
         )
     pending = request.session.get(_PENDING_STORAGE_ITEM_SESSION_KEY, {})
     if (
@@ -1465,11 +1463,11 @@ def pawn_storage_location_scan(request, public_id):
         ).first()
         if item is not None:
             return redirect(
-                f"{reverse('loans:pawn_collateral_storage_transfer', args=[item.loan_id, item.pk])}?destination={location.pk}"
+                f"{reverse('workspace_loans:pawn_collateral_storage_transfer', kwargs={'workspace_slug': request.loans_workspace.slug, 'pk': item.loan_id, 'item_pk': item.pk})}?destination={location.pk}"
             )
         request.session.pop(_PENDING_STORAGE_ITEM_SESSION_KEY, None)
     messages.info(request, "Scan an in-vault collateral item before scanning its destination.")
-    return redirect("loans:pawn_storage_location_list")
+    return redirect("workspace_loans:pawn_storage_location_list", workspace_slug=request.loans_workspace.slug)
 
 
 @loans_owner_required
@@ -1487,7 +1485,7 @@ def pawn_physical_verification_list(request):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Physical-verification scope frozen.")
-            return redirect("loans:pawn_physical_verification_detail", pk=session.pk)
+            return redirect("workspace_loans:pawn_physical_verification_detail", workspace_slug=request.loans_workspace.slug, pk=session.pk)
     sessions = PawnPhysicalVerificationSession.objects.filter(
         workspace=request.loans_workspace
     ).select_related(
@@ -1554,7 +1552,7 @@ def pawn_physical_verification_detail(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Immutable verification observation recorded.")
-            return redirect("loans:pawn_physical_verification_detail", pk=session.pk)
+            return redirect("workspace_loans:pawn_physical_verification_detail", workspace_slug=request.loans_workspace.slug, pk=session.pk)
     detail = get_physical_verification_detail(session)
     return render(
         request,
@@ -1623,7 +1621,7 @@ def pawn_loan_transfer_setup(request, pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, "Draft moved to active license setup and requires approval again.")
-            return redirect("loans:pawn_loan_detail", pk=loan.pk)
+            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return render(request, "loans/pawn/transition_form.html", {"loan": loan, "form": form, "action_label": "Transfer setup"})
 
 
@@ -1691,9 +1689,9 @@ def _risk_refresh_date(request):
 def _risk_portfolio_redirect(request):
     if request.headers.get("HX-Request") == "true":
         response = HttpResponse(status=204)
-        response["HX-Redirect"] = reverse("loans:pawn_risk_portfolio")
+        response["HX-Redirect"] = reverse('workspace_loans:pawn_risk_portfolio', kwargs={'workspace_slug': request.workspace.slug})
         return response
-    return redirect("loans:pawn_risk_portfolio")
+    return redirect('workspace_loans:pawn_risk_portfolio', workspace_slug=request.workspace.slug)
 
 
 # Compatibility exports: URLs continue importing ``loans.views`` while the
@@ -1831,7 +1829,7 @@ def pawn_economics_setup(request):
             configuration_form.add_error(None, str(exc))
         else:
             messages.success(request, "PawnLoan economic configuration added.")
-            return redirect("loans:pawn_economics_setup")
+            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     if action == "fee" and fee_form.is_valid():
         try:
             create_pawn_loan_fee_policy(
@@ -1843,7 +1841,7 @@ def pawn_economics_setup(request):
             fee_form.add_error(None, str(exc))
         else:
             messages.success(request, "PawnLoan fee policy added.")
-            return redirect("loans:pawn_economics_setup")
+            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     if action == "monitoring" and monitoring_form.is_valid():
         try:
             create_loan_monitoring_policy(
@@ -1855,7 +1853,7 @@ def pawn_economics_setup(request):
             monitoring_form.add_error(None, str(exc))
         else:
             messages.success(request, "Loan monitoring policy added.")
-            return redirect("loans:pawn_economics_setup")
+            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     context = {
         "configuration_form": configuration_form,
         "fee_form": fee_form,
@@ -1917,7 +1915,7 @@ def license_expiry_notice_create(request, pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, "License expiry alert queued for the workspace Owner.")
-    return redirect("loans:license_detail", pk=license.pk)
+    return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
 
 
 @loans_setup_required
@@ -1937,9 +1935,10 @@ def operational_notice_retry(request, notice_pk):
             request, f"Operational alert delivery is {result.delivery.status.lower()}."
         )
     if notice.source_license_id:
-        return redirect("loans:license_detail", pk=notice.source_license_id)
+        return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=notice.source_license_id)
     return redirect(
-        "loans:pawn_physical_verification_detail",
+        "workspace_loans:pawn_physical_verification_detail",
+        workspace_slug=request.loans_workspace.slug,
         pk=notice.source_verification_observation.session_id,
     )
 
@@ -1960,7 +1959,7 @@ def license_create(request):
             form.add_error("supporting_document", str(exc))
         else:
             messages.success(request, "Loan license and initial evidence created.")
-            return redirect("loans:license_detail", pk=license.pk)
+            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(request, "loans/setup/license_form.html", {"form": form})
 
 
@@ -1984,7 +1983,7 @@ def license_update(request, pk):
             form.add_error("supporting_document", str(exc))
         else:
             messages.success(request, "License amendment evidence recorded.")
-            return redirect("loans:license_detail", pk=license.pk)
+            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/license_form.html",
@@ -2012,7 +2011,7 @@ def license_renew(request, pk):
             form.add_error("supporting_document", str(exc))
         else:
             messages.success(request, "License renewal evidence recorded and activated.")
-            return redirect("loans:license_detail", pk=license.pk)
+            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/license_renewal_form.html",
@@ -2049,7 +2048,7 @@ def license_expire(request, pk):
     license = _license_for_workspace(request, pk)
     expire_license(license, actor=request.user)
     messages.success(request, "Loan license deactivated; existing loans remain linked.")
-    return redirect("loans:license_detail", pk=license.pk)
+    return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
 
 
 @loans_setup_required
@@ -2061,7 +2060,7 @@ def license_activate(request, pk):
         messages.success(request, "Loan license activated.")
     except LicenseSeriesError as exc:
         messages.error(request, str(exc))
-    return redirect("loans:license_detail", pk=license.pk)
+    return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
 
 
 @loans_setup_required
@@ -2076,7 +2075,7 @@ def series_create(request, license_pk):
             **form.cleaned_data,
         )
         messages.success(request, "Loan series and numbering sequences created.")
-        return redirect("loans:license_detail", pk=license.pk)
+        return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/series_form.html",
@@ -2097,7 +2096,7 @@ def series_update(request, pk):
             **form.cleaned_data,
         )
         messages.success(request, "Loan series setup updated.")
-        return redirect("loans:license_detail", pk=series.license_id)
+        return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=series.license_id)
     return render(
         request,
         "loans/setup/series_form.html",
@@ -2195,12 +2194,12 @@ def _pawn_renewal_for_workspace(request, pk):
 def _primary_action(loan, context):
     if loan.state == PawnLoanState.DRAFT.value:
         if context.get("simple_owner"):
-            return {"label": "Review and disburse", "url": reverse("loans:pawn_loan_review_disburse", args=[loan.pk]), "message": "Review the summary and confirm payment in one action."}
+            return {"label": "Review and disburse", "url": reverse('workspace_loans:pawn_loan_review_disburse', args=[loan.workspace.slug, loan.pk]), "message": "Review the summary and confirm payment in one action."}
         if not context.get("can_approve", False):
             return None
         return {
             "label": "Approve loan",
-            "url": reverse("loans:pawn_loan_approve", args=[loan.pk]),
+            "url": reverse('workspace_loans:pawn_loan_approve', args=[loan.workspace.slug, loan.pk]),
             "method": "post",
             "message": "Review the frozen terms, then approve this draft.",
         }
@@ -2209,7 +2208,7 @@ def _primary_action(loan, context):
             return None
         return {
             "label": "Disburse loan",
-            "url": reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            "url": reverse('workspace_loans:pawn_loan_disburse', args=[loan.workspace.slug, loan.pk]),
             "message": "Record disbursal to activate the loan.",
         }
     if loan.state == PawnLoanState.ACTIVE.value:
@@ -2217,7 +2216,7 @@ def _primary_action(loan, context):
             return None
         return {
             "label": "Record repayment",
-            "url": reverse("loans:pawn_loan_repay", args=[loan.pk]),
+            "url": reverse('workspace_loans:pawn_loan_repay', args=[loan.workspace.slug, loan.pk]),
             "message": "Continue with repayment, accrual, or collateral release.",
         }
     if loan.state == PawnLoanState.CLOSED.value:

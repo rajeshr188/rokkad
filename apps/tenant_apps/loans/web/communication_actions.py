@@ -43,7 +43,7 @@ def pawn_communication_consent(request, party_pk):
                 next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
             ):
                 return redirect(next_url)
-            return redirect("loans:pawn_risk_portfolio")
+            return redirect('workspace_loans:pawn_risk_portfolio', workspace_slug=request.workspace.slug)
     consents = {
         row.channel: row
         for row in PawnLoanCommunicationConsent.objects.filter(

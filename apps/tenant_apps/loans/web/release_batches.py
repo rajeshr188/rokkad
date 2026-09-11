@@ -97,7 +97,7 @@ def create(request):
                     **header.cleaned_data,
                 )
                 messages.success(request, f"Release batch {batch.pk} completed.")
-                return redirect("loans:release_batch_detail", batch_pk=batch.pk)
+                return redirect("workspace_loans:release_batch_detail", workspace_slug=workspace.slug, batch_pk=batch.pk)
         if ids:
             context["preview"] = preview_release_batch(workspace=workspace, actor=request.user, loan_ids=ids)
     except (ValueError, ValidationError) as exc:
@@ -127,9 +127,10 @@ def create(request):
     selected = preview["rows"] if preview else []
     selection = SelectionForm(initial={"loans": [row["loan"].pk for row in selected]})
     selection.fields["loans"].choices = [(row["loan"].pk, f'{row["loan"].loan_number} — {row["loan"].borrower.display_name}') for row in selected]
-    selection.fields["loans"].widget.attrs.update({"id": "batch-loans", "class": "form-select", "data-search-url": reverse("loans:release_batch_search")})
+    selection.fields["loans"].widget.attrs.update({"id": "batch-loans", "class": "form-select", "data-search-url": reverse("workspace_loans:release_batch_search", kwargs={"workspace_slug": workspace.slug})})
     context["selection_form"] = selection
-    template = "loans/batches/_review.html" if request.headers.get("HX-Request") == "true" else "loans/batches/create.html"
+    fragment = request.headers.get("HX-Request") == "true" and request.headers.get("HX-History-Restore-Request") != "true"
+    template = "loans/batches/_review.html" if fragment else "loans/batches/create.html"
     return render(request, template, context)
 
 

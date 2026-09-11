@@ -3,12 +3,12 @@
 {% block workspace_content %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div>
-    <a class="small text-decoration-none" href="{% url 'loans:pawn_physical_verification_list' %}">&larr; Verification sessions</a>
+    <a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_physical_verification_list' request.workspace.slug %}">&larr; Verification sessions</a>
     <h1 class="h3 mt-2 mb-1">{{ session.scope_location.path_label }}</h1>
     <p class="text-muted mb-0">{{ session.get_status_display }} &middot; {{ session.public_id }}</p>
   </div>
   {% if session.status == 'OPEN' %}
-    <form method="post" action="{% url 'loans:pawn_physical_verification_complete' session.pk %}">
+    <form method="post" action="{% url 'workspace_loans:pawn_physical_verification_complete' request.workspace.slug session.pk %}">
       {% csrf_token %}
       <button class="btn btn-success" {% if not detail.can_complete %}disabled{% endif %}>Complete and freeze</button>
       {% if detail.pending_count %}<div class="small text-danger mt-1">Observe {{ detail.pending_count }} pending item{{ detail.pending_count|pluralize }} first.</div>{% endif %}
@@ -64,7 +64,7 @@
   <div class="card-body">
     <h2 class="h5">Record observation</h2>
     <p class="small text-muted">An item or location QR scan can preselect these fields. Submitting creates immutable evidence; it does not move collateral.</p>
-    <form method="post">
+    <form method="post" action="{% url 'workspace_loans:pawn_physical_verification_detail' request.workspace.slug session.pk %}">
       {% csrf_token %}
       {{ form.non_field_errors }}
       {% for field in form %}
@@ -106,13 +106,13 @@
               <div class="small">{{ observation.resolution.reason }}</div>
               {% if observation.resolution.compensation_reference %}<div class="small text-muted">Settlement {{ observation.resolution.compensation_reference }} &middot; market {{ observation.resolution.current_market_value }} &middot; agreed {{ observation.resolution.agreed_compensation }}</div>{% endif %}
             {% elif session.status == 'COMPLETED' and observation.classification != 'FOUND' %}
-              <a class="btn btn-sm btn-outline-danger" href="{% url 'loans:pawn_physical_verification_resolve' observation.pk %}">Resolve discrepancy</a>
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'workspace_loans:pawn_physical_verification_resolve' request.workspace.slug observation.pk %}">Resolve discrepancy</a>
             {% else %}
               <span class="text-muted">No resolution required</span>
             {% endif %}
 
             {% if session.status == 'COMPLETED' and observation.classification != 'FOUND' and not row.notices %}
-              <form class="d-inline" method="post" action="{% url 'loans:pawn_physical_verification_discrepancy_notice' observation.pk %}">
+              <form class="d-inline" method="post" action="{% url 'workspace_loans:pawn_physical_verification_discrepancy_notice' request.workspace.slug observation.pk %}">
                 {% csrf_token %}<button class="btn btn-sm btn-outline-warning">Alert Owner</button>
               </form>
             {% endif %}
@@ -124,7 +124,7 @@
                 {% if notice_row.external_reference %}<div>Provider reference {{ notice_row.external_reference }}</div>{% endif %}
                 {% if notice_row.failure_reason %}<div class="text-danger">{{ notice_row.failure_reason }}</div>{% endif %}
                 {% if notice_row.status == 'FAILED' %}
-                  <form method="post" action="{% url 'loans:operational_notice_retry' notice_row.notice.pk %}">
+                  <form method="post" action="{% url 'workspace_loans:operational_notice_retry' request.workspace.slug notice_row.notice.pk %}">
                     {% csrf_token %}<button class="btn btn-sm btn-link px-0">Retry failed alert</button>
                   </form>
                 {% endif %}

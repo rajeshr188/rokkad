@@ -38,7 +38,7 @@
         </ol>
         <p class="small mt-3 mb-0">Economic setup starts with editable monthly interest of 2% for gold and 4% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies.</p>
         <p class="small mt-2 mb-0">Working alone? Team invitations are optional. Your selected loan workflow stays unchanged until you explicitly change it.</p>
-        <div class="d-flex flex-wrap gap-3 mt-3"><a href="{% url 'workspace_slug_rates' workspace_slug=company.slug %}">Review buying rates</a><a href="{% url 'workspace_slug_loans_dispatch' workspace_slug=company.slug loans_path='setup/documents/' %}">Documents and printing (customization optional)</a><a href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">Full loan setup</a></div>
+        <div class="d-flex flex-wrap gap-3 mt-3"><a href="{% url 'workspace_slug_rates' workspace_slug=company.slug %}">Review buying rates</a><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">Documents and printing (customization optional)</a><a href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">Full loan setup</a></div>
     </div>
 </section>
 

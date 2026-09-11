@@ -4,7 +4,7 @@
 {% include "loans/setup/_navigation.html" %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Visual Flow editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · revision {{ revision.version }} · draft</p></div>
-  <div class="d-flex gap-2">{% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'loans:document_layout_preview' revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'loans:document_layout_detail' revision.pk %}">Advanced JSON and publishing</a></div>
+  <div class="d-flex gap-2">{% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_detail' request.workspace.slug revision.pk %}">Advanced JSON and publishing</a></div>
 </div>
 {% if not sample_loan %}<div class="alert alert-warning">Create and approve a PawnLoan to enable PDF preview and test print.</div>{% endif %}
 <div class="alert alert-info">This editor changes the same validated layout JSON shown on the revision page. It does not create a separate template format.</div>

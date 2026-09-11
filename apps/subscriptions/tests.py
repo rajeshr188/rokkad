@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.utils import timezone
 from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -21,7 +23,7 @@ class SubscriptionAccessServiceTests(TestCase):
     def test_allows_access_for_active_workspace_subscription(self):
         workspace = SimpleNamespace(id=1, slug="tenant-a", schema_name="tenant_a")
         membership = SimpleNamespace(user=SimpleNamespace(id=7), role=SimpleNamespace(name="Admin"))
-        subscription = SimpleNamespace(status="active", is_active=True)
+        subscription = SimpleNamespace(status="active", end_date=timezone.now() + timedelta(days=30))
 
         decision = self.service.evaluate_access(
             user=SimpleNamespace(id=7),
@@ -51,7 +53,7 @@ class SubscriptionAccessServiceTests(TestCase):
     def test_blocks_feature_access_when_entitlement_is_disabled(self):
         workspace = SimpleNamespace(id=1, slug="tenant-a", schema_name="tenant_a")
         membership = SimpleNamespace(user=SimpleNamespace(id=7), role=SimpleNamespace(name="Admin"))
-        subscription = SimpleNamespace(status="active", is_active=True)
+        subscription = SimpleNamespace(status="active", end_date=timezone.now() + timedelta(days=30))
         entitlement = SimpleNamespace(feature_code="advanced_reporting", enabled=False)
 
         decision = self.service.evaluate_access(
