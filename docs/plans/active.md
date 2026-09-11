@@ -18,7 +18,7 @@ removed. The Loans views portion of R12 is complete: focused modules own all
 handlers and views.py retains compatibility imports. See the
 [module map](../implementation/loans-view-organization.md). Foundation, operator
 commands and billing hardening are included in the local checkpoint.
-Application checkpoints are published through 16be7149.
+Application checkpoints are published through fdb5e97f.
 Orgs view organization is complete and published, including account/preferences
 and slug adapters. See the
 [orgs module map](../implementation/orgs-view-organization.md). Broader
@@ -26,10 +26,10 @@ model/form/renewal-service review selected document forms, now published
 with compatible public imports; see the
 [review](project-hardening.md#remaining-r12-module-review). The three license/series
 setup forms are also extracted and published. Remaining form families have been
-reviewed; the three economic-setup forms are included in this local checkpoint.
-The eight funding forms are also extracted locally with compatible public imports.
-The five storage/physical-verification forms are also extracted locally. Next:
-verify publication CI for the validated form checkpoint. See the
+reviewed; the three economic-setup forms are published as 7c043eb0.
+The eight funding forms preserve compatible public imports.
+Funding and the five storage/physical-verification forms are published as fdb5e97f.
+Verify publication CI; intake/lifecycle forms remain together pending a concrete need. See the
 [form-family review](project-hardening.md#remaining-form-families-reviewed-after-16be7149).
 Model and renewal-service moves remain deferred.
 

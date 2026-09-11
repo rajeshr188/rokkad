@@ -84,9 +84,9 @@ separate files. Prioritize coherent workflows over file size.
 
 Economic extraction completed with unchanged class bodies and compatible public
 aliases: 69 economic-default, setup UI, economic-policy, pawn-economics and scoped
-route tests passed. Economic forms are committed locally as `7c043eb0`. The eight funding forms
-are also extracted locally with unchanged class bodies and compatible public
-imports. The five storage/physical-verification forms are also extracted locally;
+route tests passed. Economic forms are published as `7c043eb0`. The eight funding forms
+are published in `fdb5e97f` with unchanged class bodies and compatible public
+imports. The five storage/physical-verification forms are also published in `fdb5e97f`;
 all 31 class bodies and three formset definitions from the preceding checkpoint
 remain unchanged. Next: verify publication CI for the validated form changes.
 Keep persistence, calculations and action authorization in

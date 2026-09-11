@@ -9,7 +9,7 @@ tags: [status, architecture]
 
 ## Current checkpoint
 
-Branch: `rls-mvp`. Published application checkpoint: `16be7149` (2026-09-11).
+Branch: `rls-mvp`. Published application checkpoint: `fdb5e97f` (2026-09-11).
 All four orgs checkpoints are pushed: workspace/role settings (`ee31dda`),
 team/invitations (`0177fc3`), lifecycle/navigation (`e434828`), and final
 account/preferences, slug adapters and unused backup-view removal (`38eb1e3`).
@@ -19,12 +19,12 @@ print-profile forms moved to `web/document_forms.py`, with existing public impor
 preserved. Document setup handlers use the owning module; no business rules changed.
 The three license/series setup forms are also extracted into `web/license_forms.py`
 with compatible public imports. Both form increments are published as `16be7149`.
-The three economic-setup forms are extracted locally into `web/economic_forms.py`
-with public imports preserved and unchanged behavior; committed locally as `7c043eb0`.
+The three economic-setup forms are published into `web/economic_forms.py`
+with public imports preserved and unchanged behavior; published as `7c043eb0`.
 The eight funding forms are extracted into `web/funding_forms.py` with compatible
 public imports and unchanged behavior. Five storage/physical-verification forms
 are also extracted into `web/custody_forms.py`. Funding and custody increments
-are included in this checkpoint alongside the test Workspace assertion fixes.
+are published as `fdb5e97f` alongside the test Workspace assertion fixes.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -239,7 +239,8 @@ verification are complete. Document layout and print-profile forms are extracted
 along with the three license/series setup forms in this checkpoint. The remaining
 form-family review's economic-setup extraction is complete in this local checkpoint.
 Funding and storage/physical-verification forms are also extracted locally.
-Next: verify publication CI for these form checkpoints. See the
+The selected form extractions are published; verify their publication CI before
+starting further work. Intake/lifecycle forms remain together. See the
 [review and validation scope](plans/project-hardening.md#remaining-r12-module-review).
 Model and renewal-service restructuring are lower priority and remain unimplemented.
 Razorpay and license scoping remain shelved.
