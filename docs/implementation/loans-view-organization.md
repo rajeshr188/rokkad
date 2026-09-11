@@ -77,6 +77,29 @@ scope choices, Workspace filters, monitoring instance defaults and gold/silver
 2%/4% interest plus INR 10 fee defaults are preserved. Services still own policy
 persistence and financial rules. This completes the selected economic-form move.
 
+`web/funding_forms.py` owns the eight funding draft, activation, cancellation,
+repayment, collateral-return, closure and correction forms. `forms.py` preserves
+their public imports; `web/funding.py` and `web/funding_actions.py` use the owning
+module. All 31 form class bodies from the preceding forms.py checkpoint remain
+unchanged across the two files. Active-lender selection, eligible-collateral
+filters, active pledge exclusion, confirmation words, request keys and return
+choices are preserved. Services continue to own funding lifecycle and corrections.
+
+`web/custody_forms.py` owns the five storage location/transfer and physical
+verification start/observation/resolution forms. `forms.py` retains public imports;
+custody read/action handlers use the owning module. Workspace filters, permitted
+location levels, choice enums and resolution inputs are unchanged. Across the
+funding and custody increments all 31 original form class bodies and all three
+formset definitions match the preceding checkpoint. Existing services continue
+to enforce custody transitions and evidence rules. Intake/lifecycle forms and
+shared formsets remain in `forms.py`; further splitting needs a concrete benefit.
+
+The custody validation run also exposed three funding UI tests using global
+`FundingLoan.objects.get()`/empty-table assumptions in the shared test database.
+Their assertions now select the fixture Workspace, including its numbering
+sequence. Existing rejection, redirect, ownership and lifecycle assertions remain;
+no runtime query or tenant-isolation rule changed.
+
 The final extraction moved 56 functions into nine modules with identical function
 and decorator ASTs. The compatibility file fell from 1,620 to 224 lines. Existing
 route tests check decorated callback identity for all 136 canonical Loans routes.

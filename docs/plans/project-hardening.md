@@ -77,15 +77,19 @@ separate files. Prioritize coherent workflows over file size.
 | Group | Finding and priority |
 | --- | --- |
 | Economic setup (3 forms) | `PawnEconomicConfigurationForm`, `PawnFeePolicyForm` and `LoanMonitoringPolicyForm` are used together by `web/economic_setup.py`. Implemented locally in `web/economic_forms.py`, preserving public imports, business-default versus license policy selection, Workspace-filtered choices, monitoring instance defaults, gold/silver 2%/4% interest and INR 10 fee defaults. |
-| Funding (8 forms) | Used by `web/funding.py` and `web/funding_actions.py`; a coherent later extraction. Preserve eligible-collateral selection, active pledge exclusion, confirmation words, request keys and return choices. This is existing lender-funding functionality, not permission to restore retired accounting. |
-| Storage/physical verification (5 forms) | Used by custody views/actions; another coherent later group. Preserve Workspace and location-level filtering and existing resolution inputs. |
+| Funding (8 forms) | Extracted locally to `web/funding_forms.py`; `web/funding.py` and `web/funding_actions.py` use the owning module and public imports remain compatible. Preserved eligible-collateral selection, active pledge exclusion, confirmation words, request keys and return choices. This is existing lender-funding functionality, not permission to restore retired accounting. |
+| Storage/physical verification (5 forms) | Extracted locally into `web/custody_forms.py`; custody views/actions use the owning module with compatible public imports. Preserved Workspace and location-level filtering and existing resolution inputs. |
 | Product setup (1 form) | A small standalone model form. No priority to create a file solely for this class. |
 | Pawn intake and lifecycle | Keep together for now. Intake has local number-preview imports and bound/edit/single-option behavior; draft and renewal handlers share collateral formsets. Reversal/reason forms serve several action families. A future move must map these shared dependencies and preserve formset identity and constructor behavior. |
 
 Economic extraction completed with unchanged class bodies and compatible public
 aliases: 69 economic-default, setup UI, economic-policy, pawn-economics and scoped
-route tests passed. Economic forms are included in this local checkpoint. Next:
-extract the eight funding forms with compatible public imports. Keep persistence, calculations and action authorization in
+route tests passed. Economic forms are committed locally as `7c043eb0`. The eight funding forms
+are also extracted locally with unchanged class bodies and compatible public
+imports. The five storage/physical-verification forms are also extracted locally;
+all 31 class bodies and three formset definitions from the preceding checkpoint
+remain unchanged. Next: verify publication CI for the validated form changes.
+Keep persistence, calculations and action authorization in
 their existing services. No new permission scope or financial rule is authorized
 by this organization work.
 

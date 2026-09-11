@@ -928,11 +928,11 @@ class LoansSetupUiTests(WorkspaceTestCase):
         rejected = self.tenant_post(create_url, {"lender": inactive_lender.pk})
         self.assertEqual(rejected.status_code, 200)
         self.assertContains(rejected, "Select a valid choice")
-        self.assertEqual(FundingLoan.objects.count(), 0)
-        self.assertFalse(FundingLoanSequence.objects.exists())
+        self.assertEqual(FundingLoan.objects.filter(workspace=self.tenant).count(), 0)
+        self.assertFalse(FundingLoanSequence.objects.filter(workspace=self.tenant).exists())
 
         response = self.tenant_post(create_url, {"lender": active_lender.pk})
-        funding_loan = FundingLoan.objects.get()
+        funding_loan = FundingLoan.objects.get(workspace=self.tenant)
 
         self.assertRedirects(
             response,
@@ -973,7 +973,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
             custody_state=CollateralCustodyState.IN_VAULT.value,
         )
         self.tenant_post(reverse("loans:funding_loan_draft_create"), {"lender": lender.pk})
-        funding_loan = FundingLoan.objects.get()
+        funding_loan = FundingLoan.objects.get(workspace=self.tenant)
         inputs_url = reverse("loans:funding_loan_draft_inputs", args=[funding_loan.pk])
 
         page = self.tenant_get(inputs_url)
@@ -1045,7 +1045,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
             custody_state=CollateralCustodyState.IN_VAULT.value,
         )
         self.tenant_post(reverse("loans:funding_loan_draft_create"), {"lender": lender.pk})
-        funding_loan = FundingLoan.objects.get()
+        funding_loan = FundingLoan.objects.get(workspace=self.tenant)
         self.tenant_post(
             reverse("loans:funding_loan_draft_inputs", args=[funding_loan.pk]),
             {

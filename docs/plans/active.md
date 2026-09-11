@@ -27,7 +27,9 @@ with compatible public imports; see the
 [review](project-hardening.md#remaining-r12-module-review). The three license/series
 setup forms are also extracted and published. Remaining form families have been
 reviewed; the three economic-setup forms are included in this local checkpoint.
-Next: extract the eight funding forms with compatible public imports. See the
+The eight funding forms are also extracted locally with compatible public imports.
+The five storage/physical-verification forms are also extracted locally. Next:
+verify publication CI for the validated form checkpoint. See the
 [form-family review](project-hardening.md#remaining-form-families-reviewed-after-16be7149).
 Model and renewal-service moves remain deferred.
 

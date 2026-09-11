@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.tenant_apps.loans.access import LOANS_OWNER_ACTION, loans_owner_required
-from apps.tenant_apps.loans.forms import (
+from apps.tenant_apps.loans.web.custody_forms import (
     PawnPhysicalVerificationResolutionForm, PawnStorageLocationForm,
     PawnStorageTransferForm,
 )

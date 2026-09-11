@@ -20,7 +20,11 @@ preserved. Document setup handlers use the owning module; no business rules chan
 The three license/series setup forms are also extracted into `web/license_forms.py`
 with compatible public imports. Both form increments are published as `16be7149`.
 The three economic-setup forms are extracted locally into `web/economic_forms.py`
-with public imports preserved and unchanged behavior; included in this local checkpoint.
+with public imports preserved and unchanged behavior; committed locally as `7c043eb0`.
+The eight funding forms are extracted into `web/funding_forms.py` with compatible
+public imports and unchanged behavior. Five storage/physical-verification forms
+are also extracted into `web/custody_forms.py`. Funding and custody increments
+are included in this checkpoint alongside the test Workspace assertion fixes.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -42,6 +46,18 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- Custody form extraction: all 78 collateral/media/storage/verification, setup UI
+  and scoped-route tests passed (57.905 seconds). The initial run exposed three
+  funding UI tests assuming globally empty tables; scoping their lookups and
+  numbering assertions to the fixture Workspace fixed them. Runtime behavior is
+  unchanged. Across funding/custody, all 31 class ASTs and three formset definitions
+  match; 13 public aliases preserve class identity. Runtime/import checks,
+  explicit new-module boundary checks, 139 documentation links and whitespace pass.
+- Funding form extraction: all 103 setup UI, funding service/persistence/domain
+  and scoped-route tests passed (56.212 seconds). All 31 previous forms.py class
+  ASTs match and all eight public aliases preserve class identity. Runtime check,
+  tracked import guard, explicit new-module boundary check, 139 documentation
+  links and whitespace checks pass.
 - Economic form extraction: all 69 economic-default, setup UI, economic-policy,
   pawn-economics and scoped-route tests passed (26.998 seconds). All 34 original
   class ASTs from the previous forms.py checkpoint match; three public aliases
@@ -222,7 +238,8 @@ The orgs view split is also complete; see the
 verification are complete. Document layout and print-profile forms are extracted
 along with the three license/series setup forms in this checkpoint. The remaining
 form-family review's economic-setup extraction is complete in this local checkpoint.
-Next: extract the eight funding forms using the reviewed compatibility approach. See the
+Funding and storage/physical-verification forms are also extracted locally.
+Next: verify publication CI for these form checkpoints. See the
 [review and validation scope](plans/project-hardening.md#remaining-r12-module-review).
 Model and renewal-service restructuring are lower priority and remain unimplemented.
 Razorpay and license scoping remain shelved.

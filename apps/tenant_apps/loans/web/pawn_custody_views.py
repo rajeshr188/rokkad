@@ -23,7 +23,7 @@ from apps.tenant_apps.loans.filters import (
     PawnPhysicalVerificationSessionFilter,
     PawnStorageLocationFilter,
 )
-from apps.tenant_apps.loans.forms import (
+from apps.tenant_apps.loans.web.custody_forms import (
     PawnPhysicalVerificationObservationForm,
     PawnPhysicalVerificationStartForm,
 )

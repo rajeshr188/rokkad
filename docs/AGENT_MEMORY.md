@@ -172,3 +172,11 @@ Economic, fee and monitoring setup forms live in loans/web/economic_forms.py;
 forms.py preserves their public imports and economic_setup.py uses the owning module.
 Form organization preserves policy scope choices, Workspace filtering and starter
 defaults; calculations and persistence remain in existing services.
+The eight funding forms live in loans/web/funding_forms.py; forms.py preserves
+their public imports and funding read/action handlers use the owning module.
+Keep eligible collateral, lender selection, confirmation words and request keys
+unchanged during organization work; funding services still own lifecycle changes.
+The five storage/physical-verification forms live in loans/web/custody_forms.py;
+forms.py preserves their public imports and custody handlers use the owning module.
+Preserve Workspace/location filtering and resolution inputs. Intake and lifecycle
+forms and their shared formsets remain together pending a concrete need to move them.
