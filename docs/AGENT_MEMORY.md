@@ -149,14 +149,11 @@ storage labels encode scoped QR URLs; old mapped-domain scan links remain valid.
 See [routing migration](implementation/loans-workspace-routing.md).
 The two Loans setup-link failures were incomplete fixtures: readiness correctly
 checks numbering before economics and borrowers. Fixtures now cover each stage.
-R12 product-catalog setup handlers live in web/product_setup.py; views.py retains
-the same decorated public imports. No service or permission rule changed.
-R12 economic setup lives in web/economic_setup.py with the same public import,
-setup permission decorator, defaults and service calls.
-R12 license/series setup handlers and their lookup/preview helpers live in
-web/license_setup.py; public view imports remain compatible. Shared operational
-notice retry still serves both license and custody workflows from views.py.
-R12 print-profile setup lives in web/print_profile_setup.py. Layout and profile
-previews share the unchanged asset loader in web/document_assets.py.
-Next: R12 document layout setup, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
-package upgrades. Prefer Django services/selectors, templates and HTMX.
+The Loans views portion of R12 is complete: views.py is a compatibility import
+file; feature handlers live in web/. Shared preview assets and loan read helpers
+have small dedicated modules. Preserve decorated public imports and scoped routes;
+feature modules must not import views.py. Test mocks patch the owning module.
+See [module map](implementation/loans-view-organization.md). No business rules changed.
+The broader R12 orgs/model/form/renewal-service review remains separate; do not
+split files merely for size. Preserve history and avoid speculative abstractions
+or blanket package upgrades. Prefer Django services/selectors, templates and HTMX.

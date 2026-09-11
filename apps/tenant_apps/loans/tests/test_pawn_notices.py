@@ -305,7 +305,7 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
                    return_value=SimpleNamespace(delivery=SimpleNamespace(status="SENT"))) as dispatch:
             self.assertRedirects(client.post(retry), destination, fetch_redirect_response=False)
             dispatch.assert_called_once_with(notice.pk)
-        with patch("apps.tenant_apps.loans.views.retry_operational_notice",
+        with patch("apps.tenant_apps.loans.web.operational_notice_actions.retry_operational_notice",
                    side_effect=LoanOperationalNoticeError("Scheduled for later")):
             self.assertRedirects(client.post(retry), destination, fetch_redirect_response=False)
         missing = reverse("workspace_loans:operational_notice_retry", kwargs={
@@ -315,7 +315,7 @@ class PawnLoanNoticeTests(WorkspaceTestCase):
         viewer, _ = Role.objects.get_or_create(name="Viewer")
         Membership.objects.filter(user=self.actor, company=self.tenant).update(role=viewer)
         client.force_login(self.actor)
-        with patch("apps.tenant_apps.loans.views.retry_operational_notice") as retry_service:
+        with patch("apps.tenant_apps.loans.web.operational_notice_actions.retry_operational_notice") as retry_service:
             self.assertEqual(client.get(listing).status_code, 403)
             self.assertEqual(client.post(retry).status_code, 403)
             retry_service.assert_not_called()

@@ -19,7 +19,7 @@ scoping or authorize production deployment.
 | Operational commands | R05 | Implemented; validation recorded in STATUS |
 | Paid billing correctness | R03/R04 | Checkout binding, replay, invoice and webhook repair implemented; expiry implemented; known-payment/refund recovery implemented; owner review decisions implemented; provider acceptance shelved as FW-002 |
 | Current docs/product/residue cleanup | R08/R09/R10, verified R13 | R08/R09/R10/R13 complete; bounded removal evidence linked below |
-| Routing, dashboard and module organization | R07/R11/R12 | R07 and R11 complete locally; R12 started: product-catalog, economic, license/series and print-profile setup extracted; remaining module families pending |
+| Routing, dashboard and module organization | R07/R11/R12 | R07 and R11 complete locally; Loans views portion of R12 complete; broader orgs/model/form/renewal-service review remains separate |
 | Production operations acceptance | Remaining R06 | Pending selected deployment; no live deployment requested |
 
 Foundation implementation and operator commands are documented in
@@ -42,9 +42,11 @@ No Razorpay setup is needed for the remaining review cleanup. Resume delivery wi
 4. R11 visibility, batching and [query measurements](../implementation/dashboard-reliability.md) complete.
    R07 is complete: all 136 canonical Loans routes use direct Workspace adapters;
    all URL generation is scoped and response rewriting is removed. Old mapped-domain
-   routes and named aliases remain compatible. R12 module organization is next,
-   product-catalog, economic, license/series and print-profile setup are extracted after checkpoint c9e27f9;
-   document layout setup is next.
+   routes and named aliases remain compatible. The Loans views portion of R12 is
+   complete: all handlers live in focused web modules, with public imports retained.
+   See [module map](../implementation/loans-view-organization.md). Broader R12
+   orgs/model/form/renewal-service work requires a separate dependency review.
+
 
 
 [Checkout flow and limitations](../flows/subscription-checkout.md) and

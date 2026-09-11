@@ -147,7 +147,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         version.refresh_from_db()
         self.assertEqual(version.status, "RETIRED")
 
-    @patch("apps.tenant_apps.loans.views.refresh_loan_risk_snapshot")
+    @patch("apps.tenant_apps.loans.web.risk_refresh.refresh_loan_risk_snapshot")
     def test_owner_can_refresh_one_risk_snapshot_with_htmx_redirect(self, refresh):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-RISK-00001", state="ACTIVE")
@@ -162,7 +162,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(response["HX-Redirect"], reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}))
         refresh.assert_called_once_with(loan.pk, as_of_date=date(2026, 8, 13))
 
-    @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
+    @patch("apps.tenant_apps.loans.web.risk_refresh.reassess_pawn_loans_batch")
     def test_owner_can_refresh_bounded_due_risk_batch(self, reassess):
         reassess.return_value = {"selected": 2, "current": 2, "errors": []}
 
@@ -182,7 +182,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
             batch_size=50,
         )
 
-    @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
+    @patch("apps.tenant_apps.loans.web.risk_refresh.reassess_pawn_loans_batch")
     def test_owner_batch_risk_refresh_uses_htmx_redirect_response(self, reassess):
         reassess.return_value = {"selected": 1, "current": 1, "errors": []}
 
@@ -198,7 +198,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
             reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}),
         )
 
-    @patch("apps.tenant_apps.loans.views.reassess_pawn_loans_batch")
+    @patch("apps.tenant_apps.loans.web.risk_refresh.reassess_pawn_loans_batch")
     def test_member_cannot_refresh_risk_monitoring(self, reassess):
         User = get_user_model()
         member = User.objects.create_user(

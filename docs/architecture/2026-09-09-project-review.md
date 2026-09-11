@@ -538,3 +538,25 @@ Workspace filtering, published evidence and templates remain unchanged.
 All 115 setup, print-profile, layout, document-issuance and Workspace-route tests
 pass, alongside system, import-boundary, documentation-link and whitespace checks.
 Document layout setup is the next bounded R12 extraction.
+
+## R12 Loans views completion (2026-09-11)
+
+The owner approved completing all remaining related Loans view extractions.
+All 56 remaining functions moved into nine feature/helper modules; their function
+and decorator ASTs are identical. The compatibility views.py file now contains
+only imports (224 lines, down from 1,620), preserving all 142 prior handler/helper
+exports. No feature module imports it, and the web module dependency graph has no
+cycles. Existing test mocks now patch dependencies in the handler's owning module;
+assertions and business code are unchanged.
+
+Layout/editor setup, issued documents, loan PDFs, loan pages, custody, risk refresh,
+draft setup transfer and shared operational-notice retries now have explicit homes.
+The [module map](../implementation/loans-view-organization.md) records ownership and
+compatibility rules. This completes the Loans views portion of R12. The original
+orgs/model/form/renewal-service suggestions remain separate review work, not a
+claim that every large module requires an immediate split.
+
+Validation: all 595 Loans, Party UI/history, route and shell tests passed in one
+run (124.773 seconds), plus four import-guard unit tests. Runtime system check,
+migration drift, 528-file import scan, 132 current-doc links and staged whitespace
+checks pass. No service, schema, template, permission or financial-rule changes.

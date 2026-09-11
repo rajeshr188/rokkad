@@ -456,8 +456,8 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         self.assertEqual(label.status_code, 200)
         text = "".join(page.get_text() for page in fitz.open(stream=label.content, filetype="pdf"))
         self.assertIn("B-2", text)
-        from apps.tenant_apps.loans.views import render_storage_location_label
-        with patch("apps.tenant_apps.loans.views.render_storage_location_label", wraps=render_storage_location_label) as renderer:
+        from apps.tenant_apps.loans.web.pawn_custody_views import render_storage_location_label
+        with patch("apps.tenant_apps.loans.web.pawn_custody_views.render_storage_location_label", wraps=render_storage_location_label) as renderer:
             self.client.get(reverse("workspace_loans:pawn_storage_location_label", kwargs={"workspace_slug": self.tenant.slug, "pk": box.pk}))
         self.assertTrue(renderer.call_args.kwargs["qr_target"].endswith(reverse(
             "workspace_loans:pawn_storage_location_scan", kwargs={"workspace_slug": self.tenant.slug, "public_id": box.public_id},
@@ -818,7 +818,7 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         })
         self.assertContains(failed, f'action="{retry_url}"')
         from apps.tenant_apps.loans.services.operational_notices import LoanOperationalNoticeError
-        with patch("apps.tenant_apps.loans.views.retry_operational_notice",
+        with patch("apps.tenant_apps.loans.web.operational_notice_actions.retry_operational_notice",
                    side_effect=LoanOperationalNoticeError("Delivery unavailable")) as retry:
             self.assertRedirects(self.client.post(retry_url), detail_url, fetch_redirect_response=False)
             retry.assert_called_once_with(notice.pk, actor=self.owner)

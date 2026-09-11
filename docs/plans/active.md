@@ -14,11 +14,12 @@ selects work; [Status](../STATUS.md) records the checkpoint and validation.
 R08/R09/R10/R13 documentation, onboarding and residue cleanup are complete.
 R11 dashboard visibility/batching and R07 Loans routing are complete locally.
 All Loans route families use direct Workspace adapters; response rewriting is
-removed. R12 module organization remains separate. Foundation, operator commands
-and billing application hardening are included in the local checkpoint.
-Local hardening checkpoint: c9e27f9 (not pushed). R12 product-catalog, economic
-license/series and print-profile setup views are extracted with stable public imports;
-document layout setup is the next family.
+removed. The Loans views portion of R12 is complete: focused modules own all
+handlers and views.py retains compatibility imports. See the
+[module map](../implementation/loans-view-organization.md). Foundation, operator
+commands and billing hardening are included in the local checkpoint.
+Local changes remain unpublished. Broader R12 orgs/model/form/renewal-service
+organization is separate work requiring its own dependency review.
 
 Razorpay setup/provider testing is shelved as
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).

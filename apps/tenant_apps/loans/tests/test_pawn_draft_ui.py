@@ -1225,7 +1225,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             total_due=Decimal("10200.00"),
         )
         with (
-            patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
+            patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance", return_value=balance),
             patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
         ):
             detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
@@ -1297,7 +1297,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             recognized_interest=Decimal("200.00"),
         )
         with (
-            patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
+            patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance", return_value=balance),
             patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
         ):
             finalized_detail = self.client.get(
@@ -1401,7 +1401,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             total_due=Decimal("9000.00"),
         )
         with (
-            patch("apps.tenant_apps.loans.views.get_pawn_loan_balance", return_value=balance),
+            patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance", return_value=balance),
             patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
         ):
             detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
@@ -1427,7 +1427,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
         self.assertContains(missing_confirmation, "This field is required")
         with patch(
-            "apps.tenant_apps.loans.views.get_pawn_loan_balance",
+            "apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance",
             return_value=SimpleNamespace(total_due=Decimal("10000.00")),
         ):
             recorded = self.client.post(
