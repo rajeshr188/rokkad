@@ -634,7 +634,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertRedirects(self.client.post(url("activate", pk=license.pk)), detail, fetch_redirect_response=False)
         license.refresh_from_db()
         self.assertTrue(license.is_active)
-        with patch("apps.tenant_apps.loans.views.create_license_expiry_notice") as alert:
+        with patch("apps.tenant_apps.loans.web.license_setup.create_license_expiry_notice") as alert:
             self.assertRedirects(self.client.post(url("expiry_notice_create", pk=license.pk)), detail,
                                  fetch_redirect_response=False)
             self.assertEqual(alert.call_args.args, (license.pk,))
@@ -727,7 +727,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         request = RequestFactory().get("/loans/setup/licenses/999/")
         request.loans_workspace = self.tenant
         with patch(
-            "apps.tenant_apps.loans.views.get_object_or_404"
+            "apps.tenant_apps.loans.web.license_setup.get_object_or_404"
         ) as get_object_or_404:
             _license_for_workspace(request, 999)
 

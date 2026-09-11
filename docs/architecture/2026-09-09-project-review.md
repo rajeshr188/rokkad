@@ -514,3 +514,15 @@ forms, defaults, services, authorization and Workspace filtering remain unchange
 All 58 setup/Workspace-route tests and the runtime system check pass. Import-boundary,
 documentation-link and whitespace checks pass. License/series setup is next;
 broader R12 work remains pending.
+
+## R12 license/series setup extraction (2026-09-11)
+
+Moved twelve license/series handlers and four lookup/number-preview helpers to
+web/license_setup.py. Their function/decorator ASTs match the original. Public
+handler imports and the existing lookup helper import remain available from views.py.
+Shared operational-notice retry remains in views.py because it also serves custody.
+Two test mock targets now patch the dependencies at their new location; assertions
+remain unchanged. All 90 setup, license service/regulatory, numbering, notice and
+Workspace-route tests pass, alongside system, import-boundary, documentation-link
+and whitespace checks. No service, schema, template or permission rules changed.
+Document print-profile setup is the next bounded R12 extraction.

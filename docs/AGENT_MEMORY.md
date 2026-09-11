@@ -153,5 +153,8 @@ R12 product-catalog setup handlers live in web/product_setup.py; views.py retain
 the same decorated public imports. No service or permission rule changed.
 R12 economic setup lives in web/economic_setup.py with the same public import,
 setup permission decorator, defaults and service calls.
-Next: R12 license/series setup handlers, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
+R12 license/series setup handlers and their lookup/preview helpers live in
+web/license_setup.py; public view imports remain compatible. Shared operational
+notice retry still serves both license and custody workflows from views.py.
+Next: R12 document print-profile setup, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
 package upgrades. Prefer Django services/selectors, templates and HTMX.
