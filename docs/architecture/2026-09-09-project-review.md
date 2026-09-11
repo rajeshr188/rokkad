@@ -492,3 +492,15 @@ separate; see [routing record](../implementation/loans-workspace-routing.md).
 Completion evidence covers 595 distinct broad/focused regression checks, with stale
 compatibility and setup-label expectations corrected. System, documentation and
 whitespace checks pass; exact runs are recorded in the routing implementation note.
+
+## R12 first module extraction (2026-09-11)
+
+After local hardening checkpoint c9e27f9, the five product-catalog setup handlers
+(62 source lines) moved from Loans views.py to web/product_setup.py. Public view
+imports and URL callbacks retain the same decorated functions. Function-body and
+decorator ASTs match exactly; services, forms, templates and models are unchanged.
+The new module has explicit dependencies and no import back to views.py. Economic
+setup is the next bounded family; broader R12 work remains pending.
+
+All 66 product-catalog/setup/Workspace-route checks pass, together with the runtime
+system check, staged import guard, documentation links and whitespace checks.

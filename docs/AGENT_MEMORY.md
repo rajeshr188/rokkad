@@ -149,5 +149,7 @@ storage labels encode scoped QR URLs; old mapped-domain scan links remain valid.
 See [routing migration](implementation/loans-workspace-routing.md).
 The two Loans setup-link failures were incomplete fixtures: readiness correctly
 checks numbering before economics and borrowers. Fixtures now cover each stage.
-Next: R12 product-catalog setup handlers, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
+R12 product-catalog setup handlers live in web/product_setup.py; views.py retains
+the same decorated public imports. No service or permission rule changed.
+Next: R12 economic setup handlers, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
 package upgrades. Prefer Django services/selectors, templates and HTMX.

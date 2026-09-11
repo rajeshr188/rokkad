@@ -55,7 +55,6 @@ from apps.tenant_apps.loans.forms import (
     LoanLicenseForm,
     LoanLicenseRenewalForm,
     LoanMonitoringPolicyForm,
-    LoanProductVersionDraftForm,
     LoanSeriesSetupForm,
     PawnEconomicConfigurationForm,
     PawnFeePolicyForm,
@@ -149,7 +148,6 @@ from apps.tenant_apps.loans.models import (
     LoanLicenseRevision,
     LoanMonitoringPolicy,
     LoanOperationalNotice,
-    LoanProduct,
     LoanSeries,
     PawnCollateralItem,
     PawnCollateralPhoto,
@@ -189,7 +187,6 @@ from apps.tenant_apps.loans.services import (
     PawnPhysicalVerificationError,
     RiskSnapshotRefreshError,
     activate_license,
-    activate_product_version,
     assess_pawn_loan_event_reversal,
     create_configured_series,
     create_license,
@@ -197,7 +194,6 @@ from apps.tenant_apps.loans.services import (
     create_loan_monitoring_policy,
     create_pawn_economic_configuration,
     create_pawn_loan_fee_policy,
-    create_product_version_draft,
     retry_operational_notice,
     expire_license,
     issue_configurable_document,
@@ -210,8 +206,6 @@ from apps.tenant_apps.loans.services import (
     render_loan_license_register_pdf,
     render_storage_location_label,
     renew_license,
-    retire_product_version,
-    seed_default_loan_products,
     start_physical_verification,
     transfer_expired_draft_setup,
     update_configured_series,
@@ -246,70 +240,6 @@ def pawn_loan_list(request):
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
     )
-
-
-@loans_setup_required
-def loan_product_list(request):
-    products = LoanProduct.objects.filter(workspace=request.loans_workspace).prefetch_related("versions", "versions__pawn_loans").order_by("code")
-    return render(request, "loans/setup/products/list.html", {"products": products})
-
-
-@require_POST
-@loans_setup_required
-def loan_product_seed_defaults(request):
-    try:
-        versions = seed_default_loan_products(actor=request.user, request=request)
-    except ValueError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, f"Default product catalog is ready with {len(versions)} version(s). Review and activate each approved draft.")
-    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
-
-
-@require_POST
-@loans_setup_required
-def loan_product_version_activate(request, version_pk):
-    try:
-        version = activate_product_version(version_pk, actor=request.user, request=request)
-    except ValueError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, f"{version.product.name} v{version.version} is active for new loans.")
-    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
-
-
-@require_POST
-@loans_setup_required
-def loan_product_version_retire(request, version_pk):
-    try:
-        version = retire_product_version(version_pk, actor=request.user, request=request)
-    except ValueError as exc:
-        messages.error(request, str(exc))
-    else:
-        messages.success(request, f"{version.product.name} v{version.version} is retired from new origination. Existing loans are unchanged.")
-    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
-
-
-@loans_setup_required
-def loan_product_version_create(request, product_pk):
-    product = get_object_or_404(LoanProduct, pk=product_pk, workspace=request.loans_workspace)
-    active = product.versions.filter(status="ACTIVE").first()
-    initial = {}
-    if active:
-        for name in LoanProductVersionDraftForm.Meta.fields:
-            initial[name] = getattr(active, name)
-    form = LoanProductVersionDraftForm(request.POST or None, initial=initial)
-    if request.method == "POST" and form.is_valid():
-        try:
-            version = create_product_version_draft(
-                product.pk, actor=request.user, request=request, **form.cleaned_data
-            )
-        except ValueError as exc:
-            form.add_error(None, str(exc))
-        else:
-            messages.success(request, f"Created {product.name} v{version.version} as a draft. Review it before activation.")
-            return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
-    return render(request, "loans/setup/products/version_form.html", {"form": form, "product": product, "active_version": active})
 
 
 @loans_setup_required
@@ -1708,6 +1638,13 @@ from apps.tenant_apps.loans.web.funding_actions import (
     funding_loan_reverse_event,
     funding_loan_reverse_pledge,
     funding_loan_reverse_return,
+)
+from apps.tenant_apps.loans.web.product_setup import (
+    loan_product_list,
+    loan_product_seed_defaults,
+    loan_product_version_activate,
+    loan_product_version_create,
+    loan_product_version_retire,
 )
 from apps.tenant_apps.loans.web.pawn_draft_actions import (
     get_pawn_draft_readiness,

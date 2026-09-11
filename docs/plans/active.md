@@ -16,7 +16,8 @@ R11 dashboard visibility/batching and R07 Loans routing are complete locally.
 All Loans route families use direct Workspace adapters; response rewriting is
 removed. R12 module organization remains separate. Foundation, operator commands
 and billing application hardening are included in the local checkpoint.
-R12 starts with the five product-catalog setup views and stable public imports.
+Local hardening checkpoint: c9e27f9 (not pushed). R12 product-catalog setup views
+are extracted with stable public imports; economics setup is the next family.
 
 Razorpay setup/provider testing is shelved as
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).
