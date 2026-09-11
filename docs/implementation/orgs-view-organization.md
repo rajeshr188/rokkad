@@ -23,10 +23,13 @@ Paths are relative to `apps/orgs/`.
 | `web/access_helpers.py` | Existing Workspace access-context and owner-access helpers, reused by both extracted and remaining views |
 | `web/team_members.py` | Member list, role change/removal, self-leave and owner-membership helpers |
 | `web/invitations.py` | Sent/received invitation lists, send, confirmation, accept, decline and revoke; explicit query lookup helper |
-| `views.py` | Compatibility imports for moved handlers; remaining preferences, lifecycle, selection/dashboard and routing handlers |
+| `web/workspace_lifecycle.py` | Archive confirmation, archived list, restore and explicit lifecycle transitions |
+| `web/workspace_navigation.py` | Workspace selector, POST selection with safe redirects, and dashboard |
+| `views.py` | Compatibility imports for moved handlers; remaining preferences/account/backup surfaces, subscription compatibility and routing handlers |
 
 The first family moved nine handlers and three helpers. Team/invitations added
-eleven handlers and three helpers, all with identical function/decorator ASTs.
+eleven handlers and three helpers; lifecycle/navigation added seven handlers.
+All moved function/decorator ASTs remain identical.
 All route names and decorated public handler imports remain intact. The new
 modules use absolute project imports and never import `orgs.views`. The shared
 helpers still delegate to existing access/permission policy; this move does not
@@ -40,11 +43,9 @@ of this extraction.
 
 ## Remaining families and dependency review
 
-1. Lifecycle and navigation: archive/restore/transitions, selector, preference
-   changes and dashboard. Preserve independent explicit browser-tab identity.
-2. Account/preferences and backup surfaces: inspect class-based views and existing
+1. Account/preferences and backup surfaces: inspect class-based views and existing
    retirement behavior before extraction.
-3. Slug adapters and legacy compatibility: move only after their handler imports
+2. Slug adapters and legacy compatibility: move only after their handler imports
    are stable. Preserve retired responses and old names; do not recreate the
    removed Loans response-rewriting dispatcher.
 

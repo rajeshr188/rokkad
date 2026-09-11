@@ -597,3 +597,18 @@ is the next family in the [module map](../implementation/orgs-view-organization.
 Validation: all 161 selected orgs, invitation/verified-email, ownership, role-grant,
 lifecycle and shell tests passed (14.363 seconds). System check, migration drift,
 import guard, current-doc links and whitespace checks pass.
+
+## R12 lifecycle/navigation extraction (2026-09-11)
+
+Seven handlers moved into web/workspace_lifecycle.py and web/workspace_navigation.py
+with identical function/decorator ASTs. Public imports and slug adapters remain
+intact. Archive/restore/transition services, access guards, preference cleanup,
+POST-only selection, same-host redirects, switch audit and dashboard selectors
+are unchanged. Test mock targets follow their owning modules; the dashboard
+source-dependency test now inspects the moved module. Account/preferences and
+backup compatibility surfaces are next, followed by slug adapters.
+
+Validation: 171 selected orgs, lifecycle, ownership, context/platform override,
+shell and Loans-route checks passed (28.329 seconds); the updated source-dependency
+check also passed separately. System check, migration drift, import guard,
+documentation links and whitespace pass. No service, schema or policy changes.

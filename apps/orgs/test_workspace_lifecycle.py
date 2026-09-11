@@ -78,11 +78,11 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         request.user = self.owner
         view = inspect.unwrap(views.workspace_delete)
 
-        with patch("apps.orgs.views.get_object_or_404", return_value=self.workspace), \
-                patch("apps.orgs.views._assert_workspace_access"), \
-                patch("apps.orgs.views._assert_owner_access"), \
-                patch("apps.orgs.views.control_plane.archive_workspace") as archive, \
-                patch("apps.orgs.views.render", return_value=MagicMock()) as render:
+        with patch("apps.orgs.web.workspace_lifecycle.get_object_or_404", return_value=self.workspace), \
+                patch("apps.orgs.web.workspace_lifecycle._assert_workspace_access"), \
+                patch("apps.orgs.web.workspace_lifecycle._assert_owner_access"), \
+                patch("apps.orgs.web.workspace_lifecycle.control_plane.archive_workspace") as archive, \
+                patch("apps.orgs.web.workspace_lifecycle.render", return_value=MagicMock()) as render:
             view(request, workspace_id=9)
 
         archive.assert_not_called()
@@ -95,10 +95,10 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         request.user = self.owner
         request.workspace = None
 
-        with patch("apps.orgs.views.get_object_or_404", return_value=self.workspace), \
-                patch("apps.orgs.views._assert_workspace_access") as access, \
-                patch("apps.orgs.views._assert_owner_access") as owner_access, \
-                patch("apps.orgs.views.render", return_value=MagicMock()) as render:
+        with patch("apps.orgs.web.workspace_lifecycle.get_object_or_404", return_value=self.workspace), \
+                patch("apps.orgs.web.workspace_lifecycle._assert_workspace_access") as access, \
+                patch("apps.orgs.web.workspace_lifecycle._assert_owner_access") as owner_access, \
+                patch("apps.orgs.web.workspace_lifecycle.render", return_value=MagicMock()) as render:
             views.workspace_delete(request, workspace_id=9)
 
         access.assert_called_once_with(
@@ -119,11 +119,11 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         request.user = self.owner
         view = inspect.unwrap(views.workspace_restore)
 
-        with patch("apps.orgs.views.get_object_or_404", return_value=self.workspace), \
-                patch("apps.orgs.views.is_platform_admin", return_value=False), \
-                patch("apps.orgs.views.control_plane.restore_workspace") as restore, \
-                patch("apps.orgs.views.messages.success"), \
-                patch("apps.orgs.views.redirect", return_value=MagicMock()):
+        with patch("apps.orgs.web.workspace_lifecycle.get_object_or_404", return_value=self.workspace), \
+                patch("apps.orgs.web.workspace_lifecycle.is_platform_admin", return_value=False), \
+                patch("apps.orgs.web.workspace_lifecycle.control_plane.restore_workspace") as restore, \
+                patch("apps.orgs.web.workspace_lifecycle.messages.success"), \
+                patch("apps.orgs.web.workspace_lifecycle.redirect", return_value=MagicMock()):
             view(request, workspace_id=9)
 
         restore.assert_called_once_with(
@@ -137,9 +137,9 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         request.user = SimpleNamespace(pk=8)
         view = inspect.unwrap(views.workspace_restore)
 
-        with patch("apps.orgs.views.get_object_or_404", return_value=self.workspace), \
-                patch("apps.orgs.views.is_platform_admin", return_value=False), \
-                patch("apps.orgs.views.control_plane.restore_workspace") as restore:
+        with patch("apps.orgs.web.workspace_lifecycle.get_object_or_404", return_value=self.workspace), \
+                patch("apps.orgs.web.workspace_lifecycle.is_platform_admin", return_value=False), \
+                patch("apps.orgs.web.workspace_lifecycle.control_plane.restore_workspace") as restore:
             with self.assertRaises(PermissionDenied):
                 view(request, workspace_id=9)
 

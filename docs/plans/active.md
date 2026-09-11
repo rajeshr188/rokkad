@@ -20,7 +20,7 @@ handlers and views.py retains compatibility imports. See the
 commands and billing hardening are included in the local checkpoint.
 Application checkpoints are published through fb3db63 (publication record af22f23).
 Org workspace/role settings and shared access helpers are extracted locally;
-team/invitation handlers are extracted; lifecycle/navigation are next. See the
+team/invitation handlers are extracted; lifecycle/navigation are extracted; account/preferences are next. See the
 [orgs module map](../implementation/orgs-view-organization.md). Broader
 model/form/renewal-service organization remains separate review work.
 

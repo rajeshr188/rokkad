@@ -282,8 +282,8 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		self.assertEqual(result["role_name"], "Superuser")
 		self.assertIn("workspace_view", result["effective_permissions"])
 
-	@patch("apps.orgs.views.redirect")
-	@patch("apps.orgs.views.messages")
+	@patch("apps.orgs.web.workspace_navigation.redirect")
+	@patch("apps.orgs.web.workspace_navigation.messages")
 	def test_workspace_select_redirects_when_access_denied(self, mock_messages, mock_redirect):
 		from apps.orgs import views as org_views
 
@@ -298,15 +298,15 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
-			 patch("apps.orgs.views._assert_workspace_access", side_effect=PermissionDenied):
+			 patch("apps.orgs.web.workspace_navigation._assert_workspace_access", side_effect=PermissionDenied):
 			org_views.workspace_select(request, workspace_id=12)
 
 		mock_messages.error.assert_called_once()
 		mock_redirect.assert_called_once_with("workspace_selector")
 
-	@patch("apps.orgs.views.redirect")
-	@patch("apps.orgs.views.messages")
-	@patch("apps.orgs.views.AuditLog.log")
+	@patch("apps.orgs.web.workspace_navigation.redirect")
+	@patch("apps.orgs.web.workspace_navigation.messages")
+	@patch("apps.orgs.web.workspace_navigation.AuditLog.log")
 	def test_workspace_select_sets_workspace_when_access_allowed(
 		self,
 		_mock_audit,
@@ -327,7 +327,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		fake_filter = SimpleNamespace(first=lambda: workspace)
 
 		with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
-			 patch("apps.orgs.views._assert_workspace_access", return_value={
+			 patch("apps.orgs.web.workspace_navigation._assert_workspace_access", return_value={
 				"membership": None,
 				"role_name": "Superuser",
 				"effective_permissions": {"workspace_view"},
@@ -346,7 +346,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		request = self.factory.get("/orgs/workspace/12/select/")
 		request.user = SimpleNamespace(is_authenticated=True)
 
-		with patch("apps.orgs.views.Company.objects.filter") as mock_filter:
+		with patch("apps.orgs.web.workspace_navigation.Company.objects.filter") as mock_filter:
 			response = org_views.workspace_select.__wrapped__(request, workspace_id=12)
 
 		self.assertEqual(response.status_code, 405)
@@ -374,14 +374,14 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 				)
 
 				with patch.object(org_views.Company.objects, "filter", return_value=fake_filter), \
-					 patch("apps.orgs.views._assert_workspace_access", return_value={
+					 patch("apps.orgs.web.workspace_navigation._assert_workspace_access", return_value={
 						"membership": None,
 						"role_name": "Superuser",
 						"effective_permissions": {"workspace_view"},
 					 }), \
-					 patch("apps.orgs.views.AuditLog.log"), \
-					 patch("apps.orgs.views.messages.success"), \
-					 patch("apps.orgs.views.redirect") as mock_redirect:
+					 patch("apps.orgs.web.workspace_navigation.AuditLog.log"), \
+					 patch("apps.orgs.web.workspace_navigation.messages.success"), \
+					 patch("apps.orgs.web.workspace_navigation.redirect") as mock_redirect:
 					org_views.workspace_select(request, workspace_id=12)
 
 				if isinstance(expected_redirect, tuple):
@@ -617,7 +617,7 @@ class OrgNavigationFlowTests(SimpleTestCase):
 		self.assertNotIn("dea_journal_view", sidebar_html)
 
 	def test_workspace_dashboard_view_does_not_import_tenant_business_models(self):
-		with open("apps/orgs/views.py", "r") as f:
+		with open("apps/orgs/web/workspace_navigation.py", "r", encoding="utf-8") as f:
 			views_py = f.read()
 
 		self.assertNotIn("apps.tenant_apps.contact.models", views_py)

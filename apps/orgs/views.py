@@ -1,30 +1,22 @@
 import logging
-from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpResponse, HttpResponseGone, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
 from dynamic_preferences.views import PreferenceFormView
 from render_block import render_block_to_string
 
-from apps.onboarding.services import build_workspace_setup_display_state
 
-from .audit import AuditLog
 from .decorators_v2 import permission_required
-from .forms import ArchiveWorkspaceForm, company_preference_form_builder
+from .forms import company_preference_form_builder
 from .models import Company, CompanyInvitation, Membership
 from .permissions import get_effective_permissions, is_platform_admin
 from .registries import company_preference_registry
-from .services import control_plane
-from .services.dashboard_selectors import get_workspace_dashboard_context
 from .tenant_context import resolve_preferred_workspace, resolve_request_workspace
 from apps.subscriptions.billing import effective_billing_state
 
@@ -65,6 +57,18 @@ from apps.orgs.web.invitations import (
     invitation_delete,
     team_invitations,
     _get_workspace_from_query,
+)
+
+from apps.orgs.web.workspace_lifecycle import (
+    workspace_delete,
+    archived_workspaces,
+    workspace_restore,
+    workspace_lifecycle_transition,
+)
+from apps.orgs.web.workspace_navigation import (
+    workspace_selector,
+    workspace_select,
+    workspace_dashboard,
 )
 
 # Compatibility imports above preserve existing URLs and Python callers.
@@ -552,121 +556,6 @@ workspace_slug_commodity_valuation_report = retired_accounting_surface
 workspace_slug_reports = retired_accounting_surface
 
 
-@login_required
-def workspace_delete(request, workspace_id=None, company_id=None):
-    """
-    Archive a workspace while preserving its tenant schema and all business data.
-
-    The legacy route name is retained for compatibility. Requires the
-    workspace_delete permission and Owner access.
-    """
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_delete"},
-        allow_platform_admin=True,
-    )
-
-    _assert_owner_access(request, company, allow_platform_admin=True)
-    form = ArchiveWorkspaceForm(
-        request.POST if request.method == "POST" else None,
-        workspace=company,
-    )
-    if request.method == "POST" and form.is_valid():
-        control_plane.archive_workspace(
-            company=company,
-            actor=request.user,
-            request=request,
-            reason=f"Owner confirmed archive of {company.name}",
-        )
-
-        # Do not leave the actor's profile pointing at an inaccessible tenant.
-        if getattr(request.user.profile, "workspace", None) == company:
-            request.user.profile.workspace = None
-            request.user.profile.save(update_fields=["workspace"])
-
-        messages.success(
-            request,
-            f"{company.name} was archived. Its schema and business records were preserved.",
-        )
-        return redirect("archived_workspaces")
-
-    return render(
-        request,
-        "company/company_delete_confirm.html",
-        {"company": company, "workspace": company, "form": form},
-    )
-
-
-@login_required
-def archived_workspaces(request):
-    """List archived workspaces that the actor is allowed to restore."""
-    workspaces = Company.all_objects.filter(
-        lifecycle_state=Company.LifecycleState.ARCHIVED
-    ).exclude(
-        schema_name="public"
-    )
-    if not is_platform_admin(request.user):
-        workspaces = workspaces.filter(owner=request.user)
-    workspaces = workspaces.select_related("owner").order_by("-updated_at", "name")
-    return render(
-        request,
-        "company/archived_workspaces.html",
-        {"archived_workspaces": workspaces},
-    )
-
-
-@require_POST
-@login_required
-def workspace_restore(request, workspace_id):
-    """Restore one archived workspace; only its Owner or platform admin may act."""
-    company = get_object_or_404(
-        Company.all_objects,
-        id=workspace_id,
-        lifecycle_state=Company.LifecycleState.ARCHIVED,
-    )
-    if request.user != company.owner and not is_platform_admin(request.user):
-        raise PermissionDenied("Only the workspace owner can restore this workspace")
-
-    control_plane.restore_workspace(
-        company=company,
-        actor=request.user,
-        request=request,
-    )
-    messages.success(request, f"{company.name} was restored.")
-    return redirect("archived_workspaces")
-
-
-@require_POST
-@login_required
-def workspace_lifecycle_transition(request, workspace_id, target_state):
-    """Apply an explicitly authorized operational lifecycle transition."""
-    company = get_object_or_404(Company.all_objects, id=workspace_id)
-    reason = (request.POST.get("reason") or "").strip()
-    try:
-        updated = control_plane.transition_workspace_lifecycle(
-            workspace=company,
-            target_state=target_state.upper(),
-            actor=request.user,
-            reason=reason,
-            request=request,
-        )
-    except ValidationError as exc:
-        messages.error(request, "; ".join(exc.messages))
-        return redirect("archived_workspaces")
-
-    messages.success(
-        request,
-        f"{updated.name} is now {updated.get_lifecycle_state_display().lower()}.",
-    )
-    return redirect("archived_workspaces")
-
-
 @method_decorator(login_required, name="dispatch")
 @method_decorator(permission_required("workspace_settings"), name="dispatch")
 class CompanyPreferenceBuilder(PreferenceFormView):
@@ -813,108 +702,6 @@ class BackupDatabaseView(View):
 # ============================================================================
 
 
-@login_required
-def workspace_selector(request):
-    """
-    Workspace selection page - shows user's available workspaces.
-
-    Displays:
-    - User's available workspaces with membership info
-    - Pending invitations
-    - Quick actions (create workspace)
-
-    Always displays the list, independently of the saved navigation preference.
-    """
-    user = request.user
-    profile = user.profile
-
-    # Get user's workspace memberships
-    memberships = (
-        user.memberships.select_related("company", "role")
-        .filter(company__lifecycle_state=Company.LifecycleState.ACTIVE)
-        .order_by("-company__updated_at")
-    )
-
-    selected_workspace = resolve_preferred_workspace(user)
-
-    # Get pending invitations
-    pending_invitations = (
-        CompanyInvitation.pending_queryset().filter(
-            email=user.email,
-        )
-        .select_related("company", "role")
-        .order_by("-created")
-    )
-
-    # Filter out expired invitations
-    valid_invitations = [inv for inv in pending_invitations if not inv.key_expired()]
-
-    # Count outgoing pending invitations sent by this user
-    sent_invitations_count = CompanyInvitation.objects.filter(
-        inviter=user,
-        status=CompanyInvitation.Status.PENDING,
-    ).count()
-
-    context = {
-        "workspaces": memberships,
-        "pending_invitations": valid_invitations,
-        "current_workspace": selected_workspace,
-        "workspace_count": memberships.count(),
-        "invitation_count": len(valid_invitations),
-        "has_workspaces": memberships.exists(),
-        "sent_invitations_count": sent_invitations_count,
-    }
-
-    return render(request, "company/workspace_home.html", context)
-
-
-@login_required
-@require_POST
-def workspace_select(request, workspace_id):
-    """
-    Select a workspace to work in.
-    Sets the selected workspace in UserProfile and redirects to company dashboard.
-    """
-    user = request.user
-
-    workspace = Company.objects.filter(id=workspace_id).first()
-    if workspace is None:
-        messages.error(request, "Workspace not found")
-        return redirect("workspace_selector")
-
-    try:
-        _assert_workspace_access(request, workspace, allow_platform_admin=True)
-    except PermissionDenied:
-        messages.error(request, "Workspace not found or access denied")
-        return redirect("workspace_selector")
-
-    # Set as active workspace
-    user.profile.set_workspace(workspace)
-
-    AuditLog.log(
-        "WORKSPACE_SWITCH",
-        user=user,
-        company=workspace,
-        description=f"Switched to workspace: {workspace.name}",
-        request=request,
-        success=True,
-    )
-
-    messages.success(request, f"Switched to {workspace.name}")
-
-    next_url = request.POST.get("next")
-    if next_url and url_has_allowed_host_and_scheme(
-        next_url,
-        allowed_hosts={request.get_host()},
-        require_https=request.is_secure(),
-    ):
-        return redirect(next_url)
-    return redirect(
-        "workspace_slug_dashboard",
-        workspace_slug=workspace.slug,
-    )
-
-
 def subscription_required(view_func):
     """
     Decorator to ensure workspace has active subscription.
@@ -959,76 +746,3 @@ def subscription_required(view_func):
 # ============================================================================
 # WORKSPACE DASHBOARD
 # ============================================================================
-
-
-@login_required
-def workspace_dashboard(request, workspace_id):
-    """
-    Main workspace dashboard - shows key metrics and activity.
-
-    Displays:
-    - Loan statistics (unreleased, sunken, today's activity)
-    - Customer statistics
-    - Financial metrics
-    - Team information
-
-    Requires: User must be a member of the workspace (Owner/Admin/Member)
-
-    """
-    # Get workspace and validate access policy.
-    workspace = get_object_or_404(Company, id=workspace_id)
-
-    try:
-        access_context = _assert_workspace_access(
-            request,
-            workspace,
-            allow_platform_admin=True,
-        )
-    except PermissionDenied:
-        messages.error(request, "Access denied to this workspace")
-        return redirect("workspace_list")
-
-    membership = access_context["membership"]
-    role_name = access_context["role_name"]
-    if membership is None:
-        membership = SimpleNamespace(role=SimpleNamespace(name=role_name))
-
-    # Set as active workspace if not already
-    if request.user.profile.workspace != workspace:
-        request.user.profile.workspace = workspace
-        request.user.profile.save()
-
-    # Redirect to public if somehow in public schema
-    if workspace.slug == "public":
-        return redirect("dashboard")
-
-    context = {}
-    context["workspace"] = workspace
-    context["membership"] = membership
-    context["role"] = role_name
-
-    # Check if user can view detailed metrics (Owner/Admin)
-    context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
-    access = access_context["access"]
-    context.update(get_workspace_dashboard_context(workspace=workspace, access=access))
-    context["can_use_counter"] = access.can("data.view")
-    context["can_create_loan"] = access.can("data.view") and access.can("data.create")
-    if context["can_use_counter"]:
-        from django.core.paginator import Paginator
-        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
-
-        work = get_workspace_counter_work(workspace=workspace)
-        default_queue = next((key for key in ("overdue", "due", "approved", "draft", "review") if work["queues"][key]["count"]), "draft")
-        selected = work["queues"].get(request.GET.get("queue"), work["queues"][default_queue])
-        context["counter_work"] = work
-        context["work_queues"] = work["queues"].values()
-        context["selected_queue"] = selected
-        context["work_page"] = Paginator(selected["rows"], 20).get_page(request.GET.get("page"))
-    if context.get("setup_checklist") is not None:
-        context["setup_state"] = build_workspace_setup_display_state(
-            user=request.user,
-            workspace=workspace,
-            checklist=context["setup_checklist"],
-        )
-
-    return render(request, "company/workspace_dashboard.html", context)
