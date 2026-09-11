@@ -54,10 +54,7 @@ from apps.tenant_apps.loans.forms import (
     LoanDocumentPrintProfileDefinitionForm,
     LoanLicenseForm,
     LoanLicenseRenewalForm,
-    LoanMonitoringPolicyForm,
     LoanSeriesSetupForm,
-    PawnEconomicConfigurationForm,
-    PawnFeePolicyForm,
     PawnPhysicalVerificationObservationForm,
     PawnPhysicalVerificationStartForm,
     PawnSetupTransferForm,
@@ -146,7 +143,6 @@ from apps.tenant_apps.loans.models import (
     LoanDocumentPrintProfileRevision,
     LoanLicense,
     LoanLicenseRevision,
-    LoanMonitoringPolicy,
     LoanOperationalNotice,
     LoanSeries,
     PawnCollateralItem,
@@ -154,11 +150,8 @@ from apps.tenant_apps.loans.models import (
     PawnLoan,
     PawnLoanEvent,
     PawnLoanAuction,
-    PawnLoanEconomicPolicy,
-    PawnLoanFeePolicy,
     PawnLoanRelease,
     PawnLoanRenewal,
-    PawnMetalInterestRatePolicy,
     PawnPhysicalVerificationObservation,
     PawnPhysicalVerificationSession,
     PawnStorageLocation,
@@ -191,9 +184,6 @@ from apps.tenant_apps.loans.services import (
     create_configured_series,
     create_license,
     create_license_expiry_notice,
-    create_loan_monitoring_policy,
-    create_pawn_economic_configuration,
-    create_pawn_loan_fee_policy,
     retry_operational_notice,
     expire_license,
     issue_configurable_document,
@@ -1639,6 +1629,7 @@ from apps.tenant_apps.loans.web.funding_actions import (
     funding_loan_reverse_pledge,
     funding_loan_reverse_return,
 )
+from apps.tenant_apps.loans.web.economic_setup import pawn_economics_setup
 from apps.tenant_apps.loans.web.product_setup import (
     loan_product_list,
     loan_product_seed_defaults,
@@ -1725,90 +1716,6 @@ def license_register_pdf(request):
         f"loan-license-register-{as_of_date.isoformat()}.pdf",
     )
     return response
-
-
-@loans_setup_required
-def pawn_economics_setup(request):
-    action = request.POST.get("action") if request.method == "POST" else None
-    configuration_form = PawnEconomicConfigurationForm(
-        request.POST if action == "configuration" else None,
-        workspace=request.loans_workspace,
-        initial={"effective_from": timezone.localdate()},
-        prefix="configuration",
-    )
-    fee_form = PawnFeePolicyForm(
-        request.POST if action == "fee" else None,
-        workspace=request.loans_workspace,
-        initial={"effective_from": timezone.localdate()},
-        prefix="fee",
-    )
-    monitoring_form = LoanMonitoringPolicyForm(
-        request.POST if action == "monitoring" else None,
-        workspace=request.loans_workspace,
-        initial={
-            "effective_from": timezone.localdate(),
-            "compliance_profile": "Workspace monitoring v1",
-            "ltv_warning_ratio": Decimal("0.70"),
-            "ltv_breach_ratio": Decimal("0.80"),
-            "ltv_critical_ratio": Decimal("0.90"),
-        },
-        prefix="monitoring",
-    )
-    if action == "configuration" and configuration_form.is_valid():
-        data = configuration_form.cleaned_data
-        try:
-            create_pawn_economic_configuration(
-                workspace=request.loans_workspace,
-                actor=request.user,
-                **data,
-            )
-        except (ValidationError, ValueError) as exc:
-            configuration_form.add_error(None, str(exc))
-        else:
-            messages.success(request, "PawnLoan economic configuration added.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
-    if action == "fee" and fee_form.is_valid():
-        try:
-            create_pawn_loan_fee_policy(
-                workspace=request.loans_workspace,
-                actor=request.user,
-                **fee_form.cleaned_data,
-            )
-        except (ValidationError, ValueError) as exc:
-            fee_form.add_error(None, str(exc))
-        else:
-            messages.success(request, "PawnLoan fee policy added.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
-    if action == "monitoring" and monitoring_form.is_valid():
-        try:
-            create_loan_monitoring_policy(
-                workspace=request.loans_workspace,
-                actor=request.user,
-                **monitoring_form.cleaned_data,
-            )
-        except (ValidationError, ValueError) as exc:
-            monitoring_form.add_error(None, str(exc))
-        else:
-            messages.success(request, "Loan monitoring policy added.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
-    context = {
-        "configuration_form": configuration_form,
-        "fee_form": fee_form,
-        "monitoring_form": monitoring_form,
-        "economic_policies": PawnLoanEconomicPolicy.objects.filter(
-            workspace=request.loans_workspace
-        ).select_related("license"),
-        "rate_policies": PawnMetalInterestRatePolicy.objects.filter(
-            workspace=request.loans_workspace
-        ).select_related("license"),
-        "fee_policies": PawnLoanFeePolicy.objects.filter(
-            workspace=request.loans_workspace
-        ).select_related("license"),
-        "monitoring_policies": LoanMonitoringPolicy.objects.filter(
-            workspace=request.loans_workspace
-        ).select_related("license"),
-    }
-    return render(request, "loans/setup/economics.html", context)
 
 
 @loans_setup_required

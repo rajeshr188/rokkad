@@ -151,5 +151,7 @@ The two Loans setup-link failures were incomplete fixtures: readiness correctly
 checks numbering before economics and borrowers. Fixtures now cover each stage.
 R12 product-catalog setup handlers live in web/product_setup.py; views.py retains
 the same decorated public imports. No service or permission rule changed.
-Next: R12 economic setup handlers, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
+R12 economic setup lives in web/economic_setup.py with the same public import,
+setup permission decorator, defaults and service calls.
+Next: R12 license/series setup handlers, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
 package upgrades. Prefer Django services/selectors, templates and HTMX.

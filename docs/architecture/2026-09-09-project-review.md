@@ -504,3 +504,13 @@ setup is the next bounded family; broader R12 work remains pending.
 
 All 66 product-catalog/setup/Workspace-route checks pass, together with the runtime
 system check, staged import guard, documentation links and whitespace checks.
+
+## R12 economic setup extraction (2026-09-11)
+
+Moved pawn_economics_setup to web/economic_setup.py, retaining its public import
+in views.py and existing route callbacks. The handler/decorator AST is unchanged;
+ten exclusive dependencies moved with it. Economic, interest, fee and monitoring
+forms, defaults, services, authorization and Workspace filtering remain unchanged.
+All 58 setup/Workspace-route tests and the runtime system check pass. Import-boundary,
+documentation-link and whitespace checks pass. License/series setup is next;
+broader R12 work remains pending.
