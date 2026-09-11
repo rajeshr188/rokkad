@@ -14,6 +14,11 @@ All four orgs checkpoints are pushed: workspace/role settings (`ee31dda`),
 team/invitations (`0177fc3`), lifecycle/navigation (`e434828`), and final
 account/preferences, slug adapters and unused backup-view removal (`38eb1e3`).
 Both Loans and orgs view organization are complete and published.
+Document form organization is implemented locally: 13 layout/overlay/asset and
+print-profile forms moved to `web/document_forms.py`, with existing public imports
+preserved. Document setup handlers use the owning module; no business rules changed.
+The three license/series setup forms are also extracted into `web/license_forms.py`
+with compatible public imports. Both form increments are included in this checkpoint.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -35,6 +40,16 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- License/series form extraction: all 62 setup UI, license regulatory and scoped
+  route tests passed (28.185 seconds). Across both form extractions, all 50
+  original class ASTs match and all 16 public aliases preserve class identity.
+  Runtime system check and tracked import guard pass; both new, untracked form
+  modules also pass the same import-boundary validator explicitly.
+- Document form extraction: 121 document/layout/print-profile, scoped-route and
+  shell tests passed (18.438 seconds), plus all 32 setup UI tests (7.590 seconds).
+  All 50 form class ASTs are unchanged; all 13 compatibility imports resolve to
+  the owning class objects. Runtime system check, import-boundary check and its
+  four unit tests, 138 documentation links and whitespace checks pass.
 - [Workspace RLS checks for 38eb1e3](https://github.com/rajeshr188/rokkad/actions/runs/34591042913)
   passed: dependencies/docs/import boundaries, owner migrations and restricted
   runtime checks, boundary/first-loan checks, Loans regressions, image build and
@@ -192,8 +207,9 @@ The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).
 The orgs view split is also complete; see the
 [orgs module map](implementation/orgs-view-organization.md). Publication and CI
-verification are complete. The remaining-module review selects
-document layout and print-profile forms as the next bounded extraction; see the
+verification are complete. Document layout and print-profile forms are extracted
+along with the three license/series setup forms in this checkpoint. Next: verify
+publication CI, then review remaining form families before choosing another move; see the
 [review and validation scope](plans/project-hardening.md#remaining-r12-module-review).
 Model and renewal-service restructuring are lower priority and remain unimplemented.
 Razorpay and license scoping remain shelved.

@@ -162,3 +162,9 @@ unrouted/uncalled backup view classes were removed. See the
 [orgs module map](implementation/orgs-view-organization.md). Feature modules must
 not import the facade. Model/form/renewal-service review remains separate; avoid
 splits solely for size, speculative abstractions and blanket package upgrades.
+Document layout, overlay, asset and print-profile forms now live in
+loans/web/document_forms.py. loans/forms.py retains their public class imports;
+document handlers use the owning module. Preserve fields, validation and scoped
+assignment querysets when organizing other form families.
+License creation, renewal and series setup forms live in loans/web/license_forms.py;
+forms.py preserves their public imports and license_setup.py uses the owning module.

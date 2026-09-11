@@ -22,8 +22,11 @@ Application checkpoints are published through 38eb1e3.
 Orgs view organization is complete and published, including account/preferences
 and slug adapters. See the
 [orgs module map](../implementation/orgs-view-organization.md). Broader
-model/form/renewal-service review selects document forms as the next bounded
-increment; see the [review](project-hardening.md#remaining-r12-module-review).
+model/form/renewal-service review selected document forms, now extracted locally
+with compatible public imports; see the
+[review](project-hardening.md#remaining-r12-module-review). The three license/series
+setup forms are also extracted in this checkpoint. Next: verify publication CI,
+then review remaining form families; model and renewal-service moves remain deferred.
 
 Razorpay setup/provider testing is shelved as
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).

@@ -52,6 +52,23 @@ Other specialized endpoints already imported directly by URLs retain their modul
 
 ## Verification and scope
 
+Document-editing forms are now grouped in `web/document_forms.py`: layout creation
+and JSON editing, flow and overlay editors, asset upload, layout pack import,
+layout assignment, and print-profile creation/editing/assignment (13 classes).
+`forms.py` re-exports the same class objects for existing callers. Document layout
+and print-profile handlers import from the owning module. The form module must
+not import `forms.py` or handler modules; rendering and business services remain
+separate. All 50 original form class ASTs are unchanged across the two files,
+including Workspace-filtered assignment querysets. No models or migrations changed.
+
+`web/license_forms.py` owns `LoanLicenseForm`, `LoanLicenseRenewalForm` and
+`LoanSeriesSetupForm`; `forms.py` re-exports them and `web/license_setup.py` uses
+the owning module. Required supporting evidence, renewal date validation, creation
+versus edit behavior, and numbering defaults are unchanged. All 50 original form
+class ASTs still match across the three files, and all 16 moved form imports resolve
+to the owning class objects. This groups setup changes by responsibility without
+changing the user workflow or introducing a form framework.
+
 The final extraction moved 56 functions into nine modules with identical function
 and decorator ASTs. The compatibility file fell from 1,620 to 224 lines. Existing
 route tests check decorated callback identity for all 136 canonical Loans routes.

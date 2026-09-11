@@ -60,7 +60,16 @@ during this review. File size is supporting context, not a reason by itself to s
 | Core models | `models/core.py` mixes numbering/economic policies, loan/collateral records, immutable evidence, releases, auctions and renewals. The existing model package already separates other features. Defer moving these classes until a concrete change benefits from it; preserve Django model identity, relationships, constraints, default-callable paths and public imports, with no generated schema migration for organization alone. |
 | Renewal service | `services/pawn_renewals.py` contains previews, atomic execution/reversal, fingerprints and shared validation. Execution and reversal depend on row locking, replay handling, custody evidence and compensating events. Keep the transaction orchestration together for now; a later preview/helper extraction needs explicit dependency mapping and renewal/reversal regression coverage. |
 
-The next form increment must preserve fields, validation, widgets, constructor
+The document form increment is implemented locally: 13 classes now live in
+`web/document_forms.py`; `forms.py` retains public imports and the two document
+setup handlers use the owning module. All 50 form class bodies remain unchanged.
+The three license/series setup forms are also extracted into `web/license_forms.py`
+with compatible public imports and unchanged class bodies. License setup handlers
+use the owning module. Next: verify publication CI and review remaining form
+families before choosing another extraction.
+Core model and renewal-service moves remain deferred.
+
+Each form increment must preserve fields, validation, widgets, constructor
 arguments and public class identities. Inspect callers and mock targets, compare
 class bodies, then run existing document-layout/print-profile and affected web
 tests plus import checks. Do not introduce a generic form framework or change

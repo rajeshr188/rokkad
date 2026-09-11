@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from apps.tenant_apps.loans.access import loans_setup_required
-from apps.tenant_apps.loans.forms import (
+from apps.tenant_apps.loans.web.document_forms import (
     LoanDocumentPrintProfileAssignmentForm,
     LoanDocumentPrintProfileCreateForm,
     LoanDocumentPrintProfileDefinitionForm,
