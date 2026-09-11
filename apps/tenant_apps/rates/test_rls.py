@@ -8,7 +8,7 @@ from apps.orgs.models import Company
 from apps.tenancy.checks import check_restricted_runtime_role, check_workspace_rls
 from apps.tenancy.context import workspace_context
 
-from apps.tenant_apps.rates.models import RateSource
+from apps.tenant_apps.rates.models import Rate, RateSource
 
 
 class RateRLSIsolationTests(TransactionTestCase):
@@ -27,19 +27,22 @@ class RateRLSIsolationTests(TransactionTestCase):
                 f"GRANT SELECT, INSERT, UPDATE, DELETE ON {rate_source_table} "
                 f"TO {quoted_role}"
             )
+            cursor.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON rates_rate TO {quoted_role}")
             cursor.execute(
                 f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public "
                 f"TO {quoted_role}"
             )
-        owner = get_user_model().objects.create_user(username="rates-rls-owner")
+        suffix = uuid.uuid4().hex[:10]
+        owner = get_user_model().objects.create_user(username=f"rates-rls-owner-{suffix}")
+        cls.owner_id = owner.pk
         cls.first_workspace = Company.objects.create(
-            schema_name="rates-rls-one",
+            schema_name=f"rates-rls-one-{suffix}",
             name="Rates RLS One",
             owner=owner,
             creator=owner,
         )
         cls.second_workspace = Company.objects.create(
-            schema_name="rates-rls-two",
+            schema_name=f"rates-rls-two-{suffix}",
             name="Rates RLS Two",
             owner=owner,
             creator=owner,
@@ -48,10 +51,12 @@ class RateRLSIsolationTests(TransactionTestCase):
             cls.first_source_id = RateSource.objects.create(
                 name="First", location="One"
             ).pk
+            cls.first_quote_id = Rate.objects.create(rate_source_id=cls.first_source_id, buying_rate=1, selling_rate=2).pk
         with workspace_context(cls.second_workspace.pk):
             cls.second_source_id = RateSource.objects.create(
                 name="Second", location="Two"
             ).pk
+            cls.second_quote_id = Rate.objects.create(rate_source_id=cls.second_source_id, buying_rate=3, selling_rate=4).pk
 
     @classmethod
     def tearDownClass(cls):
@@ -134,3 +139,33 @@ class RateRLSIsolationTests(TransactionTestCase):
                     f'SELECT id FROM "{RateSource._meta.db_table}" ORDER BY id'
                 )
                 self.assertEqual(cursor.fetchall(), [(self.second_source_id,)])
+
+    def test_quote_history_is_scoped_and_immutable_under_runtime_role(self):
+        with transaction.atomic():
+            self._assume_runtime_role()
+            self.assertEqual(Rate.objects.count(), 0)
+        with workspace_context(self.first_workspace.pk):
+            self._assume_runtime_role()
+            self.assertEqual(list(Rate.objects.values_list("pk", flat=True)), [self.first_quote_id])
+            self.assertEqual(Rate.objects.filter(pk=self.second_quote_id).update(buying_rate=10), 0)
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                Rate.objects.filter(pk=self.first_quote_id).update(buying_rate=10)
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM rates_rate WHERE id = %s", [self.first_quote_id])
+
+    def test_quote_insert_cannot_use_cross_workspace_source_or_invalid_price(self):
+        with workspace_context(self.first_workspace.pk):
+            self._assume_runtime_role()
+            for source_id, amount in ((self.second_source_id, 1), (self.first_source_id, 0)):
+                with self.assertRaises(DatabaseError), transaction.atomic():
+                    Rate.objects.bulk_create([Rate(workspace=self.first_workspace, rate_source_id=source_id,
+                                                   buying_rate=amount, selling_rate=2)])
+
+    def test_quote_revision_cannot_reference_another_workspace(self):
+        with workspace_context(self.first_workspace.pk):
+            self._assume_runtime_role()
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                Rate.objects.bulk_create([Rate(workspace=self.first_workspace, rate_source_id=self.first_source_id,
+                    buying_rate=1, selling_rate=2, supersedes_id=self.second_quote_id,
+                    recorded_by_id=self.owner_id, reason="Cross-workspace attempt")])

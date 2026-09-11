@@ -13,7 +13,7 @@
     <li>Schedule one invocation per tenant workspace. The schema and workspace ID must identify the same workspace or the command fails closed.</li>
     <li>Repeat the command until it reports <code>selected=0</code> when a workspace can have more active loans than the chosen batch size.</li>
     <li>Treat a non-zero process exit as a monitoring alert. Successful loans remain refreshed; failed loans retain an <strong>Error</strong> snapshot with the specific blocker.</li>
-    <li>Open the Risk portfolio to review Error or Stale rows. Correct policy, appraisal, valuation-rate, schedule, or loan-event evidence rather than editing a snapshot.</li>
+    <li>Open the Loan health to review Error or Stale rows. Correct policy, appraisal, valuation-rate, schedule, or loan-event evidence rather than editing a snapshot.</li>
     <li>Confirm the Operations Console shows zero unassessed active loans and a recent last risk assessment.</li>
   </ol>
   <p class="mb-0"><strong>Result fields:</strong> <code>selected</code> is the claimed due work, <code>current</code> is successfully refreshed work, and <code>errors</code> is failed work requiring review. Re-running is safe: current snapshots for the same or later assessment date are skipped, while stale and error rows are retried.</p>

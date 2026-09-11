@@ -46,6 +46,67 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- Checkpoint review: authenticated browser checks confirmed Loan health loads and
+  shows the empty active-loan state; economic setup fields and history were
+  inspected. Populated portfolio and amendment submissions were verified in
+  disposable tests, preserving development policies. Amendment mode now has an
+  explicit heading, save-new-version button and cancel link, including after
+  validation errors. All 43 monitoring/setup checks passed (13.203 seconds),
+  including a valid amendment, missing reason and duplicate submission. Browser
+  screenshot capture timed out; no visual screenshot acceptance is claimed.
+
+- Capacity review: owner specified 3,000-10,000 active loans per organization,
+  30-100 loans processed per organization/day and at least 100 organizations.
+  Active-only assessment selection is confirmed. Current worker cadence,
+  duplicated reads, batch lock duration and residual closed-snapshot/alert work
+  need launch-scale hardening. See the [capacity findings](implementation/rates-appraisal-monitoring-review.md#launch-capacity-requirements-and-review-2026-09-11).
+  Existing regression results below do not establish this capacity. This review
+  changes documentation only; no production load test or worker startup occurred.
+- Monitoring completeness/amendment increment: all 576 broader Loans, Rates,
+  onboarding and scoped-route regressions passed (224.937 seconds). All 83 final
+  focused/concurrency/migration/deployment checks passed (45.085 seconds), followed
+  by 24 coverage-basis display checks (7.068 seconds). Tests include first-failure
+  recovery, committed and rolled-back invalidation under restricted RLS, competing
+  batches/amendments, date rollover, incomplete totals and upgrade preservation.
+  Loans 0007 is applied to local `rokkad_shared_dev`; runtime/database, pending
+  migration and drift checks pass. Four JavaScript guards, 544 tracked import
+  boundaries, 15 new Python modules, 179 documentation links across 21 files and
+  whitespace pass. Both Compose configurations validate without resolving secrets.
+  Optional repeating-worker wiring is implemented but has not been started or
+  deployed. All four Rates/appraisal/monitoring increments are included in this reviewed
+  checkpoint; publication is the next operation.
+- Freshness/reappraisal increment: all 558 broader Loans, Rates, route and operator
+  regressions passed (190.570 seconds); 53 final focused checks passed (29.606
+  seconds), including competing reviewers, read-only history access, original
+  approval/as-of preservation, transaction-local risk invalidation, and restricted
+  SQL rejection of appraisal mutation/cross-item or cross-Workspace linkage.
+  The migration rehearsal preserved legacy appraisal values/dates/authors and
+  marked saved assessments stale. Loans migration 0006 is applied to local
+  `rokkad_shared_dev`; runtime/database, pending-migration and drift checks pass.
+  Four JavaScript guards, 544-file tracked import guard, all 13 new Python modules,
+  163 links in 18 documentation files, and whitespace pass. No production or
+  physical-device acceptance. All three Rates/appraisal increments are uncommitted.
+- Rates quote-evidence increment: all 563 Loans, Rates, onboarding, scoped-route
+  and operator-journey tests passed in a fresh disposable database (192.195 seconds).
+  Final focused checks passed all 31 tests (12.767 seconds), including the final
+  quote-detail link, migration rehearsal, concurrent corrections and restricted-role
+  cross-Workspace revision denial. Four JavaScript preflight tests also pass.
+  The upgrade test preserves an invalid legacy quote's amount, purity and date and
+  proves it can be withdrawn without deleting history. Import checks cover 544
+  tracked files and all seven new Python modules; 152 links across 16 current docs
+  and whitespace pass. Migration drift is clear. Rates migration 0003 is applied
+  to local `rokkad_shared_dev`; restricted runtime/database checks and the pending
+  migration check pass. Existing quote values are preserved. No production action
+  or physical device acceptance. Both Rates increments remain uncommitted.
+- Rates setup/readiness increment: all 137 focused Loans, onboarding, scoped-route,
+  Rates access and RLS tests passed (67.068 seconds) in a fresh disposable test
+  database. Four Node preflight interaction tests passed, covering missing prices,
+  successful submission, stale responses and retry after failure. Runtime check,
+  migration drift, tracked-source and all three new-module import checks pass.
+  No schema changes or normal development data changes. The first broader run
+  encountered retained test-data assumptions; the fresh-database run passed.
+  Physical browser/device acceptance remains outstanding; quote age enforcement
+  belongs to the subsequent freshness increment. Changes are local and uncommitted.
 - Custody form extraction: all 78 collateral/media/storage/verification, setup UI
   and scoped-route tests passed (57.905 seconds). The initial run exposed three
   funding UI tests assuming globally empty tables; scoping their lookups and
@@ -231,6 +292,27 @@ reconstructions. Refund issuance, proration and chargebacks are not automated.
 
 ## Next increment
 
+The owner requested a Rates/appraisal/monitoring review after a missing quote
+blocked new-loan creation. [Review findings and proposed increments](implementation/rates-appraisal-monitoring-review.md)
+are documented and the order is approved. Increment 1 is implemented locally:
+shared usable-quote guidance in setup, actual series/date/metal preflight, a Rates
+detour that keeps the form in place, and row-specific missing-input errors.
+Increment 2 is also implemented locally: effective-dated, append-only quote
+corrections/withdrawals, explicit pure-metal/per-gram entry, positive validation,
+actor/source snapshots, protected source history and corresponding lookup/risk
+invalidation changes. Rates migration 0003 is applied to the development database;
+regression, migration and restricted-runtime validation passed.
+See the [quote operator guide](flows/metal-rate-entry.md). Increment 3 is implemented:
+current monitoring enforces configured quote/appraisal ages, and active held
+collateral supports reviewed, immutable appraisal versions with reference context.
+See [reassessment](flows/collateral-reassessment.md). Migration/regression validation
+passed; Loans 0006 is applied locally. Increment 4 is implemented locally: all-active portfolio coverage, date-based
+freshness, bounded repeating refresh, transactional invalidation and immutable
+policy amendments. Validation passed and Loans 0007 is applied to local `rokkad_shared_dev`.
+Next: review Loan health and the amendment form, then publish the checkpoint.
+The optional repeating worker still requires explicit Workspace configuration and startup.
+See [Loan health](flows/loan-health-monitoring.md). Origination age rules require a separate policy contract.
+
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).
 The orgs view split is also complete; see the
@@ -239,8 +321,8 @@ verification are complete. Document layout and print-profile forms are extracted
 along with the three license/series setup forms in this checkpoint. The remaining
 form-family review's economic-setup extraction is complete in this local checkpoint.
 Funding and storage/physical-verification forms are also extracted locally.
-The selected form extractions are published; verify their publication CI before
-starting further work. Intake/lifecycle forms remain together. See the
+The selected form extractions are published, and publication CI passed for
+`1fea70be`. Intake/lifecycle forms remain together. See the
 [review and validation scope](plans/project-hardening.md#remaining-r12-module-review).
 Model and renewal-service restructuring are lower priority and remain unimplemented.
 Razorpay and license scoping remain shelved.

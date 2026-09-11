@@ -54,14 +54,15 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.loans.services.risk_snapshots.transaction.atomic",
             return_value=nullcontext(),
-        ):
+        ), patch("apps.tenant_apps.loans.services.risk_snapshots._require_active_workspace"):
+
             result = reassess_pawn_loans_batch(
                 workspace_id=5,
                 as_of_date=date(2026, 8, 13),
                 batch_size=50,
             )
 
-        manager.select_for_update.assert_called_once_with(skip_locked=True)
+        manager.select_for_update.assert_called_once_with(skip_locked=True, of=("self",))
         queryset.filter.assert_called_once_with(workspace_id=5, state="ACTIVE")
         queryset.exclude.assert_called_once_with(pk__in="current-loan-subquery")
         self.assertEqual(result, {"selected": 0, "current": 0, "errors": []})
@@ -107,17 +108,18 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
             total_economic_exposure=Decimal("1250.00"),
             due_now=SimpleNamespace(total=Decimal("300.00")),
             overdue=SimpleNamespace(total=Decimal("125.00")),
+            ltv_basis_label="Economic exposure",
         )
         delinquency = SimpleNamespace(
             assessment=SimpleNamespace(days_past_due=7)
         )
         collateral = SimpleNamespace(
             eligible_collateral_value=Decimal("2000.00"),
-            ltv=SimpleNamespace(ltv_ratio=Decimal("0.625")),
+            ltv=SimpleNamespace(ltv_ratio=Decimal("0.625"), exposure=Decimal("1250"), headroom=Decimal("350"), full_shortfall=Decimal("0"), status="WITHIN_LIMIT", blockers=()),
             compliance_profile="loan-policy-snapshot:91",
             items=(
-                SimpleNamespace(collateral_item_id=8, appraisal_id=31, rate_id=12),
-                SimpleNamespace(collateral_item_id=7, appraisal_id=30, rate_id=12),
+                SimpleNamespace(collateral_item_id=8, appraisal_id=31, rate_id=12, rate_effective_at=assessed_at, appraisal_effective_at=assessed_at, rate_status="CURRENT", appraisal_status="CURRENT", blocker_messages=()),
+                SimpleNamespace(collateral_item_id=7, appraisal_id=30, rate_id=12, rate_effective_at=assessed_at, appraisal_effective_at=assessed_at, rate_status="CURRENT", appraisal_status="CURRENT", blocker_messages=()),
             ),
         )
         assessment = SimpleNamespace(
@@ -152,3 +154,4 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         self.assertEqual(values["source_provenance"]["appraisal_ids"], [30, 31])
         self.assertEqual(values["source_provenance"]["valuation_rate_ids"], [12])
         self.assertEqual(values["source_provenance"]["collateral_item_ids"], [7, 8])
+        self.assertEqual(values["source_provenance"]["coverage"]["basis"], "Economic exposure")

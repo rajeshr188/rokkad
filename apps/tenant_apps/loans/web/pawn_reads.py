@@ -17,6 +17,7 @@ from apps.tenant_apps.loans.domain import (
 )
 from apps.tenant_apps.loans.filters import PawnLoanFilter
 from apps.tenant_apps.loans.models import (
+    CollateralAppraisal,
     PawnLoan,
     PawnLoanEvent,
     PawnLoanRenewal,
@@ -134,6 +135,13 @@ def pawn_loan_detail(request, pk):
     context["can_split_draft"] = context["can_edit_loan"] and request.loans_workspace_access.can("data.create")
     context["can_delete_draft_photos"] = loan.state == "DRAFT" and request.loans_workspace_access.can("data.edit")
     context["can_approve"] = request.loans_workspace_access.can("loan.approve")
+    context["can_reappraise"] = loan.state == "ACTIVE" and context["can_approve"] and context["can_edit_loan"]
+    current_appraisals = {}
+    for appraisal in CollateralAppraisal.objects.filter(workspace=request.loans_workspace,
+            collateral_item__loan=loan, status="APPROVED", effective_at__date__lte=context["today"]).order_by("-effective_at", "-version"):
+        current_appraisals.setdefault(appraisal.collateral_item_id, appraisal)
+    for item in loan.collateral_items.all():
+        item.current_appraisal = current_appraisals.get(item.pk)
     context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
     context["simple_owner"] = request.loans_workspace.loan_workflow == "SIMPLE" and request.loans_workspace_access.can("workspace.transfer")
     context["primary_action"] = _primary_action(loan, context)

@@ -21,9 +21,10 @@ class CollateralAppraisal(models.Model):
     method = models.CharField(max_length=80)
     evidence_reference = models.CharField(max_length=255, blank=True)
     review_notes = models.TextField(blank=True)
+    valuation_context = models.JSONField(default=dict, blank=True, editable=False)
     supersedes = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="superseded_by")
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="collateral_appraisals_created")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="collateral_appraisals_created")
 
     class Meta:
         ordering = ("collateral_item_id", "version")

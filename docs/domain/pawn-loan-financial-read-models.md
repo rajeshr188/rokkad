@@ -68,7 +68,20 @@ reconciliation comparison only.
 
 Live risk consumes exposure, delinquency, collateral valuation, and monitoring
 policy. Persisted risk snapshots copy those results and their identities; they
-must never recompute money independently.
+must never recompute money independently. The active portfolio includes loans
+without projections. Current means a successful current-contract projection for
+today; missing/outdated/error assessments do not contribute to claimed complete
+portfolio monetary totals. Unknown collateral coverage is a separate dimension.
+Coverage exposure, headroom and shortfall are copied from the valuation/LTV selector.
+See [Loan health](../flows/loan-health-monitoring.md).
+
+Current collateral valuation applies the effective monitoring policy's inclusive
+quote/appraisal age limits. It retains displayed reference amounts but reports
+unknown eligible coverage when evidence required by the loan's frozen valuation
+method is stale or missing. Reviewed active-loan appraisals append immutable
+versions, retain their reference context, and invalidate saved risk assessments.
+See [collateral reassessment](../flows/collateral-reassessment.md). These monitoring
+limits do not become origination or settlement rules implicitly.
 
 ## Workflow use
 
@@ -77,4 +90,3 @@ must never recompute money independently.
 - renewal settles recorded source balances and separately prices the successor;
 - reports label recorded amounts, contractual dues, and projections distinctly;
 - monitoring and risk use exposure and contractual delinquency.
-

@@ -1,0 +1,10 @@
+<div data-rate-readiness-result data-request-key="{{ request_key }}" data-ready="{{ ready|yesno:'true,false' }}">
+  {% if message %}<p class="mb-2">{{ message }}</p>{% endif %}
+  {% if needs_rates %}
+  <p class="small mb-2">Required buying prices for {{ as_of }}: INR per gram of pure metal. Loan entry checks availability. Active-loan monitoring separately applies the configured age limits.</p>
+  <ul class="mb-2">{% for row in rows %}<li><strong>{{ row.label }}:</strong> {% if row.usable %}₹{{ row.rate.buying_rate }}/g · {{ row.rate.effective_at|date:"d M Y" }} ({{ row.age_days }} days before loan date) · <a href="{% url 'workspace_rates:rate_detail' request.workspace.slug row.rate.pk %}" target="_blank" rel="noopener">{{ row.rate.source_snapshot.name }} · Quote #{{ row.rate.pk }}</a>{% else %}<span class="text-danger">No usable positive INR pure-metal buying price on or before the loan date.</span>{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if not ready %}<p class="small mb-2">Keep this loan tab open. Add the missing price or review the policy in another tab, then select “Check prices again”. Your entries and selected photos stay here.</p>{% endif %}
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates in another tab</a>
+  {% if not ready %}<a class="btn btn-sm btn-link" href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}" target="_blank" rel="noopener">Economic Setup</a>{% endif %}
+</div>

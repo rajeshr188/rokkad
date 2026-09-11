@@ -85,7 +85,7 @@ class CollateralTrancheEconomicsTests(SimpleTestCase):
 
     def test_missing_inputs_and_nonpositive_net_fail_closed(self):
         missing_rate = self._tranche("ring", "GOLD", "5000", "2", None, "10000")
-        with self.assertRaisesRegex(CollateralEconomicsError, "both a current metal"):
+        with self.assertRaisesRegex(CollateralEconomicsError, "a usable metal valuation rate"):
             calculate_pawn_disbursal_economics(
                 (missing_rate,),
                 valuation_method=ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL,

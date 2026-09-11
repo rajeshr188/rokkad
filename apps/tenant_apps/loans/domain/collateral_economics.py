@@ -188,7 +188,8 @@ def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_peri
     if metal_rate is not None:
         if metal_rate <= ZERO:
             raise CollateralEconomicsError(
-                f"Collateral {item.reference} metal value rate must be positive."
+                f"Collateral {item.reference} metal value rate must be positive.",
+                reference=item.reference, field="metal",
             )
         calculated = (
             metal_rate * net_weight * purity / Decimal("100")
@@ -229,20 +230,22 @@ def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_peri
 
 
 def _selected_value(reference, *, method, calculated, appraisal):
-    if method == ValuationMethod.CALCULATED_METAL_VALUE:
-        value = calculated
-        missing = "a current metal valuation rate"
-    elif method == ValuationMethod.LATEST_APPRAISAL:
-        value = appraisal
-        missing = "a staff appraisal"
-    else:
-        value = min(calculated, appraisal) if calculated is not None and appraisal is not None else None
-        missing = "both a current metal valuation rate and a staff appraisal"
-    if value is None or value <= ZERO:
+    required = []
+    if method != ValuationMethod.LATEST_APPRAISAL and (calculated is None or calculated <= ZERO):
+        required.append("a usable metal valuation rate")
+    if method != ValuationMethod.CALCULATED_METAL_VALUE and (appraisal is None or appraisal <= ZERO):
+        required.append("a staff appraisal")
+    if required:
         raise CollateralEconomicsError(
-            f"Collateral {reference} requires {missing} for the configured valuation method."
+            f"Collateral {reference} requires {' and '.join(required)} for the configured valuation method.",
+            reference=reference,
+            field="metal" if required[0] == "a usable metal valuation rate" else "latest_appraised_value",
         )
-    return value
+    if method == ValuationMethod.CALCULATED_METAL_VALUE:
+        return calculated
+    elif method == ValuationMethod.LATEST_APPRAISAL:
+        return appraisal
+    return min(calculated, appraisal)
 
 
 def _calculate_fee(item, gross, quantum):

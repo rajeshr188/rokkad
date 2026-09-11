@@ -83,15 +83,17 @@ class WorkspaceBusinessEntrypointTests(TestCase):
             response = self.client.get(reverse("workspace_rates:rate_detail", kwargs=detail_scope))
             self.assertEqual(response.status_code, 200)
             data["buying_rate"] = "7200.00"
+            data["reason"] = "Correct amount"
             response = self.client.post(reverse("workspace_rates:rate_update", kwargs=detail_scope), data)
             self.assertEqual(response.status_code, 302)
             with workspace_context(self.workspace.pk):
                 lookup = get_latest_commodity_valuation_rate(commodity_code="GOLD")
                 self.assertEqual(lookup.rate.buying_rate, Decimal("7200.00"))
-            response = self.client.post(reverse("workspace_rates:rate_delete", kwargs=detail_scope))
+                detail_scope["pk"] = lookup.rate.pk
+            response = self.client.post(reverse("workspace_rates:rate_delete", kwargs=detail_scope), {"reason": "Withdraw test quote"})
             self.assertEqual(response.status_code, 302)
             with workspace_context(self.workspace.pk):
-                self.assertFalse(Rate.objects.filter(pk=rate_id).exists())
+                self.assertTrue(Rate.objects.filter(pk=rate_id).exists())
                 self.assertEqual(
                     get_latest_commodity_valuation_rate(commodity_code="GOLD").status,
                     RATE_MISSING,

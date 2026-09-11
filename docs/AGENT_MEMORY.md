@@ -180,3 +180,53 @@ The five storage/physical-verification forms live in loans/web/custody_forms.py;
 forms.py preserves their public imports and custody handlers use the owning module.
 Preserve Workspace/location filtering and resolution inputs. Intake and lifecycle
 forms and their shared formsets remain together pending a concrete need to move them.
+Rates/appraisal review now drives the next increments. Lending setup shows actual
+usable quotes; a source alone is not quote readiness. New/edit loan price preflight
+uses the selected series/policy/date/metals and preserves the current form/files
+when missing quotes require a Rates detour. Gold-only and appraisal-only loans
+must not require unrelated quotes. Commands retain final validation. Quote ages
+are displayed; origination-age policy and complete monitoring refresh remain
+subsequent work; see
+[review](implementation/rates-appraisal-monitoring-review.md).
+Rates quotes are immutable evidence: operator effective time is distinct from entry
+time, corrections/withdrawals append actor/reason-linked records, and referenced
+sources cannot be deleted. Source snapshots preserve recorded metadata. Use the
+authorized Rates commands, not model updates or admin edits. Loans selects the
+latest applicable INR pure-metal buying price per gram across sources with explicit
+effective/recorded/ID ordering; `24k` remains the compatible pure-metal key, labelled
+Pure metal for gold and silver. Historical lookups use current corrected knowledge;
+completed loan evidence remains frozen. See [quote decision](adr/2026-09-11-rate-quote-evidence.md).
+Current collateral monitoring enforces the effective monitoring policy's quote and
+appraisal age limits, inclusively by local calendar date (zero means same-day).
+Only evidence required by the frozen valuation method blocks coverage; stale or
+missing required evidence is unknown. Active held collateral can receive a new
+current-time appraisal through the authorized reassessment service, requiring
+data.view/data.edit/loan.approve, method/reference/reason and the reviewed version.
+It appends immutable evidence with quote context and marks its risk snapshot stale
+within the transaction. Original loan/draft evidence stays unchanged; history is
+readable with data.view. See [reassessment](flows/collateral-reassessment.md).
+
+Loan health starts from all active Workspace loans, including unassessed ones.
+Only today's successful V2 projection is current; reads derive outdated status.
+Unknown collateral coverage is separate from assessment freshness and payment
+performance. Missing current monetary assessments make whole-portfolio totals
+unavailable. Source invalidation stays inside its RLS transaction; existing ERROR
+projections remain errors (and retry candidates) until a successful refresh.
+Monitoring policies amend through immutable, actor/reason-linked successors;
+old values/end dates remain unchanged, same-scope precedence uses effective date
+then version. Amendments cannot be backdated; original loan terms stay frozen.
+The existing reassessment command supports explicit-Workspace bounded repeated
+passes, oldest attempts first, under the restricted runtime role and ACTIVE
+lifecycle. Optional Compose wiring does not itself start a worker. See
+[loan health](flows/loan-health-monitoring.md) and
+[monitoring decision](adr/2026-09-11-complete-loan-monitoring.md).
+
+Launch sizing supplied by the owner: 30-100 loans processed per organization/day,
+3,000-10,000 active loans per organization, and at least 100 organizations. The
+current 50-per-pass/300-second-pause worker is not capacity-validated for this
+300,000-1,000,000-active-loan baseline. Correctness tests are not load acceptance.
+Prioritize the [capacity review](implementation/rates-appraisal-monitoring-review.md#launch-capacity-requirements-and-review-2026-09-11)
+before production claims or simply increasing batch sizes. Closed loans are
+excluded from assessment selection; residual closed-snapshot invalidation and
+open-alert cleanup and unnecessary live health calculations on closed-loan detail
+pages remain identified follow-ups.

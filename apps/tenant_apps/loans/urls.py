@@ -4,10 +4,14 @@ from apps.tenant_apps.loans import views, browse
 from apps.tenant_apps.loans.web import workflow, release_batches
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
+from apps.tenant_apps.loans.web.rate_readiness import pawn_valuation_readiness
+from apps.tenant_apps.loans.web.reappraisal import collateral_reappraisal
 
 app_name = "loans"
 
 urlpatterns = [
+    path("internal/<int:pk>/collateral/<int:item_pk>/reappraise/", collateral_reappraisal, name="collateral_reappraisal"),
+    path("internal/valuation-readiness/", pawn_valuation_readiness, name="pawn_valuation_readiness"),
     path("releases/batch/new/", release_batches.create, name="release_batch_create"),
     path("releases/batch/search/", release_batches.search, name="release_batch_search"),
     path("releases/batch/", release_batches.history, name="release_batch_list"),

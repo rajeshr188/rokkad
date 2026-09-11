@@ -1,7 +1,7 @@
-from django.db import transaction
 from django.db.models import Q
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from apps.tenant_apps.rates.models import Rate
 from .models import (
@@ -27,9 +27,9 @@ def _loan_id(instance):
 
 def _mark_loan(sender, instance, **kwargs):
     loan_id = _loan_id(instance)
-    if not LoanRiskSnapshot.objects.filter(loan_id=loan_id).exists():
-        return
-    transaction.on_commit(lambda: LoanRiskSnapshot.objects.filter(loan_id=loan_id).update(status=LoanRiskSnapshot.Status.STALE, error_message="Source evidence changed; reassessment required."))
+    # Invalidate inside the source transaction while its RLS context is active.
+    LoanRiskSnapshot.objects.filter(workspace_id=instance.workspace_id, loan_id=loan_id).exclude(status=LoanRiskSnapshot.Status.ERROR).update(
+        status=LoanRiskSnapshot.Status.STALE, error_message="Source evidence changed; reassessment required.")
 
 
 for source in LOAN_SOURCES:
@@ -44,8 +44,8 @@ def _mark_policy_scope(sender, instance, **kwargs):
         queryset = queryset.filter(as_of_date__gte=instance.effective_from)
         if instance.effective_until:
             queryset = queryset.filter(as_of_date__lte=instance.effective_until)
-        queryset.update(status=LoanRiskSnapshot.Status.STALE, error_message="Monitoring policy changed; reassessment required.")
-    transaction.on_commit(update)
+        queryset.exclude(status=LoanRiskSnapshot.Status.ERROR).update(status=LoanRiskSnapshot.Status.STALE, error_message="Monitoring policy changed; reassessment required.")
+    update()
 
 
 @receiver(post_save, sender=Rate, dispatch_uid="loans-risk-stale-rate")
@@ -53,7 +53,7 @@ def _mark_rate_change(sender, instance, **kwargs):
     signatures = {
         signature
         for signature in (
-            getattr(instance, "_risk_previous_signature", None),
+            _rate_signature(instance.supersedes) if instance.supersedes_id else None,
             _rate_signature(instance),
         )
         if signature is not None
@@ -67,20 +67,12 @@ def _mark_rate_change(sender, instance, **kwargs):
                 as_of_date__gte=effective_date,
             )
         if scope:
-            LoanRiskSnapshot.objects.filter(scope).update(
+            LoanRiskSnapshot.objects.filter(scope, workspace_id=instance.workspace_id).exclude(status=LoanRiskSnapshot.Status.ERROR).update(
                 status=LoanRiskSnapshot.Status.STALE,
                 error_message="Applicable valuation rate changed; reassessment required.",
             )
 
-    transaction.on_commit(update)
-
-
-@receiver(pre_save, sender=Rate, dispatch_uid="loans-risk-capture-previous-rate")
-def _capture_previous_rate_scope(sender, instance, **kwargs):
-    if not instance.pk:
-        return
-    previous = Rate.objects.filter(pk=instance.pk).first()
-    instance._risk_previous_signature = _rate_signature(previous)
+    update()
 
 
 def _rate_signature(rate):
@@ -90,6 +82,6 @@ def _rate_signature(rate):
         Rate.Metal.GOLD: "GOLD",
         Rate.Metal.SILVER: "SILVER",
     }.get(rate.metal)
-    if metal is None or rate.timestamp is None:
+    if metal is None or rate.effective_at is None:
         return None
-    return metal, rate.timestamp.date()
+    return metal, timezone.localtime(rate.effective_at).date()

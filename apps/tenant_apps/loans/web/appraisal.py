@@ -41,7 +41,7 @@ def collateral_appraisal_suggestion(request):
             else:
                 context["message"] = "The calculated amount is too large. Check weights and rate."
         else:
-            context["message"] = "No usable INR 24K buying rate on or before the loan date. Add a buying rate in Rates or enter an appraisal manually."
+            context["message"] = "No usable INR pure-metal buying price per gram on or before the loan date. Check Metal prices for this loan above. A manual appraisal alone does not satisfy a policy requiring a metal price."
     response = render(request, "loans/pawn/_appraisal_suggestion.html", context)
     response["Cache-Control"] = "no-store"
     return response

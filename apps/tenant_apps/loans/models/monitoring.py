@@ -12,6 +12,8 @@ class LoanMonitoringPolicy(models.Model):
     version = models.PositiveIntegerField()
     effective_from = models.DateField()
     effective_until = models.DateField(null=True, blank=True)
+    supersedes = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="successor")
+    amendment_reason = models.TextField(blank=True)
     compliance_profile = models.CharField(max_length=120)
     maturity_warning_days = models.PositiveSmallIntegerField(default=30)
     operational_grace_days = models.PositiveSmallIntegerField(default=3)
@@ -25,7 +27,7 @@ class LoanMonitoringPolicy(models.Model):
     eligible_custody_states = models.JSONField(default=list)
     severity_mapping = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="loan_monitoring_policies_created")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="loan_monitoring_policies_created")
 
     class Meta:
         ordering = ("workspace_id", "license_id", "effective_from", "version")
@@ -44,15 +46,29 @@ class LoanMonitoringPolicy(models.Model):
             errors["workspace"] = "Monitoring policy must belong to the active workspace."
         if self.license_id and self.license.workspace_id != self.workspace_id:
             errors["license"] = "License override must belong to the policy workspace."
-        if not self.ltv_warning_ratio <= self.ltv_breach_ratio <= self.ltv_critical_ratio:
+        if (all(value is not None for value in (self.ltv_warning_ratio, self.ltv_breach_ratio, self.ltv_critical_ratio))
+                and not self.ltv_warning_ratio <= self.ltv_breach_ratio <= self.ltv_critical_ratio):
             errors["ltv_breach_ratio"] = "LTV thresholds must be ordered warning, breach, critical."
-        if self.dpd_watch_threshold > self.dpd_substandard_threshold:
+        if (self.dpd_watch_threshold is not None and self.dpd_substandard_threshold is not None
+                and self.dpd_watch_threshold > self.dpd_substandard_threshold):
             errors["dpd_substandard_threshold"] = "DPD thresholds must be ordered."
         if self.workspace_id and self.effective_from:
+            ancestors = set()
+            prior = self.supersedes if self.supersedes_id else None
+            if prior:
+                if (prior.workspace_id != self.workspace_id or prior.license_id != self.license_id
+                        or prior.effective_until is not None or self.effective_until is not None
+                        or self.effective_from < prior.effective_from):
+                    errors["supersedes"] = "Amend the latest open-ended policy in the same scope, from its start date or later."
+                if not self.created_by_id or not self.amendment_reason.strip():
+                    errors["amendment_reason"] = "An amendment requires its author and reason."
+                while prior and prior.pk not in ancestors:
+                    ancestors.add(prior.pk)
+                    prior = prior.supersedes
             overlaps = type(self).objects.filter(
                 workspace_id=self.workspace_id,
                 license_id=self.license_id,
-            ).exclude(pk=self.pk).filter(
+            ).exclude(pk=self.pk).exclude(pk__in=ancestors).filter(
                 Q(effective_until__isnull=True) | Q(effective_until__gte=self.effective_from)
             )
             if self.effective_until:

@@ -74,3 +74,12 @@ docker compose --env-file .env.container run --rm web python manage.py check_loa
 
 The same app commands work with production settings and separately supplied runtime
 credentials. Schema migrations continue to use the owner-only migration settings.
+
+## Repeated monitoring refresh
+
+`reassess_pawn_loans --workspace-id ID --batch-size 50 --repeat-seconds 300`
+uses today's local date for each bounded pass and establishes its own Workspace
+context. Use restricted runtime settings. An optional Compose monitoring service
+runs this command through role/migration startup checks. The operator must select
+and enable a Workspace job; this code change does not start it automatically.
+See [setup, status meanings and failure handling](../flows/loan-health-monitoring.md).

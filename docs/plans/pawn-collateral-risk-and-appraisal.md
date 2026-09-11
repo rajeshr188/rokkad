@@ -13,6 +13,10 @@ related:
 
 # Pawn Collateral Risk And Appraisal — Future Work
 
+Historical proposal: several foundations described below now exist. For current
+behavior, confirmed gaps and proposed next increments, see the
+[2026-09-11 Rates/appraisal/monitoring review](../implementation/rates-appraisal-monitoring-review.md).
+
 This document records future work only. It does not change current overdue,
 notice, auction, accrual, valuation, or accounting behavior.
 

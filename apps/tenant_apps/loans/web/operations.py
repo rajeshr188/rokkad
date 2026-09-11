@@ -45,7 +45,7 @@ def pawn_operations_console(request):
 
 @loans_setup_required
 def pawn_risk_portfolio(request):
-    allowed_statuses = {"CURRENT", "STALE", "ERROR"}
+    allowed_statuses = {"CURRENT", "STALE", "ERROR", "UNASSESSED"}
     status = (request.GET.get("status") or "").strip().upper()
     if status not in allowed_statuses:
         status = None

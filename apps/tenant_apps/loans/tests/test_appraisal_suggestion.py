@@ -23,13 +23,13 @@ class AppraisalSuggestionTests(SimpleTestCase):
         request = RequestFactory().get("/suggestion/", self.data())
         request.user = SimpleNamespace(is_authenticated=True)
         request.loans_workspace_access = policy
-        lookup.return_value = SimpleNamespace(status="FOUND", rate=SimpleNamespace(buying_rate=Decimal("7000"), timestamp=datetime(2026, 9, 9)))
+        lookup.return_value = SimpleNamespace(status="FOUND", rate=SimpleNamespace(buying_rate=Decimal("7000"), effective_at=datetime(2026, 9, 9)))
         response = collateral_appraisal_suggestion(request)
         self.assertContains(response, 'data-value="56700.00"')
         self.assertEqual(response["Cache-Control"], "no-store")
         self.assertEqual(lookup.call_args.kwargs["purity"], "24k")
         lookup.return_value = SimpleNamespace(status="MISSING_RATE", rate=None)
-        self.assertContains(collateral_appraisal_suggestion(request), "No usable INR 24K buying rate")
+        self.assertContains(collateral_appraisal_suggestion(request), "No usable INR pure-metal buying price per gram")
 
     def test_invalid_dimensions_and_nonfinite_numbers_are_rejected(self):
         for change in ({"net_weight": "11"}, {"purity": "101"}, {"gross_weight": "NaN"}, {"net_weight": "-1"}, {"as_of": "bad"}):

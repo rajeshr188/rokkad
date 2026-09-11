@@ -810,9 +810,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             buying_rate=Decimal("10000.00"),
             selling_rate=Decimal("10100.00"),
             rate_source=rate_source,
-        )
-        Rate.objects.filter(pk=rate.pk).update(
-            timestamp=timezone.make_aware(datetime(2026, 7, 18, 12, 0))
+            effective_at=timezone.make_aware(datetime(2026, 7, 18, 12, 0)),
         )
         loan = create_pawn_draft(self.command(), actor=self.actor)
         self._add_photo(loan)
@@ -1032,9 +1030,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                 buying_rate=Decimal("10000.00"),
                 selling_rate=Decimal("10100.00"),
                 rate_source=rate_source,
-            )
-            Rate.objects.filter(pk=rate.pk).update(
-                timestamp=timezone.make_aware(datetime(2026, 7, 18, 12, 0))
+                effective_at=timezone.make_aware(datetime(2026, 7, 18, 12, 0)),
             )
         loan = create_pawn_draft(
             self.command(

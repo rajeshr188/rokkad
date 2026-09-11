@@ -1,6 +1,6 @@
 <div data-appraisal-result data-request-key="{{ request_key }}"{% if value %} data-value="{{ value }}"{% endif %}>
 {% if value %}
-  <span>Suggested appraisal: ₹{{ value }}. Net weight × purity percentage × buying rate (₹{{ rate.buying_rate }}/g; rate dated {{ rate.timestamp|date:"d M Y" }}).</span>
+  <span>Suggested appraisal: ₹{{ value }}. Net weight × purity percentage × buying rate (₹{{ rate.buying_rate }}/g; rate dated {{ rate.effective_at|date:"d M Y" }}).</span>
   <button type="button" class="btn btn-sm btn-link" data-apply-appraisal>Use suggestion</button>
 {% else %}{{ message }}{% endif %}
 </div>

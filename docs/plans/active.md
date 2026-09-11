@@ -7,6 +7,25 @@ tags: [plans, active]
 
 # Active work
 
+The owner approved the [Rates/appraisal improvement order](../implementation/rates-appraisal-monitoring-review.md).
+Increment 1 (quote readiness and actionable loan errors) is validated locally.
+Increment 2 (effective-dated, auditable quote history) is implemented and validated;
+Rates migration 0003 is applied locally. Increment 3 (monitoring freshness and
+active-loan reassessment) is implemented and validated; Loans 0006 is applied locally. Increment 4 is implemented locally: complete active-loan monitoring, date-based
+freshness, bounded repeated refresh and immutable policy amendments.
+See [Loan health](../flows/loan-health-monitoring.md); validation passed and Loans 0007 is applied locally.
+The owner's newly stated launch volumes require a capacity-hardening increment
+before production readiness claims. Next recommendation: agree freshness targets
+and benchmark representative 3,000/10,000-active-loan Workspaces under RLS; then
+remove repeated reads and improve bounded scheduling/lock duration. See the
+[capacity review](../implementation/rates-appraisal-monitoring-review.md#launch-capacity-requirements-and-review-2026-09-11).
+Operator UI/content and amendment submission review is complete. Publish this
+checkpoint, then prioritize closed-loan cleanup, representative RLS benchmarks,
+measured optimization and multi-organization load validation, in that order.
+The optional worker is configured in code but has not been started. Origination
+age requirements remain an explicit separate policy design item.
+See the [quote operator guide](../flows/metal-rate-entry.md). Existing form cleanup is published.
+
 Follow [incremental project hardening](project-hardening.md), based on the
 [architecture review](../architecture/2026-09-09-project-review.md). The active plan
 selects work; [Status](../STATUS.md) records the checkpoint and validation.

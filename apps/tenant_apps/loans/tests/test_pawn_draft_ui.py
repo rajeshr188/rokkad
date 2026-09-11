@@ -555,7 +555,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         page = self.client.get(reverse("loans:license_list"))
         self.assertContains(page, "First-loan setup checklist")
         checks = {step["key"]: step["complete"] for step in page.context["loan_setup"]["steps"]}
-        self.assertEqual(checks, {"license": True, "series": True, "economics": True, "product": False})
+        self.assertEqual(checks, {"license": True, "series": True, "economics": True, "product": False, "metal_rates": True})
         blocked = self.client.get(reverse("loans:pawn_loan_create"))
         self.assertContains(blocked, "Review loan products")
         self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))

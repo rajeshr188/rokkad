@@ -5,7 +5,12 @@
 <div class="mb-4"><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; PawnLoan drafts</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}Create PawnLoan draft{% endif %}</h1><p class="text-muted">Saving creates only an editable draft. It does not approve, disburse, or activate the loan.</p></div>
 <nav class="loan-workflow-nav" aria-label="Loan draft sections"><a href="#loan-details">1 &middot; Borrower &amp; terms</a><a href="#collateral-formset">2 &middot; Collateral</a><a href="#loan-review-actions">3 &middot; Review &amp; save</a></nav>
 <div class="loan-workflow-grid"><div class="loan-workflow-main">
-<form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+<form method="post" enctype="multipart/form-data" novalidate data-valuation-preflight="{% url 'workspace_loans:pawn_valuation_readiness' request.workspace.slug %}">{% csrf_token %}
+  <div class="alert alert-info" tabindex="-1" data-rate-readiness-panel>
+    <h2 class="h6">Metal prices for this loan</h2>
+    <div data-rate-readiness-content role="status" aria-live="polite">Select a series, loan date and collateral metal to check prices. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates in another tab</a>.</div>
+    <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-check-rates>Check prices again</button>
+  </div>
   {% if form.errors or formset.errors or formset.non_form_errors %}<div class="alert alert-danger" role="alert" tabindex="-1" data-pawn-draft-error-summary><strong>The draft was not saved.</strong> Correct the highlighted loan or collateral fields below and submit again.</div>{% endif %}
   {% if form.is_bound %}<div class="alert alert-warning" role="status">Your entered details are retained. For any new collateral, select its photograph again before submitting; uploaded files cannot be restored after a page reload. Photographs already saved with an existing item remain attached.</div>{% endif %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
@@ -65,4 +70,5 @@ document.addEventListener("DOMContentLoaded", function () {
 {% include "loans/pawn/_camera_capture.html" %}
 <script src="{% static 'js/pawn-draft-summary.js' %}"></script>
 <script src="{% static 'js/pawn-appraisal-suggestion.js' %}"></script>
+<script src="{% static 'js/pawn-rate-readiness.js' %}"></script>
 {% endblock %}

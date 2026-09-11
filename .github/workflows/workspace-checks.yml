@@ -68,6 +68,8 @@ jobs:
         run: |
           python scripts/check_app_boundaries.py
           python -m unittest scripts.test_app_boundaries
+      - name: Check loan price preflight interactions
+        run: node --test scripts/test_pawn_rate_readiness.cjs
       - name: Provision runtime role before owner migrations
         env:
           DJANGO_SETTINGS_MODULE: django_project.settings.migration
@@ -99,6 +101,17 @@ jobs:
         run: >-
           python manage.py test --settings django_project.settings.test --noinput
           apps.tenant_apps.loans.tests
+      - name: Quote history, migration and isolation regressions
+        run: >-
+          python manage.py test --settings django_project.settings.test --noinput
+          apps.tenant_apps.rates.test_quote_evidence
+          apps.tenant_apps.rates.test_quote_concurrency
+          apps.tenant_apps.rates.test_quote_migration
+          apps.tenant_apps.rates.test_rls
+          apps.tenant_apps.rates.test_workspace_isolation
+          apps.tenant_apps.rates.test_rate_form_helpers
+          apps.tenant_apps.rates.test_rate_source_setup_ui
+          apps.tenant_apps.rates.test_access_conformance
       - name: Build application image (never publish)
         run: docker build -t rokkad-ci .
       - name: Verify image runtime and static assets with no owner credentials

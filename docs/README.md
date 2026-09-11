@@ -26,6 +26,9 @@ not an instruction to reintroduce it.
 ## Business and operator flows
 
 - [Set up your business](flows/business-setup.md) and [first-loan setup](flows/first-loan-setup.md).
+- [Enter, correct and withdraw metal prices](flows/metal-rate-entry.md).
+- [Reassess collateral and review freshness](flows/collateral-reassessment.md).
+- [Review loan health, amend monitoring limits and enable refresh](flows/loan-health-monitoring.md).
 - [Choose simple or extended loan workflow](flows/loan-workflow-choice.md).
 - [Browse collateral and releases](flows/collateral-and-release-browsing.md).
 - [Release multiple loans](flows/multiple-loan-release.md).

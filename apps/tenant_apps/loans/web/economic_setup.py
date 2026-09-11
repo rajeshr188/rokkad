@@ -4,7 +4,9 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.forms.models import model_to_dict
+from django.http import Http404
 from django.utils import timezone
 
 from apps.tenant_apps.loans.access import loans_setup_required
@@ -41,16 +43,30 @@ def pawn_economics_setup(request):
         initial={"effective_from": timezone.localdate()},
         prefix="fee",
     )
+    monitoring_initial = {
+        "effective_from": timezone.localdate(),
+        "compliance_profile": "Workspace monitoring v1",
+        "ltv_warning_ratio": Decimal("0.70"),
+        "ltv_breach_ratio": Decimal("0.80"),
+        "ltv_critical_ratio": Decimal("0.90"),
+    }
+    amendment = None
+    amendment_id = request.GET.get("amend_monitoring")
+    if request.method == "GET" and amendment_id:
+        try:
+            amendment_id = int(amendment_id)
+        except (ValueError, TypeError) as exc:
+            raise Http404("Monitoring policy not found.") from exc
+        amendment = get_object_or_404(LoanMonitoringPolicy, pk=amendment_id,
+                                     workspace=request.loans_workspace, successor__isnull=True)
+        monitoring_initial.update(model_to_dict(amendment, fields=LoanMonitoringPolicyForm.Meta.fields))
+        monitoring_initial.update(supersedes=amendment.pk, amendment_reason="",
+                                  effective_from=max(timezone.localdate(), amendment.effective_from))
     monitoring_form = LoanMonitoringPolicyForm(
         request.POST if action == "monitoring" else None,
         workspace=request.loans_workspace,
-        initial={
-            "effective_from": timezone.localdate(),
-            "compliance_profile": "Workspace monitoring v1",
-            "ltv_warning_ratio": Decimal("0.70"),
-            "ltv_breach_ratio": Decimal("0.80"),
-            "ltv_critical_ratio": Decimal("0.90"),
-        },
+        initial=monitoring_initial,
+        actor=request.user,
         prefix="monitoring",
     )
     if action == "configuration" and configuration_form.is_valid():
@@ -94,6 +110,7 @@ def pawn_economics_setup(request):
         "configuration_form": configuration_form,
         "fee_form": fee_form,
         "monitoring_form": monitoring_form,
+        "monitoring_amendment": amendment,
         "economic_policies": PawnLoanEconomicPolicy.objects.filter(
             workspace=request.loans_workspace
         ).select_related("license"),
@@ -105,6 +122,6 @@ def pawn_economics_setup(request):
         ).select_related("license"),
         "monitoring_policies": LoanMonitoringPolicy.objects.filter(
             workspace=request.loans_workspace
-        ).select_related("license"),
+        ).select_related("license", "successor", "created_by"),
     }
     return render(request, "loans/setup/economics.html", context)

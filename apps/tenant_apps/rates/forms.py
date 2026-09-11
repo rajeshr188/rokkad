@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Div, HTML, Layout, Row, Submit
@@ -9,12 +10,16 @@ from .models import Rate, RateSource
 
 
 class RateForm(forms.ModelForm):
+    effective_at = forms.DateTimeField(required=False, initial=timezone.now,
+        widget=forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
+        help_text="When this price applied, in local time. Leave blank to use now for a new quote.")
+
     class Meta:
         model = Rate
-        fields = "__all__"
+        fields = ("rate_source", "metal", "currency", "purity", "buying_rate", "selling_rate", "effective_at", "reason")
         widgets = {
-            "buying_rate": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
-            "selling_rate": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "buying_rate": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+            "selling_rate": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -26,15 +31,18 @@ class RateForm(forms.ModelForm):
             else RateSource.objects.none()
         )
         self.fields["rate_source"].empty_label = "Select a rate source"
-        self.fields["buying_rate"].help_text = "Buying rate for the selected metal and purity."
-        self.fields["selling_rate"].help_text = "Selling rate for the selected metal and purity."
+        self.fields["buying_rate"].label = "Buying price per gram"
+        self.fields["selling_rate"].label = "Selling price per gram"
+        self.fields["purity"].help_text = "Loans uses INR Pure metal buying prices for gold and silver. Enter the item's actual purity on the loan."
+        self.fields["reason"].required = bool(self.instance.pk)
+        self.fields["reason"].help_text = "Required for corrections. The previous quote remains in history."
         self.helper = FormHelper()
         self.helper.form_method = "post"
         self.helper.layout = Layout(
             HTML(
                 '<div class="border rounded bg-light p-3 mb-3">'
                 '<div class="fw-semibold">Metal rate details</div>'
-                '<div class="small text-muted">Workspace reference rates for supported metals.</div>'
+                '<div class="small text-muted">Prices per gram, excluding tax and making charges. Convert prices per 10 grams or kilogram before entry. Source tax settings do not convert amounts.</div>'
                 "</div>"
             ),
             Row(
@@ -47,6 +55,8 @@ class RateForm(forms.ModelForm):
                 Column("buying_rate", css_class="col-md-4"),
                 Column("selling_rate", css_class="col-md-4"),
             ),
+            "effective_at",
+            "reason",
             Div(
                 Submit("submit", "Save Rate", css_class="btn btn-primary"),
                 HTML(
@@ -59,6 +69,13 @@ class RateForm(forms.ModelForm):
             ),
         )
 
+    def clean_effective_at(self):
+        return self.cleaned_data.get("effective_at") or (self.instance.effective_at if self.instance.pk else timezone.now())
+
+
+class RateWithdrawalForm(forms.Form):
+    reason = forms.CharField(max_length=500, label="Reason for withdrawal", widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}))
+
 
 class RateSourceForm(forms.ModelForm):
     class Meta:
@@ -69,7 +86,7 @@ class RateSourceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["name"].widget.attrs.update({"placeholder": "Local market, jeweller, exchange, etc."})
         self.fields["location"].widget.attrs.update({"placeholder": "City or branch"})
-        self.fields["tax_included"].help_text = "Enable when quoted rates already include tax."
+        self.fields["tax_included"].help_text = "Describes the source's published prices only. Rate entry requires tax-exclusive prices; no automatic tax conversion is performed."
         self.helper = FormHelper()
         self.helper.form_method = "post"
         self.helper.layout = Layout(

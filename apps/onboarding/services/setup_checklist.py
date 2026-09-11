@@ -122,7 +122,7 @@ def build_workspace_setup_checklist(
         SetupChecklistItem(
             key="rates",
             title="Rates",
-            description="Configure commodity or market rates used by operations.",
+            description="Add usable INR pure-metal buying prices for the metals you lend against; a rate source alone is not a price.",
             status=_status_from_count(metrics.rate_count),
             action_label="Configure rates",
             url_name="rate_list",
@@ -143,14 +143,23 @@ def collect_workspace_setup_metrics(*, workspace) -> WorkspaceSetupMetrics:
         member_count=member_count,
         invitation_count=invitation_count,
         party_count=_safe_model_count("party", "Party"),
-        rate_count=_sum_known(
-            _safe_model_count("rates", "Rate"),
-            _safe_model_count("rates", "RateSource"),
-        ),
+        rate_count=_usable_rate_count(workspace),
         transaction_count=_sum_known(
             _safe_model_count("loans", "PawnLoanEvent"),
         ),
     )
+
+
+def _usable_rate_count(workspace):
+    from django.utils import timezone
+    from apps.tenant_apps.loans.selectors.rate_readiness import get_metal_rate_readiness
+
+    try:
+        return sum(row["usable"] for row in get_metal_rate_readiness(
+            workspace=workspace, as_of_date=timezone.localdate(),
+        ))
+    except (DatabaseError, ValueError):
+        return None
 
 
 def _status_from_count(count: int | None, *, complete_at: int = 1) -> str:

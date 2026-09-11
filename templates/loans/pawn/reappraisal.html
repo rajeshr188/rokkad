@@ -1,0 +1,13 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Reassess collateral{% endblock %}
+{% block workspace_content %}
+<header class="app-heading"><div><div class="app-eyebrow">{{ loan.loan_number }} · {{ item.item_code }}</div><h1>Reassess collateral</h1><p>{{ item.description }}</p></div><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan</a></header>
+<div class="record-grid"><section class="card"><div class="card-body">
+<p>Record a reviewed value effective now. Existing appraisals and original loan terms remain in history. Approval requires permission to edit data and approve loans.</p>
+<p>{{ item.get_metal_display }} · {{ item.net_weight }} grams net · {{ item.purity_percentage }}% purity.</p>
+<div class="alert alert-info">Reference metal estimate: ₹{{ reference.suggested_metal_value|default:"Unavailable" }}.{% if reference.rate_id %} Quote #{{ reference.rate_id }}, effective {{ reference.rate_effective_at }}.{% endif %} Review its date and the item's condition. Enter your independently reviewed value below; the reference is captured again when you approve.</div>
+{% if can_record %}<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" class="btn btn-primary">Approve new appraisal</button></form>{% else %}<div class="alert alert-info">Recording requires an active loan, held collateral, and permission to edit data and approve loans.</div>{% endif %}
+</div></section><aside class="card"><div class="card-body"><h2 class="h5">Appraisal history</h2>
+{% for appraisal in appraisals %}<div class="border-bottom py-3"><strong>Version {{ appraisal.version }} · ₹{{ appraisal.appraised_value }}</strong><div>{{ appraisal.method }}</div><div class="small">Effective {{ appraisal.effective_at }}<br>Recorded {{ appraisal.created_at }} by {{ appraisal.created_by|default:"Not recorded" }}</div><p class="small">{{ appraisal.evidence_reference }}<br>{{ appraisal.review_notes }}</p>{% if appraisal.valuation_context.rate_id %}<div class="small">Reference quote #{{ appraisal.valuation_context.rate_id }} · effective {{ appraisal.valuation_context.rate_effective_at }} · ₹{{ appraisal.valuation_context.buying_price_inr_per_pure_gram }}/g. Metal estimate: ₹{{ appraisal.valuation_context.suggested_metal_value|default:"Unavailable" }}.</div>{% endif %}</div>{% empty %}<p>No approved appraisal yet.</p>{% endfor %}
+</div></aside></div>
+{% endblock %}

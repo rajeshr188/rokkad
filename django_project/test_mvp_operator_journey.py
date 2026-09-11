@@ -542,11 +542,19 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         with workspace_context(self.workspace.pk):
             rate = Rate.objects.get()
         rate_data["buying_rate"] = "101"
-        self._post(url("rate_update", rate.pk), rate_data, expected_url=url("rate_detail", rate.pk))
+        rate_data["reason"] = "Correct price"
+        response = self._post(url("rate_update", rate.pk), rate_data)
+        with workspace_context(self.workspace.pk):
+            corrected = Rate.objects.get(supersedes=rate)
+        self.assertEqual(response.url, url("rate_detail", corrected.pk))
         self.assertEqual(self.client.get(url("rate_update", rate.pk, workspace=other)).status_code, 404)
         self.assertEqual(self.client.post(url("rate_delete", rate.pk)).status_code, 403)
-        self._post(url("rate_delete", rate.pk), expected_url=url("rate_list"))
-        self._post(url("ratesource_delete", source.pk), expected_url=url("ratesource_list"))
+        response = self._post(url("rate_delete", corrected.pk), {"reason": "Withdraw test quote"})
+        with workspace_context(self.workspace.pk):
+            withdrawal = Rate.objects.get(supersedes=corrected)
+        self.assertEqual(response.url, url("rate_detail", withdrawal.pk))
+        response = self.client.post(url("ratesource_delete", source.pk), HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value)
+        self.assertContains(response, "must remain in history")
 
     def test_notify_navigation_artifacts_and_actions_keep_workspace(self):
         from apps.tenant_apps.notify_v2.models import NotificationArtifact, NotificationBatch, NotificationEvent, NotificationEventType, NotificationJob, NotificationRecipient

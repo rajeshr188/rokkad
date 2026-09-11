@@ -1,25 +1,25 @@
-from django.db.models import Q
+from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .access import rate_action_required
-from .forms import RateForm, RateSourceForm
+from .forms import RateForm, RateSourceForm, RateWithdrawalForm
 from .models import Rate, RateSource
+from .facade import get_workspace_rate_dashboard_summary
+from .services import record_quote, withdraw_quote
 
 
 # Create your views here.
 @rate_action_required("view")
 def get_latest_rate(request):
-    latest_rates = (
-        Rate.objects.filter(Q(metal=Rate.Metal.GOLD) | Q(metal=Rate.Metal.SILVER))
-        .order_by("metal", "-timestamp")
-        .distinct("metal")
-    )
+    summary = get_workspace_rate_dashboard_summary()
+    latest_rates = [quote for quote in (summary["gold_rate"], summary["silver_rate"]) if quote]
 
     rates = []
     for rate in latest_rates:
         rates.append(
-            f"{rate.metal} {rate.purity} {rate.currency} {rate.buying_rate} {rate.timestamp}"
+            f"{rate.metal} {rate.get_purity_display()} {rate.currency} {rate.buying_rate}/g {rate.effective_at}"
         )
 
     return HttpResponse(" ".join(rates))
@@ -27,7 +27,7 @@ def get_latest_rate(request):
 
 @rate_action_required("view")
 def rate_list(request):
-    rates = Rate.objects.all()
+    rates = Rate.objects.filter(workspace=request.workspace).select_related("rate_source", "successor").order_by("-timestamp", "-pk")
     return render(
         request,
         "rates/rate_list.html",
@@ -45,8 +45,12 @@ def rate_create(request):
     if request.method == "POST":
         form = RateForm(request.POST)
         if form.is_valid():
-            rate = form.save()
-            return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
+            try:
+                rate = record_quote(workspace=request.workspace, actor=request.user, values=form.cleaned_data)
+            except ValidationError as exc:
+                form.add_error(None, " ".join(exc.messages))
+            else:
+                return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
     else:
         form = RateForm()
     return render(
@@ -62,8 +66,12 @@ def rate_update(request, pk):
     if request.method == "POST":
         form = RateForm(request.POST, instance=rate)
         if form.is_valid():
-            rate = form.save()
-            return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
+            try:
+                rate = record_quote(workspace=request.workspace, actor=request.user, values=form.cleaned_data, supersedes_id=pk)
+            except ValidationError as exc:
+                form.add_error(None, " ".join(exc.messages))
+            else:
+                return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
     else:
         form = RateForm(instance=rate)
     return render(
@@ -76,10 +84,15 @@ def rate_update(request, pk):
 @rate_action_required("delete")
 def rate_delete(request, pk):
     rate = get_object_or_404(Rate, pk=pk)
-    if request.method == "POST":
-        rate.delete()
-        return redirect("workspace_rates:rate_list", workspace_slug=request.workspace.slug)
-    return render(request, "rates/rate_confirm_delete.html", {"rate": rate})
+    form = RateWithdrawalForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            withdrawal = withdraw_quote(workspace=request.workspace, actor=request.user, quote_id=pk, reason=form.cleaned_data["reason"])
+        except ValidationError as exc:
+            form.add_error(None, " ".join(exc.messages))
+        else:
+            return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=withdrawal.pk)
+    return render(request, "rates/rate_confirm_delete.html", {"rate": rate, "form": form})
 
 
 @rate_action_required("view")
@@ -122,9 +135,14 @@ def ratesource_update(request, pk):
 @rate_action_required("delete")
 def ratesource_delete(request, pk):
     ratesource = get_object_or_404(RateSource, pk=pk)
+    error = ""
     if request.method == "POST":
-        ratesource.delete()
-        return redirect("workspace_rates:ratesource_list", workspace_slug=request.workspace.slug)
+        try:
+            ratesource.delete()
+        except ProtectedError:
+            error = "This source has recorded quotes and must remain in history. Its quotes cannot be deleted with the source."
+        else:
+            return redirect("workspace_rates:ratesource_list", workspace_slug=request.workspace.slug)
     return render(
-        request, "rates/ratesource_confirm_delete.html", {"ratesource": ratesource}
+        request, "rates/ratesource_confirm_delete.html", {"ratesource": ratesource, "error": error}
     )

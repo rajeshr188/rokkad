@@ -44,6 +44,7 @@ class PawnLoanExposure:
     projection_periods: tuple[tuple[date, date, Decimal], ...]
     provenance: tuple[str, ...]
     integrity_findings: tuple[str, ...]
+    ltv_basis_label: str = ""
 
 
 def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposure:
@@ -118,6 +119,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         projection_periods=previews,
         provenance=provenance,
         integrity_findings=tuple(findings),
+        ltv_basis_label="Maturity payoff" if is_bullet else "Economic exposure",
     )
 
 

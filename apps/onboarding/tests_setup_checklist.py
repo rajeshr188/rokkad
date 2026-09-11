@@ -111,17 +111,17 @@ class WorkspaceSetupChecklistTests(SimpleTestCase):
                 "apps.onboarding.services.setup_checklist._safe_model_count",
                 return_value=1,
             ) as safe_model_count,
+            patch("apps.onboarding.services.setup_checklist._usable_rate_count", return_value=1),
         ):
             metrics = collect_workspace_setup_metrics(workspace=workspace)
 
         self.assertEqual(1, metrics.member_count)
         self.assertEqual(1, metrics.invitation_count)
         self.assertEqual(1, metrics.party_count)
-        self.assertEqual(2, metrics.rate_count)
+        self.assertEqual(1, metrics.rate_count)
         self.assertEqual(1, metrics.transaction_count)
         self.assertGreaterEqual(safe_queryset_count.call_count, 2)
         safe_model_count.assert_any_call("party", "Party")
-        safe_model_count.assert_any_call("rates", "Rate")
         safe_model_count.assert_any_call("loans", "PawnLoanEvent")
 
     def test_solo_owner_can_complete_general_checklist_without_invites(self):

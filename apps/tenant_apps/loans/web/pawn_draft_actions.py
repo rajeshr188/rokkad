@@ -284,7 +284,7 @@ def get_pawn_draft_readiness(workspace):
 
     checklist = get_pawn_setup_checklist(workspace)
     for step in checklist["steps"]:
-        if not step["complete"]:
+        if not step["complete"] and step.get("blocking", True):
             return {
                 "ready": False, "requires_setup": True,
                 "message": step["description"],

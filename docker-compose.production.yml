@@ -18,6 +18,14 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: django_project.settings.migration
     command: ["python", "manage.py", "migrate", "--settings", "django_project.settings.migration", "--noinput"]
+  monitoring:
+    image: ${ROKKAD_IMAGE:?Set an explicitly versioned ROKKAD_IMAGE}
+    profiles: [monitoring]
+    env_file: .env.production.runtime
+    environment:
+      DJANGO_SETTINGS_MODULE: django_project.settings.prod
+    command: ["python", "scripts/start_web.py", "python", "manage.py", "reassess_pawn_loans", "--workspace-id", "${ROKKAD_MONITOR_WORKSPACE_ID:-0}", "--batch-size", "50", "--repeat-seconds", "300"]
+    restart: unless-stopped
 volumes:
   media:
   staticfiles:

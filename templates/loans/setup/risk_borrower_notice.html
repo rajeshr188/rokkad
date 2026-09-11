@@ -3,7 +3,7 @@
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <div class="row justify-content-center"><div class="col-xl-8">
-  <a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_risk_portfolio' request.workspace.slug %}">&larr; Risk portfolio</a>
+  <a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_risk_portfolio' request.workspace.slug %}">&larr; Loan health</a>
   <h1 class="h3 mt-2 mb-1">Create borrower notice</h1>
   <p class="text-muted">Manual {{ preview.channel.channel|title }} communication from {{ alert.get_alert_kind_display }} on <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug alert.loan_id %}">{{ alert.loan.loan_number }}</a>. Sending does not resolve the risk alert.</p>
   {% if preview.readiness.policy and alert.loan.risk_snapshot.days_past_due >= preview.readiness.policy.escalation_dpd %}<div class="alert alert-warning">This loan has reached the workspace escalation threshold of {{ preview.readiness.policy.escalation_dpd }} DPD. Follow the workspace's internal escalation procedure after reviewing this notice. Nothing is sent or escalated automatically.</div>{% endif %}

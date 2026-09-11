@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from apps.tenancy.context import current_workspace_id
 
 
 @dataclass(frozen=True)
@@ -27,20 +28,12 @@ RATE_UNSUPPORTED_PURITY = "UNSUPPORTED_PURITY"
 
 
 def get_workspace_rate_dashboard_summary():
-    from apps.tenant_apps.rates.models import Rate, RateSource
+    from apps.tenant_apps.rates.models import RateSource
 
     return {
-        "gold_rate": (
-            Rate.objects.filter(metal=Rate.Metal.GOLD, purity=Rate.Purity.K24)
-            .order_by("-timestamp")
-            .first()
-        ),
-        "silver_rate": (
-            Rate.objects.filter(metal=Rate.Metal.SILVER)
-            .order_by("-timestamp")
-            .first()
-        ),
-        "has_rate_sources": RateSource.objects.exists(),
+        "gold_rate": get_latest_commodity_valuation_rate(commodity_code="GOLD").rate,
+        "silver_rate": get_latest_commodity_valuation_rate(commodity_code="SILVER").rate,
+        "has_rate_sources": RateSource.objects.filter(workspace_id=current_workspace_id()).exists(),
     }
 
 
@@ -52,6 +45,7 @@ def get_latest_commodity_valuation_rate(
     purity: str = "24k",
 ) -> CommodityRateLookupResult:
     from apps.tenant_apps.rates.models import Rate
+    from django.utils import timezone
 
     normalized_code = (commodity_code or "").strip().upper()
     normalized_currency = (currency or "").strip().upper()
@@ -85,17 +79,20 @@ def get_latest_commodity_valuation_rate(
         )
 
     rates = Rate.objects.filter(
+        workspace_id=current_workspace_id(),
         metal=metal,
         currency=normalized_currency,
         purity=normalized_purity,
+        successor__isnull=True,
+        is_withdrawal=False,
     )
-    if as_of is not None:
-        if isinstance(as_of, datetime):
-            rates = rates.filter(timestamp__lte=as_of)
-        else:
-            rates = rates.filter(timestamp__date__lte=as_of)
+    as_of = as_of if as_of is not None else timezone.now()
+    if isinstance(as_of, datetime):
+        rates = rates.filter(effective_at__lte=as_of)
+    else:
+        rates = rates.filter(effective_at__date__lte=as_of)
 
-    rate = rates.order_by("-timestamp").first()
+    rate = rates.order_by("-effective_at", "-timestamp", "-pk").first()
     if not rate:
         return CommodityRateLookupResult(
             status=RATE_MISSING,

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-11
 tags: [onboarding, workspace, loans]
 ---
 
@@ -23,6 +23,32 @@ regulatory compliance or approval for an individual loan. Review license evidenc
 metal buying rates, terms and document output. Commands retain final validation.
 Loan product and policy effective dates still matter. Invalid or incomplete settings
 can become unavailable again when dates or configuration change.
+
+**Metal valuation prices** shows gold/silver quote availability and dates using
+the same lookup as loan valuation. A source alone does not complete the general
+Rates task. The lending checklist can be ready for one supported metal or an
+appraisal-only policy; it does not require silver to originate a gold-only loan.
+The price step guides setup rather than blocking the form before the user selects
+a series, loan date and collateral metals.
+
+On the new/edit loan form, **Metal prices for this loan** checks that actual
+selection. With JavaScript/HTMX available it checks again before Save/Preview,
+without uploading borrower details or files. Missing prices keep the existing
+page and file inputs in place. Open Rates in another tab, add the needed quote,
+return and select **Check prices again**. This also refreshes appraisal suggestions
+without overwriting manual values. Manual appraisal alone cannot satisfy a
+lower-of policy that also requires a metal price.
+
+The current quote contract is a positive INR buying price per gram of pure metal,
+labelled **Pure metal (100%)** for both metals, effective on/before the loan date.
+The compatible storage key remains `24k`. Quote entry separates effective time
+from recorded time and preserves corrections/withdrawals as linked history; see
+[entering metal prices](metal-rate-entry.md). Dates are visible; a usable lookup
+does not yet enforce an origination-age policy. Active-loan monitoring separately
+enforces the configured quote/appraisal ages; see [reassessment](collateral-reassessment.md). An appraisal-only
+policy bypasses the price requirement. Server commands always revalidate; without
+JavaScript, or if evidence changes after preflight, normal server form errors apply
+and new photo uploads must be reselected after the response reloads the page.
 
 Economic forms retain editable defaults: gold 2% monthly, silver 4% monthly, and a
 separate fixed INR 10 document fee deducted at disbursal. **Business default (all

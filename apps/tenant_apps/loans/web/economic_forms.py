@@ -107,19 +107,25 @@ class LoanMonitoringPolicyForm(forms.ModelForm):
     class Meta:
         model = LoanMonitoringPolicy
         fields = (
-            "license", "effective_from", "compliance_profile",
+            "license", "effective_from", "compliance_profile", "supersedes", "amendment_reason",
             "maturity_warning_days", "operational_grace_days",
             "dpd_watch_threshold", "dpd_substandard_threshold",
             "ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio",
             "rate_freshness_days", "appraisal_freshness_days",
         )
-        widgets = {"effective_from": forms.DateInput(attrs={"type": "date"})}
+        widgets = {"effective_from": forms.DateInput(attrs={"type": "date"}),
+                   "supersedes": forms.HiddenInput(), "amendment_reason": forms.Textarea(attrs={"rows": 2})}
 
-    def __init__(self, *args, workspace, **kwargs):
+    def __init__(self, *args, workspace, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.workspace = workspace
+        self.instance.created_by = actor
+        self.fields["supersedes"].queryset = LoanMonitoringPolicy.objects.filter(workspace=workspace)
+        self.fields["amendment_reason"].help_text = "Required when amending an existing policy. Previous versions remain in history."
         self.instance.eligible_custody_states = ["IN_VAULT", "WITH_FUNDING_LENDER"]
         self.instance.severity_mapping = {"strategy": "derived-v1"}
+        self.fields["rate_freshness_days"].help_text = "Maximum quote age for current collateral monitoring, inclusive in calendar days. Zero requires same-day prices."
+        self.fields["appraisal_freshness_days"].help_text = "Maximum approved appraisal age for current collateral monitoring. Zero requires same-day appraisal evidence."
         self.fields["license"].required = False
         self.fields["license"].queryset = LoanLicense.objects.filter(
             workspace=workspace

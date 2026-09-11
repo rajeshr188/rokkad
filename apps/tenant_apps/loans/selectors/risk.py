@@ -2,26 +2,14 @@ from datetime import date
 from decimal import Decimal
 
 from apps.tenant_apps.loans.domain import RiskPolicy, assess_pawn_loan_risk
-from apps.tenant_apps.loans.models import LoanMonitoringPolicy, PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 from .collateral_valuation import get_pawn_loan_collateral_valuation
 from .delinquency import get_pawn_loan_delinquency
 from .balances import get_pawn_loan_balance
 from .obligation_state import get_active_repayment_schedule_as_of
 
 
-class LoanRiskAssessmentError(ValueError):
-    pass
-
-
-def resolve_monitoring_policy(*, workspace_id, license_id, as_of_date):
-    base = LoanMonitoringPolicy.objects.filter(workspace_id=workspace_id, effective_from__lte=as_of_date).filter(effective_until__isnull=True) | LoanMonitoringPolicy.objects.filter(workspace_id=workspace_id, effective_from__lte=as_of_date, effective_until__gte=as_of_date)
-    for scope_license in (license_id, None):
-        matches = tuple(base.filter(license_id=scope_license).order_by("-effective_from", "-version")[:2])
-        if len(matches) > 1 and matches[0].effective_from == matches[1].effective_from:
-            raise LoanRiskAssessmentError("Monitoring policy resolution is ambiguous for this date.")
-        if matches:
-            return matches[0]
-    raise LoanRiskAssessmentError("No monitoring policy applies to this loan and date.")
+from .monitoring_policy import LoanRiskAssessmentError, resolve_monitoring_policy
 
 
 def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date):

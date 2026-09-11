@@ -1,8 +1,9 @@
-from datetime import time
+from datetime import time, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase, override_settings
+from django.utils import timezone
 
 from apps.tenant_apps.loans.models import LoanRiskAlert, LoanRiskSnapshot, PawnLoanCommunicationConsent
 from apps.tenant_apps.loans.services.risk_communication_readiness import (
@@ -102,6 +103,7 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
     def test_open_current_dpd_alert_exposes_only_complete_channels(self):
         snapshot = SimpleNamespace(
             status=LoanRiskSnapshot.Status.CURRENT,
+            as_of_date=timezone.localdate(), source_provenance={"calculation_contract": "LOAN_RISK_SNAPSHOT_V2"},
             days_past_due=31,
             flags=["PAYMENT_OVERDUE"],
         )
@@ -154,6 +156,10 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
             return_value=policy_query,
         ):
             result = assess_risk_alert_communication_readiness(alert.pk)
+            snapshot.as_of_date -= timedelta(days=1)
+            stale = assess_risk_alert_communication_readiness(alert.pk)
+            self.assertFalse(stale.eligible)
+            self.assertIn("RISK_NOT_CURRENT", {row.code for row in stale.blockers})
 
         self.assertTrue(result.eligible)
         by_channel = {row.channel: row for row in result.channels}

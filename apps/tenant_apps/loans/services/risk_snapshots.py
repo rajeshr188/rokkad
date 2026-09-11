@@ -3,7 +3,7 @@ import json
 from datetime import date
 
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, F, Max, Q
 from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import detect_risk_transitions
@@ -13,6 +13,8 @@ from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_
 from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
 from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
 from apps.tenant_apps.loans.selectors.risk import get_pawn_loan_risk_assessment
+from apps.tenant_apps.loans.selectors.risk_portfolio import SNAPSHOT_CONTRACT, current_snapshot_filter
+from apps.orgs.models import Company
 
 
 class RiskSnapshotRefreshError(ValueError):
@@ -22,7 +24,8 @@ class RiskSnapshotRefreshError(ValueError):
 def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
-        raise RiskSnapshotRefreshError("Risk refresh requires an active tenant schema.")
+        raise RiskSnapshotRefreshError("Risk refresh requires an explicit Workspace context.")
+    _require_active_workspace(workspace_id)
     if not PawnLoan.objects.filter(
         pk=loan_id,
         workspace_id=workspace_id,
@@ -47,7 +50,7 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
         after = _source_fingerprint(loan_id, workspace_id, as_of_date)
         if before != after:
             if snapshot:
-                snapshot.status = LoanRiskSnapshot.Status.STALE
+                snapshot.status = LoanRiskSnapshot.Status.STALE if snapshot.assessment_fingerprint else LoanRiskSnapshot.Status.ERROR
                 snapshot.error_message = "Source evidence changed during assessment; refresh required."
                 snapshot.save(update_fields=("status", "error_message", "updated_at"))
             raise RiskSnapshotRefreshError("Source evidence changed during assessment; retry refresh.")
@@ -82,7 +85,23 @@ def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
             action_hint=assessment.action_hint, flags=list(assessment.flags),
             explanations=list(assessment.explanations), policy_identity=assessment.policy_identity,
             source_provenance={
-                "calculation_contract": "LOAN_RISK_SNAPSHOT_V1",
+                "calculation_contract": SNAPSHOT_CONTRACT,
+                "coverage": {
+                    "exposure": str(collateral.ltv.exposure),
+                    "basis": exposure.ltv_basis_label,
+                    "headroom": str(collateral.ltv.headroom) if collateral.ltv.headroom is not None else None,
+                    "shortfall": str(collateral.ltv.full_shortfall) if collateral.ltv.full_shortfall is not None else None,
+                    "status": collateral.ltv.status,
+                    "blockers": list(collateral.ltv.blockers),
+                },
+                "evidence": [
+                    {"item_id": row.collateral_item_id,
+                     "rate_at": row.rate_effective_at.isoformat() if row.rate_effective_at else None,
+                     "appraisal_at": row.appraisal_effective_at.isoformat() if row.appraisal_effective_at else None,
+                     "rate_status": row.rate_status, "appraisal_status": row.appraisal_status,
+                     "messages": list(row.blocker_messages)}
+                    for row in collateral.items
+                ],
                 "policy_identity": assessment.policy_identity,
                 "collateral_policy_identity": collateral.compliance_profile,
                 "appraisal_ids": sorted(
@@ -106,7 +125,7 @@ def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
 
 def rebuild_current_risk_snapshots(*, as_of_date: date, loan_ids=None):
     workspace_id = current_tenant_workspace_id()
-    queryset = PawnLoan.objects.filter(workspace_id=workspace_id).order_by("pk")
+    queryset = PawnLoan.objects.filter(workspace_id=workspace_id, state=PawnLoanState.ACTIVE.value).order_by("pk")
     if loan_ids is not None: queryset = queryset.filter(pk__in=loan_ids)
     results = {"current": 0, "errors": []}
     for loan_id in queryset.values_list("pk", flat=True).iterator():
@@ -124,17 +143,17 @@ def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size
     active_workspace_id = current_tenant_workspace_id()
     if active_workspace_id is None or int(workspace_id) != int(active_workspace_id):
         raise RiskSnapshotRefreshError("Explicit workspace does not match the active tenant schema.")
+    _require_active_workspace(workspace_id)
     with transaction.atomic():
         current_loan_ids = LoanRiskSnapshot.objects.filter(
-            workspace_id=workspace_id,
-            status=LoanRiskSnapshot.Status.CURRENT,
-            as_of_date__gte=as_of_date,
+            current_snapshot_filter(as_of_date), workspace_id=workspace_id,
         ).values("loan_id")
         candidate_ids = tuple(
-            PawnLoan.objects.select_for_update(skip_locked=True)
+            PawnLoan.objects.select_for_update(skip_locked=True, of=("self",))
             .filter(workspace_id=workspace_id, state=PawnLoanState.ACTIVE.value)
             .exclude(pk__in=current_loan_ids)
-            .order_by("pk").values_list("pk", flat=True)[:batch_size]
+            .order_by(F("risk_snapshot__updated_at").asc(nulls_first=True), "pk")
+            .values_list("pk", flat=True)[:batch_size]
         )
         result = {"selected": len(candidate_ids), "current": 0, "errors": []}
         for loan_id in candidate_ids:
@@ -144,6 +163,11 @@ def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size
             except RiskSnapshotRefreshError as exc:
                 result["errors"].append({"loan_id": loan_id, "error": str(exc)})
         return result
+
+
+def _require_active_workspace(workspace_id):
+    if not Company.objects.filter(pk=workspace_id, lifecycle_state=Company.LifecycleState.ACTIVE).exists():
+        raise RiskSnapshotRefreshError("Risk refresh requires an ACTIVE Workspace.")
 
 
 def _record_error(loan_id, workspace_id, as_of_date, fingerprint, exc):
@@ -223,10 +247,10 @@ def _source_fingerprint(loan_id, workspace_id, as_of_date):
         for metal in item_queryset.values_list("metal", flat=True).distinct()
         if metal in rate_metals
     }
-    payload["rates"] = Rate.objects.filter(
-        metal__in=applicable_metals,
-        currency=Rate.Currency.INR,
-        purity=Rate.Purity.K24,
-        timestamp__date__lte=as_of_date,
+    payload["rates"] = Rate.objects.filter(workspace_id=workspace_id).filter(
+        Q(metal__in=applicable_metals, currency=Rate.Currency.INR,
+          purity=Rate.Purity.K24, effective_at__date__lte=as_of_date)
+        | Q(supersedes__metal__in=applicable_metals, supersedes__currency=Rate.Currency.INR,
+            supersedes__purity=Rate.Purity.K24, supersedes__effective_at__date__lte=as_of_date)
     ).aggregate(count=Count("pk"), max_pk=Max("pk"), latest=Max("timestamp"))
     return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()

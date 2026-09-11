@@ -18,7 +18,7 @@ _ALERT_DETAILS = {
     ),
     LoanRiskAlert.Kind.ASSESSMENT_FAILURE: (
         "HIGH", "The current risk assessment could not be completed.",
-        "Open the Risk Portfolio and correct the reported evidence or setup blocker.",
+        "Open Loan health and correct the reported evidence or setup blocker.",
     ),
 }
 

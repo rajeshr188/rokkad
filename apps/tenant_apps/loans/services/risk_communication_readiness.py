@@ -14,6 +14,7 @@ from apps.tenant_apps.loans.models import (
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.notify_v2.models import NotificationTemplate
+from apps.tenant_apps.loans.selectors.risk_portfolio import snapshot_is_current
 from apps.tenant_apps.notify_v2.services.whatsapp_integration import get_whatsapp_cloud_credentials
 
 
@@ -79,7 +80,7 @@ def assess_risk_alert_communication_readiness(alert_id: int, *, locale="en"):
     if mapping is None:
         blockers.append(_block("NOTICE_KIND_UNAPPROVED", "This risk category has no approved borrower notice workflow."))
     snapshot = _snapshot(alert)
-    if snapshot is None or snapshot.status != LoanRiskSnapshot.Status.CURRENT:
+    if not snapshot_is_current(snapshot, timezone.localdate()):
         blockers.append(_block("RISK_NOT_CURRENT", "Refresh this loan to a current risk assessment before communication."))
     elif not _snapshot_supports(alert.alert_kind, snapshot):
         blockers.append(_block("RISK_NO_LONGER_SUPPORTS_NOTICE", "The current risk state no longer supports this borrower notice."))

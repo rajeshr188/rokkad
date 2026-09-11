@@ -59,6 +59,11 @@ services:
     ports: ["127.0.0.1:8000:8000"]
     volumes:
       - media:/var/www/rokkad/media
+  monitoring:
+    <<: *app
+    profiles: [monitoring]
+    command: ["python", "scripts/start_web.py", "python", "manage.py", "reassess_pawn_loans", "--workspace-id", "${ROKKAD_MONITOR_WORKSPACE_ID:-0}", "--batch-size", "50", "--repeat-seconds", "300"]
+    restart: unless-stopped
 
 volumes:
   postgres_data:

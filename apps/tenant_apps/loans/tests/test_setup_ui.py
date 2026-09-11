@@ -119,7 +119,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         license, series = self._configured_setup()
         page = self.tenant_get(reverse("loans:license_list"))
         checks = {step["key"]: step["complete"] for step in page.context["loan_setup"]["steps"]}
-        self.assertEqual(checks, {"license": True, "series": True, "economics": False, "product": False})
+        self.assertEqual(checks, {"license": True, "series": True, "economics": False, "product": False, "metal_rates": False})
         self.assertContains(page, "Open Economic Setup")
         LoanLicense.objects.filter(pk=license.pk).update(issued_on=date(2019, 1, 1), expires_on=date(2020, 1, 1))
         expired = self.tenant_get(reverse("loans:license_list"))
