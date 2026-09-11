@@ -69,6 +69,14 @@ class ASTs still match across the three files, and all 16 moved form imports res
 to the owning class objects. This groups setup changes by responsibility without
 changing the user workflow or introducing a form framework.
 
+`web/economic_forms.py` owns `PawnEconomicConfigurationForm`, `PawnFeePolicyForm`
+and `LoanMonitoringPolicyForm`. Existing `forms.py` imports remain valid;
+`web/economic_setup.py` imports the owning module. All 34 class bodies present in
+the previous `forms.py` checkpoint are unchanged across the two files. Policy
+scope choices, Workspace filters, monitoring instance defaults and gold/silver
+2%/4% interest plus INR 10 fee defaults are preserved. Services still own policy
+persistence and financial rules. This completes the selected economic-form move.
+
 The final extraction moved 56 functions into nine modules with identical function
 and decorator ASTs. The compatibility file fell from 1,620 to 224 lines. Existing
 route tests check decorated callback identity for all 136 canonical Loans routes.

@@ -8,7 +8,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.tenant_apps.loans.access import loans_setup_required
-from apps.tenant_apps.loans.forms import (
+from apps.tenant_apps.loans.web.economic_forms import (
     LoanMonitoringPolicyForm,
     PawnEconomicConfigurationForm,
     PawnFeePolicyForm,

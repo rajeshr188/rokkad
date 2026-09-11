@@ -18,15 +18,18 @@ removed. The Loans views portion of R12 is complete: focused modules own all
 handlers and views.py retains compatibility imports. See the
 [module map](../implementation/loans-view-organization.md). Foundation, operator
 commands and billing hardening are included in the local checkpoint.
-Application checkpoints are published through 38eb1e3.
+Application checkpoints are published through 16be7149.
 Orgs view organization is complete and published, including account/preferences
 and slug adapters. See the
 [orgs module map](../implementation/orgs-view-organization.md). Broader
-model/form/renewal-service review selected document forms, now extracted locally
+model/form/renewal-service review selected document forms, now published
 with compatible public imports; see the
 [review](project-hardening.md#remaining-r12-module-review). The three license/series
-setup forms are also extracted in this checkpoint. Next: verify publication CI,
-then review remaining form families; model and renewal-service moves remain deferred.
+setup forms are also extracted and published. Remaining form families have been
+reviewed; the three economic-setup forms are included in this local checkpoint.
+Next: extract the eight funding forms with compatible public imports. See the
+[form-family review](project-hardening.md#remaining-form-families-reviewed-after-16be7149).
+Model and renewal-service moves remain deferred.
 
 Razorpay setup/provider testing is shelved as
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).

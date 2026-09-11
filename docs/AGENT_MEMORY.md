@@ -168,3 +168,7 @@ document handlers use the owning module. Preserve fields, validation and scoped
 assignment querysets when organizing other form families.
 License creation, renewal and series setup forms live in loans/web/license_forms.py;
 forms.py preserves their public imports and license_setup.py uses the owning module.
+Economic, fee and monitoring setup forms live in loans/web/economic_forms.py;
+forms.py preserves their public imports and economic_setup.py uses the owning module.
+Form organization preserves policy scope choices, Workspace filtering and starter
+defaults; calculations and persistence remain in existing services.

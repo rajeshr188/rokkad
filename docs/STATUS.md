@@ -9,16 +9,18 @@ tags: [status, architecture]
 
 ## Current checkpoint
 
-Branch: `rls-mvp`. Published application checkpoint: `38eb1e3` (2026-09-11).
+Branch: `rls-mvp`. Published application checkpoint: `16be7149` (2026-09-11).
 All four orgs checkpoints are pushed: workspace/role settings (`ee31dda`),
 team/invitations (`0177fc3`), lifecycle/navigation (`e434828`), and final
 account/preferences, slug adapters and unused backup-view removal (`38eb1e3`).
 Both Loans and orgs view organization are complete and published.
-Document form organization is implemented locally: 13 layout/overlay/asset and
+Document form organization is published: 13 layout/overlay/asset and
 print-profile forms moved to `web/document_forms.py`, with existing public imports
 preserved. Document setup handlers use the owning module; no business rules changed.
 The three license/series setup forms are also extracted into `web/license_forms.py`
-with compatible public imports. Both form increments are included in this checkpoint.
+with compatible public imports. Both form increments are published as `16be7149`.
+The three economic-setup forms are extracted locally into `web/economic_forms.py`
+with public imports preserved and unchanged behavior; included in this local checkpoint.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -40,6 +42,16 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- Economic form extraction: all 69 economic-default, setup UI, economic-policy,
+  pawn-economics and scoped-route tests passed (26.998 seconds). All 34 original
+  class ASTs from the previous forms.py checkpoint match; three public aliases
+  preserve class identity. Runtime check, tracked import guard and explicit new
+  module import-boundary validation pass. Documentation links and whitespace pass.
+- [Workspace RLS checks for 16be7149](https://github.com/rajeshr188/rokkad/actions/runs/34594565045)
+  passed, including dependency/docs/import checks, migration and restricted-runtime
+  gates, boundary/first-loan checks, Loans regressions, image build and image
+  runtime/static assets. Remaining-form review changes documentation only; all
+  139 checked local documentation links pass.
 - License/series form extraction: all 62 setup UI, license regulatory and scoped
   route tests passed (28.185 seconds). Across both form extractions, all 50
   original class ASTs match and all 16 public aliases preserve class identity.
@@ -208,8 +220,9 @@ The selected Loans view organization work is complete; see the
 The orgs view split is also complete; see the
 [orgs module map](implementation/orgs-view-organization.md). Publication and CI
 verification are complete. Document layout and print-profile forms are extracted
-along with the three license/series setup forms in this checkpoint. Next: verify
-publication CI, then review remaining form families before choosing another move; see the
+along with the three license/series setup forms in this checkpoint. The remaining
+form-family review's economic-setup extraction is complete in this local checkpoint.
+Next: extract the eight funding forms using the reviewed compatibility approach. See the
 [review and validation scope](plans/project-hardening.md#remaining-r12-module-review).
 Model and renewal-service restructuring are lower priority and remain unimplemented.
 Razorpay and license scoping remain shelved.

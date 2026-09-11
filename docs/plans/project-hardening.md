@@ -69,6 +69,26 @@ use the owning module. Next: verify publication CI and review remaining form
 families before choosing another extraction.
 Core model and renewal-service moves remain deferred.
 
+### Remaining form families reviewed after 16be7149
+
+This review changes documentation only. The remaining 34 classes do not all need
+separate files. Prioritize coherent workflows over file size.
+
+| Group | Finding and priority |
+| --- | --- |
+| Economic setup (3 forms) | `PawnEconomicConfigurationForm`, `PawnFeePolicyForm` and `LoanMonitoringPolicyForm` are used together by `web/economic_setup.py`. Implemented locally in `web/economic_forms.py`, preserving public imports, business-default versus license policy selection, Workspace-filtered choices, monitoring instance defaults, gold/silver 2%/4% interest and INR 10 fee defaults. |
+| Funding (8 forms) | Used by `web/funding.py` and `web/funding_actions.py`; a coherent later extraction. Preserve eligible-collateral selection, active pledge exclusion, confirmation words, request keys and return choices. This is existing lender-funding functionality, not permission to restore retired accounting. |
+| Storage/physical verification (5 forms) | Used by custody views/actions; another coherent later group. Preserve Workspace and location-level filtering and existing resolution inputs. |
+| Product setup (1 form) | A small standalone model form. No priority to create a file solely for this class. |
+| Pawn intake and lifecycle | Keep together for now. Intake has local number-preview imports and bound/edit/single-option behavior; draft and renewal handlers share collateral formsets. Reversal/reason forms serve several action families. A future move must map these shared dependencies and preserve formset identity and constructor behavior. |
+
+Economic extraction completed with unchanged class bodies and compatible public
+aliases: 69 economic-default, setup UI, economic-policy, pawn-economics and scoped
+route tests passed. Economic forms are included in this local checkpoint. Next:
+extract the eight funding forms with compatible public imports. Keep persistence, calculations and action authorization in
+their existing services. No new permission scope or financial rule is authorized
+by this organization work.
+
 Each form increment must preserve fields, validation, widgets, constructor
 arguments and public class identities. Inspect callers and mock targets, compare
 class bodies, then run existing document-layout/print-profile and affected web
