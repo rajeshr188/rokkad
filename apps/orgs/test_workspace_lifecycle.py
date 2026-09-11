@@ -60,8 +60,8 @@ class WorkspaceLifecycleViewTests(SimpleTestCase):
         request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
         access = {"role_name": "Superuser"}
 
-        with patch("apps.orgs.views._assert_workspace_access", return_value=access), \
-                patch("apps.orgs.views.is_platform_admin", return_value=True):
+        with patch("apps.orgs.web.access_helpers._assert_workspace_access", return_value=access), \
+                patch("apps.orgs.web.access_helpers.is_platform_admin", return_value=True):
             result = views._assert_owner_access(
                 request,
                 self.workspace,

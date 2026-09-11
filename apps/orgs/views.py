@@ -15,23 +15,11 @@ from django.views.decorators.http import require_POST
 from dynamic_preferences.views import PreferenceFormView
 from render_block import render_block_to_string
 
-from apps.onboarding.services import (
-    build_workspace_setup_checklist,
-    build_workspace_setup_display_state,
-    dismiss_workspace_setup,
-    mark_workspace_setup_complete,
-    reopen_workspace_setup,
-)
+from apps.onboarding.services import build_workspace_setup_display_state
 
 from .audit import AuditLog, audit_log
 from .decorators_v2 import permission_required
-from .forms import (
-    ArchiveWorkspaceForm,
-    CompanyForm,
-    CompanyInvitationForm,
-    MembershipForm,
-    company_preference_form_builder,
-)
+from .forms import ArchiveWorkspaceForm, CompanyInvitationForm, MembershipForm, company_preference_form_builder
 from .models import Company, CompanyInvitation, Membership, Role
 from .permissions import get_effective_permissions, is_platform_admin
 from .registries import company_preference_registry
@@ -40,61 +28,31 @@ from .services.membership_capacity import get_workspace_seat_capacity_snapshot
 from .services import role_policy
 from .services.dashboard_selectors import get_workspace_dashboard_context
 from .tenant_context import resolve_preferred_workspace, resolve_request_workspace
-from apps.subscriptions import entitlements
 from apps.subscriptions.billing import effective_billing_state
-from apps.orgs.access import resolve_workspace_access
 
-# Create your views here.
+from apps.orgs.web.workspace_settings import (
+    workspace_create,
+    workspace_list,
+    workspace_detail,
+    workspace_setup,
+    workspace_setup_state,
+    workspace_modules,
+    workspace_security,
+    workspace_update,
+    _workspace_module_statuses,
+    WORKSPACE_MODULE_REGISTRY,
+)
+from apps.orgs.web.role_settings import (
+    workspace_role_permissions,
+)
+from apps.orgs.web.access_helpers import (
+    _assert_workspace_access,
+    _assert_owner_access,
+)
+
+# Compatibility imports above preserve existing URLs and Python callers.
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
-WORKSPACE_MODULE_REGISTRY = [
-    {
-        "name": "Parties",
-        "description": "Customer, supplier, broker, employee, KYC, and relationship records.",
-        "route_name": "workspace_slug_parties",
-        "default_status": "Active",
-    },
-    {
-        "name": "Loans",
-        "description": "PawnLoan workflows, collateral custody, releases, repayments, and notices.",
-        "route_name": "workspace_slug_loan_list",
-        "default_status": "Active",
-    },
-    {
-        "name": "Notifications",
-        "description": "Operational notification batches and delivery settings.",
-        "route_name": "workspace_slug_notifications",
-        "default_status": "Active",
-    },
-    {
-        "name": "Rates",
-        "description": "Workspace-owned reference rates and rate sources.",
-        "route_name": "workspace_slug_rates",
-        "default_status": "Active",
-    },
-    {
-        "name": "Customer Portal",
-        "description": "Future customer-facing loans, invoices, payments, documents, and statements.",
-        "route_name": "",
-        "default_status": "Planned",
-    },
-    {
-        "name": "API Access",
-        "description": "Programmatic API integration access for this workspace.",
-        "route_name": "",
-        "feature_code": "api.access",
-        "default_status": "Active",
-    },
-    {
-        "name": "Custom Fields",
-        "description": "Custom fields for advanced workflow and data capture scenarios.",
-        "route_name": "",
-        "feature_code": "workspace.custom_fields",
-        "default_status": "Active",
-    },
-]
-
 
 def has_permission(user, tenant, permission_codename):
     return permission_codename in get_effective_permissions(user, tenant)
@@ -108,32 +66,6 @@ def has_role(user, tenant, role_name):
         company=tenant,
         role__name__iexact=role_name,
     ).exists()
-
-
-def _assert_workspace_access(
-    request,
-    workspace,
-    required_permissions=None,
-    allow_platform_admin=True,
-):
-    """Validate workspace access and return normalized access context."""
-    required_permissions = set(required_permissions or [])
-
-    access = resolve_workspace_access(actor=request.user, workspace=workspace)
-    if access.platform_override and not allow_platform_admin:
-        raise PermissionDenied("Platform override is not allowed here")
-    if access.membership is None and not access.platform_override:
-        raise PermissionDenied("You are not a member of this workspace")
-    for permission in required_permissions:
-        access.require(permission)
-    effective_perms = get_effective_permissions(request.user, workspace)
-    role_name = "Superuser" if access.platform_override else access.membership.role.name
-    return {
-        "membership": access.membership,
-        "role_name": role_name,
-        "effective_permissions": effective_perms,
-        "access": access,
-    }
 
 
 def _is_owner_membership(membership):
@@ -161,53 +93,6 @@ def _get_workspace_from_slug(workspace_slug, *, include_inactive=False):
         manager,
         slug=workspace_slug,
     )
-
-
-def _workspace_module_statuses(*, workspace, user):
-    evaluated_modules = []
-    for module_config in WORKSPACE_MODULE_REGISTRY:
-        module = {
-            "name": module_config["name"],
-            "description": module_config["description"],
-            "route_name": module_config.get("route_name", ""),
-            "status": module_config.get("default_status", "Active"),
-            "lock_reason": "",
-            "is_openable": False,
-            "upgrade_url": "",
-        }
-
-        feature_code = module_config.get("feature_code")
-        route_name = module.get("route_name")
-
-        if feature_code:
-            try:
-                subscription = workspace.subscription
-                billing = effective_billing_state(subscription)
-            except Exception:
-                billing = None
-            if entitlements.enabled(workspace, feature_code):
-                module["status"] = "Active"
-                module["is_openable"] = bool(route_name)
-            elif billing is None or not billing.commercially_available:
-                module["status"] = "Billing Required"
-                module["lock_reason"] = "An active commercial subscription is required."
-                module["upgrade_url"] = reverse(
-                    "workspace_subscriptions:dashboard",
-                    kwargs={"workspace_slug": workspace.slug},
-                )
-            else:
-                module["status"] = "Locked"
-                module["lock_reason"] = "This capability is not included in the Workspace entitlement grant."
-                module["upgrade_url"] = reverse(
-                    "workspace_subscriptions:dashboard",
-                    kwargs={"workspace_slug": workspace.slug},
-                )
-        else:
-            module["is_openable"] = bool(route_name) and module["status"] == "Active"
-
-        evaluated_modules.append(module)
-
-    return evaluated_modules
 
 
 @login_required
@@ -665,284 +550,6 @@ workspace_slug_commodity_metal_balance_report = retired_accounting_surface
 workspace_slug_commodity_exposure_report = retired_accounting_surface
 workspace_slug_commodity_valuation_report = retired_accounting_surface
 workspace_slug_reports = retired_accounting_surface
-
-
-def _assert_owner_access(request, workspace, allow_platform_admin=True):
-    """Allow only workspace owner (or platform admin when enabled)."""
-    access = _assert_workspace_access(
-        request,
-        workspace,
-        required_permissions=set(),
-        allow_platform_admin=allow_platform_admin,
-    )
-    if allow_platform_admin and is_platform_admin(request.user):
-        return access
-    if access["role_name"].lower() != "owner":
-        raise PermissionDenied("Only workspace owners can access this page")
-    return access
-
-
-@login_required
-@audit_log("COMPANY_CREATE", description="Create new company")
-def workspace_create(request):
-    """
-    Create a new workspace.
-    User becomes Owner with full permissions.
-    """
-    if request.method == "POST":
-        form = CompanyForm(request.POST, request.FILES)
-        if form.is_valid():
-            try:
-                company = control_plane.create_workspace_from_form(
-                    form=form,
-                    user=request.user,
-                    request=request,
-                )
-            except ValidationError as exc:
-                form.add_error(None, exc)
-                return render(request, "company/company_form.html", {"form": form})
-            request.user.profile.set_workspace(company)
-            return redirect("workspace_slug_settings_setup", workspace_slug=company.slug)
-        else:
-            # Handle form errors
-            return render(request, "company/company_form.html", {"form": form})
-    else:
-        form = CompanyForm()
-    return render(request, "company/company_form.html", {"form": form})
-
-
-@login_required
-def workspace_list(request):
-    """
-    Legacy workspace listing endpoint.
-
-    Canonical entrypoint is workspace_selector. Keep this route as a
-    compatibility alias to avoid breaking old links.
-    """
-    return redirect("workspace_selector")
-
-
-@login_required
-def workspace_detail(request, workspace_id=None, company_id=None):
-    """
-    Display workspace details including team members and invitations.
-    Requires workspace_view permission.
-    """
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    if company.lifecycle_state != Company.LifecycleState.ACTIVE:
-        raise Http404("Company not found")
-
-    access_context = _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_view"},
-        allow_platform_admin=True,
-    )
-
-    roles = Role.objects.all()
-    return render(
-        request,
-        "company/company_detail.html",
-        {
-            "company": company,
-            "roles": roles,
-            "workspace": company,
-            "can_archive_workspace": access_context["access"].can(
-                "workspace.archive"
-            ),
-        },
-    )
-
-
-@login_required
-def workspace_setup(request, workspace_id=None, company_id=None):
-    """Display the read-only workspace setup checklist."""
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    access_context = _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_settings"},
-        allow_platform_admin=True,
-    )
-    from apps.onboarding.services.setup_checklist import build_business_setup
-
-    business_setup = build_business_setup(workspace=company)
-    setup_checklist = build_workspace_setup_checklist(workspace=company)
-    setup_state = build_workspace_setup_display_state(
-        user=request.user,
-        workspace=company,
-        checklist=setup_checklist,
-    )
-
-    return render(
-        request,
-        "company/workspace_setup.html",
-        {
-            "company": company,
-            "workspace": company,
-            "setup_checklist": setup_checklist,
-            "business_setup": business_setup,
-            "can_create_loan": access_context["access"].can("data.create") and access_context["access"].can("data.view"),
-            "setup_state": setup_state,
-            "user_role": access_context["role_name"],
-        },
-    )
-
-
-@login_required
-@require_POST
-def workspace_setup_state(request, workspace_id=None, company_id=None):
-    """Update user-specific workspace setup checklist display state."""
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_settings"},
-        allow_platform_admin=True,
-    )
-
-    action = request.POST.get("action")
-    if action == "dismiss":
-        dismiss_workspace_setup(user=request.user, workspace=company)
-        messages.info(request, "Workspace setup card dismissed.")
-    elif action == "complete":
-        mark_workspace_setup_complete(user=request.user, workspace=company)
-        messages.success(request, "Workspace setup marked complete.")
-    elif action == "reopen":
-        reopen_workspace_setup(user=request.user, workspace=company)
-        messages.info(request, "Workspace setup reopened.")
-    else:
-        messages.error(request, "Unknown workspace setup action.")
-
-    next_url = request.POST.get("next")
-    if next_url and next_url.startswith("/"):
-        return redirect(next_url)
-    return redirect("workspace_settings_setup", workspace_id=company.id)
-
-
-@login_required
-def workspace_modules(request, workspace_id=None, company_id=None):
-    """Display the workspace-owned module availability map."""
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    access_context = _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_settings"},
-        allow_platform_admin=True,
-    )
-
-    return render(
-        request,
-        "company/workspace_modules.html",
-        {
-            "company": company,
-            "workspace": company,
-            "modules": _workspace_module_statuses(
-                workspace=company,
-                user=request.user,
-            ),
-            "user_role": access_context["role_name"],
-        },
-    )
-
-
-@login_required
-def workspace_security(request, workspace_id=None, company_id=None):
-    """Display workspace security and audit activity."""
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    access_context = _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_settings"},
-        allow_platform_admin=True,
-    )
-    audit_events = (
-        AuditLog.objects.for_company(company)
-        .select_related("user")
-        .order_by("-timestamp")[:50]
-    )
-    security_actions = [
-        "LOGIN",
-        "LOGOUT",
-        "LOGIN_FAILED",
-        "PERMISSION_DENIED",
-        "UNAUTHORIZED_ACCESS",
-    ]
-    security_events = AuditLog.objects.for_company(company).filter(
-        action__in=security_actions
-    )
-
-    return render(
-        request,
-        "company/workspace_security.html",
-        {
-            "company": company,
-            "workspace": company,
-            "audit_events": audit_events,
-            "security_event_count": security_events.count(),
-            "failed_event_count": AuditLog.objects.for_company(company)
-            .filter(success=False)
-            .count(),
-            "user_role": access_context["role_name"],
-        },
-    )
-
-
-@login_required
-@permission_required("workspace_edit")
-@audit_log("COMPANY_UPDATE", description="Update company settings")
-def workspace_update(request, workspace_id=None, company_id=None):
-    """
-    Update workspace settings.
-    Requires workspace_edit permission (Owner/Admin).
-    """
-    workspace_id = workspace_id or company_id
-    if workspace_id is None:
-        raise Http404("Workspace ID is required")
-
-    company = get_object_or_404(Company, id=workspace_id)
-    _assert_workspace_access(
-        request,
-        company,
-        required_permissions={"workspace_edit"},
-        allow_platform_admin=True,
-    )
-    _assert_owner_access(request, company, allow_platform_admin=True)
-
-    if request.method == "POST":
-        form = CompanyForm(request.POST, instance=company)
-        if form.is_valid():
-            control_plane.save_workspace_update_form(
-                form=form,
-                actor=request.user,
-                request=request,
-            )
-            return redirect("workspace_list")
-    else:
-        form = CompanyForm(instance=company)
-    return render(
-        request, "company/company_form.html", {"form": form, "company": company, "workspace": company}
-    )
 
 
 @login_required
@@ -1962,66 +1569,3 @@ def workspace_dashboard(request, workspace_id):
         )
 
     return render(request, "company/workspace_dashboard.html", context)
-
-
-@login_required
-def workspace_role_permissions(request, workspace_id, role_id=None):
-    """Owner-only editing of one business's stored role grants."""
-    from django import forms
-    from apps.orgs.access import normalize_action, resolve_workspace_access
-    from apps.orgs.models import WorkspaceRole
-    from apps.orgs.permissions import ALL_PERMISSIONS
-    from apps.orgs.services.workspace_roles import stored_role_codes, update_workspace_role
-    from apps.tenancy.context import workspace_context
-
-    workspace = get_object_or_404(Company, pk=workspace_id)
-    _assert_workspace_access(request, workspace, required_permissions=set(), allow_platform_admin=True)
-    access = resolve_workspace_access(actor=request.user, workspace=workspace)
-    if not access.platform_override and workspace.owner_id != request.user.pk:
-        raise PermissionDenied("Only the workspace Owner can edit role permissions.")
-    with workspace_context(workspace.pk):
-        roles = list(WorkspaceRole.objects.filter(workspace=workspace).select_related("role").order_by("role__name"))
-        selected = next((row for row in roles if row.role_id == role_id), None)
-        if role_id is not None and selected is None:
-            raise Http404("Role not found in this workspace.")
-        editable = selected is not None and selected.role.name.casefold() != "owner"
-        editable_codes = {"workspace_view", "workspace_edit", "workspace_settings",
-            "team_view", "team_list", "team_invite", "data_view", "data_create", "data_edit",
-            "data_delete", "data_export", "contact_view", "contact_create", "contact_edit",
-            "contact_delete", "contact_export", "report_export", "loan_approve", "loan_disburse",
-            "loan_repay", "loan_release", "loan_accrue", "loan_capitalize"}
-        choices = {}
-        for code, label, description in ALL_PERMISSIONS:
-            if code not in editable_codes:
-                continue
-            action = normalize_action(code)
-            if action != "workspace.transfer":
-                choices.setdefault(action, (label.removeprefix("Can ").capitalize(), description))
-
-        class PermissionForm(forms.Form):
-            revision = forms.IntegerField(widget=forms.HiddenInput)
-            actions = forms.MultipleChoiceField(required=False,
-                choices=[(a, label) for a, (label, _) in choices.items()],
-                widget=forms.CheckboxSelectMultiple)
-
-        form = None
-        if selected:
-            form = PermissionForm(request.POST if request.method == "POST" else None,
-                initial={"revision": selected.revision,
-                         "actions": sorted({normalize_action(c) for c in stored_role_codes(workspace.pk, role_id) if c in editable_codes})})
-        if request.method == "POST":
-            if not editable:
-                raise PermissionDenied("Select an editable role. Owner permissions are protected.")
-            if form.is_valid():
-                codes = {c for c in editable_codes if normalize_action(c) in form.cleaned_data["actions"]}
-                codes.update(stored_role_codes(workspace.pk, role_id) - editable_codes - {"workspace_transfer"})
-                try:
-                    update_workspace_role(workspace=workspace, role_id=role_id, permission_codes=codes,
-                        revision=form.cleaned_data["revision"], actor=request.user, request=request)
-                except ValidationError as exc:
-                    form.add_error(None, exc)
-                else:
-                    messages.success(request, "Role permissions updated for this workspace.")
-                    return redirect("workspace_role_permissions_edit", workspace_id=workspace.pk, role_id=role_id)
-        return render(request, "company/role_permissions.html", {"workspace": workspace,
-            "roles": roles, "selected_role": selected, "form": form, "editable": editable})

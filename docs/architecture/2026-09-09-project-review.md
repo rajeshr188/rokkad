@@ -560,3 +560,24 @@ Validation: all 595 Loans, Party UI/history, route and shell tests passed in one
 run (124.773 seconds), plus four import-guard unit tests. Runtime system check,
 migration drift, 528-file import scan, 132 current-doc links and staged whitespace
 checks pass. No service, schema, template, permission or financial-rule changes.
+
+## R12 orgs workspace/role settings extraction (2026-09-11)
+
+Reviewed the control-plane contracts and existing view dependencies. The first
+family moves eight workspace create/list/detail/setup/module/security/update
+handlers, the role-permission editor, module-status helper and two shared access
+helpers into apps/orgs/web. All twelve function/decorator ASTs match the originals;
+relative top-level imports become absolute in the new modules. Public imports and
+existing slug adapters remain intact. The shared helpers still use the same access
+policy; no role, ownership, lifecycle, billing, audit or RLS rule changes.
+The [orgs module map](../implementation/orgs-view-organization.md) records remaining
+team/invitations, lifecycle/navigation, preferences and compatibility dependencies.
+
+The published af22f23 GitHub Actions run completed successfully, including Loans
+regressions, restricted-runtime gates and container/static-asset verification.
+That CI result applies to the published checkpoint, not this new local extraction.
+
+Local validation: all 174 selected orgs/settings, role-grant, ownership, lifecycle,
+shell and Loans-route checks passed (29.900 seconds). Two entitlement mocks needed
+their owning-module targets corrected; assertions were retained. System check,
+migration drift, 532-file import guard, 136 current-doc links and whitespace pass.

@@ -229,7 +229,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		fake_qs = SimpleNamespace(filter=lambda **_kwargs: fake_filtered)
 
 		with patch.object(Membership.objects, "select_related", return_value=fake_qs), \
-			 patch("apps.orgs.views.get_effective_permissions", return_value=set()):
+			 patch("apps.orgs.web.access_helpers.get_effective_permissions", return_value=set()):
 			with self.assertRaises(PermissionDenied):
 				_assert_workspace_access(request, workspace)
 
@@ -241,7 +241,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		fake_qs = SimpleNamespace(filter=lambda **_kwargs: fake_filtered)
 
 		with patch.object(Membership.objects, "select_related", return_value=fake_qs), \
-			 patch("apps.orgs.views.get_effective_permissions", return_value={"workspace_view"}):
+			 patch("apps.orgs.web.access_helpers.get_effective_permissions", return_value={"workspace_view"}):
 			result = _assert_workspace_access(
 				request,
 				workspace,
@@ -259,7 +259,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		fake_qs = SimpleNamespace(filter=lambda **_kwargs: fake_filtered)
 
 		with patch.object(Membership.objects, "select_related", return_value=fake_qs), \
-			 patch("apps.orgs.views.get_effective_permissions", return_value={"data_view"}):
+			 patch("apps.orgs.web.access_helpers.get_effective_permissions", return_value={"data_view"}):
 			with self.assertRaises(PermissionDenied):
 				_assert_workspace_access(
 					request,
@@ -271,7 +271,7 @@ class WorkspaceAccessPolicyTests(SimpleTestCase):
 		request = self._make_request(is_superuser=True)
 		workspace = SimpleNamespace(id=1, pk=1, owner_id=99)
 
-		with patch("apps.orgs.views.get_effective_permissions", return_value={"workspace_view", "admin_access"}):
+		with patch("apps.orgs.web.access_helpers.get_effective_permissions", return_value={"workspace_view", "admin_access"}):
 			result = _assert_workspace_access(
 				request,
 				workspace,
@@ -637,11 +637,11 @@ class WorkspaceSetupStateViewTests(SimpleTestCase):
 		)
 		request.user = SimpleNamespace(is_authenticated=True)
 
-		with patch("apps.orgs.views.get_object_or_404", return_value=workspace), \
-			 patch("apps.orgs.views._assert_workspace_access"), \
-			 patch("apps.orgs.views.dismiss_workspace_setup") as dismiss_setup, \
-			 patch("apps.orgs.views.messages") as messages, \
-			 patch("apps.orgs.views.redirect", return_value="redirected") as redirect:
+		with patch("apps.orgs.web.workspace_settings.get_object_or_404", return_value=workspace), \
+			 patch("apps.orgs.web.workspace_settings._assert_workspace_access"), \
+			 patch("apps.orgs.web.workspace_settings.dismiss_workspace_setup") as dismiss_setup, \
+			 patch("apps.orgs.web.workspace_settings.messages") as messages, \
+			 patch("apps.orgs.web.workspace_settings.redirect", return_value="redirected") as redirect:
 			response = org_views.workspace_setup_state(request, workspace_id=9)
 
 		self.assertEqual(response, "redirected")
@@ -657,11 +657,11 @@ class WorkspaceSetupStateViewTests(SimpleTestCase):
 		)
 		request.user = SimpleNamespace(is_authenticated=True)
 
-		with patch("apps.orgs.views.get_object_or_404", return_value=workspace), \
-			 patch("apps.orgs.views._assert_workspace_access"), \
-			 patch("apps.orgs.views.mark_workspace_setup_complete") as complete_setup, \
-			 patch("apps.orgs.views.messages"), \
-			 patch("apps.orgs.views.redirect", return_value="redirected"):
+		with patch("apps.orgs.web.workspace_settings.get_object_or_404", return_value=workspace), \
+			 patch("apps.orgs.web.workspace_settings._assert_workspace_access"), \
+			 patch("apps.orgs.web.workspace_settings.mark_workspace_setup_complete") as complete_setup, \
+			 patch("apps.orgs.web.workspace_settings.messages"), \
+			 patch("apps.orgs.web.workspace_settings.redirect", return_value="redirected"):
 			org_views.workspace_setup_state(request, workspace_id=9)
 
 		complete_setup.assert_called_once_with(user=request.user, workspace=workspace)
@@ -672,11 +672,11 @@ class WorkspaceSetupStateViewTests(SimpleTestCase):
 		)
 		request.user = SimpleNamespace(is_authenticated=True)
 
-		with patch("apps.orgs.views.get_object_or_404", return_value=workspace), \
-			 patch("apps.orgs.views._assert_workspace_access"), \
-			 patch("apps.orgs.views.reopen_workspace_setup") as reopen_setup, \
-			 patch("apps.orgs.views.messages"), \
-			 patch("apps.orgs.views.redirect", return_value="redirected"):
+		with patch("apps.orgs.web.workspace_settings.get_object_or_404", return_value=workspace), \
+			 patch("apps.orgs.web.workspace_settings._assert_workspace_access"), \
+			 patch("apps.orgs.web.workspace_settings.reopen_workspace_setup") as reopen_setup, \
+			 patch("apps.orgs.web.workspace_settings.messages"), \
+			 patch("apps.orgs.web.workspace_settings.redirect", return_value="redirected"):
 			org_views.workspace_setup_state(request, workspace_id=9)
 
 		reopen_setup.assert_called_once_with(user=request.user, workspace=workspace)
@@ -2157,10 +2157,10 @@ class WorkspaceModuleEntitlementTests(SimpleTestCase):
 		workspace = SimpleNamespace(id=9, slug="acme", subscription=SimpleNamespace())
 		user = SimpleNamespace(id=1, is_authenticated=True)
 
-		with patch.object(
-			org_views.entitlements, "enabled", return_value=False
+		with patch(
+			"apps.orgs.web.workspace_settings.entitlements.enabled", return_value=False
 		) as mock_enabled, patch(
-			"apps.orgs.views.effective_billing_state",
+			"apps.orgs.web.workspace_settings.effective_billing_state",
 			return_value=SimpleNamespace(commercially_available=True),
 		):
 			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)
@@ -2184,8 +2184,8 @@ class WorkspaceModuleEntitlementTests(SimpleTestCase):
 		workspace = SimpleNamespace(id=9, slug="acme", subscription=SimpleNamespace())
 		user = SimpleNamespace(id=1, is_authenticated=True)
 
-		with patch.object(org_views.entitlements, "enabled", return_value=True), patch(
-			"apps.orgs.views.effective_billing_state",
+		with patch("apps.orgs.web.workspace_settings.entitlements.enabled", return_value=True), patch(
+			"apps.orgs.web.workspace_settings.effective_billing_state",
 			return_value=SimpleNamespace(commercially_available=True),
 		):
 			modules = org_views._workspace_module_statuses(workspace=workspace, user=user)

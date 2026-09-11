@@ -12,7 +12,8 @@ tags: [status, architecture]
 Branch: `rls-mvp`. Published application checkpoint: `fb3db63` (2026-09-11).
 All six checkpoints after `4b08c3f` were pushed: foundation/operator/billing,
 branding, documentation/onboarding/legacy cleanup, Loans routing and complete
-Loans view organization. Remote branch verified at the application checkpoint.
+Loans view organization. Publication record af22f23 is also pushed. The first
+orgs workspace/role settings extraction is complete locally.
 No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -30,9 +31,16 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 | R09/R10 onboarding and legacy configuration/guardrails | Completed locally: current tour choices, six unused settings removed, tracked-source import guard in CI |
 | R13 dependencies/templates | Completed locally: four unused direct packages and 14 unreachable templates removed |
 | R11 dashboard reliability | Incomplete-queue warning and explicit unavailable monetary totals implemented; batching complete with shared calculations and restricted-role verification |
-| R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. Loans views portion of R12 complete: compatibility imports plus focused web modules; broader R12 review remains separate |
+| R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. Loans views portion of R12 complete: compatibility imports plus focused web modules; orgs workspace/role settings extracted locally; remaining families pending |
 
 ## Latest validation
+
+- First orgs extraction: all 174 workspace/settings, role-grant, ownership,
+  lifecycle, shell and Loans-route tests passed in the final run (29.900 seconds).
+  Nine handlers and three helpers retain identical function/decorator ASTs.
+  Test mocks follow moved dependencies; assertions remain unchanged. Runtime
+  system check, migration drift, 532-file import guard, 136 current-doc links and
+  staged whitespace checks pass. No service, model, template or permission changes.
 
 - Loans views completion: all 595 Loans, Party UI/history, route and shell tests
   passed together (124.773 seconds), plus four import-guard unit tests. All 56
@@ -135,8 +143,10 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 Exact historical validation and known limitations are retained in the
 [status snapshot](archive/context/2026-09-09/STATUS.md). These counts describe runs
 at their checkpoints, not a claim that one fresh whole-repository suite ran today.
-GitHub-hosted [Workspace RLS checks](https://github.com/rajeshr188/rokkad/actions/runs/34588723881)
-started for fb3db63; observed in progress at publication, result not yet verified.
+The fb3db63 CI run was superseded by the publication-record push.
+[Workspace RLS checks for af22f23](https://github.com/rajeshr188/rokkad/actions/runs/34588817552)
+passed, including dependency/docs/import gates, runtime-role and boundary/first-loan
+checks, Loans regressions, image build and image runtime/static-asset verification.
 
 ## Deferred acceptance and owner decisions
 
@@ -155,9 +165,10 @@ reconstructions. Refund issuance, proration and chargebacks are not automated.
 
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).
-Next: inspect the published CI result, then review orgs views responsibilities
-and dependencies before extracting Workspace, membership/invitations, role settings
-and compatibility routing. Broader model/form/renewal-service work remains separate.
+Next: extract orgs team/invitation handlers after reviewing their shared ownership,
+capacity and verified-acceptance dependencies. Workspace/role settings are already
+extracted; see the [orgs module map](implementation/orgs-view-organization.md).
+Broader model/form/renewal-service work remains separate.
 Razorpay and license scoping remain shelved.
 
 Keep this file short: update current state and relevant evidence; move superseded

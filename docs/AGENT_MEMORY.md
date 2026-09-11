@@ -154,6 +154,9 @@ file; feature handlers live in web/. Shared preview assets and loan read helpers
 have small dedicated modules. Preserve decorated public imports and scoped routes;
 feature modules must not import views.py. Test mocks patch the owning module.
 See [module map](implementation/loans-view-organization.md). No business rules changed.
-The broader R12 orgs/model/form/renewal-service review remains separate; do not
-split files merely for size. Preserve history and avoid speculative abstractions
+R12 orgs extraction has started: web/workspace_settings.py owns workspace setup,
+profile/module/security pages; web/role_settings.py owns role editing; shared access
+helpers live in web/access_helpers.py. views.py retains public imports. See the
+[orgs module map](implementation/orgs-view-organization.md). Team/invitations are
+next. Model/form/renewal-service review remains separate; do not split for size. Preserve history and avoid speculative abstractions
 or blanket package upgrades. Prefer Django services/selectors, templates and HTMX.

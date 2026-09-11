@@ -19,7 +19,7 @@ scoping or authorize production deployment.
 | Operational commands | R05 | Implemented; validation recorded in STATUS |
 | Paid billing correctness | R03/R04 | Checkout binding, replay, invoice and webhook repair implemented; expiry implemented; known-payment/refund recovery implemented; owner review decisions implemented; provider acceptance shelved as FW-002 |
 | Current docs/product/residue cleanup | R08/R09/R10, verified R13 | R08/R09/R10/R13 complete; bounded removal evidence linked below |
-| Routing, dashboard and module organization | R07/R11/R12 | R07 and R11 complete locally; Loans views portion of R12 complete; broader orgs/model/form/renewal-service review remains separate |
+| Routing, dashboard and module organization | R07/R11/R12 | R07 and R11 complete locally; Loans views portion of R12 complete; orgs workspace/role settings extracted; team/invitations next; broader model/form/renewal review separate |
 | Production operations acceptance | Remaining R06 | Pending selected deployment; no live deployment requested |
 
 Foundation implementation and operator commands are documented in
@@ -45,7 +45,9 @@ No Razorpay setup is needed for the remaining review cleanup. Resume delivery wi
    routes and named aliases remain compatible. The Loans views portion of R12 is
    complete: all handlers live in focused web modules, with public imports retained.
    See [module map](../implementation/loans-view-organization.md). Broader R12
-   orgs/model/form/renewal-service work requires a separate dependency review.
+   orgs workspace/role settings and access helpers are now extracted. Team and
+   invitations are next; see the [orgs module map](../implementation/orgs-view-organization.md).
+   Broader model/form/renewal-service work remains separate.
 
 
 
