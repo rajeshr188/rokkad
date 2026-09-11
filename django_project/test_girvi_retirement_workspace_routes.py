@@ -22,7 +22,7 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         )
 
     def test_orgs_workspace_loan_wrappers_do_not_import_girvi(self):
-        source = Path("apps/orgs/views.py").read_text(encoding="utf-8")
+        source = Path("apps/orgs/web/slug_routes.py").read_text(encoding="utf-8")
         loan_section = source.split("def workspace_slug_loans", 1)[1].split(
             "def workspace_slug_inventory", 1
         )[0]
@@ -31,11 +31,12 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         self.assertIn("apps.tenant_apps.loans.views", loan_section)
 
     def test_orgs_navigation_surfaces_use_loans_routes(self):
-        source = Path("apps/orgs/views.py").read_text(encoding="utf-8")
+        source = Path("apps/orgs/web/slug_routes.py").read_text(encoding="utf-8")
 
         self.assertNotIn('"route_name": "girvi:', source)
         self.assertNotIn('redirect("girvi:', source)
-        self.assertIn('"route_name": "workspace_slug_loan_list"', source)
+        self.assertIn('"route_name": "workspace_slug_loan_list"',
+                      Path("apps/orgs/web/workspace_settings.py").read_text(encoding="utf-8"))
         self.assertIn("from apps.tenant_apps.loans.views import license_list", source)
 
     def test_legacy_notify_routes_redirect_to_notify_v2(self):
@@ -68,7 +69,7 @@ class GirviRetirementWorkspaceRouteTests(SimpleTestCase):
         self.assertIn("django_project.legacy_notify_urls", workspace_urls_source)
 
     def test_orgs_notification_wrappers_do_not_import_legacy_notify(self):
-        source = Path("apps/orgs/views.py").read_text(encoding="utf-8")
+        source = Path("apps/orgs/web/slug_routes.py").read_text(encoding="utf-8")
         notification_section = source.split(
             "def workspace_slug_notifications", 1
         )[1].split("def workspace_slug_data_tools_export", 1)[0]

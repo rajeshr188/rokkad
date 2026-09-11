@@ -52,10 +52,10 @@ class CanonicalWorkspaceUrlTests(SimpleTestCase):
                 request = self.factory.get("/w/acme/")
                 request.user = self.user
                 with patch(
-                    "apps.orgs.views._get_workspace_from_slug",
+                    "apps.orgs.web.slug_routes._get_workspace_from_slug",
                     return_value=self.workspace,
                 ), patch(
-                    f"apps.orgs.views.{target_name}",
+                    f"apps.orgs.web.slug_routes.{target_name}",
                     return_value=HttpResponse("canonical"),
                 ) as target:
                     response = wrapper(request, workspace_slug="acme")

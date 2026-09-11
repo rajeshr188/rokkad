@@ -612,3 +612,21 @@ Validation: 171 selected orgs, lifecycle, ownership, context/platform override,
 shell and Loans-route checks passed (28.329 seconds); the updated source-dependency
 check also passed separately. System check, migration drift, import guard,
 documentation links and whitespace pass. No service, schema or policy changes.
+
+## R12 orgs views completion (2026-09-11)
+
+Account/preferences, slug adapters and compatibility helpers now live in dedicated
+web modules; orgs.views is an import facade. The final move preserves 66 function/
+class ASTs and 137 public handler/helper/class/retirement exports, including all
+37 accounting retirement aliases. Two backup view classes had no repository routes
+or callers and were removed with their unused imports. The already-overridden
+accounting settings definition and unused logger/User initialization were removed.
+No backup action ran. Source tests follow the moved modules, with unchanged
+behavior assertions. The [module map](../implementation/orgs-view-organization.md)
+records ownership and cleanup evidence. This completes the Loans and orgs view
+portions of R12; model/form/renewal-service suggestions remain separate review work.
+
+Validation: all 229 selected orgs/invitation/ownership/role/lifecycle/context/shell/
+Loans-route/retirement tests passed (29.893 seconds). Fourteen source route-map checks
+passed again after their source-path update. System check, migration drift, import
+boundary, documentation-link and whitespace checks pass.

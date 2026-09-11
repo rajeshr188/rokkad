@@ -83,7 +83,7 @@ class WorkspaceSlugRouteMapIntentTests(SimpleTestCase):
 
     def test_phase11_active_routing_code_has_no_schema_name_authority(self):
         middleware = _read("apps/orgs/middleware_v2.py")
-        views = _read("apps/orgs/views.py")
+        views = _read("apps/orgs/web/slug_routes.py")
         tenancy_testing = _read("apps/tenancy/testing.py")
         templates = "\n".join(
             path.read_text(encoding="utf-8-sig")
