@@ -12,7 +12,7 @@ tags: [status, architecture]
 Branch: `rls-mvp`. Local hardening checkpoint: `c9e27f9`; last published checkpoint:
 `4b08c3f`. The local checkpoint includes foundation/operator/billing, branding,
 documentation/onboarding/legacy cleanup and completed Loans routing. R12 product
-setup extraction is committed separately as `752c248`; economic setup is committed as `b943118`. License/series setup is now extracted locally. Nothing has been pushed. No production deployment or real provider payment,
+setup extraction is committed separately as `752c248`; economic setup is committed as `b943118`. License/series setup is committed as `d5c4056`; print-profile setup is now extracted locally. Nothing has been pushed. No production deployment or real provider payment,
 refund or email was performed during these increments.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
@@ -30,9 +30,15 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 | R09/R10 onboarding and legacy configuration/guardrails | Completed locally: current tour choices, six unused settings removed, tracked-source import guard in CI |
 | R13 dependencies/templates | Completed locally: four unused direct packages and 14 unreachable templates removed |
 | R11 dashboard reliability | Incomplete-queue warning and explicit unavailable monetary totals implemented; batching complete with shared calculations and restricted-role verification |
-| R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. R12 started: product-catalog, economic and license/series setup views extracted; remaining families pending |
+| R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. R12 started: product-catalog, economic, license/series and print-profile setup views extracted; remaining families pending |
 
 ## Latest validation
+
+- R12 print-profile setup: all 115 setup, print-profile, layout, document-issuance
+  and Workspace-route tests passed. Nine handlers and two helpers retain identical
+  function/decorator ASTs. Shared preview assets load through one helper without
+  importing views.py. Runtime system, import-boundary, documentation-link and
+  whitespace checks pass.
 
 - R12 license/series setup: all 90 setup, license services/regulatory, numbering,
   notice and Workspace-route tests passed. Twelve handlers and four helpers retain
@@ -139,9 +145,9 @@ reconstructions. Refund issuance, proration and chargebacks are not automated.
 
 ## Next increment
 
-Continue R12 with document print-profile setup views, retaining the views.py public
-imports and route callbacks. Product, economic and license/series setup now live
-in dedicated web modules.
+Continue R12 with document layout setup views, retaining public imports and route
+callbacks. Product, economic, license/series and print-profile setup now live in
+dedicated web modules; preview asset loading is shared.
 All R07 Loans route families are migrated, including economics/workflow, documents,
 reports, lifecycle actions and funding. Razorpay and license scoping remain shelved.
 

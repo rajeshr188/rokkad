@@ -156,5 +156,7 @@ setup permission decorator, defaults and service calls.
 R12 license/series setup handlers and their lookup/preview helpers live in
 web/license_setup.py; public view imports remain compatible. Shared operational
 notice retry still serves both license and custody workflows from views.py.
-Next: R12 document print-profile setup, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
+R12 print-profile setup lives in web/print_profile_setup.py. Layout and profile
+previews share the unchanged asset loader in web/document_assets.py.
+Next: R12 document layout setup, retaining public view imports. Preserve history; avoid speculative abstractions or blanket
 package upgrades. Prefer Django services/selectors, templates and HTMX.

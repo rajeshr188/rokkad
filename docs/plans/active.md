@@ -17,8 +17,8 @@ All Loans route families use direct Workspace adapters; response rewriting is
 removed. R12 module organization remains separate. Foundation, operator commands
 and billing application hardening are included in the local checkpoint.
 Local hardening checkpoint: c9e27f9 (not pushed). R12 product-catalog, economic
-and license/series setup views are extracted with stable public imports;
-document print-profile setup is the next family.
+license/series and print-profile setup views are extracted with stable public imports;
+document layout setup is the next family.
 
 Razorpay setup/provider testing is shelved as
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).

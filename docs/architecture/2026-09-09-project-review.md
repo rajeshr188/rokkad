@@ -526,3 +526,15 @@ remain unchanged. All 90 setup, license service/regulatory, numbering, notice an
 Workspace-route tests pass, alongside system, import-boundary, documentation-link
 and whitespace checks. No service, schema, template or permission rules changed.
 Document print-profile setup is the next bounded R12 extraction.
+
+## R12 print-profile setup extraction (2026-09-11)
+
+Moved nine print-profile setup handlers and their revision lookup helper into
+web/print_profile_setup.py, retaining public view imports and route callbacks.
+The asset loader used by both layout and print-profile previews now lives in
+web/document_assets.py; neither extracted module imports views.py. All eleven
+function/decorator ASTs match the original. Services, rendering, permissions,
+Workspace filtering, published evidence and templates remain unchanged.
+All 115 setup, print-profile, layout, document-issuance and Workspace-route tests
+pass, alongside system, import-boundary, documentation-link and whitespace checks.
+Document layout setup is the next bounded R12 extraction.
