@@ -9,12 +9,11 @@ tags: [status, architecture]
 
 ## Current checkpoint
 
-Branch: `rls-mvp`. Local hardening checkpoint: `c9e27f9`; last published checkpoint:
-`4b08c3f`. The local checkpoint includes foundation/operator/billing, branding,
-documentation/onboarding/legacy cleanup and completed Loans routing. R12 setup
-extractions are committed through `c8820d8`; the remaining Loans views extraction
-is now complete locally. Nothing has been pushed. No production deployment or real
-provider payment, refund or email was performed during these increments.
+Branch: `rls-mvp`. Published application checkpoint: `fb3db63` (2026-09-11).
+All six checkpoints after `4b08c3f` were pushed: foundation/operator/billing,
+branding, documentation/onboarding/legacy cleanup, Loans routing and complete
+Loans view organization. Remote branch verified at the application checkpoint.
+No production deployment or real provider payment, refund or email was performed.
 
 The [hardening plan](plans/project-hardening.md) is the current delivery queue.
 The [project review](architecture/2026-09-09-project-review.md) preserves the original
@@ -136,7 +135,8 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 Exact historical validation and known limitations are retained in the
 [status snapshot](archive/context/2026-09-09/STATUS.md). These counts describe runs
 at their checkpoints, not a claim that one fresh whole-repository suite ran today.
-GitHub-hosted CI execution still awaits a push.
+GitHub-hosted [Workspace RLS checks](https://github.com/rajeshr188/rokkad/actions/runs/34588723881)
+started for fb3db63; observed in progress at publication, result not yet verified.
 
 ## Deferred acceptance and owner decisions
 
@@ -155,8 +155,9 @@ reconstructions. Refund issuance, proration and chargebacks are not automated.
 
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).
-Next delivery step: publish the local checkpoints when requested, then inspect CI.
-Broader R12 orgs/model/form/renewal-service organization needs its own review.
+Next: inspect the published CI result, then review orgs views responsibilities
+and dependencies before extracting Workspace, membership/invitations, role settings
+and compatibility routing. Broader model/form/renewal-service work remains separate.
 Razorpay and license scoping remain shelved.
 
 Keep this file short: update current state and relevant evidence; move superseded

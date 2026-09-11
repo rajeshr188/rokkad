@@ -18,8 +18,9 @@ removed. The Loans views portion of R12 is complete: focused modules own all
 handlers and views.py retains compatibility imports. See the
 [module map](../implementation/loans-view-organization.md). Foundation, operator
 commands and billing hardening are included in the local checkpoint.
-Local changes remain unpublished. Broader R12 orgs/model/form/renewal-service
-organization is separate work requiring its own dependency review.
+Application checkpoints are published through fb3db63. Inspect CI, then review
+orgs views responsibilities/dependencies for the next R12 extraction. Broader
+model/form/renewal-service organization remains separate review work.
 
 Razorpay setup/provider testing is shelved as
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).
