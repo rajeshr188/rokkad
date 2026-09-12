@@ -79,6 +79,7 @@ def get_pawn_loan_operations_snapshot(
     current_risk = LoanRiskSnapshot.objects.filter(
         workspace_id=workspace_id,
         status=LoanRiskSnapshot.Status.CURRENT,
+        loan__state=PawnLoanState.ACTIVE.value,
     )
     return PawnLoanOperationsSnapshot(
         generated_at=now,

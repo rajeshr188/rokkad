@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [loans, monitoring, operations]
 ---
 
@@ -10,7 +10,10 @@ tags: [loans, monitoring, operations]
 Open **Loan setup → Operations console → Loan health**. This remains an
 administration screen requiring workspace settings permission. Every active loan
 appears, including loans that have never been assessed. Loan detail remains the
-place for live calculations and collateral appraisal history.
+place for live calculations on active loans and collateral appraisal history.
+Closed loans stop live health calculations and disappear from active alerts;
+settlement, appraisal and event history remain available. A release reversal that
+reopens a loan puts it back into monitoring with an outdated assessment.
 
 ## Read the portfolio
 
@@ -46,6 +49,61 @@ assessment. The counts explain the missing work. Unknown coverage has a separate
 count among current assessments. Metric filters use current results only. Internal
 alerts retain their assessment dates; review live details before acting. Nothing
 is sent to a borrower merely by opening or refreshing this page.
+
+## When a loan needs another assessment
+
+Refresh health after relevant source changes: repayments or their reversals,
+collateral/custody/appraisal changes, applicable metal quotes (including corrections
+or withdrawals), and monitoring-policy changes. A newly active or reopened loan
+also needs an assessment. Closed loans leave the monitoring queue.
+
+Refresh active loans once each new local calendar day even without an edit: DPD,
+maturity distance, projected interest and evidence freshness can change with time.
+The repeating worker selects missing, outdated or failed assessments; it does not
+recalculate every already-current loan every minute or every hour. Its busy/idle
+polling intervals control when pending work is noticed, not the lifetime of a
+successful assessment. An authorized individual refresh remains available.
+
+The owner selected completion within one hour after an applicable metal-price
+change as the launch load-test target. That does not mean all active loans need
+hourly recomputation when nothing changes. Automatic calculation refresh is also
+different from physically inspecting collateral and recording a new appraisal.
+Refreshing cannot cure stale or missing price/appraisal evidence.
+
+## Payment performance and the NPA distinction
+
+The current classifier is per loan and operational. It folds the current
+contractual schedule and dated repayment/reversal allocations, finds the oldest
+obligation with unpaid principal or interest whose due date is before today, and
+calculates DPD from that due date. A partial payment does not reset DPD while that
+oldest obligation remains unpaid. Grace affects operational escalation, not the
+contractual due date or DPD. A bullet loan's age alone is not payment delinquency:
+its actual schedule determines when money becomes due.
+
+| Performance | Default condition |
+| --- | --- |
+| Standard | DPD below 1 |
+| Watch | DPD from 1 through 89 |
+| Substandard | DPD at least 90 |
+
+The effective Workspace/license monitoring policy can change these thresholds.
+Substandard raises DPD_SUBSTANDARD and critical review severity. It is not an
+implemented statutory NPA decision. The compliance-profile field identifies a
+policy; it does not load a regulatory rules engine. Current code does not implement
+borrower-wide NPA contagion, NPA upgrade/cure rules, doubtful/loss aging,
+provisioning or regulatory income-recognition rules.
+
+For context, the [RBI's April 2025 commercial-bank circular](https://rbi.org.in/scripts/NotificationUser.aspx?Id=12822)
+uses more-than-90-day overdue wording for term loans and includes broader
+classification requirements. This illustrates why our configurable >=90-day
+operational label must not be represented as regulatory compliance. Applicable
+requirements need review for the intended lender type before adding an NPA module.
+
+Collateral risk is independent: coverage exposure of INR 100,000 against eligible
+collateral worth INR 90,000 produces a INR 10,000 full shortfall even when DPD is
+zero. Conversely, a seriously overdue loan may still have ample collateral. LTV
+limits can raise warnings before a full shortfall; unavailable valuation evidence
+means unknown coverage, not zero value or automatic NPA classification.
 
 ## Change evidence age limits or monitoring thresholds
 
@@ -90,21 +148,35 @@ docker compose --profile monitoring up -d monitoring
 For production Compose use the corresponding `-f docker-compose.production.yml`
 file and its existing runtime environment. The worker runs startup role/migration
 checks. This guide is configuration, not a claim that production or the local
-background service has been started. Use one explicitly configured job per
-Workspace; do not infer identity from a user's last-selected Workspace.
+background service has been started. A process can serve multiple explicitly
+selected Workspaces in turn. For example:
 
-Each pass processes at most 50 loans in this example and waits five minutes after
-completion. Unassessed loans go first, then older attempts. Errors are reported and
-retried on later passes without blocking older pending work. A large backlog needs
-multiple passes. Archived/suspended Workspaces are refused on each pass. Monitor
-logs (`selected`, `current`, `errors`) and the page's outstanding counts; this is
+```powershell
+.\.venv314\Scripts\python.exe manage.py reassess_pawn_loans --workspace-id 123 --workspace-id 456 --batch-size 50 --busy-seconds 1 --repeat-seconds 300 --settings django_project.settings.dev
+```
+
+The supplied order determines turns; duplicate IDs are ignored. Configure process
+counts and Workspace lists explicitly; identity never comes from a user's
+last-selected Workspace. The optional Compose profile still supplies one ID.
+
+Each turn processes at most 50 candidate loans in this example. Each loan commits
+separately, releasing its lock before the next loan. Unassessed loans go first,
+then older attempts; each candidate is attempted at most once per turn. A failure
+does not roll back loans already committed or prevent other Workspace turns.
+
+After giving every configured Workspace a turn, the worker waits one second while
+assessments are succeeding (`--busy-seconds`, configurable from 1 to 60). When no
+assessment succeeds, it waits the idle/error interval (`--repeat-seconds`, five
+minutes here). A failed loan cannot cause an immediate retry loop within its turn.
+Archived/suspended Workspaces are refused, including if lifecycle changes during
+a pass. Monitor logs (`selected`, `current`, `errors`) and the page's outstanding counts; this is
 bounded polling, not a guarantee that all loans update immediately after a change.
 
 Omit `--repeat-seconds` for a single pass or an OS scheduler. A one-shot run exits
 with failure when assessments fail. Only one-shot mode permits `--as-of YYYY-MM-DD`;
 a historical/future projection is outdated on today's portfolio. Repeated mode
-uses the local date anew every time, opens/closes its own transaction context, and
-continues reporting failures until stopped. It sends no emails or WhatsApp messages.
+uses the local date anew every time, opens/closes a separate transaction context
+for each loan, and continues reporting failures until stopped. It sends no emails or WhatsApp messages.
 
-See [the architecture decision](../adr/2026-09-11-complete-loan-monitoring.md) and
+See [the worker decision](../adr/2026-09-11-monitoring-worker-turns.md) and
 [container operations](../implementation/container-and-ci.md).

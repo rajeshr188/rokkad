@@ -1,11 +1,16 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [rates, appraisal, onboarding, monitoring]
 ---
 
 # Rates, appraisal and collateral coverage review
+
+The subsequent [origination freshness review](origination-rate-freshness-review.md)
+records the owner's same-day-at-approval choice, confirmed quote-provenance gaps
+and proposed delayed-disbursal/backdated-entry behavior. Enforcement is the next
+increment; monitoring age limits have not been applied to origination.
 
 Reviewed against published application checkpoint `fdb5e97f`, following a new-loan
 failure when no metal valuation rate existed. The review examined code paths;
@@ -234,3 +239,189 @@ PostgreSQL documents SKIP LOCKED for competing consumers of queue-like work;
 it is useful coordination, not a throughput guarantee
 ([SELECT locking](https://www.postgresql.org/docs/current/sql-select.html)).
 No application code or worker configuration changed during this capacity review.
+
+
+## First capacity increment (2026-09-11)
+
+The UI/amendment checkpoint is published as `21a48aee`. Subsequent capacity work
+is local and separate from that checkpoint:
+
+- Invalidation now targets ACTIVE loans only. Closed loan detail retains balance,
+  exposure, settlement and history but omits live delinquency/collateral/risk
+  calculations. Operational alert lists and latest active-assessment diagnostics
+  exclude closed loans without deleting historical alerts or assessments.
+- Successful and failed refresh writes recheck loan state under its row lock.
+  A concurrent closure discards the result, including first-failure attempts.
+  Release reversal reactivates the loan and invalidates its projection.
+- Refresh reuses its authoritative exposure in collateral valuation, then passes
+  its delinquency/collateral results into risk assessment. Reused inputs must
+  match the scoped loan and as-of date. There is no persistent cache or change to
+  financial formulas, fingerprints, source-change checks or transaction locks.
+
+### Reproducible initial baseline
+
+Run `.\.venv314\Scripts\python.exe scripts/benchmark_monitoring.py`. The script
+forces test settings and a disposable `test_rokkad_monitor_benchmark` database;
+synthetic rows roll back after the test. Existing development rows are untouched.
+It reserves new identities and bulk-copies read evidence from a command-created,
+100-day-old bullet loan with one gold item, one contractual obligation and stale
+quote/appraisal evidence. It preserves relational and tranche references needed
+by the read path and checks monetary/flag parity against the seed. Synthetic
+copies are not valid lifecycle fixtures or audited origination history.
+
+Selection, portfolio reads and refresh writes run with an explicitly restricted
+NOSUPERUSER/NOBYPASSRLS role under the Workspace context. Data setup uses the test
+owner role. These are homogeneous portfolio-size microbenchmarks: one Workspace,
+one local process, warm database, a 50-loan sample, no simultaneous user traffic.
+They do not represent the full production workload, long histories, all product
+variants, background contention, complete portfolio draining or 100 organizations.
+Measured locally on Windows 11 (16 logical CPUs), Python 3.14.3, Django 6.0.3
+and PostgreSQL 16.1. Wall times are single observations, affected by other local test activity; query
+counts are the more stable evidence. Query logs are cleared between measurements
+to avoid Django's 9,000-query logging limit truncating later samples.
+
+| Active loans | Portfolio queries | Portfolio seconds before / after | Refresh-50 queries before / after | Refresh-50 seconds before / after |
+| --- | --- | --- | --- | --- |
+| 3,000 | 5 | 0.135 / 0.149 | 6,904 / 4,004 | 9.002 / 4.525 |
+| 10,000 | 5 | 0.288 / 0.277 | 6,904 / 4,004 | 10.479 / 4.623 |
+
+Removing repeated component reads cuts refresh queries by 42%. Remaining reads
+include loan/collateral/event loads, schedule/obligation folds, policy resolution
+and the two source fingerprints. The existing five-minute pause and long batch
+transaction have not changed. Do not extrapolate these timings into a promise
+that one worker supports the launch target.
+
+### Remaining priority, in order
+
+1. Expand the 3,000/10,000-loan benchmark to a reviewed mix of products, ages,
+   collateral counts/metals, repayments, reversals, closed history and rate bursts;
+   measure foreground latency, invalidation time and backlog age alongside refresh.
+2. Optimize measured remaining reads and design short transactions plus prompt,
+   bounded backlog draining with fair Workspace scheduling and retries. Preserve
+   source-change detection, closure safety and explicit RLS contexts.
+3. Run the complete 100-organization workload at the 300,000 and 1,000,000 active
+   loan bounds, with 30-100 daily operations per organization and concurrent jobs.
+   Record hardware, duration, p95/p99 foreground latency, throughput, errors and
+   recovery/backlog age against agreed acceptance targets before launch claims.
+
+This remains active work, not shelved future work. License scoping, Razorpay and
+physical device acceptance remain separately deferred.
+
+
+## Mixed workload and worker increment (2026-09-11)
+
+The initial homogeneous fixture is now supplemented by
+`scripts/benchmark_monitoring_mixed.py`. Run it with the repository Python. It
+uses the same disposable test database and never connects to development loan
+rows. The mixed run commits synthetic test data to measure real per-loan worker
+transactions; Django's TransactionTestCase flushes that data at completion.
+Do not run the two benchmark scripts simultaneously against that database.
+
+The interleaved active mix has equal numbers of:
+
+- 100-day bullet loans with one gold item;
+- 7-day bullet loans with one gold item;
+- 180-day periodic-interest bullet loans with gold and silver items;
+- 400-day flexible loans with four gold/silver items;
+- 180-day EMI loans with one gold item.
+
+The last three profiles include three dated repayments and reversal of the latest
+repayment. An additional closed, fully released silver-loan profile adds 600 closed
+loans to the 3,000-active portfolio and 2,000 to the 10,000-active portfolio. Seed
+loans use actual commands, numbering, frozen terms, photos and release evidence.
+Copies preserve relational/tranche references used by the selectors; they remain
+synthetic read-load fixtures, not auditable origination records or workflow tests.
+Gold and silver quotes include historical and current evidence. Monetary, DPD,
+coverage, flags and risk fingerprints are checked against their real seed profile.
+Gold quote changes invalidate all active projections while closed loans stay out.
+
+Measurements use a NOSUPERUSER/NOBYPASSRLS role. The script also measures an actual
+worker pass after committing the dataset, with no surrounding transaction, and
+asserts that an unset Workspace context cannot read the loans. Seed/setup writes
+use the disposable owner role. This is a more varied synthetic baseline, not a
+measured distribution of customer behavior or the full 100-organization workload.
+
+### Measured read improvement
+
+Schedule allocation reads were an N+1 cost: each obligation fetched its own
+allocations, repeated by the exposure and delinquency selectors. The canonical
+single-schedule selector now prefetches allocations through the requested date in
+one query and feeds the same existing fold. Twelve obligations need two queries
+instead of thirteen. Tests cover same-day repayment, reversal, historical dates,
+amount parity and the constant query count.
+
+| Profile / operation | Before | After |
+| --- | --- | --- |
+| Periodic-interest assessment queries | 119 | 97 |
+| EMI assessment queries | 116 | 98 |
+| Mixed refresh-50 queries, either portfolio size | 5,124 | 4,724 |
+
+Other profiles retain their prior query counts. Local wall time did not show a
+stable speedup from this smaller optimization; avoid claiming one. Repeated
+tranche/event reads for older loans remain measurable work (the 400-day exposure
+alone still needs 60 queries).
+
+### Committed worker measurement and behavior
+
+On the same local Windows/Python/PostgreSQL environment as the first baseline,
+the final 10,000-active/2,000-closed run recorded:
+
+| Operation | Queries | Seconds |
+| --- | --- | --- |
+| Loan health summary | 3 | 0.201 |
+| First portfolio page | 2 | 0.307 |
+| Older flexible-loan exposure | 60 | 0.473 |
+| Existing in-context refresh of 50 | 4,724 | 6.472 |
+| New worker pass, 50 separate loan commits | 5,199 | 7.593 |
+| Gold quote invalidation at 10,000 active loans | 2 | 1.449 |
+
+These are single local observations with other test activity, not p95/p99 latency
+or a throughput guarantee. The new worker intentionally pays transaction/context
+cost to release each loan promptly. A restricted-role concurrency test proves a
+second connection can read and NOWAIT-lock the first committed loan while the
+second candidate is processed. Competing passes keep one snapshot; bad candidates
+are attempted once per pass, and foreign Workspace projections remain untouched.
+
+Repeated command rounds give each explicitly configured Workspace a bounded turn.
+Successful rounds use a one-second busy pause by default; empty/error-only rounds
+use the configured longer idle interval. Dates and lifecycle are rechecked. No
+worker was started against development or production data. See the
+[worker decision](../adr/2026-09-11-monitoring-worker-turns.md) and
+[operator guide](../flows/loan-health-monitoring.md).
+
+The next acceptance step is the full multi-organization load test with explicit
+freshness targets, sustained price changes, concurrent servicing, backlog age,
+foreground p95/p99, worker recovery and bounded process counts. This requires
+300,000 and 1,000,000 active-loan runs before launch-capacity claims. Further read
+optimization and write/invalidation coalescing should follow measured failures.
+
+
+### Owner-selected freshness target
+
+The owner selected **within one hour after a metal-price change** for all affected
+active loans. Treat this as the launch test's acceptance target, not a current
+capacity claim. At 100 organizations, a platform-wide wave affecting 300,000 loans
+requires at least 84 completed assessments/second; one affecting 1,000,000 loans
+requires at least 278/second, before headroom, retries and foreground traffic.
+The local committed-worker sample does not meet or prove those aggregate rates.
+
+The next workload must verify current-source correctness during overlapping price
+writes/assessment publication as well as throughput. It must cover backlog drain,
+concurrent repayments/releases, worker interruption/restart, failed evidence,
+closed-loan exclusion and cross-Workspace isolation. Do not declare success from
+linear extrapolation or a small concurrency smoke test.
+
+On 2026-09-12, the continuous 100 x 3,000-active local run failed: 121,869 of
+300,000 loans were observed assessed at 3,589.09 seconds, with no errors and
+passing sampled correctness checks. The 100 x 10,000 dataset is prepared, but
+a 706-second measurement gap invalidated its timed phase. An uninterrupted
+million-loan result remains outstanding. A subsequent retry was stopped at the
+owner's request after 19,185 assessments were observed at 940.65 seconds. Further
+large-scale testing is shelved until better hardware is available under
+[FW-004](../plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity). These results
+do not establish launch capacity; measured query costs remain documented for
+later optimization review.
+
+The reproducible full-size driver and its exact limits are documented in the
+[capacity test](monitoring-capacity-test.md). The 100-Workspace measurements do
+not establish regulatory NPA classification; see the [operational distinction](../flows/loan-health-monitoring.md#payment-performance-and-the-npa-distinction).

@@ -105,6 +105,7 @@ def pawn_loan_detail(request, pk):
             )
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["exposure_error"] = str(exc)
+    if loan.state == PawnLoanState.ACTIVE.value:
         try:
             context["delinquency"] = get_pawn_loan_delinquency(loan.pk, as_of_date=context["today"])
             context["collateral_valuation"] = get_pawn_loan_collateral_valuation(loan.pk, as_of_date=context["today"])

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-12
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -25,6 +25,8 @@ plans; shelving an idea must not hide a release blocker.
 | --- | --- | --- | --- | --- |
 | FW-001 | Optional owner-configurable license scope | Shelved; review and owner approval required | Owner chooses to revisit staff access across licenses | Direction documented; no license assignments or restrictions implemented |
 | FW-002 | Razorpay setup and provider test-mode acceptance | Shelved at owner request; required before real paid onboarding | Owner starts Razorpay setup and explicitly resumes provider testing | Billing implementation and mocked tests complete; no provider setup or end-to-end rehearsal |
+| FW-003 | Formal lender-specific NPA classification | Unscheduled design review; no implementation approval | Intended lender type needs regulatory NPA reporting | Existing per-loan operational DPD and collateral-risk classifications documented |
+| FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 
 ## FW-001: Optional owner-configurable license scope
 
@@ -147,3 +149,55 @@ a shelved idea.
 - References (ADR, plan, files, commit):
 - Outcome / active delivery link:
 ```
+
+## FW-003: Formal lender-specific NPA classification
+
+**Captured:** 2026-09-11. **Priority/date:** unscheduled.
+**Implementation approval:** not granted by the monitoring capacity task.
+
+Current Loan health derives per-loan DPD from contractual obligations and labels
+Standard, Watch and Substandard using effective monitoring-policy thresholds.
+Collateral LTV/shortfall is independent. The default Substandard threshold is
+DPD >= 90, which must not be presented as a complete regulatory NPA decision.
+The compliance-profile name alone does not implement regulatory rules.
+
+Before implementation, identify the intended lender type and applicable framework,
+then review classification boundaries, borrower-wide versus per-loan scope,
+upgrade/cure rules, restructuring treatment, doubtful/loss aging and any reporting
+or income-recognition obligations. Preserve canonical schedules, repayments and
+reversal history. Do not silently change the operational thresholds or restore
+retired general-ledger accounting. See [the current explanation](../flows/loan-health-monitoring.md#payment-performance-and-the-npa-distinction).
+
+## FW-004: Launch-scale loan monitoring capacity
+
+**Shelved / last reviewed:** 2026-09-12. **Decision owner:** project owner.
+**Resume trigger:** better representative hardware is available and the owner
+explicitly resumes capacity testing. Do not automatically restart long local runs.
+
+**Target.** At least 100 organizations with 3,000-10,000 active loans each and
+30-100 loans processed per organization/day. All affected active loans should
+receive a current health assessment within one hour after a metal-price change,
+while ordinary servicing remains usable. This target remains unproven; shelving
+the test does not establish production capacity or waive launch acceptance.
+
+**Where it stopped.** The valid 100 x 3,000 run assessed 121,869/300,000 loans by
+3,589.09 seconds and failed the target, with zero reported errors and passing
+sampled correctness checks. The million-active/200,000-closed fixture was prepared.
+One upper-size attempt was invalidated by a 706-second measurement gap. The next
+retry was stopped at the owner's request because it was too slow on this machine;
+its last observation was 19,185/1,000,000 at 940.65 seconds, with no reported errors.
+That partial retry is not an acceptance result and had no final monetary-validation
+pass. Test clients are stopped and the temporary role is removed. The disposable
+`test_rokkad_monitoring_load` database is retained locally (about 27.5 GB before the
+latest wave); no normal development or production worker was started.
+
+**Pickup notes.** Preserve the existing RLS, closed-loan exclusion, per-loan commits,
+source-change guards and repayment/reversal rules. The
+[capacity report](../implementation/monitoring-capacity-test.md) records workload,
+environment, exact results, limitations and commands. Resume on documented hardware
+with an uninterrupted test window; revalidate fixtures and runtime-role restrictions.
+The full 300,000/1,000,000 matrix and realistic foreground traffic still need to pass.
+Overlapping price changes, recovery/restarts and concurrent origination/releases
+remain additional acceptance dimensions. Hardware alone is not an established fix:
+measured candidates include the per-loan pending lookup and repeated financial
+history reads. Assess those separately when capacity work resumes.

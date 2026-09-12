@@ -39,6 +39,10 @@ is authoritative for:
 - the unpaid rows used to calculate DPD;
 - schedule and allocation integrity findings.
 
+The single-schedule selector fetches obligations and date-filtered allocations
+in two queries and passes them to the same fold. It does not retain a cross-date
+cache; reversal allocations remain filtered by their source effective date.
+
 Fees are not scheduled obligations in the current contract and remain recorded
 balance components. An over-allocated obligation is reported and excluded from
 aggregate obligation amounts; it is never silently clamped into a valid row.
@@ -73,6 +77,9 @@ without projections. Current means a successful current-contract projection for
 today; missing/outdated/error assessments do not contribute to claimed complete
 portfolio monetary totals. Unknown collateral coverage is a separate dimension.
 Coverage exposure, headroom and shortfall are copied from the valuation/LTV selector.
+A refresh reuses its scoped, same-date exposure, delinquency and collateral
+results between layers; public reads can still calculate these independently.
+Closed loans retain financial/history reads but stop live health calculations.
 See [Loan health](../flows/loan-health-monitoring.md).
 
 Current collateral valuation applies the effective monitoring policy's inclusive

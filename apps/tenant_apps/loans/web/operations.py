@@ -58,6 +58,7 @@ def pawn_risk_portfolio(request):
     alerts = tuple(LoanRiskAlert.objects.filter(
         workspace=request.loans_workspace,
         status=LoanRiskAlert.Status.OPEN,
+        loan__state="ACTIVE",
     ).select_related("loan", "loan__borrower", "source_event")[:100])
     alert_rows = []
     for alert in alerts:

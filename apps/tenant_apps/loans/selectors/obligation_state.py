@@ -120,8 +120,12 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
 def calculate_obligation_state_as_of(schedule, as_of_date):
     return _fold_obligation_state(
         schedule, as_of_date,
-        schedule.obligations.order_by("due_date", "sequence") if schedule else (),
-        lambda obligation: obligation.allocations.filter(source_event__effective_date__lte=as_of_date),
+        schedule.obligations.order_by("due_date", "sequence").prefetch_related(Prefetch(
+            "allocations",
+            queryset=ObligationAllocation.objects.filter(source_event__effective_date__lte=as_of_date),
+            to_attr="as_of_allocations",
+        )) if schedule else (),
+        lambda obligation: obligation.as_of_allocations,
     )
 
 

@@ -6,7 +6,7 @@ from unittest.mock import patch
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
-from apps.tenant_apps.loans.selectors.obligation_state import calculate_obligation_state_as_of
+from apps.tenant_apps.loans.selectors.obligation_state import _fold_obligation_state
 
 
 class Rows(list):
@@ -29,7 +29,7 @@ class CounterWorkTests(SimpleTestCase):
         schedule = None if obligations is None else SimpleNamespace(pk=1, fingerprint="test", maturity_date=date(2027, 1, 1), obligations=Rows(obligations))
         with patch("apps.tenant_apps.loans.selectors.counter_work.current_tenant_workspace_id", return_value=3), patch(
             "apps.tenant_apps.loans.selectors.counter_work.PawnLoan.objects.filter",
-        ) as query, patch("apps.tenant_apps.loans.selectors.counter_work.get_obligation_states_for_loans", return_value={7: calculate_obligation_state_as_of(schedule, self.today)}):
+        ) as query, patch("apps.tenant_apps.loans.selectors.counter_work.get_obligation_states_for_loans", return_value={7: _fold_obligation_state(schedule, self.today, schedule.obligations if schedule else (), lambda row: row.allocations)}):
             query.return_value.select_related.return_value.order_by.return_value = [loan]
             result = get_workspace_counter_work(workspace=SimpleNamespace(pk=3), as_of_date=self.today)
             self.assertEqual(query.call_args.kwargs["workspace"].pk, 3)

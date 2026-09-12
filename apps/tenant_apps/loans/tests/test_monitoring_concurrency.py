@@ -1,6 +1,7 @@
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
@@ -14,7 +15,7 @@ from apps.tenancy.context import workspace_context, current_workspace_id
 from apps.tenant_apps.loans.models import LoanMonitoringPolicy, LoanRiskSnapshot, PawnLoan
 from apps.tenant_apps.loans.selectors.risk_portfolio import get_risk_portfolio_summary
 from apps.tenant_apps.loans.services.monitoring_policies import create_loan_monitoring_policy
-from apps.tenant_apps.loans.services.risk_snapshots import refresh_loan_risk_snapshot, reassess_pawn_loans_batch
+from apps.tenant_apps.loans.services.risk_snapshots import refresh_loan_risk_snapshot, reassess_pawn_loans_batch, RiskSnapshotRefreshError
 from apps.tenant_apps.loans.tests import test_collateral_reappraisal as fixtures
 from apps.tenant_apps.loans.web.economic_forms import LoanMonitoringPolicyForm
 from apps.tenant_apps.rates.models import Rate
@@ -29,6 +30,109 @@ class MonitoringConcurrencyTests(TransactionTestCase):
         Membership.objects.create(user=self.actor, company=self.tenant, role=Role.objects.get_or_create(name="Owner")[0])
         with workspace_context(self.tenant.pk):
             fixtures.CollateralReappraisalTests.make_loan(self)
+
+    def test_worker_pass_commits_each_loan_and_isolates_restricted_contexts(self):
+        from types import SimpleNamespace
+        from apps.tenant_apps.loans.services.risk_jobs import reassess_pawn_loans_pass
+        foreign = Company.objects.create(name=uuid.uuid4().hex, schema_name=uuid.uuid4().hex,
+            owner=self.actor, creator=self.actor)
+        Membership.objects.create(user=self.actor, company=foreign, role=Role.objects.get_or_create(name="Owner")[0])
+        with workspace_context(foreign.pk):
+            holder = SimpleNamespace(tenant=foreign, actor=self.actor)
+            fixtures.CollateralReappraisalTests.make_loan(holder)
+        with workspace_context(self.tenant.pk):
+            broken = PawnLoan.objects.create(workspace=self.tenant, license=self.loan.license,
+                series=self.loan.series, borrower=self.loan.borrower, product_version=self.loan.product_version,
+                loan_number=uuid.uuid4().hex, state="ACTIVE", principal_amount=1000, monthly_interest_rate=2)
+            with self.assertRaisesMessage(RiskSnapshotRefreshError, "surrounding transaction"):
+                reassess_pawn_loans_pass(workspace_id=self.tenant.pk, as_of_date=self.today)
+        role = connection.ops.quote_name("worker_pass_" + uuid.uuid4().hex)
+        with connection.cursor() as cursor:
+            cursor.execute(f"CREATE ROLE {role} NOLOGIN NOSUPERUSER NOBYPASSRLS")
+            cursor.execute(f"GRANT USAGE ON SCHEMA public TO {role}")
+            cursor.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role}")
+            cursor.execute(f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role}")
+            cursor.execute(f"SET ROLE {role}")
+        def verify_previous_commit():
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SET ROLE {role}")
+                with workspace_context(self.tenant.pk):
+                    # NOWAIT would fail if the first loan remained locked while
+                    # the second was processed. A different connection must also
+                    # see the first committed projection.
+                    PawnLoan.objects.select_for_update(nowait=True).get(pk=self.loan.pk)
+                    return LoanRiskSnapshot.objects.filter(loan=self.loan, status="CURRENT").exists()
+            finally:
+                connections.close_all()
+        def batch(**kwargs):
+            if kwargs["loan_ids"] == (broken.pk,):
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    self.assertTrue(pool.submit(verify_previous_commit).result(timeout=15))
+            return reassess_pawn_loans_batch(**kwargs)
+        try:
+            with patch("apps.tenant_apps.loans.services.risk_jobs.reassess_pawn_loans_batch", side_effect=batch):
+                result = reassess_pawn_loans_pass(workspace_id=self.tenant.pk, as_of_date=self.today, batch_size=50)
+            self.assertEqual(result["selected"], 2)
+            self.assertEqual(result["current"], 1)
+            self.assertEqual([row["loan_id"] for row in result["errors"]], [broken.pk])
+            self.assertIsNone(current_workspace_id())
+            self.assertFalse(connection.in_atomic_block)
+            self.assertEqual(PawnLoan.objects.count(), 0)  # RLS denies an unset context.
+            with workspace_context(foreign.pk):
+                self.assertEqual(LoanRiskSnapshot.objects.count(), 0)
+            with workspace_context(self.tenant.pk):
+                self.assertEqual(LoanRiskSnapshot.objects.count(), 2)
+        finally:
+            with connection.cursor() as cursor:
+                cursor.execute("RESET ROLE")
+                cursor.execute(f"DROP OWNED BY {role}")
+                cursor.execute(f"DROP ROLE {role}")
+
+    def test_competing_worker_passes_keep_one_snapshot(self):
+        from apps.tenant_apps.loans.services.risk_jobs import reassess_pawn_loans_pass
+        barrier = Barrier(2)
+        def run(_):
+            try:
+                barrier.wait(timeout=10)
+                return reassess_pawn_loans_pass(workspace_id=self.tenant.pk, as_of_date=self.today, batch_size=50)
+            finally:
+                connections.close_all()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(run, (1, 2)))
+        self.assertEqual(sum(result["current"] for result in results), 1)
+        with workspace_context(self.tenant.pk):
+            self.assertEqual(LoanRiskSnapshot.objects.filter(loan=self.loan).count(), 1)
+
+    def test_concurrent_closure_discards_success_and_error_assessments(self):
+        from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
+        def close():
+            try:
+                with workspace_context(self.tenant.pk):
+                    loan = PawnLoan.objects.select_for_update().get(pk=self.loan.pk)
+                    loan.state = "CLOSED"
+                    loan.save(update_fields=("state", "updated_at"))
+            finally:
+                connections.close_all()
+
+        for fails in (False, True):
+            with workspace_context(self.tenant.pk):
+                PawnLoan.objects.filter(pk=self.loan.pk).update(state="ACTIVE")
+            def calculate(*args, **kwargs):
+                result = get_pawn_loan_exposure(*args, **kwargs)
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(close).result(timeout=15)
+                if fails:
+                    raise ValueError("Evidence read failed during closure")
+                return result
+            with workspace_context(self.tenant.pk), patch(
+                "apps.tenant_apps.loans.services.risk_snapshots.get_pawn_loan_exposure", side_effect=calculate
+            ):
+                with self.assertRaises(RiskSnapshotRefreshError):
+                    refresh_loan_risk_snapshot(self.loan.pk, as_of_date=self.today)
+            with workspace_context(self.tenant.pk):
+                self.assertFalse(LoanRiskSnapshot.objects.filter(loan=self.loan).exists())
+                self.assertFalse(self.loan.risk_events.exists())
 
     def test_competing_amendments_create_one_successor(self):
         barrier = Barrier(2)

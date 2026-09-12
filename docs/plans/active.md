@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [plans, active]
 ---
 
@@ -15,15 +15,33 @@ active-loan reassessment) is implemented and validated; Loans 0006 is applied lo
 freshness, bounded repeated refresh and immutable policy amendments.
 See [Loan health](../flows/loan-health-monitoring.md); validation passed and Loans 0007 is applied locally.
 The owner's newly stated launch volumes require a capacity-hardening increment
-before production readiness claims. Next recommendation: agree freshness targets
-and benchmark representative 3,000/10,000-active-loan Workspaces under RLS; then
-remove repeated reads and improve bounded scheduling/lock duration. See the
+before production readiness claims. The owner has now shelved further large-scale
+testing until better hardware is available under
+[FW-004](future-work.md#fw-004-launch-scale-loan-monitoring-capacity). The selected
+one-hour freshness target remains unproven; do not restart long local tests
+without owner resumption. See the
 [capacity review](../implementation/rates-appraisal-monitoring-review.md#launch-capacity-requirements-and-review-2026-09-11).
-Operator UI/content and amendment submission review is complete. Publish this
-checkpoint, then prioritize closed-loan cleanup, representative RLS benchmarks,
-measured optimization and multi-organization load validation, in that order.
-The optional worker is configured in code but has not been started. Origination
-age requirements remain an explicit separate policy design item.
+Operator UI/content and amendment submission review is complete; checkpoint
+`21a48aee` is published. Closed-loan cleanup and the first homogeneous 3,000/10,000
+RLS baseline/read-reuse optimization are implemented locally. Mixed-history
+3,000/10,000-active benchmarks now pass, with additional closed loans, all four
+product structures, repayment/reversal evidence and price invalidation. Schedule
+allocation prefetch and per-loan worker transactions with bounded Workspace turns
+are implemented. The continuous 100 x 3,000-active baseline failed the one-hour target locally:
+121,869 of 300,000 loans were observed assessed by 3,589 seconds. The 100 x 10,000
+dataset is prepared; one phase stopped after a 706-second measurement gap, and
+the next retry was stopped at owner request after 19,185 assessments were observed
+at 940.65 seconds. Remaining large-scale testing is shelved in FW-004. Measured
+query-optimization candidates and the acceptance requirements are preserved for
+later prioritization; these partial upper-size runs establish no capacity claim.
+See the [full-load report](../implementation/monitoring-capacity-test.md) and [mixed results](../implementation/rates-appraisal-monitoring-review.md#mixed-workload-and-worker-increment-2026-09-11).
+The optional worker is configured in code but has not been started against normal
+development or production data. Origination
+age review is complete: the owner selected same-day quotes at approval for
+methods that consume Rates. The next increment needs the proposed delayed-disbursal
+and backdated-entry rules settled, then shared eligibility checks and frozen quote
+provenance. See the [origination review](../implementation/origination-rate-freshness-review.md).
+No new origination gate is implemented yet.
 See the [quote operator guide](../flows/metal-rate-entry.md). Existing form cleanup is published.
 
 Follow [incremental project hardening](project-hardening.md), based on the

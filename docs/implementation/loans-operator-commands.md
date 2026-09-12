@@ -78,8 +78,10 @@ credentials. Schema migrations continue to use the owner-only migration settings
 ## Repeated monitoring refresh
 
 `reassess_pawn_loans --workspace-id ID --batch-size 50 --repeat-seconds 300`
-uses today's local date for each bounded pass and establishes its own Workspace
-context. Use restricted runtime settings. An optional Compose monitoring service
+uses today's local date for each bounded turn and commits each loan in its own
+Workspace context. Repeat `--workspace-id` for round-robin Workspace turns. A
+successful round uses the short `--busy-seconds` pause (default 1); a round without
+success uses the idle/error interval (300 here). Use restricted runtime settings. An optional Compose monitoring service
 runs this command through role/migration startup checks. The operator must select
 and enable a Workspace job; this code change does not start it automatically.
 See [setup, status meanings and failure handling](../flows/loan-health-monitoring.md).

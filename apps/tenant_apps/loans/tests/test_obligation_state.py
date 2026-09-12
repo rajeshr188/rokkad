@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.selectors.obligation_state import (
-    calculate_obligation_state_as_of,
+    calculate_obligation_state_as_of, _fold_obligation_state,
 )
 
 
@@ -41,7 +41,7 @@ class ObligationStateContractTests(SimpleTestCase):
             ),
         )
 
-        state = calculate_obligation_state_as_of(schedule, date(2026, 8, 13))
+        state = _fold_obligation_state(schedule, date(2026, 8, 13), schedule.obligations, lambda row: row.allocations)
 
         self.assertEqual(state.remaining.principal, Decimal("3250"))
         self.assertEqual(state.remaining.interest, Decimal("350"))
@@ -62,7 +62,7 @@ class ObligationStateContractTests(SimpleTestCase):
             )
         )
 
-        state = calculate_obligation_state_as_of(schedule, date(2026, 8, 13))
+        state = _fold_obligation_state(schedule, date(2026, 8, 13), schedule.obligations, lambda row: row.allocations)
 
         self.assertEqual(state.remaining.total, Decimal("0"))
         self.assertEqual(

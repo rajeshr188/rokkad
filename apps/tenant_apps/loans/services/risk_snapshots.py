@@ -38,13 +38,16 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
     try:
         exposure = get_pawn_loan_exposure(loan_id, as_of_date=as_of_date)
         delinquency = get_pawn_loan_delinquency(loan_id, as_of_date=as_of_date)
-        collateral = get_pawn_loan_collateral_valuation(loan_id, as_of_date=as_of_date)
-        assessment = get_pawn_loan_risk_assessment(loan_id, as_of_date=as_of_date)
+        collateral = get_pawn_loan_collateral_valuation(loan_id, as_of_date=as_of_date, _exposure=exposure)
+        assessment = get_pawn_loan_risk_assessment(loan_id, as_of_date=as_of_date,
+            _delinquency=delinquency, _collateral=collateral)
     except Exception as exc:
         _record_error(loan_id, workspace_id, as_of_date, before, exc)
         raise RiskSnapshotRefreshError(str(exc)) from exc
     with transaction.atomic():
         loan = PawnLoan.objects.select_for_update().get(pk=loan_id, workspace_id=workspace_id)
+        if loan.state != PawnLoanState.ACTIVE.value:
+            raise RiskSnapshotRefreshError("Loan is no longer active; assessment discarded.")
         snapshot = LoanRiskSnapshot.objects.select_for_update().filter(loan=loan).first()
         old_projection = _projection(snapshot)
         after = _source_fingerprint(loan_id, workspace_id, as_of_date)
@@ -136,7 +139,7 @@ def rebuild_current_risk_snapshots(*, as_of_date: date, loan_ids=None):
     return results
 
 
-def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size=100):
+def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size=100, loan_ids=None):
     batch_size = int(batch_size)
     if not 1 <= batch_size <= 1000:
         raise RiskSnapshotRefreshError("Batch size must be between 1 and 1000.")
@@ -145,16 +148,13 @@ def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size
         raise RiskSnapshotRefreshError("Explicit workspace does not match the active tenant schema.")
     _require_active_workspace(workspace_id)
     with transaction.atomic():
-        current_loan_ids = LoanRiskSnapshot.objects.filter(
-            current_snapshot_filter(as_of_date), workspace_id=workspace_id,
-        ).values("loan_id")
-        candidate_ids = tuple(
-            PawnLoan.objects.select_for_update(skip_locked=True, of=("self",))
-            .filter(workspace_id=workspace_id, state=PawnLoanState.ACTIVE.value)
-            .exclude(pk__in=current_loan_ids)
-            .order_by(F("risk_snapshot__updated_at").asc(nulls_first=True), "pk")
-            .values_list("pk", flat=True)[:batch_size]
+        candidates = _pending_loans(
+            PawnLoan.objects.select_for_update(skip_locked=True, of=("self",)),
+            workspace_id, as_of_date,
         )
+        if loan_ids is not None:
+            candidates = candidates.filter(pk__in=loan_ids)
+        candidate_ids = tuple(candidates.values_list("pk", flat=True)[:batch_size])
         result = {"selected": len(candidate_ids), "current": 0, "errors": []}
         for loan_id in candidate_ids:
             try:
@@ -165,6 +165,15 @@ def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size
         return result
 
 
+def _pending_loans(queryset, workspace_id, as_of_date):
+    current_ids = LoanRiskSnapshot.objects.filter(
+        current_snapshot_filter(as_of_date), workspace_id=workspace_id,
+    ).values("loan_id")
+    return (queryset.filter(workspace_id=workspace_id, state=PawnLoanState.ACTIVE.value)
+        .exclude(pk__in=current_ids)
+        .order_by(F("risk_snapshot__updated_at").asc(nulls_first=True), "pk"))
+
+
 def _require_active_workspace(workspace_id):
     if not Company.objects.filter(pk=workspace_id, lifecycle_state=Company.LifecycleState.ACTIVE).exists():
         raise RiskSnapshotRefreshError("Risk refresh requires an ACTIVE Workspace.")
@@ -173,6 +182,8 @@ def _require_active_workspace(workspace_id):
 def _record_error(loan_id, workspace_id, as_of_date, fingerprint, exc):
     with transaction.atomic():
         loan = PawnLoan.objects.select_for_update().get(pk=loan_id, workspace_id=workspace_id)
+        if loan.state != PawnLoanState.ACTIVE.value:
+            return  # A concurrent closure ends monitoring, including error attempts.
         existing = LoanRiskSnapshot.objects.select_for_update().filter(loan=loan).first()
         old_projection = _projection(existing)
         snapshot, _ = LoanRiskSnapshot.objects.update_or_create(loan=loan, defaults={"workspace_id": workspace_id, "as_of_date": as_of_date, "status": LoanRiskSnapshot.Status.ERROR, "input_fingerprint": fingerprint, "error_message": str(exc)})

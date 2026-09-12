@@ -157,6 +157,79 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
         with self.assertRaises(RiskSnapshotRefreshError):
             reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today)
 
+    def test_closed_loan_skips_live_health_and_invalidation_then_reopens(self):
+        from apps.tenant_apps.loans.services import (
+            preview_pawn_loan_full_release, release_pawn_loan_in_full, reverse_pawn_loan_event,
+            finalize_pawn_loan_accrual,
+        )
+        from apps.tenant_apps.loans.web.pawn_reads import pawn_loan_detail
+        from apps.tenant_apps.loans.models import LoanNumberSequence
+        LoanNumberSequence.objects.create(series=self.loan.series, document_kind="PAWN_LOAN_RELEASE",
+            prefix="R-", width=5, maximum_number=10000)
+        snapshot = self.refresh()
+        for period in (1, 2, 3):
+            finalize_pawn_loan_accrual(self.loan.pk, period_number=period, actor=self.actor)
+        quote = preview_pawn_loan_full_release(self.loan.pk)
+        release = release_pawn_loan_in_full(self.loan.pk, settlement_amount=quote.minimum_settlement,
+            request_key="monitoring-close", actor=self.actor)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.state, "CLOSED")
+        snapshot.refresh_from_db()
+        saved = (snapshot.status, snapshot.error_message, snapshot.updated_at, snapshot.source_provenance)
+        Rate.objects.create(rate_source=self.source, buying_rate=3200, selling_rate=3300)
+        self.amend(rate_freshness_days=10)
+        snapshot.refresh_from_db()
+        self.assertEqual((snapshot.status, snapshot.error_message, snapshot.updated_at, snapshot.source_provenance), saved)
+        self.assertEqual(reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today)["selected"], 0)
+        request = RequestFactory().get("/")
+        request.user, request.workspace = self.actor, self.tenant
+        with patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_risk_assessment") as risk, \
+             patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_collateral_valuation") as valuation, \
+             patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_delinquency") as delinquency:
+            self.assertContains(pawn_loan_detail(request, self.loan.pk), "Live health monitoring has stopped")
+            risk.assert_not_called()
+            valuation.assert_not_called()
+            delinquency.assert_not_called()
+        with patch("apps.tenant_apps.loans.web.operations.assess_risk_alert_communication_readiness") as readiness:
+            pawn_risk_portfolio(request)
+            readiness.assert_not_called()
+        reverse_pawn_loan_event(release.loan_event.pk, reason="Correct development release", actor=self.actor)
+        self.loan.refresh_from_db()
+        snapshot.refresh_from_db()
+        self.assertEqual(self.loan.state, "ACTIVE")
+        self.assertEqual(snapshot.status, "STALE")
+        self.assertEqual(reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today)["current"], 1)
+
+    def test_prepared_reads_preserve_results_and_reject_wrong_loan_or_date(self):
+        from dataclasses import replace
+        from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
+        from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
+        from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_collateral_valuation
+        from apps.tenant_apps.loans.selectors.risk import get_pawn_loan_risk_assessment
+        from apps.tenant_apps.loans.services import record_pawn_loan_repayment, reverse_pawn_loan_event
+        for stage in ("opening", "repayment", "reversal"):
+            if stage == "repayment":
+                repayment = record_pawn_loan_repayment(self.loan.pk, amount="100", request_key="bench-parity", actor=self.actor)
+            elif stage == "reversal":
+                reverse_pawn_loan_event(repayment.loan_event.pk, reason="Parity after reversal", actor=self.actor)
+            exposure = get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today)
+            delinquency = get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today)
+            collateral = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
+            risk = get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today)
+            self.assertEqual(collateral, get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today, _exposure=exposure))
+            self.assertEqual(risk, get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today,
+                _delinquency=delinquency, _collateral=collateral))
+            snapshot = self.refresh()
+            self.assertEqual(snapshot.exposure, exposure.total_economic_exposure)
+            self.assertEqual(snapshot.assessment_fingerprint, risk.fingerprint)
+        for changes in ({"loan_id": -1}, {"as_of_date": self.today - timedelta(days=1)}):
+            with self.assertRaises(ValueError):
+                get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today, _exposure=replace(exposure, **changes))
+            with self.assertRaises(ValueError):
+                get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today, _delinquency=replace(delinquency, **changes))
+            with self.assertRaises(ValueError):
+                get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today, _collateral=replace(collateral, **changes))
+
     def test_form_and_history_offer_a_preserving_amendment(self):
         request = RequestFactory().get("/", {"amend_monitoring": self.policy.pk})
         request.user, request.workspace = self.actor, self.tenant

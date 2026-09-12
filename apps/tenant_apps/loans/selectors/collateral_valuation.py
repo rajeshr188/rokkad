@@ -56,9 +56,12 @@ class PawnLoanCollateralValuation:
     policy_error: str = ""
 
 
-def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date):
+def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
+    """Private prepared inputs are reused only within one source-checked refresh."""
     workspace_id = current_tenant_workspace_id()
     loan = PawnLoan.objects.select_related("policy_snapshot").prefetch_related("collateral_items").get(pk=loan_id, workspace_id=workspace_id)
+    if _exposure is not None and (_exposure.loan_id != loan.pk or _exposure.as_of_date != as_of_date):
+        raise ValueError("Prepared exposure must match the scoped loan and assessment date.")
     method = ValuationMethod(loan.policy_snapshot.valuation_method)
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
     policy_error = ""
@@ -108,7 +111,7 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date):
             rate_at, appraisal_at, rate_age, appraisal_age, rate_status, appraisal_status))
     blockers = tuple(code for row in results for code in row.blockers)
     total = None if blockers else sum((row.selected_value for row in results), Decimal("0"))
-    exposure = get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date)
+    exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date)
     ltv = calculate_ltv(exposure=exposure.ltv_exposure_basis, collateral_value=total, allowed_ltv_ratio=loan.policy_snapshot.maximum_ltv_ratio, blockers=blockers)
     # ``policy_snapshot`` is the reverse side of LoanPolicySnapshot.loan, so
     # PawnLoan has no generated ``policy_snapshot_id`` attribute. Use the

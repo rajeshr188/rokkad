@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [status, architecture]
 ---
 
@@ -9,7 +9,10 @@ tags: [status, architecture]
 
 ## Current checkpoint
 
-Branch: `rls-mvp`. Published application checkpoint: `fdb5e97f` (2026-09-11).
+Branch: `rls-mvp`. Published application checkpoint: `21a48aee` (2026-09-11).
+GitHub Workspace RLS checks passed for this checkpoint (run `34608453193`).
+Monitoring hardening and origination-policy review are committed locally on
+2026-09-12; publication is pending.
 All four orgs checkpoints are pushed: workspace/role settings (`ee31dda`),
 team/invitations (`0177fc3`), lifecycle/navigation (`e434828`), and final
 account/preferences, slug adapters and unused backup-view removal (`38eb1e3`).
@@ -46,6 +49,81 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- Monitoring checkpoint reviewed in an isolated export of the staged files
+  (2026-09-12), excluding concurrent Party portability changes. All 519 Loans
+  tests passed; the first invocation also reported one loader error from an
+  incorrect Rates test-module label. The corrected Rates, onboarding, scoped-route
+  and deployment run passed all 74 tests in 30.103 seconds. No application test
+  failed. Staged Python syntax, 564 tracked import boundaries, current documentation
+  links and whitespace checks pass. No large capacity test was restarted.
+  The [origination review](implementation/origination-rate-freshness-review.md)
+  records the owner's same-day quote requirement at approval and the missing
+  approval quote provenance. Enforcement is not implemented. Delayed-disbursal,
+  historical-date and legacy-approval handling are documented proposals for the
+  next increment; monitoring age limits and existing loan terms remain unchanged.
+
+- Full-capacity baseline measured locally (2026-09-12), with eight restricted-role
+  workers and concurrent portfolio reads/repayment-reversal pairs. The continuous
+  100 x 3,000-active run failed the one-hour gate: 121,869/300,000 (40.6%) observed
+  at 3,589.09 seconds; 122,400 after shutdown. Zero errors; sampled financial,
+  quote-provenance and scoped isolation checks passed. Foreground p95 was 0.462
+  seconds for portfolio reads and 0.275 seconds for repayment/reversal pairs
+  (648 samples each). The 100 x 10,000-active/200,000-closed dataset was fully
+  prepared (26.8 GB), but its timed phase suffered a 706-second measurement gap
+  and stopped as invalid continuous-load evidence. Its 2,800 post-stop assessments
+  are not a one-hour result. Available correctness checks passed; temporary-role
+  cleanup and absence of remaining test clients were verified. A second upper-size
+  retry was stopped at owner request after 19,185/1,000,000 assessments were observed
+  at 940.65 seconds; zero errors were reported, but no final monetary-validation
+  pass ran. Its clients are stopped and temporary role removed. Further large-scale
+  testing is shelved until better hardware is available and the owner resumes it,
+  under [FW-004](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity). See the
+  [capacity report](implementation/monitoring-capacity-test.md) for exact results,
+  test overhead/limits, measured query bottlenecks and retry instructions.
+  No normal development or production worker was started. The
+  [Loan health guide](flows/loan-health-monitoring.md#when-a-loan-needs-another-assessment)
+  documents daily/source-triggered refresh and operational DPD labels versus
+  formal NPA classification; lender-specific NPA design is unscheduled FW-003.
+  This turn changes benchmark tooling/documentation, not application rules.
+  This monitoring-capacity work is included in the reviewed local checkpoint;
+  publication is pending.
+
+- Mixed-capacity/worker increment (local, after published `21a48aee`): all 591
+  broader Loans, Rates, onboarding, scoped-route and deployment regressions passed
+  (242.569 seconds). The first broad run exposed three old dashboard test doubles
+  missing ORM prefetch support; those pure calculation tests now call the existing
+  fold directly. Focused worker/concurrency/financial tests passed (30 tests,
+  42.886 seconds). Mixed benchmarks at 3,000/10,000 active loans plus 600/2,000
+  closed loans passed under restricted RLS, covering four product structures,
+  repayment/reversal histories, multiple collateral items and price invalidation.
+  Schedule prefetch reduced refresh-50 queries from 5,124 to 4,724 with matching
+  financial results; no stable wall-time improvement is claimed for this change.
+  The committed 10,000-loan worker sample refreshed 50 loans in 7.593 seconds.
+  Worker passes now commit each loan separately and rotate through explicitly
+  configured Workspaces, using a short busy pause while work succeeds. Concurrency
+  checks prove earlier loan locks are released, completed work is visible, and
+  another Workspace remains isolated. The owner selected a one-hour freshness
+  target after a metal-price change; full 100-organization/300,000-1,000,000 active
+  load acceptance remains outstanding. All 183 local documentation links across
+  18 files, 559 tracked import boundaries, three new-module syntax/import checks
+  and whitespace checks pass. No migration or development/production worker
+  startup. Both capacity increments remain local and uncommitted. See the
+  [mixed results and acceptance target](implementation/rates-appraisal-monitoring-review.md#mixed-workload-and-worker-increment-2026-09-11).
+
+- First capacity increment (local, after published `21a48aee`): closed loans no
+  longer receive live health reads, rate/policy/source invalidation or active
+  alert work. Concurrent closure discards success/error refresh writes; a real
+  release reversal resumes monitoring. Same-refresh component reuse preserves
+  repayment/reversal results and rejects another loan/date. All 581 broader Loans,
+  Rates, onboarding and scoped-route regressions passed (240.725 seconds).
+  Homogeneous restricted-RLS benchmarks at 3,000 and 10,000 active loans passed:
+  refresh-50 queries fell from 6,904 to 4,004 (42% fewer); the 10,000-loan sample
+  fell from 10.479 to 4.623 seconds. This is an initial microbenchmark, not mixed
+  production-load acceptance. All 169 documentation links across 15 files,
+  559 tracked import boundaries and whitespace checks pass. No migration, worker
+  startup or development policy mutation was needed. Capacity changes remain
+  uncommitted for the next checkpoint. See the [results and remaining priority](implementation/rates-appraisal-monitoring-review.md#first-capacity-increment-2026-09-11).
+
 - Checkpoint review: authenticated browser checks confirmed Loan health loads and
   shows the empty active-loan state; economic setup fields and history were
   inspected. Populated portfolio and amendment submissions were verified in
@@ -74,7 +152,7 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
   whitespace pass. Both Compose configurations validate without resolving secrets.
   Optional repeating-worker wiring is implemented but has not been started or
   deployed. All four Rates/appraisal/monitoring increments are included in this reviewed
-  checkpoint; publication is the next operation.
+  checkpoint, published as `21a48aee` on `origin/rls-mvp`.
 - Freshness/reappraisal increment: all 558 broader Loans, Rates, route and operator
   regressions passed (190.570 seconds); 53 final focused checks passed (29.606
   seconds), including competing reviewers, read-only history access, original
@@ -309,9 +387,16 @@ See [reassessment](flows/collateral-reassessment.md). Migration/regression valid
 passed; Loans 0006 is applied locally. Increment 4 is implemented locally: all-active portfolio coverage, date-based
 freshness, bounded repeating refresh, transactional invalidation and immutable
 policy amendments. Validation passed and Loans 0007 is applied to local `rokkad_shared_dev`.
-Next: review Loan health and the amendment form, then publish the checkpoint.
+UI and amendment submission review is complete; checkpoint `21a48aee` is pushed.
+The 100 x 3,000-active capacity test failed its one-hour gate locally. Fair bounded
+worker turns and closed-loan cleanup are implemented. Further large-scale testing
+is owner-shelved until better hardware is available under
+[FW-004](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity); the one-hour
+capacity target remains unproven. See the [capacity report](implementation/monitoring-capacity-test.md).
 The optional repeating worker still requires explicit Workspace configuration and startup.
-See [Loan health](flows/loan-health-monitoring.md). Origination age rules require a separate policy contract.
+See [Loan health](flows/loan-health-monitoring.md). The owner selected same-day
+quotes at approval; the [origination review](implementation/origination-rate-freshness-review.md)
+records the proposed remaining date/disbursal rules before enforcement.
 
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).

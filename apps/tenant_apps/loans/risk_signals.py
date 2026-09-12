@@ -28,7 +28,7 @@ def _loan_id(instance):
 def _mark_loan(sender, instance, **kwargs):
     loan_id = _loan_id(instance)
     # Invalidate inside the source transaction while its RLS context is active.
-    LoanRiskSnapshot.objects.filter(workspace_id=instance.workspace_id, loan_id=loan_id).exclude(status=LoanRiskSnapshot.Status.ERROR).update(
+    LoanRiskSnapshot.objects.filter(workspace_id=instance.workspace_id, loan_id=loan_id, loan__state="ACTIVE").exclude(status=LoanRiskSnapshot.Status.ERROR).update(
         status=LoanRiskSnapshot.Status.STALE, error_message="Source evidence changed; reassessment required.")
 
 
@@ -39,7 +39,7 @@ for source in LOAN_SOURCES:
 @receiver(post_save, sender=LoanMonitoringPolicy, dispatch_uid="loans-risk-stale-monitoring-policy")
 def _mark_policy_scope(sender, instance, **kwargs):
     def update():
-        queryset = LoanRiskSnapshot.objects.filter(workspace_id=instance.workspace_id)
+        queryset = LoanRiskSnapshot.objects.filter(workspace_id=instance.workspace_id, loan__state="ACTIVE")
         if instance.license_id: queryset = queryset.filter(loan__license_id=instance.license_id)
         queryset = queryset.filter(as_of_date__gte=instance.effective_from)
         if instance.effective_until:
@@ -67,7 +67,7 @@ def _mark_rate_change(sender, instance, **kwargs):
                 as_of_date__gte=effective_date,
             )
         if scope:
-            LoanRiskSnapshot.objects.filter(scope, workspace_id=instance.workspace_id).exclude(status=LoanRiskSnapshot.Status.ERROR).update(
+            LoanRiskSnapshot.objects.filter(scope, workspace_id=instance.workspace_id, loan__state="ACTIVE").exclude(status=LoanRiskSnapshot.Status.ERROR).update(
                 status=LoanRiskSnapshot.Status.STALE,
                 error_message="Applicable valuation rate changed; reassessment required.",
             )

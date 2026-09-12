@@ -48,14 +48,14 @@ class CollateralReappraisalTests(WorkspaceTestCase):
         tenant.save()
         Membership.objects.create(user=cls.actor, company=tenant, role=Role.objects.get_or_create(name="Owner")[0])
 
-    def make_loan(self, method="LOWER_OF_CALCULATED_AND_APPRAISAL"):
+    def make_loan(self, method="LOWER_OF_CALCULATED_AND_APPRAISAL", *, product_index=0):
         self.today = timezone.localdate()
         loan_date = self.today - timedelta(days=100)
         borrower = Party.objects.create(display_name="Borrower")
         license = LoanLicense.objects.create(workspace=self.tenant, name="Main", license_number=uuid.uuid4().hex, issued_on=loan_date, expires_on=self.today + timedelta(days=365))
         series = LoanSeries.objects.create(license=license, name="Main", code="A")
         LoanNumberSequence.objects.create(series=series, document_kind="PAWN_LOAN", prefix="PL-", width=5, maximum_number=10000)
-        product = _seed_default_loan_products()[0]
+        product = _seed_default_loan_products()[product_index]
         type(product).objects.filter(pk=product.pk).update(status="ACTIVE")
         create_pawn_loan_economic_policy(workspace=self.tenant, license=license, valuation_method=method, maximum_ltv_ratio=Decimal("0.8"), advance_interest_periods=0, effective_from=loan_date, actor=self.actor)
         create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=license, metal="GOLD", monthly_interest_rate=Decimal("2"), effective_from=loan_date, actor=self.actor)
@@ -81,6 +81,24 @@ class CollateralReappraisalTests(WorkspaceTestCase):
 
     def valuation(self):
         return get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
+
+    def test_schedule_allocations_are_two_reads_and_keep_reversal_dates(self):
+        from apps.tenant_apps.loans.selectors.obligation_state import calculate_obligation_state_as_of
+        from apps.tenant_apps.loans.services import record_pawn_loan_repayment, reverse_pawn_loan_event
+        self.make_loan(product_index=1)
+        schedule = self.loan.repayment_schedules.get()
+        self.assertEqual(schedule.obligations.count(), 12)
+        with self.assertNumQueries(2):
+            before = calculate_obligation_state_as_of(schedule, self.today)
+        yesterday = calculate_obligation_state_as_of(schedule, self.today - timedelta(days=1))
+        payment = record_pawn_loan_repayment(self.loan.pk, amount="100", request_key="prefetch-payment", actor=self.actor)
+        with self.assertNumQueries(2):
+            paid = calculate_obligation_state_as_of(schedule, self.today)
+        self.assertEqual(before.remaining.total - paid.remaining.total, Decimal("100"))
+        self.assertEqual(calculate_obligation_state_as_of(schedule, self.today - timedelta(days=1)), yesterday)
+        reverse_pawn_loan_event(payment.loan_event.pk, reason="Test repayment correction", actor=self.actor)
+        with self.assertNumQueries(2):
+            self.assertEqual(calculate_obligation_state_as_of(schedule, self.today), before)
 
     def test_stale_evidence_is_unknown_and_new_evidence_restores_coverage(self):
         self.make_loan()

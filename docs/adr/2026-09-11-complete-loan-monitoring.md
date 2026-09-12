@@ -54,6 +54,10 @@ This extends the [freshness decision](2026-09-11-collateral-freshness-and-reappr
   enumeration of tenants is introduced. Deployment operators must enable it and
   monitor errors/backlog; adding a profile does not start a running scheduler.
 
+The worker transaction and cadence decisions above are refined by
+[bounded Workspace turns](2026-09-11-monitoring-worker-turns.md). The projection
+and policy-amendment contracts remain unchanged.
+
 ## Monitoring policy amendments
 
 Earlier policies remain immutable, including their stored effective_until. An

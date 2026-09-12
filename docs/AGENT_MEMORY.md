@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [agents, context, architecture]
 ---
 
@@ -185,8 +185,12 @@ usable quotes; a source alone is not quote readiness. New/edit loan price prefli
 uses the selected series/policy/date/metals and preserves the current form/files
 when missing quotes require a Rates detour. Gold-only and appraisal-only loans
 must not require unrelated quotes. Commands retain final validation. Quote ages
-are displayed; origination-age policy and complete monitoring refresh remain
-subsequent work; see
+are displayed. The owner selected same-day quotes at new-loan approval on
+2026-09-12, for methods that consume Rates. Enforcement is not implemented;
+delayed-disbursal, backdated-entry and legacy-approval handling remain proposals
+in the [origination review](implementation/origination-rate-freshness-review.md).
+Do not silently change approved economics or reuse monitoring-age limits. Complete
+monitoring and worker capacity are described below; see
 [review](implementation/rates-appraisal-monitoring-review.md).
 Rates quotes are immutable evidence: operator effective time is distinct from entry
 time, corrections/withdrawals append actor/reason-linked records, and referenced
@@ -223,10 +227,43 @@ lifecycle. Optional Compose wiring does not itself start a worker. See
 
 Launch sizing supplied by the owner: 30-100 loans processed per organization/day,
 3,000-10,000 active loans per organization, and at least 100 organizations. The
-current 50-per-pass/300-second-pause worker is not capacity-validated for this
+worker is not capacity-validated for this
 300,000-1,000,000-active-loan baseline. Correctness tests are not load acceptance.
 Prioritize the [capacity review](implementation/rates-appraisal-monitoring-review.md#launch-capacity-requirements-and-review-2026-09-11)
-before production claims or simply increasing batch sizes. Closed loans are
-excluded from assessment selection; residual closed-snapshot invalidation and
-open-alert cleanup and unnecessary live health calculations on closed-loan detail
-pages remain identified follow-ups.
+before production claims or simply increasing batch sizes. Closed-loan monitoring
+cleanup is implemented; realistic multi-Workspace load acceptance remains open.
+The owner shelved further large-scale monitoring tests until better representative
+hardware is available (FW-004). Do not automatically restart long local runs.
+The one-hour target remains unproven; preserve measured findings for resumption.
+See [the shelved work](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
+
+Closed loans keep their financial and monitoring evidence, but leave live health
+calculations, source invalidation, active alert lists and background assessment.
+Refresh rechecks state under the loan lock, including its error path. Reversing a
+release to ACTIVE invalidates the saved assessment and resumes normal selection.
+
+The monitoring command owns per-loan transactions through `risk_jobs`; it must not
+run inside a caller's transaction/context. Candidate selection is bounded and
+advisory; each loan is rechecked/locked through calculation and commit. Explicit
+Workspace IDs receive round-robin turns. Successful rounds use a short busy pause;
+empty/error-only rounds use the longer repeat interval. No Redis/queue or tenant
+enumeration is introduced. See [worker turns](adr/2026-09-11-monitoring-worker-turns.md).
+
+Single-schedule obligation reads now prefetch date-filtered allocations in two
+queries and use the existing fold. Keep reversal effective-date filtering and
+integrity findings unchanged. Mixed benchmarks are synthetic evidence, not a
+production distribution or launch SLA.
+
+Owner-selected monitoring launch acceptance target: all affected active loans
+receive an updated health assessment within one hour of a metal-price change.
+This is a target to load-test, not an established SLA. Closed loans are excluded;
+individual authorized refresh remains available. Full-platform capacity remains
+unproven until the 100-Workspace workload meets this target alongside servicing.
+
+Health reassessment follows source changes and daily date rollover; worker polling
+is not an hourly recalculation requirement for already-current loans. Operational
+performance uses oldest unpaid contractual obligation DPD, with default Watch >=1
+and Substandard >=90, independently of collateral coverage. This is not a formal
+regulatory NPA engine; lender-specific classification/cure/reporting review is
+captured as FW-003, unscheduled and not authorized by the capacity task. See
+[the explanation](flows/loan-health-monitoring.md#payment-performance-and-the-npa-distinction).
