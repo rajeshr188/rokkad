@@ -72,12 +72,13 @@ class CounterWorkTests(SimpleTestCase):
                 html = render_block_to_string("company/workspace_dashboard.html", "workspace_content", {
                     "workspace": SimpleNamespace(name="Test", slug="test"),
                     "can_use_counter": allowed,
+                    "dashboard_query": "period=today",
                     "counter_work": {"queues": {"review": {"count": count}}},
                     "selected_queue": {"key": "draft", "title": "Drafts"},
                     "work_page": Paginator([], 20).page(1),
                 })
                 if allowed and count:
                     self.assertIn("Payment queues are incomplete: 2 active loans", html)
-                    self.assertIn('href="?queue=review"', html)
+                    self.assertIn('href="?period=today&amp;queue=review"', html)
                 else:
                     self.assertNotIn("Payment queues are incomplete", html)
