@@ -173,6 +173,22 @@ def workspace_dashboard(request, workspace_id):
     if context["can_use_counter"]:
         from django.core.paginator import Paginator
         from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
+        from apps.tenant_apps.loans.selectors.business_overview import get_business_overview
+        from apps.tenant_apps.loans.web.dashboard_forms import DashboardActivityForm
+
+        activity_data = request.GET.copy()
+        if "period" not in activity_data:
+            activity_data["period"] = "month"
+        activity_form = DashboardActivityForm(activity_data)
+        activity_dates = {}
+        if activity_form.is_valid():
+            activity_dates = {"activity_start": activity_form.cleaned_data["start"],
+                              "activity_end": activity_form.cleaned_data["end"]}
+        context["activity_form"] = activity_form
+        context["business_overview"] = get_business_overview(workspace=workspace, **activity_dates)
+        from urllib.parse import urlencode
+        context["dashboard_query"] = urlencode({key: activity_data[key]
+            for key in ("period", "start", "end") if key in activity_data})
 
         work = get_workspace_counter_work(workspace=workspace)
         default_queue = next((key for key in ("overdue", "due", "approved", "draft", "review") if work["queues"][key]["count"]), "draft")

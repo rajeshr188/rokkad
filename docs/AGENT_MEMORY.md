@@ -138,6 +138,12 @@ See [reachability evidence](implementation/dependency-template-cleanup.md).
 Dashboard payment queues explicitly warn when schedule-review loans are excluded.
 The unused exported monetary summary reports unavailable totals as None with a
 count/completeness flag and requires matching Workspace context.
+The business dashboard now uses a separate overview selector: customer/active-loan
+counts, current recorded principal/interest, and period-filtered ordinary issues,
+new-loan net cash and separate renewal counts. It reuses the canonical event fold
+with batched reads, without monitoring refresh. Invalid evidence makes whole money
+totals unavailable. Period controls affect activity only; customer/portfolio cards
+remain current. See [dashboard definitions](flows/business-dashboard.md).
 Dashboard schedule reads are batched per Workspace/date and share the canonical
 termination predicate and obligation fold; no persistent cache.
 All 136 canonical Loans routes use named workspace_loans adapters. Templates,

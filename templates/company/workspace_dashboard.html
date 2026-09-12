@@ -16,6 +16,7 @@
 </div>
 </div>
 {% if can_use_counter %}
+{% include 'company/_business_overview.html' %}
 <section class="card mb-4">
 <div class="card-body">
 <h2 class="h5">Find a borrower or loan</h2>
@@ -30,11 +31,11 @@
 {% if counter_work.queues.review.count %}
 <div class="alert alert-warning" role="status">
 Payment queues are incomplete: {{ counter_work.queues.review.count }} active loan{{ counter_work.queues.review.count|pluralize }} could not be included because their repayment schedules need review.
-<a href="?queue=review" class="alert-link">Review affected loans</a> before relying on the payment counts and scheduled amounts.
+<a href="?{{ dashboard_query }}&amp;queue=review" class="alert-link">Review affected loans</a> before relying on the payment counts and scheduled amounts.
 </div>
 {% endif %}
 <div class="row g-3 mb-4" aria-label="Loan work queues">{% for queue in work_queues %}<div class="col-6 col-lg">
-<a class="card h-100 text-decoration-none {% if selected_queue.key == queue.key %}border-primary{% endif %}" href="?queue={{ queue.key }}" {% if selected_queue.key == queue.key %}aria-current="page"{% endif %}>
+<a class="card h-100 text-decoration-none {% if selected_queue.key == queue.key %}border-primary{% endif %}" href="?{{ dashboard_query }}&amp;queue={{ queue.key }}" {% if selected_queue.key == queue.key %}aria-current="page"{% endif %}>
 <div class="card-body">
 <div class="text-muted small">{{ queue.title }}</div>
 <div class="h3 mb-0">{{ queue.count }}</div>
@@ -68,7 +69,7 @@ Payment queues are incomplete: {{ counter_work.queues.review.count }} active loa
 </tr>{% endfor %}</tbody>
 </table>
 </div>
-<div class="card-body d-flex flex-wrap gap-3 align-items-center">{% if work_page.has_previous %}<a href="?queue={{ selected_queue.key }}&amp;page={{ work_page.previous_page_number }}">Previous</a>{% endif %}<span class="small text-muted">Page {{ work_page.number }} of {{ work_page.paginator.num_pages }} &middot; {{ work_page.paginator.count }} loans</span>{% if work_page.has_next %}<a href="?queue={{ selected_queue.key }}&amp;page={{ work_page.next_page_number }}">Next</a>{% endif %}<a class="ms-auto" href="{% url 'workspace_slug_loan_list' workspace_slug=workspace.slug %}">All loans</a>
+<div class="card-body d-flex flex-wrap gap-3 align-items-center">{% if work_page.has_previous %}<a href="?{{ dashboard_query }}&amp;queue={{ selected_queue.key }}&amp;page={{ work_page.previous_page_number }}">Previous</a>{% endif %}<span class="small text-muted">Page {{ work_page.number }} of {{ work_page.paginator.num_pages }} &middot; {{ work_page.paginator.count }} loans</span>{% if work_page.has_next %}<a href="?{{ dashboard_query }}&amp;queue={{ selected_queue.key }}&amp;page={{ work_page.next_page_number }}">Next</a>{% endif %}<a class="ms-auto" href="{% url 'workspace_slug_loan_list' workspace_slug=workspace.slug %}">All loans</a>
 </div>
 </section>
 {% else %}<div class="alert alert-info">Your role does not include access to loan operations. Use the available Workspace navigation or ask your owner to review your access.</div>{% endif %}

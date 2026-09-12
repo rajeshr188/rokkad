@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-10
+updated: 2026-09-12
 tags: [dashboard, performance, loans]
 ---
 
@@ -9,7 +9,8 @@ tags: [dashboard, performance, loans]
 
 ## Current behavior
 
-The Workspace dashboard renders daily work queues, not the older monetary summary.
+The Workspace dashboard renders daily work queues and, from 2026-09-12, a separate
+business overview described below. It does not use the older monetary summary.
 When any ACTIVE loan has no usable schedule or has inconsistent allocations, it
 enters Schedule needs review. A visible warning now explains that those loans are
 excluded from payment counts/amounts and links to the affected queue. This warning
@@ -93,4 +94,28 @@ Query count is bounded for this portfolio shape, but computation and memory stil
 grow with loans, schedule history and obligations. Pagination limits display only.
 Large mixed/installment portfolios need load and memory measurements before adding
 chunking or projections. No new caching or index is justified by this result.
-The next architectural increment is the planned routing/module organization.
+Routing/module organization subsequently completed; see the current active plan.
+
+## Business metrics increment (2026-09-12)
+
+The new `business_overview` selector adds current customer/borrower/loan counts,
+principal and recorded interest, and period-filtered new lending/renewal activity.
+See the [operator definitions](../flows/business-dashboard.md). Current balances
+reuse `calculate_pawn_loan_balance`, without fetching collateral or recalculating
+health. Loans/policies stream in batches with explicit-Workspace, dated event
+prefetch; activity counts use SQL aggregates and cash evidence streams separately.
+No new schema, cache or financial rule is introduced.
+
+Within one nonempty balance batch, the entire new selector uses six queries:
+customer count, active counts, loan/policy rows, events, activity counts and cash
+evidence. Each additional 250-loan batch adds one event query. Tests force smaller
+batches to verify transitions and compare money to the canonical single-loan fold,
+including capitalization, repayments and reversals. These figures cover the new
+metrics selector, not existing queues/setup or total HTTP query counts. CPU and
+history size remain linear; no large-scale latency claim is made.
+
+Read permission gates run before selector invocation. Restricted-role tests cover
+foreign Workspace exclusion, and HTTP tests cover hidden metrics without access,
+period validation and filter-preserving queue pagination. Invalid balance or cash
+evidence cannot become a claimed complete total. Renewals and ordinary loan cash
+have deliberately separate labels and counts.

@@ -1,0 +1,34 @@
+{% load humanize %}
+<section class="mb-4" aria-labelledby="business-overview-title">
+  <h2 class="h5" id="business-overview-title">Business overview</h2>
+  <p class="small text-muted">Current portfolio as of {{ business_overview.as_of_date }}. Amounts in INR.</p>
+  <div class="row g-3">
+    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Total customers</div><div class="h3 mb-1">{{ business_overview.total_customers|intcomma }}</div><div class="small text-muted">Customers registered for lending or with loan history, counted once.</div></div></div></div>
+    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active borrowers</div><div class="h3 mb-1">{{ business_overview.active_borrowers|intcomma }}</div><div class="small text-muted">Customers with at least one active loan.</div></div></div></div>
+    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active loans</div><div class="h3 mb-1">{{ business_overview.active_loans|intcomma }}</div><div class="small text-muted">Excludes drafts, approvals awaiting disbursal and closed loans.</div></div></div></div>
+    <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-muted">Principal outstanding</div><div class="h3 mb-1">{% if business_overview.principal_outstanding != None %}₹{{ business_overview.principal_outstanding|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><div class="small text-muted">Active loans, after repayments and reversals. Includes interest already capitalized into principal.</div></div></div></div>
+    <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-muted">Recorded interest outstanding</div><div class="h3 mb-1">{% if business_overview.interest_outstanding != None %}₹{{ business_overview.interest_outstanding|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><div class="small text-muted">Finalized, unpaid interest on active loans. Excludes estimated and future interest.</div></div></div></div>
+  </div>
+  {% if business_overview.unavailable_balance_count %}<div class="alert alert-warning mt-3" role="status">Recorded balances need review for {{ business_overview.unavailable_balance_count }} active loan{{ business_overview.unavailable_balance_count|pluralize }}. Portfolio money totals are unavailable until that evidence is resolved. <a href="{% url 'workspace_slug_loan_list' workspace_slug=workspace.slug %}">Review loans</a>.</div>{% endif %}
+</section>
+<section class="card mb-4" aria-labelledby="lending-activity-title"><div class="card-body">
+  <h2 class="h5" id="lending-activity-title">Lending activity</h2>
+  <form method="get" class="row g-2 align-items-end mb-3">
+    {% if request.GET.queue %}<input type="hidden" name="queue" value="{{ request.GET.queue }}">{% endif %}
+    <div class="col-sm-4"><label for="{{ activity_form.period.id_for_label }}" class="form-label">Period</label>{{ activity_form.period }}{{ activity_form.period.errors }}</div>
+    <div class="col-sm-3"><label for="{{ activity_form.start.id_for_label }}" class="form-label">Custom start</label>{{ activity_form.start }}{{ activity_form.start.errors }}</div>
+    <div class="col-sm-3"><label for="{{ activity_form.end.id_for_label }}" class="form-label">Custom end</label>{{ activity_form.end }}{{ activity_form.end.errors }}</div>
+    <div class="col-sm-2"><button class="btn btn-outline-primary" type="submit">Apply</button></div>
+    {% if activity_form.non_field_errors %}<div class="col-12 text-danger" role="alert">{{ activity_form.non_field_errors }}</div>{% endif %}
+  </form>
+  {% with activity=business_overview.activity %}{% if activity %}
+  <p class="small text-muted">{{ activity.start }}–{{ activity.end }} · {{ activity.calendar_days }} calendar day{{ activity.calendar_days|pluralize }}. Excludes issues reversed as of today; includes loans since closed.</p>
+  <div class="row g-3">
+    <div class="col-6 col-lg-3"><div class="small text-muted">New loans issued</div><div class="h3">{{ activity.new_loans|intcomma }}</div></div>
+    <div class="col-6 col-lg-3"><div class="small text-muted">Average new loans / day</div><div class="h3">{{ activity.average_per_day|floatformat:2 }}</div></div>
+    <div class="col-6 col-lg-3"><div class="small text-muted">New-loan cash disbursed</div><div class="h3">{% if activity.new_loan_cash != None %}₹{{ activity.new_loan_cash|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><p class="small text-muted mb-0">After upfront deductions. Excludes renewal top-ups.</p></div>
+    <div class="col-6 col-lg-3"><div class="small text-muted">Renewals completed</div><div class="h3">{{ activity.renewals|intcomma }}</div><p class="small text-muted mb-0">Shown separately from new lending.</p></div>
+  </div>
+  {% if activity.unavailable_cash_count %}<p class="text-warning mt-2 mb-0" role="status">Cash evidence needs review for {{ activity.unavailable_cash_count }} disbursal{{ activity.unavailable_cash_count|pluralize }}. A partial cash total is not shown.</p>{% endif %}
+  {% else %}<p class="text-muted mb-0">Correct the period to view lending activity. Current portfolio metrics remain shown above.</p>{% endif %}{% endwith %}
+</div></section>

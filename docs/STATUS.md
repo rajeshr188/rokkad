@@ -51,6 +51,30 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 
 ## Latest validation
 
+- First business-dashboard increment implemented locally (2026-09-12). Existing
+  data.view access now exposes customer/active-borrower/active-loan counts, today's
+  canonical recorded principal and unpaid interest, and period-filtered new issues,
+  new-loan net cash, average per calendar day and separate renewal counts. Activity
+  supports today/month/30 days/custom (up to 366 days), retains queue pagination
+  filters and shows invalid input without replacing the requested period. Current
+  portfolio cards stay current. Invalid opening/balance/cash evidence makes complete
+  money totals unavailable instead of exposing partial sums. New-loan cash explicitly
+  excludes renewal top-ups. See the [metric guide](flows/business-dashboard.md).
+  Balance queries are batched with the existing canonical event fold; no health
+  calculation, persistent cache, schema change or worker dependency is introduced.
+  Six new-selector queries cover one nonempty batch; subsequent 250-loan batches
+  add one event query. CPU/event-history cost remains linear; capacity is unproven.
+  Validation: all **79 related tests passed** in 93.573 seconds, including nine
+  new metric/form tests, canonical balance and servicing/renewal regressions, and
+  the restricted-role HTTP operator journey. Ten focused integration checks also
+  passed after correcting a new fixture's PartyRoleType field name. Coverage includes
+  capitalization/reversals, current/future dates, missing evidence, empty portfolios,
+  customer de-duplication, query batching, RLS, access denial and preserved filters.
+  Live browser checks confirmed the overview and Today filter on the development
+  dashboard; screenshot capture timed out, so pixel-level inspection is unverified.
+  No loan mutation, migration, worker startup, capacity run, commit or push occurred.
+  Concurrent Party portability changes are preserved.
+
 - Same-day origination quote enforcement implemented locally (2026-09-12).
   Calculated/lower-of approval now requires today's positive Workspace quotes;
   the initial implementation uses today's loan/disbursal dates as the recommended

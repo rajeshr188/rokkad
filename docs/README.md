@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-12
 tags: [docs, navigation, architecture]
 ---
 
@@ -26,6 +26,7 @@ not an instruction to reintroduce it.
 ## Business and operator flows
 
 - [Set up your business](flows/business-setup.md) and [first-loan setup](flows/first-loan-setup.md).
+- [Understand dashboard customer, portfolio and lending-activity metrics](flows/business-dashboard.md).
 - [Enter, correct and withdraw metal prices](flows/metal-rate-entry.md).
 - [Reassess collateral and review freshness](flows/collateral-reassessment.md).
 - [Review loan health, amend monitoring limits and enable refresh](flows/loan-health-monitoring.md).

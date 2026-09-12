@@ -372,9 +372,21 @@ class MVPOperatorJourneyTests(TransactionTestCase):
                 )
         url = reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
         page = self._get(url + "?queue=draft&page=2")
+        self.assertContains(page, "Business overview")
+        self.assertContains(page, "Recorded interest outstanding")
+        self.assertEqual(page.context["business_overview"]["active_loans"], 0)
+        self.assertEqual(page.context["business_overview"]["principal_outstanding"], Decimal("0"))
+        self.assertContains(page, "period=month&amp;queue=draft&amp;page=1")
         self.assertEqual(page.context["selected_queue"]["count"], 23)
         self.assertEqual(len(page.context["work_page"]), 3)
         self.assertContains(page, "QUEUE-022")
+        custom = self._get(url + f"?period=custom&start={self.today}&end={self.today}&queue=draft")
+        self.assertEqual(custom.context["business_overview"]["activity"]["calendar_days"], 1)
+        self.assertContains(custom, f"period=custom&amp;start={self.today}&amp;end={self.today}&amp;queue=draft&amp;page=2")
+        invalid = self._get(url + "?period=custom&start=bad&queue=draft")
+        self.assertIsNone(invalid.context["business_overview"]["activity"])
+        self.assertContains(invalid, "Correct the period")
+        self.assertContains(invalid, "QUEUE-000")
         other = self._workspace("Counter Queue Other")
         other_page = self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": other.slug}))
         self.assertEqual(other_page.context["counter_work"]["queues"]["draft"]["count"], 0)
@@ -385,9 +397,13 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         limited_role = Role.objects.create(name="Counter no loan access")
         membership.role = limited_role
         membership.save(update_fields=["role"])
-        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work") as counter_query:
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work") as counter_query, patch(
+            "apps.tenant_apps.loans.selectors.business_overview.get_business_overview"
+        ) as overview_query:
             denied = self._get(url)
         counter_query.assert_not_called()
+        overview_query.assert_not_called()
+        self.assertNotContains(denied, "Business overview")
         self.assertNotContains(denied, "QUEUE-000")
         self.assertContains(denied, "does not include access to loan operations")
 
