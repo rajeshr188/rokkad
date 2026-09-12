@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from .action_access import require_loan_action
+from apps.tenant_apps.loans.selectors.origination_rates import assert_approved_quotes_current
 from apps.tenant_apps.loans.domain import (
     InterestMethod,
     PawnLoanEventKind,
@@ -69,6 +70,9 @@ def disburse_pawn_loan(
         raise PawnDisbursalError("Approved PawnLoan is missing its approval snapshot.")
     economics = _approved_economics(loan, approval_snapshot)
     resolved_policy = _approved_disbursal_policy(economics)
+    assert_approved_quotes_current(workspace_id=loan.workspace_id,
+        method=resolved_policy.valuation_method,
+        evidence=approval_snapshot.payload.get("origination_rates"), effective_date=effective_date)
     try:
         assert_series_can_issue(loan.series, as_of_date=effective_date)
     except Exception as exc:
@@ -151,6 +155,9 @@ def disburse_pawn_loan(
             "repayment_schedule_version_id": repayment_schedule.pk,
         },
     )
+    assert_approved_quotes_current(workspace_id=loan.workspace_id,
+        method=resolved_policy.valuation_method,
+        evidence=approval_snapshot.payload.get("origination_rates"), effective_date=effective_date)
     return PawnDisbursalResult(
         loan, policy_snapshot, event, disbursal_snapshot
     )

@@ -48,9 +48,9 @@ class CollateralReappraisalTests(WorkspaceTestCase):
         tenant.save()
         Membership.objects.create(user=cls.actor, company=tenant, role=Role.objects.get_or_create(name="Owner")[0])
 
-    def make_loan(self, method="LOWER_OF_CALCULATED_AND_APPRAISAL", *, product_index=0):
+    def make_loan(self, method="LOWER_OF_CALCULATED_AND_APPRAISAL", *, product_index=0, age_days=100, activate=True):
         self.today = timezone.localdate()
-        loan_date = self.today - timedelta(days=100)
+        loan_date = self.today - timedelta(days=age_days)
         borrower = Party.objects.create(display_name="Borrower")
         license = LoanLicense.objects.create(workspace=self.tenant, name="Main", license_number=uuid.uuid4().hex, issued_on=loan_date, expires_on=self.today + timedelta(days=365))
         series = LoanSeries.objects.create(license=license, name="Main", code="A")
@@ -60,15 +60,20 @@ class CollateralReappraisalTests(WorkspaceTestCase):
         create_pawn_loan_economic_policy(workspace=self.tenant, license=license, valuation_method=method, maximum_ltv_ratio=Decimal("0.8"), advance_interest_periods=0, effective_from=loan_date, actor=self.actor)
         create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=license, metal="GOLD", monthly_interest_rate=Decimal("2"), effective_from=loan_date, actor=self.actor)
         self.source = RateSource.objects.create(name="Market", location="Local")
-        self.quote = Rate.objects.create(rate_source=self.source, buying_rate=3000, selling_rate=3100, effective_at=timezone.now() - timedelta(days=100))
+        originated_at = timezone.now() - timedelta(days=age_days)
+        with patch("django.utils.timezone.now", return_value=originated_at):
+            self.quote = Rate.objects.create(rate_source=self.source, buying_rate=3000, selling_rate=3100, effective_at=originated_at)
         self.loan = create_pawn_draft(CreatePawnDraftCommand(workspace_id=self.tenant.pk, borrower_id=borrower.pk, license_id=license.pk,
             series_id=series.pk, product_version_id=product.pk, principal_amount=Decimal("1000"), monthly_interest_rate=Decimal("2"), loan_date=loan_date, tenure_months=12,
             collateral=(CollateralDraftInput(description="Gold ring", metal="GOLD", gross_weight=Decimal("1"), net_weight=Decimal("1"), purity_percentage=Decimal("100"), latest_appraised_value=Decimal("2000"), allocated_principal=Decimal("1000")),)), actor=self.actor)
         self.item = self.loan.collateral_items.get()
         append_collateral_photo(self.item.pk, upload=SimpleUploadedFile("ring.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg"), actor=self.actor)
-        self.approval = approve_pawn_loan(self.loan.pk, actor=self.actor)
-        disburse_pawn_loan(self.loan.pk, effective_date=loan_date, actor=self.actor)
-        self.original = self.item.appraisals.get()
+        if activate:
+            # Build historical loans as if originated on their actual date.
+            with patch("django.utils.timezone.now", return_value=originated_at):
+                self.approval = approve_pawn_loan(self.loan.pk, actor=self.actor)
+                disburse_pawn_loan(self.loan.pk, effective_date=loan_date, actor=self.actor)
+            self.original = self.item.appraisals.get()
         self.policy = LoanMonitoringPolicy.objects.create(workspace=self.tenant, version=1, effective_from=loan_date, compliance_profile="test",
             ltv_warning_ratio=Decimal("0.7"), ltv_breach_ratio=Decimal("0.8"), ltv_critical_ratio=Decimal("0.9"),
             eligible_custody_states=["IN_VAULT", "WITH_FUNDING_LENDER"], severity_mapping={"strategy": "derived-v1"}, created_by=self.actor)

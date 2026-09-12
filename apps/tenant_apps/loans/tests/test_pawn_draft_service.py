@@ -814,12 +814,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         )
         loan = create_pawn_draft(self.command(), actor=self.actor)
         self._add_photo(loan)
-        approve_pawn_loan(loan.pk, actor=self.actor)
-        disburse_pawn_loan(
-            loan.pk,
-            effective_date=date(2026, 7, 18),
-            actor=self.actor,
-        )
+        self._originate_legacy_loan(loan)
         call = dict(
             mode=PawnLoanRenewalMode.PAY_AND_RENEW,
             renewal_date=date(2026, 7, 18),
@@ -858,12 +853,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.borrower.save(update_fields=["primary_email"])
         loan = create_pawn_draft(self.command(), actor=self.actor)
         self._add_photo(loan)
-        approve_pawn_loan(loan.pk, actor=self.actor)
-        disburse_pawn_loan(
-            loan.pk,
-            effective_date=date(2026, 7, 18),
-            actor=self.actor,
-        )
+        self._originate_legacy_loan(loan)
         with patch(
             "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
             return_value=date(2026, 12, 4),
@@ -906,12 +896,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.borrower.save(update_fields=["primary_email"])
         loan = create_pawn_draft(self.command(), actor=self.actor)
         self._add_photo(loan)
-        approve_pawn_loan(loan.pk, actor=self.actor)
-        disburse_pawn_loan(
-            loan.pk,
-            effective_date=date(2026, 7, 18),
-            actor=self.actor,
-        )
+        self._originate_legacy_loan(loan)
         with patch(
             "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
             return_value=date(2026, 12, 4),
@@ -988,6 +973,15 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.assertTrue(
             PawnLoanAuctionReversal.objects.filter(auction=completed.auction).exists()
         )
+
+    def _originate_legacy_loan(self, loan):
+        """Create servicing fixtures at their historical origination time."""
+        at = timezone.make_aware(datetime.combine(loan.loan_date, datetime.min.time())).replace(hour=12)
+        with patch("django.utils.timezone.now", return_value=at):
+            source = RateSource.objects.create(name="Origination fixture", location="Local")
+            Rate.objects.create(rate_source=source, buying_rate=10000, selling_rate=10100, effective_at=at)
+            approve_pawn_loan(loan.pk, actor=self.actor)
+            disburse_pawn_loan(loan.pk, effective_date=loan.loan_date, actor=self.actor)
 
     def _economic_setup(self):
         create_pawn_loan_economic_policy(

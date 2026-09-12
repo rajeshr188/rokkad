@@ -100,6 +100,19 @@ class RateRLSIsolationTests(TransactionTestCase):
             self._assume_runtime_role()
             self.assertEqual(RateSource.objects.count(), 0)
 
+    def test_origination_quote_selection_stays_scoped_under_runtime_role(self):
+        from django.utils import timezone
+        from apps.tenant_apps.loans.selectors.origination_rates import get_origination_quote_rows
+        for workspace, quote_id in ((self.first_workspace, self.first_quote_id),
+                                    (self.second_workspace, self.second_quote_id)):
+            with workspace_context(workspace.pk):
+                self._assume_runtime_role()
+                rows = get_origination_quote_rows(workspace_id=workspace.pk,
+                    loan_date=timezone.localdate(), metals=("GOLD",))
+                self.assertEqual(rows[0]["evidence"]["rate_id"], quote_id)
+                self.assertEqual(rows[0]["evidence"]["workspace_id"], workspace.pk)
+                self.assertTrue(rows[0]["fresh"])
+
     def test_select_update_and_delete_are_workspace_isolated(self):
         with workspace_context(self.first_workspace.pk):
             self._assume_runtime_role()

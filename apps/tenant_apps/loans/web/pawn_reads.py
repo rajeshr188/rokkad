@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import (
@@ -90,6 +91,12 @@ def pawn_loan_detail(request, pk):
             "opening_event",
         ),
     }
+    approval = loan.approval_snapshots.order_by("-version").first()
+    if approval:
+        evidence = approval.payload.get("origination_rates", {})
+        context["approved_quote_rows"] = [dict(quote,
+            effective_time=parse_datetime(quote["effective_at"]))
+            for quote in evidence.get("quotes", {}).values()]
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value}:
         try:
             context["balance"] = get_pawn_loan_balance(

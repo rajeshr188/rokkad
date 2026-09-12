@@ -7,6 +7,7 @@ from django.views.decorators.http import require_GET
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.rates.facade import RATE_FOUND, get_latest_commodity_valuation_rate
+from apps.tenant_apps.loans.selectors.origination_rates import origination_quote_cutoff
 
 
 class AppraisalSuggestionForm(forms.Form):
@@ -33,7 +34,7 @@ def collateral_appraisal_suggestion(request):
     context = {"request_key": request.GET.get("request_key", ""), "message": "Enter valid weights, purity, and loan date to get a suggestion."}
     if form.is_valid():
         data = form.cleaned_data
-        lookup = get_latest_commodity_valuation_rate(commodity_code=data["metal"], as_of=data["as_of"], currency="INR", purity="24k")
+        lookup = get_latest_commodity_valuation_rate(commodity_code=data["metal"], as_of=origination_quote_cutoff(data["as_of"]), currency="INR", purity="24k")
         if lookup.status == RATE_FOUND and lookup.rate.buying_rate > 0:
             value = (lookup.rate.buying_rate * data["net_weight"] * data["purity"] / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
             if value <= Decimal("9999999999999999.99"):

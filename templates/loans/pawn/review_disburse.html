@@ -1,7 +1,7 @@
 {% extends "base_tenant.html" %}
 {% block workspace_content %}
 <h1>Review and disburse</h1>
-{% if review_error %}<div class="alert alert-warning">{{ review_error }}</div>{% endif %}
+{% if review_error %}<div class="alert alert-warning">{{ review_error }} <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates</a> or <a href="{% url 'workspace_loans:pawn_loan_update' request.workspace.slug loan.pk %}">review the draft</a>.</div>{% endif %}
 <p>Confirm only after paying the borrower. This records payment; it does not send a bank transfer.</p>
 <div class="loan-workflow-grid"><div class="card card-body">
 {% if economics %}<dl><dt>Principal</dt><dd>{{ economics.gross_principal }}</dd><dt>Advance interest</dt><dd>{{ economics.advance_interest }}</dd><dt>Deducted fees</dt><dd>{{ economics.deducted_fees }}</dd><dt>Net amount to pay</dt><dd class="fs-3 fw-bold">{{ economics.net_disbursed }}</dd></dl>

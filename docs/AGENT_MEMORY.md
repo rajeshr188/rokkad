@@ -186,9 +186,14 @@ uses the selected series/policy/date/metals and preserves the current form/files
 when missing quotes require a Rates detour. Gold-only and appraisal-only loans
 must not require unrelated quotes. Commands retain final validation. Quote ages
 are displayed. The owner selected same-day quotes at new-loan approval on
-2026-09-12, for methods that consume Rates. Enforcement is not implemented;
-delayed-disbursal, backdated-entry and legacy-approval handling remain proposals
-in the [origination review](implementation/origination-rate-freshness-review.md).
+2026-09-12, for methods that consume Rates. Approval/disbursal enforcement and
+frozen quote provenance are implemented locally. The first version uses today's
+loan/disbursal dates as the recommended implementation assumption; historical
+entry has no separately confirmed owner contract. Appraisal-only dates stay
+unchanged. Changed/stale or missing legacy market evidence requires reapproval;
+completed replay preserves evidence after authorization. See the
+[decision](adr/2026-09-12-origination-quote-freshness.md) and
+[origination review](implementation/origination-rate-freshness-review.md).
 Do not silently change approved economics or reuse monitoring-age limits. Complete
 monitoring and worker capacity are described below; see
 [review](implementation/rates-appraisal-monitoring-review.md).

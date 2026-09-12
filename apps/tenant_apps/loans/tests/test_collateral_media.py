@@ -106,6 +106,9 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             company=self.tenant,
             defaults={"role": role},
         )
+        from apps.tenant_apps.rates.models import Rate, RateSource
+        quote_source = RateSource.objects.create(name="Origination", location="Local")
+        Rate.objects.create(rate_source=quote_source, buying_rate=10000, selling_rate=10100)
         borrower = Party.objects.create(display_name="Media Borrower")
         license = LoanLicense.objects.create(
             workspace=self.tenant,
@@ -125,7 +128,7 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             loan_number="PL-M-1",
             principal_amount=Decimal("5000.00"),
             monthly_interest_rate=Decimal("2.000000"),
-            loan_date=date(2026, 8, 9),
+            loan_date=timezone.localdate(),
             tenure_months=3,
         )
         self.item = PawnCollateralItem.objects.create(

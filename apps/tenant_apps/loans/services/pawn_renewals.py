@@ -66,6 +66,7 @@ from apps.tenant_apps.loans.services.pawn_interest import (
     should_record_pawn_accrual_event,
 )
 from apps.tenant_apps.loans.services.pawn_lifecycle import approve_pawn_loan
+from apps.tenant_apps.loans.selectors.origination_rates import assert_approved_quotes_current
 from apps.tenant_apps.loans.services.collateral_media import (
     _append_collateral_photo,
     _inherit_collateral_photos,
@@ -322,6 +323,7 @@ def preview_pawn_loan_renewal_plan(
             license_id=license.pk,
             as_of_date=timezone.localdate(),
             collateral=successor_collateral,
+            require_fresh_rates=True,
         )
     except (LoanLicense.DoesNotExist, LoanSeries.DoesNotExist) as exc:
         raise PawnRenewalError(
@@ -354,6 +356,7 @@ def preview_pawn_loan_renewal_plan(
             successor_principal=successor_principal,
             successor_advance_interest=economics.advance_interest,
             successor_deducted_fees=economics.deducted_fees,
+            valuation_quotes=resolved.valuation_quotes,
         ),
         source=source_preview,
         successor_principal=successor_principal,
@@ -614,6 +617,7 @@ def renew_pawn_loan(
         successor_principal=successor_principal,
         successor_advance_interest=successor_economics["advance_interest"],
         successor_deducted_fees=successor_economics["deducted_fees"],
+        valuation_quotes=approval.payload["origination_rates"]["quotes"],
     )
     if (
         expected_preview_fingerprint is not None
@@ -880,6 +884,9 @@ def renew_pawn_loan(
     source.state = PawnLoanState.CLOSED.value
     source.updated_by = actor
     source.save(update_fields=["state", "updated_by", "updated_at"])
+    assert_approved_quotes_current(workspace_id=successor.workspace_id,
+        method=successor_policy.valuation_method,
+        evidence=approval.payload.get("origination_rates"), effective_date=renewal_date)
     successor.state = PawnLoanState.ACTIVE.value
     successor.updated_by = actor
     successor.save(update_fields=["state", "updated_by", "updated_at"])

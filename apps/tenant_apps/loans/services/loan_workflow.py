@@ -10,7 +10,7 @@ from apps.configuration.models import PreferenceAuditLog
 from apps.orgs.access import resolve_workspace_access
 from apps.orgs.models import Company
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
-from .pawn_lifecycle import approve_pawn_loan, _validate_collateral_economics
+from .pawn_lifecycle import approve_pawn_loan, _validate_collateral_economics, approval_quote_evidence
 from .pawn_disbursal import disburse_pawn_loan
 
 SALT = "loans.owner-review.v1"
@@ -45,19 +45,21 @@ def review_values(loan):
     items = tuple(loan.collateral_items.order_by("pk"))
     resolved = _validate_collateral_economics(loan, items)
     economics = resolved.economics if resolved else None
+    quotes = approval_quote_evidence(loan, items, resolved)
     payload = {
         "loan": PawnLoan.objects.filter(pk=loan.pk).values().get(),
         "borrower": str(loan.borrower.display_name),
         "collateral": list(loan.collateral_items.order_by("pk").values()),
         "photos": [list(item.photos.order_by("pk").values()) for item in items],
         "economics": asdict(economics) if economics else None,
+        "valuation_quotes": quotes["quotes"],
     }
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
-    return economics, digest
+    return economics, digest, quotes["quotes"]
 
 
 def make_review(loan):
-    economics, digest = review_values(loan)
+    economics, digest, _ = review_values(loan)
     return economics, signing.dumps({"workspace": loan.workspace_id, "loan": loan.pk, "digest": digest}, salt=SALT)
 
 
@@ -80,10 +82,12 @@ def review_and_disburse(loan_id, *, actor, effective_date, token):
         return disburse_pawn_loan(loan.pk, actor=actor, effective_date=effective_date)
     if loan.state != "DRAFT":
         raise ValueError("Only a draft can use combined review and disbursal.")
-    economics, digest = review_values(loan)
+    economics, digest, reviewed_quotes = review_values(loan)
     if reviewed.get("digest") != digest:
         raise ValueError("Loan details or rates changed. Review the updated summary before confirming.")
     approval = approve_pawn_loan(loan.pk, actor=actor)
+    if approval.payload["origination_rates"]["quotes"] != reviewed_quotes:
+        raise ValueError("Market quotes changed during confirmation. Review the loan again.")
     if economics:
         frozen = approval.payload.get("collateral_economics", {})
         for name in ("net_disbursed", "advance_interest", "deducted_fees", "monthly_interest"):

@@ -56,6 +56,9 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
         )
         role, _ = Role.objects.get_or_create(name="Admin")
         Membership.objects.create(user=self.actor, company=self.tenant, role=role)
+        from apps.tenant_apps.rates.models import Rate, RateSource
+        quote_source = RateSource.objects.create(name="Origination", location="Local")
+        Rate.objects.create(rate_source=quote_source, buying_rate=10000, selling_rate=10100)
         self.borrower = Party.objects.create(display_name="Lifecycle Borrower")
         self.license, self.series = self._setup("A", "PL-A-")
         product_version = _seed_default_loan_products()[0]
@@ -69,7 +72,7 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
                 product_version_id=product_version.pk,
                 principal_amount=Decimal("50000.00"),
                 monthly_interest_rate=Decimal("2.000000"),
-                loan_date=date(2026, 7, 18),
+                loan_date=timezone.localdate(),
                 tenure_months=3,
                 collateral=(CollateralDraftInput(
                     description="Gold bangles",

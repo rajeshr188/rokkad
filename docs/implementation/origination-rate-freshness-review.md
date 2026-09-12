@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 owner: loans
 updated: 2026-09-12
 tags: [loans, rates, origination, evidence]
@@ -7,14 +7,17 @@ tags: [loans, rates, origination, evidence]
 
 # New-loan rate freshness review
 
-The owner selected **same-day quotes required at approval** on 2026-09-12.
-This applies only to valuation methods that consume Rates. The remaining behavior
-below is a proposal for the next implementation increment, not an implemented
-gate or an approved exception workflow. Existing monitoring limits remain separate.
+The owner selected **same-day quotes required at approval** on 2026-09-12 and
+subsequently authorized implementation. The increment is implemented locally;
+see the [accepted contract](../adr/2026-09-12-origination-quote-freshness.md).
+It uses the recommended current-day loan/disbursal scope as an implementation
+assumption; the owner has not separately confirmed historical-entry behavior.
+Existing monitoring limits remain separate. The original review below records
+the baseline and proposals that led to this increment, not remaining code gaps.
 See the [Rates/appraisal review](rates-appraisal-monitoring-review.md) and
 [monitoring freshness decision](../adr/2026-09-11-collateral-freshness-and-reappraisal.md).
 
-## Current behavior and gaps
+## Original baseline and gaps
 
 | Boundary | Reviewed behavior | Required follow-up |
 | --- | --- | --- |
@@ -30,7 +33,7 @@ Reviewed entry points: `rates/facade.py`, `loans/selectors/rate_readiness.py`,
 `loans/web/rate_readiness.py`, and Loans services `pawn_economics.py`,
 `pawn_lifecycle.py`, `pawn_disbursal.py`, `loan_workflow.py`, `pawn_renewals.py`.
 
-## Recommended behavior
+## Original recommendation
 
 1. For ordinary current-day origination, require a positive same-day quote for
    each consumed metal. Use the application's configured local date at the action,
@@ -64,7 +67,7 @@ disbursing it on Tuesday requires Tuesday's quote and a new approval; Monday's
 approval remains in history. A same-day price change before confirmation also
 requires reviewing the new evidence.
 
-## Date and compatibility decisions before enforcement
+## Date and compatibility proposals before enforcement
 
 Backdated loan dates are currently used for policy and quote resolution. The
 owner's same-day-at-approval choice must not silently substitute today's quote
@@ -79,7 +82,7 @@ quote identity. Already active/closed loans and authorized idempotent disbursal
 replays retain their original evidence and behavior. Their monitoring, repayments
 and releases remain governed by the existing contracts.
 
-## Smallest coherent next increment
+## Original implementation plan
 
 Confirm the proposed delayed-disbursal and historical-date behavior, record the
 accepted contract in an ADR, then implement quote provenance together with one
@@ -95,3 +98,27 @@ Existing frozen amounts and repayment/reversal results must remain unchanged.
 
 Large-scale monitoring capacity remains shelved in
 [FW-004](../plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
+
+## Implementation outcome
+
+Shared Workspace quote selection now excludes future-effective quotes on today's
+forms and calculations. Approval requires fresh quotes and a current loan date
+for calculated/lower-of valuation, including the legacy no-allocation path using
+its existing fallback policy. The approval JSON freezes exact quote/source/author
+evidence and the rule/evaluation time; disbursal retains those approved amounts.
+
+Delayed disbursal requires current-day, unchanged approved quotes and today's
+disbursal date. Old market-valued approvals lacking quote evidence require return
+to draft and reapproval. Appraisal-only loans retain their prior date behavior.
+Simple-review and renewal fingerprints now bind quote evidence, including
+equal-price replacements; confirmation rechecks roll back changed evidence.
+Authorized completed disbursal replay remains available after quote/date changes.
+
+Preflight distinguishes draft availability from approval freshness. Missing-price
+draft validation remains in place; this increment does not introduce incomplete
+draft persistence. The loan detail shows frozen approval quotes, and review and
+disbursal pages link to Rates and the existing correction/reapproval workflow.
+No override, migration, provider dependency or worker startup is introduced.
+
+Historical/future-dated market origination and exceptional overrides remain outside
+this implementation. Review those as explicit workflows before extending its scope.

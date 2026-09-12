@@ -25,6 +25,12 @@ from apps.tenant_apps.loans.services.number_allocation import allocate_pawn_loan
 from apps.tenant_apps.loans.services.pawn_economics import (
     resolve_pawn_draft_economics,
 )
+from apps.tenant_apps.loans.selectors.origination_rates import (
+    RULE, get_origination_quote_rows, require_fresh_quotes, requires_quotes,
+    assert_approved_quotes_current,
+    require_current_origination_date,
+)
+from apps.tenant_apps.loans.domain import resolve_policy
 
 
 class PawnLifecycleError(ValueError):
@@ -48,11 +54,16 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
                 f"Collateral {item.description} requires at least one photograph before approval."
             )
     resolved_economics = _validate_collateral_economics(loan, collateral)
+    quote_evidence = approval_quote_evidence(loan, collateral, resolved_economics)
     appraisals = _freeze_approved_appraisals(loan, collateral, actor=actor)
 
     payload = _approval_payload(
         loan, collateral, resolved_economics, appraisals=appraisals
     )
+    payload["origination_rates"] = quote_evidence
+    assert_approved_quotes_current(workspace_id=loan.workspace_id,
+        method=quote_evidence["valuation_method"], evidence=quote_evidence,
+        effective_date=loan.loan_date)
     fingerprint = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -231,6 +242,7 @@ def _validate_collateral_economics(loan, collateral):
         license_id=loan.license_id,
         as_of_date=loan.loan_date,
         collateral=collateral,
+        require_fresh_rates=True,
     )
     if resolved.economics.gross_principal != loan.principal_amount:
         raise PawnLifecycleError(
@@ -254,6 +266,22 @@ def _validate_collateral_economics(loan, collateral):
                 "Resolved collateral rates changed; resave the draft before approval."
             )
     return resolved
+
+
+def approval_quote_evidence(loan, collateral, resolved):
+    """Also cover legacy drafts without itemized economic evidence."""
+    method = resolved.economic_policy.valuation_method if resolved else resolve_policy().valuation_method.value
+    at = resolved.evaluated_at if resolved else timezone.now()
+    quotes = resolved.valuation_quotes if resolved else {}
+    if resolved is None and requires_quotes(method):
+        rows = get_origination_quote_rows(workspace_id=loan.workspace_id,
+            loan_date=loan.loan_date, metals=tuple(item.metal for item in collateral), at=at)
+        require_fresh_quotes(rows)
+        require_current_origination_date(loan.loan_date, at=at)
+        quotes = {row["metal"]: row["evidence"] for row in rows}
+    return {"rule": RULE, "valuation_method": str(method),
+        "loan_date": loan.loan_date.isoformat(), "evaluated_at": at.isoformat(),
+        "quotes": quotes}
 
 
 def _freeze_approved_appraisals(loan, collateral, *, actor):

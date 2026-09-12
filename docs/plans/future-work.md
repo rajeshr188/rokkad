@@ -27,6 +27,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-002 | Razorpay setup and provider test-mode acceptance | Shelved at owner request; required before real paid onboarding | Owner starts Razorpay setup and explicitly resumes provider testing | Billing implementation and mocked tests complete; no provider setup or end-to-end rehearsal |
 | FW-003 | Formal lender-specific NPA classification | Unscheduled design review; no implementation approval | Intended lender type needs regulatory NPA reporting | Existing per-loan operational DPD and collateral-risk classifications documented |
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
+| FW-005 | Historical market-valued loan entry | Unscheduled policy review | Owner needs backdated origination or a historical Loans import contract | Current-day quote rule implemented; historical eligibility and exceptions remain undesigned |
 
 ## FW-001: Optional owner-configurable license scope
 
@@ -201,3 +202,20 @@ Overlapping price changes, recovery/restarts and concurrent origination/releases
 remain additional acceptance dimensions. Hardware alone is not an established fix:
 measured candidates include the per-loan pending lookup and repeated financial
 history reads. Assess those separately when capacity work resumes.
+
+## FW-005: Historical market-valued loan entry
+
+**Captured:** 2026-09-12. **Priority/date:** unscheduled; no exception workflow is approved.
+
+The owner chose same-day quotes at approval. The first implementation uses today's
+loan/disbursal dates for methods that consume Rates, as the recommended implementation
+assumption. Appraisal-only date behavior is unchanged. A separate owner preference
+about historical entry has not been confirmed.
+
+Before enabling backdated market origination, define the business date versus
+actual approval/disbursal time, historical quote applicability/knowledge, evidence
+provenance, permissions and any exceptional review. Do not silently use today's
+quote for historical economics or add a generic owner bypass. Coordinate with the
+historical Loans import contract when that work is selected. Existing active/closed
+loans and their immutable history are unaffected. See the
+[origination decision](../adr/2026-09-12-origination-quote-freshness.md).

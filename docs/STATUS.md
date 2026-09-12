@@ -9,10 +9,12 @@ tags: [status, architecture]
 
 ## Current checkpoint
 
-Branch: `rls-mvp`. Published application checkpoint: `21a48aee` (2026-09-11).
-GitHub Workspace RLS checks passed for this checkpoint (run `34608453193`).
-Monitoring hardening and origination-policy review are committed locally on
-2026-09-12; publication is pending.
+Branch: `rls-mvp`. Current application checkpoint: same-day origination quotes
+and approval evidence, including monitoring hardening from `9a430aa2` (2026-09-12).
+Previous published application checkpoint: `21a48aee` (2026-09-11); GitHub Workspace
+RLS checks passed for that checkpoint (run `34608453193`). Current publication
+verification is reported with the delivery commit; the previous CI result does
+not establish the new checkpoint result.
 All four orgs checkpoints are pushed: workspace/role settings (`ee31dda`),
 team/invitations (`0177fc3`), lifecycle/navigation (`e434828`), and final
 account/preferences, slug adapters and unused backup-view removal (`38eb1e3`).
@@ -48,6 +50,33 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 | R07/R12 routing/modules | R07 complete locally: all 136 canonical routes use direct Workspace adapters; response rewriting removed. Loans views portion of R12 complete: compatibility imports plus focused web modules; orgs views portion also complete locally; model/form/renewal-service review remains separate |
 
 ## Latest validation
+
+- Same-day origination quote enforcement implemented locally (2026-09-12).
+  Calculated/lower-of approval now requires today's positive Workspace quotes;
+  the initial implementation uses today's loan/disbursal dates as the recommended
+  scope assumption. Appraisal-only date behavior is unchanged. Approval freezes
+  quote identity, source/author, price, dates and rule evidence. Disbursal rejects
+  old, replaced, corrected/withdrawn or missing legacy quote evidence without
+  changing approved amounts. Simple-review and renewal fingerprints bind quotes;
+  completion rechecks preserve atomic rollback and authorized completed replay.
+  Draft guidance separates availability from approval freshness, suggestions
+  exclude later-today quotes, and loan detail/recovery pages show evidence/links.
+  See the [decision](adr/2026-09-12-origination-quote-freshness.md) and
+  [review](implementation/origination-rate-freshness-review.md). Historical entry
+  remains an unconfirmed separate contract tracked in FW-005.
+  Final isolated checkpoint validation: all **613 Loans/Rates/onboarding/routes/
+  deployment tests passed** in 176.536 seconds. All 18 focused origination tests
+  also passed, including renewal quote replacement, rollback and successful fresh
+  review. All 43 control-plane contract-gate/operator-journey tests and four
+  JavaScript preflight tests pass. The first isolated attempt reused
+  a database containing unrelated portability tables and hit flush errors; the
+  successful run uses a fresh dedicated test database. Earlier fixture/mock errors
+  are resolved. The CI contract registry now names the renamed bounded-pass test.
+  Browser inspection failed twice because the browser-control connection timed
+  out; rendered response and service tests pass, but visual acceptance is pending.
+  No normal-data mutation, worker startup or capacity benchmark occurred.
+  Source-boundary, documentation-link and whitespace checks pass. Unrelated Party
+  portability changes are excluded from this checkpoint.
 
 - Monitoring checkpoint reviewed in an isolated export of the staged files
   (2026-09-12), excluding concurrent Party portability changes. All 519 Loans
@@ -85,8 +114,8 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
   documents daily/source-triggered refresh and operational DPD labels versus
   formal NPA classification; lender-specific NPA design is unscheduled FW-003.
   This turn changes benchmark tooling/documentation, not application rules.
-  This monitoring-capacity work is included in the reviewed local checkpoint;
-  publication is pending.
+  This monitoring-capacity work is included in `9a430aa2` and the current
+  origination publication checkpoint.
 
 - Mixed-capacity/worker increment (local, after published `21a48aee`): all 591
   broader Loans, Rates, onboarding, scoped-route and deployment regressions passed
@@ -395,8 +424,9 @@ is owner-shelved until better hardware is available under
 capacity target remains unproven. See the [capacity report](implementation/monitoring-capacity-test.md).
 The optional repeating worker still requires explicit Workspace configuration and startup.
 See [Loan health](flows/loan-health-monitoring.md). The owner selected same-day
-quotes at approval; the [origination review](implementation/origination-rate-freshness-review.md)
-records the proposed remaining date/disbursal rules before enforcement.
+quotes at approval; enforcement and quote provenance are now implemented locally.
+See the [origination review](implementation/origination-rate-freshness-review.md).
+Historical entry remains a separate unconfirmed contract (FW-005).
 
 The selected Loans view organization work is complete; see the
 [module map and compatibility rules](implementation/loans-view-organization.md).

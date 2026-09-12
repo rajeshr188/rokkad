@@ -120,6 +120,14 @@ class RateReadinessTests(WorkspaceTestCase):
         request.method = "POST"
         self.assertEqual(pawn_valuation_readiness(request).status_code, 405)
 
+    @patch("apps.tenant_apps.loans.web.rate_readiness.resolve_pawn_loan_economic_policy")
+    def test_stale_quote_allows_draft_but_explains_approval_requirement(self, policy):
+        policy.return_value = SimpleNamespace(valuation_method="CALCULATED_METAL_VALUE")
+        self.quote(effective_at=timezone.now() - timedelta(days=1))
+        response = pawn_valuation_readiness(self.request())
+        self.assertContains(response, 'data-ready="true"')
+        self.assertContains(response, "approval needs today's loan date and quotes")
+
 
 class MissingValuationInputTests(SimpleTestCase):
     def test_error_names_only_missing_inputs_and_targets_the_collateral_row(self):

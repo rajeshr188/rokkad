@@ -1,7 +1,8 @@
 <div data-rate-readiness-result data-request-key="{{ request_key }}" data-ready="{{ ready|yesno:'true,false' }}">
   {% if message %}<p class="mb-2">{{ message }}</p>{% endif %}
   {% if needs_rates %}
-  <p class="small mb-2">Required buying prices for {{ as_of }}: INR per gram of pure metal. Loan entry checks availability. Active-loan monitoring separately applies the configured age limits.</p>
+  <p class="small mb-2">Buying prices for {{ as_of }}: INR per gram of pure metal. Saving a draft checks availability. Approval requires a positive same-day quote for each required metal.</p>
+  {% if ready and not approval_ready %}<p class="text-warning mb-2">These prices can be used to save a draft, but approval needs today's loan date and quotes. Review the date and add today's prices in Rates, then check prices again.</p>{% endif %}
   <ul class="mb-2">{% for row in rows %}<li><strong>{{ row.label }}:</strong> {% if row.usable %}₹{{ row.rate.buying_rate }}/g · {{ row.rate.effective_at|date:"d M Y" }} ({{ row.age_days }} days before loan date) · <a href="{% url 'workspace_rates:rate_detail' request.workspace.slug row.rate.pk %}" target="_blank" rel="noopener">{{ row.rate.source_snapshot.name }} · Quote #{{ row.rate.pk }}</a>{% else %}<span class="text-danger">No usable positive INR pure-metal buying price on or before the loan date.</span>{% endif %}</li>{% endfor %}</ul>
   {% endif %}
   {% if not ready %}<p class="small mb-2">Keep this loan tab open. Add the missing price or review the policy in another tab, then select “Check prices again”. Your entries and selected photos stay here.</p>{% endif %}

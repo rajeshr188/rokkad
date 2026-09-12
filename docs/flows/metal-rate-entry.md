@@ -1,7 +1,7 @@
 ---
 status: active
 owner: rates
-updated: 2026-09-11
+updated: 2026-09-12
 tags: [rates, setup, operator, valuation]
 ---
 
@@ -47,9 +47,20 @@ Older migrated quotes preserve their values and original dates. Their author is
 shown as unknown, and their source snapshot was captured at migration. Verify their
 units, purity and tax basis before relying on them; use a correction when necessary.
 Current-loan monitoring enforces its configured quote/appraisal age limits; see
-[collateral reassessment](collateral-reassessment.md). New-loan entry checks quote
-availability and does not yet enforce an origination-age policy. A recorded quote is
-not a claim of a live market price or a current portfolio assessment.
+[collateral reassessment](collateral-reassessment.md). Saving a new-loan draft
+checks quote availability. Approval requires a positive **same-day quote** for
+each metal used by calculated/lower-of valuation. The loan and disbursal dates
+must be today for those methods; appraisal-only loans retain their existing rules.
+Quotes effective later today are excluded from suggestions and approval.
+
+If an approved quote becomes outdated, is corrected/withdrawn or is replaced,
+use **Return to draft**, review today's loan date and terms, then approve again
+before disbursing. This includes equal-price replacements and old approvals
+without recorded quote evidence. An editor and approver may need to help.
+The previous approval stays in history, and the loan detail displays the quotes
+recorded at the latest approval. Active and closed loans keep their original
+financial evidence. A recorded quote is not a claim of a live market price or a
+current portfolio assessment.
 
 See the [quote evidence decision](../adr/2026-09-11-rate-quote-evidence.md) and
 [Rates/appraisal delivery review](../implementation/rates-appraisal-monitoring-review.md).

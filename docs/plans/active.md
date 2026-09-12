@@ -37,11 +37,12 @@ later prioritization; these partial upper-size runs establish no capacity claim.
 See the [full-load report](../implementation/monitoring-capacity-test.md) and [mixed results](../implementation/rates-appraisal-monitoring-review.md#mixed-workload-and-worker-increment-2026-09-11).
 The optional worker is configured in code but has not been started against normal
 development or production data. Origination
-age review is complete: the owner selected same-day quotes at approval for
-methods that consume Rates. The next increment needs the proposed delayed-disbursal
-and backdated-entry rules settled, then shared eligibility checks and frozen quote
-provenance. See the [origination review](../implementation/origination-rate-freshness-review.md).
-No new origination gate is implemented yet.
+age enforcement and frozen quote provenance are implemented locally for methods
+that consume Rates. The first version requires today's loan/disbursal dates,
+blocks changed or old approved quotes and preserves completed-action replay.
+Appraisal-only date behavior is unchanged. Historical entry and overrides need
+their own contract before extending this scope. See the
+[origination review](../implementation/origination-rate-freshness-review.md).
 See the [quote operator guide](../flows/metal-rate-entry.md). Existing form cleanup is published.
 
 Follow [incremental project hardening](project-hardening.md), based on the

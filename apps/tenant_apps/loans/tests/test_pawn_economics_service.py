@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import patch, ANY
 
 from django.test import SimpleTestCase
 
@@ -13,7 +13,7 @@ from apps.tenant_apps.loans.services.pawn_economics import (
 
 class PawnEconomicsResolutionTests(SimpleTestCase):
     @patch("apps.tenant_apps.loans.services.pawn_economics.resolve_pawn_loan_fee_policies", return_value=())
-    @patch("apps.tenant_apps.loans.services.pawn_economics.get_latest_commodity_valuation_rate")
+    @patch("apps.tenant_apps.loans.services.pawn_economics.get_origination_quote_rows")
     @patch("apps.tenant_apps.loans.services.pawn_economics.resolve_pawn_metal_interest_rate_policy")
     @patch("apps.tenant_apps.loans.services.pawn_economics.resolve_pawn_loan_economic_policy")
     def test_calculated_valuation_uses_current_24k_buying_rate(
@@ -31,10 +31,8 @@ class PawnEconomicsResolutionTests(SimpleTestCase):
         resolve_rate.return_value = SimpleNamespace(
             monthly_interest_rate=Decimal("2")
         )
-        valuation_rate.return_value = SimpleNamespace(
-            status="FOUND",
-            rate=SimpleNamespace(buying_rate=Decimal("7000")),
-        )
+        valuation_rate.return_value = [{"metal": "GOLD", "usable": True, "fresh": True,
+            "rate": SimpleNamespace(buying_rate=Decimal("7000")), "evidence": {"rate_id": 7}}]
         item = SimpleNamespace(
             metal=CollateralMetal.GOLD,
             net_weight=Decimal("10"),
@@ -55,6 +53,5 @@ class PawnEconomicsResolutionTests(SimpleTestCase):
         self.assertEqual(tranche.maximum_principal, Decimal("56000.00"))
         self.assertEqual(resolved.economics.net_disbursed, Decimal("49000.00"))
         valuation_rate.assert_called_once_with(
-            commodity_code="GOLD",
-            as_of=date(2026, 8, 5),
+            workspace_id=1, loan_date=date(2026, 8, 5), metals=("GOLD",), at=ANY,
         )

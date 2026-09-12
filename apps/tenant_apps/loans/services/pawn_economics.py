@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
+
+from django.utils import timezone
 
 from apps.tenant_apps.loans.domain import (
     CollateralTrancheInput,
@@ -22,9 +24,8 @@ from apps.tenant_apps.loans.services.economic_policies import (
     resolve_pawn_loan_fee_policies,
     resolve_pawn_metal_interest_rate_policy,
 )
-from apps.tenant_apps.rates.facade import (
-    RATE_FOUND,
-    get_latest_commodity_valuation_rate,
+from apps.tenant_apps.loans.selectors.origination_rates import (
+    get_origination_quote_rows, require_fresh_quotes, require_current_origination_date,
 )
 
 
@@ -34,10 +35,13 @@ class ResolvedPawnDraftEconomics:
     economic_policy: PawnLoanEconomicPolicy
     rate_policies: tuple[PawnMetalInterestRatePolicy, ...]
     fee_policies: tuple[PawnLoanFeePolicy, ...]
+    valuation_quotes: dict
+    evaluated_at: datetime
 
 
 def resolve_pawn_draft_economics(
-    *, workspace_id: int, license_id: int, as_of_date: date, collateral
+    *, workspace_id: int, license_id: int, as_of_date: date, collateral,
+    require_fresh_rates=False,
 ) -> ResolvedPawnDraftEconomics:
     policy = resolve_pawn_loan_economic_policy(
         workspace_id=workspace_id,
@@ -48,9 +52,18 @@ def resolve_pawn_draft_economics(
         ValuationMethod.CALCULATED_METAL_VALUE.value,
         ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
     }
+    collateral = tuple(collateral)
+    evaluated_at = timezone.now()
+    quote_rows = get_origination_quote_rows(workspace_id=workspace_id, loan_date=as_of_date,
+        metals=tuple(str(getattr(item.metal, "value", item.metal)).upper() for item in collateral),
+        at=evaluated_at) if needs_metal_value else []
+    if require_fresh_rates:
+        require_fresh_quotes(quote_rows)
+        if needs_metal_value:
+            require_current_origination_date(as_of_date, at=evaluated_at)
+    valuation_rates = {row["metal"]: row["rate"].buying_rate if row["usable"] else None for row in quote_rows}
     rate_policies = []
     tranches = []
-    valuation_rates = {}
     for index, item in enumerate(collateral, start=1):
         rate_policy = resolve_pawn_metal_interest_rate_policy(
             workspace_id=workspace_id,
@@ -62,14 +75,6 @@ def resolve_pawn_draft_economics(
         metal_rate = None
         if needs_metal_value:
             metal_key = str(getattr(item.metal, "value", item.metal)).upper()
-            if metal_key not in valuation_rates:
-                lookup = get_latest_commodity_valuation_rate(
-                    commodity_code=metal_key,
-                    as_of=as_of_date,
-                )
-                valuation_rates[metal_key] = (
-                    lookup.rate.buying_rate if lookup.status == RATE_FOUND else None
-                )
             metal_rate = valuation_rates[metal_key]
         tranches.append(
             CollateralTrancheInput(
@@ -112,6 +117,8 @@ def resolve_pawn_draft_economics(
         economic_policy=policy,
         rate_policies=tuple(rate_policies),
         fee_policies=fee_policies,
+        valuation_quotes={row["metal"]: row["evidence"] for row in quote_rows},
+        evaluated_at=evaluated_at,
     )
 
 

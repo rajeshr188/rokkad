@@ -9,8 +9,8 @@ tags: [rates, appraisal, onboarding, monitoring]
 
 The subsequent [origination freshness review](origination-rate-freshness-review.md)
 records the owner's same-day-at-approval choice, confirmed quote-provenance gaps
-and proposed delayed-disbursal/backdated-entry behavior. Enforcement is the next
-increment; monitoring age limits have not been applied to origination.
+and the implemented current-day approval/disbursal contract. Origination uses its
+own rule; monitoring age limits have not been copied into origination.
 
 Reviewed against published application checkpoint `fdb5e97f`, following a new-loan
 failure when no metal valuation rate existed. The review examined code paths;

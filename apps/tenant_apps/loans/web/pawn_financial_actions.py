@@ -94,7 +94,8 @@ def pawn_loan_disburse(request, pk):
         form,
         "Disburse loan",
         "This records the approved disbursal and activates the loan.",
-        {"can_administer": _can_administer(request)},
+        {"can_administer": _can_administer(request), "quote_recovery": True,
+         "can_edit_loan": request.loans_workspace_access.can("data.edit")},
     )
 
 

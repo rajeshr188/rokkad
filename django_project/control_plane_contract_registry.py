@@ -56,7 +56,7 @@ CONTRACT_TEST_LABELS = {
     "CP-JOB-001": (
         "apps.orgs.test_workspace_seed_commands.WorkspaceSeedCommandContextTests.test_workspace_defaults_opens_its_explicit_context",
         "apps.orgs.test_workspace_seed_commands.WorkspaceSeedCommandContextTests.test_all_workspaces_passes_each_explicit_id_to_scoped_command",
-        "apps.tenant_apps.loans.tests.test_reassess_pawn_loans_command.ReassessPawnLoansCommandTests.test_reports_successful_bounded_batch",
+        "apps.tenant_apps.loans.tests.test_reassess_pawn_loans_command.ReassessPawnLoansCommandTests.test_reports_successful_bounded_pass",
     ),
 }
 

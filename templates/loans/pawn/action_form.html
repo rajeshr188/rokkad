@@ -7,6 +7,7 @@
     <a class="small text-decoration-none" href="{% url 'workspace_slug_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
     <h1 class="h3 mt-2 mb-1">{{ action_label }}</h1>
     <p class="text-muted mb-4">{{ description }}</p>
+    {% if quote_recovery %}<p class="small">Market-valued loans need today's approved quotes. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates</a>. {% if loan.state == 'APPROVED' and can_edit_loan %}<a href="{% url 'workspace_loans:pawn_loan_reopen' request.workspace.slug loan.pk %}">Return to draft for a fresh approval</a>.{% else %}Ask an authorized editor and approver if the approved quotes need updating.{% endif %}</p>{% endif %}
 
     {% if balance %}
       <div class="card mb-3"><div class="card-body row g-3">

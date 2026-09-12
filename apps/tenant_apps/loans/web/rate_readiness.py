@@ -3,6 +3,7 @@
 from django import forms
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET
+from django.utils import timezone
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import ValuationMethod
@@ -52,6 +53,7 @@ def pawn_valuation_readiness(request):
             context.update(
                 ready=not needs_rates or all(row["usable"] for row in rows),
                 needs_rates=needs_rates, rows=rows, as_of=values["as_of"],
+                approval_ready=not needs_rates or (values["as_of"] == timezone.localdate() and all(row["fresh"] for row in rows)),
                 message="" if needs_rates else "This policy uses staff appraisal only; a metal price is not required.",
             )
     response = render(request, "loans/pawn/_rate_readiness.html", context)
