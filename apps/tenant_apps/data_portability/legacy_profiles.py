@@ -53,11 +53,17 @@ def apply_corrections(tables, *, profile_key):
             row = effective[correction["table"]][correction["source_id"]]
         except KeyError as exc:
             raise PortabilityError("A reviewed correction does not match this source archive.") from exc
-        if row.get(correction["field"]) != correction["original"]:
-            raise PortabilityError("A reviewed correction's original value does not match this source archive.")
-        row[correction["field"]] = correction["corrected"]
+        source_value = row.get(correction["field"])
+        if source_value == correction["original"]:
+            row[correction["field"]] = correction["corrected"]
+            state = "APPLIED_TO_SNAPSHOT"
+        elif source_value == correction["corrected"]:
+            state = "ALREADY_CORRECTED_AT_SOURCE"
+        else:
+            raise PortabilityError("A reviewed correction does not match the source value in this archive.")
         evidence[correction["table"], correction["source_id"]] = {
             "ledger": CORRECTION_LEDGER_VERSION,
+            "state": state,
             **correction,
         }
     return effective, evidence

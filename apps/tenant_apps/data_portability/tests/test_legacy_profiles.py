@@ -34,12 +34,16 @@ class LegacySourceProfileTests(SimpleTestCase):
         self.assertEqual(record["source_sha256"], hashlib.sha256(encode(original).encode("utf-8")).hexdigest())
         self.assertEqual(data["tables"]["girvi_loan"]["29887"]["loan_date"], "2026-12-16 09:47:00+00")
 
-    def test_jcl_profile_rejects_missing_or_changed_source_correction(self):
+    def test_jcl_profile_rejects_missing_or_unapproved_source_correction(self):
         with self.assertRaisesRegex(PortabilityError, "reviewed correction"):
             build_preview(source("jcl"), schema="jcl", source_namespace=NAMESPACE, source_profile="linode-jcl/1")
         data, _ = self.jcl_source_with_corrected_loan()
         data["tables"]["girvi_loan"]["29887"]["loan_date"] = "2025-12-16 09:47:00+00"
-        with self.assertRaisesRegex(PortabilityError, "original value"):
+        _, records = build_preview(data, schema="jcl", source_namespace=NAMESPACE, source_profile="linode-jcl/1")
+        record = next(record for record in records if record["source"]["id"] == "29887")
+        self.assertEqual(record["source"]["correction"]["state"], "ALREADY_CORRECTED_AT_SOURCE")
+        data["tables"]["girvi_loan"]["29887"]["loan_date"] = "2024-12-16 09:47:00+00"
+        with self.assertRaisesRegex(PortabilityError, "does not match"):
             build_preview(data, schema="jcl", source_namespace=NAMESPACE, source_profile="linode-jcl/1")
 
     def test_profile_schema_mismatch_and_other_tenants_fail_closed_or_preserve_source(self):
