@@ -1,6 +1,7 @@
 """Public services require explicit, already-established Workspace context."""
 import hashlib
 import uuid
+import re
 from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
@@ -20,6 +21,8 @@ from .mapping import map_row, validate_mapping
 from .models import ImportBatch, ImportRow, PartyIdentity, SourceIdentity, WorkspaceNamespace
 from .normalization import normalize
 from .parsers import MAX_BYTES, MAX_ROWS, PortabilityError, parse_source
+
+LEGACY_SOURCE_SYSTEM = re.compile(r"legacy:[0-9a-f]{32}:[a-z][a-z0-9_]{0,62}\\Z")
 
 
 def _batch(workspace_id, batch_id, *, lock=False):
@@ -46,10 +49,14 @@ def stage_import(*, workspace_id, actor, content, filename, source_system, profi
         raise PortabilityError("Source system names cannot contain surrounding whitespace or control characters.")
     name, source_type, headers, raw_rows = parse_source(content, filename)
     if source_type == "jsonl":
-        try:
-            source_system = "rokkad:" + str(uuid.UUID(source_system.removeprefix("rokkad:")))
-        except ValueError as exc:
-            raise PortabilityError("For JSONL, supply the source Workspace namespace UUID from the export.") from exc
+        if source_system.startswith("legacy:"):
+            if not LEGACY_SOURCE_SYSTEM.fullmatch(source_system):
+                raise PortabilityError("Legacy JSONL requires legacy:<installation-uuid-without-hyphens>:<schema>.")
+        else:
+            try:
+                source_system = "rokkad:" + str(uuid.UUID(source_system.removeprefix("rokkad:")))
+            except ValueError as exc:
+                raise PortabilityError("For JSONL, supply a native Workspace namespace UUID or exact legacy source system.") from exc
     elif source_system.startswith("rokkad:"):
         raise PortabilityError("The rokkad namespace is reserved for canonical JSONL.")
     Company.all_objects.select_for_update().get(pk=workspace_id)

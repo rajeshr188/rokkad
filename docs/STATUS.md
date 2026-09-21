@@ -27,6 +27,16 @@ context. The next rehearsal slice is Party source-to-contract preparation; it mu
 handle the 1,000-row package limit and retain unsupported relationship labels for
 review before any Party commit.
 
+That preparation is now available through `prepare_legacy_party`. It produces
+chunked canonical JSONL with the source system
+`legacy:<installation-uuid>:<schema>`, which the Party staging service accepts
+without mislabelling it as a native Rokkad export. The three discovery-profile
+runs produced 11,777 JCL, 1,780 JSK and 5,291 Lakshmi Party source records with
+zero contract-validation errors. Their 187 retained review items are 180 missing
+related-person names, five unmapped relationship labels and two duplicate source
+defaults. Files are preparation artifacts only: they have not been staged or
+committed to the rehearsal Workspaces.
+
 ## Linode production discovery snapshot inventoried (2026-09-21)
 
 The supplied archive is a valid PostgreSQL custom-format dump despite its `.sql`

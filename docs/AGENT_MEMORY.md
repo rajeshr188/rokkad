@@ -56,6 +56,12 @@ runtime login. `scripts/provision_runtime_role.py` keeps creation fail-closed an
 requires `ROKKAD_RUNTIME_GRANT_EXISTING=1` to grant a verified restricted existing
 role without changing its password or ownership.
 
+The Linode Party preparation adapter emits chunked canonical JSONL under a strict
+`legacy:<installation-uuid-without-hyphens>:<schema>` source system. The Party
+staging service accepts this only for JSONL and retains it as the source identity;
+it does not treat legacy documents as native Rokkad exports. Preparation remains
+review-only until ordinary staged-batch approval and commit occur.
+
 ## Business rules to preserve
 
 For the seven-loan jcl rehearsal, the owner confirmed on 2026-09-17 that all
