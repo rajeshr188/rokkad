@@ -7,6 +7,31 @@ tags: [status, architecture]
 
 # Status
 
+## Separate rehearsal browser access ready (2026-09-21)
+
+The imported JCL, JSK and Lakshmi data is available locally at
+`http://127.0.0.1:8081/accounts/login/?next=/app/workspaces/` using the dedicated
+`migration-rehearsal-owner` account. Its password and branch links are in the private
+`outputs/linode-rehearsal-access-20260921/access.html` file. The account now uses
+ordinary owner Memberships, with the former platform override removed. Three local
+zero-price trials run through October 5; no paid purchase or provider subscription
+was made. Existing account credentials in the normal app were not changed.
+
+The opt-in `baseline_rehearsal_web` settings retain the isolated database guard,
+use separate session/CSRF cookies, local media/cache/email, loopback hosts, and a
+yellow rehearsal banner. The launch script binds only to `127.0.0.1`. The baseline
+database override now copies the inherited mapping instead of mutating dev settings.
+Three configuration tests passed. Actual password/CSRF HTTP login, branch selection,
+all three loan lists, sample interest-detail pages, Party lists and closed-history
+lists passed (12 scoped pages). Cross-branch object IDs returned 404; anonymous loan
+access required login. All checked business-table hashes remain unchanged. The login
+page was visually checked and left open; debug toolbar is hidden in this profile.
+
+**Next is owner workflow acceptance in this app**, starting with familiar customers,
+loans and interest month calculations. Production cutover, media, current lending
+setup and any required unsupported servicing remain pending. See the
+[rehearsal access guide](flows/linode-rehearsal-access.md) for restart instructions.
+
 ## Owner decisions applied: rehearsal loan holds resolved (2026-09-21)
 
 The isolated September 21 rehearsal now contains **6,273 operational loans**
@@ -34,7 +59,8 @@ Report: `outputs/linode-owner-decisions-20260921/review.html`; its manifest cove
 71 private files. See the [completed owner-decision record](implementation/linode-owner-decisions-20260921.md)
 and [review boundaries](adr/2026-09-21-owner-reviewed-migration-exceptions.md).
 
-**Next is separate rehearsal browser/login access and branch workflow acceptance.**
+Separate browser access is now ready as described above; branch workflow acceptance
+is next.
 These records are still in `rokkad_baseline_rehearsal_linode_20260921`, not the normal
 application or `jcl-13`. Production remains pending: retained Party preparation
 decisions, required servicing, current lending setup/access/media and a clean-build

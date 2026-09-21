@@ -133,8 +133,16 @@ The current three-Workspace rehearsal has 6,273 operational openings, 39,133 clo
 evidence records and one unused/cancelled exclusion: all 45,407 source IDs, no
 unresolved loan holds. All 18,848 prepared Party records are admitted. See the
 [owner-decision record](implementation/linode-owner-decisions-20260921.md) for proof
-and private report paths. Separate rehearsal browser access and workflow acceptance
-are next. This remains separate from jcl-13 and production; a fresh frozen archive,
+and private report paths. Separate rehearsal browser access is now configured at
+`127.0.0.1:8081`, using opt-in `baseline_rehearsal_web` settings and an ordinary
+`migration-rehearsal-owner` login. Private credentials/branch links are in
+`outputs/linode-rehearsal-access-20260921/access.html`; never commit those credentials.
+The account's old superuser/staff flags were removed; real owner Memberships and
+local trials through October 5 supply browser access. Separate cookies, local
+media/cache/email and the rehearsal banner keep this browser instance distinguishable.
+The launch script binds loopback only. See the [access guide](flows/linode-rehearsal-access.md).
+Owner workflow acceptance is next. This remains separate from jcl-13 and production;
+a fresh frozen archive,
 retained Party preparation decisions, required servicing/setup/access/media and
 clean-build acceptance remain necessary. Ordinary partial repayment remains guarded.
 

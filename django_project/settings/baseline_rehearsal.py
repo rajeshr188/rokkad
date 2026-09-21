@@ -16,7 +16,10 @@ if not REHEARSAL_DATABASE_NAME.startswith("rokkad_baseline_rehearsal_"):
         "'rokkad_baseline_rehearsal_'."
     )
 
-DATABASES["default"] = {  # noqa: F405
-    **DATABASES["default"],  # noqa: F405
-    "NAME": REHEARSAL_DATABASE_NAME,
+DATABASES = {  # noqa: F405
+    **DATABASES,  # noqa: F405
+    "default": {
+        **DATABASES["default"],  # noqa: F405
+        "NAME": REHEARSAL_DATABASE_NAME,
+    },
 }

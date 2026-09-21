@@ -31,6 +31,12 @@
     {% include 'components/brand_head.html' %}
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% if rehearsal_browser %}
+    <div class="bg-warning text-dark text-center p-2" role="note">
+        <strong>Local migration rehearsal</strong> · Test data copied from the legacy system.
+        Changes here stay in this rehearsal. <a href="{% url 'app_workspaces' %}" class="text-dark">Choose branch</a>
+    </div>
+    {% endif %}
     <!-- Main Navigation Bar -->
     {% block navbar %}
         {% include 'components/navigation/main_nav.html' %}
