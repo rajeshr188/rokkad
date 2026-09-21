@@ -12,6 +12,8 @@ from django.test import SimpleTestCase
 
 from apps.tenant_apps.data_portability import linode_run as run
 from apps.tenant_apps.data_portability.parsers import PortabilityError
+from .fixtures import PortabilityFixture
+from .test_loan_archive import document as archive_document
 
 
 class LinodeRunTests(SimpleTestCase):
@@ -97,3 +99,40 @@ class LinodeRunTests(SimpleTestCase):
         with self.assertRaisesRegex(CommandError,'--commit'):
             call_command('linode_migration','replay',package_dir='unused',expected_package_sha256='a'*64,dump='unused',
                 actor_id=1,expected_database='new',workspace_map_file='unused',output_dir='unused',stdout=io.StringIO())
+
+
+class LinodeReconciliationTests(PortabilityFixture):
+    def test_extra_version_of_a_closed_source_record_cannot_hide_in_unique_id_counts(self):
+        from django.db import connection
+        from apps.orgs.audit import AuditLog
+
+        with TemporaryDirectory() as directory:
+            root,manifest,_ = LinodeRunTests().package(directory)
+            expected = archive_document()
+            expected['source']['loan_id'] = 'girvi_loan:1'
+            earlier = copy.deepcopy(expected)
+            earlier['source']['snapshot_reference'] = 'earlier-source-snapshot'
+            run.write_rows(root/'jcl'/'closed.jsonl',[expected])
+            run.save(root/'jcl'/'source-index.json',{'girvi_loan:1':'a'*64})
+            for meta in manifest['workspaces'].values():
+                meta.update(source_system='paper-register-a',party_counts={},closed=0)
+            manifest['workspaces']['jcl']['closed'] = 1
+            for entry in manifest['files']:
+                entry['sha256'] = run.sha_file(root/entry['path'])
+            run.save(root/'manifest.json',manifest)
+            sha = run.sha_file(root/'manifest.json')
+            mapping = {'jcl':self.a.pk,'jsk':self.b.pk,'lakshmipawnbroker':self.b.pk+1000}
+            out = Path(directory)/'report';out.mkdir()
+            run.save(out/'binding.json',{'package_sha256':sha,'database':connection.settings_dict['NAME'],'workspaces':mapping})
+            with self.scoped():
+                # Both versions are valid archive claims. This exact replay must
+                # nevertheless contain only its one approved snapshot.
+                for value in (earlier,expected):
+                    run.accept_evidence(workspace_id=self.a.pk,actor=self.actor,document=value,
+                        expected_sha256=run.digest(value),confirmed=True)
+                AuditLog.log('DATA_IMPORT',company=self.a,user=self.actor,data={
+                    'linode_run':sha,'phase':'setup','config_sha256':run.digest({}),'mapping':{}})
+                with self.assertRaisesRegex(PortabilityError,'Closed history counts differ'):
+                    run.verify_package(directory=root,expected_sha256=sha,workspaces=mapping,actor=self.actor,
+                        expected_database=connection.settings_dict['NAME'],output_dir=out,progress=lambda *a,**k:None)
+            self.assertFalse((out/'verification.json').exists())
