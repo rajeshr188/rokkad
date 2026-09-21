@@ -126,7 +126,10 @@ Create three Workspaces in a clean target database through ordinary owner-only
 migrations and current configuration. Map each source schema to exactly one
 Workspace in the signed manifest. Create licences, series and policies explicitly,
 recreate approved workspace access, reserve legacy document-number ranges and run
-the normal RLS isolation tests before loading business data.
+the normal RLS isolation tests before loading business data. Provision the
+restricted runtime role for the new database as well: an existing cluster-level
+runtime login needs explicit grants on each newly created target database before
+the runtime checks or import services can run.
 
 ### 5. Import Party and setup records first
 

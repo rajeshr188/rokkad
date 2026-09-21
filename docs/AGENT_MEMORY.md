@@ -51,6 +51,10 @@ writes for cutover, take one final complete archive, then build the production R
 destination from that snapshot. The 2026-09-21 discovery inventory and its
 future-dated JCL loan hold are recorded in
 [the Linode discovery report](implementation/linode-production-discovery-20260921.md).
+Each fresh target database also needs explicit grants for the existing restricted
+runtime login. `scripts/provision_runtime_role.py` keeps creation fail-closed and
+requires `ROKKAD_RUNTIME_GRANT_EXISTING=1` to grant a verified restricted existing
+role without changing its password or ownership.
 
 ## Business rules to preserve
 

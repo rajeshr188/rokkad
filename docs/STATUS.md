@@ -7,6 +7,26 @@ tags: [status, architecture]
 
 # Status
 
+## Isolated three-Workspace rehearsal target prepared (2026-09-21)
+
+`rokkad_baseline_rehearsal_linode_20260921` is a new local-only database with the
+current owner-only migrations applied. It has three empty Workspaces:
+`rehearsal-jcl-20260921`, `rehearsal-jsk-20260921`, and
+`rehearsal-lakshmi-20260921`. The local operator account has an unusable password.
+No Party, import batch, operational loan, financial event, or historical evidence
+was created.
+
+The fresh-database rehearsal exposed a deployability gap: the cluster's existing
+restricted runtime role did not automatically have grants on a newly created
+database. `scripts/provision_runtime_role.py` now has an explicit
+`ROKKAD_RUNTIME_GRANT_EXISTING=1` mode. It verifies the existing login stays
+non-superuser, non-`BYPASSRLS`, non-owner and grant-only before granting the target
+database. After provisioning, the runtime role passed Django checks and saw zero
+Party, import, operational-loan and evidence records in each separate Workspace
+context. The next rehearsal slice is Party source-to-contract preparation; it must
+handle the 1,000-row package limit and retain unsupported relationship labels for
+review before any Party commit.
+
 ## Linode production discovery snapshot inventoried (2026-09-21)
 
 The supplied archive is a valid PostgreSQL custom-format dump despite its `.sql`

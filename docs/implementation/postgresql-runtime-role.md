@@ -54,6 +54,24 @@ python manage.py migrate --settings django_project.settings.migration --noinput
 Ordinary commands, the web server, and workers use the default development or
 production settings and therefore the restricted runtime role.
 
+When a fresh database is created on a server where `rokkad_runtime` already
+exists, grant that database explicitly; do not recreate the role or change its
+password. The owner-only utility rejects this by default. Set its narrow opt-in
+only after checking that the existing role is the intended restricted login:
+
+```powershell
+$env:DJANGO_SETTINGS_MODULE = 'django_project.settings.migration'
+$env:DB_MIGRATION_NAME = '<new-database-name>'
+$env:DB_RUNTIME_USER = 'rokkad_runtime'
+$env:ROKKAD_RUNTIME_GRANT_EXISTING = '1'
+python scripts/provision_runtime_role.py
+```
+
+This mode verifies that the role can log in but is not a superuser, cannot create
+databases or roles, cannot replicate, and cannot bypass RLS. It grants only the
+target database, schema, existing objects, and future objects created by the
+migration owner.
+
 The test runner needs owner authority only to create and drop its disposable
 database. Run it with `--settings django_project.settings.test`; adversarial
 RLS tests explicitly switch their DML to restricted roles.
