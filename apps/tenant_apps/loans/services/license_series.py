@@ -30,6 +30,28 @@ MAX_LICENSE_DOCUMENT_BYTES = 10 * 1024 * 1024
 
 
 @transaction.atomic
+def create_legacy_license_reference(*, workspace, name, source_label, evidence_reference, actor):
+    """Retain a reviewed historical grouping, never authorize new lending."""
+    from .history_setup import require_history_setup_access, _text
+    require_history_setup_access(workspace.pk, actor)
+    _text(evidence_reference, "Legacy licence evidence", 255)
+    _text(source_label, "Legacy licence label", 100)
+    license = LoanLicense(workspace=workspace, name=name, license_number=source_label,
+        issued_on=None, expires_on=None, is_active=False, is_legacy_reference=True,
+        notes=evidence_reference, created_by=actor, updated_by=actor)
+    license.full_clean()
+    license.save()
+    revision = _record_license_revision(license, kind=LoanLicenseRevision.Kind.LEGACY_REFERENCE, actor=actor)
+    _audit_license_revision(revision, actor=actor)
+    return license
+
+
+def _require_verified_license(license):
+    if license.is_legacy_reference:
+        raise LicenseSeriesError("A legacy reference has unknown validity and cannot be activated, amended or renewed. Create a verified licence separately.")
+
+
+@transaction.atomic
 def create_license(
     *,
     workspace,
@@ -86,6 +108,7 @@ def update_license(
     _require_active_workspace(license.workspace_id)
     require_setup_administration(license.workspace_id, actor)
     license = LoanLicense.objects.select_for_update().get(pk=license.pk)
+    _require_verified_license(license)
     for field, value in changes.items():
         setattr(license, field, value)
     license.updated_by = actor
@@ -122,6 +145,7 @@ def renew_license(
     if expires_on < timezone.localdate():
         raise LicenseSeriesError("A renewal cannot already be expired.")
     license = LoanLicense.objects.select_for_update().get(pk=license.pk)
+    _require_verified_license(license)
     license.issued_on = issued_on
     license.expires_on = expires_on
     if issuing_authority is not None:
@@ -159,6 +183,7 @@ def activate_license(
 ) -> LoanLicense:
     _require_active_workspace(license.workspace_id)
     require_setup_administration(license.workspace_id, actor)
+    _require_verified_license(license)
     if license.is_expired(as_of_date):
         raise LicenseSeriesError("An expired license cannot be activated.")
     if not license.is_active:
@@ -353,13 +378,50 @@ def configure_sequence(
     return sequence
 
 
+@transaction.atomic
+def reserve_sequence_through(*, series, document_kind, last_used_number, evidence_reference, actor):
+    """Reserve a reviewed historical range without issuing or recycling numbers."""
+    _require_active_workspace(series.workspace_id)
+    require_setup_administration(series.workspace_id, actor)
+    if type(last_used_number) is not int or last_used_number < 0:
+        raise LicenseSeriesError("The last used number must be a nonnegative whole number.")
+    if (not isinstance(evidence_reference, str) or not evidence_reference.strip()
+            or len(evidence_reference) > 255
+            or any(ord(c) < 32 or ord(c) == 127 for c in evidence_reference)):
+        raise LicenseSeriesError("Supply a bounded evidence reference for the reserved range.")
+    try:
+        sequence = LoanNumberSequence.objects.select_for_update().get(
+            workspace_id=series.workspace_id, series_id=series.pk,
+            document_kind=LoanDocumentKind(document_kind).value,
+        )
+    except LoanNumberSequence.DoesNotExist as exc:
+        raise LicenseSeriesError("Configure the sequence before reserving its historical range.") from exc
+    if last_used_number > sequence.maximum_number:
+        raise LicenseSeriesError("The historical range exceeds the configured sequence maximum.")
+    before = sequence.next_number
+    if before > last_used_number:
+        return sequence
+    sequence.next_number = last_used_number + 1
+    sequence.updated_by = actor
+    sequence.full_clean()
+    sequence.save(update_fields=["next_number", "updated_by", "updated_at"])
+    AuditLog.log("SETTINGS_UPDATE", user=actor, company=series.license.workspace,
+        description=f"Reserved historical {sequence.document_kind} numbers for series {series.code}.",
+        data={"entity": "loan_number_sequence_reservation", "sequence_id": sequence.pk,
+              "series_id": series.pk, "before": before, "after": sequence.next_number,
+              "last_used_number": last_used_number, "evidence_reference": evidence_reference},
+        success=True)
+    return sequence
+
+
 def assert_series_can_issue(
-    series: LoanSeries, *, as_of_date: date | None = None
+    series: LoanSeries, *, as_of_date: date | None = None, document_kind=None
 ) -> None:
     _require_active_workspace(series.workspace_id)
     if not series.is_active:
         raise LicenseSeriesError("The selected loan series is inactive.")
-    if not series.license.is_active:
+    legacy_release = series.license.is_legacy_reference and document_kind == LoanDocumentKind.PAWN_LOAN_RELEASE
+    if not series.license.is_active and not legacy_release:
         raise LicenseSeriesError("The selected loan license is inactive.")
     if series.license.is_expired(as_of_date):
         raise LicenseSeriesError("The selected loan license has expired.")

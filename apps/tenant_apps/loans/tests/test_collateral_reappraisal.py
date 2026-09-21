@@ -87,6 +87,47 @@ class CollateralReappraisalTests(WorkspaceTestCase):
     def valuation(self):
         return get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
 
+    def test_rate_based_appraisal_freezes_calculation_and_does_not_reprice_with_later_quote(self):
+        self.make_loan(method="LATEST_APPRAISAL")
+        rate = Rate.objects.create(rate_source=self.source, buying_rate=3200, selling_rate=3300)
+        original_policy = self.loan.policy_snapshot.pk
+        original_events = list(self.loan.loan_events.values())
+        appraisal = self.reassess(method="RATE_BASED", appraised_value=Decimal("3200"), expected_rate_id=rate.pk)
+        self.assertEqual(appraisal.valuation_context["valuation_basis"], "RATE_BASED")
+        self.assertEqual(appraisal.valuation_context["rate_id"], rate.pk)
+        self.assertEqual(appraisal.valuation_context["rate_maximum_age_days"], 7)
+        Rate.objects.create(rate_source=self.source, buying_rate=3500, selling_rate=3600)
+        self.assertEqual(self.valuation().eligible_collateral_value, Decimal("3200"))
+        self.assertEqual(list(self.loan.loan_events.values()), original_events)
+        self.assertEqual(self.loan.policy_snapshot.pk, original_policy)
+
+    def test_rate_based_appraisal_rejects_stale_changed_or_unreviewed_value(self):
+        self.make_loan()
+        with self.assertRaisesMessage(ValidationError, "too old"):
+            self.reassess(method="RATE_BASED", appraised_value=Decimal("3000"), expected_rate_id=self.quote.pk)
+        rate = Rate.objects.create(rate_source=self.source, buying_rate=3200, selling_rate=3300)
+        for changes, message in (({"expected_rate_id": self.quote.pk}, "quote changed"),
+                                 ({"expected_rate_id": None}, "quote changed"),
+                                 ({"appraised_value": Decimal("9999")}, "must equal")):
+            values = dict(method="RATE_BASED", appraised_value=Decimal("3200"), expected_rate_id=rate.pk)
+            values.update(changes)
+            with self.subTest(changes=changes), self.assertRaisesMessage(ValidationError, message):
+                self.reassess(**values)
+        self.assertEqual(self.item.appraisals.count(), 1)
+
+    def test_rate_based_appraisal_form_submits_reviewed_quote(self):
+        self.make_loan()
+        rate = Rate.objects.create(rate_source=self.source, buying_rate=3200, selling_rate=3300)
+        request = RequestFactory().get("/reappraise/")
+        request.workspace, request.user = self.tenant, self.actor
+        self.assertContains(collateral_reappraisal(request, self.loan.pk, self.item.pk), "Rate-based appraisal")
+        request = RequestFactory().post("/reappraise/", dict(appraised_value="3200", method="RATE_BASED",
+            evidence_reference="Owner rate review", review_notes="Reviewed weight, purity and buying quote",
+            expected_version=1, expected_rate_id=rate.pk))
+        request.workspace, request.user = self.tenant, self.actor
+        self.assertEqual(collateral_reappraisal(request, self.loan.pk, self.item.pk).status_code, 302)
+        self.assertEqual(self.item.appraisals.get(version=2).method, "RATE_BASED")
+
     def test_schedule_allocations_are_two_reads_and_keep_reversal_dates(self):
         from apps.tenant_apps.loans.selectors.obligation_state import calculate_obligation_state_as_of
         from apps.tenant_apps.loans.services import record_pawn_loan_repayment, reverse_pawn_loan_event

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "party-address/1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "address_type": {
+      "type": "string",
+      "enum": [
+        "REGISTERED",
+        "BILLING",
+        "SHIPPING",
+        "HOME",
+        "WORK",
+        "KYC",
+        "OTHER"
+      ]
+    },
+    "line1": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "line2": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 255
+    },
+    "area": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "city": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "state": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "postal_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 24
+    },
+    "country": {
+      "type": "string",
+      "maxLength": 2
+    },
+    "is_default": {
+      "type": "boolean"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "source_is_verified": {
+      "type": "boolean"
+    },
+    "party_source_system": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "party_external_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_refs": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "system",
+          "external_id"
+        ],
+        "properties": {
+          "system": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "external_id": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "legacy_number": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "party_source_system",
+    "party_external_id",
+    "source_is_verified",
+    "address_type",
+    "line1",
+    "city",
+    "country",
+    "is_default"
+  ]
+}

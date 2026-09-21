@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "party-relationship/1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_refs": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "system",
+          "external_id"
+        ],
+        "properties": {
+          "system": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "external_id": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "legacy_number": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      }
+    },
+    "party_source_system": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "party_external_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "to_party_source_system": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "to_party_external_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "relationship_type": {
+      "type": "string",
+      "enum": [
+        "CONTACT_PERSON",
+        "EMPLOYER",
+        "EMPLOYEE",
+        "BROKER",
+        "AGENT",
+        "RELATED_BUSINESS",
+        "FAMILY",
+        "OTHER"
+      ]
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "is_active": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "party_source_system",
+    "party_external_id",
+    "to_party_source_system",
+    "to_party_external_id",
+    "relationship_type",
+    "is_active"
+  ]
+}

@@ -70,6 +70,7 @@ class PawnLoanDocumentProjectionBuilder:
         "Loan event ID": "loan.event_source_id", "Release type": "release.type",
         "Principal settled": "amounts.principal_settled", "Interest settled": "amounts.interest_settled",
         "Fees settled": "amounts.fees_settled", "Total settlement": "amounts.total_settlement",
+        "Interest lost / concession": "amounts.interest_conceded", "Concession reason": "release.concession_reason",
         "Auction source ID": "auction.source_id", "Auction number": "auction.number",
         "Notice date": "auction.notice_date", "Scheduled auction date": "auction.scheduled_date",
         "Notice delivery job": "auction.notice_delivery_job", "Buyer": "auction.buyer",
@@ -216,6 +217,12 @@ class PawnLoanDocumentProjectionBuilder:
     @classmethod
     def release_memo(cls, release):
         loan, event = release.loan, release.loan_event
+        concession = (getattr(event, "payload", {}) or {}).get("values", {}).get("interest_concession", "0")
+        interest_display = cls._money(release.interest_amount)
+        if Decimal(str(concession)):
+            # This existing mandatory binding also reaches previously published layouts.
+            interest_display += (f" collected; {cls._money(concession)} forgone: "
+                                 + event.payload["release"]["interest_concession_reason"])
         reversal = cls._related_or_none(release, "reversal")
         verification = cls._verification(
             loan, f"release:{release.pk}:{release.release_number}:{event.payload_fingerprint}"
@@ -232,11 +239,14 @@ class PawnLoanDocumentProjectionBuilder:
             ("Release type", "Full" if release.is_full_release else "Partial"),
             ("Borrower", f"{loan.borrower.display_name} ({loan.borrower.party_code})"),
             ("Principal settled", cls._money(release.principal_amount)),
-            ("Interest settled", cls._money(release.interest_amount)),
+            ("Interest settled", interest_display),
             ("Fees settled", cls._money(release.fee_amount)),
             ("Total settlement", cls._money(release.settlement_amount)),
         )
         batch_line = cls._related_or_none(release, "batch_line")
+        if Decimal(str(concession)):
+            details += (("Interest lost / concession", cls._money(concession)),
+                        ("Concession reason", event.payload["release"]["interest_concession_reason"]))
         if batch_line is not None:
             details += (
                 ("Release batch", batch_line.batch_id), ("Paid by", batch_line.batch.paid_by),
@@ -406,7 +416,7 @@ class PawnLoanDocumentProjectionBuilder:
             ("Regulatory license", f"{license.name} ({license.license_number})"),
             ("License source ID", f"{source_type}:{license.pk}"),
             ("License authority", license.issuing_authority or "—"),
-            ("License validity", f"{license.issued_on} to {license.expires_on}"),
+            ("License validity", "Not recorded (legacy reference)" if getattr(license, "is_legacy_reference", False) else f"{license.issued_on} to {license.expires_on}"),
         )
 
     @staticmethod

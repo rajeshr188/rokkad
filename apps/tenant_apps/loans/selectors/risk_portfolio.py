@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
 
-SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V2"
+SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V3"
 
 
 def snapshot_is_current(snapshot, as_of_date):

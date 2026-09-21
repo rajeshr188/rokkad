@@ -37,6 +37,14 @@ def get_pawn_loan_delinquency(loan_id: int, *, as_of_date: date):
     except PawnLoan.DoesNotExist as exc:
         raise PawnLoanDelinquencyError("PawnLoan was not found in the active workspace.") from exc
     schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
+    balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+    grace_days = loan.product_version.operational_grace_days
+    if balance.financial_history_from is not None:
+        from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
+        origin = loan.loan_events.get(event_kind="MIGRATION_OPENING")
+        if not balance.financially_settled and (schedule is None or schedule.source_event_id != origin.pk):
+            raise PawnLoanDelinquencyError("Opening delinquency requires its reviewed remaining obligations.")
+        grace_days = read_opening_evidence(loan, origin)["review"]["terms"]["grace_days"]
     obligation_state = calculate_obligation_state_as_of(schedule, as_of_date)
     rows = tuple(
         UnpaidObligation(
@@ -49,9 +57,9 @@ def get_pawn_loan_delinquency(loan_id: int, *, as_of_date: date):
     assessment = calculate_delinquency(
         rows,
         as_of_date=as_of_date,
-        operational_grace_days=loan.product_version.operational_grace_days,
+        operational_grace_days=grace_days,
     )
-    legacy = get_pawn_loan_balance(loan, as_of_date=as_of_date).is_overdue
+    legacy = balance.is_overdue
     return PawnLoanDelinquency(
         loan_id=loan.pk,
         as_of_date=as_of_date,

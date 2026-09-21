@@ -93,6 +93,50 @@ class NumberAllocationTests(WorkspaceTestCase):
         self.assertEqual(first.value, "PL-A-0001")
         self.assertEqual(second, first)
 
+    def test_historical_reservation_continues_without_consuming_or_rewinding(self):
+        from apps.orgs.audit import AuditLog
+        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through
+        kwargs = dict(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
+                      last_used_number=2, evidence_reference="Reviewed source register", actor=self.user)
+        reserve_sequence_through(**kwargs)
+        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).value, "PL-A-0003")
+        reserve_sequence_through(**kwargs)
+        self.assertEqual(allocate_pawn_loan_number(series=self.series, actor=self.user).value, "PL-A-0003")
+        reserve_sequence_through(**kwargs)
+        with self.assertRaises(SequenceExhaustedError):
+            allocate_pawn_loan_number(series=self.series, actor=self.user)
+        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE).value, "RL-A-0001")
+        self.assertEqual(AuditLog.objects.filter(company=self.tenant,
+            data__entity="loan_number_sequence_reservation").count(), 1)
+
+    def test_historical_reservation_can_mark_series_exhausted(self):
+        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through
+        reserve_sequence_through(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
+            last_used_number=3, evidence_reference="Reviewed source register", actor=self.user)
+        with self.assertRaises(SequenceExhaustedError):
+            allocate_pawn_loan_number(series=self.series, actor=self.user)
+
+    def test_historical_reservation_rejects_invalid_evidence_and_range(self):
+        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through, LicenseSeriesError
+        for last, reference in ((True, "review"), (-1, "review"), (4, "review"), (2, ""), (2, "bad\nreference")):
+            with self.subTest(last=last, reference=reference), self.assertRaises(LicenseSeriesError):
+                reserve_sequence_through(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
+                    last_used_number=last, evidence_reference=reference, actor=self.user)
+        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).counter, 1)
+
+    def test_historical_reservation_requires_actor_and_matching_workspace(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through, LicenseSeriesError
+        kwargs = dict(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
+                      last_used_number=2, evidence_reference="review")
+        with self.assertRaises(PermissionDenied):
+            reserve_sequence_through(**kwargs, actor=None)
+        from copy import copy
+        other_series = copy(self.series)
+        other_series.workspace_id = self.tenant.pk + 999999
+        with self.assertRaises(LicenseSeriesError):
+            reserve_sequence_through(**{**kwargs, "series": other_series}, actor=self.user)
+
     def test_allocations_are_unique_and_a_committed_gap_is_not_reused(self):
         abandoned = allocate_pawn_loan_number(series=self.series, actor=self.user)
         used = allocate_pawn_loan_number(series=self.series, actor=self.user)

@@ -46,6 +46,8 @@ def create_license_expiry_notice(
         pk=license_id, workspace_id=workspace_id
     )
     today = timezone.localdate()
+    if license.is_legacy_reference:
+        raise LoanOperationalNoticeError("A legacy reference has no verified expiry date for an expiry notice.")
     days_remaining = (license.expires_on - today).days
     if days_remaining > 30:
         raise LoanOperationalNoticeError(

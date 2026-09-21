@@ -1,0 +1,17 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Prepare Loans import{% endblock %}
+{% block workspace_content %}
+<p><a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Upload Loans history</a></p>
+<h1 class="h3">Prepare Loans import</h1>
+<p>Check existing destination setup and preview historical numbers for one loan. Both active loans and fully released loans are supported by the bounded complete-history workflow.</p>
+<div class="alert alert-info">This preparation step does not upload, save or import a loan. Upload a canonical JSONL file to validate and import complete history. A passing setup check does not establish that a loan is ready to import.</div>
+<p>Choose the licence revision valid on the original disbursal date and a matching flexible partial-payment product version. Expired licences and retired product versions may represent valid historical evidence; this does not activate them for new loans.</p>
+<form method="post" class="card card-body">{% csrf_token %}{{ form.as_p }}<button type="submit" class="btn btn-primary">Check setup and preview numbers</button></form>
+{% if preview %}
+<section class="card card-body mt-3"><h2 class="h5">Setup checks passed</h2>
+<p>Original disbursal: {{ preview.disbursed_on }}. Licence {{ preview.revision.license_number }}, revision {{ preview.revision.revision_number }}. Series {{ preview.series }}. Product {{ preview.product.product.name }}, version {{ preview.product.version }}.</p>
+<table class="table"><thead><tr><th>Document</th><th>Original number</th><th>Proposed local number</th></tr></thead><tbody>{% for row in preview.numbers %}<tr><td>{{ row.kind }}</td><td>{{ row.source_number }}</td><td class="text-break">{{ row.local_number }}</td></tr>{% endfor %}</tbody></table>
+<p>These numbers are previews, not reservations. No live counter has advanced. Setup, source identity and number conflicts must be checked again during the import. Original numbers must remain in import provenance.</p>
+</section>{% endif %}
+<p class="mt-3"><a href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">Party imports and bundle history</a></p>
+{% endblock %}

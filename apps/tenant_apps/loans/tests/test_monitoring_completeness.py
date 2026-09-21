@@ -82,6 +82,27 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
         snapshot.refresh_from_db()
         self.assertEqual(snapshot.status, "CURRENT")  # Read did not rewrite evidence.
 
+    def test_old_projection_upgrades_through_bounded_refresh_with_financial_evidence(self):
+        from apps.tenant_apps.loans.selectors.dashboard_health import get_dashboard_health_summary
+        from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
+        from apps.tenant_apps.loans.selectors.risk_portfolio import SNAPSHOT_CONTRACT
+        snapshot = self.refresh()
+        snapshot.source_provenance = {"calculation_contract": "LOAN_RISK_SNAPSHOT_V2"}
+        snapshot.save(update_fields=["source_provenance"])
+        self.extra_loan("CLOSED")
+        before = get_dashboard_health_summary(workspace=self.tenant)
+        self.assertEqual(before["stale_count"], 1)
+        self.assertIsNone(before["projected_interest"])
+        result = reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today, batch_size=1)
+        self.assertEqual(result, {"selected": 1, "current": 1, "errors": []})
+        snapshot.refresh_from_db()
+        self.assertEqual(snapshot.source_provenance["calculation_contract"], SNAPSHOT_CONTRACT)
+        canonical = get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today)
+        after = get_dashboard_health_summary(workspace=self.tenant)
+        self.assertEqual(after["projected_interest"], canonical.projected_interest)
+        self.assertEqual(after["economic_exposure"], canonical.total_economic_exposure)
+        self.assertEqual(after["loan_count"], 1)
+
     def test_batch_retries_outdated_and_never_assessed_without_error_starvation(self):
         broken = self.extra_loan()
         first = reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today, batch_size=1)

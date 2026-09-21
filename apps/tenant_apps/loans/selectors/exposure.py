@@ -60,12 +60,23 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
 
     balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
     previews = ()
-    if loan.state == PawnLoanState.ACTIVE.value and as_of_date >= loan.loan_date:
+    continuation = None
+    if balance.financial_history_from is not None:
+        from apps.tenant_apps.loans.services.opening_continuation import preview_opening_collection
+        try:
+            continuation = preview_opening_collection(loan, events=loan.loan_events.all(), as_of_date=as_of_date)
+        except ValueError as exc:
+            raise PawnLoanExposureError(str(exc)) from exc
+        if as_of_date > continuation.cutover_date:
+            previews = ((continuation.cutover_date + timedelta(days=1), as_of_date, continuation.additional_interest),)
+    elif loan.state == PawnLoanState.ACTIVE.value and as_of_date >= loan.loan_date:
         previews = _project_interest_periods(loan, as_of_date)
     projected_interest = sum(
         (row[2] for row in previews), Decimal("0")
     )
     active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
+    if continuation and not balance.financially_settled and (active_schedule is None or active_schedule.source_event_id != continuation.opening_event_id):
+        raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")
     obligation_state = calculate_obligation_state_as_of(active_schedule, as_of_date)
     due_now = obligation_state.due_now
     overdue = obligation_state.overdue
@@ -95,7 +106,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         findings.append("Recorded total due does not equal its balance components.")
     provenance = (
         "recorded:event-fold-v1",
-        "projection:actual-outstanding-daily-v1",
+        f"projection:{continuation.rule}" if continuation else "projection:actual-outstanding-daily-v1",
         f"contract:{loan.product_version.calculation_contract_version}",
         "due:active-obligation-fold-v1",
         f"schedule:{obligation_state.schedule_fingerprint or 'none'}",
@@ -103,7 +114,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     return PawnLoanExposure(
         loan_id=loan.pk,
         as_of_date=as_of_date,
-        original_principal=balance.principal_disbursed,
+        original_principal=balance.opening_principal if continuation else balance.principal_disbursed,
         principal_repaid=balance.principal_paid,
         principal_outstanding=balance.principal_outstanding,
         recorded_interest=balance.interest_outstanding,

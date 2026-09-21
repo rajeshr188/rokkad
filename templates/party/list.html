@@ -9,7 +9,9 @@
         <div class="text-muted small">Find a borrower, check their details, and continue their work at the counter.</div>
     </div>
     <div class="d-flex gap-2">
+        {% if can_import_parties %}<a class="btn btn-outline-secondary" href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">Import</a>{% endif %}
         {% if can_export_parties %}
+        <a class="btn btn-outline-secondary" href="{% url 'workspace_portability:export' workspace_slug=request.workspace.slug %}">Portable export</a>
         <div class="btn-group" role="group" aria-label="Export parties">
             <a class="btn btn-outline-secondary" href="?{% if export_querystring %}{{ export_querystring }}&{% endif %}_export=csv">
                 <i class="bi bi-filetype-csv"></i> CSV

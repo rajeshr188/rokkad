@@ -111,6 +111,13 @@ def get_pawn_loan_release_readiness(
         appraisal_values.setdefault(
             appraisal.collateral_item_id, appraisal.appraised_value
         )
+    unvalued_opening_item_ids = ()
+    opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").first()
+    if opening:
+        from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
+        evidence = read_opening_evidence(loan, opening)
+        unvalued_opening_item_ids = tuple(evidence["item_mapping"][row["id"]] for row in evidence["review"]["collateral"]
+            if row["valuation"].get("status") == "UNVERIFIED" and evidence["item_mapping"][row["id"]] not in appraisal_values)
     return calculate_pawn_loan_release_readiness(
         loan,
         collateral_items=collateral_items,
@@ -119,6 +126,7 @@ def get_pawn_loan_release_readiness(
         selected_item_ids=selected_item_ids,
         as_of_date=as_of_date,
         appraisal_values=appraisal_values,
+        unvalued_opening_item_ids=unvalued_opening_item_ids,
     )
 
 
@@ -132,6 +140,7 @@ def calculate_pawn_loan_release_readiness(
     as_of_date: date,
     rate_resolver=get_latest_commodity_valuation_rate,
     appraisal_values=None,
+    unvalued_opening_item_ids=(),
 ) -> PawnLoanReleaseReadiness:
     """Pure release quote except for its injected, public-facade rate lookup."""
     selected_ids = tuple(dict.fromkeys(int(value) for value in selected_item_ids))
@@ -141,6 +150,8 @@ def calculate_pawn_loan_release_readiness(
         item.pk: getattr(item, "approved_appraisal_value", None) for item in items
     }
     item_ids = {item.pk for item in items}
+    outstanding_ids = {item.pk for item in items if item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value}
+    unvalued_full_opening = bool(outstanding_ids) and selected_set == outstanding_ids and bool(unvalued_opening_item_ids)
     blockers = []
     if loan.state != PawnLoanState.ACTIVE.value:
         blockers.append(
@@ -193,7 +204,7 @@ def calculate_pawn_loan_release_readiness(
         snapshot, item_blockers = _value_item(
             item,
             selected=selected,
-            requires_valuation=(
+            requires_valuation=not (unvalued_full_opening and item.pk in unvalued_opening_item_ids) and (
                 selected
                 or item.custody_state
                 != CollateralCustodyState.WITH_CUSTOMER.value
@@ -275,6 +286,12 @@ def calculate_pawn_loan_release_readiness(
         if item.pk not in selected_set
         and item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value
     )
+    if unvalued_full_opening and valid_selection and not blockers and not retained_ids:
+        # Full settlement leaves no secured exposure. Unknown source values are
+        # not needed to collect all debt and return every item; never use this for partial release.
+        principal_reduction = _money(balance.principal_outstanding, quantum)
+        minimum_settlement = _money(fees_and_interest + principal_reduction, quantum)
+        principal_after, retained_value = ZERO, ZERO
     return PawnLoanReleaseReadiness(
         loan_id=loan.pk,
         as_of_date=as_of_date,

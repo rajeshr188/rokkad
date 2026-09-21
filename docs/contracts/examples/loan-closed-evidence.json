@@ -1,0 +1,33 @@
+{
+  "profile": "loan-closed-evidence/1",
+  "source": {
+    "namespace": "491cf2e4-99eb-499c-b555-68f3a8d5caaa",
+    "system": "paper-register-a",
+    "loan_id": "L123",
+    "snapshot_reference": "book-1990-page-12-scan-1",
+    "evidence_reference": "Synthetic source book page; settlement slips unavailable"
+  },
+  "facts": {
+    "status": "CLOSED",
+    "loan_number": "L123",
+    "raw_status": "released",
+    "borrower_reference": {
+      "system": "paper-register-a",
+      "id": "missing-customer"
+    },
+    "borrower_name": "Synthetic former borrower",
+    "opened_on": "1990-01-01",
+    "closed_on": null,
+    "original_principal": "1000.00",
+    "reported_balance": null,
+    "collateral": null,
+    "payments": null
+  },
+  "source_records": [
+    {
+      "loan": "L123",
+      "status": "released",
+      "old_margin_note": "Weight and receipt book unavailable"
+    }
+  ]
+}

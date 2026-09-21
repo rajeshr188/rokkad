@@ -1,0 +1,10 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Upload historical evidence{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Upload historical evidence</h1>
+<p>Upload a prepared record for one source-reported closed loan. Unknown facts can remain unknown. Review the source claims and findings before accepting them into the historical archive.</p>
+<p>This does not import an operational loan, post payments or change custody.</p>
+<form method="post" enctype="multipart/form-data" class="card card-body">{% csrf_token %}{{ form.as_p }}<p>Maximum 1 MiB per file.</p><button class="btn btn-primary">Stage evidence for review</button></form>
+<p class="mt-3"><a href="{% url 'workspace_portability:archive_schema' workspace_slug=request.workspace.slug %}">Download preparation schema</a> · <a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Historical archive</a></p>
+<h2 class="h5">Recent uploads</h2><ul>{% for batch in batches %}<li><a href="{% url 'workspace_portability:archive_batch' workspace_slug=request.workspace.slug batch_id=batch.public_id %}">{{ batch.created_at }} · {{ batch.state }}</a></li>{% empty %}<li>No uploads yet.</li>{% endfor %}</ul>
+{% endblock %}

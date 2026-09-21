@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "party-identifier/1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "identifier_type": {
+      "type": "string",
+      "enum": [
+        "PAN",
+        "AADHAAR",
+        "GSTIN",
+        "CIN",
+        "UDYAM",
+        "PASSPORT",
+        "DRIVING_LICENSE",
+        "OTHER"
+      ]
+    },
+    "value": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "masked_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "expires_on": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "source_is_verified": {
+      "type": "boolean"
+    },
+    "party_source_system": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "party_external_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_refs": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "system",
+          "external_id"
+        ],
+        "properties": {
+          "system": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "external_id": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "legacy_number": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      }
+    },
+    "source_verified_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "id",
+    "party_source_system",
+    "party_external_id",
+    "source_is_verified",
+    "identifier_type",
+    "value"
+  ]
+}

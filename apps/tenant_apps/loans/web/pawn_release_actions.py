@@ -49,11 +49,16 @@ def pawn_loan_release_full(request, pk):
     form = PawnFullReleaseForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
+            concession = {}
+            if form.cleaned_data.get("interest_concession") or form.cleaned_data.get("concession_reason"):
+                concession = {"interest_concession": form.cleaned_data["interest_concession"],
+                              "concession_reason": form.cleaned_data["concession_reason"]}
             result = release_pawn_loan_in_full(
                 loan.pk,
                 settlement_amount=form.cleaned_data["settlement_amount"],
                 request_key=form.cleaned_data["request_key"],
                 actor=request.user,
+                **concession,
             )
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
@@ -73,7 +78,7 @@ def pawn_loan_release_full(request, pk):
             "loan": loan,
             "form": form,
             "action_label": "Full release",
-            "description": "Collect the exact displayed settlement before returning all remaining collateral.",
+            "description": "Cash collected plus any explicitly approved interest concession must equal the displayed total due. Principal and fees must be collected in full.",
             "quote": quote,
         },
     )

@@ -1,0 +1,8 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Legacy loan openings{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Legacy loan openings</h1>
+<p>Review one source-verified loan at a time. Loans with missing balances, original due terms or source discrepancies stay held during preparation.</p>
+<ul>{% for batch in batches %}<li><a href="{% url 'workspace_portability:opening_batch' workspace_slug=request.workspace.slug batch_id=batch.public_id %}">{{ batch.document.opening.review.source.number|default:"Cancelled opening" }}</a> — {{ batch.state }} — {{ batch.created_at }}</li>{% empty %}<li>No reviewed source loans have been staged yet. Source preparation must establish the balances, original terms, custody, valuation and destination mappings first.</li>{% endfor %}</ul>
+<a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Complete loan history imports</a>
+{% endblock %}

@@ -1,3 +1,5 @@
+from .services.contact_details import save_identifier_form, save_role_form, save_relationship_form
+from .services.contact_details import (sync_party_primary_contact as _sync_party_primary_contact, save_contact_form as _save_contact_form, save_address_form as _save_address_form)
 import base64
 from pathlib import Path
 import uuid
@@ -231,75 +233,6 @@ def _render_party_detail(request, party, **kwargs):
     )
 
 
-def _sync_party_primary_contact(party, contact, *, old_contact=None, deleted=False):
-    phone_types = {
-        PartyContactMethod.ContactType.PHONE,
-        PartyContactMethod.ContactType.MOBILE,
-        PartyContactMethod.ContactType.WHATSAPP,
-    }
-    update_fields = []
-
-    if deleted:
-        if contact.contact_type == PartyContactMethod.ContactType.EMAIL:
-            if party.primary_email == contact.value:
-                party.primary_email = ""
-                update_fields.append("primary_email")
-        elif contact.contact_type in phone_types and party.primary_phone == contact.value:
-            party.primary_phone = ""
-            update_fields.append("primary_phone")
-    elif contact.is_primary:
-        if contact.contact_type == PartyContactMethod.ContactType.EMAIL:
-            party.primary_email = contact.value
-            update_fields.append("primary_email")
-        elif contact.contact_type in phone_types:
-            party.primary_phone = contact.value
-            update_fields.append("primary_phone")
-    elif old_contact and old_contact.is_primary:
-        if old_contact.contact_type == PartyContactMethod.ContactType.EMAIL:
-            if party.primary_email == old_contact.value:
-                party.primary_email = ""
-                update_fields.append("primary_email")
-        elif old_contact.contact_type in phone_types and party.primary_phone == old_contact.value:
-            party.primary_phone = ""
-            update_fields.append("primary_phone")
-
-    if update_fields:
-        update_fields.append("updated_at")
-        party.save(update_fields=update_fields)
-
-
-def _save_contact_form(form, party):
-    contact = form.save(commit=False)
-    contact.party = party
-    old_contact = None
-    if contact.pk:
-        old_contact = PartyContactMethod.objects.get(pk=contact.pk)
-    with transaction.atomic():
-        if contact.is_primary:
-            PartyContactMethod.objects.filter(
-                party=party,
-                contact_type=contact.contact_type,
-                is_primary=True,
-            ).exclude(pk=contact.pk).update(is_primary=False)
-        contact.save()
-        _sync_party_primary_contact(party, contact, old_contact=old_contact)
-    return contact
-
-
-def _save_address_form(form, party):
-    address = form.save(commit=False)
-    address.party = party
-    with transaction.atomic():
-        if address.is_default:
-            PartyAddress.objects.filter(
-                party=party,
-                address_type=address.address_type,
-                is_default=True,
-            ).exclude(pk=address.pk).update(is_default=False)
-        address.save()
-    return address
-
-
 def _image_file_from_data_uri(image_data):
     if not image_data:
         return None
@@ -338,6 +271,7 @@ def party_list(request):
             "status_choices": Party.PartyStatus.choices,
             "role_options": role_options,
             "can_export_parties": _can_export_party_data(request),
+            "can_import_parties": request.party_workspace_access.can("data.import"),
             "export_querystring": _party_export_querystring(request),
         },
     )
@@ -358,12 +292,13 @@ def party_detail(request, pk):
 
 @party_action_required("create")
 def party_create(request):
+    from .services.creation import create_party_from_form
+
     form = PartyForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        party = form.save(commit=False)
-        party.created_by = request.user
-        party.updated_by = request.user
-        party.save()
+        party = create_party_from_form(
+            form=form, workspace_id=request.workspace.pk, actor=request.user,
+        )
         messages.success(request, "Party created.")
         return redirect(
             "workspace_slug_party_detail",
@@ -410,11 +345,8 @@ def party_role_add(request, pk):
     party = get_object_or_404(Party, pk=pk)
     form = PartyRoleForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        role = form.save(commit=False)
-        role.party = party
         try:
-            with transaction.atomic():
-                role.save()
+            save_role_form(form, party)
             messages.success(request, "Role added.")
         except IntegrityError:
             messages.error(request, "An active role of that type already exists.")
@@ -549,9 +481,7 @@ def party_identifier_save(request, pk, identifier_pk=None):
         instance = get_object_or_404(PartyIdentifier, pk=identifier_pk, party=party)
     form = PartyIdentifierForm(request.POST, instance=instance, party=party)
     if form.is_valid():
-        identifier = form.save(commit=False)
-        identifier.party = party
-        identifier.save()
+        save_identifier_form(form, party)
         messages.success(request, "Identifier saved.")
         return redirect(_party_detail_url(request, party, "kyc"))
     messages.error(request, "Identifier could not be saved.")
@@ -623,9 +553,7 @@ def party_relationship_save(request, pk, relationship_pk=None):
         from_party=party,
     )
     if form.is_valid():
-        relationship = form.save(commit=False)
-        relationship.from_party = party
-        relationship.save()
+        save_relationship_form(form, party)
         messages.success(request, "Relationship saved.")
         return redirect(_party_detail_url(request, party, "relationships"))
     messages.error(request, "Relationship could not be saved.")

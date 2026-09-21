@@ -1,6 +1,6 @@
 """Append reviewed current-date appraisal evidence without changing loan terms."""
 
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
@@ -12,12 +12,15 @@ from apps.tenant_apps.rates.facade import RATE_FOUND, get_latest_commodity_valua
 from .action_access import require_loan_action
 
 
-APPRAISAL_METHODS = (("PHYSICAL_INSPECTION", "Physical inspection"), ("EXTERNAL_REPORT", "External appraisal report"))
+APPRAISAL_METHODS = (("PHYSICAL_INSPECTION", "Physical inspection"),
+                    ("EXTERNAL_REPORT", "External appraisal report"),
+                    ("RATE_BASED", "Rate-based appraisal"))
 
 
 @transaction.atomic
 def record_collateral_reappraisal(*, loan_id, item_id, actor, appraised_value,
-                                  method, evidence_reference, review_notes, expected_version):
+                                  method, evidence_reference, review_notes, expected_version,
+                                  expected_rate_id=None):
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise PermissionDenied("Reassessment requires an active Workspace.")
@@ -39,6 +42,33 @@ def record_collateral_reappraisal(*, loan_id, item_id, actor, appraised_value,
     if method not in dict(APPRAISAL_METHODS) or not evidence_reference.strip() or not review_notes.strip():
         raise ValidationError("Select a method and provide an evidence reference and review reason.")
     context = reappraisal_reference(item, as_of=now)
+    if method == "RATE_BASED":
+        from django.utils.dateparse import parse_datetime
+        from apps.tenant_apps.loans.domain.valuation_freshness import evidence_freshness
+        from apps.tenant_apps.loans.selectors.monitoring_policy import resolve_monitoring_policy, LoanRiskAssessmentError
+
+        if not context["rate_id"] or not context["suggested_metal_value"]:
+            raise ValidationError("A current pure-metal buying quote is required for a rate-based appraisal.")
+        if type(expected_rate_id) is not int or expected_rate_id != context["rate_id"]:
+            raise ValidationError("The reference quote changed. Reload and review the current rate and calculated value.")
+        try:
+            policy = resolve_monitoring_policy(workspace_id=workspace_id, license_id=loan.license_id,
+                as_of_date=timezone.localdate(now))
+        except LoanRiskAssessmentError as exc:
+            raise ValidationError("Configure monitoring before approving a rate-based appraisal.") from exc
+        status, _ = evidence_freshness(value=Decimal(context["buying_price_inr_per_pure_gram"]),
+            effective_date=timezone.localdate(parse_datetime(context["rate_effective_at"])),
+            as_of_date=timezone.localdate(now), maximum_age_days=policy.rate_freshness_days)
+        if status != "CURRENT":
+            raise ValidationError("The reference quote is too old for a rate-based appraisal. Record a current price first.")
+        try:
+            value = Decimal(str(appraised_value))
+            matches = value.is_finite() and value == Decimal(context["suggested_metal_value"])
+        except (InvalidOperation, ValueError):
+            matches = False
+        if not matches:
+            raise ValidationError("A rate-based appraisal must equal net weight times purity times the reviewed pure-metal buying price.")
+        context.update(valuation_basis="RATE_BASED", rate_maximum_age_days=policy.rate_freshness_days)
     appraisal = CollateralAppraisal.objects.create(
         workspace_id=workspace_id, collateral_item=item, version=(previous.version if previous else 0) + 1,
         effective_at=now, appraised_value=appraised_value, method=method,

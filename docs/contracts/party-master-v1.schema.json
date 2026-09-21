@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "party-master/1",
+  "type": "object",
+  "required": [
+    "id",
+    "credit_hold",
+    "kind",
+    "name",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "legal_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 255
+    },
+    "relation_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 255
+    },
+    "primary_phone": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 32
+    },
+    "primary_email": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 254
+    },
+    "tax_pan": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 16
+    },
+    "gstin": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 24
+    },
+    "risk_label": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 32
+    },
+    "kind": {
+      "enum": [
+        "INDIVIDUAL",
+        "ORGANIZATION",
+        "BANK",
+        "GOVERNMENT",
+        "INTERNAL_WORKSPACE",
+        "OTHER"
+      ]
+    },
+    "status": {
+      "enum": [
+        "ACTIVE",
+        "INACTIVE",
+        "BLOCKED",
+        "ARCHIVED"
+      ]
+    },
+    "relation_kind": {
+      "enum": [
+        null,
+        "SON_OF",
+        "DAUGHTER_OF",
+        "CARE_OF",
+        "PARENT_OF",
+        "FATHER_OF",
+        "WIFE_OF",
+        "HUSBAND_OF",
+        "OTHER"
+      ]
+    },
+    "business_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 32
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "credit_hold": {
+      "type": "boolean"
+    },
+    "extensions": {
+      "type": "object",
+      "maxProperties": 0
+    },
+    "photo_ref": {
+      "type": "null"
+    },
+    "origin": {
+      "enum": [
+        "NATIVE",
+        "IMPORT",
+        "BACKFILL"
+      ]
+    },
+    "recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_recorded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_refs": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": [
+          "system",
+          "external_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "external_id": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "legacy_number": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      }
+    }
+  }
+}

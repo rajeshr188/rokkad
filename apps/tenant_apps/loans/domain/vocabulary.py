@@ -24,6 +24,7 @@ class PawnLoanState(StringEnum):
 
 
 class TransactionKind(StringEnum):
+    MIGRATION_OPENING = "MIGRATION_OPENING"
     DISBURSAL = "DISBURSAL"
     REPAYMENT = "REPAYMENT"
     INTEREST_ACCRUAL = "INTEREST_ACCRUAL"
@@ -71,6 +72,7 @@ class CollateralCustodyState(StringEnum):
 class CollateralMetal(StringEnum):
     GOLD = "GOLD"
     SILVER = "SILVER"
+    BRONZE = "BRONZE"
     OTHER = "OTHER"
 
 

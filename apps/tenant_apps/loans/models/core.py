@@ -46,8 +46,9 @@ class LoanLicense(models.Model):
     name = models.CharField(max_length=255)
     license_number = models.CharField(max_length=100)
     issuing_authority = models.CharField(max_length=255, blank=True)
-    issued_on = models.DateField()
-    expires_on = models.DateField()
+    issued_on = models.DateField(null=True, blank=True)
+    expires_on = models.DateField(null=True, blank=True)
+    is_legacy_reference = models.BooleanField(default=False, editable=False)
     is_active = models.BooleanField(default=True, db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -78,6 +79,11 @@ class LoanLicense(models.Model):
                 condition=Q(expires_on__gte=F("issued_on")),
                 name="loans_license_dates_valid",
             ),
+            models.CheckConstraint(
+                condition=(Q(is_legacy_reference=True, is_active=False, issued_on__isnull=True, expires_on__isnull=True)
+                           | Q(is_legacy_reference=False, issued_on__isnull=False, expires_on__isnull=False)),
+                name="loans_license_validity_evidence",
+            ),
         ]
         indexes = [
             models.Index(
@@ -102,7 +108,7 @@ class LoanLicense(models.Model):
         return super().save(*args, **kwargs)
 
     def is_expired(self, as_of_date=None):
-        return self.expires_on < (as_of_date or timezone.localdate())
+        return self.expires_on is not None and self.expires_on < (as_of_date or timezone.localdate())
 
 
 class LoanSeries(WorkspaceOwnedModel):
@@ -655,7 +661,9 @@ class PawnCollateralItem(WorkspaceOwnedModel):
     )
     description = models.CharField(max_length=255)
     metal = models.CharField(max_length=16, choices=enum_choices(CollateralMetal))
-    gross_weight = models.DecimalField(max_digits=14, decimal_places=4)
+    # Null preserves missing migration evidence. Keep blank=False: native draft
+    # forms and approval full_clean still require a measured gross weight.
+    gross_weight = models.DecimalField(max_digits=14, decimal_places=4, null=True)
     net_weight = models.DecimalField(max_digits=14, decimal_places=4)
     purity_percentage = models.DecimalField(max_digits=7, decimal_places=4)
     latest_appraised_value = models.DecimalField(
@@ -995,6 +1003,8 @@ class PawnLoanEvent(WorkspaceOwnedModel):
                 ),
                 name="loans_event_reversal_link_valid",
             ),
+            models.UniqueConstraint(fields=("loan",), condition=Q(event_kind="MIGRATION_OPENING"),
+                                    name="loans_one_migration_opening"),
         ]
 
 
@@ -1088,7 +1098,7 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
 
 
 class PawnLoanInterestAccrual(WorkspaceOwnedModel):
-    """Immutable, currency-rounded monthly interest recognition row."""
+    """Immutable interest recognition, including release collection catch-up."""
 
     loan = models.ForeignKey(
         PawnLoan,
@@ -1513,6 +1523,14 @@ class PawnLoanRelease(models.Model):
                 name="loans_release_amounts_nonnegative",
             ),
         ]
+
+    @property
+    def interest_concession_amount(self):
+        return Decimal(str(self.loan_event.payload.get("values", {}).get("interest_concession", "0")))
+
+    @property
+    def interest_concession_reason(self):
+        return (self.loan_event.payload.get("release") or {}).get("interest_concession_reason", "")
 
     def save(self, *args, **kwargs):
         if self.pk:

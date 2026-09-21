@@ -72,6 +72,7 @@ def pawn_loan_list(request):
 @loans_workspace_required
 def pawn_loan_detail(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    opening = next((event for event in loan.loan_events.all() if event.event_kind == "MIGRATION_OPENING"), None)
     series_navigation = get_pawn_loan_series_navigation(loan)
     context = {
         "loan": loan,
@@ -119,7 +120,7 @@ def pawn_loan_detail(request, pk):
             context["risk_assessment"] = get_pawn_loan_risk_assessment(loan.pk, as_of_date=context["today"])
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["risk_error"] = str(exc)
-    if loan.state == PawnLoanState.ACTIVE.value:
+    if loan.state == PawnLoanState.ACTIVE.value and not opening:
         try:
             context["accrual_previews"] = preview_pawn_loan_accruals(
                 loan.pk,
@@ -151,6 +152,26 @@ def pawn_loan_detail(request, pk):
     for item in loan.collateral_items.all():
         item.current_appraisal = current_appraisals.get(item.pk)
     context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
+    if opening:
+        context["is_opening"] = True
+        for action in ("repay", "accrue", "capitalize", "renew"):
+            context["can_" + action] = False
+        from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
+        try:
+            review = read_opening_evidence(loan, opening)["review"]
+            context["opening_review"] = review
+            if loan.state == PawnLoanState.ACTIVE.value:
+                from apps.tenant_apps.loans.services.opening_continuation import opening_interest_breakdown
+                context["opening_interest_breakdown"] = opening_interest_breakdown(review, as_of_date=context["today"])
+            context["opening_source_valuations"] = [row for row in review["collateral"] if row["valuation"].get("status") == "UNVERIFIED"]
+        except ValueError as exc:
+            context["balance_error"] = str(exc)
+        if loan.state == PawnLoanState.ACTIVE.value:
+            from apps.tenant_apps.loans.services.pawn_release import preview_pawn_loan_full_release
+            try:
+                context["collection_quote"] = preview_pawn_loan_full_release(loan.pk)
+            except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+                context["collection_error"] = str(exc)
     context["simple_owner"] = request.loans_workspace.loan_workflow == "SIMPLE" and request.loans_workspace_access.can("workspace.transfer")
     context["primary_action"] = _primary_action(loan, context)
     return render(request, "loans/pawn/detail.html", context)
@@ -177,6 +198,12 @@ def _primary_action(loan, context):
             "message": "Record disbursal to activate the loan.",
         }
     if loan.state == PawnLoanState.ACTIVE.value:
+        if context.get("is_opening"):
+            if not context.get("can_release"):
+                return None
+            return {"label": "Collect and release", "url": reverse(
+                'workspace_loans:pawn_loan_release_full', args=[loan.workspace.slug, loan.pk]),
+                "message": "Review the amount to collect, record any interest concession and return the collateral."}
         if not context.get("can_repay", False):
             return None
         return {

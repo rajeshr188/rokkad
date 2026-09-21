@@ -96,6 +96,8 @@ def preview_pawn_loan_accruals(
     include_partial: bool = True,
 ) -> tuple[AccrualPeriodPreview, ...]:
     loan = _tenant_loan(loan_id)
+    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        raise PawnInterestError("Migration opening interest continuation is not enabled; historical periods cannot be replayed.")
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnInterestError("Only an active PawnLoan can accrue interest.")
     policy = loan.policy_snapshot
@@ -371,6 +373,8 @@ def finalize_pawn_loan_accrual(
 ) -> AccrualFinalizationResult:
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.accrue")
+    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        raise PawnInterestError("Opening collection catch-up is posted only within full release, not native period finalization.")
     existing = loan.interest_accruals.filter(period_number=period_number).first()
     if existing:
         event = existing.loan_event

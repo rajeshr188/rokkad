@@ -10,6 +10,7 @@ from .balances import (
     PawnLoanBalanceSelectorError, calculate_pawn_loan_balance,
     _optional_policy_snapshot,
 )
+from .dashboard_health import get_dashboard_health_summary
 
 
 ZERO = Decimal("0")
@@ -55,7 +56,7 @@ def get_business_overview(*, workspace, activity_start=None, activity_end=None):
             balance = calculate_pawn_loan_balance(loan, events=loan.dashboard_events,
                 collateral_items=(), policy_snapshot=_optional_policy_snapshot(loan),
                 as_of_date=today, pending_delivery_blocks=False)
-            if balance.principal_disbursed + balance.principal_capitalized <= ZERO:
+            if balance.principal_disbursed + balance.principal_capitalized + balance.opening_principal <= ZERO:
                 raise PawnLoanBalanceSelectorError("Active loan has no opening balance.")
             if not balance.principal_outstanding.is_finite() or not balance.interest_outstanding.is_finite():
                 raise PawnLoanBalanceSelectorError("Non-finite recorded balance.")
@@ -70,6 +71,7 @@ def get_business_overview(*, workspace, activity_start=None, activity_end=None):
         unavailable_balance_count=unavailable, activity=None)
     if activity_start is not None:
         result["activity"] = _activity(workspace.pk, activity_start, activity_end, today)
+    result["health"] = get_dashboard_health_summary(workspace=workspace)
     return result
 
 

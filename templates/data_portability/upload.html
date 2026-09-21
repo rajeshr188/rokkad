@@ -1,0 +1,35 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Import Party data{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Import Party data</h1>
+<p><a href="{% url 'workspace_portability:loan_setup' workspace_slug=request.workspace.slug %}">Prepare Loans import (Workspace owner)</a></p>
+<p>Upload up to 1,000 rows in a UTF-8 CSV, XLSX or canonical JSONL file (5 MiB maximum). You will review a preview before any Party is created.</p>
+<p>Choose Party master, contact methods, addresses, identifiers, Party roles or relationships. Import the Party master before its children. Child rows require an exact Party source reference; relationships require both Parties. Binary KYC documents, photos and Loans are excluded.</p>
+<p>XLSX: use one visible worksheet, text headers in row 1 and plain values. Formulas, macros, links, hidden data, merged cells and filters are unsupported. Store dates and identifiers needing leading zeros as text. Excel-formatted numeric values are rejected.</p>
+<form method="post" enctype="multipart/form-data" class="card card-body">
+  {% csrf_token %}{{ form.as_p }}
+  <button class="btn btn-primary" type="submit">Upload for review</button>
+</form>
+<h2 class="h5 mt-4">Upload a Party ZIP bundle</h2>
+<p>Upload a Rokkad Party bundle (31 MiB maximum). All six profiles are checked together before nonempty files are staged. No Party data is committed by this upload. The source Workspace in the bundle never changes your destination Workspace.</p>
+<form method="post" enctype="multipart/form-data" class="card card-body">
+  {% csrf_token %}<input type="hidden" name="action" value="bundle">{{ bundle_form.as_p }}
+  <button class="btn btn-primary" type="submit">Stage ZIP for review</button>
+</form>
+{% if receipt_error %}<div class="alert alert-warning">{{ receipt_error }}</div>{% endif %}
+{% if receipt_rows %}
+<section class="card card-body my-3"><h2 class="h5">Bundle staging results</h2>
+<p><a class="btn btn-primary" href="{% if history_id %}{% url 'workspace_portability:bundle_history' workspace_slug=request.workspace.slug bundle_id=history_id %}{% else %}{% url 'workspace_portability:bundle' workspace_slug=request.workspace.slug %}?receipt={{ request.GET.bundle_receipt|urlencode }}{% endif %}">Review and commit whole bundle</a></p>
+<p>Alternatively, review and commit Party master first. Then open each child preview and choose Validate canonical records again to resolve the committed parents. Party roles require explicit destination role-type mapping. Each profile has its own confirmation; the bundle is not committed as one transaction. Empty profiles are skipped.</p>
+<ol>{% for item in receipt_rows %}<li>{{ item.profile }}: {% if item.empty %}Empty ? no batch needed{% elif item.batch %}<a href="{% url 'workspace_portability:batch' workspace_slug=request.workspace.slug batch_id=item.batch.public_id %}">{{ item.batch.get_state_display }} ? review preview</a>{% else %}Batch unavailable{% endif %}</li>{% endfor %}</ol>
+<p>These batches also appear in Recent imports. Reloading this page does not upload again. Uploading the ZIP again creates new previews; commit-time identity checks still prevent duplicate Party records.</p>
+</section>
+{% endif %}
+<a class="btn btn-link" href="{% url 'workspace_portability:export' workspace_slug=request.workspace.slug %}">Export Party master data</a>
+<h2 class="h5 mt-3">Recent imports</h2>
+<ul>{% for batch in batches %}<li><a href="{% url 'workspace_portability:batch' workspace_slug=request.workspace.slug batch_id=batch.public_id %}">{{ batch.source_name }} · {{ batch.get_state_display }}</a></li>{% empty %}<li>No imports yet.</li>{% endfor %}</ul>
+<h2 class="h5 mt-4">Bundle history</h2>
+<p>Reopen a bundle here after its staging receipt expires. Each review requires current permissions and a fresh approval.</p>
+<ul>{% for history in histories %}<li><a href="{% url 'workspace_portability:bundle_history' workspace_slug=request.workspace.slug bundle_id=history.public_id %}">{{ history.created_at }} ? {{ history.progress }}</a> ? Source {{ history.source_namespace }}</li>{% empty %}<li>No saved bundles yet. Stage a Party ZIP bundle to create an entry here. Individual CSV, XLSX and JSONL imports appear in Recent imports.</li>{% endfor %}</ul>
+<nav aria-label="Bundle history pages">{% if histories.has_previous %}<a href="?history_page={{ histories.previous_page_number }}">Previous</a>{% endif %} Page {{ histories.number }} of {{ histories.paginator.num_pages }} {% if histories.has_next %}<a href="?history_page={{ histories.next_page_number }}">Next</a>{% endif %}</nav>
+{% endblock %}

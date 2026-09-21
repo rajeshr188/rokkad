@@ -1,0 +1,9 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Accepted historical evidence{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Accepted historical evidence</h1>
+<p>Accepted by {{ evidence.accepted_by }} on {{ evidence.accepted_at }}. Source claims are preserved as an immutable snapshot.</p>
+{% include 'data_portability/_archive_evidence.html' %}
+{% if can_export %}<form method="post" action="{% url 'workspace_portability:archive_export' workspace_slug=request.workspace.slug evidence_id=evidence.public_id %}" class="mt-3">{% csrf_token %}<button class="btn btn-secondary">Export retained evidence</button></form>{% endif %}
+<p class="mt-3"><a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}?q={{ evidence.source_id|urlencode }}">Browse source snapshots</a> · <a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Historical archive</a></p>
+{% endblock %}

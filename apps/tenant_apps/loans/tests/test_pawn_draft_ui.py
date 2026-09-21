@@ -632,7 +632,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
             str(self.party.pk),
         )
         self.assertEqual(list(field.queryset), [self.party])
-        self.assertEqual(list(field.widget.get_queryset()), [self.party])
+        # The test connection is an owner role; runtime widget reads are RLS scoped.
+        self.assertEqual(list(field.widget.get_queryset().filter(workspace=self.tenant)), [self.party])
         self.assertNotIn(inactive_party, field.widget.get_queryset())
         self.assertContains(response, "django-select2")
         self.assertContains(

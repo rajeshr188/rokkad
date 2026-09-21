@@ -71,6 +71,7 @@ SHARED_APPS = [
     "pages",
     "invitations",
     "apps.tenant_apps.party",
+    "apps.tenant_apps.data_portability.apps.DataPortabilityConfig",
     "apps.tenant_apps.loans.apps.LoansConfig",
     "apps.tenant_apps.rates",
     "apps.tenant_apps.notify_v2",

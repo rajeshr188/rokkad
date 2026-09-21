@@ -4,11 +4,13 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from itertools import groupby
+from django.db.models import Q
 
 from apps.tenant_apps.loans.models import (
     PawnLoanDisbursalSnapshot,
     PawnLoanPrincipalOpeningLine,
     PawnLoanRepaymentAllocationLine,
+    PawnLoanPrincipalClosingLine,
 )
 
 
@@ -28,11 +30,27 @@ def get_pawn_principal_tranche_balances(
     loan, *, as_of_date: date | None = None
 ) -> tuple[PawnPrincipalTrancheBalance, ...]:
     """Fold active repayment lines over the frozen disbursal allocations."""
+    origins = tuple(loan.loan_events.filter(event_kind="MIGRATION_OPENING"))
+    opening = None
+    if origins:
+        from .opening_evidence import read_opening_evidence, opening_tranches, OpeningEvidenceError
+        if len(origins) != 1 or loan.loan_events.filter(event_kind__in=["DISBURSAL", "RENEWAL_OPENING"]).exists():
+            raise PawnTrancheBalanceError("Migration opening requires exactly one financial origin.")
+        if as_of_date is not None and as_of_date < origins[0].effective_date:
+            raise PawnTrancheBalanceError("Item principal before migration cutover is unavailable.")
+        try:
+            opening = read_opening_evidence(loan, origins[0])
+        except OpeningEvidenceError as exc:
+            raise PawnTrancheBalanceError(str(exc)) from exc
     try:
         disbursal = loan.disbursal_snapshot
     except PawnLoanDisbursalSnapshot.DoesNotExist:
         disbursal = None
-    if disbursal is not None:
+    if opening is not None:
+        if disbursal is not None:
+            raise PawnTrancheBalanceError("Migration opening cannot have fabricated disbursal evidence.")
+        tranches = opening_tranches(opening)
+    elif disbursal is not None:
         tranches = tuple(disbursal.evidence.get("tranches") or ())
     else:
         opening_lines = tuple(
@@ -56,6 +74,8 @@ def get_pawn_principal_tranche_balances(
             "Itemized PawnLoan disbursal is missing frozen tranche evidence."
         )
     collateral_ids = set(loan.collateral_items.values_list("pk", flat=True))
+    if opening is not None and collateral_ids != set(opening["item_mapping"].values()):
+        raise PawnTrancheBalanceError("Migration opening item membership differs from the loan.")
     ordered_ids = []
     rates = {}
     initial = {}
@@ -82,11 +102,11 @@ def get_pawn_principal_tranche_balances(
         initial[item_id] = principal
         current[item_id] = principal
 
+    active = Q(loan_event__reversed_by_event__isnull=True)
+    if opening is not None and as_of_date is not None:
+        active |= Q(loan_event__reversed_by_event__effective_date__gt=as_of_date)
     lines = (
-        PawnLoanRepaymentAllocationLine.objects.filter(
-            loan_event__loan=loan,
-            loan_event__reversed_by_event__isnull=True,
-        )
+        PawnLoanRepaymentAllocationLine.objects.filter(active, loan_event__loan=loan)
         .select_related("loan_event")
         .order_by(
             "loan_event__effective_date",
@@ -99,6 +119,8 @@ def get_pawn_principal_tranche_balances(
     for _event_id, event_lines_iter in groupby(lines, key=lambda line: line.loan_event_id):
         event_lines = tuple(event_lines_iter)
         event = event_lines[0].loan_event
+        if opening is not None and event.effective_date <= origins[0].effective_date:
+            raise PawnTrancheBalanceError("Repayment allocation cannot overlap the migration cutover.")
         values = event.payload.get("values") or {}
         expected_principal = Decimal(
             str(values.get("original_principal", values.get("principal", "0")))
@@ -139,6 +161,20 @@ def get_pawn_principal_tranche_balances(
                 )
             current[item_id] = line.balance_after
 
+    if opening is not None:
+        closures = PawnLoanPrincipalClosingLine.objects.filter(active, loan_event__loan=loan)
+        if as_of_date is not None:
+            closures = closures.filter(loan_event__effective_date__lte=as_of_date)
+        closed = tuple(closures.select_related("loan_event"))
+        if closed:
+            if len({line.loan_event_id for line in closed}) != 1 or {line.collateral_item_id for line in closed} != set(current):
+                raise PawnTrancheBalanceError("Opening full-release principal lines must cover every item exactly once.")
+            for line in closed:
+                if (line.loan_event.event_kind != "RELEASE_RECEIPT" or line.balance_before != current[line.collateral_item_id] or
+                        line.principal_settled != line.balance_before or line.balance_after != 0 or
+                        line.monthly_interest_rate != rates[line.collateral_item_id]):
+                    raise PawnTrancheBalanceError("Opening full-release principal lines do not reconcile.")
+                current[line.collateral_item_id] = Decimal("0")
     return tuple(
         PawnPrincipalTrancheBalance(
             collateral_item_id=item_id,

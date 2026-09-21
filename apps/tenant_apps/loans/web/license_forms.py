@@ -29,6 +29,8 @@ class LoanLicenseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["issued_on"].required = True
+        self.fields["expires_on"].required = True
         if not self.instance.pk:
             self.fields["supporting_document"].required = True
         for field in self.fields.values():

@@ -87,6 +87,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         "subscriptions:invoice-detail",  # view invoice
         "subscriptions:invoice-pdf",  # download invoice PDF
         "workspace_slug_settings_billing",
+        "workspace_portability:export",  # Authorized partial export survives paid expiry.
     ]
 
     def _resolve_workspace(self, request):

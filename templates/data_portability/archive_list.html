@@ -1,0 +1,12 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Historical loan evidence{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Historical loan evidence</h1>
+<p>Retained source claims about closed loans. These records do not create debt, prove settlement or support loan servicing.</p>
+{% if can_import %}<p><a href="{% url 'workspace_portability:archive_upload' workspace_slug=request.workspace.slug %}">Upload historical evidence for review</a></p>{% endif %}
+<form method="get" class="mb-3"><label for="archive-search">Find a source ID or loan number</label> <input id="archive-search" name="q" value="{{ query }}" maxlength="255"><button class="btn btn-secondary">Search</button></form>
+<table class="table"><thead><tr><th>Source loan</th><th>Source</th><th>Snapshot</th><th>Accepted</th></tr></thead><tbody>
+{% for row in page %}<tr><td><a href="{% url 'workspace_portability:archive_detail' workspace_slug=request.workspace.slug evidence_id=row.public_id %}">{{ row.document.facts.loan_number|default_if_none:row.source_id }}</a></td><td>{{ row.source_system }} / {{ row.source_id }}</td><td>{{ row.document.source.snapshot_reference }}</td><td>{{ row.accepted_at }}</td></tr>{% empty %}<tr><td colspan="4">No accepted evidence found.</td></tr>{% endfor %}
+</tbody></table>
+<p>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&amp;q={{ query|urlencode }}">Previous</a> {% endif %}Page {{ page.number }} of {{ page.paginator.num_pages }}{% if page.has_next %} <a href="?page={{ page.next_page_number }}&amp;q={{ query|urlencode }}">Next</a>{% endif %}</p>
+{% endblock %}

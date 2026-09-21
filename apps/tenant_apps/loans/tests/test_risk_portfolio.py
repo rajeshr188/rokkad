@@ -106,6 +106,9 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         assessed_at = timezone.make_aware(datetime(2026, 8, 13, 10, 30))
         exposure = SimpleNamespace(
             total_economic_exposure=Decimal("1250.00"),
+            projected_interest=Decimal("50.00"),
+            recorded_total_due=Decimal("1200.00"),
+            integrity_findings=(),
             due_now=SimpleNamespace(total=Decimal("300.00")),
             overdue=SimpleNamespace(total=Decimal("125.00")),
             ltv_basis_label="Economic exposure",
@@ -155,3 +158,7 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         self.assertEqual(values["source_provenance"]["valuation_rate_ids"], [12])
         self.assertEqual(values["source_provenance"]["collateral_item_ids"], [7, 8])
         self.assertEqual(values["source_provenance"]["coverage"]["basis"], "Economic exposure")
+        self.assertEqual(values["source_provenance"]["financial"], {
+            "projected_interest": "50.00", "recorded_total_due": "1200.00",
+            "integrity_findings": [],
+        })

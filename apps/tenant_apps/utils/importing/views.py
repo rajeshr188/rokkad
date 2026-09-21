@@ -17,9 +17,11 @@ from import_export import resources
 from import_export.formats import base_formats
 from tablib import Dataset
 
-from apps.orgs.models import Membership
+from apps.orgs.access import resolve_workspace_access
+from apps.orgs.models import Company, Membership
 from apps.orgs.permissions import is_platform_admin
 from apps.orgs.tenant_context import resolve_request_workspace
+from apps.tenancy.context import current_workspace_id
 
 from .forms import ExportForm, ImportForm, tenant_app_configs
 
@@ -125,7 +127,13 @@ def _export_resource_for_model(model, app_path=None):
     )
 
 
+def _require_importable_model(model):
+    if model._meta.app_label == "loans":
+        raise PermissionDenied("Use the reviewed Loans import workflow to import loan data.")
+
+
 def _import_resource_for_model(model):
+    _require_importable_model(model)
     return _resource_from_module(model) or resources.modelresource_factory(model=model)
 
 
@@ -206,8 +214,21 @@ def export_multiple_models(request, model_names, export_format):
             return response
 
 
-@owner_or_admin_required
+@login_required
 def import_data(request):
+    workspace = resolve_request_workspace(request)
+    if workspace is None or current_workspace_id() != workspace.pk:
+        raise PermissionDenied("Import requires the matching explicit Workspace context.")
+    access = resolve_workspace_access(actor=request.user, workspace=workspace)
+    for action in ("data.view", "data.import", "workspace.settings.manage"):
+        access.require(action)
+    if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
+        raise PermissionDenied("Import requires an active Workspace.")
+    # Reject forged model selections before reading/parsing the uploaded contents.
+    if request.method == "POST":
+        model, _ = _find_tenant_model(request.POST.get("model_name", ""))
+        if model is not None:
+            _require_importable_model(model)
     form = ImportForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         model_name = form.cleaned_data["model_name"]

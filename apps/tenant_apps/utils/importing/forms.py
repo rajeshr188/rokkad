@@ -22,6 +22,17 @@ def _tenant_model_choices():
     return sorted(choices, key=lambda choice: choice[1].lower())
 
 
+def _import_model_choices():
+    # Loans writes must pass through its reviewed domain commands, including setup
+    # and evidence models. Keep the export inventory independent of this boundary.
+    return sorted(
+        (model.__name__, model.__name__)
+        for config in tenant_app_configs()
+        if config.label != "loans"
+        for model in config.models.values()
+    )
+
+
 class ExportForm(forms.Form):
     model_names = forms.MultipleChoiceField(
         choices=_tenant_model_choices,
@@ -42,5 +53,5 @@ class ExportForm(forms.Form):
 
 
 class ImportForm(forms.Form):
-    model_name = forms.ChoiceField(choices=_tenant_model_choices)
+    model_name = forms.ChoiceField(choices=_import_model_choices)
     import_file = forms.FileField()

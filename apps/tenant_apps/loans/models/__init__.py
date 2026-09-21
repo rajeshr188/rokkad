@@ -156,3 +156,8 @@ __all__.append("PawnLoanCommunicationPolicy")
 from .release_batch import PawnReleaseBatch, PawnReleaseBatchLine
 
 __all__ += ["PawnReleaseBatch", "PawnReleaseBatchLine"]
+
+from .history import HistoricalLoanImport
+__all__.append("HistoricalLoanImport")
+from .archive import HistoricalLoanEvidence
+__all__.append("HistoricalLoanEvidence")

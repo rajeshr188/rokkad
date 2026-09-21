@@ -26,6 +26,7 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
         INITIAL = "INITIAL", "Initial issue"
         AMENDMENT = "AMENDMENT", "Amendment"
         RENEWAL = "RENEWAL", "Renewal"
+        LEGACY_REFERENCE = "LEGACY_REFERENCE", "Legacy reference (validity unknown)"
 
     license = models.ForeignKey(
         LoanLicense,
@@ -37,8 +38,8 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
     name = models.CharField(max_length=255)
     license_number = models.CharField(max_length=100)
     issuing_authority = models.CharField(max_length=255, blank=True)
-    issued_on = models.DateField()
-    expires_on = models.DateField()
+    issued_on = models.DateField(null=True, blank=True)
+    expires_on = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
     supporting_document = models.FileField(
         upload_to=loan_license_document_upload,
@@ -73,6 +74,11 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
                 name="loans_license_revision_dates_valid",
             ),
             models.CheckConstraint(
+                condition=(Q(kind="LEGACY_REFERENCE", issued_on__isnull=True, expires_on__isnull=True)
+                           | (~Q(kind="LEGACY_REFERENCE") & Q(issued_on__isnull=False, expires_on__isnull=False))),
+                name="loans_licrev_validity_evidence",
+            ),
+            models.CheckConstraint(
                 condition=(
                     Q(supporting_document="", sha256="", byte_size=0)
                     | (
@@ -99,6 +105,10 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
     def has_document(self):
         return bool(self.supporting_document and self.sha256 and self.byte_size)
 
+    @property
+    def is_legacy_reference(self):
+        return self.kind == self.Kind.LEGACY_REFERENCE
+
     def clean(self):
         super().clean()
         active_workspace_id = current_tenant_workspace_id()
@@ -109,6 +119,8 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
                 )
         if self.pk:
             raise ValidationError("License revision evidence is immutable.")
+        if self.license_id and ((self.kind == self.Kind.LEGACY_REFERENCE) != self.license.is_legacy_reference):
+            raise ValidationError("Legacy references and verified licence revisions must remain separate.")
 
     def save(self, *args, **kwargs):
         self.full_clean()

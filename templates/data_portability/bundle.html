@@ -1,0 +1,44 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Review Party bundle{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Review Party bundle</h1>
+{% if history %}<p>Staged {{ history.created_at }} ? {{ history.progress }} ? Source {{ history.source_namespace }}</p><p>This saved page can be reopened later. Generate a fresh combined preview whenever approval expires.</p>{% endif %}
+<p>Review all nonempty profiles together. Master Parties are evaluated before their children, so you can approve one transaction without first committing the master separately. No Party changes from the preview are retained.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if finished %}<div class="alert alert-success">All profiles in this bundle are completed. Repeating the same approved commit does not create duplicates.</div>{% endif %}
+<ul>{% for batch in batches %}<li><a href="{% url 'workspace_portability:batch' workspace_slug=request.workspace.slug batch_id=batch.public_id %}">{{ batch.contract_version }} ? {{ batch.get_state_display }}</a></li>{% endfor %}</ul>
+{% if not batches and not error %}<p>All profiles are empty. There is nothing to commit.</p>{% endif %}
+{% if batches and not finished and not eligible %}<p>Some profiles are already completed or cancelled. Continue through the individual batch links above.</p>{% endif %}
+{% if eligible %}
+<form method="post" class="card card-body my-3">{% csrf_token %}
+<input type="hidden" name="receipt" value="{{ receipt }}"><input type="hidden" name="action" value="preview">
+<p>Choose the destination types for source Party roles. This does not create role types or staff permissions.</p>{{ role_form.as_p }}
+<button class="btn btn-primary" type="submit">Generate combined preview</button></form>
+{% endif %}
+{% if preview %}
+{% if not preview.ready %}<div class="alert alert-warning">This bundle cannot be committed. Resolve the displayed errors and review again. Profiles after a failed dependency have not been evaluated.</div>{% endif %}
+{% for profile in preview.profiles %}
+<section class="card card-body my-3"><h2 class="h5">{{ profile.profile }}</h2>
+<p>{{ profile.summary.new_records }} new; {{ profile.summary.existing_records }} existing; {{ profile.summary.rows_with_warnings }} rows with warnings; {{ profile.summary.rows_with_errors }} rows with errors.</p>
+{% for row in profile.rows %}<details class="my-2"><summary>Source row {{ row.number }} ? {{ row.disposition }}</summary>
+{% if row.role_label %}<p>Destination role: {{ row.role_label }}</p>{% endif %}
+<pre class="text-wrap">{{ row.display_values }}</pre>
+<ul>{% for issue in row.issues %}<li>{{ issue.severity }} ? {{ issue.message }}{% if issue.field %} ({{ issue.field }}){% endif %}{% if issue.before != issue.after %} ? {{ issue.before }} ? {{ issue.after }}{% endif %}</li>{% endfor %}</ul>
+</details>{% endfor %}</section>
+{% endfor %}
+{% if preview.ready %}<form method="post" class="card card-body my-3">{% csrf_token %}
+<input type="hidden" name="receipt" value="{{ receipt }}"><input type="hidden" name="action" value="commit"><input type="hidden" name="approval" value="{{ preview.approval }}">
+<label><input type="checkbox" name="warnings" value="yes" required> I reviewed every profile, destination role mapping, normalized value and warning, including any primary-contact summary changes. Commit this whole bundle.</label>
+<p>Approval expires in one hour. Changes to staged profiles or destination data may require a new preview. If any profile fails, none of this combined commit is saved.</p>
+<button class="btn btn-primary mt-2" type="submit">Confirm and commit whole bundle</button></form>{% endif %}
+{% endif %}
+{% if history and unfinished_count %}
+<section class="card card-body my-3"><h2 class="h5">Cancel unfinished profiles</h2>
+<p>{{ unfinished_count }} profile{{ unfinished_count|pluralize }} currently unfinished. Cancellation clears their staged row values, previews and issues and frees their import slots. Completed imports, bundle history, mappings (including defaults), source identifiers and audit metadata remain. Mapping defaults may contain private customer values.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel_unfinished">
+<label><input type="checkbox" name="confirm_cancel" value="yes" required> Cancel all profiles in this bundle that are still unfinished when this request runs. I understand that their staged row values will be discarded.</label>
+<button type="submit" class="btn btn-outline-danger mt-2">Cancel all unfinished profiles</button></form>
+</section>
+{% endif %}
+<a href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">Back to imports</a>
+{% endblock %}

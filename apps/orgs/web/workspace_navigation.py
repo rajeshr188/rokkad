@@ -186,6 +186,7 @@ def workspace_dashboard(request, workspace_id):
                               "activity_end": activity_form.cleaned_data["end"]}
         context["activity_form"] = activity_form
         context["business_overview"] = get_business_overview(workspace=workspace, **activity_dates)
+        context["can_manage_health"] = access.can("workspace.settings.manage")
         from urllib.parse import urlencode
         context["dashboard_query"] = urlencode({key: activity_data[key]
             for key in ("period", "start", "end") if key in activity_data})

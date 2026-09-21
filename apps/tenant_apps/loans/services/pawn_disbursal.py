@@ -173,7 +173,10 @@ def assert_pawn_loan_financial_actions_allowed(
     Mutation commands retain the default row lock. Read-only previews must pass
     ``lock=False`` so they remain safe outside an atomic request.
     """
-    return _locked_loan(loan_id) if lock else _tenant_loan(loan_id)
+    loan = _locked_loan(loan_id) if lock else _tenant_loan(loan_id)
+    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        raise PawnDisbursalError("General migration opening servicing is not enabled; use full release or its reversal.")
+    return loan
 
 
 def _locked_loan(loan_id: int) -> PawnLoan:

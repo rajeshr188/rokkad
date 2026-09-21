@@ -3,7 +3,7 @@
 import calendar
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -51,6 +51,11 @@ class PawnLoanBalance:
     collateral_partially_returned: bool
     collateral_return_complete: bool
     closure_ready: bool
+    interest_conceded: Decimal = ZERO
+    opening_principal: Decimal = ZERO
+    opening_interest: Decimal = ZERO
+    opening_fees: Decimal = ZERO
+    financial_history_from: date | None = None
 
 
 def get_pawn_loan_balance(loan_or_id, *, as_of_date: date) -> PawnLoanBalance:
@@ -89,7 +94,28 @@ def calculate_pawn_loan_balance(
     pending_delivery_blocks: bool = True,
 ) -> PawnLoanBalance:
     """Pure event-fold used by repayment, release, reporting, and tests."""
+    events = tuple(events)
+    openings = [event for event in events if event.event_kind == TransactionKind.MIGRATION_OPENING.value]
+    opening = None
+    if openings:
+        from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence, OpeningEvidenceError
+        if len(openings) != 1 or any(event.event_kind in {"DISBURSAL", "RENEWAL_OPENING"} or
+                (event.payload.get("reversal") or {}).get("original_event_kind") == "MIGRATION_OPENING"
+                for event in events):
+            raise PawnLoanBalanceSelectorError("Migration opening requires one origin and cannot use an ordinary reversal.")
+        origin = openings[0]
+        try:
+            opening = read_opening_evidence(loan, origin)
+        except OpeningEvidenceError as exc:
+            raise PawnLoanBalanceSelectorError(str(exc)) from exc
+        if as_of_date < origin.effective_date:
+            raise PawnLoanBalanceSelectorError("Financial history before the migration cutover is unavailable.")
+        if any(event is not origin and event.effective_date <= origin.effective_date for event in events):
+            raise PawnLoanBalanceSelectorError("Servicing events must be strictly after the migration cutover.")
     totals = {
+        "opening_principal": ZERO,
+        "opening_interest": ZERO,
+        "opening_fees": ZERO,
         "principal_disbursed": ZERO,
         "principal_capitalized": ZERO,
         "principal_paid": ZERO,
@@ -98,6 +124,7 @@ def calculate_pawn_loan_balance(
         "interest_accrued": ZERO,
         "interest_capitalized": ZERO,
         "interest_paid": ZERO,
+        "interest_conceded": ZERO,
         "fees_assessed": ZERO,
         "fees_paid": ZERO,
     }
@@ -110,11 +137,12 @@ def calculate_pawn_loan_balance(
     _validate_nonnegative_totals(totals)
     principal_outstanding = (
         totals["principal_disbursed"]
+        + totals["opening_principal"]
         + totals["principal_capitalized"]
         - totals["principal_paid"]
     )
     original_principal_outstanding = (
-        totals["principal_disbursed"] - totals["original_principal_paid"]
+        totals["principal_disbursed"] + totals["opening_principal"] - totals["original_principal_paid"]
     )
     capitalized_interest_principal_outstanding = (
         totals["principal_capitalized"]
@@ -122,10 +150,12 @@ def calculate_pawn_loan_balance(
     )
     interest_outstanding = (
         totals["interest_accrued"]
+        + totals["opening_interest"]
         - totals["interest_capitalized"]
         - totals["interest_paid"]
+        - totals["interest_conceded"]
     )
-    fees_outstanding = totals["fees_assessed"] - totals["fees_paid"]
+    fees_outstanding = totals["fees_assessed"] + totals["opening_fees"] - totals["fees_paid"]
     for label, value in (
         ("principal", principal_outstanding),
         ("interest", interest_outstanding),
@@ -136,7 +166,7 @@ def calculate_pawn_loan_balance(
                 f"PawnLoan event history over-settles {label}."
             )
     total_due = principal_outstanding + interest_outstanding + fees_outstanding
-    has_disbursal = totals["principal_disbursed"] > ZERO
+    has_disbursal = totals["principal_disbursed"] + totals["opening_principal"] > ZERO
     financially_settled = has_disbursal and total_due == ZERO
     collateral_items = tuple(collateral_items)
     resolved_custody_states = {
@@ -154,7 +184,8 @@ def calculate_pawn_loan_balance(
         item.custody_state in resolved_custody_states
         for item in collateral_items
     )
-    due_date = _add_months(loan.loan_date, loan.tenure_months)
+    due_date = (date.fromisoformat(opening["review"]["terms"]["maturity_date"]) if opening
+                else _add_months(loan.loan_date, loan.tenure_months))
     overdue_interest = interest_outstanding if as_of_date > due_date else ZERO
     current_interest = interest_outstanding - overdue_interest
     return PawnLoanBalance(
@@ -191,6 +222,11 @@ def calculate_pawn_loan_balance(
         collateral_partially_returned=collateral_partially_returned,
         collateral_return_complete=collateral_return_complete,
         closure_ready=financially_settled and collateral_return_complete,
+        interest_conceded=_money(totals["interest_conceded"], quantum),
+        opening_principal=_money(totals["opening_principal"], quantum),
+        opening_interest=_money(totals["opening_interest"], quantum),
+        opening_fees=_money(totals["opening_fees"], quantum),
+        financial_history_from=origin.effective_date if opening else None,
     )
 
 
@@ -212,7 +248,14 @@ def _apply_event(totals, event):
     interest = _amount(values, "interest") * multiplier
     fees = _amount(values, "fees") * multiplier
     fees_assessed = _amount(values, "fees_assessed") * multiplier
-    if kind == TransactionKind.DISBURSAL:
+    concession = _amount(values, "interest_concession") * multiplier
+    if concession and kind != TransactionKind.RELEASE_RECEIPT:
+        raise PawnLoanBalanceSelectorError("Interest concessions require a full-release receipt.")
+    if kind == TransactionKind.MIGRATION_OPENING:
+        totals["opening_principal"] += principal
+        totals["opening_interest"] += interest
+        totals["opening_fees"] += fees
+    elif kind == TransactionKind.DISBURSAL:
         totals["principal_disbursed"] += principal
         totals["fees_assessed"] += fees_assessed
     elif kind == TransactionKind.RENEWAL_OPENING:
@@ -252,6 +295,7 @@ def _apply_event(totals, event):
         totals["capitalized_interest_principal_paid"] += capitalized_component
         totals["original_principal_paid"] += principal - capitalized_component
         totals["interest_paid"] += interest
+        totals["interest_conceded"] += concession
         totals["fees_paid"] += fees
     elif kind == TransactionKind.INTEREST_ACCRUAL:
         totals["interest_accrued"] += interest
@@ -264,10 +308,10 @@ def _apply_event(totals, event):
 def _amount(values, key):
     try:
         amount = Decimal(str(values.get(key, "0")))
-    except (TypeError, ValueError) as exc:
+    except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnLoanBalanceSelectorError(f"Invalid {key} economic value.") from exc
-    if amount < ZERO:
-        raise PawnLoanBalanceSelectorError(f"{key} economic value cannot be negative.")
+    if not amount.is_finite() or amount < ZERO:
+        raise PawnLoanBalanceSelectorError(f"{key} economic value must be finite and nonnegative.")
     return amount
 
 
@@ -277,7 +321,7 @@ def _validate_nonnegative_totals(totals):
             raise PawnLoanBalanceSelectorError(
                 f"PawnLoan event history makes {label} negative."
             )
-    if totals["original_principal_paid"] > totals["principal_disbursed"]:
+    if totals["original_principal_paid"] > totals["principal_disbursed"] + totals["opening_principal"]:
         raise PawnLoanBalanceSelectorError(
             "PawnLoan event history over-settles principal (original component)."
         )

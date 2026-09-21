@@ -1,0 +1,28 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Review legacy opening{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Review legacy opening</h1><p>Status: {{ batch.state }}</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if review %}
+<p>Source loan <strong>{{ review.source.number }}</strong> · tenant {{ review.source.schema }} · original date {{ review.terms.original_date }}.</p>
+<p>Opening at {{ review.cutover.date }} ({{ review.cutover.timezone }}): principal {{ review.balances.principal }}, unpaid interest {{ review.balances.interest }}, fees {{ review.balances.fees }}.</p>
+<p>Maturity {{ review.terms.maturity_date }}; grace {{ review.terms.grace_days }} days. Billing stays anchored to {{ review.terms.billing_anchor }}.</p>
+{% if batch.document.source_evidence.maturity_review.basis == 'OWNER_MISSING_MATURITY_RULE' %}<p>The source has no recorded maturity tenure. The owner instructed three calendar months from the original loan date. This migration rule determines the due date and overdue reporting; it does not change the interest billing anchor.</p>{% endif %}
+<p>Terms evidence: {{ review.terms.evidence_reference }}.</p>
+<p>First month paid: {{ review.continuation.first_month_paid|yesno:"Yes,No" }}. Additional interest already recognized through cutover: {{ review.continuation.recognized_interest }}. This is separate from unpaid interest.</p>
+<p>Balance evidence: {{ review.balances.evidence_reference }}. Review: {{ review.review_reference }}.</p>
+<p>Destination licence: {{ destination.licence.license_number|default:"Unavailable" }}; series: {{ destination.series.name|default:"Unavailable" }}; product: {{ destination.product.product.name|default:"Unavailable" }}, version {{ destination.product.version }}.</p>
+<p>Reviewed source licence number: {{ batch.document.opening.setup.source_license_number }}. Original tenure: {{ batch.document.opening.setup.tenure_months }} months.</p>
+{% if batch.document.opening.setup.legacy_license_evidence %}<p>Legacy licence reference: validity was not recorded. This grouping cannot authorize new lending. {{ batch.document.opening.setup.legacy_license_evidence }}</p>{% endif %}
+<table class="table"><thead><tr><th>Item</th><th>Metal</th><th>Gross / net weight</th><th>Purity</th><th>Principal</th><th>Monthly rate</th><th>Appraisal</th><th>Custody evidence</th></tr></thead><tbody>
+{% for item in review.collateral %}<tr><td>{{ item.description }} ({{ item.quantity }})</td><td>{{ item.metal|title }}</td><td>{{ item.gross_weight|default_if_none:"Not recorded" }} / {{ item.net_weight }}</td><td>{{ item.purity }}%</td><td>{{ item.remaining_principal }}</td><td>{{ item.monthly_rate }}%</td><td>{% if item.valuation.status == "UNVERIFIED" %}Current valuation unavailable. Old source value: {{ item.valuation.source_amount|default_if_none:"Not recorded" }}; date: {{ item.valuation.source_date|default_if_none:"Not recorded" }}{% else %}{{ item.valuation.amount }} on {{ item.valuation.date }}{% endif %} — {{ item.valuation.evidence_reference }}</td><td>{{ item.custody_reference }}</td></tr>{% endfor %}</tbody></table>
+<h2 class="h5">Remaining obligations</h2><ul>{% for row in review.obligations %}<li>{{ row.due }}: principal {{ row.principal }}, interest {{ row.interest }} (recognized unpaid {{ row.recognized_interest }}). {{ row.evidence_reference }}</li>{% endfor %}</ul>
+<p>The selected source loan and its item/customer/series/licence facts were checked against the supplied dump. Balances, paid coverage and custody remain reviewed declarations; missing historical receipts are not recreated.</p>
+{% endif %}
+{% if unfinished %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="preview"><button class="btn btn-primary">Validate destination and preview opening</button></form>{% endif %}
+{% if batch.preview %}<section class="card card-body mt-3"><h2 class="h5">Destination preview</h2><p>Borrower: {{ batch.preview.borrower_name }}. Local loan number: {{ batch.preview.loan_number }}.</p><p>{{ batch.preview.collateral }} items; one migration opening. No historical disbursal or receipts will be created.</p>
+{% if approval %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="commit"><input type="hidden" name="approval" value="{{ approval }}"><p>Preview created no loan. Approval expires in one hour.</p><label><input type="checkbox" name="confirmed" value="yes" required> I reviewed this source selection, destination, balances, original terms and collateral evidence and confirm importing this opening.</label><button class="btn btn-primary d-block mt-2">Import reviewed opening</button></form>{% endif %}</section>{% endif %}
+{% if batch.result_id %}<p><a href="{% url 'workspace_loans:pawn_loan_detail' workspace_slug=request.workspace.slug pk=batch.result.loan_id %}">Open imported loan</a></p>{% endif %}
+{% if unfinished %}<form method="post" class="mt-3">{% csrf_token %}<input type="hidden" name="action" value="cancel"><label><input type="checkbox" name="confirmed" value="yes" required> Remove this staged review; source files stay intact.</label><button class="btn btn-outline-danger">Cancel preparation</button></form>{% endif %}
+<p><a href="{% url 'workspace_portability:opening_list' workspace_slug=request.workspace.slug %}">Legacy openings</a></p>
+{% endblock %}

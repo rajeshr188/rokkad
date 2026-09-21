@@ -120,6 +120,7 @@ CANONICAL_CONTROL_PLANE_URLPATTERNS = [
 ]
 
 CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
+    path("w/<str:workspace_slug>/data-tools/", include("apps.tenant_apps.data_portability.urls")),
     path(
         "w/<str:workspace_slug>/settings/billing/",
         include(

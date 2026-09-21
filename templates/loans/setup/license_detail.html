@@ -11,21 +11,21 @@
     <div class="text-muted">{{ license.license_number }} · {{ license.issuing_authority|default:"Issuing authority not recorded" }}</div>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}">Edit</a>
+    {% if not license.is_legacy_reference %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}">Edit</a>
     <a class="btn btn-primary" href="{% url 'workspace_loans:license_renew' request.workspace.slug license.pk %}">Record renewal</a>
     <form method="post" action="{% url 'workspace_loans:license_expiry_notice_create' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-warning" type="submit">Alert Owner of expiry</button></form>
     {% if license.is_active %}
       <form method="post" action="{% url 'workspace_loans:license_expire' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Deactivate</button></form>
     {% elif not license.is_expired %}
       <form method="post" action="{% url 'workspace_loans:license_activate' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-success" type="submit">Activate</button></form>
-    {% endif %}
+    {% endif %}{% endif %}
   </div>
 </div>
 
 <div class="card mb-4"><div class="card-body d-flex flex-wrap gap-4">
-  <div><div class="small text-muted">Validity</div>{{ license.issued_on }} – {{ license.expires_on }}</div>
+  <div><div class="small text-muted">Validity</div>{{ license.issued_on|default_if_none:"Not recorded" }} – {{ license.expires_on|default_if_none:"Not recorded" }}</div>
   <div><div class="small text-muted">Readiness</div>
-    {% if license.is_expired %}<span class="badge text-bg-danger">Expired — new drafts blocked</span>
+    {% if license.is_legacy_reference %}<span class="badge text-bg-secondary">Legacy reference: validity unknown; new lending blocked</span>{% elif license.is_expired %}<span class="badge text-bg-danger">Expired — new drafts blocked</span>
     {% elif license.is_active %}<span class="badge text-bg-success">Active</span>
     {% else %}<span class="badge text-bg-secondary">Inactive — new drafts blocked</span>{% endif %}
   </div>
@@ -44,7 +44,7 @@
       <tr>
         <td>#{{ revision.revision_number }}</td>
         <td>{{ revision.get_kind_display }}</td>
-        <td>{{ revision.issued_on }} &ndash; {{ revision.expires_on }}</td>
+        <td>{{ revision.issued_on|default_if_none:"Not recorded" }} &ndash; {{ revision.expires_on|default_if_none:"Not recorded" }}</td>
         <td>{% if revision.has_document %}<a href="{% url 'workspace_loans:license_revision_document' request.workspace.slug license.pk revision.pk %}">{{ revision.original_filename }}</a><div class="small text-muted font-monospace">{{ revision.sha256|slice:":12" }}</div>{% else %}<span class="text-warning">No document</span>{% endif %}</td>
         <td>{{ revision.created_at }}<div class="small text-muted">{{ revision.created_by|default:"System" }}</div></td>
       </tr>

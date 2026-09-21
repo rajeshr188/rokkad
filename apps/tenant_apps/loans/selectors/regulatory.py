@@ -21,7 +21,7 @@ class LoanLicenseRegisterRow:
     license: LoanLicense
     current_revision: LoanLicenseRevision | None
     status: str
-    days_remaining: int
+    days_remaining: int | None
     blockers: tuple[str, ...]
 
 
@@ -46,6 +46,10 @@ def get_loan_license_register(
     for license in licenses:
         revisions = tuple(license.revisions.all())
         current_revision = revisions[-1] if revisions else None
+        if license.is_legacy_reference:
+            rows.append(LoanLicenseRegisterRow(license, current_revision, "LEGACY_REFERENCE", None,
+                ("Source licence validity is unknown; this reference cannot authorize new lending.",)))
+            continue
         days_remaining = (license.expires_on - as_of_date).days
         blockers = []
         if not license.is_active:

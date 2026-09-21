@@ -1,0 +1,14 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Import Loans{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Import Loans</h1>
+<p><a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Historical-only archive for incomplete closed-loan evidence</a></p>
+<p><a href="{% url 'workspace_portability:opening_list' workspace_slug=request.workspace.slug %}">Review prepared legacy loan openings</a></p>
+<p>Upload one complete loan per JSONL file, including its original disbursal, repayments, accruals and full release if closed. Import the referenced Party first.</p>
+<p>Opening evidence downloads preserve the reviewed cutover and later servicing. Their restoration uses a separate operator preview and confirmation.</p>
+<p>This profile supports active and fully released flexible partial-payment loans with simple interest. It is a partial data export: attachments, workspace configuration, renewals, auctions, reversals and opening balances are outside this profile.</p>
+<p><a href="{% url 'workspace_portability:loan_setup' workspace_slug=request.workspace.slug %}">Check historical setup</a> / <a href="{% url 'workspace_portability:loan_schema' workspace_slug=request.workspace.slug %}">Download source schema</a> / <a href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">Import Party</a></p>
+<form method="post" enctype="multipart/form-data" class="card card-body">{% csrf_token %}{{ form.as_p }}<p>Maximum 5 MiB, 20 collateral items and 240 events. Uploading stages the source; review and confirmation are required to create the loan.</p><button class="btn btn-primary">Stage loan history</button></form>
+<h2 class="h5 mt-4">Recent loan imports</h2>
+<ul>{% for batch in batches %}<li><a href="{% url 'workspace_portability:loan_batch' workspace_slug=request.workspace.slug batch_id=batch.public_id %}">{{ batch.created_at }} - {{ batch.state }}{% if batch.document.loan.number %} - {{ batch.document.loan.number }}{% endif %}</a></li>{% empty %}<li>No loan imports yet.</li>{% endfor %}</ul>
+{% endblock %}

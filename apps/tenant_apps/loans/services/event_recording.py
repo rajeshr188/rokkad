@@ -55,21 +55,24 @@ def record_loan_event(
     _require_payload(payload)
     with transaction.atomic():
         loan = _locked_loan(loan_id)
-        fingerprint = _fingerprint(payload)
-        idempotency_key = f"loans:{loan.pk}:{kind}:{fingerprint}"
-        event, _created = PawnLoanEvent.objects.get_or_create(
-            idempotency_key=idempotency_key,
-            defaults={
-                "loan": loan,
-                "event_kind": kind,
-                "effective_date": effective_date,
-                "payload": payload,
-                "payload_fingerprint": fingerprint,
-                "created_by": actor,
-                "reversal_of": reversal_of,
-            },
-        )
-        return event, event_recording_result(event)
+        if kind == TransactionKind.MIGRATION_OPENING.value or loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+            raise LoanEventRecordingError("Migration opening creation and generic event posting are not enabled; use supported Loans commands.")
+        return _persist_locked_event(loan, kind=kind, effective_date=effective_date, payload=payload, actor=actor, reversal_of=reversal_of)
+
+
+def _persist_locked_event(loan, *, kind, effective_date, payload, actor, reversal_of=None):
+    """Internal evidence storage; caller owns authorization, validation and loan lock."""
+    fingerprint = _fingerprint(payload)
+    idempotency_key = f"loans:{loan.pk}:{kind}:{fingerprint}"
+    event, _created = PawnLoanEvent.objects.get_or_create(
+        idempotency_key=idempotency_key,
+        defaults={
+            "loan": loan, "event_kind": kind, "effective_date": effective_date,
+            "payload": payload, "payload_fingerprint": fingerprint,
+            "created_by": actor, "reversal_of": reversal_of,
+        },
+    )
+    return event, event_recording_result(event)
 
 
 def _locked_loan(loan_id):

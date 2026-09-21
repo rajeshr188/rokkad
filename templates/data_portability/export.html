@@ -1,0 +1,14 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Export Party data{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Export Party data</h1>
+<p>Download one canonical JSONL profile, up to 1,000 records and 5 MiB. Export and import Party master first, then contact methods, addresses, identifiers, Party roles and relationships. These are partial exports; binary KYC documents, files, metadata and Loans are excluded.</p>
+<p>Keep the filename: its UUID identifies the source Workspace namespace and is required when importing the JSONL into another Workspace. Local Party codes may change on import; source codes remain in provenance. Treat this file as private customer data.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+<form method="post">{% csrf_token %}<label for="export-profile">Profile</label><select id="export-profile" name="profile">{% for value,label in profiles %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select><button type="submit" class="btn btn-primary">Download JSONL</button></form>
+<h2 class="h5 mt-4">Download all six profiles together</h2>
+<p>The ZIP bundle includes a manifest, checksums and schemas from one consistent snapshot. Each profile is limited to 1,000 records and 5 MiB (up to 30 MiB of entity data). This is a partial Party export, not a full Workspace backup. If any profile cannot be exported, the whole download stops.</p>
+<p>Upload the ZIP on Import Party data to stage all nonempty profiles for separate review. You can also extract and import the JSONL files in manifest order. Role types must be mapped in the destination Workspace. Busy Party records may require retrying the download.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="bundle"><button type="submit" class="btn btn-primary">Download Party ZIP bundle</button></form>
+{% for value,label in profiles %}<p><a href="?schema=1&amp;profile={{ value }}">{{ label }} schema</a></p>{% endfor %}
+{% endblock %}

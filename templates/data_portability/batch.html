@@ -1,0 +1,75 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Review Party import{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Review Party import</h1>
+<p>{{ batch.contract_version }} ? {{ batch.source_name }} · {{ batch.get_state_display }} · {{ batch.source_system }}</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if saved_preset %}<div class="alert alert-success">Saved mapping preset {{ saved_preset.name }}, version {{ saved_preset.version }}.</div>{% endif %}
+{% if batch.state == 'COMPLETED' %}<div class="alert alert-success">Import completed. The results below preserve source row and Party identity. Repeating this commit creates no duplicates.</div>{% endif %}
+{% if batch.summary %}<dl class="row">{% for label,value in summary_rows %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8">{{ value }}</dd>{% endfor %}</dl>{% endif %}
+{% if batch.mapping %}
+<details><summary>Current mapping{% if batch.mapping_preset_id %}: {{ batch.mapping_preset.name }} — version {{ batch.mapping_preset.version }}{% endif %}</summary><pre class="text-wrap">{{ batch.mapping }}</pre></details>
+{% endif %}
+{% if batch.contract_version == 'party-master/1' and batch.mapping and batch.state != 'COMPLETED' and batch.state != 'CANCELLED' %}
+<details class="my-3"><summary>Keep reviewed customers with matching names separate</summary>
+<p>Use this only after checking that the selected source customer records should remain separate. Their names stay unchanged. Matching phone/tax details, duplicate source IDs and other errors still require resolution.</p>
+<form method="post" class="card card-body">{% csrf_token %}
+<input type="hidden" name="approval_digest" value="{{ batch.approval_digest }}">
+<label for="distinct-source-ids">Reviewed source customer IDs, one per line</label>
+<textarea id="distinct-source-ids" name="source_ids" rows="4" maxlength="256000" required></textarea>
+<label for="distinct-reason">Why are these separate customers?</label>
+<input id="distinct-reason" name="reason" maxlength="255" required>
+<p>This records an identity decision and generates a new preview. It does not create customers.</p>
+<button name="action" value="review_distinct_names" class="btn btn-outline-primary">Record decision and preview</button>
+</form></details>
+{% endif %}
+{% if batch.source_type == 'csv' or batch.source_type == 'xlsx' %}
+{% if batch.state != 'COMPLETED' and batch.state != 'CANCELLED' %}
+{% if presets %}
+<form method="post" class="card card-body my-3">{% csrf_token %}
+<label for="preset-version">Saved mapping version</label>
+<select name="preset_id" id="preset-version" required><option value="">Choose a version</option>{% for preset in presets %}<option value="{{ preset.public_id }}">{{ preset.name }} — version {{ preset.version }}</option>{% endfor %}</select>
+<p>Only versions matching this profile, source system and CSV/XLSX header names are listed. Applying a version generates a new preview for review.</p>
+<button name="action" value="apply_preset" class="btn btn-outline-primary">Apply and preview</button>
+</form>
+{% endif %}
+{% if batch.mapping %}<form method="post" class="my-3">{% csrf_token %}<button name="action" value="revalidate_mapping" class="btn btn-outline-primary">Revalidate current mapping</button></form>{% endif %}
+{% endif %}
+{% if batch.state == 'READY' or batch.state == 'COMPLETED' %}
+{% if batch.mapping.name_reviews %}
+<p>Customer identity decisions apply only to this batch and cannot be saved as a reusable mapping preset.</p>
+{% else %}
+<form method="post" class="card card-body my-3">{% csrf_token %}
+<label for="preset-name">Save this reviewed mapping as a preset</label><input id="preset-name" name="preset_name" maxlength="80" required>
+<input type="hidden" name="approval_digest" value="{{ batch.approval_digest }}">
+<p>Reuse an existing name to append a version. Earlier versions and other batches stay unchanged. Presets retain mapped columns, defaults and rules; review defaults for customer-specific values before saving.</p>
+<button name="action" value="save_preset" class="btn btn-outline-primary">Save mapping version</button>
+</form>
+{% endif %}
+{% endif %}
+{% endif %}
+{% if form %}
+<details {% if batch.state == 'NEEDS_MAPPING' %}open{% endif %}><summary>Map columns and validate{% if batch.mapping %} (replace current mapping){% endif %}</summary>
+<p>Map a stable source identifier and the fields for the selected profile. Child profiles also require the parent Party source system and external ID. Unmapped columns remain in source evidence but are not imported. Phone and tax fields use the existing Party validation conventions; changes appear in the preview.</p>
+<form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="validate">{{ form.as_p }}{{ role_form.as_p }}<button type="submit" class="btn btn-primary">Validate and preview</button></form>
+</details>
+{% elif batch.source_type == 'jsonl' and batch.state != 'COMPLETED' and batch.state != 'CANCELLED' %}
+<form method="post">{% csrf_token %}{{ role_form.as_p }}<button type="submit" name="action" value="validate" class="btn btn-primary">Validate canonical records</button></form>
+{% endif %}
+{% if batch.state == 'READY' %}
+<form method="post" class="card card-body my-3">{% csrf_token %}
+<input type="hidden" name="action" value="commit"><input type="hidden" name="approval_digest" value="{{ batch.approval_digest }}">
+<label><input type="checkbox" name="warnings" value="yes" required> I reviewed the normalized values and warnings. Create the new records shown in this preview and apply the displayed primary contact summary changes.</label>
+<button type="submit" class="btn btn-primary mt-2">Confirm and commit import</button>
+</form>
+{% endif %}
+{% for row in rows %}
+<section class="card card-body my-2"><h2 class="h6">Source row {{ row.source_row }} · {{ row.disposition }}</h2>
+<div class="row"><div class="col-md-6"><strong>Source</strong><pre class="text-wrap">{{ row.raw }}</pre></div><div class="col-md-6"><strong>Normalized</strong><pre class="text-wrap">{{ row.canonical }}</pre></div></div>
+{% for issue in row.issues %}<p><strong>{{ issue.severity }} · {{ issue.field }}</strong> {{ issue.message }}{% if issue.before != issue.after %} <span>{{ issue.before }} → {{ issue.after }}</span>{% endif %}</p>{% endfor %}
+{% if row.identity_id %}<p>Portable Party identity: {{ row.identity.public_id }}</p>{% endif %}{% if row.child_identity_id %}<p>Portable child identity: {{ row.child_identity.public_id }}</p>{% endif %}</section>
+{% endfor %}
+<nav aria-label="Preview pages">{% if rows.has_previous %}<a href="?page={{ rows.previous_page_number }}">Previous</a>{% endif %} Page {{ rows.number }} of {{ rows.paginator.num_pages }} {% if rows.has_next %}<a href="?page={{ rows.next_page_number }}">Next</a>{% endif %}</nav>
+{% if batch.state != 'COMPLETED' and batch.state != 'CANCELLED' %}<form method="post" class="my-3">{% csrf_token %}<button name="action" value="cancel" type="submit" class="btn btn-outline-secondary">Cancel and discard staged values</button></form>{% endif %}
+<a href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">New import</a>
+{% endblock %}

@@ -118,8 +118,19 @@ def reverse_pawn_loan_event(
     allow_auction_recovery: bool = False,
     allow_renewal: bool = False,
 ) -> PawnReversalResult:
+    return _reverse_pawn_loan_event_at(original_event_id, reason=reason, actor=actor,
+        allow_auction_recovery=allow_auction_recovery, allow_renewal=allow_renewal,
+        effective_date=timezone.localdate())
+
+
+def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_date,
+        allow_auction_recovery=False, allow_renewal=False):
+    """Shared atomic-caller writer; opening restore supplies the recorded date."""
     original = _locked_original_event(original_event_id)
     _require_administrator(actor, original.loan.workspace)
+    is_opening = original.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
+    if is_opening and original.event_kind != TransactionKind.RELEASE_RECEIPT.value:
+        raise PawnReversalError("Opening interest catch-up can only be reversed with its full release; the opening itself cannot be reversed here.")
     reason = str(reason or "").strip()
     if not reason:
         raise PawnReversalError("A reversal reason is required.")
@@ -160,7 +171,11 @@ def reverse_pawn_loan_event(
             ),
         )
     try:
-        assert_pawn_loan_financial_actions_allowed(original.loan_id)
+        if is_opening:
+            from .opening_servicing import opening_release_context
+            opening_release_context(original.loan, as_of_date=effective_date, reversing=True)
+        else:
+            assert_pawn_loan_financial_actions_allowed(original.loan_id)
     except Exception as exc:
         raise PawnReversalError(str(exc)) from exc
     readiness = assess_pawn_loan_event_reversal(
@@ -176,7 +191,6 @@ def reverse_pawn_loan_event(
     if original.event_kind == TransactionKind.RELEASE_RECEIPT.value:
         release, custody_transitions = _validate_release_reversal(original)
 
-    effective_date = timezone.localdate()
     payload = reversal_payload(
         original.loan,
         effective_date=effective_date,
@@ -189,7 +203,11 @@ def reverse_pawn_loan_event(
     payload["reversal"]["original_effective_date"] = (
         original.effective_date.isoformat()
     )
-    reversal, _ = record_loan_event(
+    writer = record_loan_event
+    if is_opening:
+        from .opening_servicing import _record_opening_servicing_event
+        writer = _record_opening_servicing_event
+    reversal, _ = writer(
         original.loan_id,
         event_kind=TransactionKind.REVERSAL,
         effective_date=effective_date,
@@ -346,7 +364,11 @@ def _reverse_release_catch_up(
         reason=reason,
     ).to_dict()
     payload["reversal"]["release_id"] = release.pk
-    reversal, _ = record_loan_event(
+    writer = record_loan_event
+    if release.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        from .opening_servicing import _record_opening_servicing_event
+        writer = _record_opening_servicing_event
+    reversal, _ = writer(
         release.loan_id,
         event_kind=TransactionKind.REVERSAL,
         effective_date=effective_date,

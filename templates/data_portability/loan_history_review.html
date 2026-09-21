@@ -1,0 +1,20 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Review loan history{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Review loan history</h1>
+<p>Status: {{ batch.state }}</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if batch.document %}
+<p>Source loan {{ batch.document.loan.number }} · {{ batch.document.loan.state }} · disbursed {{ batch.document.loan.disbursed_on }} · cutover {{ batch.document.manifest.as_of }}.</p>
+<p>Borrower source: {{ batch.document.loan.borrower.source_system }} / {{ batch.document.loan.borrower.id }}. The exact imported Party identity must match.</p>
+<p>Source actors and original numbers are retained as historical claims. Local evidence records who imported them.</p>
+<details><summary>Source events ({{ batch.document.loan.events|length }})</summary><table class="table"><thead><tr><th>Date</th><th>Kind</th><th>Principal</th><th>Interest</th><th>Fees</th></tr></thead><tbody>{% for row in batch.document.loan.events %}<tr><td>{{ row.date }}</td><td>{{ row.kind }}</td><td>{{ row.principal }}</td><td>{{ row.interest }}</td><td>{{ row.fees }}</td></tr>{% endfor %}</tbody></table></details>
+{% endif %}
+{% if unfinished %}<form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="preview">{{ form.as_p }}<button class="btn btn-primary">Validate and preview complete history</button></form>{% endif %}
+{% if batch.preview %}
+<section class="card card-body mt-3"><h2 class="h5">Reconciliation preview</h2><p>Destination borrower: {{ batch.preview.borrower_name }}</p><p>Local loan number: {{ batch.preview.loan_number }}. {{ batch.preview.events }} events and {{ batch.preview.collateral }} collateral items.</p><p>Recorded balance at {{ batch.preview.as_of }}: principal {{ batch.preview.balance.principal }}, interest {{ batch.preview.balance.interest }}, fees {{ batch.preview.balance.fees }}.</p><p>Remaining contractual obligations: principal {{ batch.preview.contractual_remaining.principal }}, interest {{ batch.preview.contractual_remaining.interest }}. These differ from recorded balances when future interest has not yet accrued.</p>
+{% if approval %}<p>No loan has been created by this preview. Commit repeats all checks and imports the entire loan atomically. Approval expires in one hour.</p><form method="post">{% csrf_token %}<input type="hidden" name="action" value="commit"><input type="hidden" name="approval" value="{{ approval }}"><label><input type="checkbox" name="confirmed" value="yes" required> I reviewed the complete history, destination setup and reconciled balances and confirm this import.</label><button class="btn btn-primary d-block mt-2">Commit complete loan history</button></form>{% elif unfinished %}<p>Generate a fresh preview to confirm the import.</p>{% endif %}</section>{% endif %}
+{% if batch.result_id %}<p><a href="{% url 'workspace_loans:pawn_loan_detail' workspace_slug=request.workspace.slug pk=batch.result.loan_id %}">Open imported loan</a></p><p class="mt-3">The complete loan history was imported.</p><form method="post" action="{% url 'workspace_portability:loan_export' workspace_slug=request.workspace.slug loan_id=batch.result.loan_id %}">{% csrf_token %}<button class="btn btn-secondary">Export canonical JSONL</button></form>{% endif %}
+{% if unfinished %}<form method="post" class="mt-4">{% csrf_token %}<input type="hidden" name="action" value="cancel"><label><input type="checkbox" name="confirmed" value="yes" required> Remove the staged source values and cancel this attempt.</label><button class="btn btn-outline-danger d-block mt-2">Cancel staged import</button></form>{% endif %}
+<p class="mt-3"><a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Loan imports</a></p>
+{% endblock %}

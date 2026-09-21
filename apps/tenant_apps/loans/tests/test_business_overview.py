@@ -122,10 +122,10 @@ class BusinessOverviewTests(TestCase):
                 for _ in range(size):
                     loan = self.loan(self.workspace)
                     self.event(loan, "DISBURSAL", {"principal": 1000})
-                with self.assertNumQueries(6):
+                with self.assertNumQueries(7):
                     self.overview()
             with patch("apps.tenant_apps.loans.selectors.business_overview.BALANCE_BATCH_SIZE", 4):
-                with self.assertNumQueries(8):
+                with self.assertNumQueries(9):
                     self.assertEqual(self.overview()["active_loans"], 11)
 
     def test_restricted_role_and_wrong_context(self):

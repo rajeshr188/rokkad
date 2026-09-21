@@ -271,6 +271,31 @@ class PawnLoanBalanceSelectorTests(SimpleTestCase):
             ],
         )
 
+    def test_concession_is_separate_from_cash_and_reverses_with_release(self):
+        events = [self._event(1, TransactionKind.DISBURSAL, principal="1000"),
+                  self._event(2, TransactionKind.INTEREST_ACCRUAL, interest="100", fees_assessed="10"),
+                  self._event(3, TransactionKind.RELEASE_RECEIPT, principal="1000", interest="50", fees="10", interest_concession="50")]
+        def balance():
+            return calculate_pawn_loan_balance(self.loan, events=events, collateral_items=(),
+                policy_snapshot=self._policy(InterestMethod.SIMPLE), as_of_date=date(2026, 2, 2))
+        closed = balance()
+        self.assertEqual((closed.interest_paid, closed.interest_conceded, closed.fees_paid, closed.total_due),
+                         (Decimal("50"), Decimal("50"), Decimal("10"), Decimal("0")))
+        events.append(self._event(4, TransactionKind.REVERSAL, principal="1000", interest="50", fees="10", interest_concession="50",
+                                 reversal={"original_event_kind": "RELEASE_RECEIPT"}))
+        reopened = balance()
+        self.assertEqual((reopened.interest_paid, reopened.interest_conceded, reopened.total_due), (0, 0, 1110))
+
+    def test_concession_cannot_over_settle_or_appear_on_another_event_kind(self):
+        for kind, concession in ((TransactionKind.RELEASE_RECEIPT, "101"),
+                                 (TransactionKind.REPAYMENT, "1"), (TransactionKind.RELEASE_RECEIPT, "NaN")):
+            events = [self._event(1, TransactionKind.DISBURSAL, principal="1000"),
+                      self._event(2, TransactionKind.INTEREST_ACCRUAL, interest="100"),
+                      self._event(3, kind, interest_concession=concession)]
+            with self.subTest(kind=kind, concession=concession), self.assertRaises(PawnLoanBalanceSelectorError):
+                calculate_pawn_loan_balance(self.loan, events=events, collateral_items=(),
+                    policy_snapshot=self._policy(InterestMethod.SIMPLE), as_of_date=date(2026, 2, 2))
+
     def _event(
         self,
         pk,

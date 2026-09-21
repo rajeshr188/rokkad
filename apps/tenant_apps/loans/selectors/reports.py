@@ -160,7 +160,7 @@ class PawnLoanReportBundle:
 @dataclass(frozen=True)
 class LoanLicenseExpiryRow:
     license: object
-    days_remaining: int
+    days_remaining: int | None
     status: str
 
 
@@ -210,9 +210,10 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
     license_rows = tuple(
         LoanLicenseExpiryRow(
             license=license,
-            days_remaining=(license.expires_on - as_of_date).days,
+            days_remaining=(license.expires_on - as_of_date).days if license.expires_on else None,
             status=(
-                "EXPIRED" if license.expires_on < as_of_date
+                "LEGACY_REFERENCE" if license.is_legacy_reference
+                else "EXPIRED" if license.expires_on < as_of_date
                 else "EXPIRING" if (license.expires_on - as_of_date).days <= 30
                 else "CURRENT"
             ),
@@ -556,7 +557,7 @@ def _event_amount(event):
         ) + Decimal(str(values.get("fees", "0"))) + Decimal(
             str(renewal.get("successor_advance_interest", "0"))
         ) + Decimal(str(renewal.get("successor_deducted_fees", "0")))
-    elif kind == TransactionKind.RENEWAL_OPENING.value:
+    elif kind in {TransactionKind.RENEWAL_OPENING.value, TransactionKind.MIGRATION_OPENING.value}:
         return ZERO
     else:
         keys = ("interest",)

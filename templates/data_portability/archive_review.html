@@ -1,0 +1,11 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Review historical evidence{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Review historical evidence</h1><p>Status: {{ batch.state }}</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if document %}{% include 'data_portability/_archive_evidence.html' %}{% endif %}
+{% if approval %}<form method="post" class="card card-body mt-3">{% csrf_token %}<input type="hidden" name="action" value="accept"><input type="hidden" name="approval" value="{{ approval }}"><label><input type="checkbox" name="confirmed" value="yes" required> I reviewed the supplied facts and findings and confirm their retention as historical source claims. This does not verify settlement or create an operational loan.</label><button class="btn btn-primary mt-2">Accept historical evidence</button></form>{% endif %}
+{% if staged %}<form method="post" class="mt-3">{% csrf_token %}<input type="hidden" name="action" value="cancel"><label><input type="checkbox" name="confirmed" value="yes" required> Cancel this upload and remove its staged source values.</label><button class="btn btn-outline-danger">Cancel upload</button></form>{% endif %}
+{% if batch.result_id %}<p><a href="{% url 'workspace_portability:archive_detail' workspace_slug=request.workspace.slug evidence_id=batch.result.public_id %}">Open accepted historical evidence</a></p>{% endif %}
+<p class="mt-3"><a href="{% url 'workspace_portability:archive_upload' workspace_slug=request.workspace.slug %}">Uploads</a> · <a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Historical archive</a></p>
+{% endblock %}

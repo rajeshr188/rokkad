@@ -1,0 +1,12 @@
+<p class="alert alert-info">Historical evidence only. Closure, balances and borrower details are source claims, not verified operational facts.</p>
+<dl><dt>Reported loan number</dt><dd>{{ document.facts.loan_number|default_if_none:"Unknown" }}</dd>
+<dt>Source identity</dt><dd>{{ document.source.system }} / {{ document.source.loan_id }}</dd>
+<dt>Source namespace</dt><dd>{{ document.source.namespace }}</dd>
+<dt>Snapshot reference</dt><dd>{{ document.source.snapshot_reference }}</dd>
+<dt>Evidence reference</dt><dd>{{ document.source.evidence_reference }}</dd>
+<dt>Source status</dt><dd>{{ document.facts.raw_status|default_if_none:"Unknown" }} (reported as closed)</dd>
+<dt>Borrower claim</dt><dd>{{ document.facts.borrower_name|default_if_none:"Unknown" }}{% if document.facts.borrower_reference %} · {{ document.facts.borrower_reference.system }} / {{ document.facts.borrower_reference.id }} (unresolved source reference){% endif %}</dd>
+<dt>Reported dates</dt><dd>Opened: {{ document.facts.opened_on|default_if_none:"Unknown" }} · Closed: {{ document.facts.closed_on|default_if_none:"Unknown" }}</dd>
+<dt>Reported principal / balance</dt><dd>{{ document.facts.original_principal|default_if_none:"Unknown" }} / {{ document.facts.reported_balance|default_if_none:"Unknown" }}</dd></dl>
+<h2 class="h5">Review findings</h2><ul>{% for finding in report.findings %}<li>{{ finding.message }}</li>{% empty %}<li>No inconsistencies were identified by this bounded check. Source truth and settlement remain unverified.</li>{% endfor %}</ul>
+<details><summary>All supplied facts and source records</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ source_json }}</pre></details>

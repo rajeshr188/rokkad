@@ -29,7 +29,7 @@ class NumberAllocation:
 def preview_number(
     *, series: LoanSeries, document_kind: LoanDocumentKind | str
 ) -> NumberAllocation:
-    assert_series_can_issue(series)
+    assert_series_can_issue(series, document_kind=LoanDocumentKind(document_kind))
     sequence = _get_ready_sequence(series=series, document_kind=document_kind)
     return _build_allocation(sequence)
 
@@ -41,7 +41,7 @@ def allocate_number(
     actor=None,
 ) -> NumberAllocation:
     """Allocate once under a row lock; committed numbers are never reclaimed."""
-    assert_series_can_issue(series)
+    assert_series_can_issue(series, document_kind=LoanDocumentKind(document_kind))
     kind = LoanDocumentKind(document_kind).value
     with transaction.atomic():
         try:

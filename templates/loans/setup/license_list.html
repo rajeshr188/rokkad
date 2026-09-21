@@ -48,7 +48,7 @@
       {% for row in register_rows %}
         <tr>
           <td><strong>{{ row.license.name }}</strong><div class="small text-muted">{{ row.license.license_number }}</div></td>
-          <td>{{ row.license.issued_on }} &ndash; {{ row.license.expires_on }}<div class="small text-muted">Expiry offset: {{ row.days_remaining }} days</div></td>
+          <td>{{ row.license.issued_on|default_if_none:"Not recorded" }} &ndash; {{ row.license.expires_on|default_if_none:"Not recorded" }}<div class="small text-muted">{% if row.days_remaining != None %}Expiry offset: {{ row.days_remaining }} days{% endif %}</div></td>
           <td>
             {% if row.status == 'READY' %}<span class="badge text-bg-success">Ready</span>
             {% elif row.status == 'EXPIRING' %}<span class="badge text-bg-warning">Expiring</span>

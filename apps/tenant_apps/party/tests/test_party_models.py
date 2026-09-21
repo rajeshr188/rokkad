@@ -61,7 +61,7 @@ class PartyModelTests(WorkspaceTestCase):
         self.assertEqual(first.party_code, "P-000001")
         self.assertEqual(second.party_code, "P-000002")
         self.assertEqual(
-            PartyCodeSequence.objects.get(key="PARTY").next_number,
+            PartyCodeSequence.objects.get(workspace=self.tenant, key="PARTY").next_number,
             3,
         )
 
@@ -69,7 +69,7 @@ class PartyModelTests(WorkspaceTestCase):
         party = Party.objects.create(party_code="MANUAL-001", display_name="Manual")
 
         self.assertEqual(party.party_code, "MANUAL-001")
-        self.assertFalse(PartyCodeSequence.objects.filter(key="PARTY").exists())
+        self.assertFalse(PartyCodeSequence.objects.filter(workspace=self.tenant, key="PARTY").exists())
 
     def test_create_organization_party(self):
         party = Party.objects.create(

@@ -43,8 +43,8 @@ def render_loan_license_register_pdf(*, workspace, rows, as_of_date) -> bytes:
         data.append([
             row.license.license_number,
             row.license.issuing_authority or "-",
-            row.license.issued_on.isoformat(),
-            row.license.expires_on.isoformat(),
+            row.license.issued_on.isoformat() if row.license.issued_on else "Not recorded",
+            row.license.expires_on.isoformat() if row.license.expires_on else "Not recorded",
             str(revision.revision_number) if revision else "-",
             revision.sha256[:12] if revision and revision.has_document else "Missing",
             row.status.replace("_", " ").title(),

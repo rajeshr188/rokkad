@@ -89,6 +89,11 @@ def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
             explanations=list(assessment.explanations), policy_identity=assessment.policy_identity,
             source_provenance={
                 "calculation_contract": SNAPSHOT_CONTRACT,
+                "financial": {
+                    "projected_interest": format(exposure.projected_interest, "f"),
+                    "recorded_total_due": format(exposure.recorded_total_due, "f"),
+                    "integrity_findings": list(exposure.integrity_findings),
+                },
                 "coverage": {
                     "exposure": str(collateral.ltv.exposure),
                     "basis": exposure.ltv_basis_label,
