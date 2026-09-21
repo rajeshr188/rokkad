@@ -7,6 +7,22 @@ tags: [status, architecture]
 
 # Status
 
+## Owner accepted the browser rehearsal (2026-09-21)
+
+The owner reported: "all reviewed and looks great,whats next?" This accepts the
+presented three-Workspace rehearsal review. No further review of the same imported
+snapshot is queued. It does not establish a production cutover date, media recovery,
+new-lending setup or acceptance of financial workflows not exercised in the review.
+
+Next prepare a repeatable production cutover package from the proven adapters and
+recorded decisions, and prove it against a clean target from the intended release
+commit. Keep this bounded to the existing three-Workspace conversion; a new Migration
+Center UI is not required. Complete media inventory/copy mapping, production owner
+and staff access, valid current lending setup, and the required servicing scope.
+Then schedule the write freeze, obtain a fresh complete database and media snapshot,
+rebuild/reconcile the final target and accept its report before switching users.
+Linode remains live throughout preparation; this discovery dump is not a delta base.
+
 ## Separate rehearsal browser access ready (2026-09-21)
 
 The imported JCL, JSK and Lakshmi data is available locally at
@@ -27,8 +43,8 @@ lists passed (12 scoped pages). Cross-branch object IDs returned 404; anonymous 
 access required login. All checked business-table hashes remain unchanged. The login
 page was visually checked and left open; debug toolbar is hidden in this profile.
 
-**Next is owner workflow acceptance in this app**, starting with familiar customers,
-loans and interest month calculations. Production cutover, media, current lending
+The owner subsequently accepted the presented review, as recorded above.
+Production cutover, media, current lending
 setup and any required unsupported servicing remain pending. See the
 [rehearsal access guide](flows/linode-rehearsal-access.md) for restart instructions.
 
@@ -59,8 +75,7 @@ Report: `outputs/linode-owner-decisions-20260921/review.html`; its manifest cove
 71 private files. See the [completed owner-decision record](implementation/linode-owner-decisions-20260921.md)
 and [review boundaries](adr/2026-09-21-owner-reviewed-migration-exceptions.md).
 
-Separate browser access is now ready as described above; branch workflow acceptance
-is next.
+Separate browser access is ready and the owner accepted the presented review above.
 These records are still in `rokkad_baseline_rehearsal_linode_20260921`, not the normal
 application or `jcl-13`. Production remains pending: retained Party preparation
 decisions, required servicing, current lending setup/access/media and a clean-build

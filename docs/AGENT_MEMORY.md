@@ -141,8 +141,13 @@ The account's old superuser/staff flags were removed; real owner Memberships and
 local trials through October 5 supply browser access. Separate cookies, local
 media/cache/email and the rehearsal banner keep this browser instance distinguishable.
 The launch script binds loopback only. See the [access guide](flows/linode-rehearsal-access.md).
-Owner workflow acceptance is next. This remains separate from jcl-13 and production;
-a fresh frozen archive,
+The owner subsequently reported "all reviewed and looks great,whats next?", accepting
+the presented browser rehearsal. Do not repeat that review or treat it as acceptance
+of untested servicing/new-lending workflows or authorization to freeze live writes.
+Next prepare a repeatable cutover package and clean-target release rehearsal, with
+media, production access/setup and required servicing checked before scheduling the
+final frozen snapshot. A new Migration Center UI is not a prerequisite. This remains
+separate from jcl-13 and production; a fresh frozen archive,
 retained Party preparation decisions, required servicing/setup/access/media and
 clean-build acceptance remain necessary. Ordinary partial repayment remains guarded.
 

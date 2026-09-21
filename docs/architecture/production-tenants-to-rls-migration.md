@@ -179,18 +179,27 @@ product capability.
 
 ## Next recommended action
 
-Discovery and the isolated Party rehearsal are complete; see the
-[verified rehearsal record](../implementation/linode-party-rehearsal-20260921.md).
-Prepare source-bound opening evidence for the 6,464 unreleased candidates, with
-separate review of the 14 payment-bearing loans and all borrower/source errors.
-Map licences, series, policy and custody per Workspace. Establish principal,
-unpaid interest and fees from evidence before operational loan admission; previous
-JCL interest assumptions do not automatically apply to JSK or Lakshmi.
+The three-Workspace discovery, admission, exception resolution and browser review
+are complete for the September 21 snapshot. The owner accepted the presented
+rehearsal. See the [final admission record](../implementation/linode-owner-decisions-20260921.md)
+and [browser access guide](../flows/linode-rehearsal-access.md): 6,273 operational
+loans, 39,133 closed evidence records and one cancelled source entry account for
+all 45,407 source loan IDs, with no unresolved loan holds in that snapshot.
 
-Preserve the 38,943 released source loans through reviewed historical evidence.
-Resolve Party review facts, obtain the media inventory and rehearse loan servicing
-before scheduling the final write freeze and full-snapshot cutover. Classification
-alone does not authorize a loan or archive write.
+Next turn the proven operator steps into a repeatable cutover package, retaining
+source fingerprints, the exact reviewed decisions, checkpoints and reconciliation.
+Run it against a clean target from the intended production release commit. Inventory
+and map media, configure production access and valid current lending setup, and
+verify the branch workflows required at go-live. Ordinary partial repayment remains
+unsupported for imported openings; review acceptance does not remove that guard.
+
+Only after those readiness checks, schedule the legacy write freeze and obtain a
+fresh complete database/media snapshot. Re-extract and reclassify that snapshot:
+new customers, loans, payments or releases can change the prepared decisions and
+totals. Reconcile and accept the final target before switching users. Keep the old
+system read-only for recovery; after new-system writes, fallback requires explicit
+reconciliation rather than simply reopening the old app. A new Migration Center
+UI is not a prerequisite for this bounded initial conversion.
 
 ## Migration Center: first-time user experience
 
