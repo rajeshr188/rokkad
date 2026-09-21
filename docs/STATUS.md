@@ -22,8 +22,9 @@ This is not an import result and no destination data was written.
 The ongoing source is live. Rehearsals use this snapshot in isolation; production
 cutover will require an announced write freeze and a fresh final archive. The final
 target is built from that complete final snapshot rather than a best-effort stream
-of changing rows. The discovery report records a JCL future-dated loan
-(`2026-12-16`) that must remain held until reviewed. See
+of changing rows. The discovery report records the owner-approved correction for
+JCL loan `R09911`: source date `2026-12-16` is to be treated as `2025-12-16`, with
+the original value retained as evidence and rechecked in the final snapshot. See
 [the discovery report](implementation/linode-production-discovery-20260921.md).
 
 ## Production migration redesign: Django-tenants source to RLS target (2026-09-21)

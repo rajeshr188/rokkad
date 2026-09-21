@@ -54,9 +54,12 @@ box rows exist only for JCL (9) and JSK (3).
 
 ## Findings that gate admission
 
-1. JCL contains a loan with `loan_date` of `2026-12-16 09:47:00+00`, later than
-   the September 21 discovery snapshot. This is a source date anomaly. It must be
-   held and reviewed; the importer must not reinterpret it as a valid future loan.
+1. JCL `girvi_loan:29887` (`loan_id=R09911`) has source `loan_date`
+   `2026-12-16 09:47:00+00`, later than the September 21 discovery snapshot. The
+   owner confirmed the intended business date is `2025-12-16`. The original archive
+   remains immutable; the migration correction ledger must bind this exact source
+   identity, original value and corrected value. The final snapshot must verify the
+   correction before this loan is admitted.
 2. JCL's latest payment and release are `2026-09-04`; JSK's are `2026-09-18`; and
    Lakshmi Pawn Broker's are `2026-09-19`. These are snapshot observations only.
    Live production can change after them.
