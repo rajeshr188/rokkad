@@ -2,6 +2,7 @@
 from collections import Counter, defaultdict
 from html import escape
 from pathlib import Path
+import re
 
 from apps.tenant_apps.loans.services.portability_validation import CATEGORY_LABELS
 from apps.tenant_apps.loans.services.opening_validation import COLLECTION_PROFILE, PROFILE, PENDING, validate_opening
@@ -41,7 +42,9 @@ def prepare_openings(summary, records, *, owner_profile=None):
             raw = item["facts"]
             quantity = number(raw["quantity"])
             collateral.append({
-                "id": item["source"]["external_id"], "description": raw["itemdesc"],
+                "id": item["source"]["external_id"],
+                "description": (re.sub(r"[\r\n\t]+", " ", raw["itemdesc"])
+                                if owner_profile == LINODE_PROFILE and raw["itemdesc"] is not None else raw["itemdesc"]),
                 "quantity": int(quantity) if quantity is not None and quantity == quantity.to_integral_value() else None,
                 "metal": {"Gold": "GOLD", "Silver": "SILVER", "Bronze": "BRONZE"}.get(raw["itemtype"]),
                 "gross_weight": None, "net_weight": raw["weight"] if owner_profile else None, "purity": raw["purity"],

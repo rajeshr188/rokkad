@@ -72,7 +72,12 @@ def _source_evidence(review, setup, summary, records, candidates):
                     Decimal(valuation["source_amount"]) != Decimal(loan["facts"]["value"])):
                 raise HistoryError("An old loan-level value can be assigned only to its sole item, unchanged; otherwise retain it in source records.")
     selected.extend((series, licence, customer))
+    transformations = [{"rule": "description-line-whitespace/1", "source_id": r["source"]["external_id"],
+        "field": "itemdesc", "before": r["facts"]["itemdesc"], "after": proposed[r["source"]["external_id"]]["description"]}
+        for r in selected if r["source"]["table"] == "girvi_loanitem"
+        and r["facts"]["itemdesc"] != proposed[r["source"]["external_id"]]["description"]]
     return {"adapter": PROFILE, "archive_sha256": summary["archive_sha256"],
+        **({"transformations": transformations} if transformations else {}),
         **({"source_profile": summary["source_profile"]} if summary.get("source_profile") else {}),
         "selection_sha256": source["selection_sha256"], "selected_loan_ids": [source["loan_id"]],
         "owner_profile": owner_profile, "records": selected,

@@ -300,6 +300,8 @@ def validate_opening(document, *, today=None):
         p = check.amount(obligation["principal"], path + ".principal")
         interest = check.amount(obligation["interest"], path + ".interest")
         recognized = check.amount(obligation["recognized_interest"], path + ".recognized_interest")
+        if p is not None and interest is not None and p + interest == 0:
+            check.issue("AMOUNT_RANGE", path, "Omit empty obligation rows; each row must contain principal or interest due.")
         check.text(obligation["evidence_reference"], path + ".evidence_reference")
         principal_due.append(p)
         recognized_due.append(recognized)

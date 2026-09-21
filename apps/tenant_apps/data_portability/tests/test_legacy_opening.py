@@ -76,6 +76,7 @@ class LegacyOpeningTests(OpeningImportFixture):
 
     def test_confirmed_linode_profiles_stage_commit_and_replay_with_canonical_parties(self):
         from uuid import UUID, uuid5
+        self.extracted["tables"]["girvi_loanitem"]["1"]["itemdesc"] = "Ring\nchain\tPendant"
         for schema, profile in (("jsk", "linode-jsk/1"), ("lakshmipawnbroker", "linode-lakshmi/1")):
             self.extracted["source_schema"] = schema
             self.extracted["schemas"] = {schema: list(self.extracted["tables"])}
@@ -87,6 +88,7 @@ class LegacyOpeningTests(OpeningImportFixture):
             for key in ("borrower_source_system", "borrower_external_id"):
                 review["mapping"][key] = candidate["mapping"][key]
             review["collateral"][0]["weight_reference"] = candidate["collateral"][0]["weight_reference"]
+            review["collateral"][0]["description"] = candidate["collateral"][0]["description"]
             with self.scoped():
                 SourceIdentity.objects.create(identity=self.source_party.identity,
                     source_system=summary["source_system"],
@@ -94,6 +96,13 @@ class LegacyOpeningTests(OpeningImportFixture):
                     accepted_digest=self.source_party.accepted_digest, local_digest=self.source_party.local_digest)
                 batch = self.stage_opening(review=review, source_profile=profile)
                 self.assertEqual(batch.document["source_evidence"]["owner_profile"], "linode-owner/1")
+                transformation = batch.document["source_evidence"]["transformations"][0]
+                self.assertEqual(transformation["before"], "Ring\nchain\tPendant")
+                self.assertEqual(transformation["after"], "Ring chain Pendant")
+                forged = copy.deepcopy(review)
+                forged["collateral"][0]["description"] = "A different item"
+                with self.assertRaisesMessage(ValueError, "preserve the verified source facts"):
+                    self.stage_opening(review=forged, source_profile=profile)
                 approval = bridge.preview(**self.batch_args(batch))
                 result = bridge.commit(**self.batch_args(batch), approval=approval, confirmed=True)
                 self.assertEqual(bridge.commit(**self.batch_args(batch), approval=approval, confirmed=True), result)

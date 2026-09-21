@@ -110,6 +110,24 @@ class OpeningValidationTests(SimpleTestCase):
         doc["collateral"].append(copy.deepcopy(doc["collateral"][0]))
         self.assertIn("DUPLICATE_ITEM", self.codes(doc))
 
+    def test_empty_obligation_is_rejected_before_database_preview(self):
+        doc = reviewed_opening()
+        row = copy.deepcopy(doc["obligations"][0])
+        row.update(id="empty", principal="0", interest="0", recognized_interest="0")
+        doc["obligations"].append(row)
+        self.assertIn("AMOUNT_RANGE", self.codes(doc))
+        issue = next(i for i in validate_opening(doc)["issues"] if i["code"] == "AMOUNT_RANGE")
+        self.assertEqual(issue["field"], "obligations[1]")
+        self.assertEqual(issue["category"], "MALFORMED_DATA")
+
+    def test_separate_principal_and_interest_obligations_remain_valid(self):
+        doc = reviewed_opening()
+        interest = copy.deepcopy(doc["obligations"][0])
+        interest.update(id="interest", principal="0")
+        doc["obligations"][0].update(interest="0", recognized_interest="0")
+        doc["obligations"].append(interest)
+        self.assertTrue(validate_opening(doc)["document_reconciled"])
+
     def test_original_dates_timezone_and_overdue_obligations_are_preserved(self):
         doc = reviewed_opening()
         doc["cutover"]["date"] = "2021-05-15"
