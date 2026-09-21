@@ -36,3 +36,8 @@ class LegacyPartyPreparationTests(SimpleTestCase):
         self.assertIsNone(result["records"][contracts.PROFILE][0]["relation_kind"])
         self.assertFalse(result["invalid"])
         self.assertEqual(result["review"][0]["code"], "RELATION_NAME_REQUIRED")
+
+    def test_legacy_source_system_shape_is_accepted(self):
+        from apps.tenant_apps.data_portability.services import LEGACY_SOURCE_SYSTEM
+        self.assertTrue(LEGACY_SOURCE_SYSTEM.fullmatch("legacy:6ca968d626474dbb8e3924f0c1a12ed6:jcl"))
+        self.assertFalse(LEGACY_SOURCE_SYSTEM.fullmatch("legacy:6ca968d6-2647-4dbb-8e39-24f0c1a12ed6:jcl"))

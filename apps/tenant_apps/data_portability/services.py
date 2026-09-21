@@ -22,7 +22,7 @@ from .models import ImportBatch, ImportRow, PartyIdentity, SourceIdentity, Works
 from .normalization import normalize
 from .parsers import MAX_BYTES, MAX_ROWS, PortabilityError, parse_source
 
-LEGACY_SOURCE_SYSTEM = re.compile(r"legacy:[0-9a-f]{32}:[a-z][a-z0-9_]{0,62}\\Z")
+LEGACY_SOURCE_SYSTEM = re.compile(r"legacy:[0-9a-f]{32}:[a-z][a-z0-9_]{0,62}\Z")
 
 
 def _batch(workspace_id, batch_id, *, lock=False):
