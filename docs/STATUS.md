@@ -7,14 +7,52 @@ tags: [status, architecture]
 
 # Status
 
-## Isolated three-Workspace rehearsal target prepared (2026-09-21)
+## Three-Workspace Party rehearsal completed with explicit holds (2026-09-21)
+
+The local isolated database `rokkad_baseline_rehearsal_linode_20260921` now contains
+the verified Party import below. This supersedes the earlier preparation-only
+state; Linode and the normal application database were not modified.
+
+| Workspace | Parties | Contacts | Addresses | Held source rows |
+| --- | ---: | ---: | ---: | ---: |
+| rehearsal-jcl-20260921 | 5,882 | 1,898 | 3,997 | 0 |
+| rehearsal-jsk-20260921 | 646 | 513 | 611 | 10 |
+| rehearsal-lakshmi-20260921 | 2,102 | 1,085 | 2,104 | 0 |
+
+All 18,848 prepared source rows reconcile as 18,838 committed plus ten held JSK
+duplicate-address rows. No duplicate winner was inferred. Source content,
+accepted digests, parent links and saved child fields match preparation. Replaying
+every completed batch leaves counts unchanged. Raw SQL checks under the restricted
+runtime role confirm cross-Workspace and missing-context read isolation. The
+adapter now uses canonical master UUIDs for child parent lookup, retaining raw
+legacy customer references as provenance. The targeted preparation/name-review/
+child suite passed all 65 tests.
+
+The 187 preparation review items remain explicit production-review facts: 180
+missing related-person names, five unsupported relationship labels and two
+conflicting defaults. Rehearsal omissions/default proposals are not production
+acceptance. Obsolete pending attempts were cancelled; committed rows were retained.
+
+The same source was classified into 6,464 unreleased opening-review candidates and
+38,943 released history candidates. Fourteen unreleased loans have payments and
+eight have loan-level source errors (review categories may overlap). No loans or
+historical archives were admitted in this database. Next is source-bound opening
+evidence and setup reconciliation; balances, interest and custody cannot be
+inferred from source totals. Final production migration still requires a write
+freeze, fresh full archive/media and business acceptance.
+
+Local report: `outputs/linode-party-rehearsal-20260921/review.html`, with verification,
+receipts, held rows, source evidence and a SHA-256 manifest. See the
+[rehearsal record](implementation/linode-party-rehearsal-20260921.md).
+
+## Isolated three-Workspace rehearsal target preparation (historical checkpoint, 2026-09-21)
 
 `rokkad_baseline_rehearsal_linode_20260921` is a new local-only database with the
-current owner-only migrations applied. It has three empty Workspaces:
+current owner-only migrations applied. It initially had three empty Workspaces:
 `rehearsal-jcl-20260921`, `rehearsal-jsk-20260921`, and
 `rehearsal-lakshmi-20260921`. The local operator account has an unusable password.
-No Party, import batch, operational loan, financial event, or historical evidence
-was created.
+No business data had been created at this initial checkpoint; the completed Party
+rehearsal above is the current state.
 
 The fresh-database rehearsal exposed a deployability gap: the cluster's existing
 restricted runtime role did not automatically have grants on a newly created
@@ -23,7 +61,7 @@ database. `scripts/provision_runtime_role.py` now has an explicit
 non-superuser, non-`BYPASSRLS`, non-owner and grant-only before granting the target
 database. After provisioning, the runtime role passed Django checks and saw zero
 Party, import, operational-loan and evidence records in each separate Workspace
-context. The next rehearsal slice is Party source-to-contract preparation; it must
+context. The next slice at that checkpoint was Party preparation, which must
 handle the 1,000-row package limit and retain unsupported relationship labels for
 review before any Party commit.
 
@@ -34,8 +72,8 @@ without mislabelling it as a native Rokkad export. The three discovery-profile
 runs produced 11,777 JCL, 1,780 JSK and 5,291 Lakshmi Party source records with
 zero contract-validation errors. Their 187 retained review items are 180 missing
 related-person names, five unmapped relationship labels and two duplicate source
-defaults. Files are preparation artifacts only: they have not been staged or
-committed to the rehearsal Workspaces.
+defaults. Those files were subsequently staged and committed as recorded above,
+with ten duplicate-address rows held.
 
 ## Linode production discovery snapshot inventoried (2026-09-21)
 
@@ -85,8 +123,8 @@ errors are review inputs, not destination writes. The JCL profile applies the
 owner-approved `R09911` date correction only after matching its exact raw source
 value. See the [source-profile decision](adr/2026-09-21-versioned-legacy-source-profiles.md).
 
-The next action is an isolated three-Workspace rehearsal from these profiles,
-followed by review of the resulting Party, active-opening, archive and hold counts.
+The Party portion of the isolated rehearsal is complete as recorded above.
+Active-opening evidence, archive admission and final cutover remain pending.
 See the
 [production migration design](architecture/production-tenants-to-rls-migration.md).
 

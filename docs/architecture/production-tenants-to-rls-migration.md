@@ -39,8 +39,8 @@ Every imported record retains this stable source identity:
 legacy:<installation-uuid>:<tenant-schema>:<source-table>:<source-primary-key>
 ```
 
-The installation UUID is created once for a snapshot and stored in its signed
-manifest. It prevents collisions between old numeric IDs in different schemas and
+The installation UUID is created once for the source installation and reused in
+every snapshot manifest. It prevents collisions between old numeric IDs in different schemas and
 makes replay idempotent. Old foreign keys, user IDs and schema-qualified primary
 keys never become destination keys.
 
@@ -117,8 +117,9 @@ explicit adapter version and fixture, never an ad-hoc edit to exported JSON.
 Produce a report listing Party candidates, active/closed loan candidates,
 payment/release facts and every hold reason.
 
-The current local legacy adapter is JCL-specific. JSK and Lakshmi need their own
-reviewed mapping profiles after this inventory establishes their actual shapes.
+Versioned `linode-jcl/1`, `linode-jsk/1` and `linode-lakshmi/1` profiles now match
+the September 21 discovery archive. Their compatibility does not establish
+financial opening facts or approval for operational admission.
 
 ### 4. Prepare the RLS destination
 
@@ -168,27 +169,28 @@ product capability.
 
 | Capability | Current state | Needed for Linode migration |
 | --- | --- | --- |
-| Party CSV/JSONL/XLSX bundles, preview, approval and export | Committed baseline | Add three source profiles and run a deployment rehearsal. |
+| Party CSV/JSONL/XLSX bundles, preview, approval and export | Baseline plus verified three-Workspace local rehearsal | Resolve retained review facts and rerun against final frozen source. |
 | Strict complete-loan history | Committed baseline | Use only after source-contract proof; likely a subset. |
-| Reviewed active-opening import and servicing | Committed baseline | Generalize JCL-only rules; add final-snapshot reconciliation and cutover evidence. |
+| Reviewed active-opening import and servicing | Committed baseline | Establish each Workspace's financial rules and opening evidence; add final-snapshot reconciliation and cutover evidence. |
 | Closed-loan evidence archive | Committed baseline | Cover actual source variations and run a deployment rehearsal. |
-| Source-dump preview | Committed, bounded and source-specific | Build three adapters, durable manifests and checkpointed orchestration. |
+| Source-dump preview | Three versioned source profiles and classified discovery snapshot | Build reviewed loan evidence and production orchestration from the proven runbook. |
 | Export | Partial Party and specific Loans contracts | It is not a complete Workspace backup or full-database export. |
 | Production operator workflow | Not ready | Build the Migration Center after adapters and runbook are proven. |
 
 ## Next recommended action
 
-Do one source-discovery release slice before any additional data conversion:
+Discovery and the isolated Party rehearsal are complete; see the
+[verified rehearsal record](../implementation/linode-party-rehearsal-20260921.md).
+Prepare source-bound opening evidence for the 6,464 unreleased candidates, with
+separate review of the 14 payment-bearing loans and all borrower/source errors.
+Map licences, series, policy and custody per Workspace. Establish principal,
+unpaid interest and fees from evidence before operational loan admission; previous
+JCL interest assumptions do not automatically apply to JSK or Lakshmi.
 
-1. Obtain a read-only Linode discovery dump and media manifest.
-2. Run a per-schema inventory and reconciliation-only extraction; make no target
-   writes.
-3. Produce the JCL, JSK and Lakshmi mapping report and list the factual decisions
-   needed for active loans.
-
-This answers the only questions that cannot safely be guessed: actual schemas,
-volumes, data drift, active balances, interest treatment, custody state and media.
-It keeps work focused on three known Workspaces rather than a broad framework.
+Preserve the 38,943 released source loans through reviewed historical evidence.
+Resolve Party review facts, obtain the media inventory and rehearse loan servicing
+before scheduling the final write freeze and full-snapshot cutover. Classification
+alone does not authorize a loan or archive write.
 
 ## Migration Center: first-time user experience
 

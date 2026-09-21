@@ -44,7 +44,8 @@ def build_party_preparation(extracted, *, schema, source_namespace, source_profi
     system = f"legacy:{installation.hex}:{schema}"
     records = {contracts.PROFILE: [], child_contracts.CONTACT: [], child_contracts.ADDRESS: []}
     review = []
-    parent = lambda pk: f"contact_customer:{pk}"
+    source_parent = lambda pk: f"contact_customer:{pk}"
+    parent = lambda pk: _id(namespace, "contact_customer", pk)
     for pk, row in sorted(tables["contact_customer"].items(), key=lambda item: int(item[0])):
         relation_kind = _relation(row["relatedas"])
         relation_name = row["relatedto"] if relation_kind else None
@@ -59,7 +60,7 @@ def build_party_preparation(extracted, *, schema, source_namespace, source_profi
             "id": _id(namespace, "contact_customer", pk), "name": row["name"], "kind": "INDIVIDUAL",
             "status": "ACTIVE" if row["active"] == "t" else "INACTIVE", "relation_kind": relation_kind,
             "relation_name": relation_name, "credit_hold": False, "business_code": None, "extensions": {},
-            "source_refs": [{"system": system, "external_id": parent(pk)}], "recorded_at": None,
+            "source_refs": [{"system": system, "external_id": source_parent(pk)}], "recorded_at": None,
             "source_recorded_at": row["created"], "origin": "IMPORT", "photo_ref": None,
         })
     primary = set()

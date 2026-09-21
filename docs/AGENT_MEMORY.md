@@ -62,6 +62,13 @@ staging service accepts this only for JSONL and retains it as the source identit
 it does not treat legacy documents as native Rokkad exports. Preparation remains
 review-only until ordinary staged-batch approval and commit occur.
 
+Legacy Party contact/address `party_external_id` must be the deterministic UUID
+emitted as the master document's `id`: that is the external ID persisted by
+canonical JSONL staging. Raw `contact_customer:<pk>` references remain provenance,
+not parent lookup keys. Keep the installation namespace stable across snapshots.
+Completed-batch retries are idempotent; they do not establish that re-uploading a
+fresh snapshot can bypass conflict review after local or child-derived changes.
+
 ## Business rules to preserve
 
 For the seven-loan jcl rehearsal, the owner confirmed on 2026-09-17 that all
