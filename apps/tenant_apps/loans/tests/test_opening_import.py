@@ -54,6 +54,44 @@ class OpeningImportFixture(PortabilityFixture):
 
 
 class OpeningImportTests(OpeningImportFixture):
+    def canonical_customer_binding(self):
+        from uuid import UUID, uuid5
+        self.review["source"]["borrower_id"] = "contact_customer:1"
+        self.review["mapping"]["borrower_external_id"] = "contact_customer:1"
+        source = self.review["source"]
+        return SourceIdentity.objects.create(workspace=self.a, identity=self.source_party.identity,
+            source_system=self.review["mapping"]["borrower_source_system"],
+            external_id=str(uuid5(uuid5(UUID(source["namespace"]), source["schema"]), "contact_customer:1")),
+            accepted_digest=self.source_party.accepted_digest, local_digest=self.source_party.local_digest)
+
+    def test_canonical_party_uuid_resolves_raw_loan_reference_and_replays(self):
+        from apps.tenant_apps.loans.services.opening_import import _source_parent
+        with self.scoped():
+            self.canonical_customer_binding()
+            preview = preview_opening_import(**self.args)
+            self.assertFalse(m.PawnLoan.objects.exists())
+            origin = self.write()
+            self.assertEqual(origin.loan.borrower_id, self.source_party.identity.party_id)
+            self.assertEqual(self.write().pk, origin.pk)
+            self.assertEqual(m.PawnLoan.objects.count(), 1)
+            self.assertEqual(preview["sha256"], digest(origin.document))
+        with self.scoped(self.b):
+            self.assertIsNone(_source_parent(self.review["source"], self.review["mapping"], self.b.pk))
+
+    def test_conflicting_raw_and_canonical_party_bindings_fail_before_financial_writes(self):
+        from apps.tenant_apps.party.models import Party
+        from apps.tenant_apps.data_portability.models import PartyIdentity
+        with self.scoped():
+            self.canonical_customer_binding()
+            other = PartyIdentity.objects.create(party=Party.objects.create(display_name="Other source borrower"))
+            SourceIdentity.objects.create(identity=other,
+                source_system=self.review["mapping"]["borrower_source_system"], external_id="contact_customer:1",
+                accepted_digest="a" * 64, local_digest="a" * 64)
+            with self.assertRaisesMessage(ValueError, "identities disagree"):
+                self.write()
+            for model in (m.PawnLoan, m.PawnLoanEvent, m.HistoricalLoanImport):
+                self.assertFalse(model.objects.exists())
+
     def test_preview_rolls_back_then_commit_replay_preserves_review_and_no_origination(self):
         with self.scoped():
             before = copy.deepcopy(self.review)

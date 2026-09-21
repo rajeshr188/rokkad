@@ -68,6 +68,33 @@ canonical JSONL staging. Raw `contact_customer:<pk>` references remain provenanc
 not parent lookup keys. Keep the installation namespace stable across snapshots.
 Completed-batch retries are idempotent; they do not establish that re-uploading a
 fresh snapshot can bypass conflict review after local or child-derived changes.
+The Loans opening boundary preserves raw customer references in its frozen review
+while resolving either existing raw Party bindings or the canonical deterministic
+UUID from the same source namespace/schema. Conflicting bindings fail closed;
+this compatibility does not change the generic Party child resolver.
+The opening staging service and operator command accept an optional versioned
+`source_profile`, re-extract its correction ledger, and freeze the profile in
+signed source evidence. The separately confirmed `linode-owner/1` profile extends
+the reviewed source interpretation to exactly these three versioned Linode
+profiles; the older JCL owner profiles remain JCL-only.
+
+On 2026-09-21 the owner answered "same rules as jcl" when asked about JSK/Lakshmi
+interest, first-month payment, later collections and missing-tenure treatment.
+`linode-owner-terms/1` records shared anniversary/upfront interest and the
+three-month missing-tenure fallback for the exact three Linode source profiles.
+Keep valid recorded tenure; hold payment-bearing cases for reconciliation. This
+interest/maturity confirmation alone does not prove weight interpretation,
+custody, current balances/fees or a production cutover date. The owner subsequently
+answered "Yes, net weight in both" for JSK and Lakshmi. `linode-owner/1` therefore
+maps stored weight to net weight with a new explicit evidence reference and shares
+the confirmed terms. Gross weight remains unknown, and custody/balances still
+require separate evidence. Versioned staging selects this profile; profile-less
+older staging preserves its JCL-only behavior.
+The owner also confirmed rehearsal branch custody for unreleased loans apart from
+the report's flagged exceptions. Scope that custody attestation to unflagged
+candidates; do not clear payment, inactive-borrower or source/collateral holds.
+Unpaid fees/charges are still awaiting a factual answer, and no opening balances
+or cutover date have yet been accepted for the September 21 three-Workspace run.
 
 ## Business rules to preserve
 

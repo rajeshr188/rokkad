@@ -2,7 +2,7 @@
 from datetime import date
 from decimal import Decimal, localcontext
 
-from apps.tenant_apps.loans.services.legacy_interest import aggregate_collection_interest, collection_interest
+from apps.tenant_apps.loans.services.legacy_interest import AGGREGATE_RULE, aggregate_collection_interest, collection_interest
 
 from .legacy_preview import number
 from .parsers import PortabilityError
@@ -12,31 +12,65 @@ COLLECTION_PROFILE = "jcl-owner/2"
 NAMESPACE = "6ca968d6-2647-4dbb-8e39-24f0c1a12ed6"
 EVIDENCE = "owner-clarifications-2026-09-12:jcl-net-weight"
 MATURITY_EVIDENCE = "owner-clarifications-2026-09-12:jcl-missing-maturity-three-months"
+LINODE_TERMS_PROFILE = "linode-owner-terms/1"
+LINODE_TERMS_EVIDENCE = "owner-clarifications-2026-09-21:jsk-lakshmi-same-interest-and-maturity-as-jcl"
+LINODE_PROFILE = "linode-owner/1"
+LINODE_WEIGHT_EVIDENCE = "owner-clarifications-2026-09-21:jcl-jsk-lakshmi-net-weight"
 
 
-def maturity_tenure(summary, facts):
-    """Apply the owner's jcl migration fallback without changing source facts."""
-    check_profile(summary, COLLECTION_PROFILE)
+def maturity_tenure(summary, facts, *, owner_profile=COLLECTION_PROFILE):
+    """Apply a scoped owner maturity decision without changing source facts."""
+    if owner_profile not in {COLLECTION_PROFILE, LINODE_PROFILE}:
+        raise PortabilityError("Missing maturity requires an explicitly confirmed owner profile.")
+    check_profile(summary, owner_profile)
+    return _maturity_tenure(facts, LINODE_TERMS_EVIDENCE if owner_profile == LINODE_PROFILE else MATURITY_EVIDENCE)
+
+
+def _maturity_tenure(facts, evidence):
     raw = facts.get("tenure")
     tenure = number(raw)
     if raw in (None, "") or tenure == 0:
-        return 3, MATURITY_EVIDENCE
+        return 3, evidence
     if tenure is None or tenure != tenure.to_integral_value() or not 1 <= tenure <= 1200:
         raise PortabilityError("Invalid source tenure requires review; the fallback is only for missing tenure.")
     return int(tenure), None
 
 
+def linode_terms(summary, facts):
+    """Owner-confirmed interest/maturity only; no balance, weight or custody claim."""
+    from .legacy_profiles import get_profile
+
+    profile = get_profile(summary.get("source_profile"))
+    if summary.get("source_namespace") != NAMESPACE or summary.get("source_schema") != profile.schema:
+        raise PortabilityError("Confirmed Linode terms require the reviewed installation and matching source profile.")
+    tenure, fallback = _maturity_tenure(facts, LINODE_TERMS_EVIDENCE)
+    return {"profile": LINODE_TERMS_PROFILE, "evidence_reference": LINODE_TERMS_EVIDENCE,
+            "interest_rule": AGGREGATE_RULE, "first_month_paid_upfront": True,
+            "tenure_months": tenure,
+            "maturity_basis": "OWNER_MISSING_MATURITY_RULE" if fallback else "RECORDED_TENURE",
+            "payment_reconciliation_required_when_present": True,
+            "opening_balances_approved": False, "custody_confirmed": False}
+
+
 def check_profile(summary, profile):
+    if profile == LINODE_PROFILE:
+        linode_terms(summary, {"tenure": "0"})  # Exact reviewed installation/schema/profile.
+        return
     if profile is not None and (profile not in {PROFILE, COLLECTION_PROFILE} or summary.get("source_namespace") != NAMESPACE or
                                 summary.get("source_schema") != "jcl"):
         raise PortabilityError("The supported jcl owner profiles apply only to the owner-reviewed legacy namespace and jcl tenant.")
 
 
+def weight_evidence(summary, profile):
+    check_profile(summary, profile)
+    return LINODE_WEIGHT_EVIDENCE if profile == LINODE_PROFILE else EVIDENCE if profile else None
+
+
 def interest_diagnostic(candidate, *, as_of, owner_profile=PROFILE):
     """Hypothetical collection under confirmed terms; never fills opening balances."""
-    if owner_profile not in {PROFILE, COLLECTION_PROFILE}:
+    if owner_profile not in {PROFILE, COLLECTION_PROFILE, LINODE_PROFILE}:
         raise PortabilityError("Unsupported owner calculation profile.")
-    aggregate = owner_profile == COLLECTION_PROFILE
+    aggregate = owner_profile in {COLLECTION_PROFILE, LINODE_PROFILE}
     blockers = []
     if candidate["source_state"] != "UNRELEASED":
         blockers.append("RELEASED_OUTSIDE_ACTIVE_SCOPE")

@@ -23,7 +23,7 @@ class Command(BaseCommand):
         parser.add_argument("--output-dir")
         parser.add_argument("--reconciliation-as-of")
         parser.add_argument("--reconciliation-timezone")
-        parser.add_argument("--owner-profile", choices=["jcl-owner/1", "jcl-owner/2"],
+        parser.add_argument("--owner-profile", choices=["jcl-owner/1", "jcl-owner/2", "linode-owner/1"],
                             help="Apply the source-scoped owner net-weight attestation and collection diagnostics.")
         parser.add_argument("--prepare-openings", action="store_true",
                             help="Prepare offline opening review records for retained unreleased loans.")
@@ -34,7 +34,8 @@ class Command(BaseCommand):
         try:
             if options["owner_profile"]:
                 from apps.tenant_apps.data_portability.legacy_owner_rules import check_profile
-                check_profile({"source_namespace": options["source_namespace"], "source_schema": options["source_schema"]}, options["owner_profile"])
+                check_profile({"source_namespace": options["source_namespace"], "source_schema": options["source_schema"],
+                               "source_profile": options["source_profile"]}, options["owner_profile"])
                 if not options["reconciliation_as_of"]:
                     raise PortabilityError("--owner-profile requires an explicit reconciliation date and timezone.")
             if options["source_profile"] and options["source_schema"] and get_profile(options["source_profile"]).schema != options["source_schema"]:

@@ -6,6 +6,8 @@ missing balances, dates, custody or mappings from a raw dump.
 from copy import deepcopy
 from datetime import date, datetime, time
 from decimal import Decimal, ROUND_HALF_EVEN
+import re
+from uuid import UUID, uuid5
 from zoneinfo import ZoneInfo
 
 from dateutil.relativedelta import relativedelta
@@ -61,6 +63,24 @@ def _create(model, *, exclude=(), **values):
     return obj
 
 
+def _source_parent(source, mapping, workspace_id):
+    """Resolve old raw bindings or the canonical legacy Party adapter identity."""
+    from apps.tenant_apps.data_portability.children import parent_for
+
+    reference = {"party_source_system": mapping["borrower_source_system"],
+                 "party_external_id": mapping["borrower_external_id"]}
+    parent = parent_for(reference, workspace_id)
+    # Review validation already binds this reference to the source schema/namespace.
+    # Only the known customer-table identity has a deterministic adapter equivalent.
+    if re.fullmatch(r"contact_customer:[1-9][0-9]{0,18}", reference["party_external_id"]):
+        external = str(uuid5(uuid5(UUID(source["namespace"]), source["schema"]), reference["party_external_id"]))
+        canonical = parent_for({**reference, "party_external_id": external}, workspace_id)
+        if parent is not None and canonical is not None and parent.pk != canonical.pk:
+            raise OpeningEvidenceError("Raw and canonical source Party identities disagree; review the borrower mapping.")
+        parent = parent or canonical
+    return parent
+
+
 def _write(*, workspace_id, actor, document, restoration=None):
     # Workspace lock serializes both financial-origin writers, including replay.
     workspace = Company.all_objects.select_for_update().get(pk=workspace_id)
@@ -88,13 +108,11 @@ def _write(*, workspace_id, actor, document, restoration=None):
         operational_grace_days=terms["grace_days"], legacy_license_evidence=supplied.get("legacy_license_evidence"),
         local_loan_number=supplied.get("local_loan_number"))
     from apps.tenant_apps.party.models import Party
-    from apps.tenant_apps.data_portability.children import parent_for
     try:
         borrower = Party.objects.select_for_update().get(pk=mapping["borrower_id"], workspace_id=workspace_id)
     except Party.DoesNotExist as exc:
         raise OpeningEvidenceError("Borrower must belong to the destination Workspace.") from exc
-    parent = parent_for({"party_source_system": mapping["borrower_source_system"],
-                         "party_external_id": mapping["borrower_external_id"]}, workspace_id)
+    parent = _source_parent(source, mapping, workspace_id)
     if parent is None or parent.party_id != borrower.pk:
         raise OpeningEvidenceError("Borrower must resolve the exact source Party identity.")
     principal = Decimal(review["balances"]["principal"])

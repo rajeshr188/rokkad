@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.tenant_apps.data_portability.legacy_archive_preview import write_report
 from apps.tenant_apps.data_portability.legacy_dump import inspect_archive
 from apps.tenant_apps.data_portability.legacy_preview import build_preview, encode
+from apps.tenant_apps.data_portability.legacy_profiles import PROFILES, get_profile
 from apps.tenant_apps.data_portability.parsers import PortabilityError
 
 
@@ -17,12 +18,17 @@ class Command(BaseCommand):
         for name in ("dump", "source-schema", "source-namespace", "business-timezone", "review-date", "output-dir"):
             parser.add_argument("--" + name, required=True)
         parser.add_argument("--pg-restore", default="pg_restore")
-        parser.add_argument("--owner-profile", choices=["jcl-owner/1", "jcl-owner/2"])
+        parser.add_argument("--source-profile", choices=sorted(PROFILES),
+                            help="Apply the versioned source schema and reviewed correction ledger.")
+        parser.add_argument("--owner-profile", choices=["jcl-owner/1", "jcl-owner/2", "linode-owner/1"])
 
     def handle(self, *args, **options):
         try:
+            if options["source_profile"] and get_profile(options["source_profile"]).schema != options["source_schema"]:
+                raise PortabilityError("--source-profile must match --source-schema.")
             extracted = inspect_archive(options["dump"], schema=options["source_schema"], pg_restore=options["pg_restore"])
-            summary, records = build_preview(extracted, schema=options["source_schema"], source_namespace=options["source_namespace"])
+            summary, records = build_preview(extracted, schema=options["source_schema"], source_namespace=options["source_namespace"],
+                                             source_profile=options["source_profile"])
             report = write_report(options["output_dir"], summary, records, **{
                 key: options[key] for key in ("business_timezone", "review_date", "owner_profile")})
             self.stdout.write(encode(report["counts"]))

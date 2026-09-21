@@ -18,6 +18,53 @@ from apps.tenant_apps.data_portability.tests.test_legacy_dump import row, source
 
 
 class LegacyOwnerRulesTests(SimpleTestCase):
+    def test_confirmed_linode_weight_maps_net_only_and_scopes_maturity(self):
+        from apps.tenant_apps.data_portability.legacy_owner_rules import LINODE_PROFILE, LINODE_WEIGHT_EVIDENCE, LINODE_TERMS_EVIDENCE
+        for schema, profile in (("jsk", "linode-jsk/1"), ("lakshmipawnbroker", "linode-lakshmi/1")):
+            summary, records = build_preview(source(schema), schema=schema, source_namespace=NAMESPACE, source_profile=profile)
+            propose_collateral_exclusions(summary, records)
+            prepared = prepare_openings(summary, records, owner_profile=LINODE_PROFILE)[0]
+            self.assertEqual(prepared["profile"], "loan-opening-review/2")
+            self.assertEqual(prepared["collateral"][0]["net_weight"], "10")
+            self.assertIsNone(prepared["collateral"][0]["gross_weight"])
+            self.assertEqual(prepared["collateral"][0]["weight_reference"], LINODE_WEIGHT_EVIDENCE)
+            self.assertIsNone(prepared["collateral"][0]["custody_reference"])
+            self.assertIsNone(prepared["balances"])
+            self.assertEqual(maturity_tenure(summary, {"tenure":"0"}, owner_profile=LINODE_PROFILE), (3, LINODE_TERMS_EVIDENCE))
+            with self.assertRaises(PortabilityError):
+                prepare_openings({**summary, "source_profile": None}, records, owner_profile=LINODE_PROFILE)
+            with self.assertRaises(PortabilityError):
+                maturity_tenure(summary, {"tenure": "0"}, owner_profile=None)
+
+    def test_linode_terms_extend_only_confirmed_interest_and_maturity(self):
+        from apps.tenant_apps.data_portability.legacy_owner_rules import linode_terms
+        from apps.tenant_apps.data_portability.legacy_profiles import PROFILES
+        for profile in PROFILES.values():
+            summary = dict(source_namespace=NAMESPACE, source_schema=profile.schema, source_profile=profile.key)
+            for raw, expected, basis in [("0", 3, "OWNER_MISSING_MATURITY_RULE"), ("6", 6, "RECORDED_TENURE")]:
+                with self.subTest(schema=profile.schema, tenure=raw):
+                    facts = {"tenure": raw}
+                    result = linode_terms(summary, facts)
+                    self.assertEqual(result["tenure_months"], expected)
+                    self.assertEqual(result["maturity_basis"], basis)
+                    self.assertEqual(result["interest_rule"], "original-anniversary-upfront-inclusive/2")
+                    self.assertTrue(result["first_month_paid_upfront"])
+                    self.assertFalse(result["opening_balances_approved"])
+                    self.assertFalse(result["custody_confirmed"])
+                    self.assertEqual(facts, {"tenure": raw})
+            for raw in ("bad", "-1", "1.5", "1201"):
+                with self.assertRaises(PortabilityError):
+                    linode_terms(summary, {"tenure": raw})
+
+    def test_linode_terms_cannot_expand_old_weight_attestation_or_wrong_scope(self):
+        from apps.tenant_apps.data_portability.legacy_owner_rules import linode_terms, check_profile
+        valid = dict(source_namespace=NAMESPACE, source_schema="jsk", source_profile="linode-jsk/1")
+        for field, value in (("source_namespace", "other"), ("source_schema", "jcl"), ("source_profile", None)):
+            with self.assertRaises(PortabilityError):
+                linode_terms({**valid, field: value}, {"tenure": "0"})
+        with self.assertRaises(PortabilityError):
+            check_profile(valid, COLLECTION_PROFILE)
+
     def test_maturity_fallback_preserves_recorded_tenure_and_rejects_invalid_or_wrong_scope(self):
         summary, _ = self.build()
         for raw in (None, "", "0", "0.00"):

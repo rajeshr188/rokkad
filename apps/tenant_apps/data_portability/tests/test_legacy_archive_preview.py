@@ -6,6 +6,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.data_portability.legacy_archive_preview import candidates, write_report
@@ -17,6 +18,46 @@ from .test_legacy_dump import source, row, NAMESPACE
 
 class ArchivePreviewTests(SimpleTestCase):
     options = {"business_timezone": "Asia/Kolkata", "review_date": "2026-09-13"}
+
+    def test_confirmed_linode_weight_keeps_its_own_evidence_reference(self):
+        from apps.tenant_apps.data_portability.legacy_owner_rules import LINODE_PROFILE, LINODE_WEIGHT_EVIDENCE, NAMESPACE as linode_namespace
+        data = source("jsk")
+        data["tables"]["girvi_release"]["1"] = row("girvi_release", id="1", loan_id="1",
+            release_date="2021-02-01 00:00:00+00", released_by_id="1")
+        summary, records = build_preview(data, schema="jsk", source_namespace=linode_namespace, source_profile="linode-jsk/1")
+        result = next(candidates(summary, records, owner_profile=LINODE_PROFILE, **self.options))
+        self.assertIsNone(result["held_reason"])
+        self.assertEqual(result["document"]["facts"]["collateral"][0]["net_weight"], "10")
+        self.assertIn(LINODE_WEIGHT_EVIDENCE, json.dumps(result["document"]))
+
+    def test_command_rejects_wrong_profile_before_reading_archive(self):
+        with patch("apps.tenant_apps.data_portability.management.commands.preview_legacy_closed_archive.inspect_archive") as inspect:
+            with self.assertRaisesRegex(CommandError, "must match"):
+                call_command("preview_legacy_closed_archive", dump="unused", source_schema="jsk",
+                    source_profile="linode-jcl/1", source_namespace=NAMESPACE,
+                    output_dir="unused", stdout=io.StringIO(), **self.options)
+            inspect.assert_not_called()
+
+    def test_command_preserves_correction_and_raw_hash_in_closed_evidence(self):
+        from .test_legacy_profiles import LegacySourceProfileTests
+        data, original = LegacySourceProfileTests().jcl_source_with_corrected_loan()
+        data["tables"]["girvi_release"]["1"] = row("girvi_release", id="1", loan_id="29887",
+            release_date="2026-01-01 00:00:00+00", released_by_id="1")
+        with TemporaryDirectory() as temp:
+            output = Path(temp) / "report"
+            with patch("apps.tenant_apps.data_portability.management.commands.preview_legacy_closed_archive.inspect_archive", return_value=data):
+                call_command("preview_legacy_closed_archive", dump="unused", source_schema="jcl",
+                    source_profile="linode-jcl/1", source_namespace=NAMESPACE,
+                    output_dir=str(output), stdout=io.StringIO(), **self.options)
+            with ZipFile(output / "candidates.zip") as bundle:
+                document = parse(bundle.read(bundle.namelist()[0]))
+            self.assertEqual(document["facts"]["opened_on"], "2025-12-16")
+            loan = document["source_records"][0]
+            self.assertEqual(loan["source"]["correction"]["original"], original["loan_date"])
+            import hashlib
+            from apps.tenant_apps.data_portability.legacy_preview import encode
+            self.assertEqual(loan["source_sha256"], hashlib.sha256(encode(original).encode()).hexdigest())
+            self.assertEqual(json.loads((output / "summary.json").read_text())["source"]["source_profile"], "linode-jcl/1")
 
     def prepare(self, data=None):
         data = data or source()

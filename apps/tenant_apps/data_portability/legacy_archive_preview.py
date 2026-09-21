@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 from apps.tenant_apps.loans.services import archive_contract as contract
 from apps.tenant_apps.loans.services.portability_validation import PortabilityValidationError
 
-from .legacy_owner_rules import check_profile, EVIDENCE
+from .legacy_owner_rules import check_profile, weight_evidence
 from .legacy_archive_review import date_findings, select_pilot_case, write_case_review
 from .legacy_preview import encode, number, timestamp
 from .parsers import PortabilityError
@@ -110,7 +110,7 @@ def candidates(summary, records, *, business_timezone, review_date, owner_profil
                     "amount": decimal(p["facts"]["payment_amount"], "payment.amount")} for p in payments] or None},
             "source_records": graph + [{"adapter": PROFILE, "business_timezone": business_timezone,
                 "review_date": review_date, "owner_profile": owner_profile,
-                "net_weight_evidence": EVIDENCE if owner_profile else None,
+                "net_weight_evidence": weight_evidence(summary, owner_profile),
                 "interpretation": "Release row is a closure claim, not settlement or custody proof. Stored loan_amount is not original principal. Absent rows mean unknown evidence.",
                 "mapping_notes": notes, "transformations": transformations}]}
         result = {"source_id": loan["source"]["external_id"], "loan_number": facts["loan_id"],

@@ -15,20 +15,20 @@ from apps.tenant_apps.loans.services.opening_import import (
 from .legacy_dump import inspect_archive
 from .legacy_preview import build_preview, propose_collateral_exclusions
 from .opening_review import prepare_openings
-from .legacy_owner_rules import maturity_tenure
+from .legacy_owner_rules import COLLECTION_PROFILE, LINODE_PROFILE, maturity_tenure
 from .models import LoanHistoryBatch
 
 PROFILE = "legacy-opening/1"
 SALT = "legacy-opening-approval-v1"
 
 
-def source_evidence(*, archive_path, review, setup, pg_restore="pg_restore"):
+def source_evidence(*, archive_path, review, setup, pg_restore="pg_restore", source_profile=None):
     """Re-extract a private immutable archive snapshot; never trust edited reports."""
     source = review["source"]
     extracted = inspect_archive(archive_path, schema=source["schema"], pg_restore=pg_restore)
-    summary, records = build_preview(extracted, schema=source["schema"], source_namespace=source["namespace"])
+    summary, records = build_preview(extracted, schema=source["schema"], source_namespace=source["namespace"], source_profile=source_profile)
     propose_collateral_exclusions(summary, records)
-    candidates = prepare_openings(summary, records, owner_profile="jcl-owner/2")
+    candidates = prepare_openings(summary, records, owner_profile=LINODE_PROFILE if source_profile else COLLECTION_PROFILE)
     return _source_evidence(review, setup, summary, records, candidates)
 
 
@@ -49,7 +49,8 @@ def _source_evidence(review, setup, summary, records, candidates):
     payments = [row for row in records if row["source"]["table"] == "girvi_loanpayment" and row["facts"]["loan_id"] == raw_id]
     if payments:
         raise HistoryError("Source payment history requires separate reconciliation before this unchanged-principal pilot.")
-    tenure, maturity_reference = maturity_tenure(summary, loan["facts"])
+    owner_profile = LINODE_PROFILE if summary.get("source_profile") else COLLECTION_PROFILE
+    tenure, maturity_reference = maturity_tenure(summary, loan["facts"], owner_profile=owner_profile)
     if setup["tenure_months"] != tenure:
         raise HistoryError("Reviewed tenure must preserve recorded terms or the owner's three-month missing-maturity rule.")
     if maturity_reference and maturity_reference not in review["terms"]["evidence_reference"].split("; "):
@@ -72,8 +73,9 @@ def _source_evidence(review, setup, summary, records, candidates):
                 raise HistoryError("An old loan-level value can be assigned only to its sole item, unchanged; otherwise retain it in source records.")
     selected.extend((series, licence, customer))
     return {"adapter": PROFILE, "archive_sha256": summary["archive_sha256"],
+        **({"source_profile": summary["source_profile"]} if summary.get("source_profile") else {}),
         "selection_sha256": source["selection_sha256"], "selected_loan_ids": [source["loan_id"]],
-        "owner_profile": "jcl-owner/2", "records": selected,
+        "owner_profile": owner_profile, "records": selected,
         "maturity_review": {"source_tenure": loan["facts"].get("tenure"),
             "tenure_months": tenure, "maturity_date": review["terms"]["maturity_date"],
             "basis": "OWNER_MISSING_MATURITY_RULE" if maturity_reference else "RECORDED_TENURE",
@@ -98,11 +100,12 @@ def _inputs(batch):
     return {"review": opening["review"], "setup": opening["setup"]}
 
 
-def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_restore"):
+def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_restore", source_profile=None):
     require_history_setup_access(workspace_id, actor)
     # Domain validation precedes expensive source extraction and retains no loans.
     preview_opening_import(workspace_id=workspace_id, actor=actor, review=review, setup=setup)
-    evidence = source_evidence(archive_path=archive_path, review=review, setup=setup, pg_restore=pg_restore)
+    evidence = source_evidence(archive_path=archive_path, review=review, setup=setup, pg_restore=pg_restore,
+                               source_profile=source_profile)
     opening = {"profile": OPENING_PROFILE, "review": deepcopy(review), "setup": deepcopy(setup)}
     with transaction.atomic():
         Company.all_objects.select_for_update().get(pk=workspace_id)
@@ -113,7 +116,7 @@ def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_re
             source_sha256=digest(opening), document={"opening": opening, "source_evidence": evidence})
 
 
-def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_restore"):
+def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_restore", source_profile=None):
     """Stage at most 20 reviewed openings against one freshly extracted snapshot.
 
     Admission still uses each batch's ordinary signed preview and commit. Callers
@@ -134,9 +137,9 @@ def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_re
     if len({s["loan_id"] for s in sources}) != len(sources):
         raise HistoryError("Select each source loan only once per staging batch.")
     extracted = inspect_archive(archive_path, schema=first["schema"], pg_restore=pg_restore)
-    summary, records = build_preview(extracted, schema=first["schema"], source_namespace=first["namespace"])
+    summary, records = build_preview(extracted, schema=first["schema"], source_namespace=first["namespace"], source_profile=source_profile)
     propose_collateral_exclusions(summary, records)
-    candidates = prepare_openings(summary, records, owner_profile="jcl-owner/2")
+    candidates = prepare_openings(summary, records, owner_profile=LINODE_PROFILE if source_profile else COLLECTION_PROFILE)
     documents = []
     for inputs in openings:
         evidence = _source_evidence(inputs["review"], inputs["setup"], summary, records, candidates)

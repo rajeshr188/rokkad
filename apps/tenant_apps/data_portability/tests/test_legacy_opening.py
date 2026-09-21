@@ -45,6 +45,61 @@ class LegacyOpeningTests(OpeningImportFixture):
     def stage_opening(self, **changes):
         return bridge.stage(**{**self.args, "archive_path": "synthetic.dump", **changes})
 
+    def test_versioned_profile_staging_preserves_ledger_and_rejects_source_drift(self):
+        tables = self.extracted["tables"]
+        tables["girvi_loan"]["29887"] = {**tables["girvi_loan"]["1"], "id": "29887",
+            "loan_id": "R09911", "loan_date": "2026-12-16 09:47:00+00"}
+        tables["girvi_loanitem"]["29887"] = {**tables["girvi_loanitem"]["1"], "id": "29887", "loan_id": "29887"}
+        summary, records = build_preview(self.extracted, schema="jcl", source_namespace=NAMESPACE,
+                                         source_profile="linode-jcl/1")
+        propose_collateral_exclusions(summary, records)
+        candidate = prepare_openings(summary, records, owner_profile="linode-owner/1")[0]
+        self.review["source"] = candidate["source"]
+        self.review["collateral"][0]["weight_reference"] = candidate["collateral"][0]["weight_reference"]
+        with self.scoped():
+            batch = self.stage_opening(source_profile="linode-jcl/1")
+            self.assertEqual(batch.document["source_evidence"]["source_profile"], "linode-jcl/1")
+            many = bridge.stage_many(workspace_id=self.a.pk, actor=self.actor, archive_path="synthetic.dump",
+                openings=[{"review": self.review, "setup": self.setup}], source_profile="linode-jcl/1")
+            self.assertEqual(many[0].document, batch.document)
+            tables["girvi_loan"]["29887"]["loan_date"] = "2024-12-16 09:47:00+00"
+            with self.assertRaisesMessage(ValueError, "does not match"):
+                self.stage_opening(source_profile="linode-jcl/1")
+            self.assertEqual(LoanHistoryBatch.objects.count(), 2)
+            self.assertFalse(PawnLoan.objects.exists())
+
+    def test_versioned_profile_cannot_cross_source_schema(self):
+        with self.scoped(), self.assertRaisesMessage(ValueError, "does not match"):
+            self.stage_opening(source_profile="linode-jsk/1")
+        with self.scoped():
+            self.assertFalse(LoanHistoryBatch.objects.exists())
+
+    def test_confirmed_linode_profiles_stage_commit_and_replay_with_canonical_parties(self):
+        from uuid import UUID, uuid5
+        for schema, profile in (("jsk", "linode-jsk/1"), ("lakshmipawnbroker", "linode-lakshmi/1")):
+            self.extracted["source_schema"] = schema
+            self.extracted["schemas"] = {schema: list(self.extracted["tables"])}
+            summary, records = build_preview(self.extracted, schema=schema, source_namespace=NAMESPACE, source_profile=profile)
+            propose_collateral_exclusions(summary, records)
+            candidate = prepare_openings(summary, records, owner_profile="linode-owner/1")[0]
+            review = copy.deepcopy(self.review)
+            review["source"] = candidate["source"]
+            for key in ("borrower_source_system", "borrower_external_id"):
+                review["mapping"][key] = candidate["mapping"][key]
+            review["collateral"][0]["weight_reference"] = candidate["collateral"][0]["weight_reference"]
+            with self.scoped():
+                SourceIdentity.objects.create(identity=self.source_party.identity,
+                    source_system=summary["source_system"],
+                    external_id=str(uuid5(uuid5(UUID(NAMESPACE), schema), "contact_customer:1")),
+                    accepted_digest=self.source_party.accepted_digest, local_digest=self.source_party.local_digest)
+                batch = self.stage_opening(review=review, source_profile=profile)
+                self.assertEqual(batch.document["source_evidence"]["owner_profile"], "linode-owner/1")
+                approval = bridge.preview(**self.batch_args(batch))
+                result = bridge.commit(**self.batch_args(batch), approval=approval, confirmed=True)
+                self.assertEqual(bridge.commit(**self.batch_args(batch), approval=approval, confirmed=True), result)
+        with self.scoped():
+            self.assertEqual(PawnLoan.objects.count(), 2)
+
     def many_inputs(self):
         tables = self.extracted["tables"]
         tables["girvi_loan"]["2"] = {**tables["girvi_loan"]["1"], "id": "2", "loan_id": "A00002"}

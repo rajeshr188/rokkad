@@ -16,8 +16,9 @@ MAX_LOANS = 5000
 
 def prepare_openings(summary, records, *, owner_profile=None):
     """Propose review documents, leaving unknown financial facts explicitly null."""
-    from .legacy_owner_rules import EVIDENCE, check_profile
+    from .legacy_owner_rules import LINODE_PROFILE, check_profile, weight_evidence
     check_profile(summary, owner_profile)
+    weight_reference = weight_evidence(summary, owner_profile)
     proposal = summary.get("exclusion_proposal")
     if summary.get("profile") != "legacy-dump-preview/1" or not proposal:
         raise PortabilityError("Opening preparation requires the explicit collateral exclusion proposal.")
@@ -45,12 +46,12 @@ def prepare_openings(summary, records, *, owner_profile=None):
                 "metal": {"Gold": "GOLD", "Silver": "SILVER", "Bronze": "BRONZE"}.get(raw["itemtype"]),
                 "gross_weight": None, "net_weight": raw["weight"] if owner_profile else None, "purity": raw["purity"],
                 "original_principal": raw["loanamount"], "remaining_principal": None,
-                "monthly_rate": raw["interestrate"], "weight_reference": EVIDENCE if owner_profile else None,
+                "monthly_rate": raw["interestrate"], "weight_reference": weight_reference,
                 "custody_reference": None, "valuation": None,
             })
         borrower = f"contact_customer:{facts['customer_id']}"
         documents.append({
-            "profile": COLLECTION_PROFILE if owner_profile == "jcl-owner/2" else PROFILE,
+            "profile": COLLECTION_PROFILE if owner_profile in {"jcl-owner/2", LINODE_PROFILE} else PROFILE,
             "source": {"namespace": summary["source_namespace"], "schema": summary["source_schema"],
                        "loan_id": record["source"]["external_id"], "number": facts["loan_id"],
                        "loan_timestamp": facts["loan_date"], "borrower_id": borrower,

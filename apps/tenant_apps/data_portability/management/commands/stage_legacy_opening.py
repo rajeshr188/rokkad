@@ -9,6 +9,7 @@ from apps.tenant_apps.loans.services.history_setup import require_history_setup_
 from apps.tenant_apps.loans.services.opening_import import PROFILE
 from apps.tenant_apps.data_portability.opening_review import read_documents
 from apps.tenant_apps.data_portability.legacy_opening import stage
+from apps.tenant_apps.data_portability.legacy_profiles import PROFILES
 
 
 class Command(BaseCommand):
@@ -20,6 +21,8 @@ class Command(BaseCommand):
         parser.add_argument("--dump", required=True)
         parser.add_argument("--opening-file", required=True, help="One bounded UTF-8 JSONL record: profile, review and setup, prepared by the migration operator.")
         parser.add_argument("--pg-restore", default="pg_restore")
+        parser.add_argument("--source-profile", choices=sorted(PROFILES),
+                            help="Verify the versioned source profile and retain its reviewed correction ledger.")
 
     def handle(self, *args, **options):
         try:
@@ -30,7 +33,8 @@ class Command(BaseCommand):
                 if len(rows) != 1 or not isinstance(rows[0], dict) or set(rows[0]) != {"profile", "review", "setup"} or rows[0]["profile"] != PROFILE:
                     raise ValueError("Supply exactly one prepared opening commit document.")
                 batch = stage(workspace_id=workspace.pk, actor=actor, archive_path=options["dump"],
-                    review=rows[0]["review"], setup=rows[0]["setup"], pg_restore=options["pg_restore"])
+                    review=rows[0]["review"], setup=rows[0]["setup"], pg_restore=options["pg_restore"],
+                    source_profile=options["source_profile"])
                 url = reverse("workspace_portability:opening_batch", kwargs={"workspace_slug": workspace.slug, "batch_id": batch.public_id})
             self.stdout.write("Source-verified opening staged. No loan imported. Owner review: " + url)
         except (ValueError, ObjectDoesNotExist, PermissionDenied, ValidationError) as exc:

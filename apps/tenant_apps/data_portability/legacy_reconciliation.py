@@ -155,11 +155,11 @@ def write_worksheet(output, summary, records, *, as_of, business_timezone, owner
     worksheet = build_worksheet(summary, records, as_of=as_of, business_timezone=business_timezone, owner_profile=owner_profile)
     (output / "reconciliation.json").write_text(encode(worksheet) + "\n", encoding="utf-8")
     if owner_profile:
-        from .legacy_owner_rules import COLLECTION_PROFILE
+        from .legacy_owner_rules import COLLECTION_PROFILE, LINODE_PROFILE
         rounding_note = ("For this rehearsal, item interest is summed, multiplied by additional months and rounded once "
                          "to the nearest rupee, with half-even ties. Actual collections and accepted interest losses are separate; "
                          "their missing amounts remain unknown. No automatic shortfall allowance or loan waiver is applied."
-                         if owner_profile == COLLECTION_PROFILE else
+                         if owner_profile in {COLLECTION_PROFILE, LINODE_PROFILE} else
                          "Fractional item charges require a confirmed aggregation rule.")
         diagnostics = worksheet["owner_rule_diagnostics"]
         calculated = sum(row["calculation"] is not None for row in diagnostics)

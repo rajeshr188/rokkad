@@ -7,6 +7,56 @@ tags: [status, architecture]
 
 # Status
 
+## Three-Workspace loan review packages prepared (2026-09-21)
+
+Reused the existing source-preview, opening-review and closed-evidence adapters on
+the same hashed discovery archive. All 6,464 unreleased loans have observed Party
+links in the isolated rehearsal database. There are 6,456 opening-review drafts
+and eight incomplete-collateral holds; every held source graph is retained.
+Fourteen loans have recorded payments, and 190 JCL borrowers are inactive.
+All 38,943 released source loans produce schema-valid historical-evidence
+documents. This is preparation only: zero loan, event, setup or archive writes.
+
+`preview_legacy_closed_archive` now accepts an optional versioned `--source-profile`,
+checks its schema before extraction, and preserves reviewed correction provenance
+and original row hashes. Existing invocations remain compatible. Fifteen focused
+archive/profile tests initially passed, including correction retention and early
+mismatch rejection. After the owner's "same rules as jcl" confirmation,
+`linode-owner-terms/1` explicitly scopes shared interest and missing-tenure rules
+to these source profiles. The combined owner-rule/archive/profile suite passed
+29 tests. The report now includes 6,442 interest illustrations and month counts;
+22 calculations remain held (14 payment cases and eight source/collateral cases).
+630 missing-tenure cases use the confirmed three-month fallback. These remain
+illustrations, not accepted balances.
+
+Local review: `outputs/linode-loan-review-20260921/review.html`; each Workspace has
+opening gaps, all active borrower links, payment review, setup evidence and closed
+history exceptions. Draft balances, custody and terms remain unapproved. The
+source-verified operational bridge now accepts an explicit versioned source profile
+through single/bounded staging and the operator command, retaining it in signed
+source evidence. The owner then confirmed net weight for JSK and Lakshmi.
+`linode-owner/1` separately scopes those confirmed terms and net-weight facts to
+the three versioned Linode profiles; older JCL profiles stay restricted. All
+6,456 drafts were regenerated as v2 in each Workspace's `confirmed-opening/`
+directory, with unknown balances/custody intact. Source preparation, terms,
+staging and reconciliation suites passed 57 tests, including synthetic JSK and
+Lakshmi stage/commit/retry through canonical Party mappings and source-drift rejection.
+Raw legacy borrower references
+now resolve the canonical Party UUID at the Loans opening boundary; ambiguous
+bindings fail before financial writes. All 14 opening-import tests passed,
+including canonical mapping, retry, ambiguity and Workspace isolation.
+Source/financial gates remain intact. Actual balances/fees and current custody
+still require evidence; destination setup must be prepared before real admission.
+All 45,407 loan IDs and 38,943 archived candidate documents
+were reconciled; source hashes, active graphs and report links passed verification.
+Final combined regression run: all 98 focused tests passed. The final report
+manifest covers 107 private evidence files, including the subsequent custody attestation.
+The owner subsequently confirmed branch custody for the rehearsal apart from
+flagged exceptions. Its separate evidence covers 6,254 unflagged candidates;
+the 210 flagged loans stay excluded from that attestation. Fees/charges remain
+unanswered, so actual opening documents have not been financially admitted.
+See [loan review preparation](implementation/linode-loan-review-20260921.md).
+
 ## Three-Workspace Party rehearsal completed with explicit holds (2026-09-21)
 
 The local isolated database `rokkad_baseline_rehearsal_linode_20260921` now contains
