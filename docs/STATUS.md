@@ -49,9 +49,15 @@ cutover tool: it needs deployment migration rehearsal and source adapters for th
 actual Linode schemas. Prior local JCL rehearsals are evidence about test data
 only; they do not establish that Linode production has been imported.
 
-The next action is source discovery: obtain a read-only custom `pg_dump` plus media
-manifest from Linode, produce a per-schema inventory and reconciliation report,
-then build versioned adapters for the exact JCL, JSK and Lakshmi source shapes. See the
+Versioned `linode-jcl/1`, `linode-jsk/1` and `linode-lakshmi/1` source profiles now
+match this archive. All three completed read-only previews; their unresolved source
+errors are review inputs, not destination writes. The JCL profile applies the
+owner-approved `R09911` date correction only after matching its exact raw source
+value. See the [source-profile decision](adr/2026-09-21-versioned-legacy-source-profiles.md).
+
+The next action is an isolated three-Workspace rehearsal from these profiles,
+followed by review of the resulting Party, active-opening, archive and hold counts.
+See the
 [production migration design](architecture/production-tenants-to-rls-migration.md).
 
 ## Closed-loan archive rehearsal completed (2026-09-19)

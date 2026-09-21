@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.tenant_apps.data_portability.legacy_dump import inspect_archive
+from apps.tenant_apps.data_portability.legacy_profiles import PROFILES, get_profile
 from apps.tenant_apps.data_portability.legacy_preview import build_preview, encode, namespace_uuid, propose_collateral_exclusions, write_preview
 from apps.tenant_apps.data_portability.parsers import PortabilityError
 
@@ -17,6 +18,8 @@ class Command(BaseCommand):
         mode.add_argument("--list-schemas", action="store_true")
         mode.add_argument("--source-schema")
         parser.add_argument("--source-namespace")
+        parser.add_argument("--source-profile", choices=sorted(PROFILES),
+                            help="Apply a versioned Linode schema profile and its reviewed source corrections.")
         parser.add_argument("--output-dir")
         parser.add_argument("--reconciliation-as-of")
         parser.add_argument("--reconciliation-timezone")
@@ -34,6 +37,8 @@ class Command(BaseCommand):
                 check_profile({"source_namespace": options["source_namespace"], "source_schema": options["source_schema"]}, options["owner_profile"])
                 if not options["reconciliation_as_of"]:
                     raise PortabilityError("--owner-profile requires an explicit reconciliation date and timezone.")
+            if options["source_profile"] and options["source_schema"] and get_profile(options["source_profile"]).schema != options["source_schema"]:
+                raise PortabilityError("--source-profile must match --source-schema.")
             if (options["reconciliation_as_of"] or options["reconciliation_timezone"]) and not (
                     options["prepare_openings"] and options["reconciliation_as_of"] and options["reconciliation_timezone"]):
                 raise PortabilityError("Reconciliation requires --prepare-openings, --reconciliation-as-of and --reconciliation-timezone.")
@@ -50,7 +55,8 @@ class Command(BaseCommand):
             if options["list_schemas"]:
                 self.stdout.write(encode(extracted))
                 return
-            summary, records = build_preview(extracted, schema=options["source_schema"], source_namespace=options["source_namespace"])
+            summary, records = build_preview(extracted, schema=options["source_schema"], source_namespace=options["source_namespace"],
+                                             source_profile=options["source_profile"])
             if options["propose_skip_incomplete_collateral"]:
                 propose_collateral_exclusions(summary, records)
             opening_documents = None

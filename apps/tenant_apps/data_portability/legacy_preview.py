@@ -10,6 +10,7 @@ import re
 from uuid import UUID, uuid5
 
 from .legacy_dump import COLUMNS, source_schema
+from .legacy_profiles import apply_corrections, get_profile
 from .parsers import PortabilityError
 
 PROFILE = "legacy-dump-preview/1"
@@ -80,14 +81,18 @@ def add_issue(record, code, field, message, severity="ERROR"):
                              "before": None, "after": None})
 
 
-def build_preview(extracted, *, schema, source_namespace):
+def build_preview(extracted, *, schema, source_namespace, source_profile=None):
     source_schema(schema)
     if extracted.get("source_schema") != schema:
         raise PortabilityError("Extracted records must belong to the selected source schema.")
+    profile = get_profile(source_profile) if source_profile else None
+    if profile and profile.schema != schema:
+        raise PortabilityError("The source profile does not match the selected source schema.")
     namespace = namespace_uuid(source_namespace)
     tenant_namespace = uuid5(namespace, schema)
     system = f"legacy:{namespace.hex}:{schema}"
-    tables = extracted["tables"]
+    raw_tables = extracted["tables"]
+    tables, corrections = (apply_corrections(raw_tables, profile_key=profile.key) if profile else (raw_tables, {}))
     if set(tables) != set(COLUMNS):
         raise PortabilityError("The selected source table set is incomplete.")
 
@@ -98,9 +103,10 @@ def build_preview(extracted, *, schema, source_namespace):
     for table in COLUMNS:
         for pk, row in sorted(tables[table].items(), key=lambda item: int(item[0])):
             record = {
-                "source": {**reference(table, pk), "schema": schema, "table": table, "id": pk},
+                "source": {**reference(table, pk), "schema": schema, "table": table, "id": pk,
+                           "correction": corrections.get((table, pk))},
                 "proposed_id": str(uuid5(tenant_namespace, f"{table}:{pk}")),
-                "source_sha256": hashlib.sha256(encode(row).encode("utf-8")).hexdigest(),
+                "source_sha256": hashlib.sha256(encode(raw_tables[table][pk]).encode("utf-8")).hexdigest(),
                 "target": TARGETS[table], "facts": row, "references": {},
                 "review_route": "SOURCE_MAPPING_REVIEW", "import_ready": False, "issues": [],
             }
@@ -217,7 +223,8 @@ def build_preview(extracted, *, schema, source_namespace):
     summary = {
         "profile": PROFILE, "coverage": "SOURCE_REVIEW_ONLY", "import_ready": False,
         "source_namespace": str(namespace), "tenant_namespace": str(tenant_namespace),
-        "source_system": system, "source_schema": schema, "archive_sha256": extracted["archive_sha256"],
+        "source_system": system, "source_schema": schema, "source_profile": profile.key if profile else None,
+        "archive_sha256": extracted["archive_sha256"],
         "destination_workspace": None, "counts": {table: len(rows) for table, rows in tables.items()},
         "loan_cohorts": dict(cohorts), "issue_counts": dict(sorted(issue_counts.items())),
         "records_with_errors": sum(any(i["severity"] == "ERROR" for i in r["issues"]) for r in records),
