@@ -12,6 +12,50 @@ snapshot, replays it into three clean Workspaces, and reconciles every imported
 record. This is an operator workflow for the known Linode source, using existing
 import services. It does not restore old SQL into the shared-schema database.
 
+## Validated September 21 run
+
+The approved discovery snapshot was replayed into the newly created
+`rokkad_baseline_rehearsal_cutover_20260921` database. Cold admission used clean
+commit `f276b9b8`; final validation safeguards, tests, complete replay and
+reconciliation used clean commit `da3c91ec`. The actor used ordinary owner
+Memberships under the restricted runtime role. Target Workspace IDs were
+deliberately assigned in a different order from the accepted browser rehearsal.
+
+| Source | Party masters | Contacts | Addresses | Openings | Closed archive | Excluded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| JCL | 5,882 | 1,898 | 3,997 | 2,355 | 26,664 | 0 |
+| JSK | 646 | 513 | 621 | 1,483 | 3,811 | 1 |
+| Lakshmi | 2,102 | 1,085 | 2,104 | 2,435 | 8,658 | 0 |
+| Total | 8,630 | 3,496 | 6,722 | 6,273 | 39,133 | 1 |
+
+All 45,407 source loan IDs reconcile exactly once. Opening principal is
+199,847,583 and interest is 22,614,850, with no unpaid fees. Reconciliation checks
+every input/document, identity, balance, collateral record, remaining obligation
+and next interest boundary, including the distinct-address and corrected-purity
+decisions. Restricted-role checks confirmed cross-Workspace and missing-context
+isolation. Extra archive versions and wrong source-branch provenance fail closed.
+
+The final checkout passed 56 focused tests and the import-boundary guard. All 31
+scoped page renders, 22 opening exports, three archive exports and 22 full-release
+and retry simulations passed. Servicing was rolled back. The complete replay
+passed; all 291 business-table fingerprints matched afterwards, and reconciliation
+passed again. The accepted browser rehearsal's recorded 33 business-table hashes
+were separately checked unchanged during this work.
+
+Private evidence is in `outputs/linode-clean-replay-20260921/`; start with
+`completion.json` and `verification.json`. `evidence-manifest.json` seals the
+reports, logs, release/migration metadata and fingerprints. The approved package
+is `outputs/linode-reviewed-package-20260921/`, with manifest SHA256:
+
+```text
+6b8fa81cc11f0a5200c62f98856d677088aa1879d8063a0b06da0ec2e1df140e
+```
+
+Cold admission took 6,059 seconds (about 101 minutes) on this local machine.
+Production timing requires its own measurement; this excludes media, final-source
+preparation and acceptance. The result is `RECONCILED_DATABASE_ONLY`.
+Production remains live, and no media copy or production cutover is claimed.
+
 ## Inputs and preparation
 
 Retain the original archive, the private package directory, its independently

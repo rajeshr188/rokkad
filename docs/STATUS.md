@@ -7,14 +7,39 @@ tags: [status, architecture]
 
 # Status
 
-## Repeatable accepted-snapshot replay in validation (2026-09-21)
+## Reviewed-snapshot replay proven in a clean target (2026-09-21)
 
 The accepted inputs are captured in a private, checksummed three-Workspace package.
 The `linode_migration` command composes existing import services for replay and
 full reconciliation in a clean target, and reports source changes without applying
-old decisions to a new dump. The clean checkout passed 54 focused package,
-legacy-opening, archive and release tests. A clean-checkout/database run is being validated; production readiness
-is not yet asserted. See [the operator runbook](implementation/linode-reviewed-replay.md).
+old decisions to a new dump. The fresh database
+`rokkad_baseline_rehearsal_cutover_20260921` was built from a clean checkout using
+ordinary migrations, restricted runtime grants and ordinary owner Memberships.
+Workspace IDs were deliberately reassigned to exercise destination remapping.
+Cold admission used `f276b9b8`; final safeguards, tests, replay and reconciliation
+used `da3c91ec`. Both checkouts were clean.
+
+All **6,273 operational openings**, **39,133 closed records** and the **one reviewed
+exclusion** reconcile: all **45,407 source loan IDs** are accounted for exactly
+once. Party totals are 8,630 masters, 3,496 contacts and 6,722 addresses. Every
+opening balance, collateral record, remaining schedule, next interest boundary,
+signed source document and closed document was checked. Totals remain
+199,847,583 principal and 22,614,850 interest, with no unpaid fees.
+
+The final clean checkout passed **56 tests** and the import-boundary guard.
+All 31 scoped page renders, 22 opening exports, three archive exports and 22
+full-release/retry simulations passed; all servicing was rolled back. A complete
+package replay succeeded, all **291 business-table fingerprints** remained
+identical, and final reconciliation passed again. Cross-Workspace and missing-
+context RLS checks passed. The accepted browser rehearsal's 33 recorded business-
+table fingerprints were also checked unchanged during this work.
+
+Evidence is private under `outputs/linode-clean-replay-20260921/`, including
+`completion.json`, `verification.json`, release/migration metadata, logs and an
+evidence checksum manifest. The reviewed input package is
+`outputs/linode-reviewed-package-20260921/`. Cold admission took about 101 minutes
+on this local machine; this excludes media and fresh-source preparation and is
+not a production timing guarantee. See [the operator runbook](implementation/linode-reviewed-replay.md).
 
 The owner confirmed production photographs/documents live on the same Linode
 server filesystem, not Cloudflare R2. Actual media root/path inventory, separate
@@ -31,10 +56,9 @@ presented three-Workspace rehearsal review. No further review of the same import
 snapshot is queued. It does not establish a production cutover date, media recovery,
 new-lending setup or acceptance of financial workflows not exercised in the review.
 
-Next prepare a repeatable production cutover package from the proven adapters and
-recorded decisions, and prove it against a clean target from the intended release
-commit. Keep this bounded to the existing three-Workspace conversion; a new Migration
-Center UI is not required. Complete media inventory/copy mapping, production owner
+The accepted-snapshot package and clean-target proof are complete as recorded
+above. A new Migration Center UI is not required. Next complete media
+inventory/copy mapping, production owner
 and staff access, valid current lending setup, and the required servicing scope.
 Then schedule the write freeze, obtain a fresh complete database and media snapshot,
 rebuild/reconcile the final target and accept its report before switching users.
