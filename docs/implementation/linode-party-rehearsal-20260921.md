@@ -27,8 +27,10 @@ These records are not automatically visible in the normally running application.
 | 3 / rehearsal-lakshmi-20260921 | 2,102 | 1,085 | 2,104 | 0 |
 | Total | 8,630 | 3,496 | 6,712 | 10 |
 
-All 18,848 prepared rows are accounted for: 18,838 committed, ten held. There are
-zero operational loans and zero historical-loan evidence records in this target.
+All 18,848 prepared rows are accounted for: 18,838 committed, ten held. At this
+Party-only checkpoint there were zero operational loans or historical-loan
+evidence records. Subsequent loan admission is tracked in the
+[loan rehearsal record](linode-opening-rehearsal-20260921.md).
 
 ## Source and identity
 

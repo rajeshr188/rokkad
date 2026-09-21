@@ -1,11 +1,25 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-21
 tags: [loans, portability, migration, approval]
 ---
 
 # Review and import one prepared legacy opening
+
+For the current three-Workspace Linode source, pass the matching
+`--source-profile linode-jcl/1`, `linode-jsk/1` or `linode-lakshmi/1` when staging.
+The bridge checks the installation/schema, reapplies the versioned correction
+ledger and freezes the `linode-owner/1` source interpretation. The confirmed
+shared terms/net-weight profile does not itself approve balances or custody.
+The [September 21 rehearsal](../implementation/linode-opening-rehearsal-20260921.md)
+records those separate owner confirmations and actual admission results.
+Omitting the profile retains the older JCL-only behavior described below.
+
+Prepare only positive remaining obligation rows. A loan with zero outstanding
+interest keeps its principal obligation and no empty interest row. For the
+confirmed Linode profile, description line breaks/tabs normalize to spaces with
+explicit signed before/after source evidence; other text edits remain rejected.
 
 For an explicitly authorized larger rehearsal, operators may call `stage_many`
 with up to 20 reviewed `review`/`setup` pairs. It extracts the archive once for
@@ -32,6 +46,9 @@ the completed batch. Opening details guide full collection/release, show origina
 maturity/grace and explain which earlier history is unavailable. Prepare destination
 monitoring separately; missing appraisal evidence remains visibly unknown. Rehearse
 settlement, concession, receipt and reversal before bulk rollout.
+Ordinary partial repayments and other general financial actions are still blocked
+for migration openings; do not promise general native-loan servicing from a
+successful opening import.
 
 
 This is the first `jcl` dump adapter, for a small reviewed active-loan rehearsal.

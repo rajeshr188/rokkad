@@ -9,6 +9,9 @@ tags: [migration, loans, review, rehearsal]
 
 This follows the [verified Party rehearsal](linode-party-rehearsal-20260921.md).
 It prepares evidence; it does not admit operational loans or accept closed history.
+This page records that preparation checkpoint. Subsequent owner confirmation of
+zero unpaid fees and the actual financial rehearsal are recorded in the
+[admission rehearsal](linode-opening-rehearsal-20260921.md).
 The source remains the September 21 custom archive, SHA-256
 `f50e992a5813571e5d64316534cf073c08a96059780420be47bf7211eab163a6`, installation
 namespace `6ca968d6-2647-4dbb-8e39-24f0c1a12ed6`.

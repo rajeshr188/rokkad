@@ -1,11 +1,30 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-21
 tags: [plans, portability, migration]
 ---
 
 # Incremental data portability delivery plan
+
+## Current migration checkpoint (2026-09-21)
+
+The historical entries below describe earlier source snapshots and implementation
+steps. Current production discovery uses the September 21 Linode archive and the
+three versioned source profiles. The isolated Party rehearsal is complete with
+holds; eligible active opening admission and closed evidence retention have
+completed through existing domain services: 6,254 operational openings, 38,943
+closed source-evidence records and 210 held active loans. Follow [Status](../STATUS.md) and the
+[admission rehearsal record](../implementation/linode-opening-rehearsal-20260921.md)
+for actual counts and completion evidence.
+
+The next production gates are exception resolution, supported branch servicing,
+current lending setup/access/media, and a clean committed importer followed by
+a write freeze, fresh full source and final reconciliation. Opening support is
+currently full-settlement catch-up/release and coupled reversal, not general
+partial repayment servicing. The earlier one-loan pilot is no longer the next
+delivery step. Avoid unrelated portability/UI expansion until these migration
+gates are addressed.
 
 ## Actual source priorities (2026-09-12)
 

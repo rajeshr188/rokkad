@@ -93,8 +93,28 @@ older staging preserves its JCL-only behavior.
 The owner also confirmed rehearsal branch custody for unreleased loans apart from
 the report's flagged exceptions. Scope that custody attestation to unflagged
 candidates; do not clear payment, inactive-borrower or source/collateral holds.
-Unpaid fees/charges are still awaiting a factual answer, and no opening balances
-or cutover date have yet been accepted for the September 21 three-Workspace run.
+The owner subsequently answered "no fees are unpaid,proceed". The isolated
+September 21 rehearsal therefore uses zero fees, unchanged principal and the
+confirmed interest rule for the 6,254 unflagged, payment-free candidates. Its
+September 21 opening date is a rehearsal checkpoint, not a production cutover.
+The 210 flagged active loans remain held. Closed loans belong in source-evidence
+retention, not the operational opening path.
+
+For `linode-owner/1` only, collapse runs of description line breaks/tabs to a
+space; retain exact raw descriptions, row hashes and explicit before/after
+transformations in signed staging evidence. Do not permit arbitrary description
+edits or loosen control-character validation. Zero-interest openings need only
+their principal obligation: omit empty schedule rows. Document validation rejects
+all-zero obligations before database preview, matching the existing writer and
+database constraint. Never revise an already accepted opening to repair a
+preparation error; checkpointed admission resumes only against identical accepted
+documents and source fingerprints.
+The three-Workspace eligible-data rehearsal is now complete: 6,254 operational
+openings, 38,943 closed source-evidence records and 210 held active loans account
+for every source loan. See the [admission record](implementation/linode-opening-rehearsal-20260921.md)
+for validation and private report paths. This is not a production migration or
+general partial-repayment support; a fresh frozen archive, exception decisions,
+required servicing/setup/access/media and clean-build acceptance remain necessary.
 
 ## Business rules to preserve
 

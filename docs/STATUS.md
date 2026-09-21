@@ -7,6 +7,47 @@ tags: [status, architecture]
 
 # Status
 
+## Three-Workspace loan rehearsal completed with holds (2026-09-21)
+
+The owner's "no fees are unpaid,proceed" answer completed the outstanding fee
+fact. Source-bound admission and independent reconciliation completed in the
+isolated `rokkad_baseline_rehearsal_linode_20260921` database:
+
+| Workspace | Operational openings | Closed source evidence | Held active loans |
+| --- | ---: | ---: | ---: |
+| JCL | 2,345 | 26,474 | 200 |
+| JSK | 1,478 | 3,811 | 6 |
+| Lakshmi | 2,431 | 8,658 | 4 |
+| Total | 6,254 | 38,943 | 210 |
+
+All 45,407 source loan IDs are accounted for in disjoint sets. Every accepted
+opening document, source record, collateral mapping, balance, obligation and
+next monthly interest boundary reconciled. Opening principal is 198,573,923 INR,
+interest 22,317,483 INR and fees zero at the September 21 rehearsal checkpoint.
+Twenty-one representative detail pages, exports and full-release/retry rollback
+checks passed. Restarting all three opening runners verified existing fingerprints
+and made no extra admissions. Closed-history documents and findings match exactly;
+archive admission left checked operational table counts and hashes unchanged.
+Restricted-role cross-Workspace and missing-context RLS checks passed.
+R09911 is closed source evidence, with the approved December 16, 2025 date retained.
+This supersedes preparation-only/pending-fee states below. Linode and the normal
+application database remain unchanged; these records are separate from `jcl-13`.
+
+The Linode adapter now normalizes description line breaks/tabs with exact raw
+source evidence and before/after transformations. Empty obligation rows are
+rejected during offline validation, matching the existing writer constraint.
+The focused regression suite passed all 70 tests; code checkpoint `7d8e131a`.
+Local report: `outputs/linode-opening-rehearsal-20260921/review.html`. Its manifest
+covers 791 private evidence files and all local report links resolve. See the
+[admission rehearsal record](implementation/linode-opening-rehearsal-20260921.md).
+
+Production is still pending: resolve the 210 active-loan holds, ten duplicate
+Party addresses and retained Party preparation decisions; establish required
+servicing, current lending setup/access/media and a clean-build release; then
+freeze legacy writes and migrate a fresh complete archive into a fresh target.
+Opening servicing currently supports full-settlement catch-up/release and coupled
+reversal; ordinary partial repayments remain guarded.
+
 ## Three-Workspace loan review packages prepared (2026-09-21)
 
 Reused the existing source-preview, opening-review and closed-evidence adapters on
