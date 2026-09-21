@@ -434,6 +434,9 @@ def verify_package(*, directory, expected_sha256, workspaces, actor, expected_da
             require(dict(counts) == meta["party_counts"],"Party input counts differ.")
             require([Party.objects.count(),len(contacts),PartyAddress.objects.count()] == [counts[p] for p in PARTY_PROFILES],"Unexpected destination Party rows.")
             require(len(masters) == counts[contracts.PROFILE] and len(kids) == counts[child_contracts.CONTACT]+counts[child_contracts.ADDRESS],"Unexpected source aliases.")
+            require(len({s.identity_id for s in masters.values()}) == len(masters)
+                    and len({s.identity_id for s in kids.values()}) == len(kids),
+                    "Reviewed distinct source records were merged.")
             expected = {}
             for row in read_rows(root/schema/"openings.jsonl"):
                 original = row["opening"]["review"]
@@ -484,7 +487,7 @@ def verify_package(*, directory, expected_sha256, workspaces, actor, expected_da
             require(not loans.PawnLoanRelease.objects.exists() and not loans.CollateralAppraisal.objects.exists()
                     and not loans.PawnLoanDisbursalSnapshot.objects.exists(),"Unexpected servicing or historical disbursal/appraisal rows.")
             actual_closed = {e.source_id:e for e in loans.HistoricalLoanEvidence.objects.all().iterator(chunk_size=500)}
-            require(len(actual_closed)==meta["closed"],"Closed history counts differ.")
+            require(len(actual_closed)==meta["closed"]==loans.HistoricalLoanEvidence.objects.count(),"Closed history counts differ.")
             closed_ids = set()
             for document in read_rows(root/schema/"closed.jsonl"):
                 key = document["source"]["loan_id"]

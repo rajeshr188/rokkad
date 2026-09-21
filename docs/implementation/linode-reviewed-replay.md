@@ -82,3 +82,26 @@ contents, sizes, checksums and source-record references. Copy to the selected
 destination storage and verify tenant-scoped access and completeness. No media
 copy is claimed by these database commands. R2 source-bucket credentials are not
 needed to retrieve these files.
+
+The stated production commit configures `MEDIA_ROOT=/var/www/rokkad/media` in
+`django_project/settings/prod.py`; base settings select `TenantFileSystemStorage`
+with tenant-relative `%s/` media. This is a code-derived starting point, not a
+verified live-server path.
+Legacy customer photos use `contact.CustomerPic.image` (`customer_pics/...`) and
+proof documents use `contact.Proof.doc` (`upload/files/proofs/...`). Verify
+the actual deployed settings, tenant prefixes and files before backup/mapping.
+The current database replay does not import those two media models.
+
+The September 21 dump's read-only reference inventory found 1,153 customer photo
+rows (JCL 18, JSK 250, Lakshmi 885) and 30,685 nonempty loan-item picture references
+(14,723; 4,867; 11,095 respectively). The three `contact_proof` tables contain no
+rows in this snapshot. These are reference counts, not verified file counts or a
+claim that no documents exist elsewhere. Source paths and record associations are
+retained privately in `outputs/linode-media-inventory-20260921/references.jsonl`;
+the summary records its checksum. Loan-item picture paths in this dump start with
+`loan_pics/`. No source file contents were available or copied.
+All 31,838 schema/path pairs are distinct, but 5,180 stored relative paths occur in
+more than one source schema. Preserve the schema in every association and verify
+the deployed storage's resolution of each path; a flat merge by filename could
+associate a different branch's photograph. Matching relative paths do not prove
+matching file contents or matching physical source locations.

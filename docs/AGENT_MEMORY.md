@@ -56,6 +56,10 @@ server filesystem, not in Cloudflare R2. Capture a separate filesystem media bac
 with paths, checksums and source-record associations alongside the final database
 snapshot. The actual production media root still needs inventory; do not infer it
 from current development storage settings or assume file contents are in pg_dump.
+The snapshot-bound `linode_migration` operator command captures accepted inputs,
+rebinds them into clean Workspaces through existing services, and reconciles the
+result. Its source comparison never approves a changed archive; fresh production
+data needs new preparation. See [the replay runbook](implementation/linode-reviewed-replay.md).
 Each fresh target database also needs explicit grants for the existing restricted
 runtime login. `scripts/provision_runtime_role.py` keeps creation fail-closed and
 requires `ROKKAD_RUNTIME_GRANT_EXISTING=1` to grant a verified restricted existing
