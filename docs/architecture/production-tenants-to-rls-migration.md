@@ -101,6 +101,14 @@ Take a final snapshot after an announced cutover freeze. An earlier snapshot is
 only for discovery and rehearsal; the final snapshot is the import source of
 record.
 
+The source remains live while discovery and rehearsal run. Do not attempt an
+unbounded row-by-row sync between the old application and the new one. Rehearse in
+an isolated destination, then stop legacy business writes for the cutover window,
+take a final complete archive and build the production destination from that one
+source of record. If the final archive differs from the rehearsal archive, rerun
+the reviewed adapters and reconciliation against the final archive; do not patch
+the difference manually.
+
 ### 3. Discover and lock the source contract
 
 Build a source inventory for each tenant schema. Compare actual tables, columns,

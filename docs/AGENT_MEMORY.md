@@ -45,6 +45,13 @@ are not a deployed migration tool. Rehearsal results are not proof that Linode d
 was imported. Follow [the production migration design](architecture/production-tenants-to-rls-migration.md): inventory a fresh custom dump, build exact per-schema adapters,
 reconcile with owner gates, then cut over from a final frozen snapshot.
 
+The legacy source remains live while discovery and rehearsal proceed. A discovery
+archive is never an incremental-import base: rehearse in isolation, freeze legacy
+writes for cutover, take one final complete archive, then build the production RLS
+destination from that snapshot. The 2026-09-21 discovery inventory and its
+future-dated JCL loan hold are recorded in
+[the Linode discovery report](implementation/linode-production-discovery-20260921.md).
+
 ## Business rules to preserve
 
 For the seven-loan jcl rehearsal, the owner confirmed on 2026-09-17 that all

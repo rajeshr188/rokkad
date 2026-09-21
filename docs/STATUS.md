@@ -7,6 +7,25 @@ tags: [status, architecture]
 
 # Status
 
+## Linode production discovery snapshot inventoried (2026-09-21)
+
+The supplied archive is a valid PostgreSQL custom-format dump despite its `.sql`
+extension. It is an inventory-only snapshot of `rokkaddbv1`, made by PostgreSQL
+15.7, with SHA-256
+`f50e992a5813571e5d64316534cf073c08a96059780420be47bf7211eab163a6`.
+
+The authoritative legacy Company map confirms `jcl` (Company 2), `jsk` (Company
+3) and `lakshmipawnbroker` (Company 6). The three schemas contain 8,630 customers,
+45,407 loans, 22,835 payments, 38,943 releases and 6,464 unreleased loan candidates.
+This is not an import result and no destination data was written.
+
+The ongoing source is live. Rehearsals use this snapshot in isolation; production
+cutover will require an announced write freeze and a fresh final archive. The final
+target is built from that complete final snapshot rather than a best-effort stream
+of changing rows. The discovery report records a JCL future-dated loan
+(`2026-12-16`) that must remain held until reviewed. See
+[the discovery report](implementation/linode-production-discovery-20260921.md).
+
 ## Production migration redesign: Django-tenants source to RLS target (2026-09-21)
 
 The requested production migration is separate from the local September rehearsals.
