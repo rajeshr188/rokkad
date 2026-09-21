@@ -22,19 +22,16 @@ discovered from a fresh, read-only custom-format production dump before any targ
 writes. The old application remains the rollback system until written business
 acceptance of the new system.
 
-The local `data_portability` app, its Loans migrations and portability documents
-are untracked working-tree material: neither the source commit nor `HEAD` contains
-that app. The work provides useful Party bundles, strict loan-history contracts,
-reviewed active-opening contracts and closed-loan evidence archives, but it is not
-a release artifact or production cutover tool. It must be reviewed, committed,
-migrated and tested from a clean checkout before use. Prior local JCL rehearsals
-are evidence about test data only; they do not establish that Linode production
-has been imported.
+The local portability baseline is committed as `a3e0e2b8` on `rls-mvp`. It provides
+Party bundles, strict loan-history contracts, reviewed active-opening contracts and
+closed-loan evidence archives. It remains a release candidate, not a production
+cutover tool: it needs deployment migration rehearsal and source adapters for the
+actual Linode schemas. Prior local JCL rehearsals are evidence about test data
+only; they do not establish that Linode production has been imported.
 
-The next action is a source-discovery release slice: freeze and commit the
-portability baseline, obtain a read-only custom `pg_dump` plus media manifest from
-Linode, produce a per-schema inventory and reconciliation report, then build
-versioned adapters for the exact JCL, JSK and Lakshmi source shapes. See the
+The next action is source discovery: obtain a read-only custom `pg_dump` plus media
+manifest from Linode, produce a per-schema inventory and reconciliation report,
+then build versioned adapters for the exact JCL, JSK and Lakshmi source shapes. See the
 [production migration design](architecture/production-tenants-to-rls-migration.md).
 
 ## Closed-loan archive rehearsal completed (2026-09-19)

@@ -40,11 +40,10 @@ Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company
 deployment. Treat JCL, JSK and Lakshmi Pawn Brokers as a read-only source-to-RLS
 conversion, never an in-place database upgrade or old-database restore. The local
-portability app and Loans import migrations are untracked delivery-candidate work,
-not a deployed migration tool. Rehearsal results are not proof that Linode data was
-imported. Follow [the production migration design](architecture/production-tenants-to-rls-migration.md): release the importer, inventory a fresh custom dump, build exact
-per-schema adapters, reconcile with owner gates, then cut over from a final frozen
-snapshot.
+portability baseline and Loans import migrations are committed in `a3e0e2b8`, but
+are not a deployed migration tool. Rehearsal results are not proof that Linode data
+was imported. Follow [the production migration design](architecture/production-tenants-to-rls-migration.md): inventory a fresh custom dump, build exact per-schema adapters,
+reconcile with owner gates, then cut over from a final frozen snapshot.
 
 ## Business rules to preserve
 

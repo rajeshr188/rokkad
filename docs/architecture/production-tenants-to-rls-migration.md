@@ -151,17 +151,17 @@ an attempt to reverse history.
 
 ## Current portability status
 
-The repository has substantial portability work in the working tree, but it is
-not present in the old production commit or current `HEAD`; it is an unreviewed
-delivery candidate rather than deployed product capability.
+The portability baseline is committed in `a3e0e2b8` on `rls-mvp`; it is absent from
+the old production commit. It is a reviewed release candidate rather than deployed
+product capability.
 
 | Capability | Current state | Needed for Linode migration |
 | --- | --- | --- |
-| Party CSV/JSONL/XLSX bundles, preview, approval and export | Local implementation | Commit, clean-install test and three source profiles. |
-| Strict complete-loan history | Local implementation | Use only after source-contract proof; likely a subset. |
-| Reviewed active-opening import and servicing | Local implementation | Generalize JCL-only rules; add final-snapshot reconciliation and cutover evidence. |
-| Closed-loan evidence archive | Local implementation | Package as a release and cover actual source variations. |
-| Source-dump preview | Local, bounded and source-specific | Build three adapters, durable manifests and checkpointed orchestration. |
+| Party CSV/JSONL/XLSX bundles, preview, approval and export | Committed baseline | Add three source profiles and run a deployment rehearsal. |
+| Strict complete-loan history | Committed baseline | Use only after source-contract proof; likely a subset. |
+| Reviewed active-opening import and servicing | Committed baseline | Generalize JCL-only rules; add final-snapshot reconciliation and cutover evidence. |
+| Closed-loan evidence archive | Committed baseline | Cover actual source variations and run a deployment rehearsal. |
+| Source-dump preview | Committed, bounded and source-specific | Build three adapters, durable manifests and checkpointed orchestration. |
 | Export | Partial Party and specific Loans contracts | It is not a complete Workspace backup or full-database export. |
 | Production operator workflow | Not ready | Build the Migration Center after adapters and runbook are proven. |
 
@@ -169,12 +169,10 @@ delivery candidate rather than deployed product capability.
 
 Do one source-discovery release slice before any additional data conversion:
 
-1. Review, test and commit the existing portability app, Loans migrations and
-   supporting documents as a release candidate.
-2. Obtain a read-only Linode discovery dump and media manifest.
-3. Run a per-schema inventory and reconciliation-only extraction; make no target
+1. Obtain a read-only Linode discovery dump and media manifest.
+2. Run a per-schema inventory and reconciliation-only extraction; make no target
    writes.
-4. Produce the JCL, JSK and Lakshmi mapping report and list the factual decisions
+3. Produce the JCL, JSK and Lakshmi mapping report and list the factual decisions
    needed for active loans.
 
 This answers the only questions that cannot safely be guessed: actual schemas,
