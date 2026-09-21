@@ -54,8 +54,36 @@ future-dated JCL loan hold are recorded in
 The owner confirmed production photographs/documents are stored on the same Linode
 server filesystem, not in Cloudflare R2. Capture a separate filesystem media backup
 with paths, checksums and source-record associations alongside the final database
-snapshot. The actual production media root still needs inventory; do not infer it
-from current development storage settings or assume file contents are in pg_dump.
+snapshot. Do not infer source storage from current development settings or assume
+file contents are in pg_dump. Read-only SSH inventory subsequently verified the
+live root and schema folders; this is not a frozen cutover snapshot.
+The owner selected Cloudflare R2 for destination media and supplied
+`root@rokkad.com` with `/var/www/rokkad/media` as the source location. SSH verified
+that root, the deployed historical commit and tenant-relative media settings.
+Transfer directly from Linode
+to private R2 storage; a download to the owner's computer is not required. Keep
+Workspace-authorized application delivery and preserve source schema/record
+associations. R2 configuration examples exist but are not enabled storage settings.
+See [the media migration plan](plans/linode-media-to-r2.md) for pending work.
+The live inventory matches 28,224 of 31,838 discovery photo references. Missing
+branch-path references include 102 operational-loan photos, 3,507 closed-loan
+photos and five customer photos. Older shared folders contain 1,149 exact-path
+candidates, but their source-tenant association is unproven; never auto-attach
+them by filename. The owner explicitly approved creation of private
+`rokkad-production-media`; the bucket exists with public access disabled. The
+owner also approved the bucket-only Object Read & Write migration token
+`rokkad-media-migration-20260921`, expiring after one week; creation succeeded.
+The owner saved the credentials and authenticated access succeeded. All 31,405
+inventoried branch files and 1,149 separately labelled recovery candidates are now
+preserved and read-back hash-verified in private R2, with 13 verified evidence files.
+No application attachments exist yet. Also retain the distinction between 102
+active-photo references whose branch files are missing and 203 active collateral
+items with no recorded photo reference. Preserved originals must not become mutable
+Party FileField objects: photo removal/cleanup could delete them. Use separate
+application copies through the future authorized attachment service. See the
+[preservation decision](adr/2026-09-21-legacy-media-preservation-and-application-copies.md).
+The old local R2 endpoint points to another account and must not be reused. Temporary
+SSH key access works and must be revoked after migration; credentials remain local.
 The snapshot-bound `linode_migration` operator command captures accepted inputs,
 rebinds them into clean Workspaces through existing services, and reconciles the
 result. Its source comparison never approves a changed archive; fresh production

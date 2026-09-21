@@ -7,6 +7,128 @@ tags: [status, architecture]
 
 # Status
 
+## Media preservation copy verified in private R2 (2026-09-21)
+
+After the owner saved the approved bucket-scoped credentials, **32,554 files**
+(**591,274,335 bytes**, about 564 MiB) were copied directly from Linode to
+`rokkad-production-media`: all 31,405 inventoried branch files and 1,149 separately
+labelled shared-folder recovery candidates. Every source hash matched inventory,
+every destination object was read back and SHA-256 verified, and all destination
+keys/sizes reconcile. Conditional creation refused overwrites; all 15 sample
+retries verified existing bytes. There were no source/destination verification
+failures. The source application/media and both rehearsal databases were unchanged.
+
+Thirteen evidence/report files were also copied and hash-verified in R2, including
+the source-record map, copy receipts and exception reports. Private local evidence
+is `outputs/linode-media-copy-20260921/`; `review.html` is the readable result.
+The bucket has no custom domain and its public development URL is disabled.
+An unsigned GET of a known photo from Linode was rejected with HTTP 400,
+`InvalidArgument: Authorization`. An earlier local TLS transport failure was not
+counted as privacy evidence. See [the completed preservation record](implementation/linode-media-preservation-20260921.md).
+
+This is **MEDIA_PRESERVATION_VERIFIED_ATTACHMENTS_PENDING**, not go-live.
+Of 31,838 discovery references, 28,224 have verified branch originals, 1,149 have
+unverified shared-folder candidates, and 2,465 have no exact file in checked
+locations. The missing branch references still include 102 active-loan photos,
+3,507 closed-history photos and five customer photos. Separately, **203 active
+collateral items had no photograph reference recorded at all**. Among 6,293 active
+items, 5,988 have verified originals. Do not silently turn candidate matches or
+newly captured pictures into original evidence.
+
+Offline source evidence now preserves all 1,153 customer-photo rows and their
+default flags: 1,147 customers, six with multiple photos and two with no marked
+default. No application attachments were created. Next implement authorized,
+retry-safe attachments for verified Party, collateral and historical identities,
+using separate application copies so ordinary cleanup cannot delete preserved
+originals. See [the preservation decision](adr/2026-09-21-legacy-media-preservation-and-application-copies.md).
+Actual R2 backend dependencies, permanent runtime credentials, privacy/rendering
+tests, missing-file disposition and the final frozen database/media cutover remain.
+The one-week migration token must not become the production application credential.
+
+## Live media inventory complete; copy and recovery pending (2026-09-21)
+
+The owner installed temporary SSH access and reported "ssh ready". Key-based
+login succeeded. Read-only checks verified `/var/www/rokkad/media`, the three
+schema directories and deployed commit `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd`
+under `/root/app/rokkad`. Deployed code retains TenantFileSystemStorage, tenant
+relative `%s/` and the stated production media root. No application or media
+files were written. Inventory reads ran serially with idle I/O priority and a
+20 MiB/s cap; only manifests and hashes were saved locally.
+
+All **31,405 branch files** were readable and stable during their individual
+hash reads: **589,157,649 bytes**, about 562 MiB (disk allocation about 642 MiB).
+The discovery dump's **31,838 photo references** reconcile as follows:
+
+| Source branch | Exact branch-path matches | Missing from branch folder |
+| --- | ---: | ---: |
+| JCL | 11,582 | 3,159 |
+| JSK | 4,662 | 455 |
+| Lakshmi | 11,980 | 0 |
+| Total | 28,224 | 3,614 |
+
+Missing references comprise **102 operational-loan photos** (77 JCL, 25 JSK),
+3,507 closed-loan photos and five JCL customer photos. Separate read-only inventory
+of the two older shared photo folders found 1,149 exact-path JCL candidates,
+including 23 operational photos and all five customer photos. These remain
+unverified associations, not recovered attachments. The other 2,465 missing
+references have no exact path in the checked branch/shared folders. No same-branch
+filename-stem alternatives were found. The 3,181 branch files absent from the
+discovery reference list are retained for classification, not declared orphans.
+
+Evidence and a readable report are private under
+`outputs/linode-media-live-20260921/` (`review.html`, filesystem/reference manifests,
+missing classification, shared-folder candidates and checksums). This is live-file
+evidence against the discovery dump, not a database/filesystem-consistent snapshot.
+No images/documents have been transferred to R2 or attached to the rehearsal.
+
+The owner confirmed the R2 bucket is **not created**. Existing local R2 environment
+fields are populated but their validity/permissions were not tested; do not treat
+them as usable production credentials. `django-storages`/`boto3` are absent from
+the current requirements, so the inactive helper alone is not a working deployment.
+The owner signed in to Cloudflare. The account has an existing empty `rokkad`
+bucket alongside unrelated application buckets. Preparation selected a separate
+`rokkad-production-media` bucket, Standard storage and automatic Asia Pacific
+placement. Automatic approval review initially rejected the agent-selected permanent
+name. The owner then explicitly approved `rokkad-production-media`; creation
+succeeded and the dashboard confirms Standard storage, zero objects and **Public
+Access: Disabled**. Existing buckets were not modified. The local R2 endpoint
+belongs to a different account, so the guarded SDK check sent no credentials or
+request there. The owner explicitly approved the one-week, bucket-only Object
+Read & Write token `rokkad-media-migration-20260921`; Cloudflare confirmed its
+creation. The one-time credential result page is retained for the user. Token
+secrets were not printed in tool output or chat. The syntax-checked private
+`configure-r2.ps1` helper is ready for secure terminal entry into
+LocalAppData outside OneDrive; credentials must not be pasted into chat. Next
+configure the approved private R2 access, preserve missing-file exceptions and
+verify candidate provenance, then implement and test the bounded attachment path.
+
+## Linode media destination selected: private R2 (2026-09-21)
+
+The owner chose Cloudflare R2 for new-system media and supplied
+`root@rokkad.com`, `/var/www/rokkad/media` for source access. A read-only SSH
+attempt reached the server but authentication failed (`publickey,password`);
+no source files were accessed or changed. The owner uses password login and
+authorized preparation of temporary key access. Private operator scripts are ready
+under `outputs/linode-media-ssh-20260921/`: `authorize.ps1` generates a dedicated
+key outside OneDrive in the user's LocalAppData, restricts local directory access,
+installs its public key using the owner's interactive password login, and verifies
+key authentication. `revoke.ps1` removes that exact authorization and key pair.
+Both scripts passed PowerShell syntax checks. The owner subsequently ran
+authorization in their own terminal; agent key authentication succeeded as recorded
+above. The password was not shared. The key disables forwarding and PTY but permits root commands; it must be
+removed after migration. Destination bucket/credentials remain pending. No media
+was copied.
+
+The repository currently uses filesystem storage; the R2 helper/options are
+present but the production override is commented out. Existing authorized Party
+and Loans file routes should continue reading private storage. Direct Linode-to-R2
+copy avoids requiring a local download, but file verification and source-to-record
+attachment remain separate required steps. Closed-history media needs an explicit
+retention/delivery extension; database replay alone does not attach any media.
+See [the bounded migration plan](plans/linode-media-to-r2.md). Live pre-copy can
+reduce transfer work; final acceptance still needs the frozen database and media
+snapshot. This does not authorize or schedule a production write freeze.
+
 ## Reviewed-snapshot replay proven in a clean target (2026-09-21)
 
 The accepted inputs are captured in a private, checksummed three-Workspace package.
