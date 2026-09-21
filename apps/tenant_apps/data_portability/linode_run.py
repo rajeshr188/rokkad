@@ -192,6 +192,9 @@ def build_package(*, directory, archive_path, workspaces, actor, expected_databa
                 for evidence in loans.HistoricalLoanEvidence.objects.order_by("pk").iterator(chunk_size=500):
                     document = evidence.document
                     require(evidence.source_id not in closed and document["source"]["snapshot_reference"] == "sha256:"+manifest["archive_sha256"], "Unexpected closed-history source.")
+                    require(document["source"]["namespace"] == str(evidence.source_namespace) == namespace
+                            and document["source"]["system"] == evidence.source_system == party["source_system"]
+                            and document["source"]["loan_id"] == evidence.source_id, "Closed source provenance differs.")
                     require(evidence.source_sha256 == digest(document) and evidence.review == review_document(document), "Closed evidence fingerprint changed.")
                     closed.add(evidence.source_id)
                     yield document
@@ -493,6 +496,9 @@ def verify_package(*, directory, expected_sha256, workspaces, actor, expected_da
                 key = document["source"]["loan_id"]
                 e = actual_closed[key]
                 require(e.document==document and e.source_sha256==digest(document) and e.review==review_document(document),"Closed document/findings differ.")
+                require(document["source"]["namespace"] == str(e.source_namespace) == manifest["namespace"]
+                        and document["source"]["system"] == e.source_system == meta["source_system"],
+                        "Closed source provenance differs.")
                 closed_ids.add(key)
             excluded = {r["source_id"] for r in read_rows(root/schema/"excluded.jsonl")}
             source_ids = {k for k in json.loads((root/schema/"source-index.json").read_text()) if k.startswith("girvi_loan:")}
