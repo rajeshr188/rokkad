@@ -51,6 +51,11 @@ writes for cutover, take one final complete archive, then build the production R
 destination from that snapshot. The 2026-09-21 discovery inventory and its
 future-dated JCL loan hold are recorded in
 [the Linode discovery report](implementation/linode-production-discovery-20260921.md).
+The owner confirmed production photographs/documents are stored on the same Linode
+server filesystem, not in Cloudflare R2. Capture a separate filesystem media backup
+with paths, checksums and source-record associations alongside the final database
+snapshot. The actual production media root still needs inventory; do not infer it
+from current development storage settings or assume file contents are in pg_dump.
 Each fresh target database also needs explicit grants for the existing restricted
 runtime login. `scripts/provision_runtime_role.py` keeps creation fail-closed and
 requires `ROKKAD_RUNTIME_GRANT_EXISTING=1` to grant a verified restricted existing

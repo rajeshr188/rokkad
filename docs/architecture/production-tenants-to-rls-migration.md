@@ -91,6 +91,12 @@ version in the run manifest. No run may depend on a developer's working tree.
 
 ### 2. Capture a read-only source snapshot
 
+The owner confirmed on September 21 that production photographs and documents live
+on the Linode server filesystem, not Cloudflare R2. Inventory the actual media root
+and tenant/path layout there. Back up those files separately; the PostgreSQL dump
+contains references, not the file bytes. Destination storage choice is independent
+of this source fact. No R2 source-bucket copy is part of this migration.
+
 On Linode, produce a PostgreSQL custom-format dump and separate media manifest
 without writing to production. Record the old application commit, PostgreSQL
 version, timestamp, checksums, schemas, table definitions, row counts and media

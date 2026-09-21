@@ -7,6 +7,20 @@ tags: [status, architecture]
 
 # Status
 
+## Repeatable accepted-snapshot replay in validation (2026-09-21)
+
+The accepted inputs are captured in a private, checksummed three-Workspace package.
+The `linode_migration` command composes existing import services for replay and
+full reconciliation in a clean target, and reports source changes without applying
+old decisions to a new dump. Focused package/boundary and legacy-opening tests pass
+(28 tests). A clean-checkout/database run is being validated; production readiness
+is not yet asserted. See [the operator runbook](implementation/linode-reviewed-replay.md).
+
+The owner confirmed production photographs/documents live on the same Linode
+server filesystem, not Cloudflare R2. Actual media root/path inventory, separate
+file backup, association mapping and verified destination copy remain pending.
+The SQL dump does not contain those file bytes.
+
 ## Owner accepted the browser rehearsal (2026-09-21)
 
 The owner reported: "all reviewed and looks great,whats next?" This accepts the
