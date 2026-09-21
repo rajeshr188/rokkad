@@ -137,6 +137,74 @@ class ChildPortabilityTests(PortabilityFixture):
             self.commit(batch, acknowledge_warnings=True)
             self.assertEqual(Party.objects.get().primary_email, "asha@example.com")
 
+    def review_addresses(self, batch, **changes):
+        from apps.tenant_apps.data_portability.address_reviews import review_distinct_addresses
+        return review_distinct_addresses(**{**dict(workspace_id=self.a.pk, actor=self.actor,
+            batch_id=batch.public_id, external_ids=list(batch.rows.values_list('external_id', flat=True)),
+            reason='Owner confirms distinct source addresses.', approval_digest=batch.approval_digest), **changes})
+
+    def test_reviewed_matching_addresses_keep_separate_ids_and_default(self):
+        with self.scoped():
+            batch = self.child_ready(profile=contract.ADDRESS, records=[self.record(contract.ADDRESS), self.record(contract.ADDRESS, is_default=False)])
+            self.assertEqual(batch.summary['conflicts'], 2)
+            batch = self.review_addresses(batch)
+            self.assertEqual(batch.summary['conflicts'], 0)
+            with self.assertRaises(PortabilityError): self.commit(batch)
+            self.commit(batch, acknowledge_warnings=True)
+            self.commit(batch, acknowledge_warnings=True)
+            self.assertEqual(PartyAddress.objects.count(), 2)
+            self.assertEqual(PartyAddress.objects.filter(is_default=True).count(), 1)
+            self.assertEqual(len(set(batch.rows.values_list('child_identity_id', flat=True))), 2)
+            exported = [json.loads(s) for s in self.export(contract.ADDRESS).content.splitlines()]
+            self.assertEqual(len({r['id'] for r in exported}), 2)
+
+    def test_address_review_keeps_partial_review_default_and_source_id_conflicts(self):
+        with self.scoped():
+            record = self.record(contract.ADDRESS, is_default=False)
+            batch = self.child_ready(profile=contract.ADDRESS, records=[record, record])
+            batch = self.review_addresses(batch, external_ids=['detail-1'])
+            self.assertEqual(batch.summary['conflicts'], 2)
+            defaults = self.child_ready(profile=contract.ADDRESS, records=[self.record(contract.ADDRESS)] * 2)
+            self.assertEqual(self.review_addresses(defaults).summary['conflicts'], 2)
+            batch.rows.filter(source_row=batch.rows.last().source_row).update(raw=batch.rows.first().raw)
+            batch = services.validate_import(workspace_id=self.a.pk, actor=self.actor, batch_id=batch.public_id, mapping=batch.mapping)
+            with self.assertRaises(PortabilityError): self.review_addresses(batch, external_ids=['detail-1'])
+            self.assertFalse(PartyAddress.objects.exists())
+
+    def test_address_review_binds_values_destination_and_cannot_be_a_preset(self):
+        from apps.tenant_apps.data_portability.presets import save_preset
+        with self.scoped():
+            batch = self.review_addresses(self.child_ready(profile=contract.ADDRESS, record=self.record(contract.ADDRESS, is_default=False)))
+            with self.assertRaises(PortabilityError):
+                save_preset(workspace_id=self.a.pk, actor=self.actor, batch_id=batch.public_id, name='Addresses', approval_digest=batch.approval_digest)
+            PartyAddress.objects.create(party=Party.objects.get(), **{k:v if k == 'is_default' else v or '' for k,v in self.record(contract.ADDRESS, is_default=False).items() if k in contract.ADDRESS_FIELDS})
+            with self.assertRaises(PortabilityError): self.commit(batch, acknowledge_warnings=True)
+            mapping = copy.deepcopy(batch.mapping)
+            mapping['defaults']['area'] = 'Changed area'
+            batch = services.validate_import(workspace_id=self.a.pk, actor=self.actor, batch_id=batch.public_id, mapping=mapping)
+            self.assertTrue(any(i['code']=='ADDRESS_REVIEW_CHANGED' for i in batch.rows.get().issues))
+
+    def test_address_review_requires_current_authorized_preview(self):
+        with self.scoped():
+            batch = self.child_ready(profile=contract.ADDRESS)
+            with self.assertRaises(PermissionDenied): self.review_addresses(batch, actor=self.other_actor)
+            with self.assertRaises(PortabilityError): self.review_addresses(batch, approval_digest='stale')
+            with self.assertRaises(PortabilityError): self.review_addresses(batch, reason='')
+        with self.scoped(self.b):
+            with self.assertRaises(PermissionDenied): self.review_addresses(batch, workspace_id=self.b.pk)
+
+    def test_address_review_http_action_only_revalidates(self):
+        with self.scoped():
+            batch = self.child_ready(profile=contract.ADDRESS, records=[self.record(contract.ADDRESS, is_default=False)]*2)
+            req = RequestFactory().post('/', {'action':'review_distinct_addresses', 'source_ids':'detail-1\ndetail-11',
+                'reason':'Confirmed separate source address records.', 'approval_digest':batch.approval_digest})
+            req.user=self.actor;req.workspace=self.a
+            self.assertEqual(views.batch_detail(req,batch.public_id).status_code,302)
+            batch.refresh_from_db()
+            self.assertEqual(batch.summary['conflicts'],0)
+            self.assertEqual(len(batch.mapping['address_reviews']),2)
+            self.assertFalse(PartyAddress.objects.exists())
+
     def test_source_verification_is_provenance_only(self):
         with self.scoped():
             batch = self.child_ready(self.record(source_is_verified=True))

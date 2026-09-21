@@ -123,6 +123,64 @@ class LegacyOpeningTests(OpeningImportFixture):
             inputs.append({"review": review, "setup": copy.deepcopy(self.setup)})
         return inputs
 
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})
+    def test_exact_payment_exclusion_is_source_bound_and_retains_raw_rows(self):
+        from .test_legacy_dump import row
+        self.extracted['source_schema'] = 'jsk'
+        self.extracted['schemas'] = {'jsk': list(self.extracted['tables'])}
+        self.extracted['tables']['girvi_loanpayment']['1'] = row('girvi_loanpayment', id='1', loan_id='1',
+            payment_date='2021-01-02 00:00:00+00', payment_amount='10', principal_payment='0', interest_payment='10', with_release='f')
+        summary, records = build_preview(self.extracted, schema='jsk', source_namespace=NAMESPACE, source_profile='linode-jsk/1')
+        propose_collateral_exclusions(summary, records)
+        candidate = prepare_openings(summary, records, owner_profile='linode-owner/1')[0]
+        self.review['source'] = candidate['source']
+        for key in ('borrower_source_system', 'borrower_external_id'):
+            self.review['mapping'][key] = candidate['mapping'][key]
+        self.review['collateral'][0]['weight_reference'] = candidate['collateral'][0]['weight_reference']
+        loan = next(r for r in records if r['source']['external_id']=='girvi_loan:1')
+        payment = next(r for r in records if r['source']['external_id']=='girvi_loanpayment:1')
+        decision = dict(archive_sha256=summary['archive_sha256'], loan_id='girvi_loan:1',
+            loan_sha256=loan['source_sha256'], payment_hashes={'girvi_loanpayment:1': payment['source_sha256']},
+            reason='Owner instructs excluding this source payment; principal unchanged, loan outstanding and held.')
+        with self.scoped():
+            SourceIdentity.objects.create(identity=self.source_party.identity, source_system=summary['source_system'],
+                external_id='contact_customer:1', accepted_digest=self.source_party.accepted_digest, local_digest=self.source_party.local_digest)
+            with self.assertRaisesMessage(ValueError, 'separate reconciliation'):
+                self.stage_opening(source_profile='linode-jsk/1')
+            for key, value in [('archive_sha256', 'b'*64), ('loan_sha256', 'b'*64), ('loan_id', 'girvi_loan:2'), ('payment_hashes', {}), ('reason', '')]:
+                with self.subTest(key=key), self.assertRaisesMessage(ValueError, 'every payment row'):
+                    self.stage_opening(source_profile='linode-jsk/1', payment_review={**decision, key:value})
+            with TemporaryDirectory() as directory:
+                opening = Path(directory) / 'opening.jsonl'
+                payment_file = Path(directory) / 'payment.jsonl'
+                opening.write_text(json.dumps({'profile':'loan-opening-commit/1','review':self.review,'setup':self.setup})+'\n', encoding='utf-8')
+                payment_file.write_text(json.dumps(decision)+'\n', encoding='utf-8')
+                output = io.StringIO()
+                call_command('stage_legacy_opening', workspace_id=self.a.pk, actor_id=self.actor.pk,
+                    dump='synthetic.dump', opening_file=str(opening), payment_review_file=str(payment_file),
+                    source_profile='linode-jsk/1', stdout=output)
+                self.assertIn('No loan imported', output.getvalue())
+                self.assertFalse(PawnLoan.objects.exists())
+            batch = LoanHistoryBatch.objects.get()
+            evidence = batch.document['source_evidence']
+            self.assertIn(payment, evidence['records'])
+            self.assertEqual(evidence['payment_exclusion']['payment_hashes'], decision['payment_hashes'])
+            from django.template.loader import render_to_string
+            from types import SimpleNamespace
+            page = render_to_string('data_portability/legacy_opening_review.html', {
+                'batch':batch, 'review':self.review, 'request':SimpleNamespace(workspace=self.a),
+            })
+            self.assertIn('Reviewed payment exclusion', page)
+            self.assertIn('girvi_loanpayment:1', page)
+            self.assertIn(decision['reason'], page)
+            approval = bridge.preview(**self.batch_args(batch))
+            origin = bridge.commit(**self.batch_args(batch), approval=approval, confirmed=True)
+            self.assertEqual(bridge.commit(**self.batch_args(batch), approval=approval, confirmed=True).pk, origin.pk)
+            self.assertEqual(list(PawnLoanEvent.objects.values_list('event_kind', flat=True)), ['MIGRATION_OPENING'])
+            self.assertFalse(LoanHistoryBatch.objects.exclude(state='COMPLETED').exists())
+
     def test_bounded_staging_extracts_once_and_preserves_per_loan_approval(self):
         inputs = self.many_inputs()
         with self.scoped():

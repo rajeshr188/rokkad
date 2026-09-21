@@ -52,7 +52,12 @@ def existing_identity(batch, external):
     return None
 
 
-def resolve(record, external, batch):
+def address_matches(record, workspace_id, party_id):
+    match = {k + "__iexact": record[k] or "" for k in contract.ADDRESS_FIELDS if k != "is_default"}
+    return PartyAddress.objects.filter(workspace_id=workspace_id, party_id=party_id, **match)
+
+
+def resolve(record, external, batch, address_review=None):
     parent = parent_for(record, batch.workspace_id)
     if parent is None:
         return "CONFLICT", [issue("MISSING_PARENT", "party_external_id", "Import the Party master first, or use its exact source reference.")]
@@ -103,8 +108,11 @@ def resolve(record, external, batch):
             return "CONFLICT", [issue("IDENTIFIER_TYPE_CONFLICT", "identifier_type", "This Party already has an identifier of this type; automatic replacement is unsupported.")]
     else:
         qs = PartyAddress.objects.filter(workspace_id=batch.workspace_id, party_id=parent.party_id)
-        match = {k + "__iexact": record[k] or "" for k in contract.ADDRESS_FIELDS if k != "is_default"}
-        if qs.filter(**match).exists():
+        matches = address_matches(record, batch.workspace_id, parent.party_id)
+        if address_review is not None and (address_review["party_id"] != parent.party_id or
+                set(matches.values_list("pk", flat=True)) != set(address_review["address_ids"])):
+            return "CONFLICT", [issue("ADDRESS_REVIEW_CHANGED", "line1", "The parent or matching addresses changed since review.")]
+        if address_review is None and matches.exists():
             return "CONFLICT", [issue("POSSIBLE_DUPLICATE", "line1", "A matching address already exists.")]
         if record["is_default"] and qs.filter(address_type=record["address_type"], is_default=True).exists():
             return "CONFLICT", [issue("DEFAULT_CONFLICT", "is_default", "An existing default address would be replaced.")]

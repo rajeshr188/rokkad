@@ -22,17 +22,17 @@ PROFILE = "legacy-opening/1"
 SALT = "legacy-opening-approval-v1"
 
 
-def source_evidence(*, archive_path, review, setup, pg_restore="pg_restore", source_profile=None):
+def source_evidence(*, archive_path, review, setup, pg_restore="pg_restore", source_profile=None, payment_review=None):
     """Re-extract a private immutable archive snapshot; never trust edited reports."""
     source = review["source"]
     extracted = inspect_archive(archive_path, schema=source["schema"], pg_restore=pg_restore)
     summary, records = build_preview(extracted, schema=source["schema"], source_namespace=source["namespace"], source_profile=source_profile)
     propose_collateral_exclusions(summary, records)
     candidates = prepare_openings(summary, records, owner_profile=LINODE_PROFILE if source_profile else COLLECTION_PROFILE)
-    return _source_evidence(review, setup, summary, records, candidates)
+    return _source_evidence(review, setup, summary, records, candidates, payment_review=payment_review)
 
 
-def _source_evidence(review, setup, summary, records, candidates):
+def _source_evidence(review, setup, summary, records, candidates, *, payment_review=None):
     source = review["source"]
     candidate = next((row for row in candidates if row["source"]["loan_id"] == source["loan_id"]), None)
     if candidate is None or candidate["source"] != source or source["errors"]:
@@ -47,8 +47,19 @@ def _source_evidence(review, setup, summary, records, candidates):
     loan = next(row for row in records if row["source"]["external_id"] == source["loan_id"])
     raw_id = loan["source"]["id"]
     payments = [row for row in records if row["source"]["table"] == "girvi_loanpayment" and row["facts"]["loan_id"] == raw_id]
-    if payments:
+    if payments and payment_review is None:
         raise HistoryError("Source payment history requires separate reconciliation before this unchanged-principal pilot.")
+    if payment_review is not None:
+        if (not summary.get("source_profile") or not payments or type(payment_review) is not dict
+                or set(payment_review) != {"archive_sha256", "loan_id", "loan_sha256", "payment_hashes", "reason"}
+                or payment_review["archive_sha256"] != summary["archive_sha256"]
+                or payment_review["loan_id"] != source["loan_id"]
+                or payment_review["loan_sha256"] != loan["source_sha256"]
+                or payment_review["payment_hashes"] != {p["source"]["external_id"]: p["source_sha256"] for p in payments}
+                or not isinstance(payment_review["reason"], str) or not payment_review["reason"].strip()
+                or len(payment_review["reason"]) > 255
+                or any(ord(c) < 32 or ord(c) == 127 for c in payment_review["reason"])):
+            raise HistoryError("Payment exclusion requires a reviewed decision matching this exact versioned source loan and every payment row.")
     owner_profile = LINODE_PROFILE if summary.get("source_profile") else COLLECTION_PROFILE
     tenure, maturity_reference = maturity_tenure(summary, loan["facts"], owner_profile=owner_profile)
     if setup["tenure_months"] != tenure:
@@ -72,11 +83,13 @@ def _source_evidence(review, setup, summary, records, candidates):
                     Decimal(valuation["source_amount"]) != Decimal(loan["facts"]["value"])):
                 raise HistoryError("An old loan-level value can be assigned only to its sole item, unchanged; otherwise retain it in source records.")
     selected.extend((series, licence, customer))
+    selected.extend(payments)  # Excluded from opening calculations, never erased from source evidence.
     transformations = [{"rule": "description-line-whitespace/1", "source_id": r["source"]["external_id"],
         "field": "itemdesc", "before": r["facts"]["itemdesc"], "after": proposed[r["source"]["external_id"]]["description"]}
         for r in selected if r["source"]["table"] == "girvi_loanitem"
         and r["facts"]["itemdesc"] != proposed[r["source"]["external_id"]]["description"]]
     return {"adapter": PROFILE, "archive_sha256": summary["archive_sha256"],
+        **({"payment_exclusion": {"rule": "owner-reviewed-payment-exclusion/1", **deepcopy(payment_review)}} if payment_review is not None else {}),
         **({"transformations": transformations} if transformations else {}),
         **({"source_profile": summary["source_profile"]} if summary.get("source_profile") else {}),
         "selection_sha256": source["selection_sha256"], "selected_loan_ids": [source["loan_id"]],
@@ -105,12 +118,12 @@ def _inputs(batch):
     return {"review": opening["review"], "setup": opening["setup"]}
 
 
-def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_restore", source_profile=None):
+def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_restore", source_profile=None, payment_review=None):
     require_history_setup_access(workspace_id, actor)
     # Domain validation precedes expensive source extraction and retains no loans.
     preview_opening_import(workspace_id=workspace_id, actor=actor, review=review, setup=setup)
     evidence = source_evidence(archive_path=archive_path, review=review, setup=setup, pg_restore=pg_restore,
-                               source_profile=source_profile)
+                               source_profile=source_profile, payment_review=payment_review)
     opening = {"profile": OPENING_PROFILE, "review": deepcopy(review), "setup": deepcopy(setup)}
     with transaction.atomic():
         Company.all_objects.select_for_update().get(pk=workspace_id)
@@ -121,7 +134,7 @@ def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_re
             source_sha256=digest(opening), document={"opening": opening, "source_evidence": evidence})
 
 
-def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_restore", source_profile=None):
+def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_restore", source_profile=None, payment_reviews=None):
     """Stage at most 20 reviewed openings against one freshly extracted snapshot.
 
     Admission still uses each batch's ordinary signed preview and commit. Callers
@@ -136,6 +149,10 @@ def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_re
             raise HistoryError("Each opening requires exactly review and setup.")
         preview_opening_import(workspace_id=workspace_id, actor=actor, **inputs)
     sources = [inputs["review"]["source"] for inputs in openings]
+    if payment_reviews is None:
+        payment_reviews = {}
+    if type(payment_reviews) is not dict or not set(payment_reviews) <= {s["loan_id"] for s in sources}:
+        raise HistoryError("Payment reviews must identify selected source loans only.")
     first = sources[0]
     if any((s["schema"], s["namespace"]) != (first["schema"], first["namespace"]) for s in sources):
         raise HistoryError("A staging batch must use one source schema and namespace.")
@@ -147,7 +164,8 @@ def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_re
     candidates = prepare_openings(summary, records, owner_profile=LINODE_PROFILE if source_profile else COLLECTION_PROFILE)
     documents = []
     for inputs in openings:
-        evidence = _source_evidence(inputs["review"], inputs["setup"], summary, records, candidates)
+        evidence = _source_evidence(inputs["review"], inputs["setup"], summary, records, candidates,
+                                   payment_review=payment_reviews.get(inputs["review"]["source"]["loan_id"]))
         documents.append({"opening": {"profile": OPENING_PROFILE, **inputs}, "source_evidence": evidence})
     with transaction.atomic():
         Company.all_objects.select_for_update().get(pk=workspace_id)

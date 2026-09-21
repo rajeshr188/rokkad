@@ -7,6 +7,10 @@ tags: [migration, loans, rehearsal, portability]
 
 # Three-Workspace loan admission rehearsal
 
+This is the earlier checkpoint. Its 210 loan holds and ten held Party addresses
+are resolved in the [subsequent owner-decision rehearsal](linode-owner-decisions-20260921.md).
+The private evidence for this checkpoint remains sealed and unchanged.
+
 This continues the [Party rehearsal](linode-party-rehearsal-20260921.md) and
 [source review](linode-loan-review-20260921.md), using the same September 21 archive
 and installation namespace. Destination is the isolated database

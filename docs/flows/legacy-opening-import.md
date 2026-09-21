@@ -174,3 +174,18 @@ setup. Older same-format evidence-only exports remain readable.
 The next MVP activity is the selected one-loan pilot review and rehearsal. Final
 source, destination, cutover and unresolved business facts still require review;
 no production import has occurred as part of implementing this command.
+
+## Owner-reviewed payment exclusions and source corrections (2026-09-21)
+
+Payment-bearing source loans remain blocked unless an explicit owner decision is
+prepared and bound to the exact archive, loan and every raw payment row. The operator
+can pass `--payment-review-file <decision.jsonl>` alongside the prepared opening and
+versioned `--source-profile`. The command only stages; the existing signed preview
+and import confirmation still apply. The review page displays excluded payment IDs
+and the reason. Raw payments remain in evidence/export and create no payment receipts.
+
+Exact approved purity corrections use `linode-jsk/2` or `linode-lakshmi/2`; the page
+shows original and corrected values with the decision reference. Older `/1` profiles
+remain unchanged. These are bounded migration decisions, not general permission to
+ignore payments or cap invalid purity. See the [completed three-Workspace rehearsal](../implementation/linode-owner-decisions-20260921.md)
+for current totals and the separate browser-access/production steps still pending.

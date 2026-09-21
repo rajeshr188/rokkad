@@ -49,7 +49,7 @@ def save_preset(*, workspace_id, actor, batch_id, name, approval_digest):
         raise PortabilityError("Save a preset from a validated, error-free CSV/XLSX preview or completed CSV/XLSX batch.")
     if approval_digest != batch.approval_digest or _approval(batch, list(batch.rows.order_by("source_row"))) != approval_digest:
         raise PortabilityError("The preview changed. Review it before saving a preset.")
-    if batch.mapping.get("name_reviews"):
+    if batch.mapping.get("name_reviews") or batch.mapping.get("address_reviews"):
         raise PortabilityError("Customer identity decisions belong to this batch and cannot be saved in a reusable mapping preset.")
     if not isinstance(name, str) or not name or len(name) > 80 or name != name.strip() or any(ord(c) < 32 for c in name):
         raise PortabilityError("Use a nonempty preset name of at most 80 characters without surrounding whitespace or control characters.")

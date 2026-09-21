@@ -18,6 +18,8 @@ def validate_mapping(mapping, headers, source_type, profile=PROFILE):
         allowed.add("role_type_map")
     if profile == PROFILE:
         allowed.add("name_reviews")
+    if profile == child_contracts.ADDRESS:
+        allowed.add("address_reviews")
     if not isinstance(mapping, dict) or set(mapping) - allowed:
         raise PortabilityError("Invalid mapping configuration.")
     columns, defaults, rules = mapping.get("columns", {}), mapping.get("defaults", {}), mapping.get("normalization", [])
@@ -39,6 +41,23 @@ def validate_mapping(mapping, headers, source_type, profile=PROFILE):
         if rule["field"] not in targets - {"source.external_id", "role_type_key", *child_contracts.relationship_contracts.REFERENCES} or rule["rule"] not in {"trim", "upper", "empty_to_null", "boolean"} or rule["version"] != 1:
             raise PortabilityError("Unsupported normalization rule.")
     result = {"columns": columns, "defaults": defaults, "normalization": rules}
+    if "address_reviews" in mapping:
+        reviews = mapping["address_reviews"]
+        if not isinstance(reviews, dict) or len(reviews) > 1000:
+            raise PortabilityError("Address reviews must identify at most 1,000 source records.")
+        for external, review in reviews.items():
+            if (not isinstance(external, str) or not external or len(external) > 255
+                    or external != external.strip() or any(ord(c) < 32 for c in external)
+                    or not isinstance(review, dict) or set(review) != {"record_sha256", "party_id", "address_ids", "reason"}
+                    or not isinstance(review["record_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", review["record_sha256"])
+                    or type(review["party_id"]) is not int or review["party_id"] <= 0
+                    or not isinstance(review["reason"], str) or not review["reason"].strip() or len(review["reason"]) > 255
+                    or any(ord(c) < 32 or ord(c) == 127 for c in review["reason"])
+                    or not isinstance(review["address_ids"], list) or len(review["address_ids"]) > 1000
+                    or any(type(pk) is not int or pk <= 0 for pk in review["address_ids"])
+                    or len(set(review["address_ids"])) != len(review["address_ids"])):
+                raise PortabilityError("Invalid reviewed address decision.")
+        result["address_reviews"] = reviews
     if "name_reviews" in mapping:
         reviews = mapping["name_reviews"]
         if not isinstance(reviews, dict) or len(reviews) > 1000:

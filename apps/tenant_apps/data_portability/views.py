@@ -17,6 +17,7 @@ from .presets import available_presets, save_preset, preset_for_batch
 from .parsers import MAX_BYTES, PortabilityError
 from .services import cancel_import, commit_import, export_children, export_parties, preview_import, stage_import, validate_import
 from .name_reviews import review_distinct_names
+from .address_reviews import review_distinct_addresses
 
 
 @login_required
@@ -110,6 +111,10 @@ def batch_detail(request, batch_id):
                 return response
             elif action == "review_distinct_names":
                 review_distinct_names(**args,
+                    external_ids=[s.strip() for s in request.POST.get("source_ids", "").splitlines() if s.strip()],
+                    reason=request.POST.get("reason", ""), approval_digest=request.POST.get("approval_digest", ""))
+            elif action == "review_distinct_addresses":
+                review_distinct_addresses(**args,
                     external_ids=[s.strip() for s in request.POST.get("source_ids", "").splitlines() if s.strip()],
                     reason=request.POST.get("reason", ""), approval_digest=request.POST.get("approval_digest", ""))
             elif action == "commit":

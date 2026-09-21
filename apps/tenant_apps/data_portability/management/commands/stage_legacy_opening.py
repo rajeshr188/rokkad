@@ -23,6 +23,7 @@ class Command(BaseCommand):
         parser.add_argument("--pg-restore", default="pg_restore")
         parser.add_argument("--source-profile", choices=sorted(PROFILES),
                             help="Verify the versioned source profile and retain its reviewed correction ledger.")
+        parser.add_argument("--payment-review-file", help="One bounded JSONL decision excluding the exact reviewed payment rows; original source evidence is retained.")
 
     def handle(self, *args, **options):
         try:
@@ -32,9 +33,15 @@ class Command(BaseCommand):
                 rows = read_documents(options["opening_file"])
                 if len(rows) != 1 or not isinstance(rows[0], dict) or set(rows[0]) != {"profile", "review", "setup"} or rows[0]["profile"] != PROFILE:
                     raise ValueError("Supply exactly one prepared opening commit document.")
+                payment_review = None
+                if options["payment_review_file"]:
+                    decisions = read_documents(options["payment_review_file"])
+                    if len(decisions) != 1 or not isinstance(decisions[0], dict):
+                        raise ValueError("Supply exactly one reviewed payment-exclusion decision.")
+                    payment_review = decisions[0]
                 batch = stage(workspace_id=workspace.pk, actor=actor, archive_path=options["dump"],
                     review=rows[0]["review"], setup=rows[0]["setup"], pg_restore=options["pg_restore"],
-                    source_profile=options["source_profile"])
+                    source_profile=options["source_profile"], payment_review=payment_review)
                 url = reverse("workspace_portability:opening_batch", kwargs={"workspace_slug": workspace.slug, "batch_id": batch.public_id})
             self.stdout.write("Source-verified opening staged. No loan imported. Owner review: " + url)
         except (ValueError, ObjectDoesNotExist, PermissionDenied, ValidationError) as exc:

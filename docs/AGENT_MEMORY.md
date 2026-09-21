@@ -75,8 +75,8 @@ this compatibility does not change the generic Party child resolver.
 The opening staging service and operator command accept an optional versioned
 `source_profile`, re-extract its correction ledger, and freeze the profile in
 signed source evidence. The separately confirmed `linode-owner/1` profile extends
-the reviewed source interpretation to exactly these three versioned Linode
-profiles; the older JCL owner profiles remain JCL-only.
+the reviewed source interpretation to the three named Linode schemas through
+registered versioned profiles; the older JCL owner profiles remain JCL-only.
 
 On 2026-09-21 the owner answered "same rules as jcl" when asked about JSK/Lakshmi
 interest, first-month payment, later collections and missing-tenure treatment.
@@ -97,8 +97,9 @@ The owner subsequently answered "no fees are unpaid,proceed". The isolated
 September 21 rehearsal therefore uses zero fees, unchanged principal and the
 confirmed interest rule for the 6,254 unflagged, payment-free candidates. Its
 September 21 opening date is a rehearsal checkpoint, not a production cutover.
-The 210 flagged active loans remain held. Closed loans belong in source-evidence
-retention, not the operational opening path.
+At that checkpoint 210 flagged active loans remained held. Closed loans belong in
+source-evidence retention, not the operational opening path. The subsequent owner
+decisions below resolve this snapshot's holds without changing that boundary.
 
 For `linode-owner/1` only, collapse runs of description line breaks/tabs to a
 space; retain exact raw descriptions, row hashes and explicit before/after
@@ -109,12 +110,33 @@ all-zero obligations before database preview, matching the existing writer and
 database constraint. Never revise an already accepted opening to repair a
 preparation error; checkpointed admission resumes only against identical accepted
 documents and source fingerprints.
-The three-Workspace eligible-data rehearsal is now complete: 6,254 operational
-openings, 38,943 closed source-evidence records and 210 held active loans account
-for every source loan. See the [admission record](implementation/linode-opening-rehearsal-20260921.md)
-for validation and private report paths. This is not a production migration or
-general partial-repayment support; a fresh frozen archive, exception decisions,
-required servicing/setup/access/media and clean-build acceptance remain necessary.
+The owner subsequently confirmed inactive customers have no outstanding loans,
+instructed exclusion of the 14 loans' payment rows, retained ten matching addresses
+as distinct, and confirmed custody/outstanding status for the remaining payment
+cohort. Exactly one payment loan overlaps the 190 inactive-customer loans: **13**
+payment-bearing loans remain open, despite the earlier question incorrectly saying
+12. Preserve that counting correction and the verbatim answer in the decision record.
+Payments remain in source evidence; they are excluded from calculations, not deleted.
+The 190 owner-reported closures retain unknown release dates and create no settlement.
+
+The owner corrected six specific JSK/Lakshmi purity values to 100%, conditional on
+no supporting release record (verified absent), and identified JSK WH01223 as unused
+or cancelled. New `linode-jsk/2` and `linode-lakshmi/2` profiles contain those exact
+source-row corrections under ledger `/2`; `/1` profiles remain reproducible. Never
+cap arbitrary purity values. WH01223 stays in retained exclusion evidence without
+an operational loan or invented closure. Distinct-address decisions bind exact
+canonical row, parent and matching destination addresses; source IDs/default
+conflicts still block, and decisions cannot become reusable presets. Payment
+exclusions bind the exact archive, loan and every raw payment row to signed review.
+
+The current three-Workspace rehearsal has 6,273 operational openings, 39,133 closed
+evidence records and one unused/cancelled exclusion: all 45,407 source IDs, no
+unresolved loan holds. All 18,848 prepared Party records are admitted. See the
+[owner-decision record](implementation/linode-owner-decisions-20260921.md) for proof
+and private report paths. Separate rehearsal browser access and workflow acceptance
+are next. This remains separate from jcl-13 and production; a fresh frozen archive,
+retained Party preparation decisions, required servicing/setup/access/media and
+clean-build acceptance remain necessary. Ordinary partial repayment remains guarded.
 
 ## Business rules to preserve
 

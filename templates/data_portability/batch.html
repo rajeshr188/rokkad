@@ -23,6 +23,19 @@
 <button name="action" value="review_distinct_names" class="btn btn-outline-primary">Record decision and preview</button>
 </form></details>
 {% endif %}
+{% if batch.contract_version == 'party-address/1' and batch.mapping and batch.state != 'COMPLETED' and batch.state != 'CANCELLED' %}
+<details class="my-3"><summary>Keep reviewed matching addresses separate</summary>
+<p>Use this after confirming that the selected source addresses are distinct. Their text stays unchanged. Duplicate source IDs, competing defaults and other errors still need resolution.</p>
+<form method="post" class="card card-body">{% csrf_token %}
+<input type="hidden" name="approval_digest" value="{{ batch.approval_digest }}">
+<label for="distinct-address-ids">Reviewed source address IDs, one per line</label>
+<textarea id="distinct-address-ids" name="source_ids" rows="4" maxlength="256000" required></textarea>
+<label for="distinct-address-reason">Why should these addresses remain separate?</label>
+<input id="distinct-address-reason" name="reason" maxlength="255" required>
+<p>This records your decision and prepares a new preview. Addresses are created only after import confirmation.</p>
+<button name="action" value="review_distinct_addresses" class="btn btn-outline-primary">Record decision and preview</button>
+</form></details>
+{% endif %}
 {% if batch.source_type == 'csv' or batch.source_type == 'xlsx' %}
 {% if batch.state != 'COMPLETED' and batch.state != 'CANCELLED' %}
 {% if presets %}
@@ -36,8 +49,8 @@
 {% if batch.mapping %}<form method="post" class="my-3">{% csrf_token %}<button name="action" value="revalidate_mapping" class="btn btn-outline-primary">Revalidate current mapping</button></form>{% endif %}
 {% endif %}
 {% if batch.state == 'READY' or batch.state == 'COMPLETED' %}
-{% if batch.mapping.name_reviews %}
-<p>Customer identity decisions apply only to this batch and cannot be saved as a reusable mapping preset.</p>
+{% if batch.mapping.name_reviews or batch.mapping.address_reviews %}
+<p>Reviewed identity decisions apply only to this batch and cannot be saved as a reusable mapping preset.</p>
 {% else %}
 <form method="post" class="card card-body my-3">{% csrf_token %}
 <label for="preset-name">Save this reviewed mapping as a preset</label><input id="preset-name" name="preset_name" maxlength="80" required>

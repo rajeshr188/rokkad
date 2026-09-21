@@ -11,6 +11,15 @@
 <p>Terms evidence: {{ review.terms.evidence_reference }}.</p>
 <p>First month paid: {{ review.continuation.first_month_paid|yesno:"Yes,No" }}. Additional interest already recognized through cutover: {{ review.continuation.recognized_interest }}. This is separate from unpaid interest.</p>
 <p>Balance evidence: {{ review.balances.evidence_reference }}. Review: {{ review.review_reference }}.</p>
+{% if batch.document.source_evidence.payment_exclusion %}
+<section class="alert alert-warning"><h2 class="h5">Reviewed payment exclusion</h2>
+<p>Recorded payments on this source loan are excluded from the opening balance calculation. Their original records remain in the migration evidence; no payment receipts will be created.</p>
+<p>{{ batch.document.source_evidence.payment_exclusion.reason }}</p>
+<p>Excluded source payment IDs: {% for source_id in batch.document.source_evidence.payment_exclusion.payment_hashes %}{{ source_id }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p></section>
+{% endif %}
+{% for record in batch.document.source_evidence.records %}{% if record.source.correction %}
+<p>Reviewed source correction for {{ record.source.external_id }}: {{ record.source.correction.field }} changed from {{ record.source.correction.original }} to {{ record.source.correction.corrected }}. Decision: {{ record.source.correction.decision }}. The original source value remains in the evidence.</p>
+{% endif %}{% endfor %}
 <p>Destination licence: {{ destination.licence.license_number|default:"Unavailable" }}; series: {{ destination.series.name|default:"Unavailable" }}; product: {{ destination.product.product.name|default:"Unavailable" }}, version {{ destination.product.version }}.</p>
 <p>Reviewed source licence number: {{ batch.document.opening.setup.source_license_number }}. Original tenure: {{ batch.document.opening.setup.tenure_months }} months.</p>
 {% if batch.document.opening.setup.legacy_license_evidence %}<p>Legacy licence reference: validity was not recorded. This grouping cannot authorize new lending. {{ batch.document.opening.setup.legacy_license_evidence }}</p>{% endif %}

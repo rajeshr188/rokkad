@@ -4,12 +4,48 @@ import hashlib
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.data_portability.legacy_preview import build_preview, encode
-from apps.tenant_apps.data_portability.legacy_profiles import CORRECTION_LEDGER_VERSION, PROFILES
+from apps.tenant_apps.data_portability.legacy_profiles import CORRECTION_LEDGER_VERSION, CORRECTIONS, PROFILES, apply_corrections
 from apps.tenant_apps.data_portability.parsers import PortabilityError
 from apps.tenant_apps.data_portability.tests.test_legacy_dump import NAMESPACE, source
 
 
 class LegacySourceProfileTests(SimpleTestCase):
+    def test_purity_corrections_are_exact_versioned_rows_and_preserve_raw_hashes(self):
+        for profile in ("linode-jsk/2", "linode-lakshmi/2"):
+            schema = PROFILES[profile].schema
+            data = source(schema)
+            corrections = [c for c in CORRECTIONS if c["profile"] == profile]
+            self.assertEqual(len(corrections), 3)
+            for correction in corrections:
+                item = copy.deepcopy(data["tables"]["girvi_loanitem"]["1"])
+                item.update(id=correction["source_id"], purity=correction["original"])
+                data["tables"]["girvi_loanitem"][item["id"]] = item
+            # An unrelated bad value remains bad, even under the new profile.
+            data["tables"]["girvi_loanitem"]["1"]["purity"] = "150.00"
+            original = copy.deepcopy(data)
+            _, old = build_preview(data, schema=schema, source_namespace=NAMESPACE, source_profile=profile[:-1] + "1")
+            self.assertTrue(all(r["source"]["correction"] is None for r in old))
+            _, records = build_preview(data, schema=schema, source_namespace=NAMESPACE, source_profile=profile)
+            indexed = {r["source"]["external_id"]: r for r in records}
+            for correction in corrections:
+                record = indexed["girvi_loanitem:" + correction["source_id"]]
+                raw = data["tables"]["girvi_loanitem"][correction["source_id"]]
+                self.assertEqual(record["facts"]["purity"], "100.00")
+                self.assertEqual(record["source"]["correction"]["original"], raw["purity"])
+                self.assertEqual(record["source"]["correction"]["ledger"], "linode-production-corrections/2")
+                self.assertEqual(record["source_sha256"], hashlib.sha256(encode(raw).encode()).hexdigest())
+            self.assertEqual(indexed["girvi_loanitem:1"]["facts"]["purity"], "150.00")
+            self.assertEqual(data, original)
+            effective, _ = apply_corrections(data["tables"], profile_key=profile)
+            _, evidence = apply_corrections(effective, profile_key=profile)
+            self.assertTrue(all(e["state"] == "ALREADY_CORRECTED_AT_SOURCE" for e in evidence.values()))
+            effective["girvi_loanitem"][corrections[0]["source_id"]]["purity"] = "99.00"
+            with self.assertRaisesRegex(PortabilityError, "does not match"):
+                apply_corrections(effective, profile_key=profile)
+            del effective["girvi_loanitem"][corrections[0]["source_id"]]
+            with self.assertRaisesRegex(PortabilityError, "does not match"):
+                apply_corrections(effective, profile_key=profile)
+
     def jcl_source_with_corrected_loan(self):
         data = source("jcl")
         loan = copy.deepcopy(data["tables"]["girvi_loan"]["1"])

@@ -16,6 +16,8 @@ PROFILES = {
     "linode-jcl/1": LegacySourceProfile("linode-jcl/1", "jcl", "JCL"),
     "linode-jsk/1": LegacySourceProfile("linode-jsk/1", "jsk", "JSK"),
     "linode-lakshmi/1": LegacySourceProfile("linode-lakshmi/1", "lakshmipawnbroker", "Lakshmi Pawn Broker"),
+    "linode-jsk/2": LegacySourceProfile("linode-jsk/2", "jsk", "JSK"),
+    "linode-lakshmi/2": LegacySourceProfile("linode-lakshmi/2", "lakshmipawnbroker", "Lakshmi Pawn Broker"),
 }
 
 # Corrections are source facts with explicit owner decisions. They are never written
@@ -31,6 +33,29 @@ CORRECTIONS = (
         "corrected": "2025-12-16 09:47:00+00",
         "decision": "owner-approved-2026-09-21:R09911-date",
     },
+)
+
+# Keep /1 replay stable. Only these six owner-reviewed source rows use /2;
+# unrelated values above 100 remain errors rather than being silently capped.
+CORRECTIONS += tuple(
+    {
+        "profile": profile,
+        "table": "girvi_loanitem",
+        "source_id": source_id,
+        "field": "purity",
+        "original": original,
+        "corrected": "100.00",
+        "ledger": "linode-production-corrections/2",
+        "decision": f"owner-approved-2026-09-21:{number}-purity",
+    }
+    for profile, source_id, original, number in (
+        ("linode-jsk/2", "501", "125.00", "03986"),
+        ("linode-jsk/2", "2222", "500.00", "05267"),
+        ("linode-jsk/2", "5008", "200.00", "WH01799"),
+        ("linode-lakshmi/2", "7898", "999.90", "C08257"),
+        ("linode-lakshmi/2", "8254", "120.00", "C08612"),
+        ("linode-lakshmi/2", "9906", "110.00", "D00251"),
+    )
 )
 
 

@@ -520,3 +520,14 @@ The cancellation button disappears when no unfinished profiles remain.
 Party portability MVP feature scope is closed. History filtering is optional and
 deferred; no further portability feature slice is queued. See the scope boundary
 in [the delivery plan](../plans/data-portability.md#mvp-scope-closeout-2026-09-12).
+
+## Keep reviewed matching addresses separate
+
+In an unfinished, validated address batch, open **Keep reviewed matching addresses
+separate**. Enter the exact source address IDs shown in the review and a reason
+confirming they represent distinct records. **Record decision and preview** creates
+a new preview without writing addresses. Review its warnings and use the ordinary
+import confirmation. Address text stays unchanged; duplicate source IDs, default
+conflicts and unrelated errors still block. A changed source row, parent or matching
+destination address set requires review again. Decisions apply only to this batch
+and cannot be saved as reusable presets.

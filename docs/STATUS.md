@@ -7,6 +7,41 @@ tags: [status, architecture]
 
 # Status
 
+## Owner decisions applied: rehearsal loan holds resolved (2026-09-21)
+
+The isolated September 21 rehearsal now contains **6,273 operational loans**
+(JCL 2,355; JSK 1,483; Lakshmi 2,435), **39,133 closed evidence records**, and
+one owner-excluded unused/cancelled JSK entry, WH01223. All 45,407 source loan IDs
+are accounted for exactly once, with **zero unresolved loan holds** in this dump.
+The ten JSK matching addresses are imported as distinct identities; Party totals
+are 8,630 masters, 3,496 contact methods and 6,722 addresses.
+
+Owner decisions closed the earlier exceptions: 190 inactive-customer loans are
+retained as owner-reported closed with unknown release dates; payments on 14 loans
+are excluded from calculations while retained in evidence (one closed, 13 open);
+six exact collateral purity values are corrected to 100% in new JSK/Lakshmi `/2`
+source profiles after confirming no release records. Earlier `/1` profiles and
+sealed evidence remain unchanged. The earlier question's incorrect “12” payment
+cohort count is explicitly corrected to 13 in the decision evidence.
+
+Opening principal is **199,847,583 INR**, interest **22,614,850 INR**, fees zero at
+September 21. Every opening and closed document, balance, obligation, source graph
+and next interest boundary reconciled. All 19 additional loans passed detail-page,
+export and full-release/retry rollback checks; RLS checks passed. The focused suite
+passed 119 tests, including source-bound exclusions and distinct-address review.
+The later command/browser-evidence checks also passed the 20-test opening module.
+Report: `outputs/linode-owner-decisions-20260921/review.html`; its manifest covers
+71 private files. See the [completed owner-decision record](implementation/linode-owner-decisions-20260921.md)
+and [review boundaries](adr/2026-09-21-owner-reviewed-migration-exceptions.md).
+
+**Next is separate rehearsal browser/login access and branch workflow acceptance.**
+These records are still in `rokkad_baseline_rehearsal_linode_20260921`, not the normal
+application or `jcl-13`. Production remains pending: retained Party preparation
+decisions, required servicing, current lending setup/access/media and a clean-build
+release, followed by a legacy write freeze and fresh complete dump into a fresh
+target. Full settlement and coupled reversal work; ordinary partial repayments
+remain guarded. This supersedes the unresolved counts in earlier checkpoints below.
+
 ## Three-Workspace loan rehearsal completed with holds (2026-09-21)
 
 The owner's "no fees are unpaid,proceed" answer completed the outstanding fee

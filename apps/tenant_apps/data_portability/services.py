@@ -109,6 +109,7 @@ def _resolve(record, external, batch, name_review=None):
 def _evaluate(batch, rows, mapping):
     evaluated, external_seen, detail_seen = [], {}, {}
     reviewed_rows = set()
+    reviewed_addresses = set()
     for row in rows:
         record, external, issues = map_row(row.raw, mapping, batch.source_type)
         record, changes = normalize(record, mapping["normalization"])
@@ -131,9 +132,18 @@ def _evaluate(batch, rows, mapping):
                 reviewed_rows.add(row.source_row)
                 issues.append(issue("DISTINCT_NAME_REVIEWED", "name",
                     "Keep this reviewed source customer separate despite matching names. " + name_review["reason"], "WARNING"))
+        address_review = mapping.get("address_reviews", {}).get(external)
+        if address_review is not None:
+            if address_review["record_sha256"] != source_digest(record):
+                issues.append(issue("ADDRESS_REVIEW_CHANGED", "line1", "The reviewed address values changed; review them again."))
+                address_review = None
+            else:
+                reviewed_addresses.add(row.source_row)
+                issues.append(issue("DISTINCT_ADDRESS_REVIEWED", "line1",
+                    "Keep this reviewed source address separate despite matching text. " + address_review["reason"], "WARNING"))
         if not any(i["severity"] == "ERROR" for i in issues):
             disposition, conflicts = (_resolve(record, external, batch, name_review) if batch.contract_version == PROFILE
-                else children.resolve(record, external, batch))
+                else children.resolve(record, external, batch, address_review=address_review))
             issues += conflicts
         row.canonical, row.external_id, row.issues, row.disposition = record, external, issues, disposition
         candidate_keys = [(external, external_seen)]
@@ -147,6 +157,9 @@ def _evaluate(batch, rows, mapping):
             if key and key in index:
                 if (isinstance(key, tuple) and key[0] == "name"
                         and row.source_row in reviewed_rows and index[key].source_row in reviewed_rows):
+                    continue
+                if (isinstance(key, tuple) and len(key) == 3 and key[1] == "address"
+                        and row.source_row in reviewed_addresses and index[key].source_row in reviewed_addresses):
                     continue
                 for duplicate in (row, index[key]):
                     duplicate.disposition = "CONFLICT"
