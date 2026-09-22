@@ -55,6 +55,9 @@ licence revisions. V4 fields `license.business_name/business_address` capture
 the current licence's display details at first issue, preserving exact reprints.
 Never infer these values from workspace names, customer addresses or background
 artwork. Blank bound values explain themselves in previews and block new issues.
+JCL's heading has the business name alone on the first line, an editable literal
+`Pawn Brokers` on the second, followed by the licence address/contact block.
+Keep those separate frames; do not automatically strip words from stored names.
 The owner requested replacing JCL's fixed three-month artwork text with approved
 `loan.tenure`, and deferring printed interest for now. The original-front proof
 uses a separately cleaned background; source artwork and issued PDFs stay intact.

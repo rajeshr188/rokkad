@@ -7,6 +7,23 @@ tags: [status, architecture]
 
 # Status
 
+## JCL heading line separation (2026-09-22)
+
+The owner's small layout correction is applied to both copies: business name
+alone at 16 pt, an editable `Pawn Brokers` text frame at 11 pt, then the existing
+licence address/contact block at 9 pt. The latter supports an address followed
+by a phone line; no separate contact-data model or automatic name splitting was
+introduced. The sample business name is `JCL (Sample)` and all contact values
+remain synthetic. Updated the frame review to support literal text frames.
+
+Regenerated and visually checked the public-renderer A5 original and A4 pair at
+`output/pdf/jcl-original-heading-preview.pdf` and
+`output/pdf/jcl-original-duplicate-heading-preview.pdf`. All heading lines fit
+above the borrower box; both retain tenure, signature artwork and timestamp.
+Existing previews/source artwork and runtime data are unchanged. Renderer/text
+checks and frame-review generation pass; no full regression rerun was needed
+for this layout-only correction.
+
 ## Per-copy signature choices and validated JCL pair (2026-09-22)
 
 The precision editor now asks separately for Original and Duplicate whether to

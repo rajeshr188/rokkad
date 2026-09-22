@@ -55,18 +55,21 @@ def build_review():
         if template["workspace"] == "jcl":
             definition["blocks"].extend([
                 {"type": "field", "binding": "license.business_name", "show_label": False,
-                 "copy_scope": "BOTH", "x_mm": 40, "y_mm": 29, "width_mm": 98, "height_mm": 9,
+                 "copy_scope": "BOTH", "x_mm": 40, "y_mm": 25, "width_mm": 98, "height_mm": 8,
                  "font_size_pt": 16, "leading_pt": 18, "padding_pt": 0, "align": "CENTER"},
+                {"type": "title", "text": "Pawn Brokers", "copy_scope": "BOTH",
+                 "x_mm": 40, "y_mm": 33, "width_mm": 98, "height_mm": 5,
+                 "font_size_pt": 11, "leading_pt": 12, "padding_pt": 0, "align": "CENTER"},
                 {"type": "field", "binding": "license.business_address", "show_label": False,
-                 "copy_scope": "BOTH", "x_mm": 40, "y_mm": 38, "width_mm": 98, "height_mm": 10,
-                 "font_size_pt": 10, "leading_pt": 12, "padding_pt": 0, "align": "CENTER"},
+                 "copy_scope": "BOTH", "x_mm": 40, "y_mm": 38.5, "width_mm": 98, "height_mm": 11,
+                 "font_size_pt": 9, "leading_pt": 10, "padding_pt": 0, "align": "CENTER"},
                 {"type": "field", "binding": "loan.tenure", "show_label": False,
                  "copy_scope": "BOTH", "x_mm": 64.7, "y_mm": 147.4, "width_mm": 55, "height_mm": 4.2,
                  "font_size_pt": 11, "leading_pt": 11, "padding_pt": 0, "align": "LEFT"},
             ])
             adjustments.append({"bindings": ["license.business_name", "license.business_address"],
                                 "status": "OWNER_REQUESTED",
-                                "reason": "Print licence business details above the borrower block, beside the artwork logo."})
+                                "reason": "Print business name alone, Pawn Brokers on its own line, then the licence address/contact block above the borrower row."})
             adjustments.append({"binding": "loan.tenure", "status": "OWNER_REQUESTED",
                                 "reason": "Replace both supplied backgrounds' fixed three-month text with approved tenure. Use separately cleaned Original and Duplicate artwork."})
             definition["require_interest_rate"] = False
@@ -93,7 +96,7 @@ def build_review():
 
 def review_html(review):
     sample = {"document.generated_at": "22-09-2026 20:05:30 IST (UTC+05:30)", "license.number": "TEST-LIC", "borrower.contact_block": "TEST Customer\nS/o TEST Parent\n10 Test Road\n9000000000",
-              "license.business_name": "JCL Pawn Brokers (Sample)", "license.business_address": "10 Sample Business Road\nVellore, Tamil Nadu",
+              "license.business_name": "JCL (Sample)", "license.business_address": "10 Sample Business Road\nVellore, Tamil Nadu\nPhone: 9000000001",
               "loan.tenure": "6 months",
               "loan.number": "TEST-19", "loan.date": "22-09-2026", "collateral.description_lines": "1. Test ring",
               "collateral.net_weight_by_metal": "Gold: 2 g", "collateral.approved_appraisal_total": "12000.00",
@@ -111,10 +114,10 @@ def review_html(review):
                     continue
                 is_media = block["type"] in ("image", "qr")
                 style = f'left:{block["x_mm"]}mm;top:{block["y_mm"]}mm;width:{block["width_mm"]}mm;height:{block["height_mm"]}mm;padding:{block.get("padding_pt", 0)}pt;font-size:{block["font_size_pt"]}pt;line-height:{block.get("leading_pt", 12)}pt'
-                value = ("QR position" if block["type"] == "qr" else "Photo position") if is_media else sample[block["binding"]]
+                value = ("QR position" if block["type"] == "qr" else "Photo position") if is_media else block.get("text") or sample[block["binding"]]
                 if not is_media and block.get("show_label"):
                     value = f"{block['field_label']}: {value}"
-                parts.append(f'<div class="frame {"media" if is_media else ""}" style="{style}"><small>{html.escape(block["binding"])}</small>{html.escape(value)}</div>')
+                parts.append(f'<div class="frame {"media" if is_media else ""}" style="{style}"><small>{html.escape(block.get("binding", "Text"))}</small>{html.escape(value)}</div>')
             parts.append('</div></div>')
         details = {key: value for key, value in candidate.items() if key not in {"layout_candidate", "profile_candidate"}}
         parts.append(f'</div><details><summary>Validation and unresolved source differences</summary><pre>{html.escape(json.dumps(details, indent=2))}</pre></details>')
