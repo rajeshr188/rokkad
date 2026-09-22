@@ -7,22 +7,26 @@ tags: [status, architecture]
 
 # Status
 
-## Legacy media attachment in the isolated rehearsal (2026-09-22)
+## Legacy media attachment verified in the isolated rehearsal (2026-09-22)
 
-The source-bound attachment implementation and rehearsal R2 backend are in place.
-The full plan resolves 28,224 verified branch photographs: 1,148 customer photos,
+The source-bound attachment implementation and rehearsal R2 backend are complete.
+All 28,224 verified branch image references are attached: 1,148 customer images,
 5,988 active collateral photos and 21,088 closed-history photos, requiring 29,366
 separate application objects including 1,142 default profile copies. Owner-only
 admission, immutable receipts, forced RLS, source/parent checks, private delivery,
-retry behavior and SQL immutability have passed 59 relevant tests (55 media/archive
+retry behavior and SQL immutability have passed 60 relevant tests (56 media/archive
 tests and four registry/forced-RLS metadata tests).
 
 Only `rokkad_baseline_rehearsal_linode_20260921` received the new migrations.
-Execution is in progress; the plan is not a completion receipt. The initial copy
-stopped on a dropped TLS handshake after 36 committed attachments. It resumed with
-lower concurrency and bounded transport retries, without disabling certificate
-validation or recreating committed attachments. One customer photograph has already
-rendered successfully through the ordinary-owner private rehearsal route.
+All application object keys/sizes and all 28,224 source/target receipts reconcile.
+Every new object was read back and hash-verified during admission. A full identical
+retry recognized 28,224 existing receipts and created nothing. The 32,554 preserved
+original/candidate files and 13 preservation reports remain intact. Twelve private
+HTTP probes across three Workspaces pass authorized byte/hash checks, anonymous
+denial and cross-Workspace denial; nine detail pages render without direct R2 URLs.
+Ordinary-owner browser checks cover customer, active and closed-history images.
+Bounded transport and interrupted-body retries resolved connection failures without
+disabling certificate validation or accepting partial bytes.
 
 Visual inspection found plain grey placeholders in the source. Twelve decoded
 source hashes account for at least 24,946 blank image references: 5,283 active
@@ -32,9 +36,13 @@ integrity is not proof of usable photographic evidence.
 
 See [the attachment runbook](implementation/linode-media-attachments.md) and
 [decision](adr/2026-09-22-legacy-media-attachment-evidence.md). The private evidence
-directory is `outputs/linode-media-attachments-20260922/`. Financial/source-document
-fingerprints were saved before admission; final reconciliation and full retry proof
-remain pending. The live Linode application and original media are unchanged.
+directory is `outputs/linode-media-attachments-20260922/`; `review.html` links to
+sample records. All 252 financial and Party metadata fingerprints match the
+pre-attachment snapshot. State is **REHEARSAL_MEDIA_VERIFIED**, not production
+cutover. The live Linode application, original media and ordinary development
+database are unchanged. Permanent runtime credentials, production access/current
+lending setup, a guarded production-target media path, and final frozen-source
+preparation/reconciliation remain.
 
 ## Media preservation copy verified in private R2 (2026-09-21)
 
@@ -55,7 +63,8 @@ An unsigned GET of a known photo from Linode was rejected with HTTP 400,
 `InvalidArgument: Authorization`. An earlier local TLS transport failure was not
 counted as privacy evidence. See [the completed preservation record](implementation/linode-media-preservation-20260921.md).
 
-This is **MEDIA_PRESERVATION_VERIFIED_ATTACHMENTS_PENDING**, not go-live.
+This preservation checkpoint was **MEDIA_PRESERVATION_VERIFIED_ATTACHMENTS_PENDING**;
+the September 22 entry above completes rehearsal attachment, not go-live.
 Of 31,838 discovery references, 28,224 have verified branch originals, 1,149 have
 unverified shared-folder candidates, and 2,465 have no exact file in checked
 locations. The missing branch references still include 102 active-loan photos,
@@ -66,12 +75,11 @@ newly captured pictures into original evidence.
 
 Offline source evidence now preserves all 1,153 customer-photo rows and their
 default flags: 1,147 customers, six with multiple photos and two with no marked
-default. No application attachments were created. Next implement authorized,
-retry-safe attachments for verified Party, collateral and historical identities,
-using separate application copies so ordinary cleanup cannot delete preserved
-originals. See [the preservation decision](adr/2026-09-21-legacy-media-preservation-and-application-copies.md).
-Actual R2 backend dependencies, permanent runtime credentials, privacy/rendering
-tests, missing-file disposition and the final frozen database/media cutover remain.
+default. No application attachments were created during this preservation step;
+the later attachment implementation uses separate application copies so ordinary
+cleanup cannot delete preserved originals. See [the preservation decision](adr/2026-09-21-legacy-media-preservation-and-application-copies.md).
+Permanent runtime credentials, missing-file disposition and the final frozen
+database/media cutover remain.
 The one-week migration token must not become the production application credential.
 
 ## Live media inventory complete; copy and recovery pending (2026-09-21)

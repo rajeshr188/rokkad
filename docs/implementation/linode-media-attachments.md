@@ -60,15 +60,21 @@ control.
 ## September rehearsal
 
 Private evidence directory: `outputs/linode-media-attachments-20260922/`.
-The plan resolves **28,224** photographs: **1,148 Party**, **5,988 active
+The completed import contains **28,224** source images: **1,148 Party**, **5,988 active
 collateral**, and **21,088 closed-history**. There are **29,366** separate
 application objects including **1,142** default profile copies. Two source
 customers without defaults remain unselected; missing originals remain excluded.
 The exact plan SHA-256 is
 `62d8d184af08e32b74e10bd3741695bc85c342326ffdecb518bfa65dd22005b8`.
 
-Execution and final verification are in progress. Do not treat the plan as proof
-that attachments have been created. Production remains live and unchanged.
+All attachments and 29,366 application objects reconcile against the plan. The
+32,554 preserved source files and 13 preservation reports remain intact. Twelve
+ordinary-owner HTTP probes across all three Workspaces verify exact image hashes,
+private cache headers, anonymous denial and cross-Workspace denial. Nine detail
+pages render without direct R2 URLs. Browser checks cover customer, active-loan and
+closed-history images. All 252 financial and Party metadata fingerprints are
+unchanged. A full identical retry recognizes all 28,224 receipts and creates
+nothing. Sixty focused tests pass. Production remains live and unchanged.
 
 Visual and pixel-level inspection also confirmed **24,946 blank grey source image
 references** across twelve exact hashes: **5,283 active collateral**, **19,661

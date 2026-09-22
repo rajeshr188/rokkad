@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-21
+updated: 2026-09-22
 tags: [migration, media, r2, portability]
 ---
 
@@ -15,9 +15,12 @@ read-back SHA-256 verified. The object set/sizes reconcile, retries refuse overw
 anonymous S3 access is rejected, public endpoints are disabled, and 13 evidence files
 are also preserved and verified. See [the preservation record](../implementation/linode-media-preservation-20260921.md).
 
-Application attachments are still pending. The next slice is the authorized,
-retry-safe attachment service and actual R2 backend integration, followed by private
-render/download and isolation tests. The final source freeze is not scheduled.
+Application attachment and R2 integration are complete in the accepted isolated
+rehearsal: 28,224 source images and 29,366 separate application copies reconcile.
+Private access checks pass and all 252 financial/Party fingerprints are unchanged.
+See [the attachment record](../implementation/linode-media-attachments.md).
+Production runtime credentials, current lending/access setup and final frozen
+database/media reconciliation remain. The final source freeze is not scheduled.
 
 ## Selected destination and current boundary
 
@@ -63,12 +66,13 @@ with no secret values printed in tool output or chat, using
 LocalAppData migration directory, outside OneDrive. This expiring migration token
 must not become the permanent application credential.
 
-The current `STORAGES.default` is Django FileSystemStorage. Development/production
+The ordinary `STORAGES.default` is Django FileSystemStorage. Development/production
 R2 options exist but their storage override is commented out. The existing
 `helpers.cloudflare.storages.MediaFileStorage` uses an object prefix of `media/`;
 the database stores names relative to that prefix. Avoid double-prefixing keys.
-`django-storages` and `boto3` are absent from current requirements and the rehearsal
-environment; add and test the actual storage dependencies when enabling the backend.
+`django-storages` and `boto3` are now pinned and installed. The dedicated
+`rehearsal_r2` settings select the private backend with an isolated application
+prefix and explicit protected credentials; ordinary settings remain unchanged.
 Keep static-file deployment separate from business media.
 
 Preserve the [private-media decision](../adr/2026-09-09-private-business-media-delivery.md):
@@ -78,7 +82,7 @@ domain and `r2.dev` delivery for this bucket; see
 [Cloudflare's public-access controls](https://developers.cloudflare.com/r2/buckets/public-buckets/).
 Public logos/avatar behavior must be handled separately when enabling R2, without
 making the business bucket public. This plan extends deployment preparation; it
-does not change the existing authorization architecture or enable R2 today.
+does not change the existing authorization architecture or enable production R2.
 
 ## Smallest delivery sequence
 
@@ -117,18 +121,18 @@ does not change the existing authorization architecture or enable R2 today.
    an evolving working bucket alone is not the backup. Keep Linode files and the
    final database/media backup for recovery until cutover acceptance is complete.
 
-## Association work still required
+## Association implementation and remaining boundaries
 
 | Source | Destination and implementation boundary |
 | --- | --- |
-| `contact.CustomerPic.image` | Resolve deterministic imported Party identity. Preserve the source default-photo flag and every additional image. Select the profile image only from supported source evidence; retain additional images as associated documents/evidence without claiming KYC verification. |
+| `contact.CustomerPic.image` | Implemented through deterministic imported Party identity: all verified images become unverified documents, and source defaults alone select separate profile copies. |
 | `contact.Proof.doc` | Map to the correct Party document/identifier where supported; preserve source verification claims distinctly from new verification. This snapshot has no proof rows, but the final snapshot may differ. |
-| Active `girvi.LoanItem.pic` | Resolve the imported collateral item through opening source references. Extend the bounded import path to retain legacy provenance; current append-photo behavior otherwise labels it as a post-approval capture. Import time must not impersonate historical capture time. Existing JPEG/PNG and size checks need assessment against real files; retain unsupported originals as exceptions. |
-| Closed-loan item photos | Closed evidence has no operational loan/item parent, and its v1 contract excludes binaries. Add a minimal Workspace-owned, authorized attachment association before declaring these photos usable in historical views. Preserve accepted archive JSON unchanged; schema/contract changes require their own ADR and isolation tests. |
+| Active `girvi.LoanItem.pic` | Implemented through exact opening/item source references and verified bytes. Legacy provenance and unknown capture date are explicit; confirmed blank source images are labelled. |
+| Closed-loan item photos | Implemented with immutable Workspace-owned attachments and private archive delivery. Accepted archive JSON is unchanged; forced RLS and parent isolation are tested. |
 | Other filesystem assets | Inventory and retain separately; resolve logos, account pictures and unreferenced files explicitly. Do not discard them or attach by filename/name similarity. |
 
-The existing database replay does not perform these associations. A copy to R2
-alone will not make photographs appear on customer or loan pages. This remains a
+The database replay does not perform these associations; the separate rehearsal
+`linode_media` command plans and admits them through domain services. This remains a
 bounded legacy migration, not a new general synchronization framework or migration
 UI project.
 
@@ -141,9 +145,10 @@ file existence or bytes. There are 5,180 relative paths occurring in more than o
 source schema; schema-aware resolution is mandatory. Extract customer default flags
 from the source as part of preparation; the initial reference JSONL omits them.
 
-Completion requires both the existing database reconciliation and the new media
-copy/association/privacy report. Until then, the migration remains
-`RECONCILED_DATABASE_ONLY`, with production media pending.
+The accepted rehearsal now has database reconciliation and media
+copy/association/privacy evidence. Production cutover remains pending. Twelve
+confirmed source hashes account for 24,946 blank references, including 5,283 active
+collateral images; these must not be counted as usable photographs.
 
 ## Live inventory result
 
@@ -165,4 +170,5 @@ The 3,181 branch files absent from the discovery reference list include other
 asset types and possibly newly added or older files; retain them pending source
 classification. Reads were stable per file, not a globally frozen snapshot.
 The live source can change between inventory and copy: revalidate hashes before
-copying and reconcile again at final freeze. No media attachments have been made.
+copying and reconcile again at final freeze. This inventory preceded the completed
+rehearsal attachment described above.

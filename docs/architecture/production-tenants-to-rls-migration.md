@@ -1,7 +1,7 @@
 ---
 status: proposed
 owner: project
-updated: 2026-09-21
+updated: 2026-09-22
 tags: [architecture, migration, portability, django-tenants, rls]
 related: [data-portability.md, loans-portability-target.md, ../plans/data-portability.md]
 ---
@@ -96,8 +96,9 @@ on the Linode server filesystem, not Cloudflare R2. Inventory the actual media r
 and tenant/path layout there. Back up those files separately; the PostgreSQL dump
 contains references, not the file bytes. The owner subsequently selected private
 R2 for the destination. Read-only source inventory and direct preservation copy
-are complete for the inventoried files; application attachments and final-snapshot
-reconciliation remain pending. See [the media preservation record](../implementation/linode-media-preservation-20260921.md).
+are complete for the inventoried files. Application attachments are verified in
+the isolated rehearsal; final-snapshot reconciliation remains pending. See
+[the attachment record](../implementation/linode-media-attachments.md).
 No R2 source-bucket copy is part of this migration.
 
 On Linode, produce a PostgreSQL custom-format dump and separate media manifest
@@ -181,11 +182,11 @@ product capability.
 | Party CSV/JSONL/XLSX bundles, preview, approval and export | Verified three-Workspace rehearsal and clean-target replay | Preserve accepted decisions; prepare/review again against the final frozen source. |
 | Strict complete-loan history | Committed baseline | Use only after source-contract proof; likely a subset. |
 | Reviewed active-opening import and servicing | 6,273 openings reconciled; full settlement and coupled reversal rehearsed | Final-source preparation and cutover reconciliation; ordinary partial repayments remain guarded. |
-| Closed-loan evidence archive | 39,133 records reconciled in accepted and clean-target rehearsals | Preserve final-source coverage and add authorized media attachments. |
+| Closed-loan evidence archive | 39,133 records reconciled; private media attachments verified in accepted rehearsal | Preserve final-source coverage and repeat media reconciliation. |
 | Source-dump preview | Versioned profiles and owner exceptions cover the accepted snapshot | Re-extract a fresh final snapshot; old approvals do not approve changed data. |
 | Export | Partial Party and specific Loans contracts | It is not a complete Workspace backup or full-database export. |
-| Production operator workflow | Snapshot-bound package/replay/verify command proven in a clean target | Complete media attachments, production access/setup and final frozen cutover. A Migration Center UI is not required. |
-| Legacy media | 32,554 inventoried files/candidates preserved and hash-verified in private R2 | Attach verified originals through application services; resolve missing-file/candidate evidence and recheck the final snapshot. |
+| Production operator workflow | Snapshot-bound package/replay/verify command proven in a clean target; separate rehearsal media command verified | Complete production access/setup, permanent media credentials and final frozen cutover. A Migration Center UI is not required. |
+| Legacy media | 32,554 files/candidates preserved; 28,224 source images attached through private services in the rehearsal | Retain missing-file/candidate exceptions and blank-image labels; recheck final snapshot. The media command currently refuses non-rehearsal destinations. |
 
 ## Next recommended action
 
@@ -198,14 +199,21 @@ all 45,407 source loan IDs, with no unresolved loan holds in that snapshot.
 
 The snapshot-bound cutover package and clean-target replay/reconciliation are
 complete for the accepted snapshot. Media preservation in private R2 is also
-complete for the inventoried files. Next attach verified originals to the imported
-Party, collateral and closed-history identities, preserving originals separately
-from mutable application copies and retaining missing-file exceptions. Configure
+complete for the inventoried files. All 28,224 verified source-image references are
+attached to Party, collateral and closed-history identities, with 29,366 separate
+application copies. Financial fingerprints and private delivery checks pass.
+Of these references, 24,946 are confirmed blank source images (5,283 active);
+missing-file and unverified-candidate exceptions remain explicit.
+
+Next prepare the production target, permanent bucket-scoped runtime credentials,
 production access and valid current lending setup, and verify the branch workflows
 required at go-live. Ordinary partial repayment remains
 unsupported for imported openings; review acceptance does not remove that guard.
 
-Only after those readiness checks, schedule the legacy write freeze and obtain a
+Extend the current rehearsal-only media command to the explicitly approved clean
+production target with equivalent destination guards and release validation before
+cutover; do not bypass its database safety check. Only after those readiness checks,
+schedule the legacy write freeze and obtain a
 fresh complete database/media snapshot. Re-extract and reclassify that snapshot:
 new customers, loans, payments or releases can change the prepared decisions and
 totals. Reconcile and accept the final target before switching users. Keep the old

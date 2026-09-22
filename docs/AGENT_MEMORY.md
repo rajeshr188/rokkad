@@ -81,6 +81,9 @@ The bounded attachment implementation now uses immutable source receipts,
 separate application objects, explicit legacy collateral provenance and immutable
 closed-history media sidecars. Its operator command is rehearsal-only; execution
 and verification are tracked in [the attachment runbook](implementation/linode-media-attachments.md).
+Many source image files are uniform grey placeholders. Byte/hash verification is
+not proof of a usable photograph; confirmed blank fingerprints are labelled in
+the application and never establish photographic or appraisal evidence.
 Also retain the distinction between 102
 active-photo references whose branch files are missing and 203 active collateral
 items with no recorded photo reference. Preserved originals must not become mutable

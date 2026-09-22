@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError, ConnectionClosedError, EndpointConn
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from PIL import Image
+from urllib3.exceptions import ProtocolError, ReadTimeoutError as HTTPReadTimeoutError
 
 
 class R2MediaCopies:
@@ -38,9 +39,18 @@ class R2MediaCopies:
         return self.location + "/" + name
 
     def _read(self, key, original):
-        response = self._request("get_object", Bucket=self.bucket, Key=key)
-        with response["Body"] as body:
-            content = body.read(10 * 1024 * 1024 + 1)
+        # A connection can also fail after headers arrive. Restart the bounded GET
+        # and validate the complete bytes; never accept a partial streaming body.
+        for attempt in range(4):
+            try:
+                response = self._request("get_object", Bucket=self.bucket, Key=key)
+                with response["Body"] as body:
+                    content = body.read(10 * 1024 * 1024 + 1)
+                break
+            except (ReadTimeoutError, HTTPReadTimeoutError, ProtocolError, ConnectionClosedError):
+                if attempt == 3:
+                    raise
+                time.sleep(0.25 * (2 ** attempt))
         if len(content) != original["byte_size"] or hashlib.sha256(content).hexdigest() != original["sha256"]:
             raise ValidationError("Stored photo bytes differ from preserved evidence.")
         return content

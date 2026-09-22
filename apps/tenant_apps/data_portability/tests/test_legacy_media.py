@@ -207,6 +207,20 @@ class LegacyMediaTests(PortabilityFixture):
 
 
 class MediaStorageTests(SimpleTestCase):
+    def test_interrupted_stream_restarts_the_get_and_checks_complete_bytes(self):
+        from urllib3.exceptions import ReadTimeoutError
+        adapter = object.__new__(R2MediaCopies)
+        adapter.bucket = "test"
+        broken = Mock()
+        broken.__enter__ = Mock(return_value=broken)
+        broken.__exit__ = Mock(return_value=False)
+        broken.read.side_effect = ReadTimeoutError(None, None, "interrupted stream")
+        adapter._request = Mock(side_effect=[{"Body": broken}, {"Body": BytesIO(PNG)}])
+        with patch("apps.tenant_apps.data_portability.legacy_media_storage.time.sleep"):
+            self.assertEqual(adapter._read("key", evidence()["verified_source_file"]), PNG)
+        self.assertEqual(adapter._request.call_count, 2)
+        broken.__exit__.assert_called_once()
+
     def test_confirmed_blank_source_images_are_not_presented_as_usable_photos(self):
         from helpers.legacy_media import BLANK_LEGACY_IMAGE_SHA256
         from apps.tenant_apps.loans.models import PawnCollateralPhoto
