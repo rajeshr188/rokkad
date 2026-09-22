@@ -61,7 +61,8 @@ PREPRINTED A5 Original/Duplicate profile 4, using the same sandbox login. The
 owner requested `Jai Sri Krishna` from licence business details and confirmed
 both signature areas already exist on each stock copy. Loan rate/tenure remain
 approved loan facts. JSK has no guide artwork; added heading/term positions and
-collision corrections need physical-stock calibration before activation.
+collision corrections have accepted digital previews; physical alignment remains
+unverified, with its merge gate explicitly waived by the owner.
 For excessive collateral text the owner's final choice is wrapping plus smaller
 font within the existing frame, NOT additional ticket sheets. Both sandbox
 drafts use SHRINK with automatic leading for collateral descriptions; JSK's
@@ -76,9 +77,12 @@ and Workspace/Series scope, then atomically publish/assign both using existing
 services. Preserve override precedence, reject stale draft hashes and check all
 effective pairs. Failed activation rolls back publication/assignment/audit; repeat
 submissions are idempotent and paired activations serialize on the Workspace.
-The owner requested merging after these checks and physical acceptance, but has
-explicitly confirmed physical printing is not yet tested. Keep the merge pending
-that gate. Existing issued PDFs and source snapshots remain unchanged.
+On September 22 the owner explicitly accepted the print previews, waived physical
+printing as a merge prerequisite, and authorized merging into `rls-mvp`. Do not
+reintroduce that approval gate. Record physical alignment as untested, not passed.
+Existing issued PDFs and source snapshots remain unchanged. Database migrations
+0016/0017 and transferring/assigning sandbox templates remain separate rollout
+steps; merging Git does not activate layouts or deploy the production application.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

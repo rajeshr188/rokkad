@@ -18,8 +18,8 @@ buttons automatically use the assigned published layout.
 
 ## Before You Start
 
-**Feature experiment:** in `feature/ticket-template-designer`, choose **Loan
-ticket**, **Exact PDF overlay**, then **Use precision ticket overlay** when
+**Precision ticket editor:** choose **Loan ticket**, **Exact PDF overlay**,
+then **Use precision ticket overlay** when
 creating a draft. This enables optional backgrounds, value-only/custom-label
 fields and 0.1 mm positions/sizes in the visual overlay editor. Leave every
 background selection empty if you have no artwork. In **Print profiles**, choose
@@ -39,7 +39,7 @@ The feature has an isolated browser sandbox and automated checks; follow the
 
 ### Use this template
 
-After saving edits and checking a physical test print, select **Use this template**
+After saving edits and reviewing the print preview, select **Use this template**
 in the ticket editor or revision page. Choose **Paper and copies**, leave **Use
 for** at **Workspace default** or choose a particular series, then **Review
 selection**. Check paper size, orientation, stock, copy order and scaling. The
@@ -68,8 +68,8 @@ You need:
 - the corresponding completed event for receipt, release, auction recovery, or
   renewal preview;
 - PNG/JPEG logos or backgrounds, or a small valid PDF letterhead background;
-- access to the physical printer used by the business before production
-  assignment.
+- the intended paper/copy settings; a physical test print is recommended when
+  checking alignment on a new printer or preprinted stationery.
 
 ## The Safe Mental Model
 
@@ -136,12 +136,12 @@ without changing historical interpretation.
 As an Owner/Admin, open **Settings > Documents & printing > Document layouts >
 Issued documents**, then choose **Evidence** on an issue. It records the source
 reference/fingerprint, layout and profile versions/hashes, PDF hash and issue time.
-On the isolated ticket feature, it also shows the issuer and retained customer,
+For precision tickets, it also shows the issuer and retained customer,
 loan, verification and photo evidence captured at first issue. Expand the captured
 values or asset-checksum sections when investigating a document. Older issues
 without separate snapshots are labelled; current customer data is not substituted.
 
-The feature's loan print panel has **Ticket history & evidence**, filtered to that
+The loan print panel has **Ticket history & evidence**, filtered to that
 loan's ticket issues. It does not list payment/release documents whose sources are
 separate events. Global Issued documents remains available for every document kind.
 
@@ -154,12 +154,16 @@ are not digital signatures or a public authenticity-verification service.
 
 For v4 precision tickets, internal IDs/fingerprints and verification text are
 optional on paper. Complete source evidence stays in the payload/issue. Each front
-still requires business/license identity, customer, number/date/principal, rate,
-tenure, collateral details and signature space. Descriptions plus net weights by
+still requires business/license identity, customer, number/date/principal,
+tenure, collateral details and signature space. Printed interest is required by
+default; turn off **Require interest rate on the printed ticket** to omit it.
+The approved rate remains in internal evidence. Descriptions plus net weights by
 metal can replace the full collateral table. A QR alone cannot replace a readable
-loan number. V1/v2/v3 retain their original mandatory printed-field rules. Reviewed
-static-stock declarations are still pending; background artwork alone currently
-cannot waive required business fields.
+loan number. V1/v2/v3 retain their original mandatory printed-field rules.
+For each copy, choose editable signature frames, signature areas already in the
+background, or areas already on the preprinted paper. Confirm existing areas;
+background confirmations bind to its file hash and require review if it changes.
+Artwork alone cannot waive other required business fields.
 
 New precision starters include a small **Generated** timestamp on both copies.
 In an existing editable precision template, choose the **Generated at** field and
@@ -179,13 +183,18 @@ both required copies.
 1. Select **Create starter layout**.
 2. Enter a clear name, such as `Main Counter Loan Ticket`.
 3. Select **Loan ticket** as the document type.
-4. Select **Create draft**.
-5. Review the generated structured layout definition.
-6. Select **Preview** to render it using an approved sample loan.
-7. Select **Test print** and print it on the actual paper and printer.
-8. When satisfied, select **Publish and freeze**.
-9. In **Assign default scope**, choose the required scope and select
-   **Assign layout**.
+4. Choose **Exact PDF overlay** and **Use precision ticket overlay** for positioned
+   fields/backgrounds, or keep Flow for a flowing document. Select **Create draft**.
+5. Open the visual editor, adjust fields/backgrounds and save changes.
+6. Create or select a **Print profile** for the intended paper stock and copies.
+7. Select **Print preview** using that profile and an approved sample loan.
+   **Test print** downloads the preview for optional physical alignment checks.
+8. Select **Use this template**, choose the paper profile and workspace/series,
+   then **Review selection**.
+9. Select **Use this template** on the review page to publish and assign both.
+
+Older layouts and licence-only layout overrides retain the separate **Publish
+and freeze** and **Assign layout** controls under advanced revision settings.
 
 Do not publish merely to see what a layout looks like. Preview and test print
 work while it is still a draft.
@@ -625,7 +634,7 @@ data, or executable templates. They always remain drafts until reviewed.
 
 ## If Printing Fails
 
-On the isolated feature branch, precision tickets offer customer contact fields
+Precision tickets offer customer contact fields
 and customer/approved-collateral photograph bindings. Choose **Image** and the
 photograph binding instead of an uploaded static asset. **Leave absent photo
 blank** permits genuinely absent photos; an unreadable or changed selected file
@@ -651,7 +660,7 @@ It is a recovery action, not a silent fallback for broken configuration.
 
 ## Before Production Assignment
 
-Complete the physical matrix in
+Use the applicable checks from the print matrix in
 [Loans Configurable Document Operations](../implementation/loans-configurable-document-operations.md):
 
 - A4 and A5;
@@ -670,4 +679,8 @@ Also run the tenant integrity gate:
 python manage.py tenant_command check_loan_document_integrity --schema=<schema> --fail-on-findings
 ```
 
-Do not treat an on-screen PDF preview as physical printer acceptance.
+For the September 22 JCL/JSK integration, the owner accepted the previews and
+explicitly waived physical testing as a merge prerequisite. Physical alignment
+remains unverified; it does not block this authorized merge. Other deployment
+and data-migration steps are separate. A preview confirms PDF content, not the
+printer's actual margins or feed alignment.

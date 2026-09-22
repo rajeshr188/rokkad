@@ -7,6 +7,25 @@ tags: [status, architecture]
 
 # Status
 
+## Ticket designer accepted for merge (2026-09-22)
+
+The owner explicitly accepted the JCL/JSK print previews, chose to skip physical
+printing checks, and authorized merging `feature/ticket-template-designer` into
+`rls-mvp`. This supersedes the physical-print merge hold below; printer alignment
+remains untested, not a passed check. Updated the starter guide, accepted ADR,
+feature plan and agent memory before integration. The implemented checkpoint
+`3243147d` passed all 197 focused document/licence tests; subsequent changes in
+this merge-preparation slice update documentation and in-app help text only.
+The beginner guide now describes optional backgrounds, precision controls,
+per-copy signatures, stock-aware previews and the single activation action.
+
+Rollout remains separate: apply owner-only migrations 0016/0017 to the intended
+database and transfer/review/assign layouts, backgrounds and paper profiles in
+the intended workspaces. No production deployment, database migration, source
+freeze or sandbox/rehearsal template activation is part of this Git merge.
+The optional JCL Conditions reverse still contains fixed-rate wording; review
+that wording before enabling that reverse. The accepted default is the front pair.
+
 ## Paired ticket activation implemented (2026-09-22)
 
 Added **Use this template** to supported ticket editors/revision pages. Owners

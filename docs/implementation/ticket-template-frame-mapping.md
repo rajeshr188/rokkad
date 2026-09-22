@@ -17,6 +17,16 @@ database was changed to produce this document.
 
 ## Evidence and inventory
 
+**Delivery update (2026-09-22):** the contract below originated as the isolated
+design/mapping target. V4 geometry/backgrounds, rich source evidence, reviewed
+signature choices and paired activation are now implemented; the JCL/JSK sandbox
+previews are accepted and 197 focused regression checks pass. The owner authorized
+merging into `rls-mvp` and explicitly waived physical testing as a merge gate.
+Physical printer alignment remains untested. Raw mapping candidates remain
+distinct from the reviewed sandbox drafts; use the
+[operator guide](../flows/loans-document-layout-operator-guide.md) for the delivered
+workflow and the [feature plan](../plans/ticket-template-designer.md) for rollout.
+
 Source: commit `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd`, specifically
 `apps/tenant_apps/girvi/models/template.py`, `girvi/views/prints.py` and
 `apps/tenant_apps/utils/loan_pdf.py`, plus the September 21 production archive.
@@ -268,12 +278,13 @@ clear its summary label. These are added frames, not part of the 35 extracted
 source frames. Actual background/printer calibration remains pending. Exact PDF
 reprints preserve this generation timestamp rather than showing the reprint time.
 
-Image/QR fit refinements, static-stock declarations and paired activation remain
-pending. V4 visible business coverage is now implemented: internal identifiers and
+Image/QR fit refinements, per-copy signature declarations and paired activation
+are implemented in the reviewed sandbox drafts. V4 visible business coverage is implemented: internal identifiers and
 verification text are optional on paper; compact description/weight bindings can
 replace the table. Complete internal payload evidence is still validated. Every
-front must retain business/license/customer identity, number/date/principal, rate,
-tenure and signature space. Candidate reports therefore flag only missing business
+front must retain business/license/customer identity, number/date/principal,
+tenure and signature space. Rate printing is required by default, with an explicit
+v4 omission setting; approved rates remain in internal evidence. Candidate reports flag missing business
 identity/terms and signature areas, which must be covered by visible frames or
 reviewed stationery. Do not treat candidates as accepted JCL/JSK templates. See the
 plan for isolated test commands and manual-runtime limits.
@@ -301,7 +312,8 @@ foreign-Workspace objects; concurrent first print; changed Party/assignment afte
 issuance; old layout/profile versions; and no customer data in exported packs.
 Mock backgrounds alone cannot establish Tamil artwork or real-printer parity.
 
-This design completes the mapping/engineering-decision slice. Asset retrieval,
-owner review of actual stationery/semantic differences and physical calibration
-remain acceptance work. Do not call the experiment production-ready from this
-document or from passing unit tests.
+This design records the mapping/engineering decisions. The reviewed drafts and
+paired activation have since completed the bounded implementation. Preview
+acceptance supports the owner-authorized merge; physical calibration was waived
+and remains unverified. Production deployment, migrations and workspace template
+installation are separate from this merge.

@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 owner: loans
 updated: 2026-09-22
 tags: [loans, documents, templates, ux, experiment]
@@ -17,7 +17,10 @@ Clients can reproduce their stationery through an ordinary visual template/frame
 editor, duplicate a template, and change it without JSON or developer assistance.
 JCL and JSK are concrete acceptance examples of the same general-purpose editor,
 not branch-specific rendering code. The owner authorized an isolated experiment;
-merging into `rls-mvp` requires their acceptance of the result.
+the owner has now accepted both previews and authorized merging into `rls-mvp`,
+explicitly waiving physical testing as a merge prerequisite on September 22.
+Physical alignment is untested, not a claimed pass. The bounded feature is complete;
+deployment and workspace configuration are separate rollout tasks.
 
 Feature branch: `feature/ticket-template-designer`.
 Baseline: `8b0e1ba3`, also named
@@ -272,11 +275,12 @@ pending. These are implementation targets, not changes to current validators.
    Existing overrides retain precedence and incompatible effective pairs reject
    the transaction. No JSON is needed for this workflow. Automated clone/edit/
    preview/activate/new-issue and unchanged historical reprint checks pass.
-5. Reproduce both examples, test permissions/reprints/compatibility, then conduct
-   owner visual and physical printer acceptance before proposing a merge.
+5. Complete for authorized merge: both examples are accepted and all 197 focused
+   checks pass. The owner waived physical testing based on accepted print previews.
 
 Both digital previews are accepted. The owner explicitly confirms physical
-printing is not yet tested; the authorized merge remains pending that acceptance.
+printing is not yet tested and has waived that merge gate. Proceed with the
+authorized merge; do not describe printer calibration as verified.
 Live review pages (same `ticket-designer` sandbox login):
 
 - JCL: `/w/jcl-template-sandbox-sample-only/loans/setup/documents/revisions/1/use/?profile=1`
@@ -311,6 +315,8 @@ review the fixed rate wording on Conditions and test the flip direction.
 - Merge only after owner acceptance and appropriate regression checks, with a
   reviewed migration/asset rollout if required. A saved PDF is not evidence of
   a physical signature or successful paper printing.
+- Owner acceptance and regression checks are complete; physical testing was
+  explicitly waived for this merge. Retain the checkpoint and isolated sandbox.
 - If rejected, retain or archive the feature branch and continue using the
   original checkout/checkpoint. No reset or data restoration is needed there
   while the isolation rules hold. Do not delete feature evidence automatically.

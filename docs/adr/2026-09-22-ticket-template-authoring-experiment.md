@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 owner: loans
 updated: 2026-09-22
 tags: [adr, loans, templates, printing, experiment]
@@ -16,9 +16,9 @@ and positioned-frame approach already serves JCL plain-paper and JSK preprinted
 stationery. The successor has stronger versioning and issuance boundaries but
 exposes setup complexity and lacks several production authoring capabilities.
 
-## Proposed decision
+## Accepted decision
 
-Evaluate a single template/frame editor over the existing Loans layout blocks,
+Use a single template/frame editor over the existing Loans layout blocks,
 assets, print profiles, publication, assignments and issue services. Reuse the
 production authoring concepts and reviewed design data, not its Girvi-coupled
 models or renderer. Do not create another source of loan financial facts.
@@ -36,9 +36,9 @@ now selects layout v4, stock-aware profile v2 and ticket payload v2. V4 optional
 backgrounds, field labels, precision geometry and text spacing are implemented on
 the feature branch, together with profile v2 stock mode and separate design/print
 previews. Payload-v2 contact/photo evidence and the nullable immutable issue source
-snapshot are implemented; static-stock coverage, unified authoring/activation and
-actual artwork acceptance remain pending. Prior schema interpretation and exact
-stored artifacts survive.
+snapshot are implemented, together with per-copy signature declarations and
+paired activation. Both JCL/JSK digital previews are accepted. Prior schema
+interpretation and exact stored artifacts survive.
 
 Party identity/contact/photo data is captured at first issue; approved economics
 and collateral/photo evidence retain their existing snapshot authority. A nullable
@@ -50,8 +50,9 @@ Unified activation uses the existing Workspace/Series profile scopes and validat
 the intended pair atomically. License-only profile scope is not added. Internal
 audit identities need not clutter v4 paper output; reviewed static stock/artwork
 declarations must match authoritative values while dynamic business facts remain
-required. Source quantity/license/value differences and physical calibration are
-explicit acceptance gates, not silent compatibility assumptions.
+required. Source quantity/license/value differences remain explicit rather than
+silent compatibility assumptions. Physical calibration is unverified; the owner
+has explicitly waived it as a prerequisite to merging this implementation.
 
 ## Status and compatibility
 
@@ -62,13 +63,16 @@ activations; reviewed hashes prevent stale-draft activation; existing scope
 precedence is preserved and effective layout/profile pairs are revalidated.
 Existing audit events roll back with failed activation. No new configuration
 model, profile scope or issue mutation is introduced. Both digital previews are
-accepted; physical printer acceptance and merge remain pending.
+accepted. On September 22 the owner authorized merging into `rls-mvp` and waived
+physical testing based on those previews. This changes the merge gate, not the
+evidence: no successful physical print is claimed.
 
 The owner subsequently accepted the per-copy signature-area choice and explicit
 optional printed-interest requirement, implemented for v4 in
 [this decision](2026-09-22-ticket-signature-area-choices.md). JCL's Original and
-Duplicate now have a validated paired preview using their reviewed artwork;
-physical printing, reverse sides and integrated client activation remain pending.
+Duplicate have a validated paired preview using their reviewed artwork.
+Reverse assets are connected; Conditions fixed-rate wording needs separate review
+before using those backs. Integrated client activation is implemented.
 
 The owner accepted separating printed business information from internal audit
 evidence on 2026-09-22. Implemented for v4: audit IDs/fingerprints and verification
@@ -76,21 +80,21 @@ text are optional on paper; complete source evidence remains required in the
 payload/issue, accessible through the existing admin Evidence page. New starters
 omit internal identifiers. Business identity, approved terms, collateral coverage
 and signature space remain required on each front. Existing printed designs and
-artifacts are not rewritten. Reviewed fixed-stock declarations remain a distinct
-pending part of this experiment; arbitrary text/backgrounds cannot waive coverage.
+artifacts are not rewritten. Signature declarations cover reviewed backgrounds
+or preprinted paper; arbitrary text/backgrounds cannot waive other business fields.
 
-The owner approved branch isolation and a design-first experiment, not a merged
-replacement. Existing schema/background/binding and publication rules remain in
+The owner initially approved branch isolation and a design-first experiment and
+has now accepted the implementation for integration. Existing schema/background/binding and publication rules remain in
 force for prior versions. The opt-in v4 foundation permits absent backgrounds;
 it now enforces business coverage separately from internal verification. Compatibility checks
-pass for legacy rendering and stored reprints; physical and owner acceptance
-remain required before adoption.
+pass for legacy rendering and stored reprints. Owner preview acceptance and
+197 focused regression checks support the authorized merge.
 
 The plan defines acceptance examples, exclusions and isolated runtime rules.
-Keep `rls-mvp` available at checkpoint `8b0e1ba3`; use the feature worktree and a
-separate database/media location for experimentation. Reverting Git alone is not
-a database rollback. Physical printer and owner authoring acceptance are merge
-gates, not assumptions from unit tests.
+Retain checkpoint `8b0e1ba3` and the isolated feature worktree/database/media as
+reference. Reverting Git alone is not a database rollback. Merging does not apply
+migrations or install/assign the sandbox templates in rehearsal or production.
+Physical testing is waived for this integration, not inferred from unit tests.
 
 ## Alternatives
 
@@ -101,4 +105,4 @@ gates, not assumptions from unit tests.
 - Keep current authoring unchanged: does not satisfy self-service customization
   or JSK's working data-only stationery workflow.
 
-The feature status/plan records partial implementation and remaining acceptance.
+The feature status/plan records completed implementation and separate rollout work.
