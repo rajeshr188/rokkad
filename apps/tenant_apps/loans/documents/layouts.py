@@ -163,6 +163,7 @@ class DocumentLayout:
     surfaces: LogicalSurfaces | None = None
     signature_areas: tuple[tuple[str, str, str, str], ...] = ()
     require_interest_rate: bool = True
+    business_name_preprinted: bool = False
 
     def canonical_dict(self):
         def block_dict(block):
@@ -257,6 +258,8 @@ class DocumentLayout:
                 }
             if not self.require_interest_rate:
                 value["require_interest_rate"] = False
+            if self.business_name_preprinted:
+                value["business_name_preprinted"] = True
         return value
 
     def signature_area(self, copy_scope):
@@ -338,7 +341,7 @@ class DocumentLayoutValidator:
         if schema_version >= 3:
             allowed_keys.add("surfaces")
         if schema_version >= 4:
-            allowed_keys.update({"signature_areas", "require_interest_rate"})
+            allowed_keys.update({"signature_areas", "require_interest_rate", "business_name_preprinted"})
         unknown = set(definition) - allowed_keys
         if unknown:
             raise LayoutValidationError(f"Unknown layout properties: {', '.join(sorted(unknown))}.")
@@ -367,6 +370,9 @@ class DocumentLayoutValidator:
         require_interest_rate = definition.get("require_interest_rate", True)
         if not isinstance(require_interest_rate, bool):
             raise LayoutValidationError("Printed interest choice must be true or false.")
+        business_name_preprinted = definition.get("business_name_preprinted", False)
+        if not isinstance(business_name_preprinted, bool):
+            raise LayoutValidationError("Preprinted business name choice must be true or false.")
         if not blocks:
             raise LayoutValidationError("A layout requires at least one front-page block.")
         if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks and not definition.get("sheet"):
@@ -408,7 +414,7 @@ class DocumentLayoutValidator:
             for copy_scope in ("ORIGINAL", "DUPLICATE"):
                 cls.validate_precision_copy_evidence(blocks, copy_scope,
                     signature_on_stock=any(entry[0] == copy_scope for entry in signature_areas),
-                    require_interest_rate=require_interest_rate)
+                    require_interest_rate=require_interest_rate, business_name_preprinted=business_name_preprinted)
         elif schema_version >= 3 and document_type == "loan_ticket":
             cls._validate_logical_copy_evidence(blocks, document_type)
         return DocumentLayout(
@@ -416,7 +422,7 @@ class DocumentLayoutValidator:
             back_blocks, background, layout_mode, margin_mm,
             theme["primary_color"], theme["border_color"], theme["font_family"],
             theme["body_font_size_pt"], theme["heading_font_size_pt"],
-            header, footer, sheet, surfaces, signature_areas, require_interest_rate,
+            header, footer, sheet, surfaces, signature_areas, require_interest_rate, business_name_preprinted,
         )
 
     @staticmethod
@@ -525,14 +531,16 @@ class DocumentLayoutValidator:
                 )
 
     @staticmethod
-    def precision_missing_visible(blocks, copy_scope, *, signature_on_stock=False, require_interest_rate=True):
+    def precision_missing_visible(blocks, copy_scope, *, signature_on_stock=False, require_interest_rate=True, business_name_preprinted=False):
         visible = [block for block in blocks if block.copy_scope in {"BOTH", copy_scope} and block.visible_when is None]
         present = {block.binding for block in visible if block.type in {"field", "table"}}
         collateral_tables = [block for block in visible if block.type == "table" and block.binding == "collateral.items"]
         if collateral_tables and not any(not block.table_columns or {1, 2, 3} <= {column.index for column in block.table_columns} for block in collateral_tables):
             present.discard("collateral.items")
         missing = [label for label, alternatives in TICKET_VISIBLE_BINDING_GROUPS.items()
-                   if (require_interest_rate or label != "Monthly interest rate") and not any(required <= present for required in alternatives)]
+                   if (require_interest_rate or label != "Monthly interest rate")
+                   and not (business_name_preprinted and label == "Business name")
+                   and not any(required <= present for required in alternatives)]
         if not signature_on_stock and not any(block.type == "signature" for block in visible):
             missing.append("Signature space")
         return missing

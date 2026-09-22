@@ -179,7 +179,7 @@ class LoanDocumentLayoutService:
 
     @classmethod
     @transaction.atomic
-    def configure_ticket_signatures(cls, *, revision, sources, confirmed, require_interest_rate=True, actor=None, request=None):
+    def configure_ticket_signatures(cls, *, revision, sources, confirmed, require_interest_rate=True, business_name_preprinted=False, actor=None, request=None):
         revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
         _require_workspace(revision.layout.workspace_id)
         require_setup_administration(revision.layout.workspace_id, actor)
@@ -222,6 +222,7 @@ class LoanDocumentLayoutService:
         definition["blocks"] = blocks
         definition["signature_areas"] = areas
         definition["require_interest_rate"] = require_interest_rate
+        definition["business_name_preprinted"] = business_name_preprinted
         return cls.update_draft(revision=revision, definition=definition, actor=actor, request=request)
 
     @classmethod

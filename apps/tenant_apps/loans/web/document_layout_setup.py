@@ -279,6 +279,7 @@ def document_layout_overlay_designer(request, revision_pk):
                 sources={scope: form.cleaned_data[f"{scope.lower()}_source"] for scope in ("ORIGINAL", "DUPLICATE")},
                 confirmed={scope: form.cleaned_data[f"{scope.lower()}_confirmed"] for scope in ("ORIGINAL", "DUPLICATE")},
                 require_interest_rate=form.cleaned_data["require_interest_rate"], actor=request.user, request=request,
+                business_name_preprinted=form.cleaned_data["business_name_preprinted"],
             )
         except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
             messages.error(request, str(exc))
@@ -425,6 +426,7 @@ def document_layout_overlay_designer(request, revision_pk):
             "original_source": layout.signature_area("ORIGINAL")[1] if layout.signature_area("ORIGINAL") else "FRAMES",
             "duplicate_source": layout.signature_area("DUPLICATE")[1] if layout.signature_area("DUPLICATE") else "FRAMES",
             "require_interest_rate": layout.require_interest_rate,
+            "business_name_preprinted": layout.business_name_preprinted,
         }),
         "preview_profiles": LoanDocumentPrintProfileRevision.objects.filter(profile__workspace=request.loans_workspace, state__in=["DRAFT", "PUBLISHED"]).select_related("profile"),
         "geometry_step": "0.1" if layout.schema_version >= 4 else "1",

@@ -8,6 +8,9 @@ from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 
 
 class LoanDocumentSignatureAreasForm(forms.Form):
+    business_name_preprinted = forms.BooleanField(required=False,
+        label="I checked that the business name is already printed on both stationery copies.",
+        help_text="Allows removal of the business name frame. Remove address/contact frames too if already preprinted. Use only with a preprinted-stationery paper profile.")
     SOURCES = (("FRAMES", "Add editable signature frames"),
                ("BACKGROUND", "Already included in the background PDF"),
                ("PREPRINTED", "Already printed on the paper"))

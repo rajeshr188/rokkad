@@ -164,6 +164,15 @@ For each copy, choose editable signature frames, signature areas already in the
 background, or areas already on the preprinted paper. Confirm existing areas;
 background confirmations bind to its file hash and require review if it changes.
 Artwork alone cannot waive other required business fields.
+If both stationery copies already carry the business name, check **I checked that
+the business name is already printed on both stationery copies** in **Preprinted
+details and signature areas**, then remove the business-name frame. Remove the
+address/contact frames too when those details are preprinted. This confirmation
+requires a **Preprinted stationery** profile; it cannot be used with plain paper.
+Licence number and the other required loan fields remain required. For an already
+published template, clone its revision, make the correction and use **Use this
+template**. Old issued tickets keep their exact saved PDF; use the new revision's
+preview to inspect the correction.
 
 New precision starters include a small **Generated** timestamp on both copies.
 In an existing editable precision template, choose the **Generated at** field and

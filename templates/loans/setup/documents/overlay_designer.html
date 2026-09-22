@@ -57,11 +57,11 @@
   </div>
   <div class="col-xl-4">
     {% if precision_overlay %}
-    <div class="card mb-3"><div class="card-header"><strong>Signature areas</strong></div><div class="card-body">
+    <div class="card mb-3"><div class="card-header"><strong>Preprinted details and signature areas</strong></div><div class="card-body">
       <p>Are both signature areas already on your background or paper? Choose separately for each copy. Otherwise, add frames and drag them into the space you have left.</p>
       {% if signature_warning %}<p class="alert alert-warning">{{ signature_warning }}</p>{% endif %}
       <p class="small text-muted">Confirm again after changing the background. Preprinted areas require a Preprinted stationery print profile. Switching to an existing area removes signature frames from that copy.</p>
-      <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_signature_areas">{{ signature_form.as_p }}<button class="btn btn-primary">Save signature choices</button></form>
+      <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_signature_areas">{{ signature_form.as_p }}<button class="btn btn-primary">Save paper and signature choices</button></form>
     </div></div>
     {% endif %}
     <div class="card mb-3"><div class="card-header"><strong>Logical page and backgrounds</strong></div><div class="card-body">{% if legacy_composition_controls %}<div class="alert alert-warning small">This older schema keeps embedded physical composition for compatibility. New layouts use Print profiles for A5/A4 and simplex/duplex packaging.</div>{% else %}<p class="small text-muted">Configure logical Original, Duplicate, Terms, and D3 surfaces here. Physical paper, imposition, sequence, and duplex behavior belong to Print profiles.</p>{% endif %}<form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_settings">{{ settings_form.as_p }}<button class="btn btn-primary">Save settings</button></form></div></div>

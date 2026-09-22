@@ -31,6 +31,36 @@ def synthetic_payload():
 
 
 class PrecisionOverlayTests(SimpleTestCase):
+    def test_preprinted_business_name_omission_requires_matching_stock_and_internal_evidence(self):
+        from dataclasses import replace
+        original_hash = DocumentLayoutValidator.load(self.definition).content_hash
+        self.definition['business_name_preprinted'] = False
+        self.assertEqual(original_hash, DocumentLayoutValidator.load(self.definition).content_hash)
+        self.definition['blocks'] = [b for b in self.definition['blocks'] if b.get('binding') not in {'workspace.name', 'license.business_name'}]
+        with self.assertRaisesMessage(LayoutValidationError, 'Business name'):
+            DocumentLayoutValidator.load(self.definition)
+        self.definition['business_name_preprinted'] = True
+        with self.assertRaisesMessage(ValueError, 'preprinted-stationery profile'):
+            self.render()
+        self.profile = PrintProfileValidator.load({**self.profile.canonical_dict(), 'schema_version':2, 'stock_mode':'PREPRINTED'})
+        with fitz.open(stream=self.render().pdf, filetype='pdf') as pdf:
+            self.assertEqual(len(pdf), 2)
+            self.assertIn('TEST-00019', pdf[0].get_text())
+        self.payload = replace(self.payload, fields=tuple(f for f in self.payload.fields if f.key != 'workspace.name'))
+        with self.assertRaisesMessage(ValueError, 'internal source/verification'):
+            self.render()
+        self.definition['blocks'] = [b for b in self.definition['blocks'] if b.get('binding') not in {'license.display', 'license.number'}]
+        with self.assertRaisesMessage(LayoutValidationError, 'License'):
+            DocumentLayoutValidator.load(self.definition)
+
+    def test_preprinted_business_name_is_strictly_v4_boolean(self):
+        for invalid in ('true', 1, None, []):
+            with self.subTest(invalid=invalid), self.assertRaises(LayoutValidationError):
+                DocumentLayoutValidator.load({**self.definition, 'business_name_preprinted':invalid})
+        old = starter_layout('loan_ticket', schema_version=3, layout_mode='ABSOLUTE_OVERLAY').canonical_dict()
+        with self.assertRaisesMessage(LayoutValidationError, 'Unknown layout properties'):
+            DocumentLayoutValidator.load({**old, 'business_name_preprinted':True})
+
     def test_signature_choices_are_per_copy_hashed_and_stock_aware(self):
         from apps.tenant_apps.loans.documents.integrity import _includes_required_ticket_signatures
         with fitz.open() as pdf:

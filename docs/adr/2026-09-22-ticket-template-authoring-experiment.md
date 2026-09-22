@@ -82,6 +82,9 @@ omit internal identifiers. Business identity, approved terms, collateral coverag
 and signature space remain required on each front. Existing printed designs and
 artifacts are not rewritten. Signature declarations cover reviewed backgrounds
 or preprinted paper; arbitrary text/backgrounds cannot waive other business fields.
+The September 23 extension explicitly recognizes an owner-confirmed business name
+already on both preprinted copies, with stock compatibility enforced; see the
+[stock-choice decision](2026-09-22-ticket-signature-area-choices.md).
 
 The owner initially approved branch isolation and a design-first experiment and
 has now accepted the implementation for integration. Existing schema/background/binding and publication rules remain in

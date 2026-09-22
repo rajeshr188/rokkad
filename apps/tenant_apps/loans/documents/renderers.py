@@ -185,6 +185,8 @@ class ConfigurableDocumentRenderer:
 
     @classmethod
     def assert_print_profile_compatible(cls, layout, profile):
+        if layout.business_name_preprinted and profile.stock_mode != "PREPRINTED":
+            raise ValueError("A preprinted business name requires a preprinted-stationery profile.")
         if profile.stock_mode == "PREPRINTED" and (layout.schema_version < 4 or layout.layout_mode != "ABSOLUTE_OVERLAY"):
             raise ValueError("Preprinted stationery requires a precision ticket overlay.")
         logical_paper_size = (
@@ -207,7 +209,8 @@ class ConfigurableDocumentRenderer:
                     if area and ((area[1] == "PREPRINTED") != (profile.stock_mode == "PREPRINTED")):
                         raise ValueError(f"{copy_scope.title()}: signature-area choice does not match the print profile's paper stock.")
                     DocumentLayoutValidator.validate_precision_copy_evidence(layout.blocks, copy_scope,
-                        signature_on_stock=area is not None, require_interest_rate=layout.require_interest_rate)
+                        signature_on_stock=area is not None, require_interest_rate=layout.require_interest_rate,
+                        business_name_preprinted=layout.business_name_preprinted)
                     continue
                 required = REQUIRED_BINDINGS[layout.document_type] | REQUIRED_SECTIONS[layout.document_type]
                 present = DocumentLayoutValidator._unconditional_bindings_for_scope(

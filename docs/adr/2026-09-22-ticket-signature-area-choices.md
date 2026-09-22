@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: loans
-updated: 2026-09-22
+updated: 2026-09-23
 tags: [adr, loans, documents, signatures]
 related:
   - 2026-09-22-ticket-template-authoring-experiment.md
@@ -44,3 +44,15 @@ relaxing the complete source payload or altering approved economics. It does not
 erase an existing rate frame: clients remove that frame if present. Older schema
 contracts and old canonical hashes remain unchanged. Exact-artifact reprints do
 not reevaluate these choices.
+
+On September 23 the owner confirmed that JSK's business name, address and contact
+are already on both copies of its preprinted stationery. Extend the same explicit
+stock-choice approach with v4 `business_name_preprinted`, default false and omitted
+from canonical definitions when false, preserving existing hashes. A checked
+confirmation allows omission of the business-name frame on both copies; optional
+address/contact frames can also be removed. The renderer and assignment checks
+require a PREPRINTED profile whenever this declaration is true. It does not waive
+licence number, loan terms, borrower, collateral or internal source evidence, and
+does not automatically remove client frames. The ordinary editor exposes the
+choice beside signature/printed-interest settings. Existing published revisions
+and issued PDFs remain immutable; a correction clones and activates a revision.

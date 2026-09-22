@@ -102,12 +102,13 @@ def build_jsk_calibration_layout():
     """Owner-confirmed stock signatures and movable licence/approved-term fields.
 
     This is a calibration draft, not proof of alignment with physical stationery.
-    It contains bindings only: the business name lives on the selected licence.
+    Business name/address/contact are already on both copies of the owner's stock.
     """
     candidate = next(item for item in build_review()["templates"] if item["workspace"] == "jsk")
     definition = candidate["layout_candidate"]
     definition["name"] = "JSK preprinted A5 - calibration draft"
     definition["require_interest_rate"] = False
+    definition["business_name_preprinted"] = True
     for block in definition["blocks"]:
         if block["type"] == "field" and block["binding"] in {"loan.number", "loan.date"}:
             block["overflow_policy"] = "SHRINK"
@@ -138,9 +139,7 @@ def build_jsk_calibration_layout():
                 "font_size_pt": size, "leading_pt": leading or size + 1,
                 "padding_pt": 0, "show_label": bool(label), "field_label": label}
     definition["blocks"].extend([
-        field("license.business_name", 10, 5, 120, 8, 14),
         field("license.number", 10, 14, 85, 5, 9, label="Licence"),
-        field("license.business_address", 10, 20, 85, 10, 8),
     ])
     for scope, y in (("ORIGINAL", 162), ("DUPLICATE", 150)):
         definition["blocks"].extend([

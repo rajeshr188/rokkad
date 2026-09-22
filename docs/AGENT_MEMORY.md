@@ -65,6 +65,16 @@ both signature areas already exist on each stock copy. Loan rate/tenure remain
 approved loan facts. JSK has no guide artwork; added heading/term positions and
 collision corrections have accepted digital previews; physical alignment remains
 unverified, with its merge gate explicitly waived by the owner.
+On September 23 the owner clarified that JSK's business name, address and contact
+are already preprinted too. Omit those frames from JSK output, preserving stored
+licence details and the licence-number frame. The editor now offers an explicit
+v4 `business_name_preprinted` confirmation for both copies; it requires a
+PREPRINTED profile, defaults false without changing old canonical hashes, and
+does not waive internal source evidence or other required fields. Rehearsal JSK
+uses layout revision id 4 (version 2) with existing profile 2 on TEST series 14.
+Published revision 2 and issued TEST ticket 3 remain unchanged; use revision 4's
+marked preview to inspect the corrected design. The calibration builder matches
+the correction. No change to JCL's printed business heading.
 For excessive collateral text the owner's final choice is wrapping plus smaller
 font within the existing frame, NOT additional ticket sheets. Both sandbox
 drafts use SHRINK with automatic leading for collateral descriptions; JSK's

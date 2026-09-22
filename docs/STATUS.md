@@ -7,6 +7,40 @@ tags: [status, architecture]
 
 # Status
 
+## JSK preprinted business details corrected (2026-09-23)
+
+Owner clarified that JSK's name/address/contact are already on its stationery.
+Removed only `license.business_name` and `license.business_address` frames from
+a clone of its published rehearsal template. New revision id 4 (version 2) is
+published and assigned to TEST series 14 with existing PREPRINTED profile 2.
+Licence number, borrower details/photos, collateral, amounts, tenure, timestamp,
+geometry and wrapping choices remain. Stored business details and old published
+revision 2 are unchanged. No JCL, imported-licence or production changes.
+
+The existing validator required a printed business-name frame, so added a bounded
+v4 `business_name_preprinted` confirmation in the ordinary editor. Only this
+business-name coverage requirement can be satisfied by the declaration; other
+required fields and complete internal evidence remain enforced. Profile checks
+reject PLAIN stock. The default is omitted from canonical data to preserve old
+hashes, and old schemas reject the new property. Updated the JSK calibration
+builder, starter help, operator guide and stock-choice ADR; no model/migration.
+
+All 110 focused overlay, setup UI, print-profile, issuance and historical-evidence
+tests pass (25.084 s), including three new declaration/editor checks. Import
+boundaries pass for 715 tracked Python files; 370 curated documentation links
+pass. Restarted only local port 8081 on `rls-mvp`. Both corrected A5 preview pages
+were rendered and visually checked without business-heading duplication; photos
+are present after retrying transient R2 unavailability. The normal reprint of
+JSK issue 3 remains byte-identical. No loan, licence or issue rows changed.
+
+Corrected layout hash:
+`a5bb8e375ca1afaa6c3cbafb81f39d5a7a0fb8ef9b6be6bd92409f04038fc419`.
+Evidence is in `outputs/ticket-template-rollout-20260922/` under
+`jsk-preprinted-correction.json`, `jsk-preprinted-verification.json`,
+`jsk-preprinted-corrected-preview.pdf`, and `preprinted-business-tests.log`.
+The existing issued TEST ticket retains its original heading by design; the
+correction applies to new issues. Historical reprints are not regenerated.
+
 ## TEST-series template activation completed (2026-09-23)
 
 Activated the reviewed pairs through the authenticated, CSRF-protected **Use

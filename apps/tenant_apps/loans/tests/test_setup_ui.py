@@ -2197,7 +2197,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         for key in ("stock", "changed"):
             LoanDocumentLayoutService.add_asset(revision=revision, key=key, kind="BACKGROUND", content=content, filename="stock.pdf", actor=self.owner)
         url = reverse("loans:document_layout_overlay_designer", args=[revision.pk])
-        self.assertContains(self.tenant_get(url), "Save signature choices")
+        self.assertContains(self.tenant_get(url), "Save paper and signature choices")
         choices = {"operation": "save_signature_areas", "original_source": "BACKGROUND", "duplicate_source": "FRAMES", "require_interest_rate": "on"}
         self.tenant_post(url, choices)
         revision.refresh_from_db()
@@ -2247,6 +2247,28 @@ class LoansSetupUiTests(WorkspaceTestCase):
         Membership.objects.create(user=viewer, company=self.tenant, role=role)
         self.client.force_login(viewer)
         self.assertEqual(self.tenant_post(url, choices).status_code, 403)
+
+    def test_editor_records_preprinted_business_name_confirmation(self):
+        definition = starter_layout('loan_ticket', schema_version=4, layout_mode='ABSOLUTE_OVERLAY').canonical_dict()
+        revision = LoanDocumentLayoutService.create_layout(workspace=self.tenant, document_type='loan_ticket',
+            name='Preprinted business details', definition=definition, actor=self.owner)
+        url = reverse('loans:document_layout_overlay_designer', args=[revision.pk])
+        response = self.tenant_post(url, {'operation':'save_signature_areas', 'original_source':'FRAMES',
+            'duplicate_source':'FRAMES', 'require_interest_rate':'on', 'business_name_preprinted':'on'})
+        self.assertEqual(response.status_code, 302)
+        revision.refresh_from_db()
+        self.assertTrue(revision.definition['business_name_preprinted'])
+        self.assertTrue(self.tenant_get(url).context['signature_form'].initial['business_name_preprinted'])
+        definition = revision.definition
+        definition['blocks'] = [b for b in definition['blocks'] if b.get('binding') not in {'workspace.name','license.business_name'}]
+        LoanDocumentLayoutService.update_draft(revision=revision, definition=definition, actor=self.owner)
+        revision.refresh_from_db()
+        before = revision.content_hash
+        # Removing the confirmation cannot silently waive the missing name.
+        self.tenant_post(url, {'operation':'save_signature_areas','original_source':'FRAMES',
+            'duplicate_source':'FRAMES','require_interest_rate':'on'})
+        revision.refresh_from_db()
+        self.assertEqual(revision.content_hash, before)
 
     def test_signature_editor_duplicate_canvas_uses_its_own_background(self):
         definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
