@@ -147,6 +147,13 @@ def pawn_loan_repay(request, pk):
                 )
                 return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     balance = _safe_balance(loan)
+    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        from apps.tenant_apps.loans.services.opening_servicing import opening_payment_balance
+        try:
+            balance, obligation_state = opening_payment_balance(loan, as_of_date=timezone.localdate())
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            balance = None
+            form.add_error(None, str(exc))
     item_by_id = {item.pk: item for item in loan.collateral_items.all()}
     return _render_action(
         request,

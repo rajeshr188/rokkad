@@ -250,6 +250,10 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
         from .history_setup import _check_number
         _check_number(loan.workspace_id, historical_number, "PAWN_LOAN_RELEASE")
         release_number = historical_number
+    collection_detail = None
+    if opening_origin and loan.loan_events.filter(event_kind="REPAYMENT").exists():
+        from .opening_servicing import payment_collection_detail
+        collection_detail = payment_collection_detail(loan, as_of_date=effective_date, request_key=request_key, operation="RELEASE_RECEIPT")
     catch_up_row = None
     if partial_accrual:
         catch_up_row = _record_release_accrual(
@@ -257,6 +261,7 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
             preview=partial_accrual,
             actor=actor,
             request_key=request_key,
+            collection_detail=collection_detail,
         )
     payload = release_receipt_payload(
         loan,
@@ -279,7 +284,7 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
     if opening_origin:
         from .opening_servicing import _record_opening_servicing_event
         writer = _record_opening_servicing_event
-        payload["opening_collection"] = {"profile": "opening-release/1", "opening_event_id": opening_origin.pk}
+        payload["opening_collection"] = collection_detail or {"profile": "opening-release/1", "opening_event_id": opening_origin.pk}
         payload["release"]["unscheduled_interest_paid"] = str(interest_amount - scheduled_interest_amount)
     event, _ = writer(
         loan.pk,
@@ -511,8 +516,8 @@ def _request_key(value):
     return value
 
 
-def _record_release_accrual(loan, *, preview, actor, request_key=None):
-    """Persist the release-day partial period before its settlement event."""
+def _record_release_accrual(loan, *, preview, actor, request_key=None, collection_detail=None):
+    """Persist the coupled catch-up before its release or opening payment."""
     policy = loan.policy_snapshot
     event = None
     if should_record_pawn_accrual_event(preview, policy):
@@ -538,6 +543,10 @@ def _record_release_accrual(loan, *, preview, actor, request_key=None):
                 "calculation": "CUMULATIVE_BASELINE_LESS_CUTOVER",
             }
             payload["accrual"]["calculation_kind"] = "OPENING_COLLECTION_CATCH_UP"
+            if collection_detail is not None:
+                payload["opening_collection"] = collection_detail
+                payload["accrual"]["release_catch_up"] = collection_detail["operation"] == "RELEASE_RECEIPT"
+                payload["accrual"]["collection_catch_up"] = True
         event, _ = writer(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
@@ -568,7 +577,8 @@ def _record_release_accrual(loan, *, preview, actor, request_key=None):
             "period_number": preview.period_number,
             "period_fraction": str(preview.period_fraction),
             "recognized_interest": str(preview.recognized_interest),
-            "release_catch_up": True,
+            "release_catch_up": collection_detail is None or collection_detail["operation"] == "RELEASE_RECEIPT",
+            **({"collection_catch_up": True} if collection_detail is not None else {}),
             "loan_event_id": event.pk if event else None,
         },
     )

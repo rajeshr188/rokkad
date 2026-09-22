@@ -42,7 +42,7 @@ not be reintroduced as an approval gate. Record its alignment as untested.
 | Destination server | Owner selected separate Linode; creation, SSH address and verified access pending. |
 | Database conversion | Accepted snapshot and separate clean-target replay reconcile all source loan IDs. Fresh data and a later opening date require new preparation. |
 | Media | Rehearsal attachment, source retention, private access and duplicate-free retry verified. Missing and blank source images remain explicitly reported. |
-| Imported-loan servicing | Owner confirmed both interest-only collections and partial principal repayments are required, with reduced-principal interest from the next monthly anniversary. Both remain unsupported for imported openings and are go-live blockers. Implement and test this bounded continuation path. New TEST-loan payment acceptance does not cover imported openings. |
+| Imported-loan servicing | Dedicated imported interest-only/partial-principal collection, coupled reversal and payment-aware export/restore are implemented. Reduced-principal interest starts at the next original charge boundary. Finish branch rehearsal on the release candidate; new TEST-loan payment acceptance does not cover imported openings. |
 | Documents and branch UX | JCL plain-paper and JSK data-only ticket previews accepted; TEST-series activation/reprints verified. Finish payment receipt/release memo and essential staff/device/language checks. |
 | Production media configuration | `prod_r2` is implemented and settings-tested; deployment and authenticated storage tests on the new host are pending. |
 | Media reliability | Local R2 reads have intermittently timed out or made photos unavailable; successful retries are not a resolution. Verify upload/read/print reliability from the destination host before opening. |
@@ -56,10 +56,10 @@ Required branch journeys are ordinary login and Workspace isolation, borrower
 search, a new-loan workflow with current setup, imported balance/interest display,
 full release and supported reversal, printing and private media. Rehearse financial
 writes in a disposable target, not as throwaway transactions in the final business
-database. Ordinary partial repayments on imported openings remain guarded; go-live
-must not imply that this unsupported workflow has become available.
+database. Use the dedicated opening-aware repayment path through Record payment;
+generic event writing and unsupported native servicing remain guarded.
 
-### Imported collections: required next implementation
+### Imported collections: implementation and rehearsal scope
 
 On September 23 the owner confirmed that branches need both interest-only and
 partial-principal collections on migrated loans. The owner then confirmed for
@@ -67,12 +67,12 @@ JCL, JSK and Lakshmi: **charge on the reduced principal from the next monthly
 anniversary**. Preserve interest already earned for the current monthly period;
 do not prorate from the payment date or shift the loan's original anniversary.
 For example, for a loan with anniversaries on the 15th, a principal repayment on
-September 23 reduces the base for the October 15 charge. Interest-only payment
-does not change that principal base. The existing reviewed rule covers unchanged
-original principal only, so this confirmed extension still needs implementation;
-the owner answer does not make the current payment handler safe to enable.
+September 23 reduces the base for the charge following the October 15 anniversary
+(October 16 under the preserved inclusive calendar). Interest-only payment does
+not change that principal base. The new `opening-payments/1` continuation extends
+the unchanged-principal rule through dedicated repayment/release services.
 
-Keep this work inside the existing collection workflow. Its required boundary is:
+The implemented boundary and acceptance coverage are:
 
 - Preview and record interest-only and partial-principal payments with the
   confirmed interest rule, preserving original dates, upfront coverage and opening
@@ -89,17 +89,17 @@ Keep this work inside the existing collection workflow. Its required boundary is
   newest-first reversal agree, including same-day retry and reversal cases.
   Payment alone must not return collateral or claim physical closure.
 - Preserve immutable repayment allocation evidence through export and restore.
-  The current opening export's frozen row contract does not include repayment
-  allocation lines; enabling payments without addressing that would leave
-  portability incomplete. Preserve existing export compatibility explicitly.
+  Payment-bearing histories use the version 2 export contract, including repayment
+  allocation lines. Histories without payments retain the unchanged v1 contract.
 - Test opening principal/interest/fees, month boundaries, cumulative rounding,
   item allocations, repeated collections, release after payments, reversal,
   transaction rollback, role permissions, cross-Workspace denial and export/restore.
 
 The existing 43 opening continuation/release/obligation/event-storage and deployment
 tests passed on September 23 in the isolated ticket test database. This proves the
-existing bounded paths, not the new payment requirement; no payment guard has
-been relaxed and no rehearsal or production financial records changed.
+existing bounded paths, not the new payment requirement. New payment regression
+evidence is recorded in [Status](../STATUS.md). The generic guard remains intact;
+no rehearsal or production financial records were changed by implementation.
 
 ### Accepted template transfer bundle
 
@@ -251,8 +251,8 @@ target records to simulate rollback.
 
 ## Immediate next action
 
-First implement and rehearse the confirmed imported-payment workflow above,
-including reversal and export/restore, while keeping unsupported operations
+First rehearse the implemented imported-payment workflow above in a disposable
+target, including reversal and export/restore, while keeping unsupported operations
 guarded. Then address production media admission, essential UI/printing checks,
 destination provisioning and recovery using this single readiness checklist.
 Resolve required business-flow gaps before choosing a freeze date.

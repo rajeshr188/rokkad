@@ -1,0 +1,815 @@
+{
+  "profile": "loan-opening-export/2",
+  "fields": {
+    "loan": {
+      "id": [
+        "reference",
+        false
+      ],
+      "workspace_id": [
+        "reference",
+        false
+      ],
+      "license_id": [
+        "reference",
+        false
+      ],
+      "license_revision_id": [
+        "reference",
+        true
+      ],
+      "series_id": [
+        "reference",
+        false
+      ],
+      "borrower_id": [
+        "reference",
+        false
+      ],
+      "product_version_id": [
+        "reference",
+        false
+      ],
+      "loan_number": [
+        "text",
+        false
+      ],
+      "state": [
+        "text",
+        false
+      ],
+      "principal_amount": [
+        "decimal",
+        false
+      ],
+      "monthly_interest_rate": [
+        "decimal",
+        false
+      ],
+      "loan_date": [
+        "date",
+        false
+      ],
+      "tenure_months": [
+        "integer",
+        false
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ],
+      "updated_at": [
+        "timestamp",
+        false
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ],
+      "updated_by_id": [
+        "reference",
+        true
+      ]
+    },
+    "origin": {
+      "id": [
+        "reference",
+        false
+      ],
+      "public_id": [
+        "uuid",
+        false
+      ],
+      "source_namespace": [
+        "uuid",
+        false
+      ],
+      "source_id": [
+        "text",
+        false
+      ],
+      "source_sha256": [
+        "text",
+        false
+      ],
+      "document": [
+        "json",
+        false
+      ],
+      "references": [
+        "json",
+        false
+      ],
+      "imported_by_id": [
+        "reference",
+        false
+      ],
+      "imported_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "policy": {
+      "id": [
+        "reference",
+        false
+      ],
+      "policy_version": [
+        "integer",
+        false
+      ],
+      "interest_method": [
+        "text",
+        false
+      ],
+      "partial_month_method": [
+        "text",
+        false
+      ],
+      "partial_month_cutoff_days": [
+        "integer",
+        false
+      ],
+      "partial_month_lower_fraction": [
+        "decimal",
+        false
+      ],
+      "capitalization_interval_periods": [
+        "integer",
+        false
+      ],
+      "valuation_method": [
+        "text",
+        false
+      ],
+      "maximum_ltv_ratio": [
+        "decimal",
+        false
+      ],
+      "rounding_method": [
+        "text",
+        false
+      ],
+      "currency_quantum": [
+        "decimal",
+        false
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "items": {
+      "id": [
+        "reference",
+        false
+      ],
+      "public_id": [
+        "uuid",
+        false
+      ],
+      "description": [
+        "text",
+        false
+      ],
+      "metal": [
+        "text",
+        false
+      ],
+      "gross_weight": [
+        "decimal",
+        true
+      ],
+      "net_weight": [
+        "decimal",
+        false
+      ],
+      "purity_percentage": [
+        "decimal",
+        false
+      ],
+      "latest_appraised_value": [
+        "decimal",
+        true
+      ],
+      "allocated_principal": [
+        "decimal",
+        true
+      ],
+      "monthly_interest_rate": [
+        "decimal",
+        true
+      ],
+      "custody_state": [
+        "text",
+        false
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ],
+      "updated_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "events": {
+      "id": [
+        "reference",
+        false
+      ],
+      "event_kind": [
+        "text",
+        false
+      ],
+      "effective_date": [
+        "date",
+        false
+      ],
+      "payload": [
+        "json",
+        false
+      ],
+      "payload_fingerprint": [
+        "text",
+        false
+      ],
+      "idempotency_key": [
+        "text",
+        false
+      ],
+      "reversal_of_id": [
+        "reference",
+        true
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "accruals": {
+      "id": [
+        "reference",
+        false
+      ],
+      "period_number": [
+        "integer",
+        false
+      ],
+      "period_start": [
+        "date",
+        false
+      ],
+      "period_end": [
+        "date",
+        false
+      ],
+      "period_fraction": [
+        "decimal",
+        false
+      ],
+      "calculation_base": [
+        "decimal",
+        false
+      ],
+      "unrounded_interest": [
+        "decimal",
+        false
+      ],
+      "recognized_interest": [
+        "decimal",
+        false
+      ],
+      "loan_event_id": [
+        "reference",
+        true
+      ],
+      "finalized_by_id": [
+        "reference",
+        true
+      ],
+      "finalized_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "accrual_lines": {
+      "id": [
+        "reference",
+        false
+      ],
+      "accrual_id": [
+        "reference",
+        false
+      ],
+      "collateral_item_id": [
+        "reference",
+        false
+      ],
+      "principal_base": [
+        "decimal",
+        false
+      ],
+      "monthly_interest_rate": [
+        "decimal",
+        false
+      ],
+      "period_fraction": [
+        "decimal",
+        false
+      ],
+      "unrounded_interest": [
+        "decimal",
+        false
+      ],
+      "calculated_interest": [
+        "decimal",
+        false
+      ],
+      "advance_interest_applied": [
+        "decimal",
+        false
+      ],
+      "recognized_interest": [
+        "decimal",
+        false
+      ]
+    },
+    "releases": {
+      "id": [
+        "reference",
+        false
+      ],
+      "release_number": [
+        "text",
+        false
+      ],
+      "request_key": [
+        "text",
+        false
+      ],
+      "effective_date": [
+        "date",
+        false
+      ],
+      "is_full_release": [
+        "boolean",
+        false
+      ],
+      "settlement_amount": [
+        "decimal",
+        false
+      ],
+      "principal_amount": [
+        "decimal",
+        false
+      ],
+      "interest_amount": [
+        "decimal",
+        false
+      ],
+      "fee_amount": [
+        "decimal",
+        false
+      ],
+      "valuation_snapshot": [
+        "json",
+        false
+      ],
+      "loan_event_id": [
+        "reference",
+        false
+      ],
+      "catch_up_accrual_id": [
+        "reference",
+        true
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "release_items": {
+      "id": [
+        "reference",
+        false
+      ],
+      "release_id": [
+        "reference",
+        false
+      ],
+      "collateral_item_id": [
+        "reference",
+        false
+      ],
+      "valuation_snapshot": [
+        "json",
+        false
+      ],
+      "returned_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "release_reversals": {
+      "id": [
+        "reference",
+        false
+      ],
+      "release_id": [
+        "reference",
+        false
+      ],
+      "loan_event_id": [
+        "reference",
+        false
+      ],
+      "catch_up_reversal_event_id": [
+        "reference",
+        true
+      ],
+      "reason": [
+        "text",
+        false
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "closing_lines": {
+      "id": [
+        "reference",
+        false
+      ],
+      "loan_event_id": [
+        "reference",
+        false
+      ],
+      "collateral_item_id": [
+        "reference",
+        false
+      ],
+      "allocation_order": [
+        "integer",
+        false
+      ],
+      "monthly_interest_rate": [
+        "decimal",
+        false
+      ],
+      "balance_before": [
+        "decimal",
+        false
+      ],
+      "principal_settled": [
+        "decimal",
+        false
+      ],
+      "balance_after": [
+        "decimal",
+        false
+      ]
+    },
+    "custody_events": {
+      "id": [
+        "reference",
+        false
+      ],
+      "collateral_item_id": [
+        "reference",
+        false
+      ],
+      "release_id": [
+        "reference",
+        true
+      ],
+      "release_reversal_id": [
+        "reference",
+        true
+      ],
+      "from_state": [
+        "text",
+        false
+      ],
+      "to_state": [
+        "text",
+        false
+      ],
+      "effective_date": [
+        "date",
+        false
+      ],
+      "actor_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "schedules": {
+      "id": [
+        "reference",
+        false
+      ],
+      "source_event_id": [
+        "reference",
+        false
+      ],
+      "version": [
+        "integer",
+        false
+      ],
+      "contract_version": [
+        "text",
+        false
+      ],
+      "fingerprint": [
+        "text",
+        false
+      ],
+      "disbursed_on": [
+        "date",
+        false
+      ],
+      "maturity_date": [
+        "date",
+        false
+      ],
+      "principal": [
+        "decimal",
+        false
+      ],
+      "contractual_interest": [
+        "decimal",
+        false
+      ],
+      "rounding_adjustment": [
+        "decimal",
+        false
+      ],
+      "supersedes_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ]
+    },
+    "obligations": {
+      "id": [
+        "reference",
+        false
+      ],
+      "schedule_version_id": [
+        "reference",
+        false
+      ],
+      "sequence": [
+        "integer",
+        false
+      ],
+      "due_date": [
+        "date",
+        false
+      ],
+      "principal_due": [
+        "decimal",
+        false
+      ],
+      "interest_due": [
+        "decimal",
+        false
+      ],
+      "opening_principal": [
+        "decimal",
+        false
+      ],
+      "closing_principal": [
+        "decimal",
+        false
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "schedule_changes": {
+      "id": [
+        "reference",
+        false
+      ],
+      "schedule_version_id": [
+        "reference",
+        false
+      ],
+      "source_event_id": [
+        "reference",
+        false
+      ],
+      "kind": [
+        "text",
+        false
+      ],
+      "effective_date": [
+        "date",
+        false
+      ],
+      "reason": [
+        "text",
+        false
+      ],
+      "reversal_of_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ]
+    },
+    "allocations": {
+      "id": [
+        "reference",
+        false
+      ],
+      "source_event_id": [
+        "reference",
+        false
+      ],
+      "obligation_id": [
+        "reference",
+        false
+      ],
+      "component": [
+        "text",
+        false
+      ],
+      "amount": [
+        "decimal",
+        false
+      ],
+      "allocation_order": [
+        "integer",
+        false
+      ],
+      "reversal_of_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ]
+    },
+    "appraisals": {
+      "id": [
+        "reference",
+        false
+      ],
+      "collateral_item_id": [
+        "reference",
+        false
+      ],
+      "version": [
+        "integer",
+        false
+      ],
+      "effective_at": [
+        "timestamp",
+        false
+      ],
+      "appraised_value": [
+        "decimal",
+        false
+      ],
+      "status": [
+        "text",
+        false
+      ],
+      "method": [
+        "text",
+        false
+      ],
+      "evidence_reference": [
+        "text",
+        false
+      ],
+      "review_notes": [
+        "text",
+        false
+      ],
+      "valuation_context": [
+        "json",
+        false
+      ],
+      "supersedes_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ],
+      "created_by_id": [
+        "reference",
+        true
+      ]
+    },
+    "change_log": {
+      "id": [
+        "reference",
+        false
+      ],
+      "event_kind": [
+        "text",
+        false
+      ],
+      "from_state": [
+        "text",
+        false
+      ],
+      "to_state": [
+        "text",
+        false
+      ],
+      "reason": [
+        "text",
+        false
+      ],
+      "metadata": [
+        "json",
+        false
+      ],
+      "actor_id": [
+        "reference",
+        true
+      ],
+      "created_at": [
+        "timestamp",
+        false
+      ]
+    },
+    "repayment_lines": {
+      "id": [
+        "reference",
+        false
+      ],
+      "loan_event_id": [
+        "reference",
+        false
+      ],
+      "collateral_item_id": [
+        "reference",
+        false
+      ],
+      "allocation_order": [
+        "integer",
+        false
+      ],
+      "monthly_interest_rate": [
+        "decimal",
+        false
+      ],
+      "balance_before": [
+        "decimal",
+        false
+      ],
+      "principal_applied": [
+        "decimal",
+        false
+      ],
+      "balance_after": [
+        "decimal",
+        false
+      ]
+    }
+  }
+}

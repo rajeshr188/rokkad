@@ -175,7 +175,7 @@ def assert_pawn_loan_financial_actions_allowed(
     """
     loan = _locked_loan(loan_id) if lock else _tenant_loan(loan_id)
     if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
-        raise PawnDisbursalError("General migration opening servicing is not enabled; use full release or its reversal.")
+        raise PawnDisbursalError("General migration opening servicing is not enabled; use the dedicated payment, full release or reversal workflow.")
     return loan
 
 

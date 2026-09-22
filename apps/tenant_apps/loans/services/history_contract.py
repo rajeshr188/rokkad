@@ -218,7 +218,7 @@ def parse(content):
                 field="document",
             )
         records = [json.loads(line, object_pairs_hook=_pairs, parse_constant=lambda _: (_ for _ in ()).throw(HistoryError("Non-finite JSON value.", category=MALFORMED_DATA, code="DOCUMENT_FORMAT", field="document"))) for line in lines]
-        if isinstance(records[0], dict) and records[0].get("profile") == "loan-opening-export/1":
+        if isinstance(records[0], dict) and records[0].get("profile") in {"loan-opening-export/1", "loan-opening-export/2"}:
             raise HistoryError(
                 "This is an opening evidence export. Use the dedicated opening restore command; upload a complete loan-history/1 file here.",
                 category=OPERATIONAL_READINESS,

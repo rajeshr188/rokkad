@@ -18,7 +18,7 @@ from .opening_continuation import preview_opening_collection
 from .opening_evidence import read_opening_evidence
 from .opening_import import PROFILE as COMMIT_PROFILE
 
-from .opening_contract import FIELDS, MAX_RECORDS, PROFILE
+from .opening_contract import FIELDS, FIELDS_V2, MAX_RECORDS, PROFILE, PAYMENT_PROFILE
 
 
 def _json(value):
@@ -38,7 +38,7 @@ def _json(value):
 
 
 def _row(kind, instance):
-    return _json({name: getattr(instance, name) for name in FIELDS[kind].split()})
+    return _json({name: getattr(instance, name) for name in FIELDS_V2[kind].split()})
 
 
 def _access(workspace_id, actor):
@@ -117,8 +117,11 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     balance = calculate_pawn_loan_balance(loan, events=events, collateral_items=items,
         policy_snapshot=loan.policy_snapshot, as_of_date=as_of, pending_delivery_blocks=False)
     settled = balance.principal_outstanding == balance.interest_outstanding == balance.fees_outstanding == 0
-    if ((loan.state == "CLOSED") != settled or
-            any(item.custody_state != ("WITH_CUSTOMER" if settled else "IN_VAULT") for item in items)):
+    closed = loan.state == "CLOSED"
+    reversed_ids = {row.reversal_of_id for row in events if row.event_kind == "REVERSAL" and row.effective_date <= as_of}
+    released = any(row.event_kind == "RELEASE_RECEIPT" and row.effective_date <= as_of and row.pk not in reversed_ids for row in events)
+    if (closed != released or (closed and not settled) or
+            any(item.custody_state != ("WITH_CUSTOMER" if closed else "IN_VAULT") for item in items)):
         raise HistoryError("Opening balance, loan state and collateral custody disagree.")
 
     # Every query is directly Workspace-scoped, including child evidence tables.
@@ -142,6 +145,9 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     evidence["release_items"] = rows("release_items", m.PawnLoanReleaseItem, release_id__in=release_ids)
     evidence["release_reversals"] = rows("release_reversals", m.PawnLoanReleaseReversal, release_id__in=release_ids)
     evidence["closing_lines"] = rows("closing_lines", m.PawnLoanPrincipalClosingLine, loan_event_id__in=[event.pk for event in events])
+    has_payments = any(event.event_kind == "REPAYMENT" for event in events)
+    if has_payments:
+        evidence["repayment_lines"] = rows("repayment_lines", m.PawnLoanRepaymentAllocationLine, loan_event_id__in=[event.pk for event in events])
     if (len(evidence["schedules"]) != 1 or evidence["schedules"][0]["id"] != origin.references["schedule_id"] or
             evidence["schedules"][0]["source_event_id"] != openings[0].pk):
         raise HistoryError("The reviewed opening schedule is missing or has an unsupported replacement.")
@@ -170,7 +176,8 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     evidence["recorded_balance"] = {name: decimal(getattr(balance, name + "_outstanding")) for name in ("principal", "interest", "fees")}
     evidence["interest_conceded"] = decimal(balance.interest_conceded)
     evidence["collection_preview"] = _json(asdict(continuation))
-    manifest = {"profile": PROFILE, "coverage": "OPENING_AND_SUPPORTED_SERVICING",
+    profile = PAYMENT_PROFILE if has_payments else PROFILE
+    manifest = {"profile": profile, "coverage": "OPENING_AND_SUPPORTED_SERVICING",
         "financial_history_from": openings[0].effective_date.isoformat(), "as_of": as_of.isoformat(),
         "history_before_cutover": "UNAVAILABLE", "restore_supported": True,
         "reference_scope": {"workspace_id": workspace_id, "ids": "SOURCE_DATABASE_LOCAL"},
@@ -182,5 +189,5 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     if audit:
         AuditLog.log("DATA_EXPORT", company=workspace, user=actor,
             description="Exported opening and supported servicing evidence; earlier history unavailable.",
-            data={"loan": loan.pk, "profile": PROFILE, "sha256": manifest["sha256"]})
+            data={"loan": loan.pk, "profile": profile, "sha256": manifest["sha256"]})
     return content

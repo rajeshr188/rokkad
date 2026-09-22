@@ -46,9 +46,10 @@ the completed batch. Opening details guide full collection/release, show origina
 maturity/grace and explain which earlier history is unavailable. Prepare destination
 monitoring separately; missing appraisal evidence remains visibly unknown. Rehearse
 settlement, concession, receipt and reversal before bulk rollout.
-Ordinary partial repayments and other general financial actions are still blocked
-for migration openings; do not promise general native-loan servicing from a
-successful opening import.
+The dedicated opening-aware Record payment action supports partial collections
+under the confirmed anniversary rule. Native periodic accrual, capitalization,
+renewal, auction and partial collateral release remain unavailable; a successful
+opening import does not authorize general native-loan servicing.
 
 
 This is the first `jcl` dump adapter, for a small reviewed active-loan rehearsal.
@@ -127,6 +128,16 @@ automatic fallback.
 
 ## Download after import
 
+For an imported loan, **Record payment** now accepts interest-only and partial
+principal collections. Preview the amount first: fees and interest are covered
+before principal, and higher-rate collateral principal is reduced first. A
+principal reduction affects the next monthly charge on the original calendar;
+the existing inclusive rule posts the charge the day after the anniversary.
+It does not recalculate the current month's interest or return collateral.
+Use the receipt link in event history after recording. Administrators correct
+collections newest first using reversal; interest catch-up reverses with its
+payment. **Collect and release** remains the separate custody/closure action.
+
 Owners can use **Export loan data JSONL** on the loan detail. For an opening, this
 downloads `loan-opening.jsonl`, preserving the reviewed origin, available source
 verification and later supported servicing evidence. It records an export audit
@@ -135,7 +146,10 @@ recorded balances and unposted collection estimates are separate.
 
 Opening exports can be restored through the dedicated operator path below. The
 complete-history browser upload remains separate. See the
-[file contract](../contracts/loan-opening-export-v1.md).
+[v1 file contract](../contracts/loan-opening-export-v1.md). Histories containing
+payments use the [v2 contract](../contracts/loan-opening-export-v2.md), preserving
+the principal allocations needed for future interest and restoration. The same
+dedicated restore command accepts either version.
 
 ## Restore an opening export
 

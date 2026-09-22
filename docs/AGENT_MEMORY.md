@@ -15,13 +15,18 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 ## Product and tenant foundation
 
 On September 23 the owner confirmed that imported loans must support both
-interest-only payments and partial principal repayments before cutover. Existing
-opening servicing supports full release/reversal only. The owner confirmed that
+interest-only payments and partial principal repayments before cutover. The owner confirmed that
 principal reductions change interest from the next original monthly anniversary
 for all three branches; retain the current period's already-earned interest.
-This requires an explicit extension of unchanged-principal continuation, not a
-guard bypass. Preserve payment allocation evidence in export
-and restore as well as in balances, receipts and reversals. Current opening
+The dedicated repayment path now implements this with `opening-payments/1`
+evidence, atomic collection catch-up, ordinary fees/interest/principal allocation,
+and highest-rate-item principal reductions. The inclusive original calendar still
+charges the day after each anniversary. Reversal compensates payment and catch-up
+together; debt-free loans remain active until explicit collateral return/release.
+General event posting, periodic accrual, renewal and auction remain guarded.
+Payment histories use `loan-opening-export/2`, with frozen item-allocation rows
+and financial-service replay on restore; histories without payments retain v1.
+See the [payment decision](adr/2026-09-23-opening-partial-payments.md). Current opening
 servicing requires dates strictly after the opening date; plan an overnight
 boundary unless that contract is deliberately extended. See the
 [cutover runbook](implementation/linode-production-cutover.md).

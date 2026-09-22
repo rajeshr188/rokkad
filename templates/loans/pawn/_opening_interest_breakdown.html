@@ -8,10 +8,15 @@
       <div class="col-md-4"><div class="small text-muted">Months charged after the upfront month</div><strong>{{ interest.charge_months }} months</strong><div class="small">First month paid upfront, excluded from this count.</div></div>
       <div class="col-md-4"><div class="small text-muted">Next interest increase</div><strong>{{ interest.next_increase_on|date:"d M Y" }}</strong></div>
     </div>
+    {% if interest.has_payments %}
+    <p class="mt-3 mb-2">Monthly interest on the remaining principal: <strong>{{ interest.monthly_interest }}</strong>. Principal reductions apply to subsequent monthly charges, preserving already-earned interest.</p>
+    <p class="mb-2">Cumulative interest calculated using each month's principal: <strong>{{ interest.cumulative_interest }}</strong>, rounded once to whole rupees. Additional unposted interest: <strong>{{ interest.additional_interest }}</strong>.</p>
+    {% else %}
     <p class="mt-3 mb-2">Monthly interest across all items: <strong>{{ interest.monthly_interest }}</strong>.
       {{ interest.monthly_interest }} × {{ interest.charge_months }} months = <strong>{{ interest.cumulative_interest }}</strong>, rounded once to whole rupees.</p>
     <p class="mb-2">At import on {{ opening_review.cutover.date }}: {{ interest.cutover_months }} chargeable months; unpaid interest brought forward <strong>{{ interest.opening_unpaid_interest }}</strong>.
       Since import: {{ interest.new_months }} additional months, adding <strong>{{ interest.additional_interest }}</strong>.</p>
+    {% endif %}
     <p class="mb-2"><strong>Interest payable now: {{ interest.total_interest }}</strong> (before any new concession).</p>
     <p class="small text-muted mb-0">Interest increases the day after each monthly anniversary, not daily. Short months use their last day. The month count explains calculated charges; unpaid interest also depends on the balance brought forward at import.</p>
   </div>

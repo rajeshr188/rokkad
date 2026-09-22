@@ -17,6 +17,13 @@ FIXTURES = Path(__file__).with_name("fixtures")
 
 
 class OpeningContractTests(SimpleTestCase):
+    def test_v2_row_definition_adds_payment_lines_without_changing_v1(self):
+        from django.conf import settings
+        from apps.tenant_apps.loans.services.opening_contract import PAYMENT_PROFILE, ROW_FIELDS_V2
+        published = json.loads((Path(settings.BASE_DIR) / "docs/contracts/loan-opening-export-v2-rows.json").read_text(encoding="utf-8"))
+        self.assertEqual(published, json.loads(dump({"profile": PAYMENT_PROFILE, "fields": ROW_FIELDS_V2})))
+        self.assertEqual({k: v for k, v in ROW_FIELDS_V2.items() if k != "repayment_lines"}, ROW_FIELDS)
+
     def test_v1_row_definition_matches_published_contract(self):
         from django.conf import settings
         published = json.loads((Path(settings.BASE_DIR) / "docs/contracts/loan-opening-export-v1-rows.json").read_text(encoding="utf-8"))

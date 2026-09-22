@@ -246,14 +246,26 @@ ROW_FIELDS = {
 # Retain the existing public field inventory for callers of opening_export.FIELDS.
 FIELDS = {kind: " ".join(fields) for kind, fields in ROW_FIELDS.items()}
 
+# Version 1 remains frozen. Version 2 adds the actual per-item payment evidence.
+PAYMENT_PROFILE = "loan-opening-export/2"
+ROW_FIELDS_V2 = {**ROW_FIELDS, "repayment_lines": {
+    "id": ("reference", False), "loan_event_id": ("reference", False),
+    "collateral_item_id": ("reference", False), "allocation_order": ("integer", False),
+    "monthly_interest_rate": ("decimal", False), "balance_before": ("decimal", False),
+    "principal_applied": ("decimal", False), "balance_after": ("decimal", False),
+}}
+FIELDS_V2 = {kind: " ".join(fields) for kind, fields in ROW_FIELDS_V2.items()}
 
-def _decode_row(kind, row):
+
+def _decode_row(kind, row, *, profile=PROFILE):
     """Decode v1 values; financial and graph admission remain the writer's job.
 
     Preserve v1's existing date/UUID spellings and decimal precision. In particular,
     this does not apply today's model validators, defaults, choices or nullability.
     """
-    fields = ROW_FIELDS[kind]
+    if profile not in {PROFILE, PAYMENT_PROFILE}:
+        raise HistoryError("Unsupported opening row profile.")
+    fields = (ROW_FIELDS_V2 if profile == PAYMENT_PROFILE else ROW_FIELDS)[kind]
     if type(row) is not dict or set(row) != set(fields):
         raise HistoryError("Unexpected opening evidence fields: " + kind)
     result = {}
@@ -295,9 +307,9 @@ def _decode_row(kind, row):
     return SimpleNamespace(**result)
 
 
-def decode_row(kind, row):
+def decode_row(kind, row, *, profile=PROFILE):
     try:
-        return _decode_row(kind, row)
+        return _decode_row(kind, row, profile=profile)
     except HistoryError:
         raise
     except (ValueError, TypeError, AttributeError, InvalidOperation, OverflowError) as exc:

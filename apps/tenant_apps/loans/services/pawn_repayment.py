@@ -93,10 +93,12 @@ def preview_pawn_loan_repayment(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
     try:
-        assert_pawn_loan_financial_actions_allowed(loan.pk, lock=False)
-        balance = get_pawn_loan_balance(
-            loan.pk, as_of_date=timezone.localdate()
-        )
+        if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+            from .opening_servicing import opening_payment_balance
+            balance, _ = opening_payment_balance(loan, as_of_date=timezone.localdate())
+        else:
+            assert_pawn_loan_financial_actions_allowed(loan.pk, lock=False)
+            balance = get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
         allocation = allocate_repayment(balance, amount)
         return _repayment_preview(loan, balance, allocation)
     except PawnRepaymentError:
@@ -113,6 +115,12 @@ def record_pawn_loan_repayment(
     request_key: str,
     actor=None,
 ) -> PawnRepaymentResult:
+    return _record_pawn_loan_repayment_at(loan_id, amount=amount, request_key=request_key,
+                                         actor=actor, effective_date=timezone.localdate())
+
+
+def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effective_date):
+    """Atomic caller only; recorded date is also used by opening restoration."""
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.repay")
     request_key = _request_key(request_key)
@@ -123,10 +131,14 @@ def record_pawn_loan_repayment(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
 
+    opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
     try:
-        assert_pawn_loan_financial_actions_allowed(loan.pk)
-        effective_date = timezone.localdate()
-        balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
+        if opening:
+            from .opening_servicing import opening_payment_balance
+            balance, obligation_state = opening_payment_balance(loan, as_of_date=effective_date)
+        else:
+            assert_pawn_loan_financial_actions_allowed(loan.pk)
+            balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         allocation = allocate_repayment(balance, amount)
     except PawnRepaymentError:
         raise
@@ -172,7 +184,21 @@ def record_pawn_loan_repayment(
             for item in item_allocations
         ],
     }
-    event, _ = record_loan_event(
+    writer = record_loan_event
+    scheduled_interest = allocation.interest
+    if opening:
+        from .opening_servicing import (opening_release_accrual_preview, payment_collection_detail,
+                                       _record_opening_servicing_event)
+        from .pawn_release import _record_release_accrual
+        detail = payment_collection_detail(loan, as_of_date=effective_date, request_key=request_key, operation="REPAYMENT")
+        catch_up = opening_release_accrual_preview(loan, as_of_date=effective_date)
+        if catch_up:
+            _record_release_accrual(loan, preview=catch_up, actor=actor, request_key=request_key, collection_detail=detail)
+        payload["opening_collection"] = detail
+        scheduled_interest = min(allocation.interest, obligation_state.remaining.interest)
+        payload["repayment"]["unscheduled_interest_paid"] = str(allocation.interest - scheduled_interest)
+        writer = _record_opening_servicing_event
+    event, _ = writer(
         loan.pk,
         event_kind=TransactionKind.REPAYMENT,
         effective_date=effective_date,
@@ -187,7 +213,7 @@ def record_pawn_loan_repayment(
     allocate_event_to_obligations(
         source_event=event,
         principal_amount=allocation.principal,
-        interest_amount=allocation.interest,
+        interest_amount=scheduled_interest,
         actor=actor,
     )
     supersede_installment_schedule(

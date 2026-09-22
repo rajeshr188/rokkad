@@ -27,6 +27,84 @@ from apps.tenant_apps.loans.tests.test_opening_import import OpeningImportFixtur
 
 
 class OpeningRestoreTests(OpeningImportFixture):
+    def test_mixed_item_rates_allocate_highest_first_and_restore_every_line(self):
+        from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
+        from apps.tenant_apps.loans.selectors import get_pawn_loan_exposure
+        self.review["collateral"][0].update(original_principal="500", remaining_principal="500")
+        second = copy.deepcopy(self.review["collateral"][0])
+        second.update(id="second-item", monthly_rate="2")
+        self.review["collateral"].append(second)
+        self.review["source"]["item_ids"].append("second-item")
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
+            origin = self.write()
+            first = record_pawn_loan_repayment(origin.loan_id, amount=215, request_key="partial", actor=self.actor)
+            self.assertEqual([(r.monthly_interest_rate, r.principal_applied) for r in first.item_allocations], [(2, 200), (1, 0)])
+            self.assertEqual(get_pawn_loan_exposure(origin.loan_id, as_of_date=date(2021, 3, 2)).total_economic_exposure, 811)
+            record_pawn_loan_repayment(origin.loan_id, amount=300, request_key="second", actor=self.actor)
+            self.assertEqual(get_pawn_loan_exposure(origin.loan_id, as_of_date=date(2021, 3, 2)).total_economic_exposure, 505)
+            content = export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=origin.loan_id)
+        with self.scoped(self.b):
+            restored, _ = self.restore(content)
+            self.assertEqual(m.PawnLoanRepaymentAllocationLine.objects.count(), 4)
+
+    def test_payment_export_restore_reconciles_allocations_and_later_release(self):
+        from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
+        from apps.tenant_apps.loans.services.pawn_release import preview_pawn_loan_full_release
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
+            origin = self.write()
+            record_pawn_loan_repayment(origin.loan_id, amount=210, request_key="partial", actor=self.actor)
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 3, 2)):
+            record_pawn_loan_repayment(origin.loan_id, amount=8, request_key="interest", actor=self.actor)
+            content = export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=origin.loan_id)
+        source = parse_opening_export(content)
+        self.assertEqual(source["manifest"]["profile"], "loan-opening-export/2")
+        self.assertEqual(len(source["evidence"]["repayment_lines"]), 1)
+        with self.scoped(self.b), patch("django.utils.timezone.localdate", return_value=date(2021, 3, 2)):
+            restored, _ = self.restore(content)
+            self.assertEqual(m.PawnLoanRepaymentAllocationLine.objects.get().principal_applied, 200)
+            self.assertEqual(preview_pawn_loan_full_release(restored.loan_id).minimum_settlement, 800)
+            again = parse_opening_export(export_opening(workspace_id=self.b.pk, actor=self.actor, loan_id=restored.loan_id))
+            self.assertEqual(semantic_evidence(source["evidence"]), semantic_evidence(again["evidence"]))
+
+    def test_reversed_payment_and_release_round_trip(self):
+        from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
+            origin = self.write()
+            payment = record_pawn_loan_repayment(origin.loan_id, amount=210, request_key="wrong", actor=self.actor)
+            reverse_pawn_loan_event(payment.loan_event.pk, actor=self.actor, reason="Correct collection")
+            record_pawn_loan_repayment(origin.loan_id, amount=110, request_key="right", actor=self.actor)
+            release_pawn_loan_in_full(origin.loan_id, settlement_amount=900, request_key="release", actor=self.actor)
+            content = export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=origin.loan_id)
+        with self.scoped(self.b):
+            restored, _ = self.restore(content)
+            self.assertEqual(restored.loan.state, "CLOSED")
+
+    def test_fully_paid_but_held_opening_round_trip(self):
+        from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
+            origin = self.write()
+            record_pawn_loan_repayment(origin.loan_id, amount=1010, request_key="paid", actor=self.actor)
+            content = export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=origin.loan_id)
+        with self.scoped(self.b):
+            restored, _ = self.restore(content)
+            self.assertEqual(restored.loan.state, "ACTIVE")
+            self.assertEqual(restored.loan.collateral_items.get().custody_state, "IN_VAULT")
+
+    def test_payment_allocation_tamper_rolls_back_restore(self):
+        from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
+            origin = self.write()
+            record_pawn_loan_repayment(origin.loan_id, amount=210, request_key="partial", actor=self.actor)
+            content = export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=origin.loan_id)
+        manifest, evidence = [json.loads(row) for row in content.splitlines()]
+        evidence["repayment_lines"][0]["principal_applied"] = "201"
+        manifest["sha256"] = digest(evidence)
+        tampered = (dump(manifest) + "\n" + dump(evidence) + "\n").encode()
+        with self.scoped(self.b):
+            with self.assertRaises(HistoryError):
+                self.restore(tampered)
+            self.assertFalse(m.PawnLoan.objects.exists())
+
     def restore_frozen_v1(self, name):
         from .test_opening_contract import FIXTURES
         content = (FIXTURES / f"opening-export-v1-{name}.jsonl").read_bytes()

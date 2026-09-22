@@ -7,6 +7,9 @@ tags: [loans, portability, contracts]
 
 # Opening evidence download: loan-opening-export/1
 
+Histories with repayment events now use [version 2](loan-opening-export-v2.md).
+This v1 contract remains unchanged for histories without payments.
+
 This is a UTF-8 JSONL evidence download of one accepted v2 opening and its supported
 later servicing. The dedicated operator restore supports this format after full
 preview and graph reconciliation; complete-history browser upload remains separate.

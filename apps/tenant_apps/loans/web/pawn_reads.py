@@ -184,7 +184,7 @@ def pawn_loan_detail(request, pk):
     context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
     if opening:
         context["is_opening"] = True
-        for action in ("repay", "accrue", "capitalize", "renew"):
+        for action in ("accrue", "capitalize", "renew"):
             context["can_" + action] = False
         from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
         try:
@@ -192,7 +192,7 @@ def pawn_loan_detail(request, pk):
             context["opening_review"] = review
             if loan.state == PawnLoanState.ACTIVE.value:
                 from apps.tenant_apps.loans.services.opening_continuation import opening_interest_breakdown
-                context["opening_interest_breakdown"] = opening_interest_breakdown(review, as_of_date=context["today"])
+                context["opening_interest_breakdown"] = opening_interest_breakdown(review, as_of_date=context["today"], loan=loan)
             context["opening_source_valuations"] = [row for row in review["collateral"] if row["valuation"].get("status") == "UNVERIFIED"]
         except ValueError as exc:
             context["balance_error"] = str(exc)

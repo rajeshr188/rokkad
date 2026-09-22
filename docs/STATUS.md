@@ -7,6 +7,41 @@ tags: [status, architecture]
 
 # Status
 
+## Imported interest-only and partial-principal payments (2026-09-23)
+
+Implemented the owner-confirmed payment rule in the existing Record payment
+workflow. Imported openings now preview and record fee/interest/principal
+allocation with atomic interest catch-up, unchanged first-month coverage and
+highest-rate-first item principal reduction. Reduced principal changes charges
+from the next original monthly boundary; the inclusive calendar still increases
+interest the day after the anniversary. Current charges are preserved and the
+cumulative baseline is rounded once to whole rupees.
+
+Subsequent release settles the remaining debt. Newest-first payment reversal
+compensates its coupled catch-up, restores item balances and preserves historical
+as-of reads. Paying all debt does not close the loan or return collateral; explicit
+full release remains required. Native periodic accrual, renewal, auction and
+generic event posting remain guarded. Existing native repayment paths are reused.
+
+New `opening-payments/1` evidence is retained through `loan-opening-export/2`,
+including immutable repayment allocation rows. Restore uses the same financial
+writers and rejects a rebuilt graph mismatch. V1 definitions and fixtures remain
+unchanged; histories without payments still export as v1. See the
+[decision](adr/2026-09-23-opening-partial-payments.md),
+[v2 contract](contracts/loan-opening-export-v2.md) and
+[operator flow](flows/legacy-opening-import.md).
+
+The initial combined regression passed 88 tests (47.845 s) covering opening
+servicing, export/restore, contracts and native allocation. Final regression passed
+120 tests (62.786 s), including the payment form preview/commit and PDF receipt,
+existing loan UI/documents, staff/cross-Workspace denial, mixed item rates, same-day
+payments, month-end boundaries, cumulative rounding, old-release reversal followed
+by payment, tamper rejection, paired rollback and portable restoration. Logs:
+`outputs/opening-payments-regression-tests.log` and
+`outputs/opening-payments-final-tests.log`. All financial test writes are isolated in
+`test_rokkad_ticket_template_feature`; no rehearsal or production loan was paid,
+released or otherwise mutated. No model change or migration is required.
+
 ## Cutover readiness audit and template export (2026-09-23)
 
 Owner confirmed both interest-only and partial-principal collections are required

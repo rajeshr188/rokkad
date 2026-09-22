@@ -129,8 +129,8 @@ def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_d
     original = _locked_original_event(original_event_id)
     _require_administrator(actor, original.loan.workspace)
     is_opening = original.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
-    if is_opening and original.event_kind != TransactionKind.RELEASE_RECEIPT.value:
-        raise PawnReversalError("Opening interest catch-up can only be reversed with its full release; the opening itself cannot be reversed here.")
+    if is_opening and original.event_kind not in {TransactionKind.RELEASE_RECEIPT.value, TransactionKind.REPAYMENT.value}:
+        raise PawnReversalError("Opening interest catch-up can only be reversed with its collection; the opening itself cannot be reversed here.")
     reason = str(reason or "").strip()
     if not reason:
         raise PawnReversalError("A reversal reason is required.")
@@ -228,6 +228,8 @@ def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_d
 
     release_reversal = None
     catch_up_reversal = None
+    if is_opening and original.event_kind == "REPAYMENT":
+        catch_up_reversal = _reverse_opening_payment_catch_up(original, effective_date=effective_date, reason=reason, actor=actor)
     if release is not None:
         catch_up_reversal = _reverse_release_catch_up(
             release,
@@ -295,6 +297,20 @@ def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_d
         release_reversal,
         catch_up_reversal,
     )
+
+
+def _reverse_opening_payment_catch_up(payment, *, effective_date, reason, actor):
+    from .opening_servicing import _record_opening_servicing_event
+    accrual = payment.loan.loan_events.filter(event_kind="INTEREST_ACCRUAL",
+        payload__opening_collection__operation="REPAYMENT",
+        payload__opening_collection__request_key=payment.payload["repayment"]["request_key"]).first()
+    if accrual is None:
+        return None
+    payload = reversal_payload(payment.loan, effective_date=effective_date, original_event_id=accrual.pk,
+        original_event_kind=accrual.event_kind, values=accrual.payload["values"], reason=reason).to_dict()
+    event, _ = _record_opening_servicing_event(payment.loan_id, event_kind=TransactionKind.REVERSAL,
+        effective_date=effective_date, payload=payload, actor=actor, reversal_of=accrual)
+    return event
 
 
 def _validate_release_reversal(original):

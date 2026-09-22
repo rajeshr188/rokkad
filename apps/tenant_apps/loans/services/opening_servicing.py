@@ -1,4 +1,4 @@
-"""Bounded full release of reviewed migration openings; no opening importer."""
+"""Bounded collections on reviewed migration openings; no opening importer."""
 from datetime import timedelta
 from decimal import Decimal
 
@@ -20,7 +20,7 @@ def opening_release_context(loan, *, as_of_date, reversing=False):
     if as_of_date <= preview.cutover_date or any(row.effective_date > as_of_date for row in events):
         raise OpeningEvidenceError("Opening servicing must be after cutover and cannot precede recorded activity.")
     if loan.policy_snapshot.interest_method != "SIMPLE" or loan.product_version.repayment_structure != "FLEXIBLE_PARTIAL_PAYMENT":
-        raise OpeningEvidenceError("Opening full release requires simple interest and a flexible repayment product.")
+        raise OpeningEvidenceError("Opening collections require simple interest and a flexible repayment product.")
     balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
     if reversing:
         if not loan.repayment_schedules.filter(source_event_id=preview.opening_event_id).exists():
@@ -46,34 +46,74 @@ def opening_release_accrual_preview(loan, *, as_of_date):
     origin = loan.loan_events.get(pk=collection.opening_event_id)
     review = read_opening_evidence(loan, origin)["review"]
     months = collection_calendar(loan.loan_date, as_of_date)["additional_months"] - review["continuation"]["additional_months"]
+    unrounded = collection.monthly_interest_unrounded * months
+    start = collection.cutover_date + timedelta(days=1)
+    if loan.loan_events.filter(event_kind="REPAYMENT").exists():
+        from .opening_payment_evidence import collection_history, baseline
+        opening = read_opening_evidence(loan, origin)
+        state, actions = collection_history(opening, origin, tuple(loan.loan_events.all()), as_of_date)
+        accrued_actions = [(e, a) for e, a in actions if a]
+        previous_date = accrued_actions[-1][0].effective_date if accrued_actions else collection.cutover_date
+        unrounded = state["raw"] - baseline(review, actions, previous_date)[1]
+        start = min(previous_date + timedelta(days=1), as_of_date)
     return AccrualPeriodPreview(
-        period_number=number, period_start=collection.cutover_date + timedelta(days=1), period_end=as_of_date,
+        period_number=number, period_start=start, period_end=as_of_date,
         period_fraction=Decimal("1"), calculation_base=sum(Decimal(item["original_principal"]) for item in review["collateral"]),
-        unrounded_interest=collection.monthly_interest_unrounded * months, recognized_interest=collection.additional_interest,
+        unrounded_interest=unrounded, recognized_interest=collection.additional_interest,
         calculated_interest=collection.additional_interest, is_partial=True,
     )
 
 
 @transaction.atomic
 def _record_opening_servicing_event(loan_id, *, event_kind, effective_date, payload, actor, reversal_of=None):
-    """Internal storage for the already validated release/reversal transaction.
+    """Internal storage for an already validated collection/reversal transaction.
 
     Ordinary record_loan_event stays closed to migration-origin loans. This helper
-    is not a financial command and must only be called by full release/reversal.
+    is not a financial command; repayment and release workflows own validation.
     """
     from .event_recording import _locked_loan, _persist_locked_event
     from apps.tenant_apps.loans.domain import TransactionKind
     loan = _locked_loan(loan_id)
     kind = TransactionKind(event_kind).value
-    require_loan_action(loan, actor, "workspace.settings.manage" if kind == "REVERSAL" else "loan.release")
+    detail = payload.get("opening_collection", {})
+    operation = detail.get("operation", "RELEASE_RECEIPT") if kind == "INTEREST_ACCRUAL" else kind
+    if kind == "REPAYMENT" or (kind == "INTEREST_ACCRUAL" and operation == "REPAYMENT"):
+        from .opening_payment_evidence import PROFILE, RULE
+        if detail.get("profile") != PROFILE or detail.get("rule") != RULE or detail.get("operation") != "REPAYMENT":
+            raise OpeningEvidenceError("Unsupported opening repayment evidence.")
+    require_loan_action(loan, actor, "workspace.settings.manage" if kind == "REVERSAL" else
+                       "loan.repay" if operation == "REPAYMENT" else "loan.release")
     origin = loan.loan_events.get(event_kind="MIGRATION_OPENING")
     if effective_date <= origin.effective_date:
         raise OpeningEvidenceError("Opening servicing must be strictly after cutover.")
     if kind == "REVERSAL":
         if (reversal_of is None or reversal_of.loan_id != loan.pk or
-                reversal_of.event_kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT"} or
+                reversal_of.event_kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT"} or
                 payload.get("values") != reversal_of.payload.get("values")):
             raise OpeningEvidenceError("Unsupported opening reversal.")
-    elif kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT"} or payload.get("opening_collection", {}).get("opening_event_id") != origin.pk:
+    elif kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT"} or payload.get("opening_collection", {}).get("opening_event_id") != origin.pk:
         raise OpeningEvidenceError("Unsupported opening servicing event.")
     return _persist_locked_event(loan, kind=kind, effective_date=effective_date, payload=payload, actor=actor, reversal_of=reversal_of)
+
+
+def payment_collection_detail(loan, *, as_of_date, request_key, operation):
+    from .opening_payment_evidence import PROFILE, RULE
+    preview, _ = opening_release_context(loan, as_of_date=as_of_date)
+    return {"profile": PROFILE, "rule": RULE, "opening_event_id": preview.opening_event_id,
+            "operation": operation, "request_key": request_key,
+            "baseline_at_cutover": str(preview.baseline_at_cutover), "baseline_as_of": str(preview.baseline_as_of),
+            "recognized_since_cutover": str(preview.baseline_as_of - preview.baseline_at_cutover - preview.additional_interest),
+            "calculation": "ANNIVERSARY_BASELINE_LESS_RECORDED"}
+
+
+def opening_payment_balance(loan, *, as_of_date):
+    """Preview with collection catch-up included, without posting a receipt."""
+    from dataclasses import replace
+    from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
+    preview, state = opening_release_context(loan, as_of_date=as_of_date)
+    balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+    extra = preview.additional_interest
+    interest = balance.interest_outstanding + extra
+    return replace(balance, interest_outstanding=interest, total_due=balance.total_due + extra,
+                   overdue_interest_outstanding=interest if balance.is_overdue else Decimal("0"),
+                   current_interest_outstanding=Decimal("0") if balance.is_overdue else interest), state

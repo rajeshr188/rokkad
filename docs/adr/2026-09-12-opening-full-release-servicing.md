@@ -7,6 +7,10 @@ tags: [loans, portability, release, reversal]
 
 # Settle opening loans through the existing full-release workflow
 
+The [September 23 payment extension](2026-09-23-opening-partial-payments.md)
+supersedes the partial-repayment restriction below. This original release evidence
+contract remains supported and unchanged for histories without payments.
+
 The owner instructed financial posting and full-release/reversal integration after
 the [continuation and obligations slice](2026-09-12-opening-collection-continuation.md).
 For the supported unchanged-principal v2 collection rule, reuse the ordinary full

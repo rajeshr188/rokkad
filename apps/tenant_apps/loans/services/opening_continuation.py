@@ -9,7 +9,7 @@ from .opening_evidence import OpeningEvidenceError, read_opening_evidence
 from .opening_validation import COLLECTION_PROFILE
 
 
-def opening_interest_breakdown(review, *, as_of_date):
+def opening_interest_breakdown(review, *, as_of_date, loan=None):
     """Explain a validated active opening's collection rule without posting."""
     original = date.fromisoformat(review["terms"]["original_date"])
     cutover = date.fromisoformat(review["cutover"]["date"])
@@ -22,7 +22,7 @@ def opening_interest_breakdown(review, *, as_of_date):
     baseline = Decimal(review["continuation"]["recognized_interest"])
     unpaid = Decimal(review["balances"]["interest"])
     additional = Decimal(calculated["additional_interest"]) - baseline
-    return {
+    result = {
         "elapsed_months": elapsed.years * 12 + elapsed.months,
         "elapsed_days": elapsed.days,
         "charge_months": calculated["additional_months"],
@@ -35,6 +35,14 @@ def opening_interest_breakdown(review, *, as_of_date):
         "total_interest": unpaid + additional,
         "next_increase_on": date.fromisoformat(calculated["next_increase_on"]),
     }
+    if loan is not None and loan.loan_events.filter(event_kind="REPAYMENT").exists():
+        from .opening_payment_evidence import collection_history
+        events = tuple(loan.loan_events.all())
+        origin = next(row for row in events if row.event_kind == "MIGRATION_OPENING")
+        state, _ = collection_history(read_opening_evidence(loan, origin), origin, events, as_of_date)
+        result.update(has_payments=True, monthly_interest=state["monthly"], cumulative_interest=state["baseline"],
+                      additional_interest=state["additional"], total_interest=state["interest"])
+    return result
 
 
 @dataclass(frozen=True)
@@ -54,19 +62,30 @@ def preview_opening_collection(loan, *, events, as_of_date):
     """Continue the reviewed cumulative baseline without recharging cutover debt.
 
     No receipts or concessions are inferred from the difference between the
-    recognized baseline and opening unpaid interest. Only full-release catch-up,
-    settlement and their coupled reversals are supported after the opening.
+    recognized baseline and opening unpaid interest. Dedicated collection catch-up,
+    repayment, full settlement and their coupled reversals are supported.
     """
     events = tuple(events)
     origins = [row for row in events if row.event_kind == "MIGRATION_OPENING"]
     if len(origins) != 1:
         raise OpeningEvidenceError("Opening collection preview requires one migration opening.")
     event = origins[0]
-    review = read_opening_evidence(loan, event)["review"]
+    opening = read_opening_evidence(loan, event)
+    review = opening["review"]
     if review["profile"] != COLLECTION_PROFILE:
         raise OpeningEvidenceError("This opening does not have the supported collection continuation checkpoint.")
     if type(as_of_date) is not date or as_of_date < event.effective_date:
         raise OpeningEvidenceError("Collection history before the migration cutover is unavailable.")
+    if any(row.event_kind == "REPAYMENT" for row in events):
+        from .opening_payment_evidence import collection_history, RULE
+        from .legacy_interest import collection_calendar
+        state, _ = collection_history(opening, event, events, as_of_date)
+        return OpeningCollectionPreview(
+            opening_event_id=event.pk, cutover_date=event.effective_date, as_of_date=as_of_date,
+            monthly_interest_unrounded=state["monthly"], baseline_at_cutover=Decimal(review["continuation"]["recognized_interest"]),
+            baseline_as_of=state["baseline"], additional_interest=state["additional"],
+            next_increase_on=date.fromisoformat(collection_calendar(loan.loan_date, state["calculation_date"])["next_increase_on"]), rule=RULE,
+        )
     monthly = sum(Decimal(item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
                   for item in review["collateral"])
     release_date = _settled_release_date(events, event, as_of_date, loan.loan_date, monthly, review)
