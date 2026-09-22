@@ -28,8 +28,10 @@ baseline, not acceptance of all current flows or a reason to skip accessibility.
 Implementation has started with the owner's selected Django native partials,
 HTMX and Bootstrap 5.3.8. The [first directory slice](../implementation/accessible-directory-redesign.md)
 provides the progressive full-page/fragment, responsive and bilingual baseline.
-The complete onboarding/first-loan journey remains the next delivery target;
-this foundation does not complete the audit or whole-product redesign.
+Customer creation/editing and the onboarding quick guide now use the same field,
+error-recovery and bilingual patterns. Actual branch setup, customer detail/KYC
+and the complete first-loan journey remain the next delivery targets; these slices
+do not complete the audit or whole-product redesign.
 
 1. Inventory live routes and actual owner/staff journeys using isolated data.
    Record concrete friction with route, role, device, language, task, observed

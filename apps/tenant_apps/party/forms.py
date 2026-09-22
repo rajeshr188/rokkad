@@ -1,5 +1,6 @@
 from django import forms
 from django.core.validators import URLValidator, validate_email
+from django.utils.translation import gettext_lazy as _
 from phonenumber_field.formfields import PhoneNumberField
 
 from .widgets import PrivateFileInput
@@ -35,7 +36,7 @@ def normalize_phone_number(value):
 class PartyForm(forms.ModelForm):
     party_code = forms.CharField(
         required=False,
-        help_text="Leave blank to auto-generate.",
+        help_text=_("Leave blank to auto-generate."),
         widget=forms.TextInput(attrs={"class": CONTROL_CLASS}),
     )
 
@@ -73,6 +74,31 @@ class PartyForm(forms.ModelForm):
             "status": forms.Select(attrs={"class": SELECT_CLASS}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        labels = {
+            "display_name": _("Customer name"), "party_type": _("Record type"),
+            "primary_phone": _("Phone"), "primary_email": _("Email"),
+            "profile_photo": _("Customer photo"), "relation_label": _("Relation"),
+            "relation_name": _("Related person's name"), "party_code": _("Customer code"),
+            "legal_name": _("Legal name"), "tax_pan": _("PAN"), "gstin": _("GSTIN"),
+            "risk_level": _("Risk level"), "credit_hold": _("Credit hold"),
+            "status": _("Status"),
+        }
+        for name, label in labels.items():
+            self.fields[name].label = label
+        self.fields["display_name"].help_text = _("Enter the name used to find this customer. Keep the original spelling.")
+        self.fields["primary_phone"].help_text = _("For an Indian number, enter 10 digits. For another country, include the country code.")
+        self.fields["profile_photo"].help_text = _("Optional. Choose a clear photo; you can add it later.")
+        self.fields["relation_name"].help_text = _("If you enter a related person's name, also choose a relation.")
+        self.fields["legal_name"].help_text = _("Enter only if different from the customer name.")
+        self.fields["primary_phone"].widget.input_type = "tel"
+        self.fields["primary_phone"].widget.attrs["inputmode"] = "tel"
+        self.fields["primary_email"].widget.attrs["inputmode"] = "email"
+        self.fields["profile_photo"].widget.attrs["accept"] = "image/*"
+        self.fields["tax_pan"].widget.attrs["autocapitalize"] = "characters"
+        self.fields["gstin"].widget.attrs["autocapitalize"] = "characters"
+
     def clean_party_code(self):
         return (self.cleaned_data.get("party_code") or "").strip().upper()
 
@@ -97,7 +123,7 @@ class PartyForm(forms.ModelForm):
         relation_name = cleaned.get("relation_name")
         if bool(relation_label) != bool(relation_name):
             raise forms.ValidationError(
-                "Relation label and related person name must be entered together."
+                _("Relation label and related person name must be entered together.")
             )
         return cleaned
 

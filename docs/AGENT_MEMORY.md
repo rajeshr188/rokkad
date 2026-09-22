@@ -50,6 +50,10 @@ The first native-partial directory slice pins Bootstrap 5.3.8 in the active shel
 Fragment headers never grant access; full-page/history fallbacks, private responses,
 keyboard focus and English/Hindi are part of each flow's contract. See
 [the frontend decision](adr/2026-09-22-native-template-partials-ui.md).
+Customer writes stay ordinary CSRF-protected submissions. Native partials share
+field/error rendering; failed forms retain text, link errors to controls and explain
+file reselection. Account introduction progress/preferences never imply branch
+lending readiness or grant permissions.
 
 Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company

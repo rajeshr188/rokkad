@@ -3,6 +3,7 @@ Onboarding Forms - Step-by-step user onboarding
 """
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 
 from apps.orgs.models import Company
@@ -192,32 +193,32 @@ class TourPreferencesForm(forms.Form):
     """
 
     ROLE_CHOICES = [
-        ("owner", "Owner/Founder - I manage everything"),
-        ("manager", "Manager - I oversee operations"),
-        ("staff", "Staff - I help with borrowers and loans"),
-        ("other", "Other"),
+        ("owner", _("Owner/Founder - I manage everything")),
+        ("manager", _("Manager - I oversee operations")),
+        ("staff", _("Staff - I help with borrowers and loans")),
+        ("other", _("Other")),
     ]
 
     primary_role = forms.ChoiceField(
         choices=ROLE_CHOICES,
         widget=forms.RadioSelect(),
         required=False,
-        label="What best describes your role?",
-        help_text="A preference only; this does not change your Workspace permissions.",
+        label=_("What best describes your role?"),
+        help_text=_("A preference only; this does not change your Workspace permissions."),
     )
 
     interested_features = forms.MultipleChoiceField(
         choices=[
-            ("loans", "Loans and Collateral"),
-            ("party", "Borrower Profiles"),
-            ("rates", "Gold and Silver Reference Rates"),
-            ("notify_v2", "Notifications and Reminders"),
-            ("reports", "Reports & Analytics"),
+            ("loans", _("Loans and Collateral")),
+            ("party", _("Borrower Profiles")),
+            ("rates", _("Gold and Silver Reference Rates")),
+            ("notify_v2", _("Notifications and Reminders")),
+            ("reports", _("Reports & Analytics")),
         ],
         widget=forms.CheckboxSelectMultiple(),
         required=False,
-        label="Which features are you most interested in?",
-        help_text="Select all that apply",
+        label=_("Which features are you most interested in?"),
+        help_text=_("Select all that apply"),
     )
 
     skip_tour = forms.BooleanField(

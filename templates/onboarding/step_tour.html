@@ -1,27 +1,27 @@
 {% extends "onboarding/base_onboarding.html" %}
-{% load crispy_forms_tags %}
-
+{% load i18n %}
 {% block onboarding_content %}
-<form method="post">
-    {% csrf_token %}
-    
-    <div class="mb-4">
-        <p class="lead">Tell us how you plan to use Rokkad.</p>
+<h2 class="h5">{% translate "Your first customer visit" %}</h2>
+<ol class="ps-3">
+  <li class="mb-3"><strong>{% translate "Check your branch" %}</strong><p class="mb-0">{% translate "Open the correct workspace. The owner completes lending setup; invited staff use the access given to them." %}</p></li>
+  <li class="mb-3"><strong>{% translate "Find or add the customer" %}</strong><p class="mb-0">{% translate "Search by name, phone or customer code first. Open the existing record, or add a customer and their identity details." %}</p></li>
+  <li class="mb-3"><strong>{% translate "Prepare and review the loan" %}</strong><p class="mb-0">{% translate "Enter collateral and loan details. Review the calculated amounts and required checks before approval and disbursal." %}</p></li>
+  <li><strong>{% translate "Return to the loan for service" %}</strong><p class="mb-0">{% translate "Open the loan to review dues, use the available collection or release action, and view its documents." %}</p></li>
+</ol>
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% include "components/forms/accessible.html#errors" %}
+  <details class="border rounded p-3 mt-4"{% if form.errors %} open{% endif %}>
+    <summary class="fw-semibold">{% translate "Your preferences (optional)" %}</summary>
+    <div class="mt-3">
+      {% include "components/forms/accessible.html#field" with field=form.primary_role %}
+      {% include "components/forms/accessible.html#field" with field=form.interested_features %}
     </div>
-
-    {{ form|crispy }}
-
-    <div class="row g-2 mt-4">
-        <div class="col">
-            <button type="submit" name="skip" class="btn btn-outline-secondary btn-lg w-100">
-                Skip Tour
-            </button>
-        </div>
-        <div class="col">
-            <button type="submit" class="btn btn-primary btn-lg w-100">
-                Complete Setup <i class="bi bi-check-circle"></i>
-            </button>
-        </div>
-    </div>
+  </details>
+  <p class="small text-body-secondary mt-3">{% translate "Next, open branch setup if a workspace is selected, or choose a workspace. Completing this guide does not make a branch ready to lend." %}</p>
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <button type="submit" class="btn btn-primary">{% translate "Continue to workspace" %}</button>
+    <button type="submit" name="skip" class="btn btn-outline-secondary" formnovalidate>{% translate "Skip preferences" %}</button>
+  </div>
 </form>
 {% endblock %}

@@ -1,84 +1,29 @@
 {% extends 'base_global.html' %}
-{% load static %}
-
-{% block title %}{{ step_title }} - Rokkad{% endblock %}
-
+{% load static i18n %}
+{% block title %}{% translate step_title %} - Rokkad{% endblock %}
 {% block mgmt_content %}
-<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
-    <div class="row w-100">
-        <div class="col-lg-8 col-xl-6 mx-auto">
-            <!-- Progress Bar -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted">Setup Progress</small>
-                        <small class="text-muted">{{ progress.progress_percentage }}%</small>
-                    </div>
-                    <div class="progress" style="height: 10px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" 
-                             style="width: {{ progress.progress_percentage }}%"
-                             aria-valuenow="{{ progress.progress_percentage }}"
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                        </div>
-                    </div>
-                    
-                    <!-- Step Indicators -->
-                    <div class="d-flex justify-content-between mt-3">
-                        <div class="text-center" style="flex: 1;">
-                            <div class="rounded-circle {% if progress.current_step >= 1 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
-                                {% if progress.profile_completed %}<i class="bi bi-check"></i>{% else %}1{% endif %}
-                            </div>
-                            <div><small class="text-muted">Profile</small></div>
-                        </div>
-                        <div class="text-center" style="flex: 1;">
-                            <div class="rounded-circle {% if progress.current_step >= 2 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
-                                {% if progress.company_created %}<i class="bi bi-check"></i>{% else %}2{% endif %}
-                            </div>
-                            <div><small class="text-muted">Workspace</small></div>
-                        </div>
-                        <div class="text-center" style="flex: 1;">
-                            <div class="rounded-circle {% if progress.current_step >= 3 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
-                                {% if progress.team_setup_completed or progress.skipped_team %}<i class="bi bi-check"></i>{% else %}3{% endif %}
-                            </div>
-                            <div><small class="text-muted">Team</small></div>
-                        </div>
-                        <div class="text-center" style="flex: 1;">
-                            <div class="rounded-circle {% if progress.current_step >= 4 %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
-                                {% if progress.tour_completed or progress.skipped_tour %}<i class="bi bi-check"></i>{% else %}4{% endif %}
-                            </div>
-                            <div><small class="text-muted">Tour</small></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content Card -->
-            <div class="card shadow">
-                <div class="card-body p-5">
-                    <h2 class="card-title mb-2">{{ step_title }}</h2>
-                    <p class="text-muted mb-4">{{ step_description }}</p>
-                    
-                    {% block onboarding_content %}
-                    <!-- Step-specific content goes here -->
-                    {% endblock %}
-                </div>
-            </div>
-
-            <!-- Skip/Help Links -->
-            <div class="text-center mt-3">
-                <a href="{% url 'onboarding_skip' %}" class="text-muted small">
-                    Skip setup for now
-                </a>
-            </div>
-        </div>
+<div class="onboarding-intro mx-auto" style="max-width: 52rem" hx-history="false">
+  <p class="small text-body-secondary">{% translate "Getting started" %}</p>
+  <h1 class="h3">{% translate step_title %}</h1>
+  <p class="text-body-secondary">{% translate step_description %}</p>
+  <div class="card mb-3"><div class="card-body">
+    <p id="onboarding-progress-label" class="mb-2">{% translate "Account introduction" %} &middot; {{ progress.progress_percentage }}%</p>
+    <div class="progress" role="progressbar" aria-labelledby="onboarding-progress-label" aria-valuenow="{{ progress.progress_percentage }}" aria-valuemin="0" aria-valuemax="100" style="height: .5rem">
+      <div class="progress-bar" style="width: {{ progress.progress_percentage }}%"></div>
     </div>
+    <ol class="row row-cols-2 row-cols-sm-4 g-2 list-unstyled mt-2 mb-0 small">
+      <li class="col"{% if step_number == 1 %} aria-current="step"{% endif %}>1. {% translate "Profile" %}{% if progress.profile_completed %} &middot; {% translate "Done" %}{% endif %}</li>
+      <li class="col"{% if step_number == 2 %} aria-current="step"{% endif %}>2. {% translate "Workspace" %}{% if progress.company_created %} &middot; {% translate "Done" %}{% endif %}</li>
+      <li class="col"{% if step_number == 3 %} aria-current="step"{% endif %}>3. {% translate "Team" %}{% if progress.skipped_team %} &middot; {% translate "Skipped" %}{% elif progress.team_setup_completed %} &middot; {% translate "Done" %}{% endif %}</li>
+      <li class="col"{% if step_number == 4 %} aria-current="step"{% endif %}>4. {% translate "Quick guide" %}{% if progress.skipped_tour %} &middot; {% translate "Skipped" %}{% elif progress.tour_completed %} &middot; {% translate "Done" %}{% endif %}</li>
+    </ol>
+  </div></div>
+  <p class="small text-body-secondary">{% translate "This introduces your account. Branch lending setup is checked separately before you can issue loans." %}</p>
+  <div class="card"><div class="card-body p-3 p-md-4">{% block onboarding_content %}{% endblock %}</div></div>
+  <div class="d-flex flex-wrap gap-3 mt-3">
+    <a href="{% url 'workspace_list' %}">{% translate "Already have a branch? Open your workspaces" %}</a>
+    <a href="{% url 'onboarding_skip' %}">{% translate "Leave introduction for now" %}</a>
+  </div>
 </div>
-
-<style>
-    .bi {
-        font-size: 16px;
-    }
-</style>
+<script src="{% static 'js/form-errors.js' %}"></script>
 {% endblock %}

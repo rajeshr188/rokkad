@@ -1,30 +1,57 @@
 ---
 status: active
 owner: project
-updated: 2026-06-17
+updated: 2026-09-22
 tags: [flows, workspace, onboarding, invitations]
-related: [../domain/workspace-auth.md, ../domain/subscriptions.md, ../implementation/tenant-seeding.md]
+related: [../architecture/control-plane-contracts.md, business-setup.md]
 ---
 
-# Workspace Onboarding
+# Workspace onboarding
 
-Workspace onboarding covers company creation, invitation acceptance, team setup, tenant provisioning, seed data, subscription setup, and the first usable dashboard state.
+Account introduction and branch readiness are separate. Rokkad uses a shared
+PostgreSQL schema with forced Workspace RLS; onboarding does not create a tenant
+schema or seed retired accounting/DEA modules.
 
-## Flow
+## New owner
 
-1. User signs in or accepts invitation.
-2. Workspace/company is created or selected.
-3. Tenant schema/context is provisioned.
-4. Required seeds are applied: permissions, preferences, DEA basics, voucher types, rates prerequisites.
-5. Subscription/access state is checked.
-6. User lands on a dashboard with setup actions surfaced.
+1. Sign in and complete the profile step.
+2. Create a Workspace through the existing control-plane service. It creates the
+   owner relationship and Membership; a profile preference is navigation only.
+3. Optionally invite staff. Existing service authorization and role rules apply.
+4. Read the quick customer-visit guide. Optional role/feature preferences are
+   onboarding answers, not permissions. Skip remains available.
+5. Completion resolves the preferred accessible Workspace and redirects to its
+   setup page; without one, it goes to the Workspace list. The completion page
+   template is not the active completion destination.
+6. Complete the actual [business setup](business-setup.md) prerequisites. Account
+   progress, a saved customer and the introductory guide do not authorize lending.
+   Loan preflight and domain services remain authoritative for each operation.
 
-## Team And Invitation Flow
+## Existing branch or invited staff
 
-Owners manage elevated roles. Admins can help with ordinary team setup only within the permissions granted to them; they cannot grant Owner/Admin roles or bypass last-owner protections. Invitation acceptance creates membership through orgs control-plane services and should write audit events using the normalized `TEAM_*` action vocabulary.
+Use the existing Workspace or invitation entry path. The introduction links to
+My Workspaces, so migrated operators are not instructed to create another branch.
+Membership and action permissions determine available operations. An introductory
+role preference never grants access. This UI increment does not change invitation
+acceptance, onboarding routing or existing progress persistence.
 
-## Workspace Creation Guardrails
+Owners manage elevated roles. Other staff remain limited by their granted access;
+last-owner protections and control-plane service checks remain in force.
 
-Workspace creation must validate the derived schema/domain name before tenant provisioning. Unsafe, empty, reserved, or colliding schema/domain values should fail early with a clear form error.
+## Customer entry
 
-Archived sources are in [archive/django-project](../archive/django-project/), [archive/orgs](../archive/orgs/), and [archive/onboarding](../archive/onboarding/).
+Search existing customers by name, phone or code before adding another record.
+The add/edit page shows identity/contact details first and retains all existing
+Party fields under More details. That section opens for editing and after a failed
+submission. A generated code is still available by leaving the code blank.
+
+Saving uses the existing Party create service/update path and redirects to the
+customer record, where addresses, identifiers and documents can be added. It does
+not verify identity or create/approve a loan. Invalid submissions keep entered
+text and display an error summary linking to the relevant fields. A new file must
+be selected again after an error; the page explains this browser limitation.
+
+The customer form and quick guide use English/Hindi copy and responsive layouts.
+Other onboarding step forms and the full setup checklist still need the broader
+bilingual/task-based redesign. Automated tests are not physical-device or novice
+operator acceptance. See [implementation evidence](../implementation/accessible-directory-redesign.md).

@@ -1,0 +1,26 @@
+{% load i18n %}
+{% partialdef field %}
+<div class="mb-3">
+  {% if field.use_fieldset %}<fieldset{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}><legend class="h6">{{ field.label }}{% if field.field.required %} <span class="small">({% translate "Required" %})</span>{% endif %}</legend>
+  {% elif field.field.widget.input_type == 'checkbox' %}
+  <div class="form-check">{{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+  {% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="small text-body-secondary">({% translate "Required" %})</span>{% endif %}</label>{% endif %}
+  {% if field.field.widget.input_type != 'checkbox' or field.use_fieldset %}{{ field }}{% endif %}
+  {% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+  {{ field.errors }}
+  {% if field.use_fieldset %}</fieldset>{% endif %}
+</div>
+{% endpartialdef %}
+
+{% partialdef errors %}
+{% if form.errors %}
+<div class="alert alert-danger" id="form-errors" tabindex="-1" role="alert" data-form-errors aria-labelledby="form-errors-title">
+  <h2 class="h5" id="form-errors-title">{% translate "Check the highlighted details" %}</h2>
+  <p>{% translate "Your entries are still here. Correct the errors below and save again." %}</p>
+  <ul class="mb-0">
+    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+    {% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label|default:field.auto_id }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endpartialdef %}

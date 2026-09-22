@@ -15,10 +15,10 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequ
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.vary import vary_on_headers
 from django.views.decorators.http import require_POST
-from django.views.decorators.cache import never_cache
 
 from apps.tenant_apps.loans.selectors import get_party_pawn_loan_history_summary
 
@@ -306,15 +306,16 @@ def party_detail(request, pk):
 
 
 @party_action_required("create")
+@never_cache
 def party_create(request):
     from .services.creation import create_party_from_form
 
-    form = PartyForm(request.POST or None, request.FILES or None)
+    form = PartyForm(request.POST if request.method == "POST" else None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         party = create_party_from_form(
             form=form, workspace_id=request.workspace.pk, actor=request.user,
         )
-        messages.success(request, "Party created.")
+        messages.success(request, _("Customer record created."))
         return redirect(
             "workspace_slug_party_detail",
             workspace_slug=request.workspace.slug,
@@ -324,19 +325,20 @@ def party_create(request):
     return render(
         request,
         "party/form.html",
-        {"form": form, "title": "Create Party", "submit_label": "Create"},
+        {"form": form, "title": _("Add customer"), "submit_label": _("Save customer")},
     )
 
 
 @party_action_required("edit")
+@never_cache
 def party_update(request, pk):
     party = get_object_or_404(Party, pk=pk)
-    form = PartyForm(request.POST or None, request.FILES or None, instance=party)
+    form = PartyForm(request.POST if request.method == "POST" else None, request.FILES or None, instance=party)
     if request.method == "POST" and form.is_valid():
         party = form.save(commit=False)
         party.updated_by = request.user
         party.save()
-        messages.success(request, "Party updated.")
+        messages.success(request, _("Customer record updated."))
         return redirect(
             "workspace_slug_party_detail",
             workspace_slug=request.workspace.slug,
@@ -349,8 +351,8 @@ def party_update(request, pk):
         {
             "form": form,
             "party": party,
-            "title": "Edit Party",
-            "submit_label": "Save",
+            "title": _("Edit customer"),
+            "submit_label": _("Save changes"),
         },
     )
 

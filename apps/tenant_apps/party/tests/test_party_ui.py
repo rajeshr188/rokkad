@@ -245,6 +245,47 @@ class PartyUITests(WorkspaceTestCase):
         self.assertEqual(party.created_by, self.user)
         self.assertEqual(party.updated_by, self.user)
 
+    def test_customer_entry_errors_retain_input_and_link_to_controls(self):
+        response = self.client.post(reverse("party:party_create"), {
+            "party_type": "INDIVIDUAL", "display_name": "Asha <Example>",
+            "primary_phone": "bad-number", "status": "ACTIVE",
+            "party_code": "kept-code", "primary_email": "retained@example.com",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="#id_primary_phone"')
+        self.assertContains(response, 'id="form-errors"')
+        self.assertContains(response, 'aria-invalid="true"')
+        self.assertContains(response, 'id="id_primary_phone_error"')
+        self.assertContains(response, 'value="Asha &lt;Example&gt;"')
+        self.assertContains(response, 'value="retained@example.com"')
+        self.assertContains(response, 'value="bad-number"')
+        self.assertContains(response, '<input type="tel" name="primary_phone"')
+        self.assertContains(response, 'choose it again before saving')
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertFalse(Party.objects.filter(party_code="KEPT-CODE").exists())
+
+    def test_empty_customer_submission_shows_required_errors(self):
+        response = self.client.post(reverse("party:party_create"), {})
+        self.assertContains(response, 'href="#id_display_name"')
+        self.assertContains(response, 'hx-history="false"')
+        self.assertTrue(response.context["form"].is_bound)
+
+    def test_customer_entry_hindi_and_all_edit_values_remain_available(self):
+        from django.utils.translation import override
+        party = Party.objects.create(party_code="KEEP-EDIT", display_name="Original Name",
+            risk_level="REVIEW", credit_hold=True, status="BLOCKED", tax_pan="ABCDE1234F")
+        with override("hi"):
+            request = self.factory.get(reverse("party:party_update", args=[party.pk]))
+            request.user, request.workspace = self.user, self.tenant
+            response = party_views.party_update(request, party.pk)
+        self.assertContains(response, "ग्राहक का नाम")
+        self.assertContains(response, "Original Name")
+        self.assertContains(response, 'value="ABCDE1234F"')
+        self.assertContains(response, 'value="REVIEW"')
+        self.assertContains(response, 'value="BLOCKED" selected')
+        self.assertContains(response, 'id="id_credit_hold" checked')
+        self.assertContains(response, '<details class="border rounded p-3 mt-2" open>')
+
     def test_party_create_allows_member_with_create_permission(self):
         self._login_workspace_user("party-ui-create-member", "Member")
 

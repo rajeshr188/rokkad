@@ -792,3 +792,355 @@ msgid "%(total)s record found"
 msgid_plural "%(total)s records found"
 msgstr[0] "%(total)s रिकॉर्ड"
 msgstr[1] "%(total)s रिकॉर्ड"
+
+#: customer-entry-and-introduction
+msgid "Customer name"
+msgstr "ग्राहक का नाम"
+
+#: customer-entry-and-introduction
+msgid "Record type"
+msgstr "रिकॉर्ड का प्रकार"
+
+#: customer-entry-and-introduction
+msgid "Customer photo"
+msgstr "ग्राहक की फ़ोटो"
+
+#: customer-entry-and-introduction
+msgid "Relation"
+msgstr "संबंध"
+
+#: customer-entry-and-introduction
+msgid "Related person's name"
+msgstr "संबंधित व्यक्ति का नाम"
+
+#: customer-entry-and-introduction
+msgid "Customer code"
+msgstr "ग्राहक कोड"
+
+#: customer-entry-and-introduction
+msgid "Legal name"
+msgstr "कानूनी नाम"
+
+#: customer-entry-and-introduction
+msgid "Risk level"
+msgstr "जोखिम स्तर"
+
+#: customer-entry-and-introduction
+msgid "Credit hold"
+msgstr "ऋण पर रोक"
+
+#: customer-entry-and-introduction
+msgid "Leave blank to auto-generate."
+msgstr "कोड अपने आप बनाने के लिए खाली छोड़ें।"
+
+#: customer-entry-and-introduction
+msgid "Enter the name used to find this customer. Keep the original spelling."
+msgstr "ग्राहक को खोजने के लिए इस्तेमाल होने वाला नाम लिखें। मूल वर्तनी बनाए रखें।"
+
+#: customer-entry-and-introduction
+msgid "For an Indian number, enter 10 digits. For another country, include the country code."
+msgstr "भारतीय नंबर के लिए 10 अंक लिखें। दूसरे देश के नंबर में देश का कोड शामिल करें।"
+
+#: customer-entry-and-introduction
+msgid "Optional. Choose a clear photo; you can add it later."
+msgstr "वैकल्पिक। साफ़ फ़ोटो चुनें; इसे बाद में भी जोड़ सकते हैं।"
+
+#: customer-entry-and-introduction
+msgid "If you enter a related person's name, also choose a relation."
+msgstr "संबंधित व्यक्ति का नाम लिखने पर संबंध भी चुनें।"
+
+#: customer-entry-and-introduction
+msgid "Enter only if different from the customer name."
+msgstr "केवल तभी लिखें जब यह ग्राहक के नाम से अलग हो।"
+
+#: customer-entry-and-introduction
+msgid "Relation label and related person name must be entered together."
+msgstr "संबंध और संबंधित व्यक्ति का नाम दोनों साथ भरें।"
+
+#: customer-entry-and-introduction
+msgid "Customer record created."
+msgstr "ग्राहक का रिकॉर्ड बन गया।"
+
+#: customer-entry-and-introduction
+msgid "Customer record updated."
+msgstr "ग्राहक का रिकॉर्ड अपडेट हो गया।"
+
+#: customer-entry-and-introduction
+msgid "Save customer"
+msgstr "ग्राहक सहेजें"
+
+#: customer-entry-and-introduction
+msgid "Edit customer"
+msgstr "ग्राहक में बदलाव करें"
+
+#: customer-entry-and-introduction
+msgid "Save changes"
+msgstr "बदलाव सहेजें"
+
+#: customer-entry-and-introduction
+msgid "Required"
+msgstr "ज़रूरी"
+
+#: customer-entry-and-introduction
+msgid "Check the highlighted details"
+msgstr "चिह्नित जानकारी जाँचें"
+
+#: customer-entry-and-introduction
+msgid "Your entries are still here. Correct the errors below and save again."
+msgstr "आपकी भरी हुई जानकारी मौजूद है। नीचे की गलतियाँ सुधारें और फिर सहेजें।"
+
+#: customer-entry-and-introduction
+msgid "Start with the customer name and contact details. Add other details when available."
+msgstr "पहले ग्राहक का नाम और संपर्क जानकारी भरें। बाकी जानकारी उपलब्ध होने पर जोड़ें।"
+
+#: customer-entry-and-introduction
+msgid "Back"
+msgstr "वापस"
+
+#: customer-entry-and-introduction
+msgid "Search existing customers first"
+msgstr "पहले मौजूदा ग्राहकों में खोजें"
+
+#: customer-entry-and-introduction
+msgid "This helps avoid creating the same customer twice."
+msgstr "इससे एक ग्राहक के दो रिकॉर्ड बनने से बचते हैं।"
+
+#: customer-entry-and-introduction
+msgid "Fields marked Required must be completed. Other fields are optional."
+msgstr "ज़रूरी चिह्नित फ़ील्ड भरना आवश्यक है। बाकी फ़ील्ड वैकल्पिक हैं।"
+
+#: customer-entry-and-introduction
+msgid "Customer details"
+msgstr "ग्राहक की जानकारी"
+
+#: customer-entry-and-introduction
+msgid "More details"
+msgstr "अन्य जानकारी"
+
+#: customer-entry-and-introduction
+msgid "Customer code, legal and tax details, status and credit hold."
+msgstr "ग्राहक कोड, कानूनी और कर संबंधी जानकारी, स्थिति और ऋण पर रोक।"
+
+#: customer-entry-and-introduction
+msgid "If you chose a new photo, choose it again before saving. Browsers cannot restore file selections."
+msgstr "यदि आपने नई फ़ोटो चुनी थी, तो सहेजने से पहले उसे फिर चुनें। ब्राउज़र चुनी हुई फ़ाइल वापस नहीं भर सकता।"
+
+#: customer-entry-and-introduction
+msgid "What happens next?"
+msgstr "आगे क्या होगा?"
+
+#: customer-entry-and-introduction
+msgid "Saving opens the customer record. Add addresses and identity documents there, then start a loan when the branch is ready."
+msgstr "सहेजने के बाद ग्राहक का रिकॉर्ड खुलेगा। वहाँ पते और पहचान के दस्तावेज़ जोड़ें। शाखा तैयार होने पर ऋण शुरू करें।"
+
+#: customer-entry-and-introduction
+msgid "Saving a customer does not approve a loan or verify identity documents."
+msgstr "ग्राहक को सहेजने से ऋण स्वीकृत या पहचान के दस्तावेज़ सत्यापित नहीं होते।"
+
+#: customer-entry-and-introduction
+msgid "Getting started"
+msgstr "शुरुआत करें"
+
+#: customer-entry-and-introduction
+msgid "Account introduction"
+msgstr "खाते का परिचय"
+
+#: customer-entry-and-introduction
+msgid "Team"
+msgstr "टीम"
+
+#: customer-entry-and-introduction
+msgid "Done"
+msgstr "पूरा"
+
+#: customer-entry-and-introduction
+msgid "Skipped"
+msgstr "छोड़ा गया"
+
+#: customer-entry-and-introduction
+msgid "Quick guide"
+msgstr "संक्षिप्त मार्गदर्शिका"
+
+#: customer-entry-and-introduction
+msgid "This introduces your account. Branch lending setup is checked separately before you can issue loans."
+msgstr "यह आपके खाते का परिचय है। ऋण जारी करने से पहले शाखा की ऋण व्यवस्था अलग से जाँची जाती है।"
+
+#: customer-entry-and-introduction
+msgid "Already have a branch? Open your workspaces"
+msgstr "शाखा पहले से है? अपने वर्कस्पेस खोलें"
+
+#: customer-entry-and-introduction
+msgid "Leave introduction for now"
+msgstr "परिचय अभी छोड़ें"
+
+#: customer-entry-and-introduction
+msgid "Your first customer visit"
+msgstr "ग्राहक की पहली मुलाकात"
+
+#: customer-entry-and-introduction
+msgid "Check your branch"
+msgstr "अपनी शाखा जाँचें"
+
+#: customer-entry-and-introduction
+msgid "Open the correct workspace. The owner completes lending setup; invited staff use the access given to them."
+msgstr "सही वर्कस्पेस खोलें। मालिक ऋण व्यवस्था पूरी करता है; आमंत्रित कर्मचारी उन्हें दी गई अनुमति का उपयोग करते हैं।"
+
+#: customer-entry-and-introduction
+msgid "Find or add the customer"
+msgstr "ग्राहक खोजें या जोड़ें"
+
+#: customer-entry-and-introduction
+msgid "Search by name, phone or customer code first. Open the existing record, or add a customer and their identity details."
+msgstr "पहले नाम, फ़ोन या ग्राहक कोड से खोजें। मौजूदा रिकॉर्ड खोलें, या ग्राहक और उसकी पहचान की जानकारी जोड़ें।"
+
+#: customer-entry-and-introduction
+msgid "Prepare and review the loan"
+msgstr "ऋण तैयार करें और जाँचें"
+
+#: customer-entry-and-introduction
+msgid "Enter collateral and loan details. Review the calculated amounts and required checks before approval and disbursal."
+msgstr "गिरवी और ऋण की जानकारी भरें। स्वीकृति और भुगतान से पहले गणना की गई रकम और आवश्यक जाँचों की समीक्षा करें।"
+
+#: customer-entry-and-introduction
+msgid "Return to the loan for service"
+msgstr "आगे के काम के लिए ऋण खोलें"
+
+#: customer-entry-and-introduction
+msgid "Open the loan to review dues, use the available collection or release action, and view its documents."
+msgstr "बकाया देखने, उपलब्ध वसूली या गिरवी छुड़ाने की कार्रवाई करने और दस्तावेज़ देखने के लिए ऋण खोलें।"
+
+#: customer-entry-and-introduction
+msgid "Your preferences (optional)"
+msgstr "आपकी प्राथमिकताएँ (वैकल्पिक)"
+
+#: customer-entry-and-introduction
+msgid "Next, open branch setup if a workspace is selected, or choose a workspace. Completing this guide does not make a branch ready to lend."
+msgstr "आगे, वर्कस्पेस चुना है तो शाखा की सेटिंग खोलें, अन्यथा वर्कस्पेस चुनें। यह मार्गदर्शिका पूरी करने से शाखा ऋण देने के लिए तैयार नहीं हो जाती।"
+
+#: customer-entry-and-introduction
+msgid "Continue to workspace"
+msgstr "वर्कस्पेस पर जाएँ"
+
+#: customer-entry-and-introduction
+msgid "Skip preferences"
+msgstr "प्राथमिकताएँ छोड़ें"
+
+#: customer-entry-and-introduction
+msgid "Follow a customer visit from finding their record to reviewing a loan."
+msgstr "ग्राहक का रिकॉर्ड खोजने से लेकर ऋण की समीक्षा तक की प्रक्रिया जानें।"
+
+#: customer-entry-and-introduction
+msgid "Preferences skipped. Continue with your workspace."
+msgstr "प्राथमिकताएँ छोड़ दी गईं। अपने वर्कस्पेस पर आगे बढ़ें।"
+
+#: customer-entry-and-introduction
+msgid "Owner/Founder - I manage everything"
+msgstr "मालिक/संस्थापक - मैं सभी काम सँभालता हूँ"
+
+#: customer-entry-and-introduction
+msgid "Manager - I oversee operations"
+msgstr "प्रबंधक - मैं संचालन देखता हूँ"
+
+#: customer-entry-and-introduction
+msgid "Staff - I help with borrowers and loans"
+msgstr "कर्मचारी - मैं ग्राहकों और ऋणों के काम में मदद करता हूँ"
+
+#: customer-entry-and-introduction
+msgid "Other"
+msgstr "अन्य"
+
+#: customer-entry-and-introduction
+msgid "What best describes your role?"
+msgstr "आपकी भूमिका क्या है?"
+
+#: customer-entry-and-introduction
+msgid "A preference only; this does not change your Workspace permissions."
+msgstr "यह केवल प्राथमिकता है; इससे वर्कस्पेस की आपकी अनुमतियाँ नहीं बदलतीं।"
+
+#: customer-entry-and-introduction
+msgid "Loans and Collateral"
+msgstr "ऋण और गिरवी"
+
+#: customer-entry-and-introduction
+msgid "Borrower Profiles"
+msgstr "ऋण ग्राहकों की प्रोफ़ाइल"
+
+#: customer-entry-and-introduction
+msgid "Gold and Silver Reference Rates"
+msgstr "सोने और चाँदी की संदर्भ दरें"
+
+#: customer-entry-and-introduction
+msgid "Notifications and Reminders"
+msgstr "सूचनाएँ और अनुस्मारक"
+
+#: customer-entry-and-introduction
+msgid "Reports & Analytics"
+msgstr "रिपोर्ट और विश्लेषण"
+
+#: customer-entry-and-introduction
+msgid "Which features are you most interested in?"
+msgstr "किन सुविधाओं में आपकी अधिक रुचि है?"
+
+#: customer-entry-and-introduction
+msgid "Select all that apply"
+msgstr "सभी लागू विकल्प चुनें"
+
+#: customer-entry-and-introduction
+msgid "Organization"
+msgstr "संस्था"
+
+#: customer-entry-and-introduction
+msgid "Bank"
+msgstr "बैंक"
+
+#: customer-entry-and-introduction
+msgid "Government Body"
+msgstr "सरकारी संस्था"
+
+#: customer-entry-and-introduction
+msgid "Internal Workspace Entity"
+msgstr "वर्कस्पेस की आंतरिक इकाई"
+
+#: customer-entry-and-introduction
+msgid "Profile Setup"
+msgstr "प्रोफ़ाइल की तैयारी"
+
+#: customer-entry-and-introduction
+msgid "Tell us a bit about yourself"
+msgstr "अपने बारे में कुछ बताएँ"
+
+#: customer-entry-and-introduction
+msgid "Create Your Workspace"
+msgstr "अपना वर्कस्पेस बनाएँ"
+
+#: customer-entry-and-introduction
+msgid "Set up your company workspace"
+msgstr "अपनी कंपनी का वर्कस्पेस तैयार करें"
+
+#: customer-entry-and-introduction
+msgid "Invite Your Team"
+msgstr "अपनी टीम को आमंत्रित करें"
+
+#: customer-entry-and-introduction
+msgid "Collaborate with your team (Optional)"
+msgstr "अपनी टीम के साथ काम करें (वैकल्पिक)"
+
+#: customer-entry-and-introduction
+msgid "Add customer"
+msgstr "ग्राहक जोड़ें"
+
+#: customer-entry-and-introduction
+msgid "Phone"
+msgstr "फ़ोन"
+
+#: customer-entry-and-introduction
+msgid "Email"
+msgstr "ईमेल"
+
+#: customer-entry-and-introduction
+msgid "Enter a valid phone number (e.g. {example_number}) or a number with an international call prefix."
+msgstr "सही फ़ोन नंबर लिखें (जैसे {example_number}), या देश के कोड के साथ नंबर लिखें।"
+
+#: customer-entry-and-introduction
+msgid "File saved. View it from the borrower details."
+msgstr "फ़ाइल सहेजी गई है। इसे ग्राहक की जानकारी में देखें।"

@@ -7,6 +7,31 @@ tags: [status, architecture]
 
 # Status
 
+## Customer entry and onboarding introduction (2026-09-22)
+
+The next redesign slice simplifies Party creation/editing: identity/contact first,
+additional fields in a native disclosure, linked server-error summary with focus
+recovery, retained text, file-reselection guidance and plain next-step explanation.
+Native template partials share accessible field/error markup. Writes remain normal
+CSRF-protected Django submissions through existing authorization/save boundaries;
+no HTMX write protocol, model or financial service changed. Empty POSTs now bind
+correctly and show required-field errors. Private form responses are no-store.
+
+The onboarding introduction now has a responsive, labelled progress display and a
+practical customer-visit guide, optional preferences and an existing-Workspace
+link. It distinguishes account introduction from actual lending readiness, without
+changing completion redirects, permissions or saved preference history. Customer
+entry and guide copy are translated into Hindi; legacy Email mistranslation was
+corrected. The obsolete schema/DEA onboarding flow document is replaced.
+
+78 focused tests and the 699-file import-boundary check pass. Browser checks cover
+customer-form error focus and English/Hindi phone/tablet layouts; the signed-in
+onboarding browser journey remains pending. Evidence is recorded in
+[the redesign implementation](implementation/accessible-directory-redesign.md#customer-entry-and-introduction).
+Full onboarding form/setup redesign, customer detail/KYC, lending/release journeys
+and physical-device/operator acceptance remain pending. No production or financial
+rehearsal records were changed.
+
 ## Native-partial redesign: first implemented slice (2026-09-22)
 
 The owner chose Django 6 native template partials, HTMX and current Bootstrap.

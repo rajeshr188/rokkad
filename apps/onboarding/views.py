@@ -7,6 +7,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext as _
 
 from apps.orgs.audit import AuditLog
 from apps.orgs.services import control_plane
@@ -105,8 +106,8 @@ def onboarding_profile(request):
         "form": form,
         "progress": progress,
         "step_number": 1,
-        "step_title": "Profile Setup",
-        "step_description": "Tell us a bit about yourself",
+        "step_title": _("Profile Setup"),
+        "step_description": _("Tell us a bit about yourself"),
     }
     return render(request, "onboarding/step_profile.html", context)
 
@@ -191,8 +192,8 @@ def onboarding_company(request):
         "form": form,
         "progress": progress,
         "step_number": 2,
-        "step_title": "Create Your Workspace",
-        "step_description": "Set up your company workspace",
+        "step_title": _("Create Your Workspace"),
+        "step_description": _("Set up your company workspace"),
     }
     return render(request, "onboarding/step_company.html", context)
 
@@ -269,8 +270,8 @@ def onboarding_team(request):
         "form": form,
         "progress": progress,
         "step_number": 3,
-        "step_title": "Invite Your Team",
-        "step_description": "Collaborate with your team (Optional)",
+        "step_title": _("Invite Your Team"),
+        "step_description": _("Collaborate with your team (Optional)"),
         "company": company,
     }
     return render(request, "onboarding/step_team.html", context)
@@ -295,7 +296,7 @@ def onboarding_tour(request):
         if "skip" in request.POST:
             # Skip tour
             progress.skip_step(4)
-            messages.info(request, "You can access help anytime from the menu.")
+            messages.info(request, _("Preferences skipped. Continue with your workspace."))
             return redirect("onboarding_complete")
 
         form = TourPreferencesForm(request.POST)
@@ -332,8 +333,8 @@ def onboarding_tour(request):
         "form": form,
         "progress": progress,
         "step_number": 4,
-        "step_title": "Feature Tour",
-        "step_description": "Learn about key features",
+        "step_title": _("Quick guide"),
+        "step_description": _("Follow a customer visit from finding their record to reviewing a loan."),
     }
     return render(request, "onboarding/step_tour.html", context)
 

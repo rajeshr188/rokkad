@@ -45,3 +45,25 @@ class TourPreferenceTests(TestCase):
         self.progress.refresh_from_db()
         self.assertFalse(self.progress.tour_completed)
         self.assertEqual(OnboardingChoice.objects.filter(progress=self.progress).count(), 1)
+
+    def test_guide_distinguishes_introduction_from_lending_readiness(self):
+        response = self.client.get("/onboarding/tour/")
+        self.assertContains(response, "Your first customer visit")
+        self.assertContains(response, "does not make a branch ready to lend")
+        self.assertContains(response, 'aria-current="step"')
+        self.assertContains(response, "Already have a branch?")
+        self.assertNotContains(response, "Complete Setup")
+        self.assertNotContains(response, 'name="skip_tour"')
+
+    def test_guide_hindi_and_preference_error_recovery(self):
+        self.client.cookies["django_language"] = "hi"
+        response = self.client.post("/onboarding/tour/", {
+            "primary_role": "staff", "interested_features": ["dea"],
+        })
+        self.assertContains(response, "ग्राहक की पहली मुलाकात")
+        self.assertContains(response, 'href="#id_interested_features"')
+        self.assertContains(response, 'value="staff"')
+        self.assertContains(response, 'checked')
+        self.assertContains(response, '<details class="border rounded p-3 mt-4" open>')
+        self.progress.refresh_from_db()
+        self.assertFalse(self.progress.tour_completed)
