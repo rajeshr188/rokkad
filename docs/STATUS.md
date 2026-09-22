@@ -7,6 +7,30 @@ tags: [status, architecture]
 
 # Status
 
+## Native-partial redesign: first implemented slice (2026-09-22)
+
+The owner chose Django 6 native template partials, HTMX and current Bootstrap.
+The active shared shell now pins Bootstrap 5.3.8 with SRI, exposes a keyboard skip
+link and correct page language, and uses explicit language submission. The Party
+directory has responsive records, progressive search/filter/pagination via one
+native partial, permission-aware actions, filtered exports and English/Hindi copy.
+Full pages remain the no-JavaScript/history fallback. Partial reads retain normal
+authorization and private caching; borrower HTML is excluded from HTMX history
+storage. Existing local HTMX 1.9.10 remains; no whole-app HTMX 2 upgrade is claimed.
+
+63 focused Party/private-media/shared-shell tests pass. A broader 68-check run has 64 passes
+and four old management-shell failures reproduced with original HEAD templates.
+Hindi catalogue syntax/duplicate/format issues were repaired and gettext compilation
+passes with legacy metadata warnings. Browser checks confirm live search with focus
+retained, result announcements, pagination focus, Back restoration and language
+switching with filters retained; responsive and translation rollout remains scoped
+to this first slice. See [implementation](implementation/accessible-directory-redesign.md)
+and [decision](adr/2026-09-22-native-template-partials-ui.md).
+
+Next: first-day setup/onboarding and customer creation, then lending/release flows.
+Whole-product redesign, Hindi coverage, assistive-technology and physical-device
+acceptance are not complete. Production and accepted financial evidence are unchanged.
+
 ## UX and onboarding redesign now precedes cutover (2026-09-22)
 
 The owner requires a thorough accessibility and user-flow redesign before moving

@@ -1,139 +1,81 @@
 {% extends 'base_tenant.html' %}
-
-{% block title %}Parties{% endblock %}
-
+{% load i18n static %}
+{% block title %}{% translate "Customers & parties" %}{% endblock %}
 {% block workspace_content %}
-<div class="app-heading">
-    <div>
-        <div class="app-eyebrow">Borrower records</div><h1 class="h3 mb-1">Parties</h1>
-        <div class="text-muted small">Find a borrower, check their details, and continue their work at the counter.</div>
+<section class="party-directory" aria-labelledby="directory-title" hx-history="false">
+  <div class="app-heading">
+    <div><div class="app-eyebrow">{% translate "Customer records" %}</div>
+      <h1 id="directory-title">{% translate "Customers & parties" %}</h1>
+      <p>{% translate "Find a customer before adding a new record." %}</p>
     </div>
+    {% if can_create_parties %}<a class="btn btn-primary" href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% translate "Add customer or party" %}</a>{% endif %}
+  </div>
+  <form id="party-search-form" method="get" action="{{ request.path }}" class="app-filter-panel"
+        hx-get="{{ request.path }}" hx-target="#party-results" hx-swap="outerHTML" hx-push-url="true"
+        hx-trigger="submit, input changed delay:400ms from:#party-search, change from:#party-role, change from:#party-status"
+        hx-sync="#party-search-form:replace" hx-indicator="#party-loading">
+    <label class="form-label fw-semibold" for="party-search">{% translate "Find a customer or party" %}</label>
     <div class="d-flex gap-2">
-        {% if can_import_parties %}<a class="btn btn-outline-secondary" href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">Import</a>{% endif %}
-        {% if can_export_parties %}
-        <a class="btn btn-outline-secondary" href="{% url 'workspace_portability:export' workspace_slug=request.workspace.slug %}">Portable export</a>
-        <div class="btn-group" role="group" aria-label="Export parties">
-            <a class="btn btn-outline-secondary" href="?{% if export_querystring %}{{ export_querystring }}&{% endif %}_export=csv">
-                <i class="bi bi-filetype-csv"></i> CSV
-            </a>
-            <a class="btn btn-outline-secondary" href="?{% if export_querystring %}{{ export_querystring }}&{% endif %}_export=xlsx">
-                <i class="bi bi-file-earmark-spreadsheet"></i> XLSX
-            </a>
+      <input id="party-search" class="form-control" type="search" name="q" value="{{ query }}" aria-describedby="party-search-help" autocomplete="off">
+      <button class="btn btn-primary" type="submit">{% translate "Search" %}</button>
+    </div>
+    <p id="party-search-help" class="form-text">{% translate "Search by name, code, phone, email, PAN or GSTIN." %}</p>
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-5"><label class="form-label" for="party-role">{% translate "Role" %}</label>
+        <select id="party-role" class="form-select" name="role"><option value="">{% translate "All roles" %}</option>
+          {% for key, label in role_options %}<option value="{{ key }}" {% if role_key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-5"><label class="form-label" for="party-status">{% translate "Status" %}</label>
+        <select id="party-status" class="form-select" name="status"><option value="">{% translate "All statuses" %}</option>
+          {% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{% translate label %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2"><a class="btn btn-outline-secondary w-100" href="{{ request.path }}">{% translate "Clear" %}</a></div>
+    </div>
+  </form>
+  <div id="party-loading" class="htmx-indicator small my-2" role="status">{% translate "Searching…" %}</div>
+  <p id="party-search-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+  <div id="party-search-error" class="alert alert-warning" role="alert" hidden>{% translate "Search could not finish. Your filters are kept. Try Search again or reload the page." %}</div>
+  {% partialdef results inline %}
+  <section id="party-results" aria-labelledby="party-results-title" tabindex="-1" data-party-results>
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
+      <h2 id="party-results-title" class="h5 mb-0" tabindex="-1">{% blocktranslate count total=page_obj.paginator.count %}{{ total }} record found{% plural %}{{ total }} records found{% endblocktranslate %}</h2>
+      {% if can_export_parties or can_import_parties %}<details class="directory-tools"><summary>{% translate "Import and export" %}</summary>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          {% if can_import_parties %}<a class="btn btn-outline-secondary" href="{% url 'workspace_portability:upload' workspace_slug=request.workspace.slug %}">{% translate "Import" %}</a>{% endif %}
+          {% if can_export_parties %}<a class="btn btn-outline-secondary" href="{% url 'workspace_portability:export' workspace_slug=request.workspace.slug %}">{% translate "Portable export" %}</a>
+            <a class="btn btn-outline-secondary" href="?{% if export_querystring %}{{ export_querystring }}&{% endif %}_export=csv">{% translate "Export filtered CSV" %}</a>
+            <a class="btn btn-outline-secondary" href="?{% if export_querystring %}{{ export_querystring }}&{% endif %}_export=xlsx">{% translate "Export filtered XLSX" %}</a>{% endif %}
         </div>
-        {% endif %}
-        <a class="btn btn-primary" href="{% if user_workspace %}{% url 'workspace_slug_party_create' workspace_slug=user_workspace.slug %}{% else %}{% url 'party:party_create' %}{% endif %}">
-            <i class="bi bi-plus-lg"></i> New Party
-        </a>
+      </details>{% endif %}
     </div>
-</div>
-
-<form method="get" class="row g-2 align-items-end mb-3 app-filter-panel">
-    <div class="col-md-5">
-        <label class="form-label small text-muted" for="party-search">Search</label>
-        <input id="party-search" class="form-control" type="search" name="q" value="{{ query }}" placeholder="Name, code, phone, email, PAN, GSTIN">
-    </div>
-    <div class="col-md-3">
-        <label class="form-label small text-muted" for="party-role">Role</label>
-        <select id="party-role" class="form-select" name="role">
-            <option value="">All roles</option>
-            {% for key, label in role_options %}
-                <option value="{{ key }}" {% if role_key == key %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-md-2">
-        <label class="form-label small text-muted" for="party-status">Status</label>
-        <select id="party-status" class="form-select" name="status">
-            <option value="">All statuses</option>
-            {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-md-2 d-grid">
-        <button class="btn btn-outline-primary" type="submit">
-            <i class="bi bi-search"></i> Filter
-        </button>
-    </div>
-</form>
-
-<div class="table-responsive card">
-    <table class="table app-table table-hover align-middle mb-0">
-        <thead class="table-light">
-            <tr>
-                <th></th>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Roles</th>
-                <th>Contact</th>
-                <th>Status</th>
-                <th class="text-end">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for party in page_obj.object_list %}
-            <tr>
-                <td style="width: 44px;">
-                    {% if party.profile_photo %}
-                        <img src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=party.pk %}" alt="" class="rounded-circle" style="width:32px;height:32px;object-fit:cover;">
-                    {% else %}
-                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:.8rem;">
-                            {{ party.display_name|first|upper }}
-                        </div>
-                    {% endif %}
-                </td>
-                <td class="fw-semibold">{{ party.party_code }}</td>
-                <td>
-                    <a class="fw-semibold text-decoration-none" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}">{{ party.display_name }}</a>
-                    {% if party.legal_name %}<div class="small text-muted">{{ party.legal_name }}</div>{% endif %}
-                    {% if party.relation_display %}<div class="small text-muted">{{ party.relation_display }}</div>{% endif %}
-                </td>
-                <td>{{ party.get_party_type_display }}</td>
-                <td>
-                    {% for role in party.roles.all %}
-                        {% if role.status == "ACTIVE" %}
-                            <span class="badge text-bg-secondary">{{ role.role_type.label }}</span>
-                        {% endif %}
-                    {% empty %}
-                        <span class="text-muted">None</span>
-                    {% endfor %}
-                </td>
-                <td>
-                    {% if party.primary_phone %}<div>{{ party.primary_phone }}</div>{% endif %}
-                    {% if party.primary_email %}<div class="small text-muted">{{ party.primary_email }}</div>{% endif %}
-                </td>
-                <td>
-                    <span class="badge {% if party.status == 'ACTIVE' %}text-bg-success{% elif party.status == 'BLOCKED' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">
-                        {{ party.get_status_display }}
-                    </span>
-                </td>
-                <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_update' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_update' party.pk %}{% endif %}" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8" class="text-center text-muted py-4">No parties found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-{% if page_obj.has_other_pages %}
-<nav class="mt-3" aria-label="Party pagination">
-    <ul class="pagination pagination-sm mb-0">
-        {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&role={{ role_key }}&status={{ status }}">Previous</a></li>
-        {% endif %}
-        <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
-        {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&role={{ role_key }}&status={{ status }}">Next</a></li>
-        {% endif %}
+    <ul class="list-unstyled directory-records">
+      {% for party in page_obj.object_list %}<li class="card directory-record">
+        <div class="directory-identity">
+          {% if party.profile_photo %}<img loading="lazy" src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=party.pk %}" alt="" width="44" height="44" class="directory-avatar">{% else %}<span class="directory-avatar" aria-hidden="true">{{ party.display_name|first|upper }}</span>{% endif %}
+          <div><a class="directory-name" href="{% url 'workspace_slug_party_detail' workspace_slug=request.workspace.slug pk=party.pk %}">{{ party.display_name }}</a>
+            <div class="small text-muted">{{ party.party_code }}</div>
+            {% if party.relation_display %}<div class="small">{{ party.relation_display }}</div>{% endif %}
+            {% if party.legal_name and party.legal_name != party.display_name %}<div class="small text-muted">{{ party.legal_name }}</div>{% endif %}
+          </div>
+        </div>
+        <dl class="directory-contact mb-0"><dt>{% translate "Contact" %}</dt><dd class="mb-0">{% if party.primary_phone %}{{ party.primary_phone }}{% else %}{% translate "No phone recorded" %}{% endif %}{% if party.primary_email %}<div class="small">{{ party.primary_email }}</div>{% endif %}</dd></dl>
+        <div><span class="badge {% if party.status == 'ACTIVE' %}text-bg-success{% elif party.status == 'BLOCKED' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{% translate party.get_status_display %}</span>
+          <div class="small text-muted mt-1">{% translate party.get_party_type_display %}</div>
+          {% for role in party.roles.all %}{% if role.status == 'ACTIVE' %}<div class="small">{{ role.role_type.label }}</div>{% endif %}{% endfor %}
+        </div>
+        {% if can_edit_parties %}<a class="btn btn-outline-secondary" href="{% url 'workspace_slug_party_update' workspace_slug=request.workspace.slug pk=party.pk %}" aria-label="{% blocktranslate with name=party.display_name %}Edit {{ name }}{% endblocktranslate %}">{% translate "Edit" %}</a>{% endif %}
+      </li>{% empty %}<li class="card app-empty"><strong>{% translate "No matching records" %}</strong><p>{% translate "Check the spelling, try a phone number, or clear the filters." %}</p></li>{% endfor %}
     </ul>
-</nav>
-{% endif %}
+    {% if page_obj.has_other_pages %}<nav aria-label="{% translate 'Search result pages' %}" class="d-flex flex-wrap align-items-center gap-3 mt-3"
+        hx-target="#party-results" hx-swap="outerHTML" hx-push-url="true" hx-sync="#party-search-form:replace" hx-indicator="#party-loading">
+      {% if page_obj.has_previous %}{% querystring page=page_obj.previous_page_number as previous_url %}<a class="btn btn-outline-secondary" href="{{ previous_url }}" hx-get="{{ previous_url }}" data-results-page>{% translate "Previous" %}</a>{% endif %}
+      <span>{% blocktranslate with page=page_obj.number pages=page_obj.paginator.num_pages %}Page {{ page }} of {{ pages }}{% endblocktranslate %}</span>
+      {% if page_obj.has_next %}{% querystring page=page_obj.next_page_number as next_url %}<a class="btn btn-outline-secondary" href="{{ next_url }}" hx-get="{{ next_url }}" data-results-page>{% translate "Next" %}</a>{% endif %}
+    </nav>{% endif %}
+  </section>
+  {% endpartialdef results %}
+</section>
 {% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/party-directory.js' %}"></script>{% endblock %}

@@ -43,6 +43,13 @@ building on the counter shell. Keep the old app live and the accepted rehearsal
 intact; defer final source freeze and switch until redesigned journeys are accepted.
 The separate production server is still planned, but need not be purchased before
 local design work. CPU/RAM sizing recommendations are provisional until measured.
+The owner selected Django 6 native template partials with HTMX and the latest stable
+Bootstrap for implementation. Use progressive ordinary Django views/forms and
+existing domain services; no extra partial-template package or SPA framework.
+The first native-partial directory slice pins Bootstrap 5.3.8 in the active shell.
+Fragment headers never grant access; full-page/history fallbacks, private responses,
+keyboard focus and English/Hindi are part of each flow's contract. See
+[the frontend decision](adr/2026-09-22-native-template-partials-ui.md).
 
 Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company

@@ -100,6 +100,59 @@ class PartyUITests(WorkspaceTestCase):
         self.assertContains(response, "Asha Traders")
         self.assertContains(response, "P1001")
 
+    def test_native_partial_matches_filtered_page_without_shell(self):
+        Party.objects.create(party_code="P1001", display_name="Asha & Sons")
+        Party.objects.create(party_code="P1002", display_name="Other customer")
+        response = self.client.get(reverse("party:party_list"), {"q": "Asha &"},
+            HTTP_HX_REQUEST="true", HTTP_HX_TARGET="party-results")
+        self.assertContains(response, "Asha &amp; Sons")
+        self.assertNotContains(response, "Other customer")
+        self.assertNotContains(response, "<html")
+        self.assertNotContains(response, "party-search-form\" method")
+        self.assertEqual(response["X-Rokkad-Fragment"], "party-results")
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertIn("HX-Request", response["Vary"])
+
+    def test_history_restore_and_other_targets_receive_full_document(self):
+        for extra in ({"HTTP_HX_HISTORY_RESTORE_REQUEST":"true"},
+                      {"HTTP_HX_BOOSTED":"true"}, {"HTTP_HX_TARGET":"other"}):
+            headers = dict(HTTP_HX_REQUEST="true", HTTP_HX_TARGET="party-results")
+            headers.update(extra)
+            response = self.client.get(reverse("party:party_list"), **headers)
+            self.assertContains(response, "<html")
+            self.assertNotIn("X-Rokkad-Fragment", response)
+
+    def test_fragment_keeps_permission_checks(self):
+        user = self._login_workspace_user("fragment-noaccess", "NoAccess")
+        request = self.factory.get(reverse("party:party_list"), HTTP_HX_REQUEST="true", HTTP_HX_TARGET="party-results")
+        request.user, request.workspace = user, self.tenant
+        with self.assertRaises(PermissionDenied):
+            party_views.party_list(request)
+
+    def test_fragment_cannot_bypass_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("party:party_list"), HTTP_HX_REQUEST="true", HTTP_HX_TARGET="party-results")
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("X-Rokkad-Fragment", response)
+
+    def test_hindi_page_and_partial_preserve_customer_names(self):
+        Party.objects.create(party_code="P1001", display_name="Asha Traders")
+        from django.utils.translation import override
+        with override("hi"):
+            request = self.factory.get(reverse("party:party_list"), HTTP_HX_REQUEST="true", HTTP_HX_TARGET="party-results")
+            request.user, request.workspace = self.user, self.tenant
+            response = party_views.party_list(request)
+        self.assertContains(response, "Asha Traders")
+        self.assertContains(response, "संपर्क")
+        self.assertNotContains(response, "No phone recorded")
+
+    def test_pagination_preserves_encoded_search(self):
+        for number in range(51):
+            Party.objects.create(party_code=f"P{number:04d}", display_name=f"A & B {number}")
+        response = self.client.get(reverse("party:party_list"), {"q":"A & B"})
+        self.assertContains(response, "q=A+%26+B")
+        self.assertContains(response, "page=2")
+
     def test_party_list_allows_member_with_view_permission(self):
         Party.objects.create(party_code="P1001", display_name="Asha Traders")
         self._login_workspace_user("party-ui-member", "Member")

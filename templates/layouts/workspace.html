@@ -1,5 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% load orgs_tags static %}
+{% block skip_target %}#content{% endblock %}
 {% block body_class %}rokkad-workspace{% endblock %}
 {% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/workspace-ui.css' %}">{% endblock %}
 {% block main_wrapper_class %}container-fluid p-0{% endblock %}
@@ -61,7 +62,7 @@
         </div>
         
         <!-- Main Content Area -->
-        <main class="col-lg-10 px-3 px-md-4 py-3 workspace-content" id="content">
+        <div class="col-lg-10 px-3 px-md-4 py-3 workspace-content" id="content" tabindex="-1">
             {% include "components/messages.html" with messages_container_class="mb-3" %}
             <!-- Breadcrumb Navigation -->
             {% block breadcrumbs %}{% endblock %}
@@ -71,7 +72,7 @@
             
             <!-- Workspace Content -->
             {% block workspace_content %}{% endblock %}
-        </main>
+        </div>
     </div>
 </div>
 

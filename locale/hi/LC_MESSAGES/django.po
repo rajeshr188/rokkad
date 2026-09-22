@@ -3,7 +3,6 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
@@ -12,7 +11,7 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"Language: hi\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -294,10 +293,8 @@ msgctxt "Gram weight unit symbol"
 msgid "g"
 msgstr ""
 
-#: .\apps\tenant_apps\purchase\models\payment.py:50
-#: .\apps\tenant_apps\purchase\models\purchase.py:55
 msgid "Supplier"
-msgstr ""
+msgstr "आपूर्तिकर्ता"
 
 #: .\templates\_base.html:42
 msgid "Workspace"
@@ -361,6 +358,7 @@ msgid ""
 "request, you can safely ignore this email. Otherwise, click the button below "
 "to reset your password."
 msgstr ""
+"%(site_name)s से नमस्ते!\n\n"
 "हमें आपका पासवर्ड रीसेट करने का अनुरोध प्राप्त हुआ है। यदि आपने इसे नहीं बनाया हैअनुरोध, आप "
 "इस ईमेल को सुरक्षित रूप से अनदेखा कर सकते हैं। अन्यथा, नीचे दिए गए बटन पर क्लिक करेंअपना "
 "पासवर्ड रीसेट करने के लिए"
@@ -423,12 +421,6 @@ msgstr "ऋण राशि"
 msgid "Total Interest"
 msgstr "कुल ब्याज"
 
-#: .\templates\girvi\loan\loan_list.html:67
-#, fuzzy
-#| msgid "Active"
-msgid "Active"
-msgstr "सक्रिय"
-
 msgid "Actions"
 msgstr "क्रियाएँ"
 
@@ -454,7 +446,7 @@ msgstr "अगला"
 msgid "Summary"
 msgstr "सारांश"
 
-msgit "Item"
+msgid "Item"
 msgstr "आइटम"
 
 msgid "Renew"
@@ -514,14 +506,8 @@ msgstr "खरीद"
 msgid "Purchases"
 msgstr "खरीद"
 
-msgid "Supplier"
-msgstr "आपूर्तिकर्ता"
-
 msgid "Suppliers"
 msgstr "आपूर्तिकर्ता"
-
-msgid "Payment"
-msgstr "भुगतान"
 
 msgid "Payments"
 msgstr "भुगतान"
@@ -550,9 +536,6 @@ msgstr "उत्पाद विशेषताएँ मूल्य"
 msgid "ProductAttributeValues"
 msgstr "उत्पाद विशेषताएँ मूल्य"
 
-msgid "Address"
-msgstr "पता"
-
 msgid "Addresses"
 msgstr "पते"
 
@@ -562,25 +545,13 @@ msgstr "संपर्क"
 msgid "Contacts"
 msgstr "संपर्क"
 
-msgid "Customer"
-msgstr "ग्राहक"
-
-msgid "Customers"
-msgstr "ग्राहक"
-
 msgid "ID"
 msgstr "आईडी"
-
-msgid "Actions"
-msgstr "क्रियाएँ"
-
-msgid "Phone Number"
-msgstr "फ़ोन नंबर"
 
 msgid "Results"
 msgstr "परिणाम"
 
-msdig "Rates"
+msgid "Rates"
 msgstr "दरें"
 
 msgid "Billing"
@@ -622,14 +593,8 @@ msgstr "रद्द करें"
 msgid "Close"
 msgstr "बंद करें"
 
-msgid "Verify"
-msgstr "सत्यापित करें"
-
 msgid "Inactive"
 msgstr "निष्क्रिय"
-
-msgid "Amount"
-msgstr "राशि"
 
 msgid "Status"
 msgstr "स्थिति"
@@ -655,20 +620,11 @@ msgstr "पूर्ण"
 msgid "Sunken"
 msgstr "डूबा हुआ"
 
-msgid "Item"
-msgstr "आइटम"
-
 msgid "Quantity"
 msgstr "मात्रा"
 
-msgid "Price"
-msgstr "मूल्य"
-
 msgid "Total"
 msgstr "कुल"
-
-msgid "Weight"
-msgstr "वजन"
 
 msgid "Months"
 msgstr "महीने"
@@ -679,8 +635,160 @@ msgstr "मूल्य"
 msgid "Currency"
 msgstr "मुद्रा"
 
-msgid "Rates"
-msgstr "दर"
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Customers & parties"
+msgstr "ग्राहक और अन्य पक्ष"
 
-msgid "Next"
-msgstr "अगला"
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Customer records"
+msgstr "ग्राहक विवरण"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Find a customer before adding a new record."
+msgstr "नया विवरण जोड़ने से पहले ग्राहक को खोजें।"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Add customer or party"
+msgstr "ग्राहक या अन्य पक्ष जोड़ें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Find a customer or party"
+msgstr "ग्राहक या अन्य पक्ष खोजें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Search by name, code, phone, email, PAN or GSTIN."
+msgstr "नाम, कोड, फ़ोन, ईमेल, पैन या GSTIN से खोजें।"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Role"
+msgstr "भूमिका"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "All roles"
+msgstr "सभी भूमिकाएँ"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "All statuses"
+msgstr "सभी स्थितियाँ"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Clear"
+msgstr "हटाएँ"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Searching…"
+msgstr "खोज जारी है…"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid ""
+"Search could not finish. Your filters are kept. Try Search again or reload "
+"the page."
+msgstr "खोज पूरी नहीं हुई। आपके फ़िल्टर सुरक्षित हैं। फिर से खोजें या पृष्ठ दोबारा खोलें।"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Import and export"
+msgstr "आयात और निर्यात"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Import"
+msgstr "आयात करें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Portable export"
+msgstr "पोर्टेबल निर्यात"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Export filtered CSV"
+msgstr "चुने गए विवरण CSV में निकालें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Export filtered XLSX"
+msgstr "चुने गए विवरण XLSX में निकालें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "No phone recorded"
+msgstr "फ़ोन दर्ज नहीं है"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Edit %(name)s"
+msgstr "%(name)s का विवरण बदलें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "No matching records"
+msgstr "कोई मेल खाता विवरण नहीं मिला"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Check the spelling, try a phone number, or clear the filters."
+msgstr "वर्तनी जाँचें, फ़ोन नंबर से खोजें या फ़िल्टर हटाएँ।"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Search result pages"
+msgstr "खोज परिणाम के पृष्ठ"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Page %(page)s of %(pages)s"
+msgstr "पृष्ठ %(page)s / %(pages)s"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Skip to main content"
+msgstr "मुख्य सामग्री पर जाएँ"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Language"
+msgstr "भाषा"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Apply language"
+msgstr "भाषा लागू करें"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Blocked"
+msgstr "अवरुद्ध"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Archived"
+msgstr "संग्रहीत"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Individual"
+msgstr "व्यक्ति"
+
+#: templates/party/list.html templates/layouts/base.html
+#: templates/components/navigation/main_nav.html
+msgid "Business"
+msgstr "व्यवसाय"
+
+#: templates/party/list.html
+msgid "%(total)s record found"
+msgid_plural "%(total)s records found"
+msgstr[0] "%(total)s रिकॉर्ड"
+msgstr[1] "%(total)s रिकॉर्ड"

@@ -15,6 +15,8 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequ
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.views.decorators.vary import vary_on_headers
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 
@@ -244,6 +246,8 @@ def _image_file_from_data_uri(image_data):
 
 
 @party_action_required("view")
+@never_cache
+@vary_on_headers("HX-Request", "HX-Target", "HX-History-Restore-Request", "HX-Boosted")
 def party_list(request):
     parties, query, status, role_key = _party_queryset_from_request(request)
     export_format = request.GET.get("_export")
@@ -260,9 +264,15 @@ def party_list(request):
         .order_by("role_type__label")
     )
 
-    return render(
+    fragment = (
+        request.headers.get("HX-Request") == "true"
+        and request.headers.get("HX-Target") == "party-results"
+        and request.headers.get("HX-History-Restore-Request") != "true"
+        and request.headers.get("HX-Boosted") != "true"
+    )
+    response = render(
         request,
-        "party/list.html",
+        "party/list.html#results" if fragment else "party/list.html",
         {
             "page_obj": page_obj,
             "query": query,
@@ -272,9 +282,14 @@ def party_list(request):
             "role_options": role_options,
             "can_export_parties": _can_export_party_data(request),
             "can_import_parties": request.party_workspace_access.can("data.import"),
+            "can_create_parties": any(request.party_workspace_access.can(p) for p in ("contact.create", "data.create")),
+            "can_edit_parties": any(request.party_workspace_access.can(p) for p in ("contact.edit", "data.edit")),
             "export_querystring": _party_export_querystring(request),
         },
     )
+    if fragment:
+        response["X-Rokkad-Fragment"] = "party-results"
+    return response
 
 
 @party_action_required("view")

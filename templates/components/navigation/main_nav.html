@@ -85,8 +85,9 @@
                 {% csrf_token %}
                 {% get_available_languages as LANGUAGES %}
                 {% get_current_language as LANGUAGE_CODE %}
-                <label for="navbar-language" class="visually-hidden">Language</label>
-                <select id="navbar-language" name="language" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 9rem;">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <label for="navbar-language" class="visually-hidden">{% translate "Language" %}</label>
+                <select id="navbar-language" name="language" class="form-select form-select-sm" style="min-width: 7rem;">
                     {% get_language_info_list for LANGUAGES as languages %}
                     {% for lang in languages %}
                     <option {% if lang.code == LANGUAGE_CODE %}selected{% endif %} value="{{ lang.code }}">
@@ -94,6 +95,7 @@
                     </option>
                     {% endfor %}
                 </select>
+                <button class="btn btn-outline-secondary ms-2" type="submit">{% translate "Apply language" %}</button>
             </form>
         </div>
     </div>
