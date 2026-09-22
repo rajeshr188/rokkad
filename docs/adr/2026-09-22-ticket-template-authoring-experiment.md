@@ -55,6 +55,12 @@ explicit acceptance gates, not silent compatibility assumptions.
 
 ## Status and compatibility
 
+The owner subsequently accepted the per-copy signature-area choice and explicit
+optional printed-interest requirement, implemented for v4 in
+[this decision](2026-09-22-ticket-signature-area-choices.md). JCL's Original and
+Duplicate now have a validated paired preview using their reviewed artwork;
+physical printing, reverse sides and integrated client activation remain pending.
+
 The owner accepted separating printed business information from internal audit
 evidence on 2026-09-22. Implemented for v4: audit IDs/fingerprints and verification
 text are optional on paper; complete source evidence remains required in the

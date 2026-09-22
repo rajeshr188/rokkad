@@ -41,16 +41,24 @@ The next completed slice brings the suite to 159 checks: V4 business coverage is
 separate from optional printed audit IDs/verification text, while full internal
 payload/issue evidence remains required. The existing admin Evidence page now
 exposes captured fields, photo evidence and issuer; loan print actions link to
-ticket history. Stored PDF reads verify checksums before serving. Static-stock
-declarations and paired activation remain pending.
+ticket history. Stored PDF reads verify checksums before serving.
+
+The current slice reaches 188 isolated checks. Licence business-name/address
+bindings, variable JCL tenure, per-copy signature confirmations, optional printed
+interest and Original/Duplicate canvas views are implemented. Confirmation binds
+the chosen background hash; replacement requires review and the print profile
+must match plain/preprinted stock. JCL's supplied Original/Duplicate artwork now
+renders a validated A4 paired preview with sample data. Reverse-side review,
+physical calibration, JSK artwork acceptance and unified activation remain pending.
 
 Run `python scripts/review_ticket_frame_mapping.py` to regenerate the synthetic
 HTML positioning aid and non-importable candidate definitions in
 `outputs/ticket-template-tests/frame-review/`. No database or media credentials
 are needed. It reports existing visible-evidence conflicts rather than changing
-the client design to satisfy them. Real artwork, copy-aware editing, reviewed
-static-stock coverage and paired activation are the remaining implementation
-work before JCL/JSK visual/physical acceptance.
+the client design to satisfy them. The raw mapping intentionally has no local
+artwork hashes or confirmations; the separate JCL supplied-artwork proof adds
+those after review. JSK business-stock coverage and paired activation remain
+before complete JCL/JSK visual/physical acceptance.
 
 Create **Loan ticket > Exact PDF overlay** and select **Use precision ticket
 overlay** to opt into v4. In the existing visual overlay editor, backgrounds are
@@ -195,8 +203,9 @@ pending. These are implementation targets, not changes to current validators.
 3. In progress: optional backgrounds, value-only/custom-label fields, precision
    geometry, stock profiles/guides, text padding/leading and isolated checks are
    implemented, together with dynamic media/source evidence and first-issue
-   serialization. Image/QR fit refinements and reviewed static-stock declarations
-   remain before full JCL/JSK reproduction.
+   serialization. JCL front image/QR positions and signature stock declarations
+   are reviewed. JSK artwork, reverse sides and physical printing remain before
+   full JCL/JSK reproduction.
 4. Simplify authoring/activation in one editor over existing services; keep JSON
    optional for advanced maintenance, unnecessary for the supported user journey.
 5. Reproduce both examples, test permissions/reprints/compatibility, then conduct

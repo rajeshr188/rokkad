@@ -7,6 +7,23 @@ from apps.tenant_apps.loans.documents.print_profiles import built_in_print_profi
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 
 
+class LoanDocumentSignatureAreasForm(forms.Form):
+    SOURCES = (("FRAMES", "Add editable signature frames"),
+               ("BACKGROUND", "Already included in the background PDF"),
+               ("PREPRINTED", "Already printed on the paper"))
+    original_source = forms.ChoiceField(choices=SOURCES, label="Original copy")
+    original_confirmed = forms.BooleanField(required=False, label="I checked that the Original has both borrower and pawnbroker signature areas.")
+    duplicate_source = forms.ChoiceField(choices=SOURCES, label="Duplicate copy")
+    duplicate_confirmed = forms.BooleanField(required=False, label="I checked that the Duplicate has both borrower and pawnbroker signature areas.")
+    require_interest_rate = forms.BooleanField(required=False, initial=True, label="Require interest rate on the printed ticket",
+        help_text="Turn off to allow a ticket without a rate frame. The approved rate is always retained in the loan and document evidence.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-check-input" if isinstance(field, forms.BooleanField) else "form-select"
+
+
 class LoanDocumentLayoutCreateForm(forms.Form):
     field_order = ("name", "document_type", "layout_mode", "precision_overlay")
     precision_overlay = forms.BooleanField(

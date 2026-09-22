@@ -31,6 +31,70 @@ def synthetic_payload():
 
 
 class PrecisionOverlayTests(SimpleTestCase):
+    def test_signature_choices_are_per_copy_hashed_and_stock_aware(self):
+        from apps.tenant_apps.loans.documents.integrity import _includes_required_ticket_signatures
+        with fitz.open() as pdf:
+            pdf.new_page().insert_text((30, 30), "Borrower signature / Authorized pawnbroker")
+            asset = DocumentAssetValidator.validate(key="stock", kind="BACKGROUND", content=pdf.tobytes(), workspace_id=7)
+        self.definition["background_asset_key"] = "stock"
+        self.definition["blocks"] = [b for b in self.definition["blocks"] if b["type"] != "signature"]
+        confirmation = {"source": "BACKGROUND", "asset_key": "stock", "sha256": asset.sha256}
+        self.definition["signature_areas"] = {"ORIGINAL": confirmation}
+        with self.assertRaisesMessage(LayoutValidationError, "Duplicate front"):
+            DocumentLayoutValidator.load(self.definition)
+        self.definition["signature_areas"]["DUPLICATE"] = confirmation
+        layout = DocumentLayoutValidator.load(self.definition)
+        self.assertTrue(_includes_required_ticket_signatures(layout))
+        self.render(assets=(asset,))
+        self.assertEqual(layout.content_hash, DocumentLayoutValidator.load(layout.canonical_dict()).content_hash)
+        with fitz.open() as pdf:
+            pdf.new_page().insert_text((30, 30), "Changed artwork")
+            changed = DocumentAssetValidator.validate(key="stock", kind="BACKGROUND", content=pdf.tobytes(), workspace_id=7)
+        with self.assertRaisesMessage(LayoutValidationError, "confirm both signature areas again"):
+            self.render(assets=(changed,))
+        definition = self.profile.canonical_dict()
+        definition.update(schema_version=2, stock_mode="PREPRINTED")
+        self.profile = PrintProfileValidator.load(definition)
+        with self.assertRaisesMessage(ValueError, "paper stock"):
+            self.render(assets=(asset,))
+        self.definition["signature_areas"] = {copy: {**confirmation, "source": "PREPRINTED"} for copy in ("ORIGINAL", "DUPLICATE")}
+        self.render(assets=(asset,))
+        self.definition["background_asset_key"] = ""
+        self.definition["signature_areas"] = {copy: {"source": "PREPRINTED", "asset_key": "", "sha256": ""} for copy in ("ORIGINAL", "DUPLICATE")}
+        self.render()
+        self.profile = built_in_print_profile("LEGACY_BOTH_SIMPLEX")
+        with self.assertRaisesMessage(ValueError, "paper stock"):
+            self.render()
+
+    def test_interest_omission_is_explicit_and_does_not_remove_source_evidence(self):
+        from dataclasses import replace
+        original_hash = DocumentLayoutValidator.load(self.definition).content_hash
+        self.definition.update(signature_areas={}, require_interest_rate=True)
+        self.assertEqual(original_hash, DocumentLayoutValidator.load(self.definition).content_hash)
+        self.definition["blocks"] = [b for b in self.definition["blocks"] if b["binding"] != "loan.monthly_interest_rate"]
+        with self.assertRaisesMessage(LayoutValidationError, "Monthly interest rate"):
+            self.render()
+        self.definition["require_interest_rate"] = False
+        self.render()
+        self.payload = replace(self.payload, fields=tuple(f for f in self.payload.fields if f.key != "loan.monthly_interest_rate"))
+        with self.assertRaisesMessage(ValueError, "internal source/verification"):
+            self.render()
+        self.definition["require_interest_rate"] = "false"
+        with self.assertRaises(LayoutValidationError):
+            DocumentLayoutValidator.load(self.definition)
+
+    def test_signature_confirmation_requires_valid_evidence_and_preserves_old_schemas(self):
+        for entry in ({"source": "BACKGROUND", "asset_key": "", "sha256": ""},
+                      {"source": [], "asset_key": "stock", "sha256": "a" * 64},
+                      {"source": "BACKGROUND", "asset_key": "stock", "sha256": "not-a-hash"}):
+            self.definition["signature_areas"] = {"ORIGINAL": entry}
+            with self.subTest(entry=entry), self.assertRaises(LayoutValidationError):
+                DocumentLayoutValidator.load(self.definition)
+        old = starter_layout("loan_ticket", schema_version=3, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        old["require_interest_rate"] = False
+        with self.assertRaisesMessage(LayoutValidationError, "Unknown layout properties"):
+            DocumentLayoutValidator.load(old)
+
     def setUp(self):
         self.definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
         self.payload = synthetic_payload()

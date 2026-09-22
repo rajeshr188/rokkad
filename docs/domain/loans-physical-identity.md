@@ -39,6 +39,14 @@ document internals:
 
 ## Software Evidence
 
+The ticket-template feature supports confirmed existing signature areas on each
+front instead of adding duplicate frames. Clients confirm both roles on the
+selected background or physical stationery; v4 retains that choice with artwork
+evidence. Changed artwork requires review, and the print profile must actually
+print the background or use the declared preprinted stock. Without that choice,
+editable signature frames remain required. This does not capture signatures.
+See [the decision](../adr/2026-09-22-ticket-signature-area-choices.md).
+
 - Fixed tickets render two pages labelled Original and Duplicate with the same
   source verification identity and both required signature areas.
 - Configurable-document integrity rejects an active pilot ticket that omits

@@ -61,6 +61,8 @@ def create_license(
     expires_on: date,
     actor=None,
     issuing_authority: str = "",
+    business_name: str = "",
+    business_address: str = "",
     notes: str = "",
     supporting_document=None,
     request=None,
@@ -71,6 +73,8 @@ def create_license(
         workspace=workspace,
         name=name,
         license_number=license_number,
+        business_name=business_name,
+        business_address=business_address,
         issuing_authority=issuing_authority,
         issued_on=issued_on,
         expires_on=expires_on,
@@ -99,7 +103,7 @@ def update_license(
     request=None,
     **changes,
 ) -> LoanLicense:
-    allowed = {"name", "license_number", "issuing_authority", "issued_on", "expires_on", "notes"}
+    allowed = {"name", "business_name", "business_address", "license_number", "issuing_authority", "issued_on", "expires_on", "notes"}
     unexpected = set(changes) - allowed
     if unexpected:
         raise LicenseSeriesError(
@@ -455,6 +459,8 @@ def _record_license_revision(
         revision_number=latest + 1,
         kind=kind,
         name=license.name,
+        business_name=license.business_name,
+        business_address=license.business_address,
         license_number=license.license_number,
         issuing_authority=license.issuing_authority,
         issued_on=license.issued_on,

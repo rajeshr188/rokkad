@@ -35,6 +35,12 @@
 
 {% if expiry_notices %}<div class="card mb-4"><div class="card-header"><strong>Expiry alerts</strong></div><div class="card-body">{% for notice in expiry_notices %}<div class="d-flex justify-content-between align-items-center mb-2"><span>{{ notice.created_at }} · {{ notice.recipient_email }}</span><form method="post" action="{% url 'workspace_loans:operational_notice_retry' request.workspace.slug notice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Retry delivery</button></form></div>{% endfor %}</div></div>{% endif %}
 
+<div class="card card-body mb-4">
+  <h2 class="h5">{% translate "Printed business details" %}</h2>
+  <div>{% if license.business_name %}{{ license.business_name }}{% else %}{% translate "Business name not configured" %}{% endif %}</div>
+  <div>{% if license.business_address %}{{ license.business_address|linebreaksbr }}{% else %}{% translate "Business address not configured" %}{% endif %}</div>
+</div>
+
 <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-3">
   <div><h2 class="h5 mb-1">Numbering series</h2><div class="small text-muted">Loan and release counters are independent and previews do not consume numbers.</div></div>
   <a class="btn btn-primary" href="{% url 'workspace_loans:series_create' request.workspace.slug license.pk %}">Add series</a>

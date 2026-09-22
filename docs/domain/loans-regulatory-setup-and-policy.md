@@ -31,6 +31,15 @@ P1 classifies the mature Girvi outcomes as follows:
 
 ## Required Setup Order
 
+The ticket-template feature adds optional printed business name/address fields
+to each licence, separate from its internal staff-facing name. Licence creation
+and amendments record these in immutable revisions; renewal retains them.
+Existing records and historical revisions receive empty values, never inferred
+identity/address data. Precision ticket layouts can bind these display fields;
+when selected, missing values block a new issue and are labelled in previews.
+The first issue captures the current licence display values; existing loan terms
+and linked regulatory revisions are unaffected, and saved PDFs reprint unchanged.
+
 For historical imports, the setup operator can reserve a reviewed numeric range
 through `reserve_sequence_through`. It requires setup authorization and a bounded
 evidence reference, locks the existing sequence, and advances only beyond the

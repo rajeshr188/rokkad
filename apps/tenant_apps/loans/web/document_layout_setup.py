@@ -29,6 +29,7 @@ from apps.tenant_apps.loans.web.document_forms import (
     LoanDocumentOverlayBlockForm,
     LoanDocumentOverlayLogicalSettingsForm,
     LoanDocumentOverlaySettingsForm,
+    LoanDocumentSignatureAreasForm,
 )
 from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer,
@@ -237,7 +238,8 @@ def document_layout_overlay_background(request, revision_pk):
     layout = DocumentLayoutValidator.load(revision.definition)
     if layout.layout_mode != "ABSOLUTE_OVERLAY":
         return HttpResponseGone("This revision is not an absolute overlay layout.")
-    background_key = layout.surface_background("ORIGINAL_FRONT")
+    copy_scope = "DUPLICATE" if request.GET.get("copy") == "DUPLICATE" else "ORIGINAL"
+    background_key = layout.surface_background(f"{copy_scope}_FRONT")
     asset = get_object_or_404(revision.assets, key=background_key, kind="BACKGROUND")
     asset.file.open("rb")
     content = asset.file.read()
@@ -255,6 +257,7 @@ def document_layout_overlay_background(request, revision_pk):
 
 @loans_setup_required
 def document_layout_overlay_designer(request, revision_pk):
+    selected_copy = "DUPLICATE" if request.GET.get("copy") == "DUPLICATE" else "ORIGINAL"
     revision = _document_revision(request, revision_pk)
     try:
         layout = DocumentLayoutValidator.load(revision.definition)
@@ -266,6 +269,24 @@ def document_layout_overlay_designer(request, revision_pk):
         return redirect('workspace_loans:document_layout_detail', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     background_keys = tuple(revision.assets.filter(kind="BACKGROUND").values_list("key", flat=True))
     image_keys = tuple(revision.assets.filter(kind="IMAGE").values_list("key", flat=True))
+    if request.method == "POST" and request.POST.get("operation") == "save_signature_areas":
+        form = LoanDocumentSignatureAreasForm(request.POST)
+        try:
+            if not form.is_valid():
+                raise ValueError("Choose a signature-area source for each copy.")
+            LoanDocumentLayoutService.configure_ticket_signatures(
+                revision=revision,
+                sources={scope: form.cleaned_data[f"{scope.lower()}_source"] for scope in ("ORIGINAL", "DUPLICATE")},
+                confirmed={scope: form.cleaned_data[f"{scope.lower()}_confirmed"] for scope in ("ORIGINAL", "DUPLICATE")},
+                require_interest_rate=form.cleaned_data["require_interest_rate"], actor=request.user, request=request,
+            )
+        except (DocumentLayoutServiceError, ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Signature choices saved. Move any added frames, then check the PDF preview.")
+        if selected_copy == "DUPLICATE":
+            return redirect(f"{request.path}?copy=DUPLICATE")
+        return redirect('workspace_loans:document_layout_overlay_designer', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     if request.method == "POST":
         if revision.state != revision.State.DRAFT:
             messages.error(request, "Published revisions are immutable. Clone this revision before editing.")
@@ -359,6 +380,8 @@ def document_layout_overlay_designer(request, revision_pk):
             messages.error(request, str(exc))
         else:
             messages.success(request, "Overlay draft updated and validated.")
+        if selected_copy == "DUPLICATE":
+            return redirect(f"{request.path}?copy=DUPLICATE")
         return redirect('workspace_loans:document_layout_overlay_designer', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     page_width_mm, page_height_mm = _OVERLAY_PAGE_DIMENSIONS_MM[layout.page_size]
     if layout.schema_version >= 4 and layout.page_size == "LETTER":
@@ -387,18 +410,30 @@ def document_layout_overlay_designer(request, revision_pk):
                          "original_front", "duplicate_front", "original_back", "duplicate_back",
                      )} if layout.sheet else {})},
         )
+    signature_warning = ""
+    try:
+        layout.validate_signature_backgrounds({asset.key: asset for asset in revision.assets.all()})
+    except ValueError as exc:
+        signature_warning = str(exc)
     return render(request, "loans/setup/documents/overlay_designer.html", {
         "revision": revision, "layout": layout, "settings_form": settings_form,
         "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys, schema_version=layout.schema_version),
         "precision_overlay": layout.schema_version >= 4,
+        "signature_warning": signature_warning,
+        "selected_copy": selected_copy,
+        "signature_form": LoanDocumentSignatureAreasForm(initial={
+            "original_source": layout.signature_area("ORIGINAL")[1] if layout.signature_area("ORIGINAL") else "FRAMES",
+            "duplicate_source": layout.signature_area("DUPLICATE")[1] if layout.signature_area("DUPLICATE") else "FRAMES",
+            "require_interest_rate": layout.require_interest_rate,
+        }),
         "preview_profiles": LoanDocumentPrintProfileRevision.objects.filter(profile__workspace=request.loans_workspace, state__in=["DRAFT", "PUBLISHED"]).select_related("profile"),
         "geometry_step": "0.1" if layout.schema_version >= 4 else "1",
         "can_preview": set(layout.background_asset_keys()).issubset(background_keys),
         "image_keys": image_keys, "page_width_mm": page_width_mm,
         "page_height_mm": page_height_mm,
         "legacy_composition_controls": layout.schema_version <= 2,
-        "preview_background_key": layout.surface_background("ORIGINAL_FRONT"),
-        "has_background": layout.surface_background("ORIGINAL_FRONT") in background_keys,
+        "preview_background_key": layout.surface_background(f"{selected_copy}_FRONT"),
+        "has_background": layout.surface_background(f"{selected_copy}_FRONT") in background_keys,
         "sample_loan": PawnLoan.objects.filter(
             workspace=request.loans_workspace, approval_snapshots__isnull=False,
         ).order_by("-pk").first(),

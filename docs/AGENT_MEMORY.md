@@ -48,6 +48,25 @@ offset, and preserve that timestamp on exact-artifact reprints.
 Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
 test launcher pins a local test database and worktree-local filesystem media;
 it does not start a feature web server. See the plan for the command and limits.
+The owner wants a larger licence-sourced business name and address above JCL's
+borrower row. `LoanLicense.business_name/business_address` are distinct from its
+internal staff label; ordinary amendments and renewals retain them in immutable
+licence revisions. V4 fields `license.business_name/business_address` capture
+the current licence's display details at first issue, preserving exact reprints.
+Never infer these values from workspace names, customer addresses or background
+artwork. Blank bound values explain themselves in previews and block new issues.
+The owner requested replacing JCL's fixed three-month artwork text with approved
+`loan.tenure`, and deferring printed interest for now. The original-front proof
+uses a separately cleaned background; source artwork and issued PDFs stay intact.
+Do not add an interest frame to this preview without revisiting that preference.
+The owner subsequently approved per-copy signature choices: movable frames,
+confirmed background areas, or confirmed preprinted-paper areas. V4 declarations
+bind the selected background key/hash; changed artwork requires reconfirmation
+before publication/rendering. Profile stock mode must match the declaration.
+The v4 `require_interest_rate` flag defaults true; explicit false now permits the
+owner-requested omission on JCL while the full approved payload retains the rate.
+Old schemas, canonical hashes and stored reprints remain unchanged. See the
+[signature choice ADR](adr/2026-09-22-ticket-signature-area-choices.md).
 The [frame mapping contract](implementation/ticket-template-frame-mapping.md)
 captures all 35 selected JCL/JSK frames and the chosen additive schema/evidence
 changes. Preserve explicit differences in quantity, legacy live value and license

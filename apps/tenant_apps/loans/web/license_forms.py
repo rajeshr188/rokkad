@@ -8,6 +8,7 @@ from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 
 LICENSE_LABELS = {
     "name": _("License name"), "license_number": _("License number"),
+    "business_name": _("Printed business name"), "business_address": _("Printed business address"),
     "issuing_authority": _("Issuing authority"), "issued_on": _("Valid from"),
     "expires_on": _("Valid until"), "notes": _("Notes"),
     "supporting_document": _("Supporting document"),
@@ -25,6 +26,8 @@ class LoanLicenseForm(forms.ModelForm):
         model = LoanLicense
         fields = (
             "name",
+            "business_name",
+            "business_address",
             "license_number",
             "issuing_authority",
             "issued_on",
@@ -32,6 +35,7 @@ class LoanLicenseForm(forms.ModelForm):
             "notes",
         )
         widgets = {
+            "business_address": forms.Textarea(attrs={"rows": 3}),
             "issued_on": forms.DateInput(attrs={"type": "date"}),
             "expires_on": forms.DateInput(attrs={"type": "date"}),
             "notes": forms.Textarea(attrs={"rows": 3}),
@@ -44,6 +48,8 @@ class LoanLicenseForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields["supporting_document"].required = True
         self.fields["name"].help_text = _("A short name staff can recognize, such as Main branch license.")
+        self.fields["business_name"].help_text = _("Business name for this license's loan tickets. Keep the internal license name separate.")
+        self.fields["business_address"].help_text = _("Business address for this license's loan tickets. Use line breaks as you want them printed.")
         for name, field in self.fields.items():
             field.label = LICENSE_LABELS[name]
             field.widget.attrs.setdefault("class", "form-control")

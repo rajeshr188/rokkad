@@ -179,6 +179,53 @@ class LoanDocumentLayoutService:
 
     @classmethod
     @transaction.atomic
+    def configure_ticket_signatures(cls, *, revision, sources, confirmed, require_interest_rate=True, actor=None, request=None):
+        revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
+        _require_workspace(revision.layout.workspace_id)
+        require_setup_administration(revision.layout.workspace_id, actor)
+        if revision.state != revision.State.DRAFT:
+            raise DocumentLayoutServiceError("Clone the published revision before changing signature areas.")
+        layout = DocumentLayoutValidator.load(revision.definition)
+        if layout.schema_version != 4:
+            raise DocumentLayoutServiceError("Signature choices require a precision ticket layout.")
+        if set(sources) != {"ORIGINAL", "DUPLICATE"} or any(value not in {"FRAMES", "BACKGROUND", "PREPRINTED"} for value in sources.values()):
+            raise DocumentLayoutServiceError("Choose a signature source for each copy.")
+        definition = layout.canonical_dict()
+        areas = {}
+        assets = {asset.key: asset for asset in revision.assets.filter(kind="BACKGROUND")}
+        for scope, source in sources.items():
+            if source == "FRAMES":
+                continue
+            key = layout.surface_background(f"{scope}_FRONT")
+            if (source == "BACKGROUND" and not key) or (key and key not in assets):
+                raise DocumentLayoutServiceError(f"{scope.title()}: select and upload its background first.")
+            evidence = {"source": source, "asset_key": key, "sha256": assets[key].sha256 if key else ""}
+            if definition.get("signature_areas", {}).get(scope) != evidence and confirmed.get(scope) is not True:
+                raise DocumentLayoutServiceError(f"{scope.title()}: confirm that both borrower and pawnbroker signature areas are already present.")
+            areas[scope] = evidence
+        # Keep client-edited frames for frame-based copies; switching a copy to
+        # stationery must not print the same signature labels twice.
+        blocks = [block for block in definition["blocks"] if block["type"] != "signature"]
+        width, height = {"A4": (210, 297), "A5": (148, 210), "LETTER": (215.9, 279.4)}[layout.page_size]
+        for scope, source in sources.items():
+            if source != "FRAMES":
+                continue
+            existing = [{**block, "copy_scope": scope} for block in definition["blocks"]
+                        if block["type"] == "signature" and block["copy_scope"] in {"BOTH", scope}]
+            blocks.extend(existing)
+            if not any(block.get("visible_when") is None for block in existing):
+                for index, label in enumerate(("Borrower signature / thumb impression", "Authorized pawnbroker / agent signature")):
+                    blocks.append({"type": "signature", "text": label, "copy_scope": scope,
+                                   "x_mm": 10 if index == 0 else round(width / 2 + 4, 1),
+                                   "y_mm": round(height - 53, 1), "width_mm": round(width / 2 - 14, 1),
+                                   "height_mm": 18, "font_size_pt": 9, "align": "LEFT"})
+        definition["blocks"] = blocks
+        definition["signature_areas"] = areas
+        definition["require_interest_rate"] = require_interest_rate
+        return cls.update_draft(revision=revision, definition=definition, actor=actor, request=request)
+
+    @classmethod
+    @transaction.atomic
     def publish(cls, *, revision, actor=None, request=None):
         revision = LoanDocumentLayoutRevision.objects.select_for_update().select_related("layout").get(pk=revision.pk)
         _require_workspace(revision.layout.workspace_id)
@@ -192,6 +239,7 @@ class LoanDocumentLayoutService:
         missing = required - available
         if missing:
             raise DocumentLayoutServiceError(f"Layout assets are missing: {', '.join(sorted(missing))}.")
+        parsed.validate_signature_backgrounds({asset.key: asset for asset in revision.assets.all()})
         revision.definition = parsed.canonical_dict()
         revision.content_hash = parsed.content_hash
         revision.validation_result = {"valid": True, "asset_keys": sorted(required)}

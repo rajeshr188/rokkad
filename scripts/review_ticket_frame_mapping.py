@@ -52,10 +52,28 @@ def build_review():
                 {**stamp, "copy_scope": "DUPLICATE", "x_mm": 92, "y_mm": 185, "width_mm": 46, "height_mm": 18}])
         else:
             definition["blocks"].append(stamp)
+        if template["workspace"] == "jcl":
+            definition["blocks"].extend([
+                {"type": "field", "binding": "license.business_name", "show_label": False,
+                 "copy_scope": "BOTH", "x_mm": 40, "y_mm": 29, "width_mm": 98, "height_mm": 9,
+                 "font_size_pt": 16, "leading_pt": 18, "padding_pt": 0, "align": "CENTER"},
+                {"type": "field", "binding": "license.business_address", "show_label": False,
+                 "copy_scope": "BOTH", "x_mm": 40, "y_mm": 38, "width_mm": 98, "height_mm": 10,
+                 "font_size_pt": 10, "leading_pt": 12, "padding_pt": 0, "align": "CENTER"},
+                {"type": "field", "binding": "loan.tenure", "show_label": False,
+                 "copy_scope": "BOTH", "x_mm": 64.7, "y_mm": 147.4, "width_mm": 55, "height_mm": 4.2,
+                 "font_size_pt": 11, "leading_pt": 11, "padding_pt": 0, "align": "LEFT"},
+            ])
+            adjustments.append({"bindings": ["license.business_name", "license.business_address"],
+                                "status": "OWNER_REQUESTED",
+                                "reason": "Print licence business details above the borrower block, beside the artwork logo."})
+            adjustments.append({"binding": "loan.tenure", "status": "OWNER_REQUESTED",
+                                "reason": "Replace both supplied backgrounds' fixed three-month text with approved tenure. Use separately cleaned Original and Duplicate artwork."})
+            definition["require_interest_rate"] = False
         adjustments.append({"binding": "document.generated_at", "status": "OWNER_REQUESTED",
                             "reason": "Print the original PDF generation timestamp on both copies; retain it on reprints."})
         parsed_blocks = DocumentLayoutValidator._blocks(definition["blocks"], "loan_ticket", 4, layout_mode="ABSOLUTE_OVERLAY")
-        missing = {copy: DocumentLayoutValidator.precision_missing_visible(parsed_blocks, copy)
+        missing = {copy: DocumentLayoutValidator.precision_missing_visible(parsed_blocks, copy, require_interest_rate=definition.get("require_interest_rate", True))
                    for copy in ("ORIGINAL", "DUPLICATE")}
         try:
             DocumentLayoutValidator.load(definition)
@@ -75,6 +93,8 @@ def build_review():
 
 def review_html(review):
     sample = {"document.generated_at": "22-09-2026 20:05:30 IST (UTC+05:30)", "license.number": "TEST-LIC", "borrower.contact_block": "TEST Customer\nS/o TEST Parent\n10 Test Road\n9000000000",
+              "license.business_name": "JCL Pawn Brokers (Sample)", "license.business_address": "10 Sample Business Road\nVellore, Tamil Nadu",
+              "loan.tenure": "6 months",
               "loan.number": "TEST-19", "loan.date": "22-09-2026", "collateral.description_lines": "1. Test ring",
               "collateral.net_weight_by_metal": "Gold: 2 g", "collateral.approved_appraisal_total": "12000.00",
               "loan.principal": "10000.00", "loan.principal_words": "Ten thousand rupees only",

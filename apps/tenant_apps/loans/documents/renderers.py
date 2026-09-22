@@ -180,6 +180,7 @@ class ConfigurableDocumentRenderer:
                 f"Required document assets are missing: {', '.join(sorted(missing_assets))}."
             )
         cls._assert_bindings(layout, fields, sections)
+        layout.validate_signature_backgrounds(asset_map)
         return fields, sections, asset_map
 
     @classmethod
@@ -202,7 +203,11 @@ class ConfigurableDocumentRenderer:
             if surface.endswith("FRONT"):
                 copy_scope = "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"
                 if layout.schema_version >= 4:
-                    DocumentLayoutValidator.validate_precision_copy_evidence(layout.blocks, copy_scope)
+                    area = layout.signature_area(copy_scope)
+                    if area and ((area[1] == "PREPRINTED") != (profile.stock_mode == "PREPRINTED")):
+                        raise ValueError(f"{copy_scope.title()}: signature-area choice does not match the print profile's paper stock.")
+                    DocumentLayoutValidator.validate_precision_copy_evidence(layout.blocks, copy_scope,
+                        signature_on_stock=area is not None, require_interest_rate=layout.require_interest_rate)
                     continue
                 required = REQUIRED_BINDINGS[layout.document_type] | REQUIRED_SECTIONS[layout.document_type]
                 present = DocumentLayoutValidator._unconditional_bindings_for_scope(

@@ -50,7 +50,7 @@ REQUIRED_SECTIONS = {
 
 # V4 paper coverage is separate from the complete internal payload registry.
 TICKET_VISIBLE_BINDING_GROUPS = {
-    "Business name": ({"workspace.name"},),
+    "Business name": ({"workspace.name"}, {"license.business_name"}),
     "License": ({"license.display"}, {"license.number"}),
     "Loan number": ({"loan.number"},),
     "Loan date": ({"loan.date"},),
@@ -161,6 +161,8 @@ class DocumentLayout:
     footer: PageRegion | None = None
     sheet: SheetComposition | None = None
     surfaces: LogicalSurfaces | None = None
+    signature_areas: tuple[tuple[str, str, str, str], ...] = ()
+    require_interest_rate: bool = True
 
     def canonical_dict(self):
         def block_dict(block):
@@ -247,7 +249,26 @@ class DocumentLayout:
                     {"backgrounds": dict(self.surfaces.backgrounds)}
                     if self.surfaces else None
                 )
+        if self.schema_version >= 4:
+            if self.signature_areas:
+                value["signature_areas"] = {
+                    scope: {"source": source, "asset_key": key, "sha256": sha}
+                    for scope, source, key, sha in self.signature_areas
+                }
+            if not self.require_interest_rate:
+                value["require_interest_rate"] = False
         return value
+
+    def signature_area(self, copy_scope):
+        return next((entry for entry in self.signature_areas if entry[0] == copy_scope), None)
+
+    def validate_signature_backgrounds(self, assets):
+        """A confirmation applies only to the selected, unchanged background."""
+        for scope, source, key, sha in self.signature_areas:
+            selected = self.surface_background(f"{scope}_FRONT")
+            asset = assets.get(key) if key else None
+            if selected != key or (key and (asset is None or asset.kind != "BACKGROUND" or asset.sha256 != sha)):
+                raise LayoutValidationError(f"{scope.title()}: background changed; review and confirm both signature areas again.")
 
     @staticmethod
     def _region_dict(region, block_dict):
@@ -316,6 +337,8 @@ class DocumentLayoutValidator:
             allowed_keys.add("sheet")
         if schema_version >= 3:
             allowed_keys.add("surfaces")
+        if schema_version >= 4:
+            allowed_keys.update({"signature_areas", "require_interest_rate"})
         unknown = set(definition) - allowed_keys
         if unknown:
             raise LayoutValidationError(f"Unknown layout properties: {', '.join(sorted(unknown))}.")
@@ -340,6 +363,10 @@ class DocumentLayoutValidator:
             document_type,
         ) if schema_version <= 2 else None
         surfaces = cls._surfaces(definition.get("surfaces"), schema_version, document_type)
+        signature_areas = cls._signature_areas(definition.get("signature_areas", {}))
+        require_interest_rate = definition.get("require_interest_rate", True)
+        if not isinstance(require_interest_rate, bool):
+            raise LayoutValidationError("Printed interest choice must be true or false.")
         if not blocks:
             raise LayoutValidationError("A layout requires at least one front-page block.")
         if copy_mode == "ORIGINAL_DUPLICATE_DUPLEX" and not back_blocks and not definition.get("sheet"):
@@ -379,7 +406,9 @@ class DocumentLayoutValidator:
                 cls._validate_sheet_copy_evidence(sheet, blocks, document_type)
         if schema_version == 4:
             for copy_scope in ("ORIGINAL", "DUPLICATE"):
-                cls.validate_precision_copy_evidence(blocks, copy_scope)
+                cls.validate_precision_copy_evidence(blocks, copy_scope,
+                    signature_on_stock=any(entry[0] == copy_scope for entry in signature_areas),
+                    require_interest_rate=require_interest_rate)
         elif schema_version >= 3 and document_type == "loan_ticket":
             cls._validate_logical_copy_evidence(blocks, document_type)
         return DocumentLayout(
@@ -387,8 +416,26 @@ class DocumentLayoutValidator:
             back_blocks, background, layout_mode, margin_mm,
             theme["primary_color"], theme["border_color"], theme["font_family"],
             theme["body_font_size_pt"], theme["heading_font_size_pt"],
-            header, footer, sheet, surfaces,
+            header, footer, sheet, surfaces, signature_areas, require_interest_rate,
         )
+
+    @staticmethod
+    def _signature_areas(value):
+        if not isinstance(value, dict) or set(value) - {"ORIGINAL", "DUPLICATE"}:
+            raise LayoutValidationError("Signature areas must identify Original or Duplicate.")
+        result = []
+        for scope, entry in sorted(value.items()):
+            if not isinstance(entry, dict) or set(entry) != {"source", "asset_key", "sha256"}:
+                raise LayoutValidationError("Signature confirmation requires source and background evidence.")
+            source, key, sha = entry["source"], entry["asset_key"], entry["sha256"]
+            if not isinstance(source, str) or source not in {"BACKGROUND", "PREPRINTED"} or not isinstance(key, str) or not isinstance(sha, str):
+                raise LayoutValidationError("Unsupported signature-area source.")
+            if (source == "BACKGROUND" and not key) or bool(key) != bool(sha):
+                raise LayoutValidationError("Background signature confirmation requires its asset and hash.")
+            if key and (not key.replace(".", "").replace("-", "").replace("_", "").isalnum() or len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha)):
+                raise LayoutValidationError("Signature background evidence is invalid.")
+            result.append((scope, source, key, sha))
+        return tuple(result)
 
     @classmethod
     def _surfaces(cls, value, schema_version, document_type):
@@ -478,21 +525,21 @@ class DocumentLayoutValidator:
                 )
 
     @staticmethod
-    def precision_missing_visible(blocks, copy_scope):
+    def precision_missing_visible(blocks, copy_scope, *, signature_on_stock=False, require_interest_rate=True):
         visible = [block for block in blocks if block.copy_scope in {"BOTH", copy_scope} and block.visible_when is None]
         present = {block.binding for block in visible if block.type in {"field", "table"}}
         collateral_tables = [block for block in visible if block.type == "table" and block.binding == "collateral.items"]
         if collateral_tables and not any(not block.table_columns or {1, 2, 3} <= {column.index for column in block.table_columns} for block in collateral_tables):
             present.discard("collateral.items")
         missing = [label for label, alternatives in TICKET_VISIBLE_BINDING_GROUPS.items()
-                   if not any(required <= present for required in alternatives)]
-        if not any(block.type == "signature" for block in visible):
+                   if (require_interest_rate or label != "Monthly interest rate") and not any(required <= present for required in alternatives)]
+        if not signature_on_stock and not any(block.type == "signature" for block in visible):
             missing.append("Signature space")
         return missing
 
     @classmethod
-    def validate_precision_copy_evidence(cls, blocks, copy_scope):
-        missing = cls.precision_missing_visible(blocks, copy_scope)
+    def validate_precision_copy_evidence(cls, blocks, copy_scope, **choices):
+        missing = cls.precision_missing_visible(blocks, copy_scope, **choices)
         if missing:
             raise LayoutValidationError(f"{copy_scope.title()} front is missing required printed information: {', '.join(missing)}.")
 

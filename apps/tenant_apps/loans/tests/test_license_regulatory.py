@@ -125,6 +125,27 @@ class LoanLicenseRegulatoryTests(WorkspaceTestCase):
         with self.assertRaises(DatabaseError), transaction.atomic():
             LoanLicenseRevision.objects.filter(pk=initial.pk).update(notes="mutated")
 
+    def test_printed_business_details_are_separate_and_retained_in_revisions(self):
+        license = create_license(
+            workspace=self.tenant, name="Staff label", license_number="PRINT-1",
+            business_name="Sample Pawnbrokers", business_address="12 First Street\nVellore",
+            issued_on=date(2026, 1, 1), expires_on=date(2027, 1, 1),
+            supporting_document=self.document(), actor=self.user,
+        )
+        initial = license.revisions.get(revision_number=1)
+        changed = update_license(license, actor=self.user, business_name="Updated Pawnbrokers",
+                                 business_address="34 Second Street\nVellore")
+        renewal = renew_license(changed, actor=self.user, issued_on=date(2027, 1, 2),
+                                expires_on=date(2028, 1, 1), supporting_document=self.document("renewal.pdf"))
+        initial.refresh_from_db()
+        self.assertEqual(initial.business_name, "Sample Pawnbrokers")
+        self.assertEqual(initial.business_address, "12 First Street\nVellore")
+        self.assertEqual(renewal.name, "Staff label")
+        self.assertEqual(renewal.business_name, "Updated Pawnbrokers")
+        self.assertEqual(renewal.revisions.get(revision_number=3).business_address, "34 Second Street\nVellore")
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            LoanLicenseRevision.objects.filter(pk=initial.pk).update(business_address="Rewritten")
+
     def test_renewal_requires_supported_document(self):
         license = self.create_license()
         with self.assertRaisesRegex(LicenseSeriesError, "required"):

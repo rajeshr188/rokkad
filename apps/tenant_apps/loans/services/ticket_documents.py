@@ -60,6 +60,15 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
     if source["borrower_id"] != loan.borrower_id:
         raise ValueError("Approved borrower does not match this loan.")
     bindings = {block.binding for block in layout.all_blocks()}
+    license_values = {
+        "license.business_name": loan.license.business_name.strip(),
+        "license.business_address": loan.license.business_address.strip(),
+    }
+    for key, value in license_values.items():
+        if key in bindings and not value:
+            if not preview:
+                raise ValueError("Complete the printed business name and address in this loan's license before issuing this ticket.")
+            license_values[key] = "[License business name not configured]" if key.endswith("name") else "[License business address not configured]"
     identity = document_identity(
         workspace=loan.workspace, party_id=source["borrower_id"], actor=actor,
         address_id=address_id,
@@ -79,6 +88,7 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
     offset = local_capture.strftime("%z")
     generated_at = local_capture.strftime("%d-%m-%Y %H:%M:%S %Z") + f" (UTC{offset[:3]}:{offset[3:]})"
     values = {
+        **license_values,
         "document.generated_at": generated_at,
         "license.number": loan.license.license_number,
         "borrower.name": identity.name, "borrower.relationship": identity.relationship,

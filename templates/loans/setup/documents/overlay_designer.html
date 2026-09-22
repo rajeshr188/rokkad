@@ -15,10 +15,11 @@
 
 <div class="row g-4">
   <div class="col-xl-8">
+    {% if precision_overlay %}<nav class="d-flex gap-2 mb-3" aria-label="Ticket copy"><a class="btn {% if selected_copy == 'ORIGINAL' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?copy=ORIGINAL">Original</a><a class="btn {% if selected_copy == 'DUPLICATE' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?copy=DUPLICATE">Duplicate</a></nav><p class="small text-muted">Save frame changes before switching copies. Frames set to Both copies move on both.</p>{% endif %}
     <div id="overlay-page" class="position-relative bg-white shadow-sm mx-auto overflow-hidden" data-page-width="{{ page_width_mm|unlocalize }}" data-page-height="{{ page_height_mm|unlocalize }}" data-step="{{ geometry_step }}" style="aspect-ratio: {{ page_width_mm|unlocalize }} / {{ page_height_mm|unlocalize }}; max-width: 760px; border: 1px solid #94a3b8; touch-action: none;">
-      {% if has_background %}<img src="{% url 'workspace_loans:document_layout_overlay_background' request.workspace.slug revision.pk %}" alt="PDF background preview" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: fill; pointer-events:none;">{% endif %}
+      {% if has_background %}<img src="{% url 'workspace_loans:document_layout_overlay_background' request.workspace.slug revision.pk %}?copy={{ selected_copy }}" alt="{{ selected_copy|title }} background preview" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: fill; pointer-events:none;">{% endif %}
       {% for block in layout.blocks %}
-      <div class="overlay-block position-absolute border border-primary bg-primary bg-opacity-10 small overflow-hidden" data-index="{{ forloop.counter0 }}" data-x="{{ block.x_mm|unlocalize }}" data-y="{{ block.y_mm|unlocalize }}" data-width="{{ block.width_mm|unlocalize }}" data-height="{{ block.height_mm|unlocalize }}" style="left: {% widthratio block.x_mm page_width_mm 100 %}%; top: {% widthratio block.y_mm page_height_mm 100 %}%; width: {% widthratio block.width_mm page_width_mm 100 %}%; height: {% widthratio block.height_mm page_height_mm 100 %}%; cursor: move; z-index:2;">
+      <div class="overlay-block position-absolute border border-primary bg-primary bg-opacity-10 small overflow-hidden" {% if precision_overlay and block.copy_scope != 'BOTH' and block.copy_scope != selected_copy %}hidden{% endif %} data-index="{{ forloop.counter0 }}" data-x="{{ block.x_mm|unlocalize }}" data-y="{{ block.y_mm|unlocalize }}" data-width="{{ block.width_mm|unlocalize }}" data-height="{{ block.height_mm|unlocalize }}" style="left: {% widthratio block.x_mm page_width_mm 100 %}%; top: {% widthratio block.y_mm page_height_mm 100 %}%; width: {% widthratio block.width_mm page_width_mm 100 %}%; height: {% widthratio block.height_mm page_height_mm 100 %}%; cursor: move; z-index:2;">
         <span class="badge text-bg-primary">{{ forloop.counter }} {{ block.type }}</span>{% if block.binding %} {{ block.binding }}{% elif block.text %} {{ block.text }}{% endif %}
       </div>
       {% endfor %}
@@ -54,6 +55,14 @@
     </div>
   </div>
   <div class="col-xl-4">
+    {% if precision_overlay %}
+    <div class="card mb-3"><div class="card-header"><strong>Signature areas</strong></div><div class="card-body">
+      <p>Are both signature areas already on your background or paper? Choose separately for each copy. Otherwise, add frames and drag them into the space you have left.</p>
+      {% if signature_warning %}<p class="alert alert-warning">{{ signature_warning }}</p>{% endif %}
+      <p class="small text-muted">Confirm again after changing the background. Preprinted areas require a Preprinted stationery print profile. Switching to an existing area removes signature frames from that copy.</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_signature_areas">{{ signature_form.as_p }}<button class="btn btn-primary">Save signature choices</button></form>
+    </div></div>
+    {% endif %}
     <div class="card mb-3"><div class="card-header"><strong>Logical page and backgrounds</strong></div><div class="card-body">{% if legacy_composition_controls %}<div class="alert alert-warning small">This older schema keeps embedded physical composition for compatibility. New layouts use Print profiles for A5/A4 and simplex/duplex packaging.</div>{% else %}<p class="small text-muted">Configure logical Original, Duplicate, Terms, and D3 surfaces here. Physical paper, imposition, sequence, and duplex behavior belong to Print profiles.</p>{% endif %}<form method="post">{% csrf_token %}<input type="hidden" name="operation" value="save_settings">{{ settings_form.as_p }}<button class="btn btn-primary">Save settings</button></form></div></div>
     <div class="card"><div class="card-header"><strong>Add overlay block</strong></div><div class="card-body"><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="add_block">{{ add_form.as_p }}<button class="btn btn-primary">Add block</button></form></div></div>
   </div>

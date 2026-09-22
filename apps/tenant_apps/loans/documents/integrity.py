@@ -41,6 +41,10 @@ def get_document_integrity_findings():
         except ValueError as exc:
             findings.append(DocumentIntegrityFinding("LAYOUT_INVALID", "revision", revision.pk, str(exc)))
         else:
+            try:
+                parsed.validate_signature_backgrounds({asset.key: asset for asset in revision.assets.all()})
+            except ValueError as exc:
+                findings.append(DocumentIntegrityFinding("SIGNATURE_BACKGROUND", "revision", revision.pk, str(exc)))
             if revision.content_hash != parsed.content_hash:
                 findings.append(DocumentIntegrityFinding("LAYOUT_HASH", "revision", revision.pk, "Stored layout hash does not match its canonical definition."))
             if parsed.document_type != revision.layout.document_type:
@@ -252,6 +256,15 @@ def _resolve_profile_assignment(assignments, series):
 
 
 def _includes_required_ticket_signatures(layout):
+    if layout.schema_version >= 4:
+        for scope in ("ORIGINAL", "DUPLICATE"):
+            if layout.signature_area(scope):
+                continue
+            text = " ".join(block.text.lower() for block in layout.blocks
+                            if block.type == "signature" and block.visible_when is None and block.copy_scope in {"BOTH", scope})
+            if not (any(word in text for word in ("borrower", "customer")) and any(word in text for word in ("staff", "pawnbroker", "authorized"))):
+                return False
+        return True
     def walk(blocks):
         for block in blocks:
             yield block

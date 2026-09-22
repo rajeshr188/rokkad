@@ -7,6 +7,108 @@ tags: [status, architecture]
 
 # Status
 
+## Per-copy signature choices and validated JCL pair (2026-09-22)
+
+The precision editor now asks separately for Original and Duplicate whether to
+use editable frames, areas already in the background PDF, or preprinted paper.
+Clients confirm that both borrower and pawnbroker/agent areas are present. Existing
+areas remove duplicate signature frames from that copy; switching back supplies
+two draggable frames where needed. Clients retain numeric positioning controls.
+Original/Duplicate canvas links show each copy's background and applicable frames.
+
+Confirmations live in the existing versioned layout, tied to the selected asset
+key/hash. A changed background prompts reconfirmation and blocks publication and
+rendering until reviewed. Profile stock mismatches are rejected; integrity checks
+recognise both confirmed stock and separate role-labelled frames. Unchanged
+confirmations survive clone/export/import with the same artwork. This is client
+confirmation, not automatic visual recognition. The usual setup permission,
+draft locking, audit history, immutability and stored-reprint path are reused.
+
+V4 has an explicit optional printed-interest requirement, enabled by default.
+JCL disables it as requested; internal approval/issue evidence still requires the
+rate. Older schemas and hashes retain their defaults. See the
+[decision](adr/2026-09-22-ticket-signature-area-choices.md).
+
+Prepared `output/pdf/jcl-original-duplicate-preview.pdf` (A4 landscape) and
+`output/pdf/jcl-original-signature-preview.pdf` (A5). Both now use the public
+validator/print-profile renderer instead of the earlier geometry-only route.
+Reviewed both supplied backgrounds, removed fixed tenure from separate copies,
+confirmed their existing signature areas and retained the duplicate's redemption
+section. Synthetic six-month tenure and timestamp appear on both; a twelve-month
+render verifies dynamic tenure. No rate field is printed. Source artwork and
+previous previews remain intact. Reverse-side terms and a real printer test remain
+pending. No app server, workspace template assignment or official document changed.
+Validation: 188 isolated document/licence tests pass. Coverage includes per-copy
+confirmation, background replacement, stock-mode mismatch, automatic frames,
+published-edit/Viewer denial, copy-specific canvas backgrounds, pack round-trip,
+optional printed rate with mandatory source evidence, and existing reprint/RLS
+regressions. Current-document links, import boundaries and diff checks pass.
+
+## JCL variable-tenure artwork proof (2026-09-22)
+
+At the owner's request, the original-front preview now binds `loan.tenure` in
+place of the artwork's fixed `3 months`. Removed that text from a separate
+`output/pdf/jcl-background-variable-tenure.pdf`; preserved the supplied `org.pdf`
+and its SHA-256. The movable field at (64.7, 147.4) mm aligns with the existing
+redemption sentence. It uses the existing approved-tenure projection, not a new
+calculation or editable loan value. The sample PDF shows six months; a second
+in-memory render proves a twelve-month payload changes the text with neither
+the old three-month text nor the six-month sample retained. Both final PDFs were
+rasterised and visually checked. Interest remains unprinted at the owner's
+request for now; publication's existing rate requirement is unchanged.
+
+Updated the JCL original candidate and local geometry review. Duplicate tenure
+placement still awaits its artwork review. The proof remains unofficial and
+non-activatable pending static-background signature coverage and the deferred
+printed-interest decision. No running app, database, issue or existing PDF changed.
+Confirmed from the current editor that pointer dragging updates X/Y, Save block
+persists it, v4 supports 0.1 mm positioning, and size/font use numeric controls.
+The canvas shows frame rectangles/bindings; PDF preview is the rendered text check.
+
+## Licence business heading above the JCL borrower block (2026-09-22)
+
+The JCL candidate now includes centred `license.business_name` (16 pt) and
+`license.business_address` (10 pt), in the blank area beside the logo above the
+borrower block. Regenerated and visually reviewed the supplied-background A5
+proof with clearly synthetic business details and the existing timestamp.
+
+The current licence previously had only a staff-facing name and no address.
+Added separate optional printed business name/address fields to licence setup,
+detail, and immutable revision capture. Migration 0017 leaves existing values
+blank. V4 editor bindings read the loan's current licence at first issue and
+retain the values in source evidence; reprints retain the saved PDF. Selected
+blank business fields block new issuance and show explicit preview placeholders.
+No fallback to workspace identity or extraction from artwork. Licence business
+name now satisfies v4's visible business-name requirement. Earlier schemas and
+published layouts remain unchanged. Runtime/rehearsal migration is not applied.
+Validation: all 183 isolated document/licence tests pass, including the actual
+setup POST, immutable licence history, blank-field handling, rendered values,
+and exact-byte reprints after changing the licence's business name/address.
+Import-boundary and current-document link checks pass; model migration drift
+is clean. Migration 0017 is exercised only in the isolated feature test database.
+
+## JCL supplied-background preview (2026-09-22)
+
+Created `output/pdf/jcl-background-preview.pdf` from the owner's local
+`template_pack/template_pack/org.pdf`, using synthetic customer/loan data and
+labelled photo placeholders. This is a watermarked A5 original-front artwork
+proof through the existing v4 rendering primitives, not an issued ticket or an
+activatable layout. No database, server, template assignment or source PDF changed.
+The public profile renderer still correctly rejects the incomplete candidate;
+this offline proof does not change publication/issuance validation.
+
+Visually checked the Tamil artwork and rendered fields. Local proof adjustments:
+customer photo at (12.1, 53) mm aligns with the padded customer text; QR moves
+from y=80 to 65 mm inside the customer box; collateral photo moves from y=110
+to 104 mm to clear the weight row. Timestamp fits below the business footer.
+These adjustments are recorded in the ignored proof builder/review JSON under
+`outputs/ticket-template-tests/jcl-background/`, not applied to saved templates
+or the source frame mapping. Checked A5 size, expected text and unchanged source
+SHA-256. Original/duplicate pairing and physical printer calibration remain pending.
+The supplied artwork fixes redemption at three months and has no interest-rate
+field; those must be reconciled with approved terms before activation, alongside
+the pending reviewed static-artwork coverage contract.
+
 ## Printed generation timestamp (2026-09-22)
 
 New precision-ticket starters and the JCL/JSK candidates include a small

@@ -747,6 +747,18 @@ class LoansSetupUiTests(WorkspaceTestCase):
         invalid = self.client.post(create, {"name": "Incomplete license"})
         self.assertTrue(invalid.context["form"].errors)
         self.assertFalse(LoanLicense.objects.filter(name="Incomplete license").exists())
+        self.assertContains(self.client.get(edit), 'name="business_name"')
+        self.assertContains(self.client.get(edit), 'name="business_address"')
+        response = self.client.post(edit, {
+            "name": license.name, "license_number": license.license_number,
+            "issued_on": "2026-01-01", "expires_on": "2027-01-01",
+            "business_name": "Printed Counter Business", "business_address": "12 Business Road\nVellore",
+        })
+        self.assertRedirects(response, detail, fetch_redirect_response=False)
+        license.refresh_from_db()
+        self.assertEqual(license.business_name, "Printed Counter Business")
+        self.assertEqual(license.revisions.latest("revision_number").business_address, "12 Business Road\nVellore")
+        self.assertContains(self.client.get(detail), "Printed Counter Business")
         for action in ("expire", "activate", "expiry_notice_create"):
             target = url(action, pk=license.pk)
             self.assertEqual(self.client.get(target).status_code, 405)
@@ -2173,6 +2185,89 @@ class LoansSetupUiTests(WorkspaceTestCase):
             1,
         )
 
+    def test_signature_editor_confirms_each_copy_rechecks_artwork_and_adds_frames(self):
+        from apps.tenant_apps.loans.documents import DocumentLayoutValidator
+        from apps.tenant_apps.loans.documents.integrity import _includes_required_ticket_signatures
+        definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["background_asset_key"] = "stock"
+        revision = LoanDocumentLayoutService.create_layout(workspace=self.tenant, document_type="loan_ticket", name="Signature choices", definition=definition, actor=self.owner)
+        with fitz.open() as pdf:
+            pdf.new_page().insert_text((30, 30), "Borrower and pawnbroker signatures on stationery")
+            content = pdf.tobytes()
+        for key in ("stock", "changed"):
+            LoanDocumentLayoutService.add_asset(revision=revision, key=key, kind="BACKGROUND", content=content, filename="stock.pdf", actor=self.owner)
+        url = reverse("loans:document_layout_overlay_designer", args=[revision.pk])
+        self.assertContains(self.tenant_get(url), "Save signature choices")
+        choices = {"operation": "save_signature_areas", "original_source": "BACKGROUND", "duplicate_source": "FRAMES", "require_interest_rate": "on"}
+        self.tenant_post(url, choices)
+        revision.refresh_from_db()
+        self.assertNotIn("signature_areas", revision.definition)
+        self.tenant_post(url, {**choices, "original_confirmed": "on"})
+        revision.refresh_from_db()
+        self.assertEqual(set(revision.definition["signature_areas"]), {"ORIGINAL"})
+        self.assertTrue(all(b["copy_scope"] == "DUPLICATE" for b in revision.definition["blocks"] if b["type"] == "signature"))
+        # Both copies now use the background; the original's unchanged evidence
+        # needs no redundant confirmation while the duplicate is being changed.
+        choices.update(duplicate_source="BACKGROUND", duplicate_confirmed="on")
+        self.tenant_post(url, choices)
+        revision.refresh_from_db()
+        self.assertFalse(any(b["type"] == "signature" for b in revision.definition["blocks"]))
+        self.assertTrue(_includes_required_ticket_signatures(DocumentLayoutValidator.load(revision.definition)))
+        from apps.tenant_apps.loans.documents.packs import export_layout_pack, import_layout_pack
+        imported = import_layout_pack(workspace=self.tenant, content=export_layout_pack(revision), actor=self.owner, name="Imported signature choices")
+        self.assertEqual(imported.definition["signature_areas"], revision.definition["signature_areas"])
+        LoanDocumentLayoutService.publish(revision=imported, actor=self.owner)
+        definition = revision.definition
+        definition["background_asset_key"] = "changed"
+        revision = LoanDocumentLayoutService.update_draft(revision=revision, definition=definition, actor=self.owner)
+        self.assertContains(self.tenant_get(url), "confirm both signature areas again")
+        with self.assertRaisesMessage(ValueError, "confirm both signature areas again"):
+            LoanDocumentLayoutService.publish(revision=revision, actor=self.owner)
+        # A failed reconfirmation changes neither the draft nor its stored hash.
+        before = revision.content_hash
+        self.tenant_post(url, choices)
+        revision.refresh_from_db()
+        self.assertEqual(revision.content_hash, before)
+        self.tenant_post(url, {**choices, "original_confirmed": "on"})
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["signature_areas"]["ORIGINAL"]["asset_key"], "changed")
+        self.tenant_post(url, {"operation": "save_signature_areas", "original_source": "FRAMES", "duplicate_source": "FRAMES"})
+        revision.refresh_from_db()
+        self.assertNotIn("signature_areas", revision.definition)
+        signatures = [b for b in revision.definition["blocks"] if b["type"] == "signature"]
+        self.assertEqual(len(signatures), 4)
+        self.assertFalse(revision.definition["require_interest_rate"])
+        self.assertTrue(_includes_required_ticket_signatures(DocumentLayoutValidator.load(revision.definition)))
+        published = LoanDocumentLayoutService.publish(revision=revision, actor=self.owner)
+        self.tenant_post(url, choices)
+        published.refresh_from_db()
+        self.assertEqual(published.definition, revision.definition)
+        viewer = get_user_model().objects.create_user(username="signature-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        self.assertEqual(self.tenant_post(url, choices).status_code, 403)
+
+    def test_signature_editor_duplicate_canvas_uses_its_own_background(self):
+        definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["surfaces"] = {"backgrounds": {"original_front": "original", "duplicate_front": "duplicate"}}
+        revision = LoanDocumentLayoutService.create_layout(workspace=self.tenant, document_type="loan_ticket", name="Copy backgrounds", definition=definition, actor=self.owner)
+        for key in ("original", "duplicate"):
+            with fitz.open() as pdf:
+                pdf.new_page().insert_text((40, 40), key)
+                LoanDocumentLayoutService.add_asset(revision=revision, key=key, kind="BACKGROUND", content=pdf.tobytes(), filename=key + ".pdf", actor=self.owner)
+        url = reverse("loans:document_layout_overlay_designer", args=[revision.pk])
+        response = self.tenant_get(url + "?copy=DUPLICATE")
+        self.assertEqual(response.context["selected_copy"], "DUPLICATE")
+        self.assertEqual(response.context["preview_background_key"], "duplicate")
+        self.assertContains(response, "Duplicate background preview")
+        background = reverse("loans:document_layout_overlay_background", args=[revision.pk])
+        original, duplicate = self.tenant_get(background), self.tenant_get(background + "?copy=DUPLICATE")
+        self.assertEqual(original.status_code, 200)
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertNotEqual(original.content, duplicate.content)
+        self.assertIn("no-store", duplicate["Cache-Control"])
+
     def _rich_ticket_fixture(self):
         import hashlib
         from django.core.files.base import ContentFile
@@ -2180,6 +2275,9 @@ class LoansSetupUiTests(WorkspaceTestCase):
         from apps.tenant_apps.party.models import PartyAddress
 
         license, series = self._configured_setup()
+        from apps.tenant_apps.loans.services import update_license
+        license = update_license(license, actor=self.owner, business_name="Sample Pawnbrokers",
+                                 business_address="12 Business Road\nVellore")
         loan = self._loan(license, series, "RICH-19")
         borrower = loan.borrower
         borrower.display_name = "Asha"
@@ -2201,12 +2299,14 @@ class LoansSetupUiTests(WorkspaceTestCase):
         loan.state = "APPROVED"
         loan.save()
         definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        next(block for block in definition["blocks"] if block.get("binding") == "workspace.name")["binding"] = "license.business_name"
         next(block for block in definition["blocks"] if block["type"] == "table")["height_mm"] = 30
         definition["blocks"].extend([
             {"type": "field", "binding": "borrower.contact_block", "show_label": False, "x_mm": 10, "y_mm": 145, "width_mm": 90, "height_mm": 35, "font_size_pt": 8},
             {"type": "image", "binding": "borrower.photo", "x_mm": 110, "y_mm": 145, "width_mm": 30, "height_mm": 30},
             {"type": "image", "binding": "collateral.first_approved_photo", "x_mm": 150, "y_mm": 145, "width_mm": 30, "height_mm": 30},
             {"type": "field", "binding": "loan.principal_words", "x_mm": 10, "y_mm": 183, "width_mm": 180, "height_mm": 15, "font_size_pt": 8},
+            {"type": "field", "binding": "license.business_address", "show_label": False, "x_mm": 10, "y_mm": 205, "width_mm": 180, "height_mm": 20, "font_size_pt": 10},
         ])
         revision = LoanDocumentLayoutService.create_layout(workspace=self.tenant, document_type="loan_ticket", name="Rich ticket", definition=definition, actor=self.owner)
         revision = LoanDocumentLayoutService.publish(revision=revision, actor=self.owner)
@@ -2228,6 +2328,8 @@ class LoansSetupUiTests(WorkspaceTestCase):
         issue = LoanDocumentIssue.objects.get(pk=first["X-Rokkad-Document-Issue"])
         self.assertEqual(issue.source_snapshot["customer"]["address_id"], address.pk)
         self.assertEqual(issue.payload_schema_version, 2)
+        self.assertEqual(issue.source_snapshot["fields"]["license.business_name"], "Sample Pawnbrokers")
+        self.assertEqual(issue.source_snapshot["fields"]["license.business_address"], "12 Business Road\nVellore")
         self.assertEqual(issue.source_snapshot["verification_id"], first["X-Rokkad-Verification-ID"])
         generated_at = issue.source_snapshot["fields"]["document.generated_at"]
         capture = timezone.datetime.fromisoformat(issue.source_snapshot["captured_at"])
@@ -2246,6 +2348,8 @@ class LoansSetupUiTests(WorkspaceTestCase):
             for page in pdf:
                 self.assertIn("Generated: " + generated_at, page.get_text())
             self.assertIn("10 Test Street", pdf[0].get_text())
+            self.assertIn("Sample Pawnbrokers", pdf[0].get_text())
+            self.assertIn("12 Business Road", pdf[0].get_text())
             self.assertGreaterEqual(len(pdf[0].get_images()), 1)
             self.assertNotIn("rich-ticket-evidence", pdf[0].get_text())
         self.assertFalse(revision.assets.exists())
@@ -2255,11 +2359,24 @@ class LoansSetupUiTests(WorkspaceTestCase):
             self.assertNotIn("10 Test Street", archive.read("manifest.json").decode())
         loan.borrower.display_name = "Changed customer"
         loan.borrower.save()
+        from apps.tenant_apps.loans.services import update_license
+        update_license(loan.license, actor=self.owner, business_name="Changed Pawnbrokers", business_address="New address")
         with patch("apps.tenant_apps.loans.web.loan_documents.PawnLoanDocumentProjectionBuilder.loan_ticket", side_effect=AssertionError("Reprint rebuilt mutable facts")), patch("apps.tenant_apps.loans.services.ticket_documents._photo_asset", side_effect=AssertionError("Reprint fetched media")), patch("apps.tenant_apps.loans.services.ticket_documents.timezone.now", return_value=capture + timedelta(days=1)):
             self.assertEqual(self.tenant_get(url).content, first.content)
             self.assertContains(self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk])), "10 Test Street")
         issue.refresh_from_db()
         self.assertEqual(issue.source_snapshot["fields"]["borrower.name"], "Asha")
+
+    def test_license_business_fields_block_issue_when_blank_but_preview_explains(self):
+        from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+        from apps.tenant_apps.loans.documents import DocumentLayoutValidator
+        loan, revision, _, _ = self._rich_ticket_fixture()
+        loan.license.business_address = ""
+        layout = DocumentLayoutValidator.load(revision.definition)
+        with self.assertRaisesMessage(ValueError, "printed business name and address"):
+            prepare_ticket_document(loan=loan, layout=layout, actor=self.owner)
+        prepared = prepare_ticket_document(loan=loan, layout=layout, actor=self.owner, preview=True)
+        self.assertEqual(prepared.source_snapshot["fields"]["license.business_address"], "[License business address not configured]")
 
     def test_rich_ticket_address_selection_does_not_mutate_party_defaults(self):
         from apps.tenant_apps.party.models import PartyAddress
