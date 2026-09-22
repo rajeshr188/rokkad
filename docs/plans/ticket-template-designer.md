@@ -37,6 +37,13 @@ selection; unavailable approved photos fail closed. Dynamic photos and customer
 values are excluded from layout exports. The test launcher includes restricted
 database guards and real concurrent-connection issuance checks (155 checks).
 
+The next completed slice brings the suite to 159 checks: V4 business coverage is
+separate from optional printed audit IDs/verification text, while full internal
+payload/issue evidence remains required. The existing admin Evidence page now
+exposes captured fields, photo evidence and issuer; loan print actions link to
+ticket history. Stored PDF reads verify checksums before serving. Static-stock
+declarations and paired activation remain pending.
+
 Run `python scripts/review_ticket_frame_mapping.py` to regenerate the synthetic
 HTML positioning aid and non-importable candidate definitions in
 `outputs/ticket-template-tests/frame-review/`. No database or media credentials
@@ -62,7 +69,8 @@ text, not executable markup.
 
 V1/v2/v3 retain their validation and canonical definitions; v3 remains the default
 creation format. V4 currently accepts loan-ticket overlays only. Required
-business fields, verification and copy validation remain enforced. No database
+business fields and copy validation remain enforced; verification stays mandatory
+in internal evidence, optional on v4 paper. No database
 migration or issue snapshot extension is needed for these controls. Profile v1
 retains its canonical definition and behavior; profile v2 makes stock explicit.
 

@@ -158,6 +158,10 @@ class ConfigurableDocumentRenderer:
     def _validated_context(cls, payload, layout, assets):
         fields = {field.key: field for field in payload.fields}
         sections = {section.key: section for section in payload.sections}
+        if layout.schema_version >= 4:
+            missing = (REQUIRED_BINDINGS["loan_ticket"] - fields.keys()) | (REQUIRED_SECTIONS["loan_ticket"] - sections.keys())
+            if missing or not payload.verification_id:
+                raise ValueError("Ticket payload is missing mandatory internal source/verification evidence.")
         workspace_field = fields.get("workspace.source_id")
         try:
             workspace_id = int(str(workspace_field.value).split(":", 1)[1])
@@ -197,6 +201,9 @@ class ConfigurableDocumentRenderer:
         for surface in profile.included_surfaces:
             if surface.endswith("FRONT"):
                 copy_scope = "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"
+                if layout.schema_version >= 4:
+                    DocumentLayoutValidator.validate_precision_copy_evidence(layout.blocks, copy_scope)
+                    continue
                 required = REQUIRED_BINDINGS[layout.document_type] | REQUIRED_SECTIONS[layout.document_type]
                 present = DocumentLayoutValidator._unconditional_bindings_for_scope(
                     layout.blocks, copy_scope

@@ -68,9 +68,12 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
 
 
 def _issued_document_response(issue, payload):
-    issue.artifact.open("rb")
-    pdf = issue.artifact.read()
-    issue.artifact.close()
+    try:
+        pdf = LoanDocumentLayoutService.read_verified_artifact(issue)
+    except DocumentLayoutServiceError as exc:
+        response = HttpResponse(str(exc), status=409, content_type="text/plain")
+        response["Cache-Control"] = "private, no-store"
+        return response
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{payload.file_name}"'
     response["Cache-Control"] = "private, no-store"

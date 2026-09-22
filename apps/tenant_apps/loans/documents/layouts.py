@@ -48,6 +48,20 @@ REQUIRED_SECTIONS = {
 }
 
 
+# V4 paper coverage is separate from the complete internal payload registry.
+TICKET_VISIBLE_BINDING_GROUPS = {
+    "Business name": ({"workspace.name"},),
+    "License": ({"license.display"}, {"license.number"}),
+    "Loan number": ({"loan.number"},),
+    "Loan date": ({"loan.date"},),
+    "Principal": ({"loan.principal"},),
+    "Monthly interest rate": ({"loan.monthly_interest_rate"},),
+    "Tenure": ({"loan.tenure"},),
+    "Customer": ({"borrower.display"}, {"borrower.name"}, {"borrower.contact_block"}),
+    "Collateral descriptions and weights": ({"collateral.items"}, {"collateral.description_lines", "collateral.net_weight_by_metal"}),
+}
+
+
 @dataclass(frozen=True)
 class LayoutBlock:
     type: str
@@ -332,19 +346,20 @@ class DocumentLayoutValidator:
             raise LayoutValidationError("Duplex layouts require back-page blocks.")
         region_blocks = tuple(header.blocks if header else ()) + tuple(footer.blocks if footer else ())
         all_layout_blocks = blocks + back_blocks + region_blocks
-        bound = cls._bindings(all_layout_blocks)
-        missing = REQUIRED_BINDINGS[document_type] - bound
-        if missing:
-            raise LayoutValidationError(f"Required bindings are missing: {', '.join(sorted(missing))}.")
-        missing_sections = REQUIRED_SECTIONS[document_type] - bound
-        if missing_sections:
-            raise LayoutValidationError(f"Required tables are missing: {', '.join(sorted(missing_sections))}.")
-        unconditional = cls._unconditional_bindings(all_layout_blocks)
-        conditionally_hidden = (REQUIRED_BINDINGS[document_type] | REQUIRED_SECTIONS[document_type]) - unconditional
-        if conditionally_hidden:
-            raise LayoutValidationError(f"Mandatory bindings must have an unconditional occurrence: {', '.join(sorted(conditionally_hidden))}.")
-        if not cls._has_unconditional_type(all_layout_blocks, "verification"):
-            raise LayoutValidationError("Every official layout requires a verification block.")
+        if schema_version < 4:
+            bound = cls._bindings(all_layout_blocks)
+            missing = REQUIRED_BINDINGS[document_type] - bound
+            if missing:
+                raise LayoutValidationError(f"Required bindings are missing: {', '.join(sorted(missing))}.")
+            missing_sections = REQUIRED_SECTIONS[document_type] - bound
+            if missing_sections:
+                raise LayoutValidationError(f"Required tables are missing: {', '.join(sorted(missing_sections))}.")
+            unconditional = cls._unconditional_bindings(all_layout_blocks)
+            conditionally_hidden = (REQUIRED_BINDINGS[document_type] | REQUIRED_SECTIONS[document_type]) - unconditional
+            if conditionally_hidden:
+                raise LayoutValidationError(f"Mandatory bindings must have an unconditional occurrence: {', '.join(sorted(conditionally_hidden))}.")
+            if not cls._has_unconditional_type(all_layout_blocks, "verification"):
+                raise LayoutValidationError("Every official layout requires a verification block.")
         name = str(definition.get("name") or "").strip()
         if not name or len(name) > 100:
             raise LayoutValidationError("Layout name must contain 1 to 100 characters.")
@@ -362,7 +377,10 @@ class DocumentLayoutValidator:
             cls._validate_overlay_geometry(blocks + back_blocks, page_size, precise=schema_version >= 4)
             if sheet:
                 cls._validate_sheet_copy_evidence(sheet, blocks, document_type)
-        if schema_version >= 3 and document_type == "loan_ticket":
+        if schema_version == 4:
+            for copy_scope in ("ORIGINAL", "DUPLICATE"):
+                cls.validate_precision_copy_evidence(blocks, copy_scope)
+        elif schema_version >= 3 and document_type == "loan_ticket":
             cls._validate_logical_copy_evidence(blocks, document_type)
         return DocumentLayout(
             schema_version, document_type, name, page_size, copy_mode, blocks,
@@ -458,6 +476,25 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError(
                     f"{copy_scope.title()} front requires an unconditional verification block."
                 )
+
+    @staticmethod
+    def precision_missing_visible(blocks, copy_scope):
+        visible = [block for block in blocks if block.copy_scope in {"BOTH", copy_scope} and block.visible_when is None]
+        present = {block.binding for block in visible if block.type in {"field", "table"}}
+        collateral_tables = [block for block in visible if block.type == "table" and block.binding == "collateral.items"]
+        if collateral_tables and not any(not block.table_columns or {1, 2, 3} <= {column.index for column in block.table_columns} for block in collateral_tables):
+            present.discard("collateral.items")
+        missing = [label for label, alternatives in TICKET_VISIBLE_BINDING_GROUPS.items()
+                   if not any(required <= present for required in alternatives)]
+        if not any(block.type == "signature" for block in visible):
+            missing.append("Signature space")
+        return missing
+
+    @classmethod
+    def validate_precision_copy_evidence(cls, blocks, copy_scope):
+        missing = cls.precision_missing_visible(blocks, copy_scope)
+        if missing:
+            raise LayoutValidationError(f"{copy_scope.title()} front is missing required printed information: {', '.join(missing)}.")
 
     @classmethod
     def _region(cls, value, document_type, schema_version, label):
@@ -823,6 +860,8 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
     if schema_version == 1 and layout_mode != "FLOW":
         raise LayoutValidationError("Absolute overlay starters require schema version 2.")
     required = sorted(REQUIRED_BINDINGS[document_type])
+    if schema_version == 4:
+        required = sorted({"workspace.name", "license.display", "loan.number", "loan.date", "loan.principal", "loan.monthly_interest_rate", "loan.tenure", "borrower.display"})
     names = {
         "loan_ticket": "Starter loan ticket",
         "repayment_receipt": "Starter repayment receipt",
@@ -863,6 +902,14 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
             {"type": "verification"},
             {"type": "signature", "text": "Borrower / customer | Authorized pawnbroker", "height_mm": 18},
         ])
+    if schema_version == 4:
+        blocks = [block for block in blocks if block["type"] != "verification"]
+        for block in blocks:
+            if block["type"] == "table":
+                block["table_columns"] = [
+                    {"index": index, "label": label, "width_percent": width, "align": "LEFT"}
+                    for index, label, width in ((1, "Description", 40), (2, "Metal", 12), (3, "Net weight", 18), (4, "Purity", 12), (5, "Appraisal", 18))
+                ]
     definition = {
         "schema_version": schema_version, "document_type": document_type,
         "name": names[document_type],

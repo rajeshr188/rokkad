@@ -1,9 +1,29 @@
 {% extends "base_tenant.html" %}
-{% block title %}Document issue {{ issue.pk }}{% endblock %}
+{% block title %}Document issue {{ issue.pk }}<div class="alert alert-info mt-4">This page shows retained evidence, not current customer details. Opening the PDF checks its bytes against the recorded PDF hash. <a href="{% url 'workspace_loans:document_layout_diagnostics' request.workspace.slug %}" class="alert-link">Integrity diagnostics</a> checks stored layouts, profiles, assets and PDFs. A displayed hash alone is not a completed verification or a digital signature.</div>
+{% if snapshot %}
+<section class="card mt-4" aria-labelledby="capture-heading"><div class="card-header"><h2 id="capture-heading" class="h5 mb-0">Captured at first issue</h2></div><div class="card-body">
+ <dl class="row">
+  <dt class="col-sm-4">Captured at</dt><dd class="col-sm-8 text-break">{{ snapshot.captured_at }}</dd>
+  <dt class="col-sm-4">Approval record</dt><dd class="col-sm-8">{{ snapshot.approval_id }}</dd>
+  <dt class="col-sm-4">Customer / address records</dt><dd class="col-sm-8">{{ snapshot.customer.party_id }} / {{ snapshot.customer.address_id|default:'No address selected' }}</dd>
+  <dt class="col-sm-4">Verification reference</dt><dd class="col-sm-8 text-break"><code>{{ snapshot.verification_id|default:'Not recorded separately for this issue' }}</code></dd>
+ </dl>
+ <details><summary>Customer, loan and source values captured for this ticket</summary><dl class="row mt-3">{% for label, value in captured_fields %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8 text-break" style="white-space:pre-wrap">{{ value|default:'Not supplied' }}</dd>{% endfor %}</dl></details>
+ {% for label, media in captured_media %}<div class="border-top mt-3 pt-3"><h3 class="h6">{{ label }}</h3><dl class="row mb-0">
+  <dt class="col-sm-4">Recorded status</dt><dd class="col-sm-8">{{ media.status }}</dd>
+  <dt class="col-sm-4">Selected record</dt><dd class="col-sm-8">{% if media.photo_id %}Photo {{ media.photo_id }} / collateral item {{ media.item_id }}{% elif media.party_id %}Customer {{ media.party_id }}{% else %}No photograph selected{% endif %}</dd>
+  <dt class="col-sm-4">Photo checksum</dt><dd class="col-sm-8 text-break"><code>{{ media.sha256|default:'No bytes captured' }}</code></dd>
+ </dl></div>{% empty %}<p class="mt-3 mb-0">This ticket did not select any dynamic photographs.</p>{% endfor %}
+</div></section>
+{% else %}<p class="alert alert-secondary mt-4">This historical issue has no separate customer/photo snapshot. Its recorded issue metadata and saved PDF remain available; current customer data has not been substituted.</p>{% endif %}
+{% if issue.asset_hashes %}<details class="card card-body mt-4"><summary>Recorded image and background checksums</summary><dl class="row mt-3 mb-0">{% for key, checksum in issue.asset_hashes.items %}<dt class="col-sm-4 text-break">{{ key }}</dt><dd class="col-sm-8 text-break"><code>{{ checksum }}</code></dd>{% endfor %}</dl></details>{% endif %}
+{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
-<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 mb-1">Document issue {{ issue.pk }}</h1><p class="text-muted mb-0">{{ issue.get_document_type_display }} · {{ issue.get_issue_kind_display }} · {{ issue.issued_at }}</p></div><div class="d-flex gap-2"><a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_issue_artifact' request.workspace.slug issue.pk %}">Open exact PDF</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">All issues</a></div></div>
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 mb-1">Document issue {{ issue.pk }}</h1><p class="text-muted mb-0">{{ issue.get_document_type_display }} · {{ issue.get_issue_kind_display }} · {{ issue.issued_at }}</p></div><div class="d-flex gap-2"><a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_issue_artifact' request.workspace.slug issue.pk %}">Open verified PDF</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">All issues</a></div></div>
 <div class="row g-4"><div class="col-lg-6"><div class="card"><div class="card-header">Source and layout</div><div class="card-body"><dl class="row mb-0">
+  <dt class="col-sm-5">Issued by</dt><dd class="col-sm-7">{{ issue.issued_by|default:"Not recorded / account removed" }}{% if issue.issued_by_id %} (user {{ issue.issued_by_id }}){% endif %}</dd>
+  <dt class="col-sm-5">Issued at</dt><dd class="col-sm-7"><time datetime="{{ issue.issued_at|date:'c' }}">{{ issue.issued_at }}</time></dd>
   <dt class="col-sm-5">Source</dt><dd class="col-sm-7">{{ issue.source_type }}:{{ issue.source_id }}</dd>
   <dt class="col-sm-5">Source fingerprint</dt><dd class="col-sm-7 text-break"><code>{{ issue.source_fingerprint }}</code></dd>
   <dt class="col-sm-5">Payload</dt><dd class="col-sm-7">Schema {{ issue.payload_schema_version }}<br><code>{{ issue.payload_hash }}</code></dd>
@@ -18,4 +38,22 @@
   <dt class="col-sm-5">PDF hash</dt><dd class="col-sm-7 text-break"><code>{{ issue.pdf_hash }}</code></dd>
   <dt class="col-sm-5">Prior issue</dt><dd class="col-sm-7">{% if issue.prior_issue %}<a href="{% url 'workspace_loans:document_issue_detail' request.workspace.slug issue.prior_issue.pk %}">Issue {{ issue.prior_issue.pk }}</a>{% else %}—{% endif %}</dd>
 </dl></div></div></div></div>
+<div class="alert alert-info mt-4">This page shows retained evidence, not current customer details. Opening the PDF checks its bytes against the recorded PDF hash. <a href="{% url 'workspace_loans:document_layout_diagnostics' request.workspace.slug %}" class="alert-link">Integrity diagnostics</a> checks stored layouts, profiles, assets and PDFs. A displayed hash alone is not a completed verification or a digital signature.</div>
+{% if snapshot %}
+<section class="card mt-4" aria-labelledby="capture-heading"><div class="card-header"><h2 id="capture-heading" class="h5 mb-0">Captured at first issue</h2></div><div class="card-body">
+ <dl class="row">
+  <dt class="col-sm-4">Captured at</dt><dd class="col-sm-8 text-break">{{ snapshot.captured_at }}</dd>
+  <dt class="col-sm-4">Approval record</dt><dd class="col-sm-8">{{ snapshot.approval_id }}</dd>
+  <dt class="col-sm-4">Customer / address records</dt><dd class="col-sm-8">{{ snapshot.customer.party_id }} / {{ snapshot.customer.address_id|default:'No address selected' }}</dd>
+  <dt class="col-sm-4">Verification reference</dt><dd class="col-sm-8 text-break"><code>{{ snapshot.verification_id|default:'Not recorded separately for this issue' }}</code></dd>
+ </dl>
+ <details><summary>Customer, loan and source values captured for this ticket</summary><dl class="row mt-3">{% for label, value in captured_fields %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8 text-break" style="white-space:pre-wrap">{{ value|default:'Not supplied' }}</dd>{% endfor %}</dl></details>
+ {% for label, media in captured_media %}<div class="border-top mt-3 pt-3"><h3 class="h6">{{ label }}</h3><dl class="row mb-0">
+  <dt class="col-sm-4">Recorded status</dt><dd class="col-sm-8">{{ media.status }}</dd>
+  <dt class="col-sm-4">Selected record</dt><dd class="col-sm-8">{% if media.photo_id %}Photo {{ media.photo_id }} / collateral item {{ media.item_id }}{% elif media.party_id %}Customer {{ media.party_id }}{% else %}No photograph selected{% endif %}</dd>
+  <dt class="col-sm-4">Photo checksum</dt><dd class="col-sm-8 text-break"><code>{{ media.sha256|default:'No bytes captured' }}</code></dd>
+ </dl></div>{% empty %}<p class="mt-3 mb-0">This ticket did not select any dynamic photographs.</p>{% endfor %}
+</div></section>
+{% else %}<p class="alert alert-secondary mt-4">This historical issue has no separate customer/photo snapshot. Its recorded issue metadata and saved PDF remain available; current customer data has not been substituted.</p>{% endif %}
+{% if issue.asset_hashes %}<details class="card card-body mt-4"><summary>Recorded image and background checksums</summary><dl class="row mt-3 mb-0">{% for key, checksum in issue.asset_hashes.items %}<dt class="col-sm-4 text-break">{{ key }}</dt><dd class="col-sm-8 text-break"><code>{{ checksum }}</code></dd>{% endfor %}</dl></details>{% endif %}
 {% endblock %}

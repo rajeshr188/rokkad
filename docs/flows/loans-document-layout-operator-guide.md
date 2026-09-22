@@ -116,9 +116,33 @@ choices exist only in Print profiles. A cloned older schema-v1/v2 layout may
 still show clearly labelled legacy composition controls so it can be corrected
 without changing historical interpretation.
 
-Use **Loans setup > Issued documents** to inspect which layout and profile
-produced an official document. Downloading the exact artifact from that page
-returns the immutable stored PDF even after assignments change.
+As an Owner/Admin, open **Settings > Documents & printing > Document layouts >
+Issued documents**, then choose **Evidence** on an issue. It records the source
+reference/fingerprint, layout and profile versions/hashes, PDF hash and issue time.
+On the isolated ticket feature, it also shows the issuer and retained customer,
+loan, verification and photo evidence captured at first issue. Expand the captured
+values or asset-checksum sections when investigating a document. Older issues
+without separate snapshots are labelled; current customer data is not substituted.
+
+The feature's loan print panel has **Ticket history & evidence**, filtered to that
+loan's ticket issues. It does not list payment/release documents whose sources are
+separate events. Global Issued documents remains available for every document kind.
+
+**Open verified PDF** reads the original stored bytes and checks their checksum
+before serving them, even after assignments change. Normal stored reprints use the
+same check. Missing/corrupt files are rejected; the evidence page remains readable.
+**Integrity diagnostics** checks configured layouts/profiles, assets and stored
+PDFs. Merely viewing a hash does not perform all these checks, and these checksums
+are not digital signatures or a public authenticity-verification service.
+
+For v4 precision tickets, internal IDs/fingerprints and verification text are
+optional on paper. Complete source evidence stays in the payload/issue. Each front
+still requires business/license identity, customer, number/date/principal, rate,
+tenure, collateral details and signature space. Descriptions plus net weights by
+metal can replace the full collateral table. A QR alone cannot replace a readable
+loan number. V1/v2/v3 retain their original mandatory printed-field rules. Reviewed
+static-stock declarations are still pending; background artwork alone currently
+cannot waive required business fields.
 
 Before the parity pilot, open **Integrity diagnostics**. An active ticket
 assignment that prints only Original or only Duplicate is a blocking finding.
@@ -279,8 +303,9 @@ content and background assets in the published layout:
 - Duplicate back / Form D3
 
 Each front block may apply to **Both copies**, **Original only**, or **Duplicate
-only**. Every logical front must retain all mandatory fields, tables, and
-verification; copy-specific decoration cannot remove legal evidence.
+only**. In v1/v2/v3, every logical front must retain mandatory fields, tables and
+verification. Precision v4 applies the business-coverage rules above; internal
+audit identifiers and verification text need not print.
 
 In the approved target architecture, a separate versioned print profile will
 package these logical surfaces as A5 pages or A4 landscape sheets. Until that
@@ -442,9 +467,9 @@ Use a registered scalar binding with `PRESENT`, `EMPTY`, `EQUALS`, or
 }
 ```
 
-Required regulatory fields, required tables, and verification must also occur
-outside conditional blocks. Conditions cannot make mandatory evidence
-disappear from an official document.
+Required visible fields and collateral coverage must occur outside conditional
+blocks. V1/v2/v3 also require printed verification. Conditions cannot hide
+mandatory information from an official document.
 
 ### Overflow policy
 

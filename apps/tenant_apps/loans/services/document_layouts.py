@@ -34,6 +34,22 @@ def _require_workspace(workspace_id):
 
 class LoanDocumentLayoutService:
     @staticmethod
+    def read_verified_artifact(issue):
+        """Read retained bytes under the caller's Workspace, rejecting corruption."""
+        _require_workspace(issue.workspace_id)
+        try:
+            issue.artifact.open("rb")
+            try:
+                content = issue.artifact.read()
+            finally:
+                issue.artifact.close()
+        except Exception as exc:
+            raise DocumentLayoutServiceError("Stored PDF is unavailable. Review document integrity diagnostics.") from exc
+        if hashlib.sha256(content).hexdigest() != issue.pdf_hash:
+            raise DocumentLayoutServiceError("Stored PDF checksum does not match the issued document. Review document integrity diagnostics.")
+        return content
+
+    @staticmethod
     def audit_fixed_recovery(*, workspace, source_type, source_id, actor=None, request=None):
         _require_workspace(workspace.pk)
         AuditLog.log(

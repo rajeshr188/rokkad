@@ -128,13 +128,20 @@ class PawnLoanFilter(django_filters.FilterSet):
 
 
 class LoanDocumentIssueFilter(django_filters.FilterSet):
+    loan = django_filters.CharFilter(method="filter_loan")
+
+    def filter_loan(self, queryset, name, value):
+        if not value.isascii() or not value.isdecimal() or len(value) > 19:
+            return queryset.none()
+        return queryset.filter(source_type="PawnLoan", source_id=str(int(value)))
+
     q = django_filters.CharFilter(
         method="filter_search",
         label="Search",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Issue, source, or profile...",
+                "placeholder": "Issue, source, ticket number, or profile...",
             }
         ),
     )
@@ -185,6 +192,7 @@ class LoanDocumentIssueFilter(django_filters.FilterSet):
             Q(source_type__icontains=value)
             | Q(source_id__icontains=value)
             | Q(print_profile_name__icontains=value)
+            | Q(**{"source_snapshot__fields__loan.number__icontains": value})
         )
         if value.isdigit():
             query |= Q(pk=int(value))

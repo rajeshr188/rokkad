@@ -8,6 +8,7 @@
  {% if can_print_ticket %}<a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_loan_ticket_pdf' request.workspace.slug loan.pk %}">{% translate "Loan ticket PDF" %} <span class="small">({% translate "new tab" %})</span></a>{% endif %}
  {% if can_print_schedule %}<a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_loan_kfs_schedule_pdf' request.workspace.slug loan.pk %}">{% translate "Key facts and repayment schedule" %} <span class="small">({% translate "new tab" %})</span></a>{% endif %}
  </div>
+ {% if can_administer %}<p class="mt-3 mb-0"><a href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}?loan={{ loan.pk }}">{% translate "Ticket history & evidence" %}</a></p>{% endif %}
  <p class="small text-body-secondary mt-3 mb-0">{% translate "Printing does not record payment or change the loan. A loan ticket describes approved terms; it is not proof of disbursal." %}</p>
  {% else %}<p class="mb-0">{% translate "A loan ticket is available after approval. The key facts document is available once a repayment schedule has been saved." %}</p>{% endif %}
  </div>

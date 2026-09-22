@@ -2228,9 +2228,20 @@ class LoansSetupUiTests(WorkspaceTestCase):
         issue = LoanDocumentIssue.objects.get(pk=first["X-Rokkad-Document-Issue"])
         self.assertEqual(issue.source_snapshot["customer"]["address_id"], address.pk)
         self.assertEqual(issue.payload_schema_version, 2)
+        self.assertEqual(issue.source_snapshot["verification_id"], first["X-Rokkad-Verification-ID"])
+        evidence = self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk]))
+        for value in ("Captured at first issue", "10 Test Street", "loans-setup-owner", photo.sha256, issue.source_snapshot["verification_id"]):
+            self.assertContains(evidence, value)
+        self.assertIn("no-store", evidence["Cache-Control"])
+        self.assertNotContains(evidence, photo.file.name)
+        history = self.tenant_get(f"{reverse('loans:document_issue_list')}?loan={loan.pk}&q=RICH-19")
+        self.assertEqual(history.context["page_obj"].paginator.count, 1)
+        self.assertIn("no-store", history["Cache-Control"])
+        self.assertEqual(self.tenant_get(f"{reverse('loans:document_issue_list')}?loan={loan.pk}0").context["page_obj"].paginator.count, 0)
         with fitz.open(stream=first.content, filetype="pdf") as pdf:
             self.assertIn("10 Test Street", pdf[0].get_text())
             self.assertGreaterEqual(len(pdf[0].get_images()), 1)
+            self.assertNotIn("rich-ticket-evidence", pdf[0].get_text())
         self.assertFalse(revision.assets.exists())
         import zipfile
         with zipfile.ZipFile(io.BytesIO(export_layout_pack(revision))) as archive:
@@ -2240,6 +2251,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         loan.borrower.save()
         with patch("apps.tenant_apps.loans.web.loan_documents.PawnLoanDocumentProjectionBuilder.loan_ticket", side_effect=AssertionError("Reprint rebuilt mutable facts")), patch("apps.tenant_apps.loans.services.ticket_documents._photo_asset", side_effect=AssertionError("Reprint fetched media")):
             self.assertEqual(self.tenant_get(url).content, first.content)
+            self.assertContains(self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk])), "10 Test Street")
         issue.refresh_from_db()
         self.assertEqual(issue.source_snapshot["fields"]["borrower.name"], "Asha")
 
@@ -2320,6 +2332,44 @@ class LoansSetupUiTests(WorkspaceTestCase):
         PawnLoanApprovalSnapshot.objects.create(loan=loan, version=2, payload=source, fingerprint="wrong-photo-item", approved_by=self.owner)
         with self.assertRaisesMessage(DocumentAssetError, "unavailable"):
             prepare_ticket_document(loan=loan, layout=DocumentLayoutValidator.load(revision.definition), actor=self.owner)
+
+    def test_document_evidence_is_admin_scoped_and_corrupt_artifacts_are_not_served(self):
+        from apps.orgs.models import Company
+        from apps.tenancy.context import workspace_context, without_workspace_context
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        ticket_url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        response = self.tenant_get(ticket_url)
+        issue = LoanDocumentIssue.objects.get(pk=response["X-Rokkad-Document-Issue"])
+        detail_url = reverse("loans:document_issue_detail", args=[issue.pk])
+        artifact_url = reverse("loans:document_issue_artifact", args=[issue.pk])
+        member = get_user_model().objects.create_user(username=f"evidence-member-{uuid.uuid4().hex[:8]}")
+        role, _ = Role.objects.get_or_create(name="Member")
+        Membership.objects.create(user=member, company=self.tenant, role=role)
+        self.client.force_login(member)
+        for url in (detail_url, artifact_url, reverse("loans:document_issue_list")):
+            self.assertEqual(self.tenant_get(url).status_code, 403)
+        self.client.force_login(self.owner)
+        other = Company.objects.create(name="Private evidence workspace", schema_name=f"evidence-{uuid.uuid4().hex[:8]}", owner=self.owner, creator=self.owner)
+        with without_workspace_context(), workspace_context(other.pk):
+            foreign = LoanDocumentIssue.objects.create(workspace=other, document_type="loan_ticket", source_type="PawnLoan",
+                source_id="PRIVATE-SOURCE", source_fingerprint="private-evidence", payload_schema_version=1,
+                payload_hash="a" * 64, pdf_hash="b" * 64, artifact="private-evidence.pdf", issued_by=self.owner)
+        for name in ("document_issue_detail", "document_issue_artifact"):
+            self.assertEqual(self.tenant_get(reverse(f"loans:{name}", args=[foreign.pk])).status_code, 404)
+        self.assertNotContains(self.tenant_get(reverse("loans:document_issue_list")), "PRIVATE-SOURCE")
+        with issue.artifact.storage.open(issue.artifact.name, "wb") as file:
+            file.write(b"altered-artifact-must-not-be-served")
+        for url in (ticket_url, artifact_url):
+            response = self.tenant_get(url)
+            self.assertContains(response, "checksum does not match", status_code=409)
+            self.assertNotIn(b"altered-artifact-must-not-be-served", response.content)
+            self.assertIn("no-store", response["Cache-Control"])
+        # Evidence remains inspectable even when the retained file is unavailable.
+        self.assertContains(self.tenant_get(detail_url), issue.pdf_hash)
+        with patch("django.core.files.storage.FileSystemStorage.open", side_effect=OSError("private-host-secret")):
+            response = self.tenant_get(artifact_url)
+            self.assertContains(response, "Stored PDF is unavailable", status_code=409)
+            self.assertNotIn(b"private-host-secret", response.content)
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

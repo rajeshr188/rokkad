@@ -2,7 +2,7 @@
 
 This is a geometry aid, not renderer output or an activatable template pack.
 It deliberately reports remaining layout-contract failures instead of inserting
-extra audit fields into the client's design to make validation pass.
+unreviewed business identity or terms into the client's design to make validation pass.
 """
 
 import html
@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from apps.tenant_apps.loans.documents import DocumentLayoutValidator, LayoutValidationError, built_in_print_profile, starter_layout
-from apps.tenant_apps.loans.documents.layouts import REQUIRED_BINDINGS, REQUIRED_SECTIONS
 
 
 def build_review():
@@ -45,12 +44,9 @@ def build_review():
                                     "candidate": 148 - block["x_mm"], "status": "REQUIRES_VISUAL_REVIEW"})
                 block["width_mm"] = 148 - block["x_mm"]
             definition["blocks"].append(block)
-        missing = {}
-        for copy in ("ORIGINAL", "DUPLICATE"):
-            visible = [block for block in definition["blocks"] if block["copy_scope"] in (copy, "BOTH")]
-            # A QR containing a number is not the same as a visible scalar field.
-            bindings = {block["binding"] for block in visible if block["type"] in {"field", "table"}}
-            missing[copy] = sorted((REQUIRED_BINDINGS["loan_ticket"] | REQUIRED_SECTIONS["loan_ticket"]) - bindings)
+        parsed_blocks = DocumentLayoutValidator._blocks(definition["blocks"], "loan_ticket", 4, layout_mode="ABSOLUTE_OVERLAY")
+        missing = {copy: DocumentLayoutValidator.precision_missing_visible(parsed_blocks, copy)
+                   for copy in ("ORIGINAL", "DUPLICATE")}
         try:
             DocumentLayoutValidator.load(definition)
         except LayoutValidationError as exc:
@@ -62,7 +58,7 @@ def build_review():
         candidates.append({"workspace": template["workspace"], "ready_to_import": False,
             "layout_candidate": definition, "profile_candidate": profile, "geometry_adjustments": adjustments,
             "validation_error": validation_error, "missing_visible_bindings_under_current_rules": missing,
-            "additional_requirements": ["Verification block", "Signature/static-stock declarations", "Reviewed artwork and physical calibration"],
+            "additional_requirements": ["Reviewed business identity/terms and signature areas", "Reviewed artwork and physical calibration"],
             "source_review_flags": [{"frame_id": frame["legacy"]["id"], "flags": frame["review_flags"]} for frame in template["frames"] if frame["review_flags"]]})
     return {"kind": "synthetic_frame_review_not_an_import_pack", "contains_customer_data": False, "templates": candidates}
 
@@ -75,7 +71,7 @@ def review_html(review):
               "loan.summary_label": "TEST-19 / 22-09-2026\nRs 10000 / Gold: 2 g\nTEST Customer\n1. Test ring"}
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8"><title>JCL / JSK frame-position review</title>',
              '<style>body{font:16px system-ui;background:#edf1f5;color:#17232d;padding:24px}h1{margin-top:0}.note{max-width:1000px;line-height:1.6}.copies{display:flex;gap:12px;flex-wrap:wrap}.sheet{width:148mm;height:210mm;position:relative;background:white;border:1px solid #788996;margin:12px 0}.frame{position:absolute;box-sizing:border-box;outline:1px dashed #b1bfcb;white-space:pre-wrap;overflow:visible;font:12pt/12pt Helvetica,Arial,sans-serif}.frame small{position:absolute;top:-10px;left:0;color:#536b7e;font:8px system-ui;white-space:nowrap}.media{display:grid;place-items:center;background:repeating-linear-gradient(45deg,#e4ebf1,#e4ebf1 4px,#f4f7fa 4px,#f4f7fa 8px);font:10px system-ui;color:#405c70}.copy-name{font-weight:700}pre{white-space:pre-wrap;max-width:1000px}summary{cursor:pointer}#guides:not(:checked)~main small{display:none}#guides:not(:checked)~main .frame{outline:none}@media print{body{background:white;padding:0}.note,details,label,input{display:none}.sheet{break-inside:avoid}.sheet:after{content:"GEOMETRY REVIEW ONLY - NOT A LOAN TICKET";position:absolute;bottom:5mm;left:8mm;color:#b00020;font-size:10px}}</style>',
-             '<h1>JCL / JSK frame-position review</h1><p class="note"><strong>Synthetic geometry aid, not an issued ticket or renderer preview.</strong> No production artwork is included. All 35 source frames are mapped. Text wrapping here is browser approximation; ReportLab preview and physical printer checks are still required. The original rectangles can overlap and longer content may not fit. These candidates cannot yet be imported: existing visible-evidence rules must be reconciled with the approved stationery design.</p><input id="guides" type="checkbox" checked><label for="guides"> Show frame boundaries and binding names</label><main>']
+             '<h1>JCL / JSK frame-position review</h1><p class="note"><strong>Synthetic geometry aid, not an issued ticket or renderer preview.</strong> No production artwork is included. All 35 source frames are mapped. Text wrapping here is browser approximation; ReportLab preview and physical printer checks are still required. The original rectangles can overlap and longer content may not fit. These candidates cannot yet be imported: business identity/terms and signature areas still need visible frames or reviewed stationery. Internal audit IDs and verification strings no longer have to print.</p><input id="guides" type="checkbox" checked><label for="guides"> Show frame boundaries and binding names</label><main>']
     for candidate in review["templates"]:
         parts.append(f'<h2>{candidate["workspace"].upper()} — {candidate["profile_candidate"]["composition"]}</h2><div class="copies">')
         for copy in ("ORIGINAL", "DUPLICATE"):

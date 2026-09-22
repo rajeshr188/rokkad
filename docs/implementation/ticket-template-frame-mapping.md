@@ -261,8 +261,13 @@ preserve the extracted source coordinates and record this as an explicit design
 correction rather than a coordinate-conversion fix.
 
 Image/QR fit refinements, static-stock declarations and paired activation remain
-pending. Existing mandatory identity/verification/table rules remain intact; do
-not treat candidate definitions as converted, accepted JCL/JSK templates. See the
+pending. V4 visible business coverage is now implemented: internal identifiers and
+verification text are optional on paper; compact description/weight bindings can
+replace the table. Complete internal payload evidence is still validated. Every
+front must retain business/license/customer identity, number/date/principal, rate,
+tenure and signature space. Candidate reports therefore flag only missing business
+identity/terms and signature areas, which must be covered by visible frames or
+reviewed stationery. Do not treat candidates as accepted JCL/JSK templates. See the
 plan for isolated test commands and manual-runtime limits.
 
 ## Minimal editor and implementation order

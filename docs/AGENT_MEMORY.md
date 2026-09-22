@@ -34,7 +34,13 @@ row lock serializes first prints. Reprints use saved artifacts before rebuilding
 facts or fetching media. Old issue snapshots remain null; dynamic images and
 customer values never enter layout packs. Migration 0016 has only been exercised
 in the isolated feature test database. Literal mapped JCL/JSK frame candidates
-remain non-activatable pending v4 visible/static-stock rules and artwork review.
+remain non-activatable pending reviewed static-stock declarations and artwork review.
+V4 visible business coverage is now separate from internal audit fields: identifiers,
+fingerprints and verification text are optional on paper, while the full payload
+and issue evidence remain required. Owners/Admins use Issued documents > Evidence;
+the loan print panel links to its ticket history. Evidence shows retained capture
+values and media hashes; verified artifact reads reject missing/mismatching bytes.
+Reviewed static-stock declarations are still needed for literal JCL/JSK candidates.
 Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
 test launcher pins a local test database and worktree-local filesystem media;
 it does not start a feature web server. See the plan for the command and limits.

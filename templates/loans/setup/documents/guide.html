@@ -58,7 +58,8 @@
 <div class="card card-body mb-3">
   <h2 class="h5">4. Print and inspect official evidence</h2>
   <p>Staff continue using the existing Print/PDF actions on the loan, repayment, release, auction, and renewal screens. Loans resolves the applicable published layout and, for configurable loan tickets, the physical print profile.</p>
-  <p class="mb-0">The first official issue is stored exactly. Open <a href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">Issued documents</a> to inspect its layout/profile revisions and hashes or download the exact stored PDF. Later reprints return those same bytes even if assignments change.</p>
+  <p>The first official issue is stored exactly. Open <a href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}">Issued documents</a>, then <strong>Evidence</strong>, to inspect the issuer, issue time, source fingerprint, layout/profile/PDF hashes and retained customer/photo evidence where recorded. <strong>Open verified PDF</strong> checks the stored bytes against their recorded checksum.</p>
+  <p class="mb-0">Precision tickets can omit internal IDs, fingerprints and verification text from paper; their complete audit evidence remains here. Business identity, customer details, loan terms, collateral and signature space still need visible coverage on both fronts. <a href="{% url 'workspace_loans:document_layout_diagnostics' request.workspace.slug %}">Integrity diagnostics</a> checks stored configuration and files; displaying a hash alone does not verify a document.</p>
 </div>
 
 <div class="card card-body mb-3">
@@ -95,7 +96,7 @@
   <ul class="mb-0">
     <li>Values can use approved case, ISO-date, and plain-decimal formats.</li>
     <li>Optional presentation can use present, empty, equals, or not-equals conditions over registered fields.</li>
-    <li>Mandatory fields, tables, and verification cannot exist only inside conditional blocks.</li>
+    <li>Mandatory visible information cannot exist only inside conditional blocks. Older layouts also require printed verification; precision tickets keep internal verification in their issue evidence.</li>
     <li>Long values must explicitly wrap, shrink after a character threshold, or fail rendering.</li>
   </ul>
 </div>

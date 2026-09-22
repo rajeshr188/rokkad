@@ -130,6 +130,7 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
     snapshot = {
         "schema_version": 2, "workspace_id": loan.workspace_id,
         "captured_at": timezone.now().isoformat(),
+        "verification_id": payload.verification_id,
         "approval_id": approval.pk, "approval_fingerprint": approval.fingerprint,
         "customer": {"party_id": identity.party_id, "address_id": identity.address_id},
         "fields": {field.key: str(field.value) for field in fields}, "media": media_evidence,

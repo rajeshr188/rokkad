@@ -7,6 +7,42 @@ tags: [status, architecture]
 
 # Status
 
+## Accessible issue evidence and cleaner precision tickets (2026-09-22)
+
+Owner/Admin access is **Settings > Documents & printing > Document layouts >
+Issued documents > Evidence**. The existing evidence page now shows the issuer,
+issue time, retained verification reference, captured customer/loan values,
+selected photo identities/checksums and asset hashes alongside the existing
+source/layout/profile/PDF evidence. Historical issues without a separate snapshot
+are labelled; no current Party values are substituted. Evidence/list pages are
+non-cached. The loan's print panel links to its exact ticket history; snapshot
+ticket numbers are searchable. This does not broaden setup permissions.
+
+Opening an artifact or performing a normal stored reprint now checks the actual
+PDF bytes against its retained hash. Missing or mismatching bytes produce a safe
+409 response; metadata remains inspectable and no new PDF is substituted. The
+existing Integrity diagnostics screen checks layouts, profiles, assets and PDFs.
+A displayed checksum is not itself a completed verification or digital signature.
+
+V4 now separates visible ticket content from the complete internal payload:
+workspace/Party/loan/approval IDs, fingerprints and verification text need not
+print. New v4 starters omit those fields and internal collateral IDs. Every front
+still requires business/license identity, customer, number/date/principal, rate,
+tenure, collateral description/metal/weight coverage and signature space. Compact
+description/weight fields can replace the full table. A QR, conditional field,
+back-only block or table omitting descriptions/weights cannot bypass coverage.
+The renderer still requires complete internal fields/sections and verification;
+new source snapshots retain the verification reference. V1/v2/v3 rules and saved
+artifacts remain unchanged. No migration is added in this slice.
+
+Validation: 159 isolated tests pass, including new paper/payload separation,
+captured evidence access, exact history filtering, denied Member/foreign-Workspace
+reads, corrupted/unavailable artifact rejection and legacy compatibility. Synthetic
+PDF output was inspected with MuPDF. The JCL/JSK review was regenerated: remaining
+gaps are business identity/terms and signature areas supplied by artwork/stock,
+not internal audit identifiers. Reviewed static-stock declarations and paired
+activation remain pending. Feature only; no runtime server or merge into rls-mvp.
+
 ## JCL customer-row alignment (2026-09-22)
 
 Owner review identified JCL's source photo frame overlapping the collateral

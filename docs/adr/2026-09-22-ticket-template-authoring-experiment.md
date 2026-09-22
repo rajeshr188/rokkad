@@ -55,10 +55,19 @@ explicit acceptance gates, not silent compatibility assumptions.
 
 ## Status and compatibility
 
+The owner accepted separating printed business information from internal audit
+evidence on 2026-09-22. Implemented for v4: audit IDs/fingerprints and verification
+text are optional on paper; complete source evidence remains required in the
+payload/issue, accessible through the existing admin Evidence page. New starters
+omit internal identifiers. Business identity, approved terms, collateral coverage
+and signature space remain required on each front. Existing printed designs and
+artifacts are not rewritten. Reviewed fixed-stock declarations remain a distinct
+pending part of this experiment; arbitrary text/backgrounds cannot waive coverage.
+
 The owner approved branch isolation and a design-first experiment, not a merged
 replacement. Existing schema/background/binding and publication rules remain in
 force for prior versions. The opt-in v4 foundation permits absent backgrounds;
-it retains existing mandatory business/verification fields. Compatibility checks
+it now enforces business coverage separately from internal verification. Compatibility checks
 pass for legacy rendering and stored reprints; physical and owner acceptance
 remain required before adoption.
 

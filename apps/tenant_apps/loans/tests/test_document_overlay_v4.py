@@ -26,7 +26,7 @@ def synthetic_payload():
         schema_version=1, document_type="loan_ticket", title="Synthetic ticket",
         file_name="synthetic-ticket.pdf", verification_id="TEST|workspace:7|loan:19",
         fields=tuple(DocumentField(key, key, value) for key, value in values.items()),
-        sections=(DocumentSection("collateral.items", "Collateral", (("Item", "Description"), ("1", "Test chain"))),),
+        sections=(DocumentSection("collateral.items", "Collateral", (("Item ID", "Description", "Metal", "Net weight", "Purity", "Appraisal", "Custody"), ("1", "Test chain", "Gold", "2 g", "90%", "12000", "At approval"))),),
     )
 
 
@@ -304,3 +304,57 @@ class PrecisionOverlayTests(SimpleTestCase):
                     result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(logo, background))
                 with fitz.open(stream=result.pdf, filetype="pdf") as pdf:
                     self.assertTrue(pdf[0].get_images())
+
+    def test_precision_starter_omits_internal_paper_fields_but_retains_payload_evidence(self):
+        bindings = {block["binding"] for block in self.definition["blocks"]}
+        self.assertNotIn("approval.fingerprint", bindings)
+        self.assertNotIn("workspace.source_id", bindings)
+        self.assertFalse(any(block["type"] == "verification" for block in self.definition["blocks"]))
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            self.assertIn("TEST-00019", pdf[0].get_text())
+            self.assertNotIn("Workspace:7", pdf[0].get_text())
+            self.assertNotIn("TEST|workspace:7|loan:19", pdf[0].get_text())
+            self.assertNotIn("Item ID", pdf[0].get_text())
+        from dataclasses import replace
+        original = self.payload
+        self.payload = replace(original, fields=tuple(field for field in original.fields if field.key != "approval.fingerprint"))
+        with self.assertRaisesMessage(ValueError, "internal source/verification"):
+            self.render()
+        self.payload = replace(original, verification_id="")
+        with self.assertRaisesMessage(ValueError, "internal source/verification"):
+            self.render()
+
+    def test_compact_customer_and_collateral_fields_satisfy_visible_coverage(self):
+        from dataclasses import replace
+        self.payload = replace(self.payload, fields=self.payload.fields + (
+            DocumentField("borrower.contact_block", "Customer", "Synthetic customer"),
+            DocumentField("collateral.description_lines", "Items", "1. Test chain"),
+            DocumentField("collateral.net_weight_by_metal", "Net weight", "Gold: 2 g"),
+        ))
+        next(block for block in self.definition["blocks"] if block["binding"] == "borrower.display")["binding"] = "borrower.contact_block"
+        table = next(block for block in self.definition["blocks"] if block["type"] == "table")
+        table.update(type="field", binding="collateral.description_lines", height_mm=15)
+        table["table_columns"] = []
+        self.definition["blocks"].append({"type": "field", "binding": "collateral.net_weight_by_metal", "x_mm": 10, "y_mm": 123, "width_mm": 190, "height_mm": 10})
+        self.render()
+        self.definition["blocks"][-1]["copy_scope"] = "ORIGINAL"
+        with self.assertRaisesMessage(LayoutValidationError, "Duplicate front"):
+            self.render()
+
+    def test_qr_conditional_or_back_only_fields_cannot_replace_visible_business_values(self):
+        for change in ({"type": "qr"}, {"copy_scope": "ORIGINAL"}, {"visible_when": {"binding": "loan.number", "operator": "PRESENT", "value": ""}}):
+            definition = copy.deepcopy(self.definition)
+            next(block for block in definition["blocks"] if block["binding"] == "loan.number").update(change)
+            with self.subTest(change=change), self.assertRaises(LayoutValidationError):
+                DocumentLayoutValidator.load(definition)
+        definition = copy.deepcopy(self.definition)
+        signature = next(block for block in definition["blocks"] if block["type"] == "signature")
+        definition["blocks"].remove(signature)
+        definition["back_blocks"] = [signature]
+        with self.assertRaisesMessage(LayoutValidationError, "Signature space"):
+            DocumentLayoutValidator.load(definition)
+        definition = copy.deepcopy(self.definition)
+        table = next(block for block in definition["blocks"] if block["type"] == "table")
+        table["table_columns"] = [{"index": 0, "label": "Internal ID", "width_percent": 50, "align": "LEFT"}, {"index": 5, "label": "Appraisal", "width_percent": 50, "align": "LEFT"}]
+        with self.assertRaisesMessage(LayoutValidationError, "Collateral descriptions and weights"):
+            DocumentLayoutValidator.load(definition)
