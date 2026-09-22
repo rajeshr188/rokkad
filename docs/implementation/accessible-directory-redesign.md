@@ -456,3 +456,23 @@ All 109 draft UI/service, collateral media and deployment checks passed on a fre
 database, including create retry, edit rollback and secondary cleanup failures.
 Gettext compilation and supported-app import boundaries pass. These checks do not
 claim uninterrupted network availability or completion of the staff walkthrough.
+
+## Visible closure and owner workflow review (September 22)
+
+The owner subsequently completed the JCL rehearsal customer/photo, origination,
+payment and full-settlement/return sequence and reported smooth operation. The
+remaining feedback was to make closure immediately recognizable. Existing CLOSED
+state now drives a prominent green detail banner, shared checkmark/text badge in
+the summary and directory, and green directory border. Active badges use blue;
+text and icons make colour supplementary. The closed detail links directly to
+history/release evidence and its summary describes original terms as reference.
+No lifecycle transition, financial computation, custody or reversal behavior changed.
+Other closure types retain their own underlying evidence; the banner does not
+claim every CLOSED loan was physically returned to its borrower.
+
+All 56 existing loan UI tests passed. Read-only Chrome checks of the owner's test
+loan confirmed CLOSED, zero balances and With Customer custody, and verified the
+banner/summary and phone-width directory card. Normal viewport restored; compiled
+Hindi messages included. Operator acceptance covers the reported sequence only;
+physical printing, remaining device/language and exception-path acceptance still
+need their own evidence.

@@ -43,14 +43,14 @@
       <h2 id="loan-results-title" class="h5 mb-3" tabindex="-1">{% blocktranslate count total=page_obj.paginator.count %}{{ total }} loan found{% plural %}{{ total }} loans found{% endblocktranslate %}</h2>
       <p class="small text-body-secondary">{% translate "Principal is the amount recorded when the loan was created or imported. Open the loan for current balances and the collection amount." %}</p>
       <ul class="list-unstyled directory-records">
-      {% for loan in loans %}<li class="card p-3">
+      {% for loan in loans %}<li class="card p-3{% if loan.state == 'CLOSED' %} border-success border-start border-4{% endif %}">
         <div class="row g-3 align-items-center">
           <div class="col-md-5"><div class="directory-identity">
             {% if loan.borrower.profile_photo %}<img loading="lazy" src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=loan.borrower_id %}" alt="" width="44" height="44" class="directory-avatar">{% else %}<span class="directory-avatar" aria-hidden="true">{{ loan.borrower.display_name|first|upper }}</span>{% endif %}
             <div class="text-break"><a class="directory-name" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{{ loan.loan_number }}</a><div>{{ loan.borrower.display_name }}</div><div class="small text-body-secondary">{{ loan.borrower.party_code }} · {{ loan.license.license_number }}/{{ loan.series.code }}</div></div>
           </div></div>
           <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">{% translate "Principal at entry" %}</dt><dd class="mb-1">₹{{ loan.principal_amount }}</dd><dt class="small text-body-secondary fw-normal">{% translate "Loan date" %}</dt><dd class="mb-0">{{ loan.loan_date }}</dd></dl></div>
-          <div class="col-6 col-md-4"><span class="badge {% if loan.state == 'ACTIVE' %}text-bg-success{% elif loan.state == 'DRAFT' or loan.state == 'APPROVED' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{% translate loan.get_state_display %}</span><p class="small mt-2 mb-0">{% if loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>
+          <div class="col-6 col-md-4">{% include "loans/pawn/_state_badge.html" %}<p class="small mt-2 mb-0">{% if loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>
         </div>
       </li>{% empty %}<li class="card app-empty"><strong>{% translate "No matching loans" %}</strong><p>{% translate "Check the loan number, try the customer’s phone, or clear the filters." %}</p></li>{% endfor %}
       </ul>

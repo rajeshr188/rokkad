@@ -8,6 +8,14 @@
 
 </div>
 
+{% if loan.state == 'CLOSED' %}
+<section class="alert alert-success border-success border-start border-4" aria-labelledby="loan-closed-title" data-loan-closed>
+  <h2 class="h4 mb-2" id="loan-closed-title"><i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>{% translate "Closed" %}</h2>
+  <p class="mb-2">{% translate "This loan is closed. Live health monitoring has stopped; settlement and event history remain available." %}</p>
+  <a class="alert-link" href="#business-events">{% translate "Loan history" %}</a>{% if loan.releases.exists %}<span aria-hidden="true"> &middot; </span><a class="alert-link" href="#loan-releases">{% translate "Release documents" %}</a>{% endif %}
+</section>
+{% endif %}
+
 <nav class="d-flex flex-wrap gap-3 mb-3" aria-label="{% translate 'Loan sections' %}">
   <a href="#loan-overview">{% translate "Balances and terms" %}</a>
   <a href="#collateral-gallery">{% translate "Collateral and photos" %}</a>
@@ -20,7 +28,7 @@
 <p><a href="#collateral-gallery">{% translate "Review collateral and photos" %}</a></p>
 {% endif %}
 {% if loan.releases.exists %}<p><a href="#loan-releases">{% translate "Open release history and memo" %}</a></p>{% endif %}
-{% if primary_action %}<div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-3"><div><strong>{% translate "Recommended next step" %}</strong><div>{{ primary_action.message }}</div></div>{% if primary_action.method == 'post' %}<form method="post" action="{{ primary_action.url }}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% translate primary_action.label %}</button></form>{% else %}<a class="btn btn-primary" href="{{ primary_action.url }}">{% translate primary_action.label %}</a>{% endif %}</div>{% endif %}
+{% if primary_action and loan.state != 'CLOSED' %}<div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-3"><div><strong>{% translate "Recommended next step" %}</strong><div>{{ primary_action.message }}</div></div>{% if primary_action.method == 'post' %}<form method="post" action="{{ primary_action.url }}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% translate primary_action.label %}</button></form>{% else %}<a class="btn btn-primary" href="{{ primary_action.url }}">{% translate primary_action.label %}</a>{% endif %}</div>{% endif %}
 {% if loan.state == "ACTIVE" and can_release and not is_opening %}<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_release_full' request.workspace.slug loan.pk %}">{% translate "Collect and release all collateral" %}</a></p>{% endif %}
 <details class="mb-3"><summary>{% translate "More loan actions" %}</summary>
   <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_party_statement' request.workspace.slug loan.borrower_id %}">{% translate "Party statement" %}</a>
@@ -43,7 +51,6 @@
 {% endif %}
 {% if balance_error %}<div class="alert alert-danger"><strong>Balance unavailable:</strong> {{ balance_error }}</div>{% endif %}
 {% if exposure_error %}<div class="alert alert-warning"><strong>Exposure unavailable:</strong> {{ exposure_error }}</div>{% endif %}
-{% if loan.state == "CLOSED" %}<div class="alert alert-secondary">This loan is closed. Live health monitoring has stopped; settlement and event history remain available.</div>{% endif %}
 {% if risk_error %}<div class="alert alert-warning"><strong>Risk assessment unavailable:</strong> {{ risk_error }} {% if can_administer %}<a class="alert-link" href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#monitoring-policy">Configure monitoring policy</a>.{% endif %}</div>{% endif %}
 {% if accrual_error %}<div class="alert alert-warning"><strong>Accrual preview unavailable:</strong> {{ accrual_error }}</div>{% endif %}
 {% if loan.state == 'DRAFT' %}<p class="small text-muted">For a valuation using metal prices, approval requires today's positive buying quotes. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Review Rates</a> before approving.</p>{% endif %}

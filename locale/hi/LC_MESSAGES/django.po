@@ -3612,5 +3612,14 @@ msgstr "पृष्ठ मार्ग"
 msgid "The collateral photo could not be uploaded. Select the photo again and retry. If this continues, contact the workspace owner."
 msgstr "गिरवी वस्तु की फोटो अपलोड नहीं हो सकी। फोटो फिर से चुनें और दोबारा प्रयास करें। समस्या बनी रहे तो कार्यक्षेत्र के मालिक से संपर्क करें।"
 
+msgid "Closed"
+msgstr "बंद"
+
+msgid "Closed loan. Original terms are shown for reference."
+msgstr "ऋण बंद है। मूल शर्तें संदर्भ के लिए दिखाई गई हैं।"
+
+msgid "This loan is closed. Live health monitoring has stopped; settlement and event history remain available."
+msgstr "यह ऋण बंद है। नियमित स्थिति की निगरानी बंद हो गई है; निपटान और लेन-देन का इतिहास उपलब्ध है।"
+
 msgid "general setup progress"
 msgstr "सामान्य सेटअप की प्रगति"

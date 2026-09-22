@@ -1,0 +1,2 @@
+{% load i18n %}
+<span class="badge {% if loan.state == 'CLOSED' %}text-bg-success{% elif loan.state == 'ACTIVE' %}text-bg-primary{% elif loan.state == 'DRAFT' or loan.state == 'APPROVED' %}text-bg-warning{% else %}text-bg-secondary{% endif %}" data-loan-state="{{ loan.state }}">{% if loan.state == 'CLOSED' %}<i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>{% endif %}{% translate loan.get_state_display %}</span>

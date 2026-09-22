@@ -7,6 +7,28 @@ tags: [status, architecture]
 
 # Status
 
+## Owner workflow acceptance and visible loan closure (2026-09-22)
+
+The owner reviewed customer/photo creation, loan/collateral entry, terms,
+approval/disbursal, payment, settlement and collateral return in JCL rehearsal,
+reporting that the process was smooth apart from closure visibility. The completed
+`TEST-JCL-L-00001` is canonically CLOSED, has zero principal/interest/fees due and
+its collateral is With Customer. This is acceptance of the reported test sequence,
+not a claim that every device, language, printer or exception path was reviewed.
+
+Closed loans now have a prominent green confirmation banner with history/release
+links, a consistent checkmark/text badge in the summary and directory, and a green
+directory-card border. Active badges are blue. Closed summaries explain that the
+original terms are reference information. Status comes only from the existing
+loan state; this presentation does not infer payment/return from other closure
+types or change lifecycle, balances, custody or reversal rules.
+
+All 56 existing loan UI tests pass. Chrome review confirmed the actual completed
+test loan, zero balances and returned custody, plus the banner and directory card
+at phone width. Normal browser sizing was restored. English/Hindi labels compile;
+this turn did not repeat the full workflow or physical-device acceptance. The local
+rehearsal server is refreshed; no production change was made.
+
 ## JCL collateral upload recovery and local migrations (2026-09-22)
 
 A manual JCL draft submission failed when R2's TLS connection ended unexpectedly.

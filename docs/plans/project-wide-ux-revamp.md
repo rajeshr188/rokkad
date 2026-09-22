@@ -46,11 +46,13 @@ responsive searchable lists and native result partials. Quote history and notifi
 send/print/post distinctions remain explicit; setup checks do not imply delivery.
 Owner/team setup now uses grouped native forms, explicit role saves, accurate seat
 guidance and a business-profile hub. Shared navigation and checklist labels are
-translated; stored role names remain unchanged. Next consolidate staff workflow
-acceptance on isolated data and fix task-blocking findings before cutover.
-Terms review, payment-form accessibility and grouped
-printing guidance now extend the first-loan journey; its complete live payment
-walkthrough and physical printing remain pending. Account/billing and deeper role
+translated; stored role names remain unchanged. The owner has completed the JCL
+rehearsal customer/photo-to-loan, payment and full-release walkthrough and reported
+a smooth process. The requested clearer CLOSED state now has a prominent banner,
+checkmark badges and directory-card border. This accepts that reported sequence;
+it does not certify all languages, devices or exception paths.
+Terms review, payment-form accessibility and grouped printing guidance extend the
+first-loan journey. Physical printing remains pending. Account/billing and deeper role
 administration, remaining dynamic translations and physical-device/operator
 acceptance remain open; these slices do not complete the whole-product redesign.
 
@@ -218,7 +220,8 @@ must not revive retired Girvi, Contact, DEA/accounting, or inventory modules.
 - Existing access, isolation, money/evidence, and browser regression checks pass.
 - Secondary details remain available without overwhelming the primary task.
 
-The first-loan prototype and the owner/team setup slice are implemented locally.
-Consolidate the full staff task walkthrough next, then refine labels, ordering
-and frequent-task shortcuts from operator feedback. Physical acceptance remains
-deferred; automated and read-only browser checks are not operator sign-off.
+The first-loan prototype and owner/team setup are implemented locally. The owner
+reviewed one complete JCL rehearsal workflow on September 22; closure visibility
+was the remaining feedback and is addressed. Next cover outstanding device/language
+and exception paths plus physical printing before cutover readiness. Automated and
+read-only browser checks do not imply acceptance of those remaining checks.
