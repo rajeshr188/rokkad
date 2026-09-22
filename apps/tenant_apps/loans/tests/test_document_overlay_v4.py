@@ -9,12 +9,13 @@ from reportlab.lib.units import mm
 
 from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer, DocumentAssetError, DocumentAssetValidator,
-    DocumentLayoutValidator, LayoutValidationError, PrintProfileValidator, built_in_print_profile, starter_layout,
+    DocumentLayoutValidator, LayoutValidationError, PrintProfileValidator, PrintProfileValidationError, built_in_print_profile, starter_layout,
 )
 from apps.tenant_apps.loans.documents.layouts import REQUIRED_BINDINGS
 from apps.tenant_apps.loans.documents.payloads import DocumentField, DocumentPayload, DocumentSection
 from apps.tenant_apps.loans.web.document_forms import (
     LoanDocumentLayoutCreateForm, LoanDocumentOverlayBlockForm, LoanDocumentOverlayLogicalSettingsForm,
+    LoanDocumentPrintProfileDefinitionForm,
 )
 
 
@@ -35,10 +36,100 @@ class PrecisionOverlayTests(SimpleTestCase):
         self.payload = synthetic_payload()
         self.profile = built_in_print_profile("LEGACY_BOTH_SIMPLEX")
 
-    def render(self, definition=None, assets=()):
+    def render(self, definition=None, assets=(), **kwargs):
         return ConfigurableDocumentRenderer.render_with_print_profile(
-            self.payload, DocumentLayoutValidator.load(definition or self.definition), self.profile, assets=assets,
+            self.payload, DocumentLayoutValidator.load(definition or self.definition), self.profile, assets=assets, **kwargs,
         )
+
+    def test_preprinted_guides_appear_only_in_design_preview(self):
+        definition = self.profile.canonical_dict()
+        definition.update(schema_version=2, stock_mode="PREPRINTED")
+        self.profile = PrintProfileValidator.load(definition)
+        self.definition["background_asset_key"] = "guide"
+        with fitz.open() as pdf:
+            pdf.new_page().insert_text((30, 20), "GUIDE-ONLY-MARKER")
+            asset = DocumentAssetValidator.validate(key="guide", kind="BACKGROUND", content=pdf.tobytes(), workspace_id=7)
+        for preview, design in ((False, False), (True, False), (True, True)):
+            with self.subTest(preview=preview, design=design):
+                result = self.render(assets=(asset,), preview=preview, design_preview=design)
+                with fitz.open(stream=result.pdf, filetype="pdf") as pdf:
+                    for page in pdf:
+                        text = page.get_text()
+                        self.assertEqual("GUIDE-ONLY-MARKER" in text, design)
+                        self.assertEqual("DESIGN PREVIEW" in text, design)
+                        self.assertIn("TEST-00019", text)
+        with self.assertRaisesMessage(ValueError, "unofficial"):
+            self.render(assets=(asset,), design_preview=True)
+        definition["stock_mode"] = "PLAIN"
+        self.profile = PrintProfileValidator.load(definition)
+        with fitz.open(stream=self.render(assets=(asset,)).pdf, filetype="pdf") as pdf:
+            self.assertIn("GUIDE-ONLY-MARKER", pdf[0].get_text())
+
+    def test_preprinted_rejects_legacy_layout_and_background_only_backs(self):
+        definition = built_in_print_profile("LEGACY_BOTH_DUPLEX").canonical_dict()
+        definition.update(schema_version=2, stock_mode="PREPRINTED")
+        profile = PrintProfileValidator.load(definition)
+        with self.assertRaisesMessage(ValueError, "precision"):
+            ConfigurableDocumentRenderer.assert_print_profile_compatible(starter_layout("loan_ticket"), profile)
+        self.definition["surfaces"] = {"backgrounds": {"original_back": "terms", "duplicate_back": "d3"}}
+        layout = DocumentLayoutValidator.load(self.definition)
+        with self.assertRaisesMessage(ValueError, "back surface"):
+            ConfigurableDocumentRenderer.assert_print_profile_compatible(layout, profile)
+
+    def test_print_profile_stock_is_versioned_and_preserved_by_form(self):
+        old = self.profile.canonical_dict()
+        self.assertNotIn("stock_mode", old)
+        invalid = {**old, "stock_mode": "PREPRINTED"}
+        with self.assertRaises(PrintProfileValidationError):
+            PrintProfileValidator.load(invalid)
+        current = PrintProfileValidator.load({**invalid, "schema_version": 2})
+        self.assertEqual(current.content_hash, PrintProfileValidator.load(current.canonical_dict()).content_hash)
+        with self.assertRaises(PrintProfileValidationError):
+            PrintProfileValidator.load({**old, "schema_version": 2, "stock_mode": "UNKNOWN"})
+        with self.assertRaises(PrintProfileValidationError):
+            PrintProfileValidator.load({**old, "schema_version": 2})
+        data = {"composition": "A5_BOTH_SIMPLEX", "scaling_policy": "ACTUAL_SIZE", "stock_mode": "PREPRINTED", "flip_edge_guidance": "NOT_APPLICABLE"}
+        form = LoanDocumentPrintProfileDefinitionForm(data)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.definition(name="Stock")["schema_version"], 2)
+        data["stock_mode"] = "PLAIN"
+        form = LoanDocumentPrintProfileDefinitionForm(data, schema_version=2)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.definition(name="Stock")["stock_mode"], "PLAIN")
+        del data["stock_mode"]
+        self.assertFalse(LoanDocumentPrintProfileDefinitionForm(data, schema_version=2).is_valid())
+
+    def test_padding_and_explicit_line_spacing_match_legacy_text_frame_metrics(self):
+        block = self.definition["blocks"][0]
+        block.update(text="FIRST LINE\nSECOND <b>LINE</b>", x_mm=40, y_mm=50, width_mm=60, height_mm=30, font_size_pt=10, align="LEFT", padding_pt=6, leading_pt=12)
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            first = pdf[0].search_for("FIRST LINE")[0]
+            second = pdf[0].search_for("SECOND <b>LINE</b>")[0]
+            self.assertAlmostEqual(first.x0, 40 * mm + 6, places=3)
+            self.assertAlmostEqual(second.y0 - first.y0, 12, places=3)
+        block["padding_pt"] = 0
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            unpadded = pdf[0].search_for("FIRST LINE")[0]
+            self.assertAlmostEqual(first.y0 - unpadded.y0, 6, places=3)
+
+    def test_spacing_validation_and_overflow_do_not_silently_clip_text(self):
+        for changes in ({"padding_pt": -1}, {"padding_pt": True}, {"padding_pt": 1.01}, {"leading_pt": 5}, {"leading_pt": float("inf")}, {"padding_pt": 20, "height_mm": 5}):
+            with self.subTest(changes=changes), self.assertRaises(LayoutValidationError):
+                definition = copy.deepcopy(self.definition)
+                definition["blocks"][0].update(changes)
+                DocumentLayoutValidator.load(definition)
+        self.definition["blocks"][0].update(text="ONE\nTWO\nTHREE", font_size_pt=10, height_mm=10, padding_pt=6, leading_pt=12)
+        with self.assertRaisesMessage(ValueError, "rectangle"):
+            self.render()
+
+    def test_default_spacing_preserves_existing_v4_hashes(self):
+        before = DocumentLayoutValidator.load(self.definition).content_hash
+        self.definition["blocks"][0].update(padding_pt=0, leading_pt=0)
+        self.assertEqual(DocumentLayoutValidator.load(self.definition).content_hash, before)
+        old = starter_layout("loan_ticket", schema_version=3, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        old["blocks"][0]["padding_pt"] = 6
+        with self.assertRaises(LayoutValidationError):
+            DocumentLayoutValidator.load(old)
 
     def test_data_only_prints_both_copies_without_assets(self):
         result = self.render()

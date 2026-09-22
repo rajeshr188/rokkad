@@ -7,6 +7,39 @@ tags: [status, architecture]
 
 # Status
 
+## Stationery guides and legacy text spacing (2026-09-22)
+
+The isolated ticket feature now supports print-profile v2 paper stock: plain
+paper prints selected backgrounds; preprinted stationery treats them as guides,
+shown only in Design preview. Print preview, downloaded test print and official
+issuance omit those backgrounds. Design previews carry the existing unofficial
+watermark plus an explicit guide warning. The renderer rejects guide requests
+without preview mode. Existing profile v1 canonical definitions remain unchanged.
+
+V4 text frames support 0.1-point padding and line spacing, including legacy 6 pt
+insets and 12 pt leading, plus escaped explicit line breaks. Padding cannot consume
+the rectangle; leading cannot be less than the font size. Overflow still blocks
+output, and bounded shrinking keeps explicit line spacing and a 6 pt font floor.
+Zero/default spacing preserves the earlier v4 hashes. Tables/images/QR do not
+accept these text controls. Older schema rendering remains unchanged.
+
+The overlay editor selects a local draft/published profile or resolves the sample
+loan's assigned profile. Profile setup exposes paper stock and separate design/
+print previews; these responses are not cached. Foreign-workspace profile choices
+are absent and direct requests fail closed. Publication/assignment and immutable
+issue services are reused; no migrations or new document tables are introduced.
+
+Validation: all 138 isolated tests pass. New checks cover guide suppression,
+explicit preview-only enforcement, profile versioning/forms, legacy text metrics,
+overflow, editor saves, draft previews, official issue and exact-byte reprint after
+changing stock mode. Synthetic A5 design/print/official images were reviewed with
+MuPDF. These are mechanics tests, not real JCL/JSK stationery or printer acceptance.
+
+Next: mapped customer/contact and approved-photo bindings/source evidence are
+still needed to assemble complete JCL/JSK templates, followed by copy-aware editing
+and visual/physical calibration. Static-stock declarations and paired activation
+remain pending. No feature web server, production changes or merge into `rls-mvp`.
+
 ## Isolated precision ticket overlays (2026-09-22)
 
 Implemented on `feature/ticket-template-designer` only: opt-in layout v4 supports

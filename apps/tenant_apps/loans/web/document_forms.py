@@ -227,6 +227,8 @@ class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
 
 
 class LoanDocumentOverlayBlockForm(forms.Form):
+    padding_pt = forms.DecimalField(required=False, min_value=0, max_value=24, decimal_places=1, label="Text padding (pt)", help_text="Inset on all four sides; legacy frames use 6 pt.")
+    leading_pt = forms.DecimalField(required=False, min_value=6, max_value=48, decimal_places=1, label="Line spacing (pt)", help_text="Leave blank for automatic spacing; legacy frames use 12 pt.")
     value_display = forms.ChoiceField(
         required=False, initial="LABEL_VALUE",
         choices=(("LABEL_VALUE", "Label and value"), ("VALUE_ONLY", "Value only")),
@@ -255,12 +257,15 @@ class LoanDocumentOverlayBlockForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.schema_version = schema_version
         if schema_version >= 4:
+            self.fields["text"].widget = forms.Textarea(attrs={"rows": 2})
             for name, minimum, maximum in (("x_mm", 0, 300), ("y_mm", 0, 400), ("width_mm", 5, 216), ("height_mm", 1, 100)):
                 self.fields[name] = forms.DecimalField(
                     min_value=minimum, max_value=maximum, max_digits=4, decimal_places=1,
                     widget=forms.NumberInput(attrs={"step": "0.1"}),
                 )
         else:
+            self.fields.pop("padding_pt")
+            self.fields.pop("leading_pt")
             self.fields.pop("value_display")
             self.fields.pop("field_label")
         field_choices = sorted((value, label) for label, value in PawnLoanDocumentProjectionBuilder.FIELD_KEYS.items())
@@ -300,6 +305,9 @@ class LoanDocumentOverlayBlockForm(forms.Form):
         if value.get("text"):
             block["text"] = value["text"]
         if self.schema_version >= 4:
+            if value["block_type"] in {"field", "title", "verification", "signature"}:
+                block["padding_pt"] = float(value.get("padding_pt") or 0)
+                block["leading_pt"] = float(value.get("leading_pt") or 0)
             for name in ("x_mm", "y_mm", "width_mm", "height_mm"):
                 block[name] = float(block[name])
             if value["block_type"] == "field":
@@ -350,6 +358,11 @@ class LoanDocumentLayoutPackImportForm(forms.Form):
 
 
 class LoanDocumentPrintProfileDefinitionForm(forms.Form):
+    stock_mode = forms.ChoiceField(
+        choices=(("PLAIN", "Plain paper - print backgrounds"), ("PREPRINTED", "Preprinted stationery - backgrounds are guides only")),
+        required=False, initial="PLAIN", label="Paper stock",
+        help_text="Preprinted stationery requires a precision ticket overlay. Guides appear only in Design preview.",
+    )
     composition = forms.ChoiceField(choices=(
         ("A5_BOTH_SIMPLEX", "A5 Original + Duplicate (simplex)"),
         ("A5_BOTH_DUPLEX", "A5 Original/Terms + Duplicate/D3 (duplex)"),
@@ -372,8 +385,10 @@ class LoanDocumentPrintProfileDefinitionForm(forms.Form):
         help_text="Operator guidance only; it does not control the printer driver.",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, schema_version=1, **kwargs):
         super().__init__(*args, **kwargs)
+        self.schema_version = schema_version
+        self.fields["stock_mode"].required = schema_version >= 2
         for field in self.fields.values():
             field.widget.attrs.setdefault(
                 "class",
@@ -403,6 +418,8 @@ class LoanDocumentPrintProfileDefinitionForm(forms.Form):
             "flip_edge_guidance": self.cleaned_data["flip_edge_guidance"],
             "printer_guidance": self.cleaned_data["printer_guidance"],
         })
+        if self.schema_version >= 2 or self.cleaned_data.get("stock_mode") == "PREPRINTED":
+            definition.update(schema_version=2, stock_mode=self.cleaned_data.get("stock_mode") or "PLAIN")
         return definition
 
 

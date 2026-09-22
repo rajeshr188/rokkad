@@ -34,6 +34,7 @@ from apps.tenant_apps.loans.documents import (
     ConfigurableDocumentRenderer,
     DocumentLayoutValidator,
     PawnLoanDocumentProjectionBuilder,
+    PrintProfileValidator,
     built_in_print_profile,
     starter_layout,
 )
@@ -46,6 +47,7 @@ from apps.tenant_apps.loans.documents.packs import (
 from apps.tenant_apps.loans.models import (
     LoanDocumentLayout,
     LoanDocumentLayoutRevision,
+    LoanDocumentPrintProfileRevision,
     PawnLoan,
     PawnLoanEvent,
     PawnLoanAuction,
@@ -57,6 +59,7 @@ from apps.tenant_apps.loans.services import (
     LoanDocumentLayoutService,
 )
 from apps.tenant_apps.loans.web.document_assets import _revision_assets
+from apps.tenant_apps.loans.services.print_profiles import LoanDocumentPrintProfileService
 
 
 _OVERLAY_PAGE_DIMENSIONS_MM = {
@@ -385,6 +388,7 @@ def document_layout_overlay_designer(request, revision_pk):
         "revision": revision, "layout": layout, "settings_form": settings_form,
         "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys, schema_version=layout.schema_version),
         "precision_overlay": layout.schema_version >= 4,
+        "preview_profiles": LoanDocumentPrintProfileRevision.objects.filter(profile__workspace=request.loans_workspace, state__in=["DRAFT", "PUBLISHED"]).select_related("profile"),
         "geometry_step": "0.1" if layout.schema_version >= 4 else "1",
         "can_preview": set(layout.background_asset_keys()).issubset(background_keys),
         "image_keys": image_keys, "page_width_mm": page_width_mm,
@@ -502,8 +506,18 @@ def document_layout_preview(request, revision_pk):
             return HttpResponse("Create an eligible source document before previewing this layout.", status=409, content_type="text/plain")
         layout = DocumentLayoutValidator.load(revision.definition)
         if layout.schema_version >= 3 and payload.document_type == "loan_ticket":
+            profile = built_in_print_profile()
+            if layout.schema_version >= 4:
+                if request.GET.get("profile"):
+                    selected = get_object_or_404(LoanDocumentPrintProfileRevision, pk=request.GET["profile"], profile__workspace=request.loans_workspace, state__in=["DRAFT", "PUBLISHED"])
+                    profile = PrintProfileValidator.load(selected.definition)
+                else:
+                    loan_key = next(field.value for field in payload.fields if field.key == "loan.source_id")
+                    loan = get_object_or_404(PawnLoan, pk=str(loan_key).split(":")[-1], workspace=request.loans_workspace)
+                    profile = LoanDocumentPrintProfileService.resolve(workspace=request.loans_workspace, document_type="loan_ticket", series=loan.series).definition
             result = ConfigurableDocumentRenderer.render_with_print_profile(
-                payload, layout, built_in_print_profile(), preview=True,
+                payload, layout, profile, preview=True,
+                design_preview=layout.schema_version >= 4 and request.GET.get("mode") == "design",
                 assets=_revision_assets(revision),
             )
         else:
@@ -516,6 +530,7 @@ def document_layout_preview(request, revision_pk):
     disposition = "attachment" if request.GET.get("download") == "1" else "inline"
     response["Content-Disposition"] = f'{disposition}; filename="preview-{payload.file_name}"'
     response["X-Rokkad-Preview"] = "true"
+    response["X-Rokkad-Preview-Mode"] = "design" if layout.schema_version >= 4 and request.GET.get("mode") == "design" else "print"
     return response
 
 

@@ -43,13 +43,15 @@ class ConfigurableDocumentRenderer:
 
     @classmethod
     def render_with_print_profile(
-        cls, payload, layout, print_profile, *, preview=False, assets=()
+        cls, payload, layout, print_profile, *, preview=False, assets=(), design_preview=False
     ):
         """Render logical ticket surfaces, then package them using a profile."""
         if payload.document_type != "loan_ticket" or layout.document_type != "loan_ticket":
             raise ValueError("Print-profile rendering supports loan tickets only.")
         if print_profile.document_type != payload.document_type:
             raise ValueError("Print profile document type does not match the payload.")
+        if design_preview and not preview:
+            raise ValueError("Design guides are available only in unofficial previews.")
         fields, sections, asset_map = cls._validated_context(
             payload, layout, assets
         )
@@ -57,9 +59,15 @@ class ConfigurableDocumentRenderer:
         rendered_surfaces = {}
         for surface in print_profile.included_surfaces:
             rendered_surfaces[surface] = cls._render_logical_surface(
-                payload, layout, fields, sections, asset_map, surface, preview
+                payload, layout, fields, sections, asset_map, surface, preview,
+                include_background=print_profile.stock_mode == "PLAIN" or design_preview,
             )
         pdf = cls._package_surfaces(rendered_surfaces, print_profile)
+        if design_preview:
+            with fitz.open(stream=pdf, filetype="pdf") as document:
+                for page in document:
+                    page.insert_text((12, page.rect.height - 12), "DESIGN PREVIEW - GUIDES MAY NOT PRINT", fontsize=9, color=(0.8, 0, 0))
+                pdf = document.tobytes()
         output_page_size = (
             f"{print_profile.paper_size}_LANDSCAPE"
             if print_profile.orientation == "LANDSCAPE"
@@ -172,6 +180,8 @@ class ConfigurableDocumentRenderer:
 
     @classmethod
     def assert_print_profile_compatible(cls, layout, profile):
+        if profile.stock_mode == "PREPRINTED" and (layout.schema_version < 4 or layout.layout_mode != "ABSOLUTE_OVERLAY"):
+            raise ValueError("Preprinted stationery requires a precision ticket overlay.")
         logical_paper_size = (
             "A5" if any(len(sheet) == 2 for sheet in profile.sheets)
             else profile.paper_size
@@ -212,14 +222,18 @@ class ConfigurableDocumentRenderer:
                 (layout.surfaces and layout.surfaces.background(surface_key))
                 or (layout.sheet and layout.sheet.background(surface_key))
             )
-            if not layout.back_blocks and not has_background:
+            has_printed_back = any(
+                block.copy_scope in {"BOTH", "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"}
+                and block.visible_when is None for block in layout.back_blocks
+            )
+            if (profile.stock_mode == "PREPRINTED" and not has_printed_back) or (not layout.back_blocks and not has_background):
                 raise ValueError(
                     f"Print profile cannot select {surface}: the layout has no logical back surface."
                 )
 
     @classmethod
     def _render_logical_surface(
-        cls, payload, layout, fields, sections, assets, surface, preview
+        cls, payload, layout, fields, sections, assets, surface, preview, *, include_background=True
     ):
         copy_scope = "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"
         is_front = surface.endswith("FRONT")
@@ -235,7 +249,7 @@ class ConfigurableDocumentRenderer:
                 blocks=blocks, copy_scope=copy_scope,
             )
         background_key = layout.surface_background(surface)
-        return cls._apply_background(pdf, assets[background_key]) if background_key else pdf
+        return cls._apply_background(pdf, assets[background_key]) if background_key and include_background else pdf
 
     @classmethod
     def _render_flow_surface(
@@ -527,8 +541,16 @@ class ConfigurableDocumentRenderer:
             text = f"<b>Verification ID</b>: {escape(payload.verification_id)}"
         else:
             text = escape(block.text or "Signature")
+        if layout.schema_version >= 4:
+            text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br/>")
+            x += block.padding_pt
+            y += block.padding_pt
+            width -= 2 * block.padding_pt
+            height -= 2 * block.padding_pt
+            if block.leading_pt:
+                style.leading = block.leading_pt
         try:
-            cls._draw_overlay_paragraph(canvas, text, style, x, y, width, height, block.overflow_policy)
+            cls._draw_overlay_paragraph(canvas, text, style, x, y, width, height, block.overflow_policy, fixed_leading=bool(block.leading_pt), enforce_minimum=layout.schema_version >= 4)
         except ValueError as exc:
             identity = block.binding or block.text or block.type
             raise ValueError(
@@ -537,13 +559,14 @@ class ConfigurableDocumentRenderer:
             ) from exc
 
     @staticmethod
-    def _draw_overlay_paragraph(canvas, text, style, x, y, width, height, overflow_policy):
+    def _draw_overlay_paragraph(canvas, text, style, x, y, width, height, overflow_policy, *, fixed_leading=False, enforce_minimum=False):
         paragraph = Paragraph(text, style)
         _, required_height = paragraph.wrap(width, height)
         if required_height > height and overflow_policy == "SHRINK":
             while required_height > height and style.fontSize > 6:
-                style.fontSize -= 1
-                style.leading = style.fontSize + 2
+                style.fontSize = max(6, style.fontSize - 1) if enforce_minimum else style.fontSize - 1
+                if not fixed_leading:
+                    style.leading = style.fontSize + 2
                 paragraph = Paragraph(text, style)
                 _, required_height = paragraph.wrap(width, height)
         if required_height > height:

@@ -22,8 +22,16 @@ buttons automatically use the assigned published layout.
 ticket**, **Exact PDF overlay**, then **Use precision ticket overlay** when
 creating a draft. This enables optional backgrounds, value-only/custom-label
 fields and 0.1 mm positions/sizes in the visual overlay editor. Leave every
-background selection empty for data-only stationery printing; any selected
-background will be printed. Preview-only stationery guides are still pending.
+background selection empty if you have no artwork. In **Print profiles**, choose
+**Paper stock > Preprinted stationery** to use selected backgrounds only as
+alignment guides; **Plain paper** prints them. The overlay editor lets you select
+a profile to test, including a draft, without changing assignments. **Design
+preview** shows guides and an unofficial warning. **Print preview** and **Test
+print** omit guides for preprinted stock. Both previews remain unofficial.
+For text frames, use **Text padding (pt)** and **Line spacing (pt)**; the old
+production frames used 6 pt padding and 12 pt line spacing. Blank line spacing
+uses the automatic value. Text can contain explicit line breaks; overflow blocks
+printing instead of silently clipping the content.
 Use a matching logical page size and an **Actual size** print profile when
 calibrating preprinted stock. Existing layouts retain their original rules.
 The feature currently has isolated automated tests, not a running manual-test

@@ -33,9 +33,9 @@ fields, production-equivalent customer/media bindings and sufficiently precise
 geometry. Review visible business requirements separately from internal audit
 evidence. The [implementation contract](../implementation/ticket-template-frame-mapping.md)
 now selects layout v4, stock-aware profile v2 and ticket payload v2. V4 optional
-backgrounds, field labels and precision geometry are implemented on the feature
-branch. Stock profiles, payload/photo evidence and other authoring changes remain
-pending. Prior schema interpretation and exact stored artifacts survive.
+backgrounds, field labels, precision geometry and text spacing are implemented on
+the feature branch, together with profile v2 stock mode and separate design/print
+previews. Payload/photo evidence and other authoring changes remain pending. Prior schema interpretation and exact stored artifacts survive.
 
 Party identity/contact/photo data is captured at first issue; approved economics
 and collateral/photo evidence retain their existing snapshot authority. A nullable

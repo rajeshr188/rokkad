@@ -74,6 +74,8 @@ class LayoutBlock:
     copy_scope: str = "BOTH"
     show_label: bool = True
     field_label: str = ""
+    padding_pt: int | float = 0
+    leading_pt: int | float = 0
 
 
 @dataclass(frozen=True)
@@ -189,6 +191,10 @@ class DocumentLayout:
                 })
             if self.schema_version >= 4:
                 value.update({"show_label": block.show_label, "field_label": block.field_label})
+                if block.padding_pt:
+                    value["padding_pt"] = block.padding_pt
+                if block.leading_pt:
+                    value["leading_pt"] = block.leading_pt
             return value
         value = {
             "schema_version": self.schema_version, "document_type": self.document_type,
@@ -515,7 +521,7 @@ class DocumentLayoutValidator:
             if schema_version >= 2:
                 allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align", "copy_scope"})
             if schema_version >= 4:
-                allowed.update({"show_label", "field_label"})
+                allowed.update({"show_label", "field_label", "padding_pt", "leading_pt"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -547,13 +553,13 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError(f"Block type {block_type} does not accept free text.")
             height = value.get("height_mm", 4)
             if schema_version >= 4:
-                height = cls._precise_mm(height, minimum=1, maximum=100)
+                height = cls._precise_number(height, minimum=1, maximum=100)
             elif not isinstance(height, int) or not 1 <= height <= 100:
                 raise LayoutValidationError("Spacer/signature height must be between 1 and 100 mm.")
             width = value.get("width_mm", 30)
             maximum_width = 216 if layout_mode == "ABSOLUTE_OVERLAY" else 180
             if schema_version >= 4:
-                width = cls._precise_mm(width, minimum=5, maximum=maximum_width)
+                width = cls._precise_number(width, minimum=5, maximum=maximum_width)
             elif not isinstance(width, int) or not 5 <= width <= maximum_width:
                 raise LayoutValidationError(f"Block width must be between 5 and {maximum_width} mm.")
             child_blocks = ()
@@ -578,8 +584,8 @@ class DocumentLayoutValidator:
             align = value.get("align", "LEFT")
             copy_scope = value.get("copy_scope", "BOTH")
             if schema_version >= 4:
-                x_mm = cls._precise_mm(x_mm, minimum=0, maximum=300)
-                y_mm = cls._precise_mm(y_mm, minimum=0, maximum=400)
+                x_mm = cls._precise_number(x_mm, minimum=0, maximum=300)
+                y_mm = cls._precise_number(y_mm, minimum=0, maximum=400)
             elif not isinstance(x_mm, int) or not isinstance(y_mm, int) or x_mm < 0 or y_mm < 0:
                 raise LayoutValidationError("Block X/Y coordinates must be non-negative whole millimetres.")
             show_label = value.get("show_label", True)
@@ -590,6 +596,15 @@ class DocumentLayoutValidator:
                 raise LayoutValidationError("Label settings apply to scalar fields only.")
             if not isinstance(font_size_pt, int) or not 6 <= font_size_pt <= 24:
                 raise LayoutValidationError("Block font size must be between 6 and 24 points.")
+            padding_pt = cls._precise_number(value.get("padding_pt", 0), minimum=0, maximum=24, unit="pt")
+            leading_pt = cls._precise_number(value.get("leading_pt", 0), minimum=0, maximum=48, unit="pt")
+            if padding_pt or leading_pt:
+                if block_type not in {"field", "title", "verification", "signature"}:
+                    raise LayoutValidationError("Text spacing applies to text frames only.")
+                if leading_pt and leading_pt < font_size_pt:
+                    raise LayoutValidationError("Line spacing must be at least the font size.")
+                if padding_pt * 2 >= min(width, height) * 72 / 25.4:
+                    raise LayoutValidationError("Padding leaves no space inside the text frame.")
             if align not in {"LEFT", "CENTER", "RIGHT"}:
                 raise LayoutValidationError("Block alignment is unsupported.")
             if copy_scope not in ALLOWED_COPY_SCOPES:
@@ -663,18 +678,18 @@ class DocumentLayoutValidator:
                 height, asset_key, width, child_blocks, columns, grid_columns,
                 style_variant, table_columns, repeat_header, value_format,
                 overflow_policy, max_characters, visible_when, x_mm, y_mm,
-                font_size_pt, align, copy_scope, show_label, field_label,
+                font_size_pt, align, copy_scope, show_label, field_label, padding_pt, leading_pt,
             ))
         return tuple(result)
 
     @staticmethod
-    def _precise_mm(value, *, minimum, maximum):
+    def _precise_number(value, *, minimum, maximum, unit="mm"):
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise LayoutValidationError("Geometry must be a finite number in 0.1 mm increments.")
+            raise LayoutValidationError(f"Measurements must be finite numbers in 0.1 {unit} increments.")
         try:
             number = Decimal(str(value))
             if not number.is_finite() or not minimum <= number <= maximum or number * 10 != (number * 10).to_integral_value():
-                raise LayoutValidationError("Geometry must be within bounds in 0.1 mm increments.")
+                raise LayoutValidationError(f"Measurements must be within bounds in 0.1 {unit} increments.")
         except InvalidOperation as exc:
             raise LayoutValidationError("Geometry must be finite.") from exc
         return int(number) if number == number.to_integral_value() else float(number)

@@ -23,7 +23,10 @@ JSK preprinted A5 are acceptance examples of one client-configurable editor.
 Preserve historical issues and tenant isolation. Runtime work requires a separate
 database/media location; Git isolation alone does not protect rehearsal data.
 Owner acceptance precedes merge. The feature now implements opt-in v4 ticket
-overlays: optional backgrounds, value-only/custom-label fields and 0.1 mm geometry.
+overlays: optional backgrounds, value-only/custom-label fields, 0.1 mm geometry,
+text padding and explicit line spacing. Profile v2 distinguishes plain paper from
+preprinted stock: backgrounds are guides only for the latter, visible exclusively
+in labelled design previews. Official output and print previews omit them.
 Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
 test launcher pins a local test database and worktree-local filesystem media;
 it does not start a feature web server. See the plan for the command and limits.

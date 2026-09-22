@@ -86,9 +86,10 @@ class PrintProfileDefinition:
     flip_edge_guidance: str
     printer_guidance: str
     sheets: tuple[tuple[str, ...], ...]
+    stock_mode: str = "PLAIN"
 
     def canonical_dict(self):
-        return {
+        value = {
             "schema_version": self.schema_version,
             "document_type": self.document_type,
             "name": self.name,
@@ -100,6 +101,10 @@ class PrintProfileDefinition:
             "flip_edge_guidance": self.flip_edge_guidance,
             "printer_guidance": self.printer_guidance,
         }
+
+        if self.schema_version >= 2:
+            value["stock_mode"] = self.stock_mode
+        return value
 
     @property
     def content_hash(self):
@@ -123,13 +128,19 @@ class PrintProfileValidator:
             "paper_size", "orientation", "duplex", "scaling_policy",
             "flip_edge_guidance", "printer_guidance",
         }
+        schema_version = definition.get("schema_version")
+        if type(schema_version) is not int or schema_version not in {1, 2}:
+            raise PrintProfileValidationError("Print profile schema_version must be 1 or 2.")
+        if schema_version >= 2:
+            allowed.add("stock_mode")
+        stock_mode = definition.get("stock_mode") if schema_version >= 2 else "PLAIN"
+        if not isinstance(stock_mode, str) or stock_mode not in {"PLAIN", "PREPRINTED"}:
+            raise PrintProfileValidationError("Choose plain paper or preprinted stationery.")
         unknown = set(definition) - allowed
         if unknown:
             raise PrintProfileValidationError(
                 f"Unknown print profile properties: {', '.join(sorted(unknown))}."
             )
-        if definition.get("schema_version") != 1:
-            raise PrintProfileValidationError("Print profile schema_version must be 1.")
         if definition.get("document_type") != "loan_ticket":
             raise PrintProfileValidationError(
                 "LPD7.1 print profiles support loan tickets only."
@@ -165,7 +176,7 @@ class PrintProfileValidator:
         if len(guidance) > 500:
             raise PrintProfileValidationError("Printer guidance must be at most 500 characters.")
         return PrintProfileDefinition(
-            schema_version=1,
+            schema_version=schema_version,
             document_type="loan_ticket",
             name=name,
             composition=composition,
@@ -176,6 +187,7 @@ class PrintProfileValidator:
             flip_edge_guidance=flip,
             printer_guidance=guidance,
             sheets=expected["sheets"],
+            stock_mode=stock_mode,
         )
 
 

@@ -34,12 +34,21 @@ overlay** to opt into v4. In the existing visual overlay editor, backgrounds are
 optional; fields offer label/value or value-only display and an optional custom
 label. X/Y/width/height accept 0.1 mm increments. Numeric inputs and drag positions
 share that precision. Blank backgrounds produce data-only output; selected
-backgrounds are printed. Guide-only artwork is not implemented yet.
+backgrounds are printed with plain-paper profiles. For preprinted stationery,
+profile v2 omits backgrounds from print output and shows them only in Design
+preview. The editor selects a local draft/published profile for testing, or uses
+the sample loan's assigned profile. Print preview/Test print use the actual stock
+policy. Design previews are explicitly watermarked and cannot create an issue.
+Text frames accept padding (0-24 pt) and explicit leading (6-48 pt, at least the
+font size) in 0.1 pt increments; blank leading retains automatic spacing. Legacy
+text frames use 6 pt padding and 12 pt leading. Explicit line breaks are escaped
+text, not executable markup.
 
 V1/v2/v3 retain their validation and canonical definitions; v3 remains the default
 creation format. V4 currently accepts loan-ticket overlays only. Required
 business fields, verification and copy validation remain enforced. No database
-migration, issue snapshot extension or new stock-profile schema is in this slice.
+migration or issue snapshot extension is needed for these controls. Profile v1
+retains its canonical definition and behavior; profile v2 makes stock explicit.
 
 From the feature worktree, run the focused renderer, persistence, issuance,
 profile and setup UI checks with:
@@ -160,8 +169,9 @@ pending. These are implementation targets, not changes to current validators.
    missing capabilities and engineering decisions. Defined synthetic test cases;
    actual media inventory/visual review and executable fixtures remain pending.
 3. In progress: optional backgrounds, value-only/custom-label fields, precision
-   geometry and isolated checks are implemented. Stock profiles, padding/leading,
-   dynamic media/source evidence and reviewed static-stock declarations remain.
+   geometry, stock profiles/guides, text padding/leading and isolated checks are
+   implemented. Dynamic media/source evidence, image/QR fit refinements and reviewed
+   static-stock declarations remain before full JCL/JSK reproduction.
 4. Simplify authoring/activation in one editor over existing services; keep JSON
    optional for advanced maintenance, unnecessary for the supported user journey.
 5. Reproduce both examples, test permissions/reprints/compatibility, then conduct

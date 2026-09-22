@@ -113,7 +113,8 @@ transformation. Add a page-size extension only if measured parity requires it.
 Example: JCL frame 15 (`customer_info`) maps to outer `(40, 50, 60, 30)` mm.
 JSK frame 1 (`loan_id`, Original) maps to `(109, 20, 30, 10)` mm.
 Text needs the old ReportLab Frame's 6-point padding and Normal-style 12-point
-leading; the new renderer currently has neither that same inset nor leading.
+leading; the v3 renderer lacks those controls. The feature's v4 text frames now
+provide both explicitly, with bounds and overflow validation.
 Photos were centered with aspect ratio preserved; QR occupied 90% of its frame.
 
 Implement v4 decimal geometry at 0.1 mm precision, separate padding/leading in
@@ -227,15 +228,18 @@ binding names, never copied customer data.
 
 ## Foundation implementation status (2026-09-22)
 
-The feature implements v4 optional printed backgrounds, value-only/custom-label
-scalar fields and 0.1 mm geometry in the existing overlay editor. A dedicated
+The feature implements v4 optional backgrounds, value-only/custom-label scalar
+fields, 0.1 mm geometry, escaped line breaks and text padding/leading in points.
+Profile v2 paper stock determines whether backgrounds print or act as design-only
+guides. Both preview modes are marked unofficial; official output never receives
+the design-preview flag. Existing profile v1 definitions stay unchanged. A dedicated
 test launcher pins the local test database and filesystem media. Synthetic PDF
 tests cover actual-size A5 copy positioning and background isolation; UI tests
 cover first issue and unchanged reprints after replacing the template.
 
-The contracts below still describe the full target. Stock-aware profile v2,
-guide-only preview, padding/leading, richer payload/media, source snapshots and
-paired activation remain unimplemented. Existing mandatory identity/verification
+The contracts below still describe the full target. Richer payload/media,
+image/QR fit controls, source snapshots, static-stock declarations and paired
+activation remain unimplemented. Existing mandatory identity/verification
 rules remain intact; do not treat these starter layouts as converted JCL/JSK
 templates. See the plan for isolated test commands and manual-runtime limits.
 

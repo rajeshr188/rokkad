@@ -1730,6 +1730,89 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(reprint.content, first.content)
         self.assertEqual(reprint["X-Rokkad-Document-Issue"], first["X-Rokkad-Document-Issue"])
 
+    def test_preprinted_profile_preview_issue_and_reprint_keep_guides_unofficial(self):
+        from apps.orgs.models import Company
+        from apps.tenancy.context import workspace_context, without_workspace_context
+
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-STOCK-00001", state="APPROVED")
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan, version=1, approved_by=self.owner, fingerprint="stock-approved-fixture",
+            payload={"loan_number": loan.loan_number, "loan_date": str(loan.loan_date),
+                     "principal_amount": str(loan.principal_amount), "monthly_interest_rate": str(loan.monthly_interest_rate),
+                     "tenure_months": loan.tenure_months, "borrower_id": loan.borrower_id, "collateral": []},
+        )
+        definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        definition["background_asset_key"] = "guide"
+        revision = LoanDocumentLayoutService.create_layout(workspace=self.tenant, document_type="loan_ticket", name="Guide ticket", definition=definition, actor=self.owner)
+        with fitz.open() as pdf:
+            pdf.new_page().insert_text((30, 20), "GUIDE-ONLY-MARKER")
+            LoanDocumentLayoutService.add_asset(revision=revision, key="guide", kind="BACKGROUND", content=pdf.tobytes(), filename="guide.pdf", actor=self.owner)
+        editor_url = reverse("loans:document_layout_overlay_designer", args=[revision.pk])
+        self.assertContains(self.tenant_get(editor_url), "Design preview")
+        self.tenant_post(editor_url, {
+            "operation": "save_block", "index": 0, "block_type": "title", "text": "Spaced ticket",
+            "x_mm": 10, "y_mm": 8, "width_mm": 190, "height_mm": 20,
+            "font_size_pt": 10, "align": "LEFT", "copy_scope": "BOTH", "padding_pt": "6", "leading_pt": "12",
+        })
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["blocks"][0]["padding_pt"], 6)
+        self.assertEqual(revision.definition["blocks"][0]["leading_pt"], 12)
+        self.assertContains(self.tenant_get(editor_url), 'name="leading_pt" step="0.1" min="6" max="48" value="12"')
+        create = self.tenant_post(reverse("loans:document_print_profile_create"), {
+            "name": "Preprinted counter", "composition": "A5_BOTH_SIMPLEX", "stock_mode": "PREPRINTED",
+            "scaling_policy": "FIT_PRINTABLE_AREA", "flip_edge_guidance": "NOT_APPLICABLE",
+        })
+        self.assertEqual(create.status_code, 302)
+        profile = LoanDocumentPrintProfileRevision.objects.get(profile__name="Preprinted counter")
+        self.assertEqual(profile.definition["stock_mode"], "PREPRINTED")
+        detail = self.tenant_get(reverse("loans:document_print_profile_detail", args=[profile.pk]))
+        self.assertContains(detail, 'value="PREPRINTED" selected')
+        self.tenant_post(reverse("loans:document_print_profile_update", args=[profile.pk]), {
+            "composition": "A5_BOTH_SIMPLEX", "stock_mode": "PREPRINTED",
+            "scaling_policy": "FIT_PRINTABLE_AREA", "flip_edge_guidance": "NOT_APPLICABLE",
+        })
+        profile.refresh_from_db()
+        self.assertEqual(profile.definition["schema_version"], 2)
+        self.assertEqual(profile.definition["stock_mode"], "PREPRINTED")
+        preview_url = reverse("loans:document_layout_preview", args=[revision.pk])
+        for mode in ("design", "print"):
+            response = self.tenant_get(f"{preview_url}?loan={loan.pk}&profile={profile.pk}&mode={mode}")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["X-Rokkad-Preview-Mode"], mode)
+            self.assertIn("no-store", response["Cache-Control"])
+            with fitz.open(stream=response.content, filetype="pdf") as pdf:
+                self.assertEqual("GUIDE-ONLY-MARKER" in pdf[0].get_text(), mode == "design")
+        self.assertFalse(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).exists())
+        revision = LoanDocumentLayoutService.publish(revision=revision, actor=self.owner)
+        LoanDocumentLayoutService.assign(revision=revision, workspace=self.tenant, license=license, series=series, actor=self.owner)
+        profile = LoanDocumentPrintProfileService.publish(revision=profile, actor=self.owner)
+        LoanDocumentPrintProfileService.assign(revision=profile, workspace=self.tenant, series=series, actor=self.owner)
+        resolved = self.tenant_get(f"{preview_url}?loan={loan.pk}")
+        with fitz.open(stream=resolved.content, filetype="pdf") as pdf:
+            self.assertNotIn("GUIDE-ONLY-MARKER", pdf[0].get_text())
+        profile_preview = reverse("loans:document_print_profile_preview", args=[profile.pk])
+        design = self.tenant_get(f"{profile_preview}?layout={revision.pk}&loan={loan.pk}&mode=design")
+        self.assertEqual(design.status_code, 200)
+        self.assertEqual(design["X-Rokkad-Preview-Mode"], "design")
+        url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        official = self.tenant_get(f"{url}?mode=design")
+        self.assertEqual(official.status_code, 200)
+        with fitz.open(stream=official.content, filetype="pdf") as pdf:
+            self.assertNotIn("GUIDE-ONLY-MARKER", pdf[0].get_text())
+            self.assertNotIn("DESIGN PREVIEW", pdf[0].get_text())
+        replacement = LoanDocumentPrintProfileService.clone_revision(revision=profile, actor=self.owner)
+        replacement = LoanDocumentPrintProfileService.update_draft(revision=replacement, definition={**replacement.definition, "stock_mode": "PLAIN"}, actor=self.owner)
+        replacement = LoanDocumentPrintProfileService.publish(revision=replacement, actor=self.owner)
+        LoanDocumentPrintProfileService.assign(revision=replacement, workspace=self.tenant, series=series, actor=self.owner)
+        self.assertEqual(self.tenant_get(url).content, official.content)
+        other = Company.objects.create(name="Other stationery workspace", schema_name="other-stationery", owner=self.owner, creator=self.owner)
+        with without_workspace_context(), workspace_context(other.pk):
+            Membership.objects.create(user=self.owner, company=other, role=Role.objects.get(name="Owner"))
+            foreign = LoanDocumentPrintProfileService.create_profile(workspace=other, document_type="loan_ticket", name="Private guide profile", definition={**built_in_print_profile().canonical_dict(), "name": "Private guide profile"}, actor=self.owner)
+        self.assertEqual(self.tenant_get(f"{preview_url}?loan={loan.pk}&profile={foreign.pk}&mode=design").status_code, 404)
+        self.assertNotContains(self.tenant_get(editor_url), "Private guide profile")
+
     def test_published_ticket_layout_drives_official_issue_and_reprint(self):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-DOC-00001", state="APPROVED")

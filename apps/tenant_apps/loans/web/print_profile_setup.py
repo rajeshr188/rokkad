@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from apps.tenant_apps.loans.access import loans_setup_required
 from apps.tenant_apps.loans.web.document_forms import (
     LoanDocumentPrintProfileAssignmentForm,
@@ -89,7 +90,8 @@ def document_print_profile_detail(request, revision_pk):
     return render(request, "loans/setup/print_profiles/detail.html", {
         "revision": revision,
         "profile": profile,
-        "definition_form": LoanDocumentPrintProfileDefinitionForm(initial={
+        "definition_form": LoanDocumentPrintProfileDefinitionForm(schema_version=profile.schema_version, initial={
+            "stock_mode": profile.stock_mode,
             "composition": profile.composition,
             "scaling_policy": profile.scaling_policy,
             "flip_edge_guidance": profile.flip_edge_guidance,
@@ -107,7 +109,7 @@ def document_print_profile_detail(request, revision_pk):
 @require_POST
 def document_print_profile_update(request, revision_pk):
     revision = _print_profile_revision(request, revision_pk)
-    form = LoanDocumentPrintProfileDefinitionForm(request.POST)
+    form = LoanDocumentPrintProfileDefinitionForm(request.POST, schema_version=revision.definition["schema_version"])
     if form.is_valid():
         try:
             LoanDocumentPrintProfileService.update_draft(
@@ -195,6 +197,7 @@ def document_print_profile_retire(request, revision_pk):
 
 
 @loans_setup_required
+@never_cache
 def document_print_profile_preview(request, revision_pk):
     revision = _print_profile_revision(request, revision_pk)
     layout_revision = get_object_or_404(
@@ -219,7 +222,7 @@ def document_print_profile_preview(request, revision_pk):
             payload,
             DocumentLayoutValidator.load(layout_revision.definition),
             PrintProfileValidator.load(revision.definition),
-            preview=True,
+            preview=True, design_preview=request.GET.get("mode") == "design",
             assets=_revision_assets(layout_revision),
         )
     except (ValueError, ValidationError) as exc:
@@ -230,6 +233,7 @@ def document_print_profile_preview(request, revision_pk):
         f'{disposition}; filename="profile-preview-{payload.file_name}"'
     )
     response["X-Rokkad-Preview"] = "true"
+    response["X-Rokkad-Preview-Mode"] = "design" if request.GET.get("mode") == "design" else "print"
     response["X-Rokkad-Print-Profile"] = revision.profile.name
     response["X-Rokkad-Print-Profile-Hash"] = revision.content_hash
     response["X-Rokkad-Layout-Revision"] = str(layout_revision.pk)
