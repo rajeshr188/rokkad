@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## Branch readiness, licenses and numbering (2026-09-22)
+
+Loan setup now highlights the first unfinished existing check and keeps access to
+servicing visible. The checklist renders its metal-price step once, separates
+document/printing review, and places secondary administration links in a disclosure.
+A responsive license register distinguishes imported references from lending
+licenses. Status remains guidance from the existing selector, not approval or
+verification of evidence. Loan-entry visibility respects the existing permission.
+
+License creation/amendment/renewal and numbering forms now use grouped fields,
+shared native field/error partials, linked corrections, document-reselection help
+and Hindi labels. Numbering examples are explicitly illustrative; real previews
+remain on the license page, before regulatory history. Empty POSTs bind correctly.
+Series service validation returns to the form with values preserved; failed updates
+still roll back identity and both counters. Setup pages are private/no-store and
+exclude HTMX history snapshots. No service rules, models or migrations changed.
+
+127 focused tests pass across setup UI, license/series services, numbering,
+regulatory evidence, loan UI and shell rendering (23.723s). Gettext compilation,
+diff checking and the 699-file import-boundary check pass. Read-only rehearsal
+browser checks confirm next-step navigation, imported-reference warnings, saved
+series values and 390px/1280px reflow without page overflow. No license, sequence,
+production or accepted rehearsal business record changed. Physical touch, screen
+reader, document upload and operator acceptance remain pending.
+Next: calculation, fee and monitoring form guidance, followed by Rates and
+notifications. See [implementation evidence](implementation/accessible-directory-redesign.md#branch-readiness-licenses-and-numbering).
+
 ## Loan search and servicing overview (2026-09-22)
 
 The loan directory now puts search and status first, with license/series/date

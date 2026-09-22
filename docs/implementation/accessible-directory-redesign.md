@@ -284,3 +284,42 @@ its field through automation; keyboard activation did.
 Physical pointer/touch and screen-reader acceptance remain open, as does complete
 operator acceptance. The local server was restarted to refresh cached templates
 and gettext. No financial form was submitted and no accepted migration data changed.
+
+## Branch readiness, licenses and numbering
+
+The setup hub uses the existing selector to highlight its first incomplete step;
+the view does not introduce another readiness algorithm. The obsolete duplicate
+metal-buying review row is removed. Documents/printing remain optional review
+tasks, and secondary tools remain accessible through a native disclosure. A card
+register fits phone widths and distinguishes legacy references. New-loan entry
+retains the `data.create` visibility check; setup authorization is unchanged.
+
+License creation, amendment and renewal share grouped native field/error partials
+and the existing multipart POST/services. Labels and help now explain validity,
+required evidence and file reselection after errors. Numbering forms separate
+identity from prefixes/digits/limits; examples cannot be mistaken for reserved or
+allocated numbers. License detail places actual read-only previews before history
+and links back to the checklist. Empty POSTs now bind on all five forms. Series
+service validation is caught outside the existing atomic service and rendered as
+form errors; it cannot leave one counter or the series identity partly updated.
+The seven page views use no-store responses and templates opt out of HTMX history.
+No new endpoint, model, migration, financial calculation or service rule is added.
+
+127 tests pass (23.723s) across setup UI, license/series services, number allocation,
+regulatory evidence, draft UI and shell rendering. Added checks cover next-step
+selection, empty submissions, private responses, linked errors, retained input,
+Hindi labels and rollback when the release counter rejects a proposed limit after
+loan-sequence configuration. Existing authorization, scope, CSRF, document evidence
+and preview/no-consumption tests pass. An initial Hindi assertion ran before the
+new catalogue was compiled; the final suite passes with compiled translations.
+Gettext retains its four existing catalogue-header warnings. The 699-file boundary
+check and diff checks pass. Logs: `outputs/ux-branch-setup-20260922/` (private).
+
+Read-only Chrome review on the accepted rehearsal confirms the next-step link,
+license form labels/grouping, legacy-reference restrictions, numbering-first detail
+and existing series values. License entry, hub and series form have no page overflow
+at 390px; desktop series layout was also checked at 1280px. The viewport was reset
+and the setup hub left open. No settings or evidence were submitted. Hindi browser,
+physical touch, screen reader and actual upload/printing/operator acceptance remain
+pending. Calculation/fee/monitoring forms and remaining legacy detail translations
+are the next setup slice, before Rates/notifications and eventual cutover acceptance.

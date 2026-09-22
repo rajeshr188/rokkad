@@ -121,12 +121,65 @@ class LoansSetupUiTests(WorkspaceTestCase):
         checks = {step["key"]: step["complete"] for step in page.context["loan_setup"]["steps"]}
         self.assertEqual(checks, {"license": True, "series": True, "economics": False, "product": False, "metal_rates": False})
         self.assertContains(page, "Open Economic Setup")
+        self.assertEqual(page.context["next_setup_step"]["key"], "economics")
+        self.assertContains(page, "Next setup step")
+        self.assertNotContains(page, "Metal buying rates")
         LoanLicense.objects.filter(pk=license.pk).update(issued_on=date(2019, 1, 1), expires_on=date(2020, 1, 1))
         expired = self.tenant_get(reverse("loans:license_list"))
         checks = {step["key"]: step["complete"] for step in expired.context["loan_setup"]["steps"]}
         self.assertFalse(checks["license"])
         self.assertFalse(checks["series"])
         self.assertFalse(expired.context["loan_setup"]["ready"])
+        self.assertEqual(expired.context["next_setup_step"]["key"], "license")
+
+    def test_empty_setup_posts_show_linked_errors_without_changes(self):
+        license, series = self._configured_setup()
+        before_sequences = list(LoanNumberSequence.objects.order_by("pk").values())
+        before_revisions = LoanLicenseRevision.objects.count()
+        for name, args, field in (
+            ("license_create", [], "license_number"),
+            ("license_update", [license.pk], "license_number"),
+            ("license_renew", [license.pk], "supporting_document"),
+            ("series_create", [license.pk], "name"),
+            ("series_update", [series.pk], "name"),
+        ):
+            with self.subTest(name=name):
+                response = self.tenant_post(reverse("loans:" + name, args=args), {})
+                self.assertContains(response, 'id="form-errors"')
+                self.assertTrue(response.context["form"].is_bound)
+                self.assertContains(response, f'href="#id_{field}"')
+                self.assertContains(response, 'hx-history="false"')
+                self.assertIn("no-store", response["Cache-Control"])
+        self.assertEqual(before_sequences, list(LoanNumberSequence.objects.order_by("pk").values()))
+        self.assertEqual(before_revisions, LoanLicenseRevision.objects.count())
+
+    def test_series_service_errors_preserve_input_and_rollback_both_counters(self):
+        license, series = self._configured_setup()
+        sequence = series.number_sequences.get(document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE.value)
+        sequence.next_number = 20
+        sequence.save(update_fields=["next_number"])
+        before = list(series.number_sequences.order_by("pk").values())
+        old_name = series.name
+        response = self.tenant_post(reverse("loans:series_update", args=[series.pk]), {
+            "name": "Keep this correction", "code": series.code, "is_active": "on",
+            "pawn_loan_prefix": "NEW-", "release_prefix": "RETURN-", "number_width": 5,
+            "maximum_number": 5,
+        })
+        self.assertContains(response, 'id="form-errors"')
+        self.assertContains(response, "Keep this correction")
+        self.assertTrue(response.context["form"].non_field_errors())
+        self.assertEqual(before, list(series.number_sequences.order_by("pk").values()))
+        series.refresh_from_db()
+        self.assertEqual(series.name, old_name)
+
+    def test_setup_forms_hindi_labels_and_document_reselection(self):
+        self.client.cookies["django_language"] = "hi"
+        response = self.tenant_post(reverse("loans:license_create"), {"name": "Retained name"})
+        self.assertContains(response, "Retained name")
+        self.assertContains(response, "लाइसेंस विवरण")
+        self.assertContains(response, "सहायक दस्तावेज़")
+        self.assertContains(response, 'id="id_supporting_document_helptext"')
+        self.assertContains(response, 'aria-invalid="true"')
 
     def test_owner_can_seed_review_activate_and_retire_loan_products(self):
         response = self.tenant_post(reverse("loans:loan_product_seed_defaults"))

@@ -2071,3 +2071,299 @@ msgid "%(total)s loan found"
 msgid_plural "%(total)s loans found"
 msgstr[0] "%(total)s ऋण"
 msgstr[1] "%(total)s ऋण"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Branch readiness"
+msgstr "शाखा की तैयारी"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Complete the business settings for new lending. Existing loans remain available for servicing under their saved terms."
+msgstr "नए ऋण देने के लिए व्यवसाय की सेटिंग्स पूरी करें। मौजूदा ऋणों पर उनकी दर्ज शर्तों के अनुसार काम जारी रख सकते हैं।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Open existing loans"
+msgstr "मौजूदा ऋण खोलें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Next setup step"
+msgstr "सेटअप का अगला चरण"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Continue to loan entry"
+msgstr "ऋण प्रविष्टि की ओर बढ़ें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Review the evidence and printing checks below, then create a loan draft. Each loan validates its own date, metals and terms."
+msgstr "नीचे दस्तावेज़ और प्रिंटिंग की जाँच करें, फिर ऋण का मसौदा बनाएँ। हर ऋण के लिए उसकी तारीख, धातु और शर्तें अलग से जाँची जाती हैं।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Start first loan"
+msgstr "पहला ऋण शुरू करें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "First-loan setup checklist"
+msgstr "पहले ऋण की तैयारी सूची"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Checks are for %(date)s. Availability here does not approve a loan or verify license evidence."
+msgstr "यह जाँच %(date)s के लिए है। यहाँ उपलब्ध दिखने से ऋण स्वीकृत या लाइसेंस के प्रमाण सत्यापित नहीं होते।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Review"
+msgstr "समीक्षा करें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Before issuing customer copies"
+msgstr "ग्राहकों को प्रतियाँ देने से पहले"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Built-in documents are available. Custom layouts are optional. Review a sample and test your printer before handing documents to customers."
+msgstr "तैयार दस्तावेज़ प्रारूप उपलब्ध हैं। अपने प्रारूप बनाना वैकल्पिक है। ग्राहकों को दस्तावेज़ देने से पहले नमूना देखें और प्रिंटर जाँचें।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Review document layouts"
+msgstr "दस्तावेज़ प्रारूप देखें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Review print profiles"
+msgstr "प्रिंट सेटिंग्स देखें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "License register"
+msgstr "लाइसेंस रजिस्टर"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Expired, inactive and legacy-reference licenses cannot authorize new lending. Review missing evidence below."
+msgstr "समाप्त, निष्क्रिय और पुराने संदर्भ वाले लाइसेंस नए ऋण की अनुमति नहीं देते। नीचे अधूरे प्रमाण देखें।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Validity"
+msgstr "वैधता"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Not recorded"
+msgstr "दर्ज नहीं है"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Legacy reference"
+msgstr "पुराना संदर्भ"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Ready"
+msgstr "तैयार"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Expiring"
+msgstr "वैधता समाप्त होने वाली है"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Document missing"
+msgstr "दस्तावेज़ उपलब्ध नहीं है"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Expired"
+msgstr "वैधता समाप्त"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "No regulatory loan license has been configured."
+msgstr "अभी कोई ऋण लाइसेंस दर्ज नहीं किया गया है।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "All setup and administration tools"
+msgstr "सभी सेटअप और प्रशासन विकल्प"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "License register PDF"
+msgstr "लाइसेंस रजिस्टर PDF"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Operations console"
+msgstr "संचालन पटल"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Customer notices"
+msgstr "ग्राहक सूचनाएँ"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Collateral storage"
+msgstr "गिरवी का भंडारण"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Physical verification"
+msgstr "भौतिक सत्यापन"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Record license renewal"
+msgstr "लाइसेंस नवीनीकरण दर्ज करें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Edit license"
+msgstr "लाइसेंस सुधारें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Add regulatory loan license"
+msgstr "ऋण का नियामक लाइसेंस जोड़ें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Copy the number and validity dates from the license document. Saving this record does not complete the other lending setup checks."
+msgstr "लाइसेंस दस्तावेज़ से संख्या और वैधता की तारीखें भरें। इसे सहेजने से ऋण सेटअप की बाकी जाँचें पूरी नहीं होतीं।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Earlier license evidence stays in the history. This save records a new revision."
+msgstr "लाइसेंस के पिछले प्रमाण इतिहास में सुरक्षित रहते हैं। सहेजने पर नया संशोधन दर्ज होगा।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Choose the supporting file again before saving; browsers do not retain file selections after an error."
+msgstr "सहेजने से पहले सहायक फ़ाइल फिर चुनें; त्रुटि के बाद ब्राउज़र चुनी हुई फ़ाइल नहीं रखता।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "1. License details"
+msgstr "1. लाइसेंस विवरण"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "2. Supporting evidence"
+msgstr "2. सहायक प्रमाण"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Optional notes"
+msgstr "वैकल्पिक टिप्पणी"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Record renewal"
+msgstr "नवीनीकरण दर्ज करें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Save license"
+msgstr "लाइसेंस सहेजें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Configure series"
+msgstr "श्रृंखला की सेटिंग्स"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Add numbering series"
+msgstr "क्रमांकन श्रृंखला जोड़ें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Choose how new loan and release numbers look. Their counters run separately; saving settings does not issue a number."
+msgstr "नए ऋण और गिरवी वापसी की संख्या का प्रारूप चुनें। दोनों की गिनती अलग चलती है; सेटिंग्स सहेजने से संख्या जारी नहीं होती।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "1. Series identity"
+msgstr "1. श्रृंखला की पहचान"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "2. Number format and limit"
+msgstr "2. संख्या का प्रारूप और सीमा"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Example only: prefix PL-A- with 5 digits produces PL-A-00001 for counter 1. Check the saved previews on the license page for your actual next numbers."
+msgstr "उदाहरण: PL-A- उपसर्ग और 5 अंक चुनने पर गिनती 1 के लिए PL-A-00001 बनता है। वास्तविक अगली संख्याएँ लाइसेंस पृष्ठ पर सहेजे गए पूर्वावलोकन में देखें।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Existing numbers stay unchanged. Editing this form does not reset either counter or reserve historical numbers."
+msgstr "मौजूदा संख्याएँ नहीं बदलतीं। इस फ़ॉर्म को सुधारने से गिनती दोबारा शुरू नहीं होती और पुरानी संख्याएँ आरक्षित नहीं होतीं।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Save series setup"
+msgstr "श्रृंखला की सेटिंग्स सहेजें"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "License name"
+msgstr "लाइसेंस का नाम"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "License number"
+msgstr "लाइसेंस संख्या"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Issuing authority"
+msgstr "जारी करने वाला प्राधिकरण"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Valid from"
+msgstr "वैधता की आरंभ तारीख"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Valid until"
+msgstr "वैधता की अंतिम तारीख"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Notes"
+msgstr "टिप्पणी"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Supporting document"
+msgstr "सहायक दस्तावेज़"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "PDF, PNG, or JPEG up to 10 MB. Required for a new license; optional when amending one."
+msgstr "10 MB तक की PDF, PNG या JPEG। नए लाइसेंस के लिए आवश्यक; संशोधन के समय वैकल्पिक।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "A short name staff can recognize, such as Main branch license."
+msgstr "ऐसा छोटा नाम जिसे कर्मचारी पहचान सकें, जैसे मुख्य शाखा का लाइसेंस।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Renewal evidence is required. PDF, PNG, or JPEG up to 10 MB."
+msgstr "नवीनीकरण का प्रमाण आवश्यक है। 10 MB तक की PDF, PNG या JPEG।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Expiry date cannot precede issue date."
+msgstr "वैधता की अंतिम तारीख आरंभ की तारीख से पहले नहीं हो सकती।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Loan number prefix"
+msgstr "ऋण संख्या का उपसर्ग"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Text before the loan counter, for example PL-A-."
+msgstr "ऋण की गिनती से पहले आने वाला पाठ, जैसे PL-A-।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Release number prefix"
+msgstr "गिरवी वापसी संख्या का उपसर्ग"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Text before the separate release counter, for example RL-A-."
+msgstr "गिरवी वापसी की अलग गिनती से पहले आने वाला पाठ, जैसे RL-A-।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Counter digits"
+msgstr "गिनती के अंक"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Leading zeros fill this width: 5 displays counter 1 as 00001."
+msgstr "आरंभ में शून्य जोड़कर इतने अंक बनेंगे: 5 चुनने पर गिनती 1 को 00001 दिखाया जाएगा।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Last counter number"
+msgstr "गिनती की अंतिम संख्या"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "When the counter reaches this limit, open another series. Numbers are never reused."
+msgstr "गिनती इस सीमा तक पहुँचने पर नई श्रृंखला खोलें। संख्याएँ दोबारा उपयोग नहीं होतीं।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Series name"
+msgstr "श्रृंखला का नाम"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Series code"
+msgstr "श्रृंखला कोड"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Active series"
+msgstr "सक्रिय श्रृंखला"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "A short code unique within this license, such as A."
+msgstr "इस लाइसेंस में अलग पहचान वाला छोटा कोड, जैसे A।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "An active series still needs a valid license and available numbers."
+msgstr "सक्रिय श्रृंखला के लिए भी वैध लाइसेंस और उपलब्ध संख्याएँ आवश्यक हैं।"
+
+#: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
+msgid "Continue the setup checklist"
+msgstr "सेटअप सूची पर आगे बढ़ें"

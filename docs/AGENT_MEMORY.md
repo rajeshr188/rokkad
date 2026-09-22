@@ -54,6 +54,10 @@ Loan directory principal is the value recorded at creation/import, not a live
 balance or guaranteed original advance. Invalid search filters must not silently
 broaden results. Loan servicing shortcuts follow existing state/permissions and
 imported-opening limitations; financial authority remains in the commands.
+Branch setup highlights the first unfinished existing selector check. It must not
+equate checklist availability with evidence verification or new-lending authority.
+License/series form examples never allocate or reserve numbers; failed numbering
+configuration must retain input while the existing atomic service rolls back changes.
 Customer writes stay ordinary CSRF-protected submissions. Native partials share
 field/error rendering; failed forms retain text, link errors to controls and explain
 file reselection. Account introduction progress/preferences never imply branch

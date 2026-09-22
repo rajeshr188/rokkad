@@ -36,7 +36,9 @@ collections/full-release guidance now follows the same field/error patterns, wit
 explicit settlement, custody and concession boundaries. The loan directory now
 uses progressive phone/name/number search, responsive results and explicit filter
 errors; servicing detail groups secondary actions and links its main sections.
-Next simplify branch setup forms/readiness guidance, then Rates and notifications.
+Branch readiness now highlights the next incomplete check, and license/renewal and
+numbering forms use grouped accessible fields, recoverable errors and Hindi labels.
+Next simplify calculation, fee and monitoring form guidance, then Rates and notifications.
 Terms review, payment-form accessibility and grouped
 printing guidance now extend the first-loan journey; its complete live payment
 walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator

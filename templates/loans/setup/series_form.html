@@ -1,28 +1,25 @@
 {% extends "base_tenant.html" %}
-
-{% block title %}{% if series %}Configure series{% else %}Add series{% endif %}{% endblock %}
-
+{% load static i18n %}
+{% block title %}{% if series %}{% translate "Configure series" %}{% else %}{% translate "Add numbering series" %}{% endif %}{% endblock %}
 {% block workspace_content %}
-{% include "loans/setup/_navigation.html" %}
-<div class="mb-4">
-  <a class="small text-decoration-none" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">← {{ license.name }}</a>
-  <h1 class="h3 mt-2">{% if series %}Configure {{ series.code }}{% else %}Add numbering series{% endif %}</h1>
-  <p class="text-muted">Each series has separate bounded sequences for pawn loans and releases.</p>
-</div>
-<div class="card"><div class="card-body">
+<section class="setup-entry" hx-history="false">
+  <a href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">&larr; {{ license.name }}</a>
+  <h1 class="h3 mt-3">{% if series %}{% translate "Configure series" %}: {{ series.code }}{% else %}{% translate "Add numbering series" %}{% endif %}</h1>
+  <p>{% translate "Choose how new loan and release numbers look. Their counters run separately; saving settings does not issue a number." %}</p>
+  {% include "components/forms/accessible.html#errors" %}
   <form method="post" action="{% if series %}{% url 'workspace_loans:series_update' request.workspace.slug series.pk %}{% else %}{% url 'workspace_loans:series_create' request.workspace.slug license.pk %}{% endif %}" novalidate>{% csrf_token %}
-    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-    <div class="row g-3">
-    {% for field in form %}
-      <div class="{% if field.name == 'is_active' %}col-12{% else %}col-md-6{% endif %}">
-        {% if field.name == 'is_active' %}<div class="form-check">{{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
-        {% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
-        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-      </div>
-    {% endfor %}
-    </div>
-    <div class="alert alert-info mt-4 mb-0">The maximum is final for this series. Once exhausted, create another series; numbers never wrap or recycle.</div>
-    <div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit">Save series setup</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">Cancel</a></div>
+    <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. Series identity" %}</legend>
+      <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.name %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.code %}</div></div>
+      {% include "components/forms/accessible.html#field" with field=form.is_active %}
+    </fieldset>
+    <fieldset class="card card-body mb-3"><legend class="h5">{% translate "2. Number format and limit" %}</legend>
+      <p class="small">{% translate "Example only: prefix PL-A- with 5 digits produces PL-A-00001 for counter 1. Check the saved previews on the license page for your actual next numbers." %}</p>
+      <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.pawn_loan_prefix %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.release_prefix %}</div></div>
+      <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.number_width %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.maximum_number %}</div></div>
+      <p class="mb-0">{% translate "Existing numbers stay unchanged. Editing this form does not reset either counter or reserve historical numbers." %}</p>
+    </fieldset>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Save series setup" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">{% translate "Cancel" %}</a></div>
   </form>
-</div></div>
+</section>
 {% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

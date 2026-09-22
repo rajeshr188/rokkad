@@ -1,70 +1,32 @@
 {% extends "base_tenant.html" %}
-
-{% block title %}Loan setup{% endblock %}
-
+{% load i18n %}
+{% block title %}{% translate "Loan setup" %}{% endblock %}
 {% block workspace_content %}
-{% include "loans/setup/_navigation.html" %}
-<div class="app-heading">
-  <div>
-    <h1 class="h3 mb-1">PawnLoan setup</h1>
-    <p class="text-muted mb-0">Manage licenses, numbering, economic settings, and loan products here at any time.</p>
-  </div>
-  <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-primary" href="{% url 'workspace_loans:license_create' request.workspace.slug %}">Add license</a>
-  </div>
-</div>
-
-<section class="card mb-4" aria-labelledby="first-loan-checklist-title">
-  <div class="card-body">
-    <h2 class="h5" id="first-loan-checklist-title">First-loan setup checklist</h2>
-    <p class="text-muted">Owner or administrator: work through these settings in order. Return here any time from Settings &rarr; Loan setup.</p>
-    <p class="small">Checks are for {{ loan_setup.as_of_date }}. Review license evidence in the register. Each loan checks its own date, metal, product, and terms when saved and approved.</p>
-    <ol class="list-group list-group-numbered mb-3">
-      {% for step in loan_setup.steps %}
-      <li class="list-group-item d-flex gap-3 align-items-start">
-        <div class="flex-grow-1"><div class="d-flex flex-wrap gap-2 align-items-center"><h3 class="h6 mb-0">{{ step.title }}</h3><span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}Available{% else %}Needs setup{% endif %}</span></div><p class="small text-muted my-2">{{ step.description }}</p><a href="{{ step.action_url }}">{{ step.action_label }}</a></div>
-      </li>
-      {% endfor %}
-      <li class="list-group-item d-flex gap-3 align-items-start"><div class="flex-grow-1"><h3 class="h6">Metal buying rates <span class="badge text-bg-secondary">Review</span></h3><p class="small text-muted">Calculated-metal valuation needs current 24K buying rates for the loan's metals and valuation date. These are separate from monthly interest rates.</p><a href="{% url 'workspace_slug_rates' workspace_slug=request.workspace.slug %}">Review buying rates</a></div></li>
-      <li class="list-group-item d-flex gap-3 align-items-start"><div class="flex-grow-1"><h3 class="h6">Documents and printing <span class="badge text-bg-secondary">Review</span></h3><p class="small text-muted">Built-in documents are available. Review layouts and print profiles for your business before issuing customer copies; custom layouts are optional.</p><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">Review document layouts</a> &middot; <a href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">Review print profiles</a></div></li>
+<section class="setup-entry" hx-history="false">
+  <div class="app-heading"><div><div class="app-eyebrow">{% translate "Branch readiness" %}</div><h1>{% translate "Loan setup" %}</h1><p>{% translate "Complete the business settings for new lending. Existing loans remain available for servicing under their saved terms." %}</p></div><a class="btn btn-outline-primary" href="{% url 'workspace_slug_loan_list' workspace_slug=request.workspace.slug %}">{% translate "Open existing loans" %}</a></div>
+  <section class="card card-body mb-4" aria-labelledby="setup-next-title">
+    {% if next_setup_step %}<h2 id="setup-next-title" class="h5">{% translate "Next setup step" %}: {{ next_setup_step.title }}</h2><p>{{ next_setup_step.description }}</p><div><a class="btn btn-primary" href="{{ next_setup_step.action_url }}">{{ next_setup_step.action_label }}</a></div>
+    {% else %}<h2 id="setup-next-title" class="h5">{% translate "Continue to loan entry" %}</h2><p>{% translate "Review the evidence and printing checks below, then create a loan draft. Each loan validates its own date, metals and terms." %}</p>{% if can_create_loans %}<div><a class="btn btn-primary" href="{% url 'workspace_slug_loan_create' workspace_slug=request.workspace.slug %}">{% translate "Start first loan" %}</a></div>{% endif %}{% endif %}
+  </section>
+  {% partialdef checklist inline %}
+  <section class="mb-4" aria-labelledby="first-loan-checklist-title"><h2 class="h5" id="first-loan-checklist-title">{% translate "First-loan setup checklist" %}</h2>
+    <p>{% blocktranslate with date=loan_setup.as_of_date %}Checks are for {{ date }}. Availability here does not approve a loan or verify license evidence.{% endblocktranslate %}</p>
+    <ol class="list-group list-group-numbered">
+      {% for step in loan_setup.steps %}<li class="list-group-item d-flex gap-3 align-items-start"><div class="flex-grow-1"><div class="d-flex flex-wrap gap-2"><h3 class="h6 mb-0">{{ step.title }}</h3><span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}{% translate "Available" %}{% elif step.blocking == False %}{% translate "Review" %}{% else %}{% translate "Needs setup" %}{% endif %}</span></div><p class="small text-body-secondary my-2">{{ step.description }}</p><a href="{{ step.action_url }}">{{ step.action_label }}</a></div></li>{% endfor %}
     </ol>
-    <div class="alert alert-light border mb-0"><h3 class="h6">Create your first loan</h3><p class="small">Select or add a borrower, enter collateral and its photo, and save a draft. Ask an owner or administrator to resolve missing business settings.</p>{% if loan_setup.ready %}<a class="btn btn-primary" href="{% url 'workspace_slug_loan_create' workspace_slug=request.workspace.slug %}">Start first loan</a>{% endif %} <a class="btn btn-outline-primary" href="{% url 'workspace_slug_parties' workspace_slug=request.workspace.slug %}">Manage borrowers</a></div>
-  </div>
+  </section>
+  {% endpartialdef %}
+  <section class="card card-body mb-4"><h2 class="h5">{% translate "Before issuing customer copies" %}</h2><p>{% translate "Built-in documents are available. Custom layouts are optional. Review a sample and test your printer before handing documents to customers." %}</p><div class="d-flex flex-wrap gap-3"><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">{% translate "Review document layouts" %}</a><a href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">{% translate "Review print profiles" %}</a><a href="{% url 'workspace_slug_parties' workspace_slug=request.workspace.slug %}">{% translate "Manage borrowers" %}</a></div></section>
+  <section id="license-register" aria-labelledby="license-register-title" tabindex="-1">
+    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-3"><h2 class="h5 mb-0" id="license-register-title">{% translate "License register" %}</h2><a class="btn btn-outline-primary" href="{% url 'workspace_loans:license_create' request.workspace.slug %}">{% translate "Add license" %}</a></div>
+    <p>{% translate "Expired, inactive and legacy-reference licenses cannot authorize new lending. Review missing evidence below." %}</p>
+    <ul class="list-unstyled directory-records">
+      {% for row in register_rows %}<li class="card card-body"><div class="row g-3"><div class="col-md-4"><a class="fw-semibold" href="{% url 'workspace_loans:license_detail' request.workspace.slug row.license.pk %}">{{ row.license.name }}</a><div class="text-break">{{ row.license.license_number }}</div><div class="small">{% translate "Numbering series" %}: {{ row.license.series.count }}</div></div>
+        <div class="col-md-4"><div class="small text-body-secondary">{% translate "Validity" %}</div>{% if row.license.issued_on %}{{ row.license.issued_on }}{% else %}{% translate "Not recorded" %}{% endif %} &ndash; {% if row.license.expires_on %}{{ row.license.expires_on }}{% else %}{% translate "Not recorded" %}{% endif %}</div>
+        <div class="col-md-4">{% if row.license.is_legacy_reference %}<span class="badge text-bg-secondary">{% translate "Legacy reference" %}</span>{% elif row.status == 'READY' %}<span class="badge text-bg-success">{% translate "Ready" %}</span>{% elif row.status == 'EXPIRING' %}<span class="badge text-bg-warning">{% translate "Expiring" %}</span>{% elif row.status == 'DOCUMENT_MISSING' %}<span class="badge text-bg-warning">{% translate "Document missing" %}</span>{% elif row.status == 'EXPIRED' %}<span class="badge text-bg-danger">{% translate "Expired" %}</span>{% else %}<span class="badge text-bg-secondary">{% translate "Inactive" %}</span>{% endif %}{% for blocker in row.blockers %}<div class="small text-danger mt-2">{{ blocker }}</div>{% endfor %}</div>
+      </div></li>{% empty %}<li class="card card-body"><p class="mb-0">{% translate "No regulatory loan license has been configured." %}</p></li>{% endfor %}
+    </ul>
+  </section>
+  <details class="mt-4"><summary>{% translate "All setup and administration tools" %}</summary><div class="mt-3">{% include "loans/setup/_navigation.html" %}<div class="d-flex flex-wrap gap-3"><a href="{% url 'workspace_loans:license_register_pdf' request.workspace.slug %}">{% translate "License register PDF" %}</a><a href="{% url 'workspace_loans:pawn_operations_console' request.workspace.slug %}">{% translate "Operations console" %}</a><a href="{% url 'workspace_loans:pawn_loan_notice_list' request.workspace.slug %}">{% translate "Customer notices" %}</a><a href="{% url 'workspace_loans:pawn_storage_location_list' request.workspace.slug %}">{% translate "Collateral storage" %}</a><a href="{% url 'workspace_loans:pawn_physical_verification_list' request.workspace.slug %}">{% translate "Physical verification" %}</a></div></div></details>
 </section>
-
-<div class="row g-3 mb-4">
-  <div class="col-lg-4"><section class="card h-100"><div class="card-body"><h2 class="h5">Loan configuration</h2><p class="small text-muted">Set terms and products, then maintain licenses and series below.</p><div class="d-flex flex-wrap gap-2"><a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}">Economic setup</a></div></div></section></div>
-  <div class="col-lg-4"><section class="card h-100"><div class="card-body"><h2 class="h5">Documents &amp; printing</h2><p class="small text-muted">Maintain official layouts and printer preferences.</p><div class="d-flex flex-wrap gap-3"><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">Document layouts</a><a href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">Print profiles</a><a href="{% url 'workspace_loans:license_register_pdf' request.workspace.slug %}">License register PDF</a></div></div></section></div>
-  <div class="col-lg-4"><section class="card h-100"><div class="card-body"><h2 class="h5">Operations &amp; custody</h2><p class="small text-muted">Review notices, collateral storage, and physical checks.</p><div class="d-flex flex-wrap gap-3"><a href="{% url 'workspace_loans:pawn_operations_console' request.workspace.slug %}">Operations console</a><a href="{% url 'workspace_loans:pawn_loan_notice_list' request.workspace.slug %}">Customer notices</a><a href="{% url 'workspace_loans:pawn_storage_location_list' request.workspace.slug %}">Collateral storage</a><a href="{% url 'workspace_loans:pawn_physical_verification_list' request.workspace.slug %}">Physical verification</a></div></div></section></div>
-</div>
-
-<div class="alert alert-light border" role="status">Regulatory readiness as of {{ as_of_date }}. Expired or inactive licenses block new origination. Missing evidence stays visible until corrected.</div>
-
-<div class="card" id="license-register">
-  <div class="table-responsive">
-    <table class="table app-table table-hover align-middle mb-0">
-      <thead><tr><th>License</th><th>Validity</th><th>Status</th><th>Series</th><th></th></tr></thead>
-      <tbody>
-      {% for row in register_rows %}
-        <tr>
-          <td><strong>{{ row.license.name }}</strong><div class="small text-muted">{{ row.license.license_number }}</div></td>
-          <td>{{ row.license.issued_on|default_if_none:"Not recorded" }} &ndash; {{ row.license.expires_on|default_if_none:"Not recorded" }}<div class="small text-muted">{% if row.days_remaining != None %}Expiry offset: {{ row.days_remaining }} days{% endif %}</div></td>
-          <td>
-            {% if row.status == 'READY' %}<span class="badge text-bg-success">Ready</span>
-            {% elif row.status == 'EXPIRING' %}<span class="badge text-bg-warning">Expiring</span>
-            {% elif row.status == 'DOCUMENT_MISSING' %}<span class="badge text-bg-warning">Document missing</span>
-            {% elif row.status == 'EXPIRED' %}<span class="badge text-bg-danger">Expired</span>
-            {% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}
-            {% for blocker in row.blockers %}<div class="small text-danger">{{ blocker }}</div>{% endfor %}
-          </td>
-          <td>{{ row.license.series.count }}</td>
-          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_loans:license_detail' request.workspace.slug row.license.pk %}">Open setup</a></td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="5" class="text-center py-5 text-muted">No regulatory loan license has been configured.<div class="mt-3"><a class="btn btn-primary" href="{% url 'workspace_loans:license_create' request.workspace.slug %}">Add your first license</a></div></td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
 {% endblock %}

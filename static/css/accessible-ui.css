@@ -6,6 +6,7 @@
 .loan-directory summary{min-height:44px;align-content:center;cursor:pointer}
 .loan-directory .directory-identity>div{min-width:0;overflow-wrap:anywhere}
 .loan-directory .directory-name{min-height:44px;align-content:center}
+.setup-entry .btn,.setup-entry summary{min-height:44px;align-content:center}.setup-entry .form-control{min-height:44px}.setup-entry summary{cursor:pointer}.setup-entry .errorlist{color:#a12828;padding-left:1.25rem}.setup-entry [aria-invalid=true]{border-color:#a12828}.setup-entry legend{float:none;width:auto;margin-bottom:1rem}.setup-entry .badge{white-space:normal;text-align:start}.setup-entry .card{overflow-wrap:anywhere}
 .directory-records{display:grid;gap:.75rem}
 .directory-record{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) minmax(0,1fr) auto;align-items:center;gap:1.25rem;padding:1.25rem}
 .directory-record>*{min-width:0;overflow-wrap:anywhere}

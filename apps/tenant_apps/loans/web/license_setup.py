@@ -42,16 +42,20 @@ from apps.tenant_apps.loans.services import (
 
 
 @loans_setup_required
+@never_cache
 def license_list(request):
     from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
 
     register_rows = get_loan_license_register(request.loans_workspace.pk)
+    checklist = get_pawn_setup_checklist(request.loans_workspace)
     return render(
         request,
         "loans/setup/license_list.html",
         {
             "register_rows": register_rows,
-            "loan_setup": get_pawn_setup_checklist(request.loans_workspace),
+            "loan_setup": checklist,
+            "next_setup_step": next((step for step in checklist["steps"] if not step["complete"]), None),
+            "can_create_loans": request.loans_workspace_access.can("data.create"),
             "as_of_date": timezone.localdate(),
         },
     )
@@ -78,6 +82,7 @@ def license_register_pdf(request):
 
 
 @loans_setup_required
+@never_cache
 def license_detail(request, pk):
     license = _license_for_workspace(request, pk)
     revisions = license.revisions.select_related("created_by").order_by(
@@ -122,8 +127,9 @@ def license_expiry_notice_create(request, pk):
 
 
 @loans_setup_required
+@never_cache
 def license_create(request):
-    form = LoanLicenseForm(request.POST or None, request.FILES or None)
+    form = LoanLicenseForm(request.POST if request.method == "POST" else None, request.FILES or None)
     form.instance.workspace = request.loans_workspace
     if request.method == "POST" and form.is_valid():
         try:
@@ -142,10 +148,11 @@ def license_create(request):
 
 
 @loans_setup_required
+@never_cache
 def license_update(request, pk):
     license = _license_for_workspace(request, pk)
     form = LoanLicenseForm(
-        request.POST or None,
+        request.POST if request.method == "POST" else None,
         request.FILES or None,
         instance=license,
     )
@@ -170,10 +177,11 @@ def license_update(request, pk):
 
 
 @loans_setup_required
+@never_cache
 def license_renew(request, pk):
     license = _license_for_workspace(request, pk)
     form = LoanLicenseRenewalForm(
-        request.POST or None,
+        request.POST if request.method == "POST" else None,
         request.FILES or None,
         license=license,
     )
@@ -193,7 +201,7 @@ def license_renew(request, pk):
     return render(
         request,
         "loans/setup/license_renewal_form.html",
-        {"form": form, "license": license},
+        {"form": form, "license": license, "is_renewal": True},
     )
 
 
@@ -242,18 +250,21 @@ def license_activate(request, pk):
 
 
 @loans_setup_required
+@never_cache
 def series_create(request, license_pk):
     license = _license_for_workspace(request, license_pk)
-    form = LoanSeriesSetupForm(request.POST or None)
+    form = LoanSeriesSetupForm(request.POST if request.method == "POST" else None)
+    form.instance.license = license
     if request.method == "POST" and form.is_valid():
-        series = create_configured_series(
-            license=license,
-            actor=request.user,
-            request=request,
-            **form.cleaned_data,
-        )
-        messages.success(request, "Loan series and numbering sequences created.")
-        return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
+        try:
+            create_configured_series(
+                license=license, actor=request.user, request=request, **form.cleaned_data,
+            )
+        except (LicenseSeriesError, ValidationError, ValueError) as exc:
+            form.add_error(None, exc.messages if isinstance(exc, ValidationError) else str(exc))
+        else:
+            messages.success(request, "Loan series and numbering sequences created.")
+            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/series_form.html",
@@ -262,19 +273,19 @@ def series_create(request, license_pk):
 
 
 @loans_setup_required
+@never_cache
 def series_update(request, pk):
     series = _series_for_workspace(request, pk)
     initial = _series_initial(series)
-    form = LoanSeriesSetupForm(request.POST or None, instance=series, initial=initial)
+    form = LoanSeriesSetupForm(request.POST if request.method == "POST" else None, instance=series, initial=initial)
     if request.method == "POST" and form.is_valid():
-        update_configured_series(
-            series,
-            actor=request.user,
-            request=request,
-            **form.cleaned_data,
-        )
-        messages.success(request, "Loan series setup updated.")
-        return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=series.license_id)
+        try:
+            update_configured_series(series, actor=request.user, request=request, **form.cleaned_data)
+        except (LicenseSeriesError, ValidationError, ValueError) as exc:
+            form.add_error(None, exc.messages if isinstance(exc, ValidationError) else str(exc))
+        else:
+            messages.success(request, "Loan series setup updated.")
+            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=series.license_id)
     return render(
         request,
         "loans/setup/series_form.html",
