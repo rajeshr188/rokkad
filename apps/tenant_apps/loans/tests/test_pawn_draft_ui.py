@@ -1394,7 +1394,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "no money recorded yet")
+        self.assertContains(response, "Preview only: no payment recorded")
         self.assertContains(response, "Overdue interest")
         self.assertContains(response, "highest monthly rate first")
         preview_command.assert_called_once_with(loan.pk, amount=Decimal("500.00"))

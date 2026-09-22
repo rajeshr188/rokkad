@@ -111,11 +111,12 @@ def pawn_loan_disburse(request, pk):
 
 
 @loans_action_required("loan.repay")
+@never_cache
 def pawn_loan_repay(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     repayment_preview = None
     form = PawnRepaymentForm(
-        request.POST or None,
+        request.POST if request.method == "POST" else None,
         initial={"request_key": uuid.uuid4().hex},
     )
     if request.method == "POST" and form.is_valid():
@@ -151,12 +152,13 @@ def pawn_loan_repay(request, pk):
         request,
         loan,
         form,
-        "Record repayment",
-        "Allocation is fixed: fees, overdue interest, current interest, then principal.",
+        _("Record repayment"),
+        _("Preview how the amount will be applied, then record it only after receiving payment. This action does not return collateral or close the loan."),
         {
             "balance": balance,
+            "is_repayment": True,
             "supports_preview": True,
-            "preview_action_label": "Preview allocation",
+            "preview_action_label": _("Preview allocation"),
             "repayment_preview": repayment_preview,
             "repayment_item_rows": tuple(
                 {

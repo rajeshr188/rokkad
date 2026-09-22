@@ -62,6 +62,10 @@ Loan review distinguishes current draft estimates from frozen approved payment
 amounts. The read-only approved-disbursal preview shares the command's frozen
 economics parser; templates never recalculate deductions. Printing availability
 follows approval/schedule evidence, and a loan ticket is not proof of payment.
+Full-release quote `fees_and_interest_settlement` already includes release-day
+catch-up interest; UI must identify that component as included, never add it again.
+Collection forms distinguish recorded repayment dues from current full settlement,
+and optional interest concessions retain the existing administration permission.
 
 Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company

@@ -6,8 +6,11 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponseGone
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
 
-from apps.tenant_apps.loans.access import loans_action_required
+from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION, loans_action_required
 from apps.tenant_apps.loans.forms import PawnFullReleaseForm
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.services import (
@@ -34,6 +37,7 @@ def _full_release_quote(loan):
 
 
 @loans_action_required("loan.release")
+@never_cache
 def pawn_loan_release_full(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     quote = _full_release_quote(loan)
@@ -46,7 +50,7 @@ def pawn_loan_release_full(request, pk):
     if minimum_settlement is not None:
         # Event arithmetic can retain trailing scale beyond the form's cents.
         initial["settlement_amount"] = format(minimum_settlement, ".2f")
-    form = PawnFullReleaseForm(request.POST or None, initial=initial)
+    form = PawnFullReleaseForm(request.POST if request.method == "POST" else None, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
             concession = {}
@@ -73,13 +77,15 @@ def pawn_loan_release_full(request, pk):
             return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     return render(
         request,
-        "loans/pawn/action_form.html",
+        "loans/pawn/full_release.html",
         {
             "loan": loan,
             "form": form,
-            "action_label": "Full release",
-            "description": "Cash collected plus any explicitly approved interest concession must equal the displayed total due. Principal and fees must be collected in full.",
+            "action_label": _("Full release"),
             "quote": quote,
+            "quote_date": timezone.localdate(),
+            "can_concede_interest": request.loans_workspace_access.can(LOANS_ADMIN_ACTION),
+            "release_available": minimum_settlement is not None and not isinstance(quote, dict) and not quote.blockers,
         },
     )
 

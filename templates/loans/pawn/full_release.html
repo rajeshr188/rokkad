@@ -1,0 +1,66 @@
+{% extends "base_tenant.html" %}
+{% load static i18n %}
+{% block title %}{% translate "Full release" %} &middot; {{ loan.loan_number }}{% endblock %}
+{% block workspace_content %}
+<div hx-history="false">
+  <div class="mb-4">
+    <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
+    <h1 class="h3 mt-2">{% translate "Full release" %}</h1>
+    <p>{% translate "Review the settlement, collect payment and return every listed item. Confirm only when collection and handover are complete." %}</p>
+  </div>
+  <div class="loan-workflow-grid"><div class="loan-workflow-main">
+    {% include "components/forms/accessible.html#errors" %}
+    {% partialdef settlement inline %}
+    <section class="card mb-3" aria-labelledby="release-amount-title"><div class="card-body">
+      <h2 class="h5" id="release-amount-title">{% translate "1. Review the amount" %}</h2>
+      <p>{{ loan.borrower.display_name }} &middot; {{ loan.borrower.party_code }}<br>{% translate "Quote date" %}: {{ quote_date }}</p>
+      {% if quote.error %}<div class="alert alert-warning" role="status">{{ quote.error }}</div>
+      {% else %}
+      <dl class="row">
+        <dt class="col-7">{% translate "Principal settled" %}</dt><dd class="col-5 text-end text-break">{{ quote.principal_reduction_required|default_if_none:"—" }}</dd>
+        <dt class="col-7">{% translate "Interest and fees" %}</dt><dd class="col-5 text-end text-break">{{ quote.fees_and_interest_settlement }}</dd>
+        <dt class="col-7 border-top pt-3">{% translate "Exact settlement" %} (INR)</dt><dd class="col-5 text-end text-break border-top pt-3 fs-4 fw-bold">{{ quote.minimum_settlement|default_if_none:"—" }}</dd>
+      </dl>
+      <p class="small text-body-secondary">{% translate "Release-day interest" %}: {{ quote.release_day_catch_up_interest }}. {% translate "Already included in interest and fees above. Do not add it again." %}</p>
+      <p class="small">{% translate "This is the total before any interest concession. Principal and fees must be collected in full. Confirmation recalculates the current settlement." %}</p>
+      {% for blocker in quote.blockers %}<div class="alert alert-warning" role="status">{{ blocker.message|default:blocker }}</div>{% endfor %}
+      {% endif %}
+    </div></section>
+    {% endpartialdef %}
+    {% partialdef collateral inline %}
+    <section class="card mb-3" aria-labelledby="release-items-title"><div class="card-body">
+      <h2 class="h5" id="release-items-title">{% translate "2. Match the collateral" %}</h2>
+      <p>{% translate "Match each item below with the physical item before handing it to the customer." %}</p>
+      <ul class="list-group list-group-flush">
+      {% for item in quote.item_valuations %}{% if item.selected_for_release %}
+        <li class="list-group-item px-0"><strong>{{ item.description }}</strong><div class="small">{{ item.metal|title }} &middot; {% translate "Net weight" %}: {{ item.net_weight }} g</div></li>
+      {% endif %}{% endfor %}
+      </ul>
+      <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}#collateral-gallery" target="_blank" rel="noopener">{% translate "Review collateral and photos" %} ({% translate "new tab" %})</a>
+    </div></section>
+    {% endpartialdef %}
+    <section class="card mb-3" aria-labelledby="release-confirm-title"><div class="card-body">
+      <h2 class="h5" id="release-confirm-title">{% translate "3. Record collection and handover" %}</h2>
+      <form method="post" novalidate>{% csrf_token %}{{ form.request_key }}
+        {% include "components/forms/accessible.html#field" with field=form.settlement_amount %}
+        {% if can_concede_interest %}
+        <details class="border rounded p-3 mb-3" {% if form.interest_concession.errors or form.concession_reason.errors or form.is_bound %}open{% endif %}>
+          <summary class="fw-semibold">{% translate "Optional interest concession" %}</summary>
+          <p class="small mt-2">{% translate "Enter only the interest you agree to forgo and its reason. Reduce the cash collected by that amount; principal and fees cannot be waived here." %}</p>
+          {% include "components/forms/accessible.html#field" with field=form.interest_concession %}
+          {% include "components/forms/accessible.html#field" with field=form.concession_reason %}
+        </details>
+        {% else %}<p class="small">{% translate "An interest concession needs an authorized Workspace administrator. Do not enter a smaller cash amount without an authorized concession." %}</p>{% endif %}
+        {% include "components/forms/accessible.html#field" with field=form.confirm_collateral_handoff %}
+        {% if not release_available %}<p class="text-danger">{% translate "Resolve the settlement or collateral issue before completing this release." %}</p>{% endif %}
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-primary" type="submit" {% if not release_available %}disabled{% endif %}>{% translate "Confirm collection and full release" %}</button>
+          <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{% translate "Cancel" %}</a>
+        </div>
+      </form>
+      <p class="small text-body-secondary mt-3 mb-0">{% translate "Saving records the collection, marks the collateral returned and closes this loan. The release memo is available from the loan's release history." %}</p>
+    </div></section>
+  </div>{% include "loans/pawn/_loan_summary.html" %}</div>
+</div>
+<script src="{% static 'js/form-errors.js' %}"></script>
+{% endblock %}

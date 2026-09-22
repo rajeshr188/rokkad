@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## Collections and single-loan full release (2026-09-22)
+
+Full release now follows three sections: review the dated settlement, match the
+selected collateral, then record cash and physical handover. Native template
+partials render the quote and item list. Release-day interest is explicitly included
+in the displayed interest/fees, preventing double counting. Authorized interest
+concessions sit in an optional disclosure; ordinary release staff see guidance
+instead of concession inputs. Existing command permissions still reject forged
+concessions. Unavailable/blocked quotes disable the completion button.
+
+Repayment now explains allocation preview, recorded-balance limits and the separate
+full-release path. Both forms bind empty POSTs, retain input/request keys on errors,
+use linked errors and no-store responses, and keep existing CSRF, settlement,
+handoff and retry semantics. Loan detail links directly to release history/memos.
+Added English/Hindi guidance changes no calculations, models or migrations.
+
+99 focused tests pass across loan UI, concessions, imported opening release,
+repayment allocation, release readiness and shared-shell rendering. The 699-file
+import-boundary check and gettext compilation pass. Read-only browser checks on
+the accepted rehearsal confirm the new release page, optional concession disclosure
+and 390px layout without horizontal overflow. No production or rehearsal payment,
+release or custody record changed. Real collection/handover, keyboard/screen-reader,
+physical-device and print acceptance remain pending. See
+[the flow](flows/single-loan-collection.md) and
+[implementation](implementation/accessible-directory-redesign.md#collections-and-full-release).
+Next: simplify the loan directory and servicing overview for daily counter work.
+
 ## Loan review, disbursal and printing guidance (2026-09-22)
 
 Draft/approved loan detail now places customer, date, tenure and the principal-to-net

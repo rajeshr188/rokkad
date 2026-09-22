@@ -1731,3 +1731,153 @@ msgstr "मूल ऋण और गिरवी का विवरण। वस
 
 msgid "Collateral identity, media, custody and economics"
 msgstr "गिरवी की पहचान, तस्वीरें, अभिरक्षा और राशि का विवरण"
+
+msgid "Full release"
+msgstr "पूर्ण मुक्ति"
+
+msgid "Review the settlement, collect payment and return every listed item. Confirm only when collection and handover are complete."
+msgstr "निपटान जाँचें, भुगतान लें और सूची में दिया हर सामान लौटाएँ। वसूली और सामान सौंपने के बाद ही पुष्टि करें।"
+
+msgid "1. Review the amount"
+msgstr "1. राशि जाँचें"
+
+msgid "Quote date"
+msgstr "हिसाब की तारीख"
+
+msgid "Principal settled"
+msgstr "चुकाया जाने वाला मूलधन"
+
+msgid "Interest and fees"
+msgstr "ब्याज और शुल्क"
+
+msgid "Exact settlement"
+msgstr "निपटान की पूरी राशि"
+
+msgid "Release-day interest"
+msgstr "मुक्ति के दिन तक का अतिरिक्त ब्याज"
+
+msgid "Already included in interest and fees above. Do not add it again."
+msgstr "ऊपर दिए ब्याज और शुल्क में पहले से शामिल है। इसे दोबारा न जोड़ें।"
+
+msgid "This is the total before any interest concession. Principal and fees must be collected in full. Confirmation recalculates the current settlement."
+msgstr "यह ब्याज में छूट से पहले की कुल राशि है। मूलधन और शुल्क पूरे वसूलने होंगे। पुष्टि के समय वर्तमान निपटान दोबारा निकाला जाएगा।"
+
+msgid "2. Match the collateral"
+msgstr "2. गिरवी सामान का मिलान करें"
+
+msgid "Match each item below with the physical item before handing it to the customer."
+msgstr "ग्राहक को सौंपने से पहले नीचे दिए हर सामान का वास्तविक सामान से मिलान करें।"
+
+msgid "Net weight"
+msgstr "शुद्ध वजन"
+
+msgid "3. Record collection and handover"
+msgstr "3. वसूली और सामान सौंपना दर्ज करें"
+
+msgid "Cash collected (INR)"
+msgstr "वसूल की गई राशि (रुपये)"
+
+msgid "Enter the actual amount received. Cash plus any authorized interest concession must equal the exact settlement."
+msgstr "वास्तव में मिली राशि भरें। वसूल राशि और अधिकृत ब्याज छूट का योग निपटान की पूरी राशि के बराबर होना चाहिए।"
+
+msgid "Optional interest concession"
+msgstr "ब्याज में वैकल्पिक छूट"
+
+msgid "Enter only the interest you agree to forgo and its reason. Reduce the cash collected by that amount; principal and fees cannot be waived here."
+msgstr "केवल छोड़े जाने वाले ब्याज की राशि और कारण भरें। वसूल राशि उतनी कम करें; यहाँ मूलधन और शुल्क माफ़ नहीं किए जा सकते।"
+
+msgid "Interest lost / concession"
+msgstr "छोड़ा गया ब्याज / छूट"
+
+msgid "Interest you explicitly agree to forgo. Requires Workspace administration permission."
+msgstr "वह ब्याज जिसे आप छोड़ने के लिए सहमत हैं। इसके लिए कार्यक्षेत्र प्रशासन की अनुमति चाहिए।"
+
+msgid "Reason for interest concession"
+msgstr "ब्याज में छूट का कारण"
+
+msgid "I confirm the stated cash amount was collected and every listed collateral item was physically returned to the customer."
+msgstr "मैं पुष्टि करता हूँ कि बताई गई राशि वसूल कर ली गई है और सूची का हर गिरवी सामान ग्राहक को वास्तव में लौटा दिया गया है।"
+
+msgid "An interest concession needs an authorized Workspace administrator. Do not enter a smaller cash amount without an authorized concession."
+msgstr "ब्याज में छूट के लिए अधिकृत कार्यक्षेत्र प्रशासक चाहिए। अधिकृत छूट के बिना वसूल राशि कम न भरें।"
+
+msgid "Resolve the settlement or collateral issue before completing this release."
+msgstr "मुक्ति पूरी करने से पहले निपटान या गिरवी सामान की समस्या सुलझाएँ।"
+
+msgid "Confirm collection and full release"
+msgstr "वसूली और पूर्ण मुक्ति की पुष्टि करें"
+
+msgid "Saving records the collection, marks the collateral returned and closes this loan. The release memo is available from the loan's release history."
+msgstr "सहेजने से वसूली और सामान की वापसी दर्ज होगी तथा ऋण बंद होगा। मुक्ति पर्ची ऋण के मुक्ति इतिहास में मिलेगी।"
+
+msgid "Explain the interest you agree to forgo."
+msgstr "ब्याज छोड़ने का कारण बताएँ।"
+
+msgid "Enter the interest concession amount."
+msgstr "ब्याज में छूट की राशि भरें।"
+
+msgid "Record repayment"
+msgstr "चुकौती दर्ज करें"
+
+msgid "Preview how the amount will be applied, then record it only after receiving payment. This action does not return collateral or close the loan."
+msgstr "पहले देखें कि राशि कैसे समायोजित होगी, फिर भुगतान मिलने के बाद ही दर्ज करें। इससे गिरवी सामान वापस नहीं होता और ऋण बंद नहीं होता।"
+
+msgid "Amount received (INR)"
+msgstr "प्राप्त राशि (रुपये)"
+
+msgid "Use Preview allocation to check the split before recording payment."
+msgstr "भुगतान दर्ज करने से पहले राशि का बँटवारा पूर्वावलोकन में जाँचें।"
+
+msgid "Preview allocation"
+msgstr "बँटवारे का पूर्वावलोकन"
+
+msgid "A repayment reduces recorded dues and keeps collateral with the branch. To settle the loan and return all items, use Full release from the loan page."
+msgstr "चुकौती से दर्ज बकाया घटता है और गिरवी सामान शाखा में रहता है। ऋण निपटाने और सभी सामान लौटाने के लिए ऋण पृष्ठ से पूर्ण मुक्ति चुनें।"
+
+msgid "The recorded balance is unavailable. Do not assume the amount due is zero; resolve the loan's balance issue before collecting payment."
+msgstr "दर्ज बकाया उपलब्ध नहीं है। बकाया शून्य न मानें; भुगतान लेने से पहले हिसाब की समस्या सुलझाएँ।"
+
+msgid "Preview only: no payment recorded"
+msgstr "केवल पूर्वावलोकन: भुगतान दर्ज नहीं हुआ"
+
+msgid "Recorded balance only. Full release calculates its own settlement, including any release-day interest."
+msgstr "यह केवल दर्ज बकाया है। पूर्ण मुक्ति अपना निपटान निकालती है, जिसमें मुक्ति के दिन तक का अतिरिक्त ब्याज शामिल होता है।"
+
+msgid "Fees"
+msgstr "शुल्क"
+
+msgid "Overdue / current interest"
+msgstr "अतिदेय / वर्तमान ब्याज"
+
+msgid "Total due"
+msgstr "कुल बकाया"
+
+msgid "Overdue interest"
+msgstr "अतिदेय ब्याज"
+
+msgid "Current interest"
+msgstr "वर्तमान ब्याज"
+
+msgid "Principal allocation: highest monthly rate first"
+msgstr "मूलधन समायोजन: सबसे अधिक मासिक दर पहले"
+
+msgid "Rate"
+msgstr "दर"
+
+msgid "Before"
+msgstr "पहले"
+
+msgid "Applied"
+msgstr "समायोजित"
+
+msgid "After"
+msgstr "बाद में"
+
+msgid "Confirming records immutable allocation evidence. Previewing again does not create an event."
+msgstr "पुष्टि से बँटवारे का अपरिवर्तनीय प्रमाण दर्ज होगा। दोबारा पूर्वावलोकन से कोई लेनदेन दर्ज नहीं होता।"
+
+msgid "Release documents"
+msgstr "मुक्ति के दस्तावेज़"
+
+msgid "Open release history and memo"
+msgstr "मुक्ति इतिहास और पर्ची खोलें"

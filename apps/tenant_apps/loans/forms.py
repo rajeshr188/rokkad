@@ -328,7 +328,7 @@ class PawnDisbursalForm(forms.Form):
 
 
 class PawnRepaymentForm(forms.Form):
-    amount = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0.01)
+    amount = forms.DecimalField(label=_("Amount received (INR)"), help_text=_("Use Preview allocation to check the split before recording payment."), max_digits=18, decimal_places=2, min_value=0.01)
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
 
     def __init__(self, *args, **kwargs):
@@ -354,23 +354,25 @@ class PawnCapitalizationForm(forms.Form):
 
 class PawnFullReleaseForm(forms.Form):
     settlement_amount = forms.DecimalField(
+        label=_("Cash collected (INR)"),
+        help_text=_("Enter the actual amount received. Cash plus any authorized interest concession must equal the exact settlement."),
         max_digits=18,
         decimal_places=2,
         min_value=0,
     )
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
     interest_concession = forms.DecimalField(
-        label="Interest lost / concession", required=False, max_digits=18,
+        label=_("Interest lost / concession"), required=False, max_digits=18,
         decimal_places=2, min_value=0, initial=0,
-        help_text="Interest you explicitly agree to forgo. Requires Workspace administration permission.",
+        help_text=_("Interest you explicitly agree to forgo. Requires Workspace administration permission."),
         widget=forms.NumberInput(attrs={"class": "form-control"}),
     )
     concession_reason = forms.CharField(
-        label="Reason for interest concession", required=False, max_length=255,
+        label=_("Reason for interest concession"), required=False, max_length=255,
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     confirm_collateral_handoff = forms.BooleanField(
-        label=(
+        label=_(
             "I confirm the stated cash amount was collected and every listed "
             "collateral item was physically returned to the customer."
         )
@@ -386,9 +388,9 @@ class PawnFullReleaseForm(forms.Form):
         concession = data.get("interest_concession") or Decimal("0")
         reason = data.get("concession_reason", "").strip()
         if concession and not reason:
-            self.add_error("concession_reason", "Explain the interest you agree to forgo.")
+            self.add_error("concession_reason", _("Explain the interest you agree to forgo."))
         elif reason and not concession:
-            self.add_error("interest_concession", "Enter the interest concession amount.")
+            self.add_error("interest_concession", _("Enter the interest concession amount."))
         return data
 
 

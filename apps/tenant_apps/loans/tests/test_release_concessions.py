@@ -140,6 +140,60 @@ class ReleaseConcessionTests(WorkspaceTestCase):
         self.assertFalse(PawnLoanRelease.objects.exists())
         self.assertEqual(get_pawn_loan_balance(self.loan.pk, as_of_date=self.today).interest_conceded, 0)
 
+    def test_release_review_errors_and_hindi_do_not_record_collection(self):
+        self.start_active_trial()
+        client = self.make_workspace_client()
+        client.force_login(self.actor)
+        url = reverse("workspace_loans:pawn_loan_release_full", args=[self.tenant.slug, self.loan.pk])
+        before = self.loan.loan_events.count()
+        response = client.get(url)
+        self.assertContains(response, "Already included in interest and fees above. Do not add it again.")
+        self.assertContains(response, "2. Match the collateral")
+        self.assertIn("no-store", response.headers["Cache-Control"])
+        self.assertContains(response, 'hx-history="false"')
+        response = client.post(url, {})
+        self.assertTrue(response.context["form"].is_bound)
+        self.assertContains(response, 'href="#id_settlement_amount"')
+        self.assertContains(response, 'href="#id_confirm_collateral_handoff"')
+        self.assertNotContains(response, 'href="#id_request_key"')
+        response = client.post(url, {"request_key": "retained-release-key",
+            "settlement_amount": "995.00", "interest_concession": "5", "concession_reason": ""})
+        self.assertContains(response, 'value="retained-release-key"')
+        self.assertContains(response, 'href="#id_concession_reason"')
+        client.cookies["django_language"] = "hi"
+        response = client.get(url)
+        self.assertContains(response, "वसूली और पूर्ण मुक्ति की पुष्टि करें")
+        self.assertEqual(self.loan.loan_events.count(), before)
+        self.assertFalse(PawnLoanRelease.objects.exists())
+        self.assertFalse(self.loan.collateral_items.filter(custody_state="WITH_CUSTOMER").exists())
+        with patch("apps.tenant_apps.loans.web.pawn_release_actions.preview_pawn_loan_full_release", side_effect=ValueError("Settlement unavailable")):
+            response = client.get(url)
+        self.assertContains(response, "Settlement unavailable")
+        self.assertFalse(response.context["release_available"])
+
+    def test_release_staff_cannot_submit_a_hidden_concession(self):
+        self.start_active_trial()
+        staff = get_user_model().objects.create_user(username="release-form-staff")
+        role = Role.objects.create(name="Release form role")
+        Membership.objects.create(company=self.tenant, user=staff, role=role)
+        workspace_role_permissions(role, self.tenant).set(Permission.objects.filter(
+            content_type__app_label="orgs", content_type__model="company",
+            codename__in=["data_view", "loan_release"]))
+        client = self.make_workspace_client()
+        client.force_login(staff)
+        url = reverse("workspace_loans:pawn_loan_release_full", args=[self.tenant.slug, self.loan.pk])
+        response = client.get(url)
+        self.assertFalse(response.context["can_concede_interest"])
+        self.assertNotContains(response, 'name="interest_concession"')
+        before = self.loan.loan_events.count()
+        response = client.post(url, {"request_key": "forged-ui-concession",
+            "settlement_amount": format(self.quote.minimum_settlement - 5, ".2f"),
+            "interest_concession": "5", "concession_reason": "Not authorized",
+            "confirm_collateral_handoff": "on"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.loan.loan_events.count(), before)
+        self.assertFalse(PawnLoanRelease.objects.exists())
+
     def test_http_form_and_release_detail_show_concession(self):
         self.start_active_trial()
         client = self.make_workspace_client()

@@ -200,3 +200,41 @@ schema mismatch was not migrated as part of UI work. The rehearsal web server wa
 restarted using its existing configuration. No production or accepted rehearsal
 business record was changed. Full live origination/payment, assistive-technology,
 physical device/printer and operator acceptance remain open.
+
+## Collections and full release
+
+`full_release.html` replaces the generic action-page presentation for single-loan
+full release. Inline native settlement/collateral partials provide three numbered
+sections with an exact dated quote, responsive selected-item list, cash field,
+optional concession disclosure and existing physical-handoff checkbox. The template
+does no arithmetic. The quote's interest/fees already includes catch-up interest;
+the separate component is labelled as included. Quote failures/blockers disable the
+button, while the unchanged command revalidates every POST and preserves retries.
+
+Concession input visibility uses the existing `workspace.settings.manage` action
+after the existing release access gate; backend concession authority is unchanged.
+Submitted invalid fields retain their values/request key and linked errors. Empty
+release/repayment POSTs are now bound, and both responses have no-store headers.
+The repayment action page explains the difference between recorded-balance repayment
+and full settlement and clearly labels its existing non-mutating allocation preview.
+The detail page offers an anchor to release history/memos. No service calculation,
+posting, model, migration or import evidence changed. Added copy/labels use compiled
+Hindi translations; complete legacy-screen translation remains outside this slice.
+
+99 focused tests pass (21.795s), covering loan UI, release concessions and authority,
+opening release, repayment allocation, readiness and shell rendering. New checks
+exercise empty POSTs, retained request keys, missing concession reason, hidden-field
+errors, Hindi labels, unavailable quotes and forged staff concessions without events
+or custody changes. The initial run's one failure was an assertion for the replaced
+preview heading; its command/no-write assertions remain. Existing replay, atomicity,
+settlement and restricted-role evidence tests pass. The 699-file boundary check,
+diff checks and gettext compilation pass (four existing catalogue metadata warnings).
+Private run evidence is under `outputs/ux-collections-20260922/`.
+
+After restarting the local rehearsal web server with its existing configuration,
+read-only Chrome review confirmed the imported-loan quote, selected collateral,
+cash/handoff controls and optional concession disclosure. The 390px phone viewport
+had no horizontal overflow and was reset afterward. No financial form was submitted,
+no release was performed and no accepted migration/custody records changed. Complete
+keyboard/screen-reader, real operator collection/handover and physical device/print
+acceptance remain pending. Next simplify loan search and the servicing overview.

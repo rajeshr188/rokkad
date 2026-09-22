@@ -31,8 +31,10 @@ provides the progressive full-page/fragment, responsive and bilingual baseline.
 Customer creation/editing and the onboarding quick guide now use the same field,
 error-recovery and bilingual patterns. Camera/photo preview now works through the
 existing customer create/edit forms. Branch-readiness guidance, identity form
-accessibility and the customer-to-loan draft handoff are implemented. Next complete
-collections/full release. Terms review, payment-form accessibility and grouped
+accessibility and the customer-to-loan draft handoff are implemented. Single-loan
+collections/full-release guidance now follows the same field/error patterns, with
+explicit settlement, custody and concession boundaries. Next simplify the loan
+directory and servicing overview for daily counter work. Terms review, payment-form accessibility and grouped
 printing guidance now extend the first-loan journey; its complete live payment
 walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator
 acceptance remain open; these slices do not complete the whole-product redesign.
