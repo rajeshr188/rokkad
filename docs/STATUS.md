@@ -7,6 +7,28 @@ tags: [status, architecture]
 
 # Status
 
+## Customer photos, identity and first-loan guidance (2026-09-22)
+
+Customer create/edit now offer webcam or front/rear mobile camera capture, local
+file preview, retake and discard before saving. Captures use the existing multipart
+ImageField and private media boundary. Camera tracks stop after capture, cancellation,
+submission or leaving the page; ordinary upload remains available without camera access.
+
+The customer record connects address and identity review to a customer-prefilled
+loan draft. Identity forms have distinct control IDs and linked errors. Branch
+setup and blocked loan entry explain the next prerequisite with permission-aware
+actions. Draft entry uses shared accessible fields/errors and private no-store
+responses. Added Hindi copy covers the new guidance and labels; remaining legacy
+screen copy and the full approval/disbursal/release redesign are still pending.
+
+128 focused Django tests and 10 JavaScript tests pass, along with the 699-file
+import-boundary check. Browser review confirms local photo selection/discard,
+edit controls/private preview URL, identity navigation and the missing-license
+handoff to branch setup. Phone-width setup layout was inspected. Physical webcam,
+mobile-camera and assistive-technology acceptance remain pending. No production
+or accepted rehearsal business records changed. See
+[implementation evidence](implementation/accessible-directory-redesign.md#customer-photos-identity-and-first-loan-guidance).
+
 ## Customer entry and onboarding introduction (2026-09-22)
 
 The next redesign slice simplifies Party creation/editing: identity/contact first,

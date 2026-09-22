@@ -544,7 +544,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         response = self.client.get(reverse("loans:pawn_loan_create"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "PawnLoan setup required")
+        self.assertContains(response, "Before your first loan")
         self.assertContains(response, "Add license")
         self.assertContains(response, "setup/licenses/create/")
 
@@ -688,7 +688,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(detail, "Capture collateral photograph")
         self.assertContains(detail, 'capture="environment"')
         self.assertContains(detail, f'{photo_url}?inline=1')
-        self.assertContains(detail, "Gold chain photograph captured")
+        self.assertContains(detail, 'alt="Gold chain photograph"')
         self.assertNotContains(detail, "Loan ticket PDF")
         ticket = self.client.get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
         self.assertEqual(ticket.status_code, 409)

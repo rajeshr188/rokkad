@@ -1,4 +1,5 @@
 {% extends 'base_workspace_settings.html' %}
+{% load i18n %}
 
 {% block title %}{{ company.name }} - Setup - Rokkad{% endblock %}
 
@@ -15,8 +16,8 @@
 {% block page_header %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
-        <h1 class="h3 fw-bold mb-1">Set up your business</h1>
-        <p class="text-muted mb-0">Continue where you left off. Saved settings stay in this business; return here any time from Settings.</p>
+        <h1 class="h3 fw-bold mb-1">{% translate "Set up your business" %}</h1>
+        <p class="text-muted mb-0">{% translate "Continue where you left off. Saved settings stay in this business; return here any time from Settings." %}</p>
     </div>
 <a href="{% url 'workspace_slug_dashboard' workspace_slug=company.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-speedometer2 me-1"></i>Dashboard
@@ -25,15 +26,16 @@
 {% endblock %}
 
 {% block mgmt_content %}
+<p class="alert alert-info">{% translate "For a new branch, complete the steps below in order. For an imported branch, review the missing setup; do not import or create your customers again." %}</p>
 <section class="card mb-4" aria-labelledby="first-loan-setup-title">
     <div class="card-body">
         <h2 id="first-loan-setup-title" class="h5">Business and lending setup: {{ business_setup.completed_count }}/{{ business_setup.total_count }} available</h2>
         <p class="text-muted">Checks are for {{ business_setup.as_of_date }}. Review license evidence, buying rates and product terms before lending. Each loan validates its own date and terms.</p>
-        {% if business_setup.next_step %}<a class="btn btn-primary mb-3" href="{{ business_setup.next_step.action_url }}">Continue setup: {{ business_setup.next_step.title }}</a>
-        {% elif can_create_loan %}<a class="btn btn-primary mb-3" href="{% url 'workspace_slug_loan_create' workspace_slug=company.slug %}">Create a loan</a>{% endif %}
+        {% if business_setup.next_step %}<a class="btn btn-primary mb-3" href="{{ business_setup.next_step.action_url }}">{% translate "Continue setup" %}: {% translate business_setup.next_step.title %}</a>
+        {% elif can_create_loan %}<a class="btn btn-primary mb-3" href="{% url 'workspace_slug_loan_create' workspace_slug=company.slug %}">{% translate "Create a loan" %}</a>{% endif %}
         <ol class="list-group list-group-numbered">
         {% for step in business_setup.steps %}
-            <li class="list-group-item d-flex gap-3"><div class="flex-grow-1"><h3 class="h6">{{ step.title }} <span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}Available{% else %}Needs setup{% endif %}</span></h3><p class="small text-muted mb-2">{{ step.description }}</p><a href="{{ step.action_url }}">{{ step.action_label }}</a></div></li>
+            <li class="list-group-item d-flex gap-3"{% if business_setup.next_step.key == step.key %} aria-current="step"{% endif %}><div class="flex-grow-1"><h3 class="h6">{% translate step.title %} <span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}Available{% else %}Needs setup{% endif %}</span></h3><p class="small text-muted mb-2">{% translate step.description %}</p><a href="{{ step.action_url }}">{% translate step.action_label %}</a></div></li>
         {% endfor %}
         </ol>
         <p class="small mt-3 mb-0">Economic setup starts with editable monthly interest of 2% for gold and 4% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies.</p>

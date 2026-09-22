@@ -229,6 +229,10 @@ class PartyIdentifierForm(forms.ModelForm):
     class Meta:
         model = PartyIdentifier
         fields = ["identifier_type", "value", "masked_value", "expires_on"]
+        labels = {"identifier_type": _("Identifier type"), "value": _("Identifier number"),
+                  "masked_value": _("Masked display"), "expires_on": _("Expiry date")}
+        help_texts = {"masked_value": _("Optional display value with sensitive digits hidden."),
+                      "expires_on": _("Enter an expiry date only if the document has one.")}
         widgets = {
             "identifier_type": forms.Select(attrs={"class": SELECT_CLASS}),
             "value": forms.TextInput(attrs={"class": CONTROL_CLASS}),
@@ -259,7 +263,7 @@ class PartyIdentifierForm(forms.ModelForm):
             if exists.exists():
                 self.add_error(
                     "identifier_type",
-                    "This party already has an identifier of this type.",
+                    _("This party already has an identifier of this type."),
                 )
         return cleaned
 
@@ -268,6 +272,9 @@ class PartyDocumentForm(forms.ModelForm):
     class Meta:
         model = PartyDocument
         fields = ["document_type", "title", "identifier", "file", "expires_on"]
+        labels = {"document_type": _("Document type"), "title": _("Document title"),
+                  "identifier": _("Related identifier"), "file": _("Document file"),
+                  "expires_on": _("Expiry date")}
         widgets = {
             "document_type": forms.Select(attrs={"class": SELECT_CLASS}),
             "title": forms.TextInput(attrs={"class": CONTROL_CLASS}),

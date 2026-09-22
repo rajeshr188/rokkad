@@ -1,0 +1,26 @@
+{% load i18n %}
+<section class="card mb-3" aria-labelledby="customer-journey-title">
+ <div class="card-body">
+  <h2 class="h5" id="customer-journey-title">{% translate "Prepare this customer's loan" %}</h2>
+  <p class="text-body-secondary small">{% translate "Review the customer, record identity evidence, then prepare a loan. Recorded details are not a verification or loan approval." %}</p>
+  <div class="row g-3">
+   <div class="col-md-4"><h3 class="h6">{% translate "1. Contact and address" %}</h3>
+    <p class="small">{% translate "Addresses recorded" %}: {{ party.addresses.all|length }}</p>
+    <a href="?tab=addresses#addresses">{% translate "Review addresses" %}</a>
+   </div>
+   <div class="col-md-4"><h3 class="h6">{% translate "2. Identity details" %}</h3>
+    <p class="small">{% translate "Identifiers" %}: {{ party.identifiers.all|length }} &middot; {% translate "Documents" %}: {{ party.documents.all|length }}</p>
+    <a href="?tab=kyc#kyc">{% translate "Review identity and documents" %}</a>
+   </div>
+   <div class="col-md-4"><h3 class="h6">{% translate "3. Loan draft" %}</h3>
+    {% if can_start_customer_loan and party.status == 'ACTIVE' %}
+     <a class="btn btn-primary" href="{% url 'workspace_slug_loan_create' workspace_slug=request.workspace.slug %}?party={{ party.pk }}">{% translate "Start loan for this customer" %}</a>
+    {% elif party.status != 'ACTIVE' %}<p class="small">{% translate "This customer is not active. Review their status before starting a loan." %}</p>
+    {% else %}<p class="small">{% translate "Ask a staff member with loan creation access to continue." %}</p>{% endif %}
+   </div>
+  </div>
+  <p class="small text-body-secondary mt-3 mb-0">{% translate "The loan screen checks branch setup. Imported history alone does not enable new lending." %}
+   {% if can_manage_customer_setup %}<a href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}">{% translate "Review branch setup" %}</a>{% endif %}
+  </p>
+ </div>
+</section>

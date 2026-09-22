@@ -1,9 +1,15 @@
 {% extends "base_tenant.html" %}
-{% block title %}PawnLoan setup required{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Before your first loan" %}{% endblock %}
 {% block workspace_content %}
-<div class="card"><div class="card-body py-5 text-center">
-  <h1 class="h3">PawnLoan setup required</h1><p class="text-muted">{{ readiness.message }}</p>
-  {% if not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{{ readiness.action_label }}</a>{% else %}<p class="alert alert-info">Ask your Workspace owner or administrator to complete Settings &rarr; Loan setup. You can continue servicing existing loans.</p>{% endif %}
-  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">Back to drafts</a>
-</div></div>
+<section class="card mx-auto" style="max-width:48rem"><div class="card-body p-3 p-md-4">
+<p class="small text-body-secondary">{{ request.workspace.name }}</p>
+<h1 class="h3">{% translate "Before your first loan" %}</h1>
+<p>{% translate "One setup step needs attention before a new loan draft can be opened." %}</p>
+<div class="alert alert-warning"><h2 class="h6">{% translate "Next required step" %}</h2><p class="mb-0">{% translate readiness.message %}</p></div>
+{% if not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{% translate readiness.action_label %}</a>{% else %}<p class="alert alert-info">{% translate "Ask your Workspace owner or administrator to complete Settings ? Loan setup. Existing loans remain available according to your permissions." %}</p>{% endif %}
+{% if can_manage_loan_setup %}<a class="btn btn-outline-secondary" href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}">{% translate "Review branch setup" %}</a>{% endif %}
+<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">{% translate "Back to loans" %}</a>
+<p class="small text-body-secondary mt-3 mb-0">{% translate "Imported loans and customer history are preserved. New lending needs current branch configuration; opening this page changes no settings." %}</p>
+</div></section>
 {% endblock %}

@@ -245,6 +245,42 @@ class PartyUITests(WorkspaceTestCase):
         self.assertEqual(party.created_by, self.user)
         self.assertEqual(party.updated_by, self.user)
 
+    def test_customer_photo_create_edit_preview_and_invalid_replacement(self):
+        import io
+        from PIL import Image
+        def photo(color):
+            data = io.BytesIO()
+            Image.new("RGB", (8, 8), color).save(data, format="JPEG")
+            return SimpleUploadedFile("customer-photo.jpg", data.getvalue(), content_type="image/jpeg")
+        values = {"display_name": "Camera example", "party_type": "INDIVIDUAL", "status": "ACTIVE"}
+        response = self.client.post(reverse("party:party_create"), {**values, "profile_photo": photo("blue")})
+        self.assertEqual(response.status_code, 302)
+        party = Party.objects.get(display_name="Camera example")
+        first = party.profile_photo.name
+        edit = reverse("party:party_update", args=[party.pk])
+        page = self.client.get(edit)
+        self.assertContains(page, 'data-customer-photo')
+        self.assertContains(page, reverse("workspace_party:party_photo", args=[self.tenant.slug, party.pk]))
+        self.assertNotContains(page, party.profile_photo.url)
+        response = self.client.post(edit, {**values, "profile_photo": photo("red")})
+        self.assertEqual(response.status_code, 302)
+        party.refresh_from_db()
+        self.assertNotEqual(first, party.profile_photo.name)
+        replacement = party.profile_photo.name
+        response = self.client.post(edit, {**values, "profile_photo": SimpleUploadedFile("bad.jpg", b"not an image", content_type="image/jpeg")})
+        self.assertContains(response, 'href="#id_profile_photo"')
+        party.refresh_from_db()
+        self.assertEqual(party.profile_photo.name, replacement)
+
+    def test_customer_identity_error_targets_and_loan_handoff(self):
+        party = Party.objects.create(display_name="Identity example")
+        response = self.client.post(reverse("party:party_identifier_add", args=[party.pk]), {"identifier_type": "PAN", "value": ""})
+        self.assertContains(response, 'href="#identity_value"')
+        self.assertContains(response, 'id="identity_expires_on"')
+        self.assertContains(response, 'id="document_expires_on"')
+        self.assertContains(response, '?party=' + str(party.pk))
+        self.assertFalse(party.identifiers.exists())
+
     def test_customer_entry_errors_retain_input_and_link_to_controls(self):
         response = self.client.post(reverse("party:party_create"), {
             "party_type": "INDIVIDUAL", "display_name": "Asha <Example>",

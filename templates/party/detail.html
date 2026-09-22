@@ -1,9 +1,10 @@
 {% extends 'base_tenant.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}{{ party.display_name }}{% endblock %}
 
 {% block workspace_content %}
+<div hx-history="false">
 <div class="app-heading">
     <div class="d-flex align-items-center gap-3">
         {% if party.profile_photo %}
@@ -34,21 +35,22 @@
     </div>
 </div>
 
+{% include "party/_customer_journey.html" %}
 <ul class="nav nav-tabs app-tabs" id="party-tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'overview' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#overview" type="button">Overview</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'loans' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#loans" type="button">Loans</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'kyc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#kyc" type="button">Documents / KYC</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'roles' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#roles" type="button">Roles</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'relationships' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#relationships" type="button">Relationships</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'contacts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#contacts" type="button">Contacts</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'addresses' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#addresses" type="button">Addresses</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'transactions' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#transactions" type="button">Transactions</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'activity' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#activity" type="button">Notes / Activity</button></li>
-    <li class="nav-item"><button class="nav-link {% if active_tab == 'merge' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#merge" type="button">Merge</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'overview' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" id="tab-overview" aria-controls="overview" aria-selected="{% if active_tab == 'overview' %}true{% else %}false{% endif %}">{% translate "Overview" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'loans' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#loans" type="button" role="tab" id="tab-loans" aria-controls="loans" aria-selected="{% if active_tab == 'loans' %}true{% else %}false{% endif %}">Loans</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'kyc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#kyc" type="button" role="tab" id="tab-kyc" aria-controls="kyc" aria-selected="{% if active_tab == 'kyc' %}true{% else %}false{% endif %}">{% translate "Documents / KYC" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'roles' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab" id="tab-roles" aria-controls="roles" aria-selected="{% if active_tab == 'roles' %}true{% else %}false{% endif %}">{% translate "Roles" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'relationships' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#relationships" type="button" role="tab" id="tab-relationships" aria-controls="relationships" aria-selected="{% if active_tab == 'relationships' %}true{% else %}false{% endif %}">{% translate "Relationships" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'contacts' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#contacts" type="button" role="tab" id="tab-contacts" aria-controls="contacts" aria-selected="{% if active_tab == 'contacts' %}true{% else %}false{% endif %}">{% translate "Contacts" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'addresses' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#addresses" type="button" role="tab" id="tab-addresses" aria-controls="addresses" aria-selected="{% if active_tab == 'addresses' %}true{% else %}false{% endif %}">{% translate "Addresses" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'transactions' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab" id="tab-transactions" aria-controls="transactions" aria-selected="{% if active_tab == 'transactions' %}true{% else %}false{% endif %}">{% translate "Transactions" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'activity' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab" id="tab-activity" aria-controls="activity" aria-selected="{% if active_tab == 'activity' %}true{% else %}false{% endif %}">{% translate "Notes / Activity" %}</button></li>
+    <li class="nav-item"><button class="nav-link {% if active_tab == 'merge' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#merge" type="button" role="tab" id="tab-merge" aria-controls="merge" aria-selected="{% if active_tab == 'merge' %}true{% else %}false{% endif %}">Merge</button></li>
 </ul>
 
 <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
-    <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="overview">
+    <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
         <details class="border rounded p-3 mb-3" id="party-photo-editor" {% if photo_form.errors %}open{% endif %}><summary class="fw-semibold mb-3">Update profile photo &mdash; camera or upload</summary>
             <form id="party-photo-form" method="post" enctype="multipart/form-data" action="{% url 'workspace_party:party_photo_update' request.workspace.slug party.pk %}" class="row g-3 align-items-end">
                 {% csrf_token %}
@@ -105,7 +107,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'roles' %}show active{% endif %}" id="roles">
+    <div class="tab-pane fade {% if active_tab == 'roles' %}show active{% endif %}" id="roles" role="tabpanel" aria-labelledby="tab-roles" tabindex="0">
         <div class="row g-3">
             <div class="col-lg-7">
                 <div class="table-responsive">
@@ -152,7 +154,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'relationships' %}show active{% endif %}" id="relationships">
+    <div class="tab-pane fade {% if active_tab == 'relationships' %}show active{% endif %}" id="relationships" role="tabpanel" aria-labelledby="tab-relationships" tabindex="0">
         <form method="post" action="{% if edit_relationship %}{% url 'workspace_party:party_relationship_update' request.workspace.slug party.pk edit_relationship.pk %}{% else %}{% url 'workspace_party:party_relationship_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
             {% csrf_token %}
             {{ relationship_form.non_field_errors }}
@@ -215,7 +217,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'contacts' %}show active{% endif %}" id="contacts">
+    <div class="tab-pane fade {% if active_tab == 'contacts' %}show active{% endif %}" id="contacts" role="tabpanel" aria-labelledby="tab-contacts" tabindex="0">
         <form method="post" action="{% if edit_contact %}{% url 'workspace_party:party_contact_update' request.workspace.slug party.pk edit_contact.pk %}{% else %}{% url 'workspace_party:party_contact_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
             {% csrf_token %}
             {{ contact_form.non_field_errors }}
@@ -254,7 +256,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'addresses' %}show active{% endif %}" id="addresses">
+    <div class="tab-pane fade {% if active_tab == 'addresses' %}show active{% endif %}" id="addresses" role="tabpanel" aria-labelledby="tab-addresses" tabindex="0">
         <form method="post" action="{% if edit_address %}{% url 'workspace_party:party_address_update' request.workspace.slug party.pk edit_address.pk %}{% else %}{% url 'workspace_party:party_address_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
             {% csrf_token %}
             {{ address_form.non_field_errors }}
@@ -296,13 +298,13 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'transactions' %}show active{% endif %}" id="transactions">
+    <div class="tab-pane fade {% if active_tab == 'transactions' %}show active{% endif %}" id="transactions" role="tabpanel" aria-labelledby="tab-transactions" tabindex="0">
         <div class="row g-3">
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans|add:loan_history.counts.closed_loans }}</div></div></div>
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'loans' %}show active{% endif %}" id="loans">
+    <div class="tab-pane fade {% if active_tab == 'loans' %}show active{% endif %}" id="loans" role="tabpanel" aria-labelledby="tab-loans" tabindex="0">
         <div class="row g-3 mb-3">
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Closed Loans</div><div class="h4 mb-0">{{ loan_history.counts.closed_loans }}</div></div></div>
@@ -398,21 +400,20 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'kyc' %}show active{% endif %}" id="kyc">
+    <div class="tab-pane fade {% if active_tab == 'kyc' %}show active{% endif %}" id="kyc" role="tabpanel" aria-labelledby="tab-kyc" tabindex="0">
+        <p class="alert alert-info">{% translate "Record the identifier and attach its supporting document. A saved file is not proof that identity has been verified." %}</p>
         <div class="row g-3">
             <div class="col-lg-6">
                 <h2 class="h6">Identifiers</h2>
-                <form method="post" action="{% if edit_identifier %}{% url 'workspace_party:party_identifier_update' request.workspace.slug party.pk edit_identifier.pk %}{% else %}{% url 'workspace_party:party_identifier_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
-                    {% csrf_token %}
-                    {{ identifier_form.non_field_errors }}
-                    <div class="row g-2">
-                        <div class="col-md-6">{{ identifier_form.identifier_type.label_tag }}{{ identifier_form.identifier_type }}{{ identifier_form.identifier_type.errors }}</div>
-                        <div class="col-md-6">{{ identifier_form.value.label_tag }}{{ identifier_form.value }}{{ identifier_form.value.errors }}</div>
-                        <div class="col-md-6">{{ identifier_form.masked_value.label_tag }}{{ identifier_form.masked_value }}</div>
-                        <div class="col-md-6">{{ identifier_form.expires_on.label_tag }}{{ identifier_form.expires_on }}</div>
-                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_identifier %}Save{% else %}Add{% endif %}</button>{% if edit_identifier %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc">Cancel</a>{% endif %}</div>
-                    </div>
-                </form>
+{% if can_edit_customer %}
+                <form method="post" action="{% if edit_identifier %}{% url 'workspace_party:party_identifier_update' request.workspace.slug party.pk edit_identifier.pk %}{% else %}{% url 'workspace_party:party_identifier_add' request.workspace.slug party.pk %}{% endif %}" novalidate class="border rounded p-3 mb-3">
+{% csrf_token %}
+{% include "components/forms/accessible.html#errors" with form=identifier_form %}
+<div class="row">{% for field in identifier_form %}<div class="col-12">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div>
+<button class="btn btn-primary" type="submit">{% translate "Save identifier" %}</button>
+{% if edit_identifier %}<a class="btn btn-outline-secondary" href="?tab=kyc">{% translate "Cancel" %}</a>{% endif %}
+</form>
+{% endif %}
                 <table class="table table-sm">
                     <tbody>
                         {% for identifier in party.identifiers.all %}
@@ -420,9 +421,9 @@
                             <td>{{ identifier.get_identifier_type_display }}</td>
                             <td>{{ identifier.masked_value|default:identifier.value }}</td>
                             <td>{{ identifier.is_verified|yesno:"Verified,Pending" }}</td>
-                            <td class="text-end">
-                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_identifier={{ identifier.pk }}"><i class="bi bi-pencil"></i></a>
-                                <form method="post" action="{% url 'workspace_party:party_identifier_delete' request.workspace.slug party.pk identifier.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                            <td class="text-end">{% if can_edit_customer %}
+                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_identifier={{ identifier.pk }}">{% translate "Edit" %}</a>
+                                <form method="post" action="{% url 'workspace_party:party_identifier_delete' request.workspace.slug party.pk identifier.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">{% translate "Delete" %}</button></form>{% endif %}
                             </td>
                         </tr>
                         {% empty %}<tr><td class="text-muted">No identifiers found.</td></tr>{% endfor %}
@@ -431,18 +432,16 @@
             </div>
             <div class="col-lg-6">
                 <h2 class="h6">Documents</h2>
-                <form method="post" enctype="multipart/form-data" action="{% if edit_document %}{% url 'workspace_party:party_document_update' request.workspace.slug party.pk edit_document.pk %}{% else %}{% url 'workspace_party:party_document_add' request.workspace.slug party.pk %}{% endif %}" class="border rounded p-3 mb-3">
-                    {% csrf_token %}
-                    {{ document_form.non_field_errors }}
-                    <div class="row g-2">
-                        <div class="col-md-6">{{ document_form.document_type.label_tag }}{{ document_form.document_type }}</div>
-                        <div class="col-md-6">{{ document_form.title.label_tag }}{{ document_form.title }}{{ document_form.title.errors }}</div>
-                        <div class="col-md-6">{{ document_form.identifier.label_tag }}{{ document_form.identifier }}</div>
-                        <div class="col-md-6">{{ document_form.expires_on.label_tag }}{{ document_form.expires_on }}</div>
-                        <div class="col-12">{{ document_form.file.label_tag }}{{ document_form.file }}{{ document_form.file.errors }}</div>
-                        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">{% if edit_document %}Save{% else %}Add{% endif %}</button>{% if edit_document %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc">Cancel</a>{% endif %}</div>
-                    </div>
-                </form>
+{% if can_edit_customer %}
+                <form method="post" enctype="multipart/form-data" action="{% if edit_document %}{% url 'workspace_party:party_document_update' request.workspace.slug party.pk edit_document.pk %}{% else %}{% url 'workspace_party:party_document_add' request.workspace.slug party.pk %}{% endif %}" novalidate class="border rounded p-3 mb-3">
+{% csrf_token %}
+{% include "components/forms/accessible.html#errors" with form=document_form %}
+<div class="row">{% for field in document_form %}<div class="col-12">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div>
+<button class="btn btn-primary" type="submit">{% translate "Save document" %}</button>
+{% if edit_document %}<a class="btn btn-outline-secondary" href="?tab=kyc">{% translate "Cancel" %}</a>{% endif %}
+{% if document_form.errors %}<p class="form-text">{% translate "Choose the document file again after correcting errors." %}</p>{% endif %}
+</form>
+{% endif %}
                 <table class="table table-sm">
                     <tbody>
                         {% for document in party.documents.all %}
@@ -450,9 +449,9 @@
                             <td>{{ document.get_document_type_display }}</td>
                             <td>{% if document.file %}<a href="{% url 'workspace_party:party_document_download' workspace_slug=request.workspace.slug pk=party.pk document_pk=document.pk %}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}{% if document.is_blank_legacy_image %}<span class="d-block small text-warning-emphasis">Blank source image: no usable photograph</span>{% endif %}</td>
                             <td>{{ document.is_verified|yesno:"Verified,Pending" }}</td>
-                            <td class="text-end">
-                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>
-                                <form method="post" action="{% url 'workspace_party:party_document_delete' request.workspace.slug party.pk document.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button></form>
+                            <td class="text-end">{% if can_edit_customer %}
+                                <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}">{% translate "Edit" %}</a>
+                                <form method="post" action="{% url 'workspace_party:party_document_delete' request.workspace.slug party.pk document.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">{% translate "Delete" %}</button></form>{% endif %}
                             </td>
                         </tr>
                         {% empty %}<tr><td class="text-muted">No documents found.</td></tr>{% endfor %}
@@ -462,7 +461,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'activity' %}show active{% endif %}" id="activity">
+    <div class="tab-pane fade {% if active_tab == 'activity' %}show active{% endif %}" id="activity" role="tabpanel" aria-labelledby="tab-activity" tabindex="0">
         <div class="row g-3">
             <div class="col-md-6"><div class="text-muted small">Created By</div><div class="fw-semibold">{{ party.created_by|default:"-" }}</div></div>
             <div class="col-md-6"><div class="text-muted small">Updated By</div><div class="fw-semibold">{{ party.updated_by|default:"-" }}</div></div>
@@ -473,7 +472,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade {% if active_tab == 'merge' %}show active{% endif %}" id="merge">
+    <div class="tab-pane fade {% if active_tab == 'merge' %}show active{% endif %}" id="merge" role="tabpanel" aria-labelledby="tab-merge" tabindex="0">
         <div class="row g-3">
             <div class="col-lg-7">
                 <form method="post" action="{% url 'workspace_party:party_merge' request.workspace.slug party.pk %}" class="border rounded p-3">
@@ -623,6 +622,9 @@
     window.addEventListener("beforeunload", stopCamera);
 })();
 </script>
+</div>
 {% endblock %}
 
-{% block extra_js %}{{ block.super }}<script src="{% static 'js/entry-summary.js' %}"></script>{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/entry-summary.js' %}"></script>
+<script src="{% static 'js/form-errors.js' %}"></script>
+{% endblock %}

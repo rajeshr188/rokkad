@@ -1144,3 +1144,467 @@ msgstr "सही फ़ोन नंबर लिखें (जैसे {examp
 #: customer-entry-and-introduction
 msgid "File saved. View it from the borrower details."
 msgstr "फ़ाइल सहेजी गई है। इसे ग्राहक की जानकारी में देखें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "New photo selected. Save the customer to upload it."
+msgstr "नई फ़ोटो चुनी गई है। अपलोड करने के लिए ग्राहक को सहेजें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Camera unavailable. Allow camera access on HTTPS, or choose a photo below."
+msgstr "कैमरा उपलब्ध नहीं है। HTTPS पर कैमरे की अनुमति दें, या नीचे फ़ोटो चुनें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Allow camera access, then position the customer in the frame."
+msgstr "कैमरे की अनुमति दें, फिर ग्राहक को फ़्रेम में लाएँ।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Camera is ready. Take a photo when the customer is in view."
+msgstr "कैमरा तैयार है। ग्राहक दिखाई देने पर फ़ोटो लें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Camera stopped. Your saved photo is unchanged until you save."
+msgstr "कैमरा बंद है। सहेजने तक पुरानी फ़ोटो नहीं बदलेगी।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Choose an image file. The server will check it when you save."
+msgstr "चित्र की फ़ाइल चुनें। सहेजते समय सर्वर इसकी जाँच करेगा।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Customer photo preview"
+msgstr "ग्राहक की फ़ोटो का पूर्वावलोकन"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Live camera preview"
+msgstr "कैमरे का सीधा दृश्य"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Use camera"
+msgstr "कैमरा खोलें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Take photo"
+msgstr "फ़ोटो लें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Stop camera"
+msgstr "कैमरा बंद करें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Discard new photo"
+msgstr "नई फ़ोटो हटाएँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Preview a camera photo or selected file before saving. Use camera again to retake it."
+msgstr "सहेजने से पहले कैमरे की फ़ोटो या चुनी हुई फ़ाइल देखें। दोबारा फ़ोटो लेने के लिए कैमरा फिर खोलें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Camera"
+msgstr "कैमरा"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Front camera / webcam"
+msgstr "सामने का कैमरा / वेबकैम"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Rear camera"
+msgstr "पीछे का कैमरा"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Prepare this customer's loan"
+msgstr "इस ग्राहक का ऋण तैयार करें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review the customer, record identity evidence, then prepare a loan. Recorded details are not a verification or loan approval."
+msgstr "ग्राहक की जानकारी जाँचें, पहचान के प्रमाण दर्ज करें, फिर ऋण तैयार करें। जानकारी दर्ज होना सत्यापन या ऋण स्वीकृति नहीं है।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "1. Contact and address"
+msgstr "1. संपर्क और पता"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Addresses recorded"
+msgstr "दर्ज पते"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review addresses"
+msgstr "पते देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "2. Identity details"
+msgstr "2. पहचान की जानकारी"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Identifiers"
+msgstr "पहचान विवरण"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Documents"
+msgstr "दस्तावेज़"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review identity and documents"
+msgstr "पहचान और दस्तावेज़ देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "3. Loan draft"
+msgstr "3. ऋण का मसौदा"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Start loan for this customer"
+msgstr "इस ग्राहक का ऋण शुरू करें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "This customer is not active. Review their status before starting a loan."
+msgstr "यह ग्राहक सक्रिय नहीं है। ऋण शुरू करने से पहले उसकी स्थिति जाँचें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Ask a staff member with loan creation access to continue."
+msgstr "ऋण बनाने की अनुमति वाले कर्मचारी से आगे बढ़ने को कहें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "The loan screen checks branch setup. Imported history alone does not enable new lending."
+msgstr "ऋण स्क्रीन शाखा की व्यवस्था जाँचती है। केवल पुराना डेटा आयात करने से नए ऋण देना शुरू नहीं होता।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review branch setup"
+msgstr "शाखा की व्यवस्था देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Record the identifier and attach its supporting document. A saved file is not proof that identity has been verified."
+msgstr "पहचान विवरण दर्ज करें और उसका प्रमाण दस्तावेज़ जोड़ें। फ़ाइल सहेजना पहचान के सत्यापन का प्रमाण नहीं है।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Save identifier"
+msgstr "पहचान विवरण सहेजें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Save document"
+msgstr "दस्तावेज़ सहेजें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Choose the document file again after correcting errors."
+msgstr "गलतियाँ सुधारने के बाद दस्तावेज़ की फ़ाइल फिर चुनें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Identifier type"
+msgstr "पहचान का प्रकार"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Identifier number"
+msgstr "पहचान संख्या"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Masked display"
+msgstr "अंक छिपाकर दिखाएँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Expiry date"
+msgstr "समाप्ति तिथि"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Optional display value with sensitive digits hidden."
+msgstr "वैकल्पिक प्रदर्शित मान, जिसमें संवेदनशील अंक छिपे हों।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Enter an expiry date only if the document has one."
+msgstr "केवल तभी समाप्ति तिथि भरें जब दस्तावेज़ पर दी गई हो।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "This party already has an identifier of this type."
+msgstr "इस ग्राहक के लिए इस प्रकार का पहचान विवरण पहले से है।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Document type"
+msgstr "दस्तावेज़ का प्रकार"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Document title"
+msgstr "दस्तावेज़ का नाम"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Related identifier"
+msgstr "संबंधित पहचान विवरण"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Document file"
+msgstr "दस्तावेज़ की फ़ाइल"
+
+#: customer-photo-and-first-loan-guidance
+msgid "New loan draft"
+msgstr "नए ऋण का मसौदा"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Loan drafts"
+msgstr "ऋण के मसौदे"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Saving creates only an editable draft. It does not approve, disburse, or activate the loan."
+msgstr "सहेजने से केवल बदलाव योग्य मसौदा बनता है। इससे ऋण स्वीकृत, वितरित या सक्रिय नहीं होता।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Loan details"
+msgstr "ऋण की जानकारी"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Loan number"
+msgstr "ऋण संख्या"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Collateral and allocation"
+msgstr "गिरवी और रकम का बँटवारा"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Save draft"
+msgstr "मसौदा सहेजें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Preview economics"
+msgstr "रकम की गणना देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Metal prices for this loan"
+msgstr "इस ऋण के लिए धातु की कीमतें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Check prices again"
+msgstr "कीमतें फिर जाँचें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Before you start"
+msgstr "शुरू करने से पहले"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Confirm the customer, choose the loan terms, then add each collateral item and its photo. Preview the amounts before saving the draft."
+msgstr "ग्राहक की पुष्टि करें, ऋण की शर्तें चुनें, फिर गिरवी की हर वस्तु और उसकी फ़ोटो जोड़ें। मसौदा सहेजने से पहले रकम की गणना देखें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Add a customer in another tab"
+msgstr "दूसरे टैब में ग्राहक जोड़ें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review branch setup in another tab"
+msgstr "दूसरे टैब में शाखा की व्यवस्था देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Keep this tab open while completing missing information. Return here and search for the customer again."
+msgstr "बाकी जानकारी भरते समय यह टैब खुला रखें। यहाँ लौटकर ग्राहक को फिर खोजें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "The draft was not saved."
+msgstr "मसौदा नहीं सहेजा गया।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Correct the loan or collateral details below and submit again."
+msgstr "नीचे ऋण या गिरवी की जानकारी सुधारें और फिर जमा करें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Before your first loan"
+msgstr "पहले ऋण से पहले"
+
+#: customer-photo-and-first-loan-guidance
+msgid "One setup step needs attention before a new loan draft can be opened."
+msgstr "नए ऋण का मसौदा खोलने से पहले व्यवस्था का एक चरण पूरा करना है।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Next required step"
+msgstr "अगला ज़रूरी चरण"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Ask your Workspace owner or administrator to complete Settings → Loan setup. Existing loans remain available according to your permissions."
+msgstr "वर्कस्पेस के मालिक या प्रशासक से सेटिंग → ऋण व्यवस्था पूरी करने को कहें। आपकी अनुमति के अनुसार पुराने ऋण उपलब्ध रहेंगे।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Back to loans"
+msgstr "ऋण सूची पर वापस जाएँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Imported loans and customer history are preserved. New lending needs current branch configuration; opening this page changes no settings."
+msgstr "आयातित ऋण और ग्राहक का इतिहास सुरक्षित है। नए ऋण के लिए शाखा की वर्तमान व्यवस्था चाहिए; यह पृष्ठ खोलने से सेटिंग नहीं बदलती।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "For a new branch, complete the steps below in order. For an imported branch, review the missing setup; do not import or create your customers again."
+msgstr "नई शाखा के लिए नीचे के चरण क्रम से पूरे करें। आयातित शाखा में बाकी व्यवस्था जाँचें; ग्राहकों को दोबारा आयात या बनाएँ नहीं।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Set up your business"
+msgstr "अपने व्यवसाय की व्यवस्था करें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Continue where you left off. Saved settings stay in this business; return here any time from Settings."
+msgstr "जहाँ छोड़ा था वहीं से आगे बढ़ें। सहेजी गई सेटिंग इसी व्यवसाय में रहती हैं; सेटिंग से कभी भी यहाँ लौटें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Available"
+msgstr "उपलब्ध"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Needs setup"
+msgstr "व्यवस्था बाकी है"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Create a loan"
+msgstr "ऋण बनाएँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Continue setup"
+msgstr "व्यवस्था जारी रखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Loan date"
+msgstr "ऋण की तिथि"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Tenure (months)"
+msgstr "अवधि (महीने)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Series (license / register)"
+msgstr "क्रम श्रृंखला (लाइसेंस / रजिस्टर)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "The selected series determines the regulatory license and loan-number sequence."
+msgstr "चुनी हुई श्रृंखला से लाइसेंस और ऋण संख्या का क्रम तय होता है।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Loan product"
+msgstr "ऋण योजना"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Search by name, party code, phone, relation, or email"
+msgstr "नाम, ग्राहक कोड, फ़ोन, संबंध या ईमेल से खोजें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Item description"
+msgstr "वस्तु का विवरण"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Metal"
+msgstr "धातु"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Gross weight (g)"
+msgstr "कुल वज़न (ग्राम)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Net weight (g)"
+msgstr "शुद्ध धातु का वज़न (ग्राम)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Purity (%)"
+msgstr "शुद्धता (%)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Appraised value (INR)"
+msgstr "आँका गया मूल्य (रुपये)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Principal for this item (INR)"
+msgstr "इस वस्तु की मूलधन राशि (रुपये)"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Item photograph"
+msgstr "वस्तु की फ़ोटो"
+
+#: customer-photo-and-first-loan-guidance
+msgid "JPEG or PNG, up to 10 MB. New collateral requires one photograph."
+msgstr "JPEG या PNG, अधिकतम 10 MB। नई गिरवी की वस्तु के लिए एक फ़ोटो ज़रूरी है।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Overview"
+msgstr "सारांश"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Documents / KYC"
+msgstr "दस्तावेज़ / पहचान"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Relationships"
+msgstr "संबंध"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Roles"
+msgstr "भूमिकाएँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Transactions"
+msgstr "लेनदेन"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Notes / Activity"
+msgstr "टिप्पणियाँ / गतिविधि"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Numbering series"
+msgstr "संख्या श्रृंखला"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Calculation and interest policies"
+msgstr "गणना और ब्याज की नीतियाँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Metal valuation prices"
+msgstr "धातु मूल्यांकन की कीमतें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Business details"
+msgstr "व्यवसाय की जानकारी"
+
+#: customer-photo-and-first-loan-guidance
+msgid "First borrower"
+msgstr "पहला ऋण ग्राहक"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review licenses"
+msgstr "लाइसेंस देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Add license"
+msgstr "लाइसेंस जोड़ें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Set up a series"
+msgstr "संख्या श्रृंखला बनाएँ"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Open Economic Setup"
+msgstr "गणना की व्यवस्था खोलें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review loan products"
+msgstr "ऋण योजनाएँ देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review metal prices"
+msgstr "धातु की कीमतें देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review business details"
+msgstr "व्यवसाय की जानकारी देखें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Manage borrowers"
+msgstr "ग्राहक प्रबंधित करें"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review your business name and branding."
+msgstr "अपने व्यवसाय का नाम और ब्रांडिंग जाँचें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Add a borrower, then record their collateral and photos in a new loan."
+msgstr "ग्राहक जोड़ें, फिर नए ऋण में उसकी गिरवी और फ़ोटो दर्ज करें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Add an active, unexpired license and its supporting evidence. Review evidence warnings in the license register."
+msgstr "सक्रिय और वैध लाइसेंस तथा उसके प्रमाण जोड़ें। लाइसेंस रजिस्टर में प्रमाण की चेतावनियाँ जाँचें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Open a license and add an active series with an available PawnLoan number. Configure release numbering there too."
+msgstr "लाइसेंस खोलें और उपलब्ध ऋण संख्या वाली सक्रिय श्रृंखला जोड़ें। वहीं गिरवी छुड़ाने की संख्या श्रृंखला भी बनाएँ।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Set policies effective today, including gold and silver interest, for at least one usable series. Review fees if your business charges them."
+msgstr "कम से कम एक उपयोग योग्य श्रृंखला के लिए आज प्रभावी नीतियाँ बनाएँ, जिनमें सोने और चाँदी का ब्याज शामिल हो। शुल्क लेते हैं तो उसे भी जाँचें।"
+
+#: customer-photo-and-first-loan-guidance
+msgid "Review product terms, activate a version, and check its availability dates. A new loan needs a product available for its loan date."
+msgstr "योजना की शर्तें जाँचें, संस्करण सक्रिय करें और उपलब्धता की तिथियाँ देखें। नए ऋण के लिए उसकी तिथि पर उपलब्ध योजना चाहिए।"

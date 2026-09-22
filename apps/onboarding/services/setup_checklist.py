@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from django.apps import apps
+from django.utils.translation import gettext_lazy as _
 from django.db import DatabaseError
 
 from apps.orgs.models import CompanyInvitation, Membership
@@ -206,15 +207,15 @@ def build_business_setup(*, workspace):
 
     lending = get_pawn_setup_checklist(workspace)
     steps = [{
-        "key": "business_profile", "title": "Business details", "complete": bool(workspace.name),
-        "description": "Review your business name and branding.",
-        "action_label": "Review business details",
+        "key": "business_profile", "title": _("Business details"), "complete": bool(workspace.name),
+        "description": _("Review your business name and branding."),
+        "action_label": _("Review business details"),
         "action_url": reverse("workspace_update", kwargs={"workspace_id": workspace.pk}),
     }, *lending["steps"], {
-        "key": "borrower", "title": "First borrower",
+        "key": "borrower", "title": _("First borrower"),
         "complete": Party.objects.filter(workspace=workspace, status=Party.PartyStatus.ACTIVE).exists(),
-        "description": "Add a borrower, then record their collateral and photos in a new loan.",
-        "action_label": "Manage borrowers",
+        "description": _("Add a borrower, then record their collateral and photos in a new loan."),
+        "action_label": _("Manage borrowers"),
         "action_url": reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}),
     }]
     return {

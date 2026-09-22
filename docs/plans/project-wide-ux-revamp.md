@@ -29,9 +29,12 @@ Implementation has started with the owner's selected Django native partials,
 HTMX and Bootstrap 5.3.8. The [first directory slice](../implementation/accessible-directory-redesign.md)
 provides the progressive full-page/fragment, responsive and bilingual baseline.
 Customer creation/editing and the onboarding quick guide now use the same field,
-error-recovery and bilingual patterns. Actual branch setup, customer detail/KYC
-and the complete first-loan journey remain the next delivery targets; these slices
-do not complete the audit or whole-product redesign.
+error-recovery and bilingual patterns. Camera/photo preview now works through the
+existing customer create/edit forms. Branch-readiness guidance, identity form
+accessibility and the customer-to-loan draft handoff are implemented. Next complete
+the terms review, approval/disbursal and printing journey, then collections/full
+release. Detailed setup forms, remaining translations and physical-device/operator
+acceptance remain open; these slices do not complete the whole-product redesign.
 
 1. Inventory live routes and actual owner/staff journeys using isolated data.
    Record concrete friction with route, role, device, language, task, observed

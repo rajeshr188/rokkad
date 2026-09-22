@@ -24,7 +24,7 @@
 <div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.primary_email %}</div>
 <div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.relation_label %}</div>
 <div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.relation_name %}</div>
-<div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.profile_photo %}</div>
+<div class="col-12">{% include "party/_form_photo.html" %}</div>
 </div>
 </fieldset>
 <details class="border rounded p-3 mt-2"{% if party or form.is_bound %} open{% endif %}>
@@ -53,4 +53,5 @@
 </div></aside>
 </div></div>
 <script src="{% static 'js/form-errors.js' %}"></script>
+<script src="{% static 'js/customer-photo.js' %}"></script>
 {% endblock %}

@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django import forms
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 from django_select2 import forms as s2forms
 
 from apps.tenant_apps.loans.domain import (
@@ -86,29 +87,30 @@ class LoanProductVersionDraftForm(forms.ModelForm):
 
 class PawnDraftForm(forms.Form):
     borrower = forms.ModelChoiceField(
+        label=_("Customer"),
         queryset=Party.objects.none(),
         widget=PartyAutocompleteWidget(
             attrs={
                 "autofocus": True,
-                "data-placeholder": "Search by name, party code, phone, relation, or email",
+                "data-placeholder": _("Search by name, party code, phone, relation, or email"),
             },
             select2_options={"width": "100%"},
         ),
     )
     series = forms.ModelChoiceField(
-        label="Series (license / register)",
-        help_text="The selected series determines the regulatory license and loan-number sequence.",
+        label=_("Series (license / register)"),
+        help_text=_("The selected series determines the regulatory license and loan-number sequence."),
         queryset=LoanSeries.objects.none(),
         widget=s2forms.Select2Widget(
             attrs={"data-placeholder": "Search by license number or series"},
         ),
     )
     product_version = forms.ModelChoiceField(
-        label="Loan product",
+        label=_("Loan product"),
         queryset=LoanProductVersion.objects.none(),
     )
-    loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
-    tenure_months = forms.IntegerField(min_value=1, initial=3)
+    loan_date = forms.DateField(label=_("Loan date"), widget=forms.DateInput(attrs={"type": "date"}))
+    tenure_months = forms.IntegerField(label=_("Tenure (months)"), min_value=1, initial=3)
 
     def __init__(self, *args, workspace, instance=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -186,7 +188,7 @@ class PawnCollateralDraftForm(forms.ModelForm):
     collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     photograph = forms.FileField(
         required=False,
-        help_text="JPEG or PNG, up to 10 MB. New collateral requires one photograph.",
+        help_text=_("JPEG or PNG, up to 10 MB. New collateral requires one photograph."),
     )
 
     class Meta:
@@ -203,6 +205,13 @@ class PawnCollateralDraftForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for name, label in {
+            "description": _("Item description"), "metal": _("Metal"),
+            "gross_weight": _("Gross weight (g)"), "net_weight": _("Net weight (g)"),
+            "purity_percentage": _("Purity (%)"), "latest_appraised_value": _("Appraised value (INR)"),
+            "allocated_principal": _("Principal for this item (INR)"), "photograph": _("Item photograph"),
+        }.items():
+            self.fields[name].label = label
         self.fields["allocated_principal"].required = True
         self.fields["photograph"].widget.attrs.update({
             "class": "form-control js-collateral-photo-input",
@@ -235,7 +244,7 @@ class PawnDraftSplitForm(forms.Form):
         help_text="Selected items move to one new draft. At least one item stays here.",
     )
     series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
-    product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label="Loan product")
+    product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label=_("Loan product"))
     loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     tenure_months = forms.IntegerField(min_value=1, initial=3)
 

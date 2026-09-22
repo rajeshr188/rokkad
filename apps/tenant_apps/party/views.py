@@ -203,6 +203,12 @@ def _party_detail_context(
 
     active_tab = active_tab or request.GET.get("tab") or "overview"
     loan_history = get_party_pawn_loan_history_summary(party, limit=20)
+    identifier_form = identifier_form or PartyIdentifierForm(instance=edit_identifier, party=party)
+    document_form = document_form or PartyDocumentForm(instance=edit_document, party=party)
+    # Both forms contain expires_on; distinct IDs preserve label/error targets.
+    identifier_form.auto_id = "identity_%s"
+    document_form.auto_id = "document_%s"
+    access = request.party_workspace_access
     return {
         "party": party,
         "role_form": PartyRoleForm(),
@@ -212,10 +218,11 @@ def _party_detail_context(
         "contact_form": contact_form
         or PartyContactMethodForm(instance=edit_contact),
         "address_form": address_form or PartyAddressForm(instance=edit_address),
-        "identifier_form": identifier_form
-        or PartyIdentifierForm(instance=edit_identifier, party=party),
-        "document_form": document_form
-        or PartyDocumentForm(instance=edit_document, party=party),
+        "identifier_form": identifier_form,
+        "document_form": document_form,
+        "can_edit_customer": any(access.can(p) for p in ("contact.edit", "data.edit")),
+        "can_start_customer_loan": access.can("data.view") and access.can("data.create"),
+        "can_manage_customer_setup": access.can("workspace.settings.manage"),
         "relationship_form": relationship_form
         or PartyRelationshipForm(instance=edit_relationship, from_party=party),
         "merge_form": merge_form or PartyMergeForm(target_party=party),

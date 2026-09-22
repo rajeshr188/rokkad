@@ -113,3 +113,44 @@ is in `outputs/ux-customer-entry-20260922/`.
 Next connect the actual branch-readiness guidance and customer detail/KYC journey
 to the redesigned first-loan flow, then collections/full release. Do not treat this
 introductory guide as completion of operational onboarding or the wider redesign.
+
+## Customer photos, identity and first-loan guidance
+
+Customer add/edit share `_form_photo.html` and `customer-photo.js`. Camera frames
+are bounded to 1280 pixels on the longest side and passed as JPEG files through
+the existing multipart ImageField. Local file selection and capture share a preview;
+discard restores the saved preview, whose URL uses existing private authorization.
+The capture request is generation-guarded against late permission responses and
+asynchronous frame callbacks. Tracks stop on cancellation, capture, form submission,
+page hiding and navigation. Object URLs are revoked. No new upload endpoint,
+storage policy, model, permission or financial service was introduced.
+
+The customer record now exposes address/identity review and an existing `?party=`
+loan-draft handoff. Identifier/document auto IDs are distinct, linked errors reuse
+the native form partials, and edit controls reflect current permissions. Saved
+identity evidence is explicitly separate from verification. Branch setup and the
+blocked-draft page explain the next prerequisite; imported records do not imply
+new-lending readiness. Loan entry reuses accessible field/error markup, supports
+Select2 error focus, offers customer/setup links in another tab to retain draft
+inputs, and excludes private form responses from caching/history snapshots.
+
+Validation: 128 Django tests pass across Party UI/private media, loan draft UI,
+rate readiness, setup checklist and shared-shell rendering. The photo test creates
+and replaces a valid multipart image and verifies that invalid replacement retains
+the saved image. Identity checks cover unique IDs/error links and customer handoff.
+Six camera JavaScript tests cover capture, cancellation/late permission, selection
+races, discard, denied/insecure access and lifecycle cleanup; four existing rate
+readiness tests also pass. The 699-file import-boundary check and gettext compilation
+pass (four existing catalogue metadata warnings). Private logs and synthetic test
+photo are in `outputs/ux-photo-journey-20260922/`.
+
+Browser review used the isolated JCL rehearsal without saving business records.
+A synthetic local image produced a preview and discard removed it. Edit exposed
+the camera controls and authorized saved-photo URL. Keyboard navigation opened
+identity review, then the customer-to-loan link correctly reached the missing-license
+guidance and branch checklist. The setup screen was visually inspected at 390px;
+the customer form had no horizontal overflow at that width. Browser automation
+needed a fresh tab after a stale debugger connection; physical camera capture was
+not exercised. Default viewport was restored. Full first-loan approval/disbursal,
+remaining Hindi copy, physical camera/mobile and assistive-technology/operator
+acceptance are still pending; no whole-product completion or cutover is claimed.

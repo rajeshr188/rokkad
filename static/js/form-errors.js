@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (parent.tagName === 'DETAILS') parent.open = true;
     }
     const control = target.matches('input, select, textarea, button') ? target : target.querySelector('input, select, textarea, button');
-    control?.focus();
+    const enhanced = control?.nextElementSibling?.querySelector('[role="combobox"]');
+    (enhanced || control)?.focus();
     target.scrollIntoView({ block: 'center' });
   });
 });

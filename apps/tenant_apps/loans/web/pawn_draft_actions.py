@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from apps.tenant_apps.loans.access import loans_workspace_required, loans_action_required
 from apps.tenant_apps.loans.domain import CollateralEconomicsError, LoanDocumentKind, PawnLoanState
@@ -40,6 +41,7 @@ def _pawn_loan_for_workspace(request, pk):
 
 
 @loans_action_required("data.create")
+@never_cache
 def pawn_loan_create(request):
     readiness = get_pawn_draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
@@ -90,11 +92,14 @@ def pawn_loan_create(request):
             "formset": formset,
             "economics_preview": economics_preview,
             "number_preview_rows": _pawn_number_preview_rows(form),
+            "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
+            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
     )
 
 
 @loans_action_required("data.edit")
+@never_cache
 def pawn_loan_update(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     if loan.state != PawnLoanState.DRAFT.value:
@@ -155,6 +160,8 @@ def pawn_loan_update(request, pk):
             "loan": loan,
             "economics_preview": economics_preview,
             "number_preview_rows": _pawn_number_preview_rows(form),
+            "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
+            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
     )
 

@@ -51,6 +51,19 @@ not verify identity or create/approve a loan. Invalid submissions keep entered
 text and display an error summary linking to the relevant fields. A new file must
 be selected again after an error; the page explains this browser limitation.
 
+On both add and edit, select front/rear camera, choose **Use camera**, allow browser
+access, then **Take photo**. Review the preview and use the camera again to retake,
+or discard the new photo. Selecting an image file also previews it. **Save customer**
+uploads the selected image; preview alone changes no saved record. Camera access
+needs HTTPS (localhost is supported for development); file upload is the fallback.
+Edit shows the existing photo through its authorized private URL.
+
+On the customer record, review addresses and identity evidence, then choose
+**Start loan for this customer**. The draft opens with that customer selected when
+branch prerequisites are met. Otherwise the screen identifies the next required
+setup step. Owners can review branch setup; staff follow the existing access gates.
+Imported history does not need to be recreated to configure new lending.
+
 The customer form and quick guide use English/Hindi copy and responsive layouts.
 Other onboarding step forms and the full setup checklist still need the broader
 bilingual/task-based redesign. Automated tests are not physical-device or novice

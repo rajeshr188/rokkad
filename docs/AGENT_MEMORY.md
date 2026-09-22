@@ -54,6 +54,10 @@ Customer writes stay ordinary CSRF-protected submissions. Native partials share
 field/error rendering; failed forms retain text, link errors to controls and explain
 file reselection. Account introduction progress/preferences never imply branch
 lending readiness or grant permissions.
+Customer create/edit camera frames become ordinary multipart photo files; preview
+does not persist anything. Existing private media authorization remains authoritative.
+Customer identity evidence and the customer-to-draft handoff do not imply verified
+identity or lending readiness; branch preflight and domain services still decide.
 
 Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company
