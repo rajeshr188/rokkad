@@ -54,7 +54,10 @@ evidence can append a VERIFICATION revision and activate the same license/series
 Old loans retain LEGACY_REFERENCE revisions and cannot be disbursed again. Ordinary
 activation still rejects unverified references. Finish imports before verification;
 the service records an attestation, not independent proof of source freeze. The
-accepted rehearsal remains inactive; never fabricate real validity or counter review.
+imported rehearsal licenses remain inactive; never fabricate real validity or
+counter review. Owner-authorized manual practice uses a separate clearly synthetic
+JCL test license/series added September 22, with TEST-prefixed loan/release numbers.
+Its document and dates are test fixtures, never production licensing evidence.
 
 The owner reprioritized a thorough accessibility, onboarding and daily-workflow
 redesign before cutover on September 22. Staff need desktop, tablet and phone

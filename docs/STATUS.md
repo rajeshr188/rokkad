@@ -7,6 +7,31 @@ tags: [status, architecture]
 
 # Status
 
+## JCL manual workflow practice setup (2026-09-22)
+
+At the owner's request, local `rehearsal-jcl-20260921` now has a separate
+`TEST ONLY - JCL workflow practice` license (ID 5) and `TEST practice` series
+(ID 13). Its synthetic document explicitly says it is not a legal license;
+validity dates 2026-09-22 through 2027-09-21 are test data. Loan/release previews
+are `TEST-JCL-L-00001` / `TEST-JCL-R-00001`. Do not carry this setup into production.
+
+The existing active flexible-payment product and workspace policies were reused,
+not changed: gold 2% monthly, one month upfront, 80% maximum LTV, lower of calculated
+and appraised value, and the existing INR 10 document fee. Gold has a usable
+September 22 quote; silver does not yet have a valuation quote. Start the manual
+walkthrough with gold and a new clearly named test customer, using today's date.
+Approval on a later day may require a new same-day quote.
+
+Creation used the existing audited setup services under the restricted runtime
+role and explicit Workspace context. The private test document was read back and
+hash-verified. Before/after checks preserved all existing licenses and counters
+and the 2,355-loan count. Browser GET confirmed the test series/product are selected
+and the non-consuming next number appears. No customer or loan was created by this
+preparation. Imported licenses remain inactive; no cutover attestation was made.
+The rehearsal now includes this synthetic setup alongside the accepted import.
+Full user workflow acceptance remains pending. Private execution evidence:
+`outputs/jcl-workflow-test-20260922/setup-result.json`.
+
 ## Owner/team setup and shared navigation (2026-09-22)
 
 Business profile, team, invitation and role forms now use responsive grouped
