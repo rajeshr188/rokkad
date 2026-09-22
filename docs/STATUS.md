@@ -7,6 +7,46 @@ tags: [status, architecture]
 
 # Status
 
+## JSK preprinted A5 calibration draft (2026-09-22)
+
+The owner reviewed JCL's sandbox editor and reported that everything works as
+expected. This accepts that reviewed workflow, not a physical printer test or
+production activation. JCL remains draft revision 1 and was not changed here.
+
+Created `jsk-template-sandbox-sample-only` in the same isolated sandbox, accessible
+with `ticket-designer`. JSK draft revision 2 and draft print profile 4 produce two
+actual-size A5 pages, Original then Duplicate, in PREPRINTED mode. There are no
+background assets or signature frames. The owner confirmed both signing areas
+on each copy and requested `Jai Sri Krishna`, with other business details from
+the licence. The synthetic licence holds that name and explicitly sample licence
+number/address; rate and tenure bind approved loan facts, not licence metadata.
+Business and term fields are movable additions whose physical placement remains
+to be tested on JSK stock. No stationery guide was supplied.
+
+`build_jsk_calibration_layout()` in the frame review script reuses all 23 mapped
+source frames and the existing timestamps, plus licence and approved-term fields.
+The source inventory is unchanged. Calibration adjustments: duplicate principal
+width 120 to 108 mm to stay on A5; 9 pt loan numbers with bounded shrinking;
+original principal width 30 mm/font 10 pt; original collateral photo at
+(68,108,25,25) mm; duplicate collateral photo moved to y=106 mm; duplicate
+description width 75 mm; original customer photo y=64 mm; duplicate customer
+contact width 60 mm. These avoid observed photo/value collisions and wrapping
+into photographs, but do not establish parity with physical stationery.
+
+Verified normal HTTP login, both editor copy views, preview endpoint, two A5 page
+dimensions and copy contents. Longer customer text wraps; excessive collateral
+text blocks rather than truncates. Restricted-role cross-workspace reads deny
+the JSK layout from JCL context. Both layout/profile remain unassigned drafts,
+with no official issues. Exported the local recovery pack and visually reviewed
+`output/pdf/jsk-preprinted-a5-calibration-preview.pdf`. No renderer/domain change,
+migration or full regression rerun was needed. The briefly considered incomplete
+draft validation change was removed after the owner's stationery clarification.
+
+Next: user prints both pages at 100% on JSK stationery, one-sided, one page per
+A5 sheet, and reports alignment. Confirm the added header/terms do not duplicate
+stock text. JCL physical duplex calibration and Conditions rate wording remain
+pending before publication/assignment; unified activation and merge remain later.
+
 ## JCL draft available in the isolated browser sandbox (2026-09-22)
 
 Provisioned `rokkad_ticket_template_sandbox` with a dedicated restricted runtime

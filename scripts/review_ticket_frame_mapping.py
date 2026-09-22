@@ -94,6 +94,57 @@ def build_review():
     return {"kind": "synthetic_frame_review_not_an_import_pack", "contains_customer_data": False, "templates": candidates}
 
 
+def build_jsk_calibration_layout():
+    """Owner-confirmed stock signatures and movable licence/approved-term fields.
+
+    This is a calibration draft, not proof of alignment with physical stationery.
+    It contains bindings only: the business name lives on the selected licence.
+    """
+    candidate = next(item for item in build_review()["templates"] if item["workspace"] == "jsk")
+    definition = candidate["layout_candidate"]
+    definition["name"] = "JSK preprinted A5 - calibration draft"
+    for block in definition["blocks"]:
+        if block["type"] == "field" and block["binding"] in {"loan.number", "loan.date"}:
+            block["overflow_policy"] = "SHRINK"
+        if block["type"] == "field" and block["binding"] == "loan.number":
+            block["font_size_pt"] = 9
+        # The square sample photos expose collisions in the source rectangles.
+        # Keep source geometry in the inventory; these are explicit draft choices.
+        if block["binding"] == "collateral.first_approved_photo":
+            if block["copy_scope"] == "ORIGINAL":
+                block.update(x_mm=68, y_mm=108, width_mm=25, height_mm=25)
+            else:
+                block["y_mm"] = 106
+        if block["copy_scope"] == "ORIGINAL" and block["binding"] == "loan.principal":
+            block.update(width_mm=30, font_size_pt=10)
+        if block["copy_scope"] == "DUPLICATE" and block["binding"] == "collateral.description_lines":
+            block["width_mm"] = 75
+        if block["copy_scope"] == "ORIGINAL" and block["binding"] == "borrower.photo":
+            block["y_mm"] = 64
+        if block["copy_scope"] == "DUPLICATE" and block["binding"] == "borrower.contact_block":
+            block["width_mm"] = 60
+    definition["signature_areas"] = {
+        copy: {"source": "PREPRINTED", "asset_key": "", "sha256": ""}
+        for copy in ("ORIGINAL", "DUPLICATE")
+    }
+    def field(binding, x, y, width, height, size, *, scope="BOTH", label="", leading=None):
+        return {"type": "field", "binding": binding, "copy_scope": scope,
+                "x_mm": x, "y_mm": y, "width_mm": width, "height_mm": height,
+                "font_size_pt": size, "leading_pt": leading or size + 1,
+                "padding_pt": 0, "show_label": bool(label), "field_label": label}
+    definition["blocks"].extend([
+        field("license.business_name", 10, 5, 120, 8, 14),
+        field("license.number", 10, 14, 85, 5, 9, label="Licence"),
+        field("license.business_address", 10, 20, 85, 10, 8),
+    ])
+    for scope, y in (("ORIGINAL", 162), ("DUPLICATE", 150)):
+        definition["blocks"].extend([
+            field("loan.monthly_interest_rate", 10, y, 68, 6, 9, scope=scope, label="Monthly interest"),
+            field("loan.tenure", 82, y, 56, 6, 9, scope=scope, label="Tenure"),
+        ])
+    return DocumentLayoutValidator.load(definition).canonical_dict()
+
+
 def review_html(review):
     sample = {"document.generated_at": "22-09-2026 20:05:30 IST (UTC+05:30)", "license.number": "TEST-LIC", "borrower.contact_block": "TEST Customer\nS/o TEST Parent\n10 Test Road\n9000000000",
               "license.business_name": "JCL (Sample)", "license.business_address": "10 Sample Business Road\nVellore, Tamil Nadu\nPhone: 9000000001",

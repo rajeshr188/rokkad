@@ -55,6 +55,13 @@ synthetic data only; it is not the existing JCL migration rehearsal. The reviewe
 JCL configuration is saved there as draft revision 1 with all four backgrounds.
 Keep credentials and local assets under ignored `outputs/ticket-template-sandbox/`.
 Use the sandbox settings/launcher, never the rehearsal environment, for this editor.
+The owner accepted JCL's reviewed sandbox workflow. JSK now has a separate
+synthetic workspace `jsk-template-sandbox-sample-only`, draft revision 2 and
+PREPRINTED A5 Original/Duplicate profile 4, using the same sandbox login. The
+owner requested `Jai Sri Krishna` from licence business details and confirmed
+both signature areas already exist on each stock copy. Loan rate/tenure remain
+approved loan facts. JSK has no guide artwork; added heading/term positions and
+collision corrections need physical-stock calibration before activation.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

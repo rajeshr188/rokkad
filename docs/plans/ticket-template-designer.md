@@ -145,6 +145,21 @@ blank fields. PDF checks are not physical duplex/printer acceptance.
 
 ## Evidence and acceptance examples
 
+JSK calibration is now available in the same local app and login:
+
+`http://127.0.0.1:8082/w/jsk-template-sandbox-sample-only/loans/setup/documents/revisions/2/overlay-designer/`
+
+Choose **JSK A5 Both Simplex** in the preview selector, then **Print preview**.
+This draft profile uses PREPRINTED stock and ACTUAL_SIZE. Print one-sided at
+100%, one page per A5 sheet: Original first, Duplicate second. The current
+sample includes the owner's requested business name but synthetic licence and
+customer data. No signature boxes/backgrounds print. Confirm header/term
+placement and absence of duplicate stock text before publication. The local
+recovery pack is `outputs/ticket-template-sandbox/jsk-reviewed-layout.zip`.
+JCL's reviewed editor workflow is accepted; physical printer acceptance remains
+separate for both workspaces. See Status for the explicit source-coordinate
+adjustments; the legacy inventory is retained unchanged.
+
 Read-only inspection of production commit
 `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` and the owner's September 21 dump found:
 
