@@ -228,6 +228,16 @@ def _persist_policy_snapshot(loan: PawnLoan, resolved_policy=None) -> LoanPolicy
     return snapshot
 
 
+def preview_approved_disbursal(loan):
+    """Read the same frozen amounts used by disbursal without recording payment."""
+    if loan.state != "APPROVED":
+        raise PawnDisbursalError("Only an approved loan can be disbursed.")
+    approval = loan.approval_snapshots.order_by("-version").first()
+    if approval is None:
+        raise PawnDisbursalError("Approved PawnLoan is missing its approval snapshot.")
+    return _approved_economics(loan, approval)
+
+
 def _approved_economics(loan, approval_snapshot):
     """Parse and reconcile the exact collateral economics frozen at approval."""
     evidence = approval_snapshot.payload.get("collateral_economics")

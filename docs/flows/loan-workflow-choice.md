@@ -1,11 +1,18 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-22
 tags: [loans, workflow, roles]
 ---
 
 # Choose a loan workflow
+
+The loan detail page places a **Check before continuing** summary before the next
+action: customer, loan date, tenure, principal, advance interest, deducted fees and
+net amount to pay. Review collateral/photos through the nearby link. Draft amounts
+are a current preview; approval still validates the latest evidence. On approved
+loans, the breakdown comes from frozen approval evidence rather than current rates.
+An unavailable breakdown is shown explicitly, not replaced with guessed deductions.
 
 An owner opens Settings > Loan workflow (also linked in Loan setup). Choose
 Owner review and disburse for a combined owner action, or Separate approval and
@@ -21,6 +28,13 @@ one hour must be refreshed; repeated submission does not record a second disburs
 For valuations using metal quotes, approval requires today's positive quotes and
 today's loan/disbursal dates. A changed quote requires another review even when
 its price is unchanged. Appraisal-only loans keep their existing date behavior.
+
+Both payment forms label the effective date **Payment date** and link validation
+errors to fields. Empty submissions show errors without recording payment. In
+owner mode a missing/expired review needs **Refresh review** and another deliberate
+confirmation; reloading never silently confirms payment. The separate-disbursal
+page uses the same approved monetary breakdown as the command, which rechecks
+eligibility on submission. These form improvements do not alter existing roles.
 
 In separate mode, a preparer creates/edits the draft, an approver approves its
 terms, and a disburser records payment. Roles need data view plus the relevant

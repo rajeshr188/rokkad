@@ -3,6 +3,8 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
 
 from apps.tenant_apps.loans.access import loans_owner_required
 from apps.tenant_apps.loans.forms import PawnDisbursalForm
@@ -19,7 +21,7 @@ class WorkflowForm(forms.Form):
 
 class ReviewForm(PawnDisbursalForm):
     review_token = forms.CharField(widget=forms.HiddenInput)
-    confirmed = forms.BooleanField(label="I have reviewed the terms and paid the borrower the amount shown.")
+    confirmed = forms.BooleanField(label=_("I have reviewed the terms and paid the borrower the amount shown."), widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
 
 
 @loans_owner_required
@@ -33,9 +35,10 @@ def loan_workflow_settings(request):
 
 
 @loans_owner_required
+@never_cache
 def pawn_loan_review_disburse(request, pk):
     loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"), pk=pk, workspace=request.loans_workspace)
-    form = ReviewForm(request.POST or None, initial={"effective_date": timezone.localdate()})
+    form = ReviewForm(request.POST if request.method == "POST" else None, initial={"effective_date": timezone.localdate()})
     if request.method == "POST" and form.is_valid():
         try:
             review_and_disburse(loan.pk, actor=request.user, effective_date=form.cleaned_data["effective_date"], token=form.cleaned_data["review_token"])

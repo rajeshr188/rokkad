@@ -1,10 +1,11 @@
 {% extends "base_tenant.html" %}
+{% load i18n %}
 {% block title %}{{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
-<div class="loan-workflow-grid"><div class="loan-workflow-main">
+<div class="loan-workflow-grid" hx-history="false"><div class="loan-workflow-main">
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
   <div><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; Pawn loans</a><h1 class="h3 mt-2 mb-1">{{ loan.loan_number }}</h1><div class="text-muted">{{ loan.borrower.display_name }} &middot; {{ loan.get_state_display }} &middot; Series {{ loan.series.code }}</div><nav class="btn-group btn-group-sm mt-2" aria-label="Loans in series {{ loan.series.code }}">{% if previous_loan %}<a class="btn btn-outline-secondary" rel="prev" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug previous_loan.pk %}">&larr; Previous <span class="d-none d-sm-inline">{{ previous_loan.loan_number }}</span></a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">&larr; Previous</span>{% endif %}{% if next_loan %}<a class="btn btn-outline-secondary" rel="next" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug next_loan.pk %}">Next <span class="d-none d-sm-inline">{{ next_loan.loan_number }}</span> &rarr;</a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">Next &rarr;</span>{% endif %}</nav></div>
-  <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_party_statement' request.workspace.slug loan.borrower_id %}">Party statement</a>{% if loan.state != 'DRAFT' and loan.approval_snapshots.exists %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_ticket_pdf' request.workspace.slug loan.pk %}">Loan ticket PDF</a>{% endif %}
+  <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_party_statement' request.workspace.slug loan.borrower_id %}">Party statement</a>
     {% if request.workspace.owner_id == request.user.pk %}{% if loan.state == 'ACTIVE' or loan.state == 'CLOSED' %}<form method="post" action="{% url 'workspace_portability:loan_export' workspace_slug=request.workspace.slug loan_id=loan.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Export loan data JSONL</button></form>{% endif %}{% endif %}
     {% if can_send_notice %}{% if loan.state == 'ACTIVE' or loan.state == 'CLOSED' %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_notice_create' request.workspace.slug loan.pk %}">Create notice</a>{% endif %}{% endif %}
     {% if loan.state == 'ACTIVE' and can_administer %}<a class="btn btn-outline-dark" href="{% url 'workspace_loans:pawn_loan_auction_initiate' request.workspace.slug loan.pk %}">Initiate auction</a>{% endif %}
@@ -14,7 +15,12 @@
   </div>
 </div>
 
-{% if primary_action %}<div class="alert alert-primary d-flex justify-content-between align-items-center gap-3"><div><strong>Recommended next step</strong><div>{{ primary_action.message }}</div></div>{% if primary_action.method == 'post' %}<form method="post" action="{{ primary_action.url }}">{% csrf_token %}<button class="btn btn-primary" type="submit">{{ primary_action.label }}</button></form>{% else %}<a class="btn btn-primary" href="{{ primary_action.url }}">{{ primary_action.label }}</a>{% endif %}</div>{% endif %}
+{% if loan.state == 'DRAFT' or loan.state == 'APPROVED' %}
+{% include "loans/pawn/_origination_review.html#review" %}
+<p><a href="#collateral-gallery">{% translate "Review collateral and photos" %}</a></p>
+{% endif %}
+{% include "loans/pawn/_print_guidance.html" %}
+{% if primary_action %}<div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-3"><div><strong>{% translate "Recommended next step" %}</strong><div>{{ primary_action.message }}</div></div>{% if primary_action.method == 'post' %}<form method="post" action="{{ primary_action.url }}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% translate primary_action.label %}</button></form>{% else %}<a class="btn btn-primary" href="{{ primary_action.url }}">{% translate primary_action.label %}</a>{% endif %}</div>{% endif %}
 {% if loan.state == 'DRAFT' and not loan.license.is_active %}<div class="alert alert-warning">The current license is unavailable. {% if can_edit_loan %}<a href="{% url 'workspace_loans:pawn_loan_transfer_setup' request.workspace.slug loan.pk %}">Transfer this draft to active setup</a>{% else %}Ask an editor to transfer this draft to active setup{% endif %} before approval.</div>{% elif loan.state == 'DRAFT' and loan.license.is_expired %}<div class="alert alert-warning">The current license has expired. {% if can_edit_loan %}<a href="{% url 'workspace_loans:pawn_loan_transfer_setup' request.workspace.slug loan.pk %}">Transfer this draft to active setup</a>{% else %}Ask an editor to transfer this draft to active setup{% endif %} before approval.</div>{% endif %}
 {% if loan.license.is_legacy_reference %}<p class="alert alert-info">Legacy licence reference: {{ loan.license.license_number }}. Original validity was not recorded. This grouping is for imported loans and cannot authorize new lending.</p>{% endif %}
 {% if is_opening %}
@@ -40,7 +46,7 @@
 
 {% if loan.state == 'ACTIVE' and accrual_previews and can_accrue %}<div class="alert alert-info">{{ accrual_previews|length }} interest period{{ accrual_previews|length|pluralize }} available to finalize. <a href="{% url 'workspace_loans:pawn_loan_accrue' request.workspace.slug loan.pk %}">Review accruals</a>{% if loan.policy_snapshot.interest_method == 'COMPOUND' and can_capitalize %} or <a href="{% url 'workspace_loans:pawn_loan_capitalize' request.workspace.slug loan.pk %}">capitalize eligible interest</a>{% endif %}.</div>{% endif %}
 
-<h2 class="h5">Collateral identity, media, custody and economics</h2>
+<h2 class="h5" id="collateral-gallery" tabindex="-1">{% translate "Collateral identity, media, custody and economics" %}</h2>
 {% if opening_source_valuations %}<div class="card card-body mb-3"><h3 class="h6">Unverified values retained from the old system</h3><p>These source values were not approved appraisals at import. Current valuation and LTV require dated appraisal evidence.</p><ul class="mb-0">{% for row in opening_source_valuations %}<li>{{ row.description }}: {{ row.valuation.source_amount|default_if_none:"Value not recorded" }}; date: {{ row.valuation.source_date|default_if_none:"Not recorded" }}. </li>{% endfor %}</ul></div>{% endif %}
 {% for item in loan.collateral_items.all %}
 <div class="card mb-4" id="collateral-{{ item.public_id }}"><div class="card-body">

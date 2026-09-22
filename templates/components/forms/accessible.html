@@ -19,7 +19,7 @@
   <p>{% translate "Your entries are still here. Correct the errors below and save again." %}</p>
   <ul class="mb-0">
     {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-    {% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label|default:field.auto_id }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}
+    {% for field in form %}{% for error in field.errors %}<li>{% if field.is_hidden %}{{ error }}{% else %}<a href="#{{ field.id_for_label|default:field.auto_id }}">{{ field.label }}: {{ error }}</a>{% endif %}</li>{% endfor %}{% endfor %}
   </ul>
 </div>
 {% endif %}

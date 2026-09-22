@@ -320,7 +320,7 @@ class PawnSetupTransferForm(forms.Form):
 
 
 class PawnDisbursalForm(forms.Form):
-    effective_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    effective_date = forms.DateField(label=_("Payment date"), help_text=_("Enter the date the money was paid to the customer."), widget=forms.DateInput(attrs={"type": "date"}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

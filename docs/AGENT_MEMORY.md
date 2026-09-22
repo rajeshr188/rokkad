@@ -58,6 +58,10 @@ Customer create/edit camera frames become ordinary multipart photo files; previe
 does not persist anything. Existing private media authorization remains authoritative.
 Customer identity evidence and the customer-to-draft handoff do not imply verified
 identity or lending readiness; branch preflight and domain services still decide.
+Loan review distinguishes current draft estimates from frozen approved payment
+amounts. The read-only approved-disbursal preview shares the command's frozen
+economics parser; templates never recalculate deductions. Printing availability
+follows approval/schedule evidence, and a loan ticket is not proof of payment.
 
 Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company

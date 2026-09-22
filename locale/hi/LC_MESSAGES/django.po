@@ -1608,3 +1608,126 @@ msgstr "कम से कम एक उपयोग योग्य श्रृ
 #: customer-photo-and-first-loan-guidance
 msgid "Review product terms, activate a version, and check its availability dates. A new loan needs a product available for its loan date."
 msgstr "योजना की शर्तें जाँचें, संस्करण सक्रिय करें और उपलब्धता की तिथियाँ देखें। नए ऋण के लिए उसकी तिथि पर उपलब्ध योजना चाहिए।"
+
+msgid "Check before continuing"
+msgstr "आगे बढ़ने से पहले जाँचें"
+
+msgid "Advance interest"
+msgstr "अग्रिम ब्याज"
+
+msgid "Deducted fees"
+msgstr "काटे गए शुल्क"
+
+msgid "Net amount to pay"
+msgstr "ग्राहक को देने की शुद्ध राशि"
+
+msgid "Amounts in INR. Principal less advance interest and deducted fees gives the amount paid to the customer."
+msgstr "राशियाँ रुपये में हैं। मूलधन में से अग्रिम ब्याज और शुल्क घटाने पर ग्राहक को दी जाने वाली राशि मिलती है।"
+
+msgid "Itemized payment amounts are unavailable for this loan. Review its recorded terms before continuing."
+msgstr "इस ऋण के भुगतान का विस्तृत हिसाब उपलब्ध नहीं है। आगे बढ़ने से पहले दर्ज शर्तें जाँचें।"
+
+msgid "Tenure"
+msgstr "अवधि"
+
+msgid "months"
+msgstr "महीने"
+
+msgid "Review needs attention"
+msgstr "समीक्षा में सुधार आवश्यक है"
+
+msgid "These amounts come from the saved approval. Confirmation rechecks whether the loan can be disbursed."
+msgstr "ये राशियाँ सहेजी गई मंज़ूरी से ली गई हैं। पुष्टि के समय ऋण वितरण की पात्रता दोबारा जाँची जाएगी।"
+
+msgid "This is a current preview. Approval checks the latest terms, collateral evidence and required rates again."
+msgstr "यह वर्तमान पूर्वावलोकन है। मंज़ूरी के समय शर्तें, गिरवी के प्रमाण और आवश्यक दरें दोबारा जाँची जाएँगी।"
+
+msgid "Review and disburse"
+msgstr "समीक्षा करें और ऋण वितरित करें"
+
+msgid "Confirm only after paying the customer. This records payment and activates the loan; it does not send a bank transfer."
+msgstr "ग्राहक को राशि देने के बाद ही पुष्टि करें। इससे भुगतान दर्ज होगा और ऋण सक्रिय होगा; बैंक से राशि नहीं भेजी जाएगी।"
+
+msgid "Record payment"
+msgstr "भुगतान दर्ज करें"
+
+msgid "Confirm disbursal"
+msgstr "ऋण वितरण की पुष्टि करें"
+
+msgid "Back to loan"
+msgstr "ऋण पर वापस जाएँ"
+
+msgid "If the terms or rates changed, refresh the review and check the amounts again before confirming."
+msgstr "यदि शर्तें या दरें बदल गई हैं, तो समीक्षा दोबारा खोलें और पुष्टि से पहले राशियाँ फिर जाँचें।"
+
+msgid "Refresh review"
+msgstr "समीक्षा दोबारा खोलें"
+
+msgid "After payment is recorded, open the loan documents to download or print them."
+msgstr "भुगतान दर्ज होने के बाद ऋण के दस्तावेज़ खोलकर डाउनलोड या प्रिंट करें।"
+
+msgid "I have reviewed the terms and paid the borrower the amount shown."
+msgstr "मैंने शर्तें जाँच ली हैं और ग्राहक को दिखाई गई राशि दे दी है।"
+
+msgid "Payment date"
+msgstr "भुगतान की तारीख"
+
+msgid "Enter the date the money was paid to the customer."
+msgstr "वह तारीख भरें जिस दिन ग्राहक को राशि दी गई थी।"
+
+msgid "Disburse loan"
+msgstr "ऋण वितरित करें"
+
+msgid "Check the customer, collateral photos and amounts below. Approval saves the terms; payment is recorded separately."
+msgstr "नीचे ग्राहक, गिरवी की तस्वीरें और राशियाँ जाँचें। मंज़ूरी से शर्तें सहेजी जाती हैं; भुगतान अलग से दर्ज होता है।"
+
+msgid "Review collateral and photos"
+msgstr "गिरवी और तस्वीरें जाँचें"
+
+msgid "Recommended next step"
+msgstr "अगला सुझाया गया कदम"
+
+msgid "Approve loan"
+msgstr "ऋण मंज़ूर करें"
+
+msgid "Loan documents"
+msgstr "ऋण के दस्तावेज़"
+
+msgid "Open a PDF, check the customer and loan number, then use the PDF viewer to download or print."
+msgstr "PDF खोलें, ग्राहक और ऋण संख्या जाँचें, फिर PDF व्यूअर से डाउनलोड या प्रिंट करें।"
+
+msgid "Loan ticket PDF"
+msgstr "ऋण टिकट PDF"
+
+msgid "new tab"
+msgstr "नया टैब"
+
+msgid "Key facts and repayment schedule"
+msgstr "मुख्य तथ्य और चुकौती अनुसूची"
+
+msgid "Printing does not record payment or change the loan. A loan ticket describes approved terms; it is not proof of disbursal."
+msgstr "प्रिंट करने से भुगतान दर्ज नहीं होता और ऋण नहीं बदलता। ऋण टिकट में मंज़ूर शर्तें होती हैं; यह ऋण वितरण का प्रमाण नहीं है।"
+
+msgid "A loan ticket is available after approval. The key facts document is available once a repayment schedule has been saved."
+msgstr "मंज़ूरी के बाद ऋण टिकट उपलब्ध होता है। चुकौती अनुसूची सहेजे जाने के बाद मुख्य तथ्यों का दस्तावेज़ उपलब्ध होता है।"
+
+msgid "Loan summary"
+msgstr "ऋण का सारांश"
+
+msgid "Original principal"
+msgstr "मूल ऋण राशि"
+
+msgid "Borrower"
+msgstr "ग्राहक"
+
+msgid "License / series"
+msgstr "लाइसेंस / श्रृंखला"
+
+msgid "Monthly rate"
+msgstr "मासिक दर"
+
+msgid "Original loan and collateral details. Use the current repayment or settlement quote for the amount to collect."
+msgstr "मूल ऋण और गिरवी का विवरण। वसूल की जाने वाली राशि के लिए वर्तमान चुकौती या निपटान का हिसाब देखें।"
+
+msgid "Collateral identity, media, custody and economics"
+msgstr "गिरवी की पहचान, तस्वीरें, अभिरक्षा और राशि का विवरण"

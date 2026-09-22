@@ -10,6 +10,10 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
+from apps.tenant_apps.loans.services.loan_workflow import make_review
+from apps.tenant_apps.loans.services.pawn_disbursal import preview_approved_disbursal
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import (
@@ -70,6 +74,7 @@ def pawn_loan_list(request):
 
 
 @loans_workspace_required
+@never_cache
 def pawn_loan_detail(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     opening = next((event for event in loan.loan_events.all() if event.event_kind == "MIGRATION_OPENING"), None)
@@ -93,6 +98,16 @@ def pawn_loan_detail(request, pk):
         ),
     }
     approval = loan.approval_snapshots.order_by("-version").first()
+    context["can_print_ticket"] = loan.state != "DRAFT" and approval is not None
+    context["can_print_schedule"] = loan.repayment_schedules.exists()
+    if loan.state in {"DRAFT", "APPROVED"}:
+        try:
+            if loan.state == "DRAFT":
+                context["economics"], _token = make_review(loan)
+            else:
+                context["economics"] = preview_approved_disbursal(loan)
+        except (ValidationError, ValueError) as exc:
+            context["review_error"] = str(exc)
     if approval:
         evidence = approval.payload.get("origination_rates", {})
         context["approved_quote_rows"] = [dict(quote,
@@ -187,7 +202,7 @@ def _primary_action(loan, context):
             "label": "Approve loan",
             "url": reverse('workspace_loans:pawn_loan_approve', args=[loan.workspace.slug, loan.pk]),
             "method": "post",
-            "message": "Review the frozen terms, then approve this draft.",
+            "message": _("Check the customer, collateral photos and amounts below. Approval saves the terms; payment is recorded separately."),
         }
     if loan.state == PawnLoanState.APPROVED.value:
         if not context.get("can_disburse", False):

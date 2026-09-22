@@ -7,6 +7,34 @@ tags: [status, architecture]
 
 # Status
 
+## Loan review, disbursal and printing guidance (2026-09-22)
+
+Draft/approved loan detail now places customer, date, tenure and the principal-to-net
+payment breakdown before the next action. Drafts use the existing read-only review
+calculation; approved loans use the same frozen-economics parser as disbursal.
+Owner combined review and separate disbursal share a native template partial.
+Payment forms have linked errors, an explicit payment-date label and clear guidance
+that recording disbursal does not transfer money. Empty POSTs now bind correctly.
+The existing approval POST, service checks, signed owner review and replay rules
+remain intact; there is no new approval or payment protocol.
+
+Loan documents are grouped with download/print guidance. Loan-ticket availability
+requires a non-draft loan and approval evidence; key facts/schedule availability
+requires a saved schedule. Existing PDF issuance, evidence and reprint services are
+unchanged. New guidance is translated into Hindi. Detail and disbursal responses
+are no-store and exclude HTMX history snapshots.
+
+142 focused Django tests, gettext compilation and the 699-file import-boundary
+check pass. Regression and browser evidence are recorded in
+[the redesign implementation](implementation/accessible-directory-redesign.md#loan-review-disbursal-and-printing).
+The local rehearsal web server was restarted with its existing settings. Read-only
+browser review confirms an imported loan offers its existing schedule without
+inventing an approval ticket; the document card fits at 390px. No production or
+accepted rehearsal business records changed. The older port-8000 development
+database lacks a previously introduced media column and was not migrated here.
+Complete desktop/mobile payment walkthroughs and physical printing remain pending.
+Next: collections and full-release guidance, with the existing settlement rules.
+
 ## Customer photos, identity and first-loan guidance (2026-09-22)
 
 Customer create/edit now offer webcam or front/rear mobile camera capture, local

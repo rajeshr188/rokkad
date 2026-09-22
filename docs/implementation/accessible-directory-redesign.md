@@ -154,3 +154,49 @@ needed a fresh tab after a stale debugger connection; physical camera capture wa
 not exercised. Default viewport was restored. Full first-loan approval/disbursal,
 remaining Hindi copy, physical camera/mobile and assistive-technology/operator
 acceptance are still pending; no whole-product completion or cutover is claimed.
+
+## Loan review, disbursal and printing
+
+The saved draft/approved detail shows customer/date/tenure and a shared native
+`_origination_review.html#review` partial before the next action. Its `amounts`
+partial presents principal, advance interest, deducted fees and net payment without
+template arithmetic. Draft reads call the existing `make_review`; approved reads
+call `preview_approved_disbursal`, a read-only wrapper around the command's existing
+frozen-economics parser. Missing/reconciling evidence errors are visible; no fallback
+invents a net payment. Confirmation remains the existing authoritative command.
+
+The owner review form preserves its signed review token and deliberate payment
+checkbox. Both payment forms bind empty POSTs, label the actual payment date, use
+accessible native fields/error summaries, and explain that recording payment sends
+no bank transfer. Hidden-field errors are plain text rather than links to invisible
+controls. The shared financial-action form retains preview/confirm values, action
+URLs and reversal guards. Detail and payment reads are private/no-store and excluded
+from HTMX history. The approval action remains POST-only with existing authorization;
+no model, migration, workflow setting or financial calculation changed.
+
+The new Loan documents card gates ticket links on approval evidence plus non-draft
+state, and schedule links on persisted schedules. It keeps existing PDF endpoints,
+issuance and reprint behavior, opens documents separately and explains the difference
+between approved terms and payment evidence. New copy has compiled Hindi translations;
+remaining older loan-detail/action text is not fully translated.
+
+142 focused Django tests pass (55.607s), along with the 699-file import-boundary
+check, diff whitespace checks and gettext compilation (four existing metadata
+warnings). Run evidence is in `outputs/ux-loan-review-20260922/`.
+Validation covers draft preview without approval/events, approved frozen amounts
+without resolving current rates, invalid payment recovery, Hindi labels, private
+responses and document availability before/after disbursal, alongside existing
+stale-owner-review, permission, atomicity/replay, rate and PDF regression tests.
+Test-rendered synthetic pages were captured inside a rolled-back test; they were
+not admitted to a business workspace. Browser tooling blocked opening those local
+HTML fixtures, so no visual acceptance of those fixture pages is claimed.
+
+The separate live read-only browser check used the accepted JCL rehearsal. An
+imported active loan displayed its available key-facts schedule without a fabricated
+approval ticket; the document card and next action fit a 390px phone viewport with
+no horizontal overflow. Default viewport was restored. The older ordinary development
+server has a missing `loans_pawncollateralphoto.source_evidence` column; this pre-existing
+schema mismatch was not migrated as part of UI work. The rehearsal web server was
+restarted using its existing configuration. No production or accepted rehearsal
+business record was changed. Full live origination/payment, assistive-technology,
+physical device/printer and operator acceptance remain open.

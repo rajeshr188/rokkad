@@ -32,8 +32,9 @@ Customer creation/editing and the onboarding quick guide now use the same field,
 error-recovery and bilingual patterns. Camera/photo preview now works through the
 existing customer create/edit forms. Branch-readiness guidance, identity form
 accessibility and the customer-to-loan draft handoff are implemented. Next complete
-the terms review, approval/disbursal and printing journey, then collections/full
-release. Detailed setup forms, remaining translations and physical-device/operator
+collections/full release. Terms review, payment-form accessibility and grouped
+printing guidance now extend the first-loan journey; its complete live payment
+walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator
 acceptance remain open; these slices do not complete the whole-product redesign.
 
 1. Inventory live routes and actual owner/staff journeys using isolated data.

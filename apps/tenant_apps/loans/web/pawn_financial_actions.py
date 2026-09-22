@@ -6,6 +6,8 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
 
 from apps.tenant_apps.loans.access import (
     LOANS_ADMIN_ACTION, loans_action_required,
@@ -16,6 +18,7 @@ from apps.tenant_apps.loans.forms import (
     PawnRepaymentForm, PawnReversalForm,
 )
 from apps.tenant_apps.loans.models import PawnLoan, PawnLoanEvent
+from apps.tenant_apps.loans.services.pawn_disbursal import preview_approved_disbursal
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.loans.services import (
     assess_pawn_loan_event_reversal, capitalize_pawn_loan_interest,
@@ -70,10 +73,11 @@ def _can_administer(request):
     return request.loans_workspace_access.can(LOANS_ADMIN_ACTION)
 
 @loans_action_required("loan.disburse")
+@never_cache
 def pawn_loan_disburse(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnDisbursalForm(
-        request.POST or None,
+        request.POST if request.method == "POST" else None,
         initial={"effective_date": timezone.localdate()},
     )
     if request.method == "POST" and form.is_valid():
@@ -88,13 +92,20 @@ def pawn_loan_disburse(request, pk):
         else:
             messages.success(request, f"{loan.loan_number} disbursed successfully.")
             return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+    economics = None
+    review_error = None
+    try:
+        economics = preview_approved_disbursal(loan)
+    except (ValidationError, ValueError) as exc:
+        review_error = str(exc)
     return _render_action(
         request,
         loan,
         form,
-        "Disburse loan",
-        "This records the approved disbursal and activates the loan.",
+        _("Disburse loan"),
+        _("Confirm only after paying the customer. This records payment and activates the loan; it does not send a bank transfer."),
         {"can_administer": _can_administer(request), "quote_recovery": True,
+         "is_disbursal": True, "economics": economics, "review_error": review_error,
          "can_edit_loan": request.loans_workspace_access.can("data.edit")},
     )
 
