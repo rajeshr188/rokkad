@@ -44,6 +44,16 @@ def build_review():
                                     "candidate": 148 - block["x_mm"], "status": "REQUIRES_VISUAL_REVIEW"})
                 block["width_mm"] = 148 - block["x_mm"]
             definition["blocks"].append(block)
+        stamp = {"type": "field", "binding": "document.generated_at", "field_label": "Generated",
+                 "show_label": True, "font_size_pt": 7, "leading_pt": 9, "padding_pt": 0,
+                 "x_mm": 10, "y_mm": 195, "width_mm": 128, "height_mm": 8, "copy_scope": "BOTH"}
+        if template["workspace"] == "jsk":
+            definition["blocks"].extend([{**stamp, "copy_scope": "ORIGINAL"},
+                {**stamp, "copy_scope": "DUPLICATE", "x_mm": 92, "y_mm": 185, "width_mm": 46, "height_mm": 18}])
+        else:
+            definition["blocks"].append(stamp)
+        adjustments.append({"binding": "document.generated_at", "status": "OWNER_REQUESTED",
+                            "reason": "Print the original PDF generation timestamp on both copies; retain it on reprints."})
         parsed_blocks = DocumentLayoutValidator._blocks(definition["blocks"], "loan_ticket", 4, layout_mode="ABSOLUTE_OVERLAY")
         missing = {copy: DocumentLayoutValidator.precision_missing_visible(parsed_blocks, copy)
                    for copy in ("ORIGINAL", "DUPLICATE")}
@@ -64,14 +74,14 @@ def build_review():
 
 
 def review_html(review):
-    sample = {"license.number": "TEST-LIC", "borrower.contact_block": "TEST Customer\nS/o TEST Parent\n10 Test Road\n9000000000",
+    sample = {"document.generated_at": "22-09-2026 20:05:30 IST (UTC+05:30)", "license.number": "TEST-LIC", "borrower.contact_block": "TEST Customer\nS/o TEST Parent\n10 Test Road\n9000000000",
               "loan.number": "TEST-19", "loan.date": "22-09-2026", "collateral.description_lines": "1. Test ring",
               "collateral.net_weight_by_metal": "Gold: 2 g", "collateral.approved_appraisal_total": "12000.00",
               "loan.principal": "10000.00", "loan.principal_words": "Ten thousand rupees only",
               "loan.summary_label": "TEST-19 / 22-09-2026\nRs 10000 / Gold: 2 g\nTEST Customer\n1. Test ring"}
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8"><title>JCL / JSK frame-position review</title>',
              '<style>body{font:16px system-ui;background:#edf1f5;color:#17232d;padding:24px}h1{margin-top:0}.note{max-width:1000px;line-height:1.6}.copies{display:flex;gap:12px;flex-wrap:wrap}.sheet{width:148mm;height:210mm;position:relative;background:white;border:1px solid #788996;margin:12px 0}.frame{position:absolute;box-sizing:border-box;outline:1px dashed #b1bfcb;white-space:pre-wrap;overflow:visible;font:12pt/12pt Helvetica,Arial,sans-serif}.frame small{position:absolute;top:-10px;left:0;color:#536b7e;font:8px system-ui;white-space:nowrap}.media{display:grid;place-items:center;background:repeating-linear-gradient(45deg,#e4ebf1,#e4ebf1 4px,#f4f7fa 4px,#f4f7fa 8px);font:10px system-ui;color:#405c70}.copy-name{font-weight:700}pre{white-space:pre-wrap;max-width:1000px}summary{cursor:pointer}#guides:not(:checked)~main small{display:none}#guides:not(:checked)~main .frame{outline:none}@media print{body{background:white;padding:0}.note,details,label,input{display:none}.sheet{break-inside:avoid}.sheet:after{content:"GEOMETRY REVIEW ONLY - NOT A LOAN TICKET";position:absolute;bottom:5mm;left:8mm;color:#b00020;font-size:10px}}</style>',
-             '<h1>JCL / JSK frame-position review</h1><p class="note"><strong>Synthetic geometry aid, not an issued ticket or renderer preview.</strong> No production artwork is included. All 35 source frames are mapped. Text wrapping here is browser approximation; ReportLab preview and physical printer checks are still required. The original rectangles can overlap and longer content may not fit. These candidates cannot yet be imported: business identity/terms and signature areas still need visible frames or reviewed stationery. Internal audit IDs and verification strings no longer have to print.</p><input id="guides" type="checkbox" checked><label for="guides"> Show frame boundaries and binding names</label><main>']
+             '<h1>JCL / JSK frame-position review</h1><p class="note"><strong>Synthetic geometry aid, not an issued ticket or renderer preview.</strong> No production artwork is included. All 35 source frames are mapped, with an added generation timestamp on each copy. Text wrapping here is browser approximation; ReportLab preview and physical printer checks are still required. The original rectangles can overlap and longer content may not fit. These candidates cannot yet be imported: business identity/terms and signature areas still need visible frames or reviewed stationery. Internal audit IDs and verification strings no longer have to print.</p><input id="guides" type="checkbox" checked><label for="guides"> Show frame boundaries and binding names</label><main>']
     for candidate in review["templates"]:
         parts.append(f'<h2>{candidate["workspace"].upper()} — {candidate["profile_candidate"]["composition"]}</h2><div class="copies">')
         for copy in ("ORIGINAL", "DUPLICATE"):
@@ -80,8 +90,10 @@ def review_html(review):
                 if block["copy_scope"] not in ("BOTH", copy):
                     continue
                 is_media = block["type"] in ("image", "qr")
-                style = f'left:{block["x_mm"]}mm;top:{block["y_mm"]}mm;width:{block["width_mm"]}mm;height:{block["height_mm"]}mm;padding:{0 if is_media else 6}pt'
+                style = f'left:{block["x_mm"]}mm;top:{block["y_mm"]}mm;width:{block["width_mm"]}mm;height:{block["height_mm"]}mm;padding:{block.get("padding_pt", 0)}pt;font-size:{block["font_size_pt"]}pt;line-height:{block.get("leading_pt", 12)}pt'
                 value = ("QR position" if block["type"] == "qr" else "Photo position") if is_media else sample[block["binding"]]
+                if not is_media and block.get("show_label"):
+                    value = f"{block['field_label']}: {value}"
                 parts.append(f'<div class="frame {"media" if is_media else ""}" style="{style}"><small>{html.escape(block["binding"])}</small>{html.escape(value)}</div>')
             parts.append('</div></div>')
         details = {key: value for key, value in candidate.items() if key not in {"layout_candidate", "profile_candidate"}}

@@ -904,6 +904,9 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
         ])
     if schema_version == 4:
         blocks = [block for block in blocks if block["type"] != "verification"]
+        blocks.append({"type": "field", "binding": "document.generated_at", "field_label": "Generated",
+                       "x_mm": 10, "y_mm": 265, "width_mm": 190, "height_mm": 8, "font_size_pt": 10,
+                       "copy_scope": "BOTH"})
         for block in blocks:
             if block["type"] == "table":
                 block["table_columns"] = [

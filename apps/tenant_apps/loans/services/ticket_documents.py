@@ -74,7 +74,12 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
     weight_text = "\n".join(f"{metal}: {weight:f} g" for metal, weight in sorted(weights.items()))
     appraisals = [item.get("latest_appraised_value") for item in items]
     appraisal = "Unknown" if any(value is None for value in appraisals) else f"{sum((Decimal(str(value)) for value in appraisals), Decimal('0')):.2f}"
+    captured_at = timezone.now()
+    local_capture = timezone.localtime(captured_at, timezone.get_default_timezone())
+    offset = local_capture.strftime("%z")
+    generated_at = local_capture.strftime("%d-%m-%Y %H:%M:%S %Z") + f" (UTC{offset[:3]}:{offset[3:]})"
     values = {
+        "document.generated_at": generated_at,
         "license.number": loan.license.license_number,
         "borrower.name": identity.name, "borrower.relationship": identity.relationship,
         "borrower.address": identity.address, "borrower.phone": identity.phone,
@@ -129,7 +134,7 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
     payload = replace(payload, schema_version=2, fields=fields, media=tuple(media))
     snapshot = {
         "schema_version": 2, "workspace_id": loan.workspace_id,
-        "captured_at": timezone.now().isoformat(),
+        "captured_at": captured_at.isoformat(),
         "verification_id": payload.verification_id,
         "approval_id": approval.pk, "approval_fingerprint": approval.fingerprint,
         "customer": {"party_id": identity.party_id, "address_id": identity.address_id},

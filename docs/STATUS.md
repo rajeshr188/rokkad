@@ -7,6 +7,20 @@ tags: [status, architecture]
 
 # Status
 
+## Printed generation timestamp (2026-09-22)
+
+New precision-ticket starters and the JCL/JSK candidates include a small
+`Generated` date/time frame on both copies. The registered `document.generated_at`
+field uses the application's default timezone, including abbreviation and UTC
+offset (currently IST / UTC+05:30). It shares the frozen source capture instant;
+it describes PDF generation, not a physical printer event or loan approval time.
+Saved reprints retain the original timestamp, and older PDFs are not rewritten.
+The timestamp is also visible among the issue's captured fields and remains an
+ordinary editable frame. JSK Duplicate places it to the right of the summary
+label; other candidate fronts use the bottom area. No migration or running-server
+change. All 159 isolated tests pass, including timestamps on both PDF copies and
+byte-identical reprinting a day later. The generated footer was visually checked.
+
 ## Accessible issue evidence and cleaner precision tickets (2026-09-22)
 
 Owner/Admin access is **Settings > Documents & printing > Document layouts >

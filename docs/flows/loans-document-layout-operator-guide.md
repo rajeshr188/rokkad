@@ -144,6 +144,13 @@ loan number. V1/v2/v3 retain their original mandatory printed-field rules. Revie
 static-stock declarations are still pending; background artwork alone currently
 cannot waive required business fields.
 
+New precision starters include a small **Generated** timestamp on both copies.
+In an existing editable precision template, choose the **Generated at** field and
+position it where needed. It uses the application timezone (currently IST) with
+an explicit UTC offset and is captured with the original PDF. Reprints keep that
+timestamp; it is not the date/time paper physically leaves the printer. Existing
+published layouts and retained PDFs are not modified automatically.
+
 Before the parity pilot, open **Integrity diagnostics**. An active ticket
 assignment that prints only Original or only Duplicate is a blocking finding.
 Choose one of the `BOTH`/side-by-side sheet presets or Original/Duplicate copy

@@ -13,6 +13,7 @@ from apps.tenant_apps.loans.domain import PawnLoanState, TransactionKind
 
 
 TICKET_FIELD_KEYS = {
+    "Generated at": "document.generated_at",
     "License number": "license.number", "Customer name": "borrower.name",
     "Customer relationship": "borrower.relationship", "Customer address": "borrower.address",
     "Customer phone": "borrower.phone", "Customer contact block": "borrower.contact_block",

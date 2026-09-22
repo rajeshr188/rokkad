@@ -260,6 +260,14 @@ matching the other two frames, while retaining its 25 x 25 mm size. It now ends
 preserve the extracted source coordinates and record this as an explicit design
 correction rather than a coordinate-conversion fix.
 
+The owner also requested a paper timestamp. `document.generated_at` is a registered
+v4 scalar, captured once with first-issue evidence and displayed with seconds,
+timezone and UTC offset. A Generated footer is added to both candidates: JCL Both
+and JSK Original `(10, 195, 128, 8)` mm; JSK Duplicate `(92, 185, 46, 18)` mm to
+clear its summary label. These are added frames, not part of the 35 extracted
+source frames. Actual background/printer calibration remains pending. Exact PDF
+reprints preserve this generation timestamp rather than showing the reprint time.
+
 Image/QR fit refinements, static-stock declarations and paired activation remain
 pending. V4 visible business coverage is now implemented: internal identifiers and
 verification text are optional on paper; compact description/weight bindings can

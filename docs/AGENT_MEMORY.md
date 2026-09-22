@@ -41,6 +41,10 @@ and issue evidence remain required. Owners/Admins use Issued documents > Evidenc
 the loan print panel links to its ticket history. Evidence shows retained capture
 values and media hashes; verified artifact reads reject missing/mismatching bytes.
 Reviewed static-stock declarations are still needed for literal JCL/JSK candidates.
+The owner wants a timestamp on paper: new v4 starters and JCL/JSK candidates print
+`document.generated_at` as a small Generated footer on both copies. Capture the
+instant once with the issue's source snapshot, display the app timezone and UTC
+offset, and preserve that timestamp on exact-artifact reprints.
 Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
 test launcher pins a local test database and worktree-local filesystem media;
 it does not start a feature web server. See the plan for the command and limits.

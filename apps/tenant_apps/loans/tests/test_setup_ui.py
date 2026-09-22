@@ -2229,6 +2229,10 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(issue.source_snapshot["customer"]["address_id"], address.pk)
         self.assertEqual(issue.payload_schema_version, 2)
         self.assertEqual(issue.source_snapshot["verification_id"], first["X-Rokkad-Verification-ID"])
+        generated_at = issue.source_snapshot["fields"]["document.generated_at"]
+        capture = timezone.datetime.fromisoformat(issue.source_snapshot["captured_at"])
+        local_capture = timezone.localtime(capture, timezone.get_default_timezone())
+        self.assertEqual(generated_at, local_capture.strftime("%d-%m-%Y %H:%M:%S IST (UTC+05:30)"))
         evidence = self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk]))
         for value in ("Captured at first issue", "10 Test Street", "loans-setup-owner", photo.sha256, issue.source_snapshot["verification_id"]):
             self.assertContains(evidence, value)
@@ -2239,6 +2243,8 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertIn("no-store", history["Cache-Control"])
         self.assertEqual(self.tenant_get(f"{reverse('loans:document_issue_list')}?loan={loan.pk}0").context["page_obj"].paginator.count, 0)
         with fitz.open(stream=first.content, filetype="pdf") as pdf:
+            for page in pdf:
+                self.assertIn("Generated: " + generated_at, page.get_text())
             self.assertIn("10 Test Street", pdf[0].get_text())
             self.assertGreaterEqual(len(pdf[0].get_images()), 1)
             self.assertNotIn("rich-ticket-evidence", pdf[0].get_text())
@@ -2249,7 +2255,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
             self.assertNotIn("10 Test Street", archive.read("manifest.json").decode())
         loan.borrower.display_name = "Changed customer"
         loan.borrower.save()
-        with patch("apps.tenant_apps.loans.web.loan_documents.PawnLoanDocumentProjectionBuilder.loan_ticket", side_effect=AssertionError("Reprint rebuilt mutable facts")), patch("apps.tenant_apps.loans.services.ticket_documents._photo_asset", side_effect=AssertionError("Reprint fetched media")):
+        with patch("apps.tenant_apps.loans.web.loan_documents.PawnLoanDocumentProjectionBuilder.loan_ticket", side_effect=AssertionError("Reprint rebuilt mutable facts")), patch("apps.tenant_apps.loans.services.ticket_documents._photo_asset", side_effect=AssertionError("Reprint fetched media")), patch("apps.tenant_apps.loans.services.ticket_documents.timezone.now", return_value=capture + timedelta(days=1)):
             self.assertEqual(self.tenant_get(url).content, first.content)
             self.assertContains(self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk])), "10 Test Street")
         issue.refresh_from_db()

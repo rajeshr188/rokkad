@@ -21,7 +21,7 @@ from apps.tenant_apps.loans.web.document_forms import (
 
 def synthetic_payload():
     values = {key: "SYNTHETIC" for key in REQUIRED_BINDINGS["loan_ticket"]}
-    values.update({"workspace.source_id": "Workspace:7", "loan.number": "TEST-00019"})
+    values.update({"workspace.source_id": "Workspace:7", "loan.number": "TEST-00019", "document.generated_at": "22-09-2026 20:05:30 IST (UTC+05:30)"})
     return DocumentPayload(
         schema_version=1, document_type="loan_ticket", title="Synthetic ticket",
         file_name="synthetic-ticket.pdf", verification_id="TEST|workspace:7|loan:19",
