@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-23
 tags: [migration, cutover, deployment, linode, r2]
 ---
 
@@ -19,17 +19,33 @@ imports one complete frozen snapshot for JCL, JSK and Lakshmi together.
 
 ## Readiness before scheduling downtime
 
-The owner added a pre-cutover UX/accessibility/onboarding redesign on September 22,
-covering desktop, tablet/phone and English/Hindi. Complete its
-[task-based acceptance](../plans/project-wide-ux-revamp.md) before scheduling the
-freeze. Local design work does not require buying the production server now.
+The owner requested cutover planning on September 23 after the ticket designer
+merge and JSK stationery correction. The implementation checkpoint is `f2c6014d`
+on `rls-mvp`, committed locally but not pushed at this review. Tracked files are
+clean; private local outputs and scratch files are deliberately untracked.
+The accepted ticket layouts are database configuration, not Git contents: export
+the current JCL revision 1/profile 1 and corrected JSK revision 4/profile 2 plus
+assets through the supported pack/profile workflow for deployment. Do not use
+the older JSK recovery pack with duplicated business headings. TEST-series
+assignments, licences, customers, loans and issued sample PDFs are rehearsal only.
+
+The pre-cutover UX work covers desktop, tablet/phone and English/Hindi. The owner
+accepted the JCL customer-to-full-release journey and ticket previews, but that
+does not establish acceptance of imported-loan servicing or every device/language.
+Finish a bounded review of daily branch tasks, payment receipts and release memos;
+do not reopen the document architecture or add unrelated designer features.
+Physical printing was explicitly waived as a ticket merge prerequisite and must
+not be reintroduced as an approval gate. Record its alignment as untested.
 
 | Work | Current evidence / remaining action |
 | --- | --- |
 | Destination server | Owner selected separate Linode; creation, SSH address and verified access pending. |
 | Database conversion | Accepted snapshot and separate clean-target replay reconcile all source loan IDs. Fresh data and a later opening date require new preparation. |
 | Media | Rehearsal attachment, source retention, private access and duplicate-free retry verified. Missing and blank source images remain explicitly reported. |
+| Imported-loan servicing | Full-release continuation exists; ordinary partial/interest-only repayment entry remains guarded. Establish required branch collection journeys and implement/test any required unsupported path before go-live. New TEST-loan payment acceptance does not cover imported openings. |
+| Documents and branch UX | JCL plain-paper and JSK data-only ticket previews accepted; TEST-series activation/reprints verified. Finish payment receipt/release memo and essential staff/device/language checks. |
 | Production media configuration | `prod_r2` is implemented and settings-tested; deployment and authenticated storage tests on the new host are pending. |
+| Media reliability | Local R2 reads have intermittently timed out or made photos unavailable; successful retries are not a resolution. Verify upload/read/print reliability from the destination host before opening. |
 | Production media admission | `linode_media` still refuses non-rehearsal databases. Add an exact approved target/storage binding and tests before the final timed rehearsal; never remove its guard ad hoc. |
 | Application release | Build a versioned image from a clean committed checkout, review security patch levels, apply migrations and run deployment checks. Do not include unrelated local changes or private output files. |
 | Access and lending | Configure actual owners/staff, Memberships, lifecycle/subscriptions, current licences, products, series, rates/policies and document numbering through normal services. Imported licences/products are historical references, not new-lending setup. |
@@ -167,9 +183,21 @@ target records to simulate rollback.
 
 ## Immediate next action
 
-Begin the prioritized UX audit and redesign on isolated data. When a hosted review
-or deployment rehearsal is needed, create the separate Linode server and provide
-its IP/SSH login identity through normal access setup. Provision the clean target
-and permanent R2 credentials, finish guarded production media admission, and run a
-timed rehearsal on that host after the redesigned workflows are accepted.
+Prepare one release-readiness checklist around the concrete remaining work above:
+imported servicing, production media admission, essential UI/printing checks,
+destination provisioning and recovery. Resolve required business-flow gaps before
+choosing a freeze date. Create the separate Linode server when ready for hosted
+deployment testing; prepare access, immutable release image, HTTPS, restricted RLS
+runtime, durable R2 credentials and verified backups while the old system remains
+live. Do not push, purchase infrastructure or switch routing as part of discussion.
+
+Then take a fresh non-frozen snapshot for a timed, disposable end-to-end rehearsal
+on that host. Source activity may continue during this rehearsal: its reports are
+preparation evidence, not the final balances. Measure extraction/preparation,
+database import, media changes and validation together; the old approximately
+101-minute database-only local run is not a promised downtime estimate.
+Use the measured result to agree the all-branch freeze window and fallback deadline,
+then follow the final frozen-snapshot sequence above. Never layer that final dump
+onto the practice database or assume old decisions about discarded payments apply
+to newly recorded transactions.
 No freeze date, DNS switch or production financial import has been executed.

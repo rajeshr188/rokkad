@@ -7,6 +7,23 @@ tags: [status, architecture]
 
 # Status
 
+## Production cutover planning resumed (2026-09-23)
+
+Owner requested commit verification and discussion of production cutover. Verified
+`rls-mvp` at `f2c6014d`, with a clean tracked tree and private untracked outputs;
+the implementation is committed locally, not pushed. Updated the existing
+[cutover runbook](implementation/linode-production-cutover.md) to reflect completed
+ticket work and the bounded readiness work still required. This is planning only.
+
+Code review confirms `linode_media` still admits rehearsal databases only and
+ordinary repayment on imported openings remains guarded; full-release continuation
+is the supported imported collection path. These must not be hidden by successful
+new TEST-loan workflows. Permanent R2 credentials, destination-host media reliability,
+server provisioning, current legal licence/numbering verification and a fresh timed
+rehearsal remain. The last recorded server status is not created. Receipt/release
+memo and essential bilingual/device checks remain separate from accepted tickets.
+No new code, infrastructure, production writes, source freeze or routing changes.
+
 ## JSK preprinted business details corrected (2026-09-23)
 
 Owner clarified that JSK's name/address/contact are already on its stationery.
