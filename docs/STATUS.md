@@ -42,6 +42,15 @@ by payment, tamper rejection, paired rollback and portable restoration. Logs:
 `test_rokkad_ticket_template_feature`; no rehearsal or production loan was paid,
 released or otherwise mutated. No model change or migration is required.
 
+Committed implementation on `rls-mvp` at `6f5049d9`. Import boundaries pass for
+717 tracked Python files; 377 curated documentation links pass. Restarted only
+the verified local rehearsal server on port 8081. Under restricted `rokkad_runtime`,
+authenticated HTTP GET checks verified imported-loan detail and Record payment
+pages for JCL, JSK and Lakshmi. Per-workspace loan state/update-time and event
+fingerprints match before/after; no financial submission was made. Evidence:
+`outputs/opening-payment-pages-verification.json`. Production remains unchanged;
+the cutover runbook still requires branch rehearsal and destination readiness.
+
 ## Cutover readiness audit and template export (2026-09-23)
 
 Owner confirmed both interest-only and partial-principal collections are required
