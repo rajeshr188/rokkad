@@ -92,29 +92,35 @@ Use current layout blocks as the frame representation. Do not add a parallel
 the existing renderer/issuance pipeline and fixed/Flow support. Reuse Django
 forms, native partials, HTMX and existing Bootstrap patterns.
 
-## Decisions to resolve before renderer changes
+## Selected decisions before renderer changes
 
-- Define which business fields must appear, and which audit identities belong in
-  stored evidence instead of the visible ticket. Existing validator requirements
-  remain effective until explicitly revised and tested; static stationery must
-  not silently bypass required business information.
-- Define the source and snapshot timing of customer details/photos so a later
-  Party edit cannot silently change an issued document. Never substitute current
-  loan balances or appraisal values for approved contract evidence.
-- Define a compatible schema extension for optional backgrounds, value-only
-  fields, fine coordinates and media bindings. Preserve published v1/v2/v3
-  definitions, assignments and historical artifact reads.
-- Define how preprinted output is represented in issue evidence. Keep the exact
-  data-only print bytes and relevant stationery/version references. A complete
-  proof preview is optional; a second official artifact is not required merely
-  to begin the experiment and must never silently replace an issued file.
+Selected for this experiment in the
+[frame mapping and implementation contract](../implementation/ticket-template-frame-mapping.md):
+
+- Layout v4 adds optional backgrounds, value-only frames, decimal geometry and
+  dynamic photo bindings; v1/v2/v3 retain their behavior.
+- Profile v2 distinguishes plain/preprinted stock. Guides are optional and do
+  not enter the data-only official PDF. Preserve one exact official artifact.
+- Ticket payload v2 uses approved economics/collateral/photo evidence, plus
+  Party details captured at first issue. One nullable immutable snapshot on the
+  existing issue records the additional evidence; no parallel history model.
+- V4 visible business requirements are separate from internal IDs/hashes.
+  Reviewed fixed artwork/stock values must match the loan's authoritative facts.
+- Initial paired activation targets Workspace or Series, matching existing
+  profile scopes. Existing license overrides remain supported outside this
+  simplified action; no implicit scope expansion.
+
+The source inventory covers 12 JCL and 23 JSK frames. Differences in live
+valuation, license-name semantics, quantity and one out-of-bounds JSK frame are
+explicit acceptance findings. Actual artwork and paper calibration remain
+pending. These are implementation targets, not changes to current validators.
 
 ## Delivery order
 
-1. Design slice (this commit): scope, journey, capabilities, isolation and gates.
-2. Inventory/review existing template assets and positions, map supported/missing
-   fields, and prepare synthetic acceptance examples; confirm the small schema
-   and evidence decisions above.
+1. Complete: scope, journey, capabilities, isolation and gates.
+2. Complete for source configuration: 35 frame mappings, candidate coordinates,
+   missing capabilities and engineering decisions. Defined synthetic test cases;
+   actual media inventory/visual review and executable fixtures remain pending.
 3. Implement only missing overlay/data capabilities and their boundary tests.
 4. Simplify authoring/activation in one editor over existing services; keep JSON
    optional for advanced maintenance, unnecessary for the supported user journey.

@@ -22,7 +22,12 @@ do not add a parallel legacy renderer or Girvi dependencies. JCL plain-paper and
 JSK preprinted A5 are acceptance examples of one client-configurable editor.
 Preserve historical issues and tenant isolation. Runtime work requires a separate
 database/media location; Git isolation alone does not protect rehearsal data.
-Owner acceptance precedes merge. This branch initially contains design only.
+Owner acceptance precedes merge. This branch currently contains design only.
+The [frame mapping contract](implementation/ticket-template-frame-mapping.md)
+captures all 35 selected JCL/JSK frames and the chosen additive schema/evidence
+changes. Preserve explicit differences in quantity, legacy live value and license
+name; do not claim visual parity from coordinate conversion. Use existing approved
+photo evidence and snapshot Party display data only at first document issue.
 
 Owner/team forms use ordinary explicit POST actions and the existing audited
 control-plane services. Invitation and role choices come from role policy; role

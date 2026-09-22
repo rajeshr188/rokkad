@@ -7,6 +7,32 @@ tags: [status, architecture]
 
 # Status
 
+## Ticket frame mapping and engineering decisions (2026-09-22)
+
+Feature-only design work maps all 12 frames in JCL's default template and all 23
+in JSK's default template from the September 21 dump. The
+[mapping contract](implementation/ticket-template-frame-mapping.md) and its
+sanitized JSON inventory preserve source geometry/settings and candidate bindings.
+No customer records, photos, production PDFs or credentials are included.
+
+Selected targets: additive layout v4, stock-aware print-profile v2, richer ticket
+payload v2, first-issue source evidence on the existing issue, and one copy-aware
+editor with atomic Workspace/Series activation. No second printing engine or
+legacy domain dependency. Old published versions and exact-artifact reprints
+remain compatibility requirements. See the proposed ADR and bounded plan.
+
+Findings: JSK Duplicate amount frame 19 exceeds A5 width by 12 mm; legacy text
+padding/leading and JCL's 148.5 mm half-A4 canvas affect alignment. Legacy live
+valuation, misleading license-name binding and separate quantity cannot silently
+be treated as equivalent to approved appraisal, license number and native item
+descriptions. These remain visible acceptance differences.
+
+Validation checks the 35 inventory rows against source configuration, coordinate
+conversion/bounds, proposed binding coverage and documentation links. This slice
+is documentation/design data only: no renderer, migrations, data, runtime settings
+or production changes; no new PDF/physical-printer acceptance. Next is isolated
+feature runtime/fixtures, then the bounded overlay and stock-profile extension.
+
 ## Isolated ticket-template design experiment (2026-09-22)
 
 The owner authorized `feature/ticket-template-designer`, based on checkpoint

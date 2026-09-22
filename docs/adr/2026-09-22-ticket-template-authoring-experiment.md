@@ -31,7 +31,22 @@ authorization, approved financial evidence and exact-byte artifact reprints.
 The bounded extension needs optional backgrounds/data-only printing, value-only
 fields, production-equivalent customer/media bindings and sufficiently precise
 geometry. Review visible business requirements separately from internal audit
-evidence. Schema/evidence details remain design work before implementation.
+evidence. The [implementation contract](../implementation/ticket-template-frame-mapping.md)
+now selects layout v4, stock-aware profile v2 and ticket payload v2; all remain
+unimplemented. Prior schema interpretation and exact stored artifacts survive.
+
+Party identity/contact/photo data is captured at first issue; approved economics
+and collateral/photo evidence retain their existing snapshot authority. A nullable
+immutable source snapshot extends the existing issue, not a second history model.
+Reprints resolve the stored artifact before fetching mutable data/media. Keep one
+official print PDF; stationery guides appear only in labelled design previews.
+
+Unified activation uses the existing Workspace/Series profile scopes and validates
+the intended pair atomically. License-only profile scope is not added. Internal
+audit identities need not clutter v4 paper output; reviewed static stock/artwork
+declarations must match authoritative values while dynamic business facts remain
+required. Source quantity/license/value differences and physical calibration are
+explicit acceptance gates, not silent compatibility assumptions.
 
 ## Status and compatibility
 

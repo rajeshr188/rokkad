@@ -1,0 +1,919 @@
+{
+  "kind": "design_inventory_not_importable_layout",
+  "source_commit": "4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd",
+  "source_archive_sha256": "f50e992a5813571e5d64316534cf073c08a96059780420be47bf7211eab163a6",
+  "source_snapshot_date": "2026-09-21",
+  "contains_borrower_data": false,
+  "background_bytes_inspected": false,
+  "coordinate_note": "Candidate outer rectangles before PDF merging/imposition; not pixel-parity or activation approval. Text uses legacy 6-point insets.",
+  "templates": [
+    {
+      "workspace": "jcl",
+      "legacy_template": {
+        "id": "2",
+        "name": "jcl_loan",
+        "base_template": "pdf_templates/org.pdf",
+        "created_at": "2024-11-12 18:35:23.757711+00",
+        "is_active": "t",
+        "dup_template": "pdf_templates/dup.pdf",
+        "form_d3_template": "pdf_templates/D31.pdf",
+        "print_option": "BA",
+        "terms_template": "pdf_templates/Condition1.pdf",
+        "page_height": "29.70",
+        "page_width": "21.00",
+        "is_default": "t"
+      },
+      "excluded_nondefault_template_ids": [
+        "1"
+      ],
+      "source_canvas_mm": [
+        "148.5",
+        "210"
+      ],
+      "target_profile": "A4_SIDE_BY_SIDE",
+      "frames": [
+        {
+          "legacy": {
+            "id": "13",
+            "frame_name": "license_no",
+            "field_type": "text",
+            "x_pos": "11.00",
+            "y_pos": "18.60",
+            "width": "3.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "license.number",
+          "candidate_outer_mm": {
+            "x": "110.00",
+            "y": "14.00",
+            "width": "30.00",
+            "height": "10.00"
+          },
+          "review_flags": [
+            "LEGACY_BINDS_LICENSE_NAME_NOT_LICENSE_NUMBER_VERIFY_MEANING"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "14",
+            "frame_name": "customer_pic",
+            "field_type": "image",
+            "x_pos": "1.00",
+            "y_pos": "11.00",
+            "width": "2.50",
+            "height": "2.50",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "borrower.photo",
+          "candidate_outer_mm": {
+            "x": "10.00",
+            "y": "75.00",
+            "width": "25.00",
+            "height": "25.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "15",
+            "frame_name": "customer_info",
+            "field_type": "text",
+            "x_pos": "4.00",
+            "y_pos": "13.00",
+            "width": "6.00",
+            "height": "3.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "borrower.contact_block",
+          "candidate_outer_mm": {
+            "x": "40.00",
+            "y": "50.00",
+            "width": "60.00",
+            "height": "30.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "16",
+            "frame_name": "loan_id",
+            "field_type": "text",
+            "x_pos": "10.00",
+            "y_pos": "15.00",
+            "width": "3.50",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.number",
+          "candidate_outer_mm": {
+            "x": "100.00",
+            "y": "50.00",
+            "width": "35.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "17",
+            "frame_name": "loan_date",
+            "field_type": "text",
+            "x_pos": "10.00",
+            "y_pos": "14.20",
+            "width": "3.50",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.date",
+          "candidate_outer_mm": {
+            "x": "100.00",
+            "y": "58.00",
+            "width": "35.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "18",
+            "frame_name": "loan_qr",
+            "field_type": "qr",
+            "x_pos": "10.00",
+            "y_pos": "11.20",
+            "width": "1.80",
+            "height": "1.80",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.number",
+          "candidate_outer_mm": {
+            "x": "100.00",
+            "y": "80.00",
+            "width": "18.00",
+            "height": "18.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "19",
+            "frame_name": "loan_desc",
+            "field_type": "text",
+            "x_pos": "1.00",
+            "y_pos": "8.00",
+            "width": "10.00",
+            "height": "4.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.description_lines",
+          "candidate_outer_mm": {
+            "x": "10.00",
+            "y": "90.00",
+            "width": "100.00",
+            "height": "40.00"
+          },
+          "review_flags": [
+            "NATIVE_COLLATERAL_HAS_NO_SEPARATE_QUANTITY_FIELD"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "20",
+            "frame_name": "loanitem_pic",
+            "field_type": "image",
+            "x_pos": "11.00",
+            "y_pos": "8.00",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.first_approved_photo",
+          "candidate_outer_mm": {
+            "x": "110.00",
+            "y": "110.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "21",
+            "frame_name": "weight",
+            "field_type": "text",
+            "x_pos": "2.50",
+            "y_pos": "7.00",
+            "width": "7.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.net_weight_by_metal",
+          "candidate_outer_mm": {
+            "x": "25.00",
+            "y": "130.00",
+            "width": "70.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "22",
+            "frame_name": "value",
+            "field_type": "text",
+            "x_pos": "11.00",
+            "y_pos": "7.00",
+            "width": "2.50",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.approved_appraisal_total",
+          "candidate_outer_mm": {
+            "x": "110.00",
+            "y": "130.00",
+            "width": "25.00",
+            "height": "10.00"
+          },
+          "review_flags": [
+            "LIVE_MARKET_VALUE_MUST_NOT_BE_SILENTLY_MAPPED_TO_APPROVED_APPRAISAL"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "23",
+            "frame_name": "amount",
+            "field_type": "text",
+            "x_pos": "2.70",
+            "y_pos": "6.00",
+            "width": "3.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.principal",
+          "candidate_outer_mm": {
+            "x": "27.00",
+            "y": "140.00",
+            "width": "30.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "24",
+            "frame_name": "amount_words",
+            "field_type": "text",
+            "x_pos": "7.20",
+            "y_pos": "6.00",
+            "width": "6.50",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "2",
+            "template_type": "B",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.principal_words",
+          "candidate_outer_mm": {
+            "x": "72.00",
+            "y": "140.00",
+            "width": "65.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        }
+      ]
+    },
+    {
+      "workspace": "jsk",
+      "legacy_template": {
+        "id": "1",
+        "name": "jsk_loan",
+        "base_template": "",
+        "created_at": "2024-11-12 18:44:04.72017+00",
+        "is_active": "t",
+        "dup_template": "",
+        "form_d3_template": "",
+        "print_option": "BS",
+        "terms_template": "",
+        "page_height": "29.70",
+        "page_width": "21.00",
+        "is_default": "t"
+      },
+      "excluded_nondefault_template_ids": [],
+      "source_canvas_mm": [
+        "148",
+        "210"
+      ],
+      "target_profile": "A5_BOTH_SIMPLEX",
+      "frames": [
+        {
+          "legacy": {
+            "id": "1",
+            "frame_name": "loan_id",
+            "field_type": "text",
+            "x_pos": "10.90",
+            "y_pos": "18.00",
+            "width": "3.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.number",
+          "candidate_outer_mm": {
+            "x": "109.00",
+            "y": "20.00",
+            "width": "30.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "2",
+            "frame_name": "customer_info",
+            "field_type": "text",
+            "x_pos": "1.00",
+            "y_pos": "12.00",
+            "width": "8.00",
+            "height": "4.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "borrower.contact_block",
+          "candidate_outer_mm": {
+            "x": "10.00",
+            "y": "50.00",
+            "width": "80.00",
+            "height": "40.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "3",
+            "frame_name": "loan_desc",
+            "field_type": "text",
+            "x_pos": "1.00",
+            "y_pos": "8.00",
+            "width": "5.00",
+            "height": "4.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.description_lines",
+          "candidate_outer_mm": {
+            "x": "10.00",
+            "y": "90.00",
+            "width": "50.00",
+            "height": "40.00"
+          },
+          "review_flags": [
+            "NATIVE_COLLATERAL_HAS_NO_SEPARATE_QUANTITY_FIELD"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "4",
+            "frame_name": "weight",
+            "field_type": "text",
+            "x_pos": "9.80",
+            "y_pos": "10.50",
+            "width": "3.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.net_weight_by_metal",
+          "candidate_outer_mm": {
+            "x": "98.00",
+            "y": "85.00",
+            "width": "30.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "5",
+            "frame_name": "value",
+            "field_type": "text",
+            "x_pos": "10.00",
+            "y_pos": "7.00",
+            "width": "3.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.approved_appraisal_total",
+          "candidate_outer_mm": {
+            "x": "100.00",
+            "y": "120.00",
+            "width": "30.00",
+            "height": "20.00"
+          },
+          "review_flags": [
+            "LIVE_MARKET_VALUE_MUST_NOT_BE_SILENTLY_MAPPED_TO_APPROVED_APPRAISAL"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "6",
+            "frame_name": "amount",
+            "field_type": "text",
+            "x_pos": "5.50",
+            "y_pos": "5.20",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.principal",
+          "candidate_outer_mm": {
+            "x": "55.00",
+            "y": "138.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "7",
+            "frame_name": "amount_words",
+            "field_type": "text",
+            "x_pos": "1.00",
+            "y_pos": "4.50",
+            "width": "10.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.principal_words",
+          "candidate_outer_mm": {
+            "x": "10.00",
+            "y": "145.00",
+            "width": "100.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "8",
+            "frame_name": "loan_date",
+            "field_type": "text",
+            "x_pos": "10.90",
+            "y_pos": "17.00",
+            "width": "3.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.date",
+          "candidate_outer_mm": {
+            "x": "109.00",
+            "y": "30.00",
+            "width": "30.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "9",
+            "frame_name": "customer_pic",
+            "field_type": "image",
+            "x_pos": "9.00",
+            "y_pos": "12.00",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "borrower.photo",
+          "candidate_outer_mm": {
+            "x": "90.00",
+            "y": "70.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "10",
+            "frame_name": "loanitem_pic",
+            "field_type": "image",
+            "x_pos": "6.00",
+            "y_pos": "5.90",
+            "width": "3.00",
+            "height": "3.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.first_approved_photo",
+          "candidate_outer_mm": {
+            "x": "60.00",
+            "y": "121.00",
+            "width": "30.00",
+            "height": "30.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "11",
+            "frame_name": "loan_qr",
+            "field_type": "qr",
+            "x_pos": "10.90",
+            "y_pos": "12.00",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "O",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.number",
+          "candidate_outer_mm": {
+            "x": "109.00",
+            "y": "70.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "12",
+            "frame_name": "loan_id",
+            "field_type": "text",
+            "x_pos": "2.20",
+            "y_pos": "15.80",
+            "width": "3.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.number",
+          "candidate_outer_mm": {
+            "x": "22.00",
+            "y": "32.00",
+            "width": "30.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "13",
+            "frame_name": "loan_date",
+            "field_type": "text",
+            "x_pos": "10.80",
+            "y_pos": "15.80",
+            "width": "3.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.date",
+          "candidate_outer_mm": {
+            "x": "108.00",
+            "y": "32.00",
+            "width": "30.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "14",
+            "frame_name": "customer_info",
+            "field_type": "text",
+            "x_pos": "4.50",
+            "y_pos": "13.30",
+            "width": "8.00",
+            "height": "4.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "borrower.contact_block",
+          "candidate_outer_mm": {
+            "x": "45.00",
+            "y": "37.00",
+            "width": "80.00",
+            "height": "40.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "15",
+            "frame_name": "customer_pic",
+            "field_type": "image",
+            "x_pos": "10.80",
+            "y_pos": "13.50",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "borrower.photo",
+          "candidate_outer_mm": {
+            "x": "108.00",
+            "y": "55.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "16",
+            "frame_name": "weight",
+            "field_type": "text",
+            "x_pos": "3.00",
+            "y_pos": "7.00",
+            "width": "3.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.net_weight_by_metal",
+          "candidate_outer_mm": {
+            "x": "30.00",
+            "y": "130.00",
+            "width": "30.00",
+            "height": "10.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "17",
+            "frame_name": "value",
+            "field_type": "text",
+            "x_pos": "10.80",
+            "y_pos": "7.00",
+            "width": "3.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.approved_appraisal_total",
+          "candidate_outer_mm": {
+            "x": "108.00",
+            "y": "130.00",
+            "width": "30.00",
+            "height": "10.00"
+          },
+          "review_flags": [
+            "LIVE_MARKET_VALUE_MUST_NOT_BE_SILENTLY_MAPPED_TO_APPROVED_APPRAISAL"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "18",
+            "frame_name": "loan_desc",
+            "field_type": "text",
+            "x_pos": "3.00",
+            "y_pos": "6.80",
+            "width": "10.00",
+            "height": "4.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.description_lines",
+          "candidate_outer_mm": {
+            "x": "30.00",
+            "y": "102.00",
+            "width": "100.00",
+            "height": "40.00"
+          },
+          "review_flags": [
+            "NATIVE_COLLATERAL_HAS_NO_SEPARATE_QUANTITY_FIELD"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "19",
+            "frame_name": "amount",
+            "field_type": "text",
+            "x_pos": "4.00",
+            "y_pos": "12.80",
+            "width": "12.00",
+            "height": "1.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.principal",
+          "candidate_outer_mm": {
+            "x": "40.00",
+            "y": "72.00",
+            "width": "120.00",
+            "height": "10.00"
+          },
+          "review_flags": [
+            "OUTER_RECTANGLE_EXCEEDS_SOURCE_PAGE"
+          ]
+        },
+        {
+          "legacy": {
+            "id": "20",
+            "frame_name": "amount_words",
+            "field_type": "text",
+            "x_pos": "4.00",
+            "y_pos": "10.80",
+            "width": "9.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.principal_words",
+          "candidate_outer_mm": {
+            "x": "40.00",
+            "y": "82.00",
+            "width": "90.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "21",
+            "frame_name": "label",
+            "field_type": "text",
+            "x_pos": "1.00",
+            "y_pos": "0.50",
+            "width": "8.00",
+            "height": "3.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.summary_label",
+          "candidate_outer_mm": {
+            "x": "10.00",
+            "y": "175.00",
+            "width": "80.00",
+            "height": "30.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "22",
+            "frame_name": "loanitem_pic",
+            "field_type": "image",
+            "x_pos": "11.00",
+            "y_pos": "6.80",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "collateral.first_approved_photo",
+          "candidate_outer_mm": {
+            "x": "110.00",
+            "y": "122.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        },
+        {
+          "legacy": {
+            "id": "23",
+            "frame_name": "loan_qr",
+            "field_type": "qr",
+            "x_pos": "10.80",
+            "y_pos": "11.00",
+            "width": "2.00",
+            "height": "2.00",
+            "font_size": "12",
+            "font_name": "Helvetica",
+            "template_id": "1",
+            "template_type": "D",
+            "show_boundary": "0"
+          },
+          "candidate_binding": "loan.number",
+          "candidate_outer_mm": {
+            "x": "108.00",
+            "y": "80.00",
+            "width": "20.00",
+            "height": "20.00"
+          },
+          "review_flags": []
+        }
+      ]
+    }
+  ]
+}
