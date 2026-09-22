@@ -86,15 +86,41 @@ The fast-forward merge completed at `e2fae88d`; the original checkout is on
 `rls-mvp`, with the isolated feature worktree and pre-feature checkpoint retained.
 Existing issued PDFs and source snapshots remain unchanged. On September 23 the
 owner authorized local rollout: migrations are applied to development/rehearsal;
-accepted JCL/JSK templates and profiles are installed as unassigned drafts in
+accepted JCL/JSK templates and profiles were installed in
 `rehearsal-jcl-20260921` (layout/profile 1/1) and `rehearsal-jsk-20260921` (2/2).
+They are now published and assigned through Use this template only to the TEST
+series (JCL 13, JSK 14). Workspace defaults and imported-series resolution remain
+unchanged. This is rehearsal activation, not production activation.
 JCL's four R2 assets and the two existing issued PDFs are checksum-verified.
 The imported JCL draft allows long identifiers/business headers to shrink within
-unchanged frames; the accepted sandbox source stays intact. Real licence printed
-name/address fields are blank; requested owner details remain pending. Imported
+unchanged frames; the accepted sandbox source stays intact. The owner confirmed
+JCL's business details: `J Champalal`, No. 58, Main Road, Lathif Sahib Street,
+RN Palayam, Vellore 632001; contact 7598260045. These are now saved through an
+audited amendment on the synthetic JCL practice licence only. Both preview headers
+fit. The owner corrected the initially supplied No. 56 to No. 58, matching the
+Original background's door number; no door-number artwork correction is needed.
+JSK's confirmed details are `Jai Sri Krishna`, No. 155, Azad Road, Thorapadi,
+Vellore 632001; contact 9489481436. Retain these for licence setup; they have not
+been applied to JSK's unverified imported licence. Real imported licence printed
+name/address fields remain blank. Imported
 licences are unverified legacy references, so do not bypass verification to amend
-them or enable lending. No template is activated by this rollout. JSK has no
-approved sample loan in rehearsal yet. Port 8081 runs the merged `rls-mvp` code.
+them or enable lending. JSK now has
+owner-authorized practice licence 6 (`TEST-JSK`), series 14 and approved sample
+loan 18859 (`TEST-JSK-L-00001`), created through ordinary services. The licence
+has the confirmed business details; customer, photos, collateral, appraisal and
+validity are explicitly synthetic. No disbursal was made. The normal printing
+route has issued JSK TEST ticket 3 with payload-v2 source evidence, layout/profile
+2/2 and SERIES scope; repeated printing returns identical bytes. JCL's existing
+ticket is issue 2 (source PawnLoan 18858); issue 1 is the KFS schedule. Both old
+artifacts remain unchanged, including the ordinary JCL ticket reprint after
+activation. To see JCL's new layout use its marked preview or a new eligible
+practice loan; existing issued tickets intentionally retain their saved PDFs.
+Practice calculation/rate policies are licence-scoped; the ordinary default
+product catalog was seeded, with its flexible version activated. Existing import
+records/counters are unchanged. JSK's published weight frames wrap/shrink with
+automatic leading in the same geometry, preserving full stored precision and
+the 6 pt floor. Both A5 rehearsal preview pages pass. Port 8081 runs the merged
+`rls-mvp` code. Keep these TEST records out of production migration.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

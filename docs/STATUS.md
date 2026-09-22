@@ -7,6 +7,122 @@ tags: [status, architecture]
 
 # Status
 
+## TEST-series template activation completed (2026-09-23)
+
+Activated the reviewed pairs through the authenticated, CSRF-protected **Use
+this template** HTTP action on local port 8081: JCL layout/profile 1/1 for TEST
+series 13, and JSK 2/2 for TEST series 14. Both layout/profile pairs are now
+PUBLISHED, with exactly one active assignment of each type per TEST series.
+Their definition hashes are unchanged. Workspace defaults and every other
+series' effective layout/profile remain unchanged, including Lakshmi.
+
+Compared full-row fingerprints for 83 Loans/Party tables in each of the three
+rehearsal workspaces before/after activation (excluding the four publication and
+assignment tables). All match. Previous assignments are preserved; only the
+two intended pairs were added. Both existing JCL artifacts pass authenticated
+read-back checks, and the normal ticket route still returns the identical saved
+PDF for issue 2. Issue 1 is the KFS schedule; it is not the historical ticket.
+
+Finished the active printing path using JSK practice loan TEST-JSK-L-00001.
+The normal route created exactly one issue (3), bound to layout/profile 2/2 and
+SERIES scope, with payload-v2 source evidence containing the confirmed business
+details. A repeat request returned the same issue and byte-identical PDF. Both
+issued A5 pages were rendered and visually inspected; no clipping, background,
+preview watermark or printed monthly rate. SHA-256:
+`0b168a4a9b8b2fc525850d18ccb552dfe349813de7961baea1a8dc549e5c07d6`.
+One R2 read timed out on the first attempt; retry succeeded. This records a
+successful retry, not resolution of the intermittent storage connectivity issue.
+
+Final comparison confirms all original rows across those 83 tables/workspace
+remain unchanged, excluding only the explicitly added JSK issue from its digest.
+No new loan, disbursal, payment or production mutation occurred in this step.
+No application code or migrations changed. Physical print alignment remains
+untested, with the merge gate already waived by the owner.
+
+Local evidence is under `outputs/ticket-template-rollout-20260922/`:
+`activation-before.json`, `activation-after.json`, `activation-after_issue.json`,
+`activation-http.json`, `activation-history-verification.json`, and
+`jsk-test-issue-verification.json`. The JCL new-layout preview remains available;
+its previously issued ticket correctly retains the old PDF. The next document
+review is payment receipts and release memos, continuing the original print-review
+scope without changing production or imported-licence verification.
+
+## JSK rehearsal ticket sample prepared (2026-09-23)
+
+Created owner-authorized synthetic JSK practice setup through existing services
+under restricted `rokkad_runtime`: licence 6 (`TEST-JSK`), series 14, customer
+11634 and loan 18859 (`TEST-JSK-L-00001`). The licence contains the confirmed
+Jai Sri Krishna business address/contact. Supporting document, customer/photo,
+collateral/photo and appraisal are explicitly TEST fixtures. Normal draft and
+approval services produced the immutable approval; no direct state/snapshot
+seeding, disbursal, repayment or official document issue was performed.
+
+Seeded the ordinary four default product drafts and activated the flexible
+product version 10 for practice. Added calculation and metal-rate policies only
+for the TEST licence (latest-appraisal valuation, 75% LTV, 1% sample monthly
+rate, first month upfront). Sample terms are Rs 10,000, three months, one 5 g
+synthetic gold chain with Rs 40,000 sample appraisal; these are not real lending
+or market evidence. Imported licences remain inactive/unverified. Before/after
+hashes match for all pre-existing JSK licences, series, counters, loans, collateral,
+issues, product versions, customers and addresses.
+
+The actual stored weight precision exposed a duplicate weight-frame overflow.
+Changed only rehearsal JSK draft 2's two weight frames to SHRINK with automatic
+leading, keeping their coordinates, sizes, maximum font and 6 pt floor. Full
+values are retained. Latest layout hash is
+`fe74191a68a38ac9aa7fba27adcb886e4f62994ba7744ec4a5daf615da9c2467`;
+the accepted sandbox source and original recovery pack are unchanged.
+
+Authenticated HTTP checks pass for both workspaces' guide, editor, activation
+review and fresh previews. Both JSK pages were rendered and visually checked:
+A5 Original/Duplicate, confirmed business details, full sample values/photos,
+tenure and timestamp; no printed monthly interest or background. The two existing
+JCL issued PDFs still pass R2 checksum verification. This is digital verification;
+physical alignment remains untested with its merge gate already waived.
+
+Both rehearsal layout/profile pairs remain unassigned drafts. Next rollout step
+is Use this template scoped to the TEST series, preserving imported-series setup.
+Evidence and fresh PDFs are under `outputs/ticket-template-rollout-20260922/`,
+including `jsk-practice-result.json` and `jsk-preview-verification.json`.
+No application code, migrations or production changes.
+
+## JCL door number corrected; JSK details confirmed (2026-09-23)
+
+The owner corrected JCL's door number to **58**, superseding the No. 56 value
+and door-number artwork concern below. Applied an ordinary audited amendment to
+rehearsal practice licence 5 (revision 7). Both refreshed preview headers show
+No. 58 and the existing phone; JCL loan, issue and other licence hashes remain
+unchanged. The Original artwork already prints No. 58 and was not modified.
+
+Recorded JSK's owner-confirmed details for setup: **Jai Sri Krishna**, No. 155,
+Azad Road, Thorapadi, Vellore 632001; contact **9489481436**. JSK's imported
+licence remains an unverified legacy reference; these details have not been
+written to that record. It still needs a separate approved practice sample for
+rehearsal printing, or completion of the existing imported-licence verification
+workflow for actual new lending. No business details are now awaiting the owner.
+Both template pairs remain drafts. No production changes or application changes.
+Local confirmed values and correction evidence are retained under
+`outputs/ticket-template-rollout-20260922/`.
+
+## JCL owner-confirmed print details saved (2026-09-23)
+
+On `rls-mvp`, amended only rehearsal JCL's synthetic practice licence 5 through
+the existing restricted-runtime service, creating immutable licence revision 6.
+Business name is `J Champalal`; address is No. 56, Main Road, Lathif Sahib Street,
+RN Palayam, Vellore 632001; contact 7598260045. Legal TEST licence identity and
+all other licences are unchanged. Before/after hashes also confirm JCL loans and
+issued-document rows are unchanged. No production writes or template activation.
+
+Authenticated preview initially encountered an R2 read timeout; a retry succeeded.
+The fresh marked A4 PDF was rendered and visually checked: both copies show the
+complete licence-sourced heading/address/contact without clipping. The existing
+Original background contains an older No. 58 Tamil footer address, separate from
+the updated header; reconcile this artwork before activating the template.
+Both rehearsal template pairs remain drafts. JSK address/phone and its approved
+rehearsal sample remain outstanding. Local evidence is in
+`outputs/ticket-template-rollout-20260922/jcl-business-details.json` and the
+refreshed JCL preview. No application code or migration changes.
+
 ## Merged ticket templates installed in rehearsal (2026-09-23)
 
 Continued from the original `rls-mvp` checkout (`e26b6363`), not the retained
