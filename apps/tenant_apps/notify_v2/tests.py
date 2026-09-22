@@ -741,7 +741,7 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
     def test_batch_list_is_domain_neutral(
         self, _access, _settings, mock_select_related, mock_render
     ):
-        mock_select_related.return_value.prefetch_related.return_value = []
+        mock_select_related.return_value.order_by.return_value = []
         mock_render.return_value = HttpResponse("ok")
 
         request = self.factory.get("/notify-v2/batches/")
@@ -809,9 +809,11 @@ class NotifyV2BatchWorkflowTests(SimpleTestCase):
             request.notify_v2_workspace_access = SimpleNamespace(can=lambda action: False)
             batch_detail(request, pk=7)
             self.assertFalse(mock_render.call_args.args[2]["can_send_digital"])
+            self.assertFalse(mock_render.call_args.args[2]["can_record_handling"])
             request.notify_v2_workspace_access = SimpleNamespace(can=lambda action: action == "data.edit")
             batch_detail(request, pk=7)
             self.assertTrue(mock_render.call_args.args[2]["can_send_digital"])
+            self.assertTrue(mock_render.call_args.args[2]["can_record_handling"])
 
     @patch("apps.tenant_apps.notify_v2.views.dispatch_batch_jobs")
     @patch("apps.tenant_apps.notify_v2.views.get_object_or_404")

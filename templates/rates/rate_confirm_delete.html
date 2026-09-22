@@ -1,14 +1,15 @@
 {% extends 'base_tenant.html' %}
-
+{% load i18n static %}
+{% block title %}{% translate "Withdraw quote" %}{% endblock %}
 {% block workspace_content %}
-{% include 'rates/_navigation.html' %}
-  <div class="card p-4">
-    <h1>Withdraw quote</h1>
-  <p>Withdraw this {{ rate.metal }} {{ rate.get_purity_display }} quote from {{ rate.rate_source }}?</p>
-  <form action="{% url 'workspace_rates:rate_delete' request.workspace.slug rate.id %}" method="POST">
-    {% csrf_token %}{{ form.as_p }}<p>The original record remains in history. Loans may fall back to an earlier applicable quote. Existing approved loan evidence stays unchanged.</p>
-    <button class="btn btn-danger" type="submit">Withdraw</button>
-    <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_list' request.workspace.slug %}">Cancel</a>
-  </form>
-  </div>
+<section class="setup-entry" hx-history="false">{% include 'rates/_navigation.html' %}
+<h1 class="h3">{% translate "Withdraw quote" %}</h1>
+<p>{{ rate.metal }} &middot; {{ rate.get_purity_display }} &middot; {{ rate.buying_rate }} {{ rate.currency }} / g &middot; {{ rate.effective_at }}</p>
+<p>{% translate "The original record remains in history. Loans may fall back to an earlier applicable quote. Existing approved loan evidence stays unchanged." %}</p>
+{% include 'components/forms/accessible.html#errors' %}
+<form method="post" class="card card-body" novalidate>{% csrf_token %}
+  {% include 'components/forms/accessible.html#field' with field=form.reason %}
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-danger" type="submit">{% translate "Withdraw" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_detail' request.workspace.slug rate.pk %}">{% translate "Cancel" %}</a></div>
+</form></section>
 {% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

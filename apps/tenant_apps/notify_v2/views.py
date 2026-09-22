@@ -9,10 +9,14 @@ import zipfile
 from django.conf import settings
 from django import forms
 from django.core.exceptions import ImproperlyConfigured
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.contrib import messages
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
+from django.views.decorators.vary import vary_on_headers
+from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -49,17 +53,31 @@ class WhatsAppCloudIntegrationForm(forms.Form):
     def __init__(self, *args, integration=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.integration = integration
-        for field in self.fields.values():
+        labels = {"api_version": _("API version"), "phone_number_id": _("Phone-number ID"),
+                  "access_token": _("Access token"), "webhook_verify_token": _("Webhook verify token"),
+                  "app_secret": _("Meta app secret"), "is_enabled": _("Enable sending and webhook verification for this workspace")}
+        for name, field in self.fields.items():
+            field.label = labels[name]
             field.widget.attrs["class"] = "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else "form-control"
+            if isinstance(field.widget, forms.PasswordInput):
+                field.widget.attrs["autocomplete"] = "new-password"
         if integration:
             for name in ("access_token", "webhook_verify_token", "app_secret"):
-                self.fields[name].help_text = "Leave blank to keep the stored secret."
+                self.fields[name].help_text = _("Leave blank to keep the stored secret.")
+        else:
+            for name in ("access_token", "webhook_verify_token", "app_secret"):
+                self.fields[name].required = True
 
     def clean(self):
         cleaned = super().clean()
         if self.integration is None and not all(cleaned.get(name) for name in ("access_token", "webhook_verify_token", "app_secret")):
-            raise forms.ValidationError("All three secrets are required for initial setup.")
+            raise forms.ValidationError(_("All three secrets are required for initial setup."))
         return cleaned
+
+
+class BatchListForm(forms.Form):
+    q = forms.CharField(required=False, max_length=100, label=_("Search batch name or event"), widget=forms.TextInput(attrs={"class": "form-control", "type": "search"}))
+    status = forms.ChoiceField(required=False, label=_("Batch status"), choices=[("", _("All statuses")), *((value, _(label)) for value, label in NotificationBatch.Status.choices)], widget=forms.Select(attrs={"class": "form-select"}))
 
 
 def _flash(request, level, message):
@@ -159,6 +177,7 @@ def _notify_admin_urls(request):
 
 
 @notify_v2_action_required("view")
+@never_cache
 def settings_overview(request):
     settings_summary = _notify_settings_summary()
     settings_summary["webhook_url"] = reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[request.workspace.slug])
@@ -186,6 +205,7 @@ def settings_overview(request):
 
 
 @notify_v2_admin_required
+@never_cache
 def whatsapp_cloud_integration_setup(request):
     workspace = request.notify_v2_workspace
     integration = get_whatsapp_cloud_integration(workspace.pk)
@@ -194,7 +214,7 @@ def whatsapp_cloud_integration_setup(request):
         "phone_number_id": getattr(integration, "phone_number_id", ""),
         "is_enabled": getattr(integration, "is_enabled", False),
     }
-    form = WhatsAppCloudIntegrationForm(request.POST or None, initial=initial, integration=integration)
+    form = WhatsAppCloudIntegrationForm(request.POST if request.method == "POST" else None, initial=initial, integration=integration)
     if request.method == "POST" and form.is_valid():
         try:
             set_whatsapp_cloud_integration(workspace_id=workspace.pk, actor=request.user, **form.cleaned_data)
@@ -263,24 +283,35 @@ def whatsapp_cloud_webhook(request):
 
 
 @notify_v2_action_required("view")
+@never_cache
+@vary_on_headers("HX-Request", "HX-Target", "HX-History-Restore-Request", "HX-Boosted")
 def batch_list(request):
-    batches = NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
-        "jobs"
-    )
-    notify_settings = _notify_settings_summary()
-    notify_settings["webhook_url"] = reverse("workspace_notify:notify_v2_whatsapp_cloud_webhook", args=[request.workspace.slug])
-    return render(
+    batches = NotificationBatch.objects.select_related("event_type", "created_by").order_by("-created", "-pk")
+    form = BatchListForm(request.GET)
+    if form.is_valid():
+        if form.cleaned_data["q"]:
+            batches = batches.filter(Q(name__icontains=form.cleaned_data["q"]) | Q(event_type__name__icontains=form.cleaned_data["q"]))
+        if form.cleaned_data["status"]:
+            batches = batches.filter(status=form.cleaned_data["status"])
+    else:
+        batches = batches.none()
+    page = Paginator(batches, 25).get_page(request.GET.get("page"))
+    fragment = (request.headers.get("HX-Request") == "true" and request.headers.get("HX-Target") == "reference-results"
+                and request.headers.get("HX-History-Restore-Request") != "true" and request.headers.get("HX-Boosted") != "true")
+    response = render(
         request,
-        "notify_v2/batch_list.html",
+        "notify_v2/batch_list.html#results" if fragment else "notify_v2/batch_list.html",
         {
-            "objects": batches,
-            "notify_settings": notify_settings,
-            "admin_urls": _notify_admin_urls(request),
+            "objects": page.object_list, "page_obj": page, "form": form,
         },
     )
+    if fragment:
+        response["X-Rokkad-Fragment"] = "reference-results"
+    return response
 
 
 @notify_v2_action_required("view")
+@never_cache
 def batch_detail(request, pk):
     batch = get_object_or_404(
         NotificationBatch.objects.select_related("event_type", "created_by").prefetch_related(
@@ -293,7 +324,8 @@ def batch_detail(request, pk):
     jobs = list(batch.jobs.select_related("event__recipient", "template").all())
     artifacts = _collect_artifacts(jobs)
     latest_artifact = next((artifact for artifact in artifacts if getattr(artifact, "file", None)), None)
-    digital_job_count = len([job for job in jobs if getattr(job, "channel", None) in DIGITAL_CHANNELS])
+    digital_job_count = len([job for job in jobs if getattr(job, "channel", None) in DIGITAL_CHANNELS
+                            and job.status not in {"SENT", "CANCELLED"}])
     selection_count = len(batch.selection_snapshot or [])
     recipient_count = len({job.event.recipient_id for job in jobs if getattr(job.event, "recipient_id", None)})
     return render(
@@ -308,6 +340,7 @@ def batch_detail(request, pk):
             "latest_artifact": latest_artifact,
             "digital_job_count": digital_job_count,
             "can_send_digital": digital_job_count > 0 and request.notify_v2_workspace_access.can("data.edit"),
+            "can_record_handling": request.notify_v2_workspace_access.can("data.edit"),
             "selection_count": selection_count,
             "recipient_count": recipient_count or batch.job_count,
         },

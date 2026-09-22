@@ -1,22 +1,28 @@
 {% extends 'base_tenant.html' %}
-{% block title %}Workspace WhatsApp Cloud{% endblock %}
+{% load i18n static %}
+{% block title %}{% translate "Workspace WhatsApp Cloud" %}{% endblock %}
 {% block workspace_content %}
+<section class="setup-entry" hx-history="false">
 {% include 'notify_v2/_navigation.html' %}
-<div class="row justify-content-center"><div class="col-xl-8">
-  <a class="small text-decoration-none" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">&larr; Notify settings</a>
-  <h1 class="h3 mt-2">Workspace WhatsApp Cloud</h1>
-  <div class="alert alert-info">Credentials belong only to this workspace. Stored secrets are encrypted and are never displayed again.</div>
-  <div class="card mb-3"><div class="card-body"><div class="small text-muted">Meta webhook callback URL</div><code>{{ webhook_url }}</code></div></div>
-  <form method="post" class="card"><div class="card-body">{% csrf_token %}{{ form.non_field_errors }}
-    <div class="row g-3">
-      <div class="col-md-4"><label class="form-label">API version</label>{{ form.api_version }}{{ form.api_version.errors }}</div>
-      <div class="col-md-8"><label class="form-label">Phone-number ID</label>{{ form.phone_number_id }}{{ form.phone_number_id.errors }}</div>
-      <div class="col-12"><label class="form-label">Access token</label>{{ form.access_token }}<div class="form-text">{{ form.access_token.help_text }}</div>{{ form.access_token.errors }}</div>
-      <div class="col-md-6"><label class="form-label">Webhook verify token</label>{{ form.webhook_verify_token }}<div class="form-text">{{ form.webhook_verify_token.help_text }}</div>{{ form.webhook_verify_token.errors }}</div>
-      <div class="col-md-6"><label class="form-label">Meta app secret</label>{{ form.app_secret }}<div class="form-text">{{ form.app_secret.help_text }}</div>{{ form.app_secret.errors }}</div>
-      <div class="col-12"><div class="form-check">{{ form.is_enabled }} <label class="form-check-label" for="{{ form.is_enabled.id_for_label }}">Enable sending and webhook verification for this workspace</label></div></div>
-    </div>
-    <button class="btn btn-primary mt-4" type="submit">Save workspace integration</button>
-  </div></form>
-</div></div>
-{% endblock %}
+<h1 class="h3">{% translate "Workspace WhatsApp Cloud" %}</h1>
+<p>{% translate "Credentials belong only to this workspace. Stored secrets are encrypted and are never displayed again." %}</p>
+{% include 'components/forms/accessible.html#errors' %}
+{% if form.errors %}<p class="alert alert-warning">{% translate "Secret fields are cleared after an error. Re-enter new secrets before saving, or leave them blank to keep existing stored values." %}</p>{% endif %}
+<form method="post" novalidate>{% csrf_token %}
+  <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. WhatsApp connection" %}</legend>
+    {% include 'components/forms/accessible.html#field' with field=form.api_version %}
+    {% include 'components/forms/accessible.html#field' with field=form.phone_number_id %}
+    {% include 'components/forms/accessible.html#field' with field=form.access_token %}
+  </fieldset>
+  <fieldset class="card card-body mb-3"><legend class="h5">{% translate "2. Delivery callbacks" %}</legend>
+    <p>{% translate "Meta webhook callback URL" %}</p><code class="text-break mb-3">{{ webhook_url }}</code>
+    {% include 'components/forms/accessible.html#field' with field=form.webhook_verify_token %}
+    {% include 'components/forms/accessible.html#field' with field=form.app_secret %}
+  </fieldset>
+  <fieldset class="card card-body mb-3"><legend class="h5">{% translate "3. Enable when ready" %}</legend>
+    {% include 'components/forms/accessible.html#field' with field=form.is_enabled %}
+    <p>{% translate "Saving credentials does not send a test message or prove delivery. Review notification settings and provider callbacks before live use." %}</p>
+  </fieldset>
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Save workspace integration" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">{% translate "Cancel" %}</a></div>
+</form></section>{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

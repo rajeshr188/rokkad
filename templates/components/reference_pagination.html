@@ -1,0 +1,7 @@
+{% load i18n %}
+{% if page_obj.has_other_pages %}<nav aria-label="{% translate 'Search result pages' %}" class="d-flex flex-wrap align-items-center gap-3 mt-3"
+  hx-target="#reference-results" hx-swap="outerHTML" hx-push-url="true" hx-sync="#reference-search-form:replace">
+  {% if page_obj.has_previous %}{% querystring page=page_obj.previous_page_number as previous_url %}<a class="btn btn-outline-secondary" href="{{ previous_url }}" hx-get="{{ previous_url }}" data-results-page>{% translate "Previous" %}</a>{% endif %}
+  <span>{% blocktranslate with page=page_obj.number pages=page_obj.paginator.num_pages %}Page {{ page }} of {{ pages }}{% endblocktranslate %}</span>
+  {% if page_obj.has_next %}{% querystring page=page_obj.next_page_number as next_url %}<a class="btn btn-outline-secondary" href="{{ next_url }}" hx-get="{{ next_url }}" data-results-page>{% translate "Next" %}</a>{% endif %}
+</nav>{% endif %}

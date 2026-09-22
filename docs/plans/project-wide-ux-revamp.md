@@ -41,7 +41,10 @@ numbering forms use grouped accessible fields, recoverable errors and Hindi labe
 Calculation, fee and monitoring forms now have separate disclosures, grouped fields,
 linked corrections, ratio/method guidance and Hindi labels. Audited license
 verification supports existing-series continuation at final cutover; it does not
-activate the rehearsal. Next simplify Rates and notifications.
+activate the rehearsal. Rates and notifications now use grouped bilingual forms,
+responsive searchable lists and native result partials. Quote history and notification
+send/print/post distinctions remain explicit; setup checks do not imply delivery.
+Next simplify owner/team setup and finish shared navigation translations.
 Terms review, payment-form accessibility and grouped
 printing guidance now extend the first-loan journey; its complete live payment
 walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator

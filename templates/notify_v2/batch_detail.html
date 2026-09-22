@@ -1,181 +1,32 @@
 {% extends 'base_tenant.html' %}
+{% load i18n %}
 {% block title %}{{ object.name }}{% endblock %}
-
-{% block page_header %}
-<div class="app-heading">
-  <div>
-    <nav aria-label="breadcrumb">
-      <ol class="breadcrumb mb-1">
-        <li class="breadcrumb-item"><a href="{% url 'workspace_notify:notify_v2_batch_list' request.workspace.slug %}">Notify delivery batches</a></li>
-        <li class="breadcrumb-item active">{{ object.name }}</li>
-      </ol>
-    </nav>
-    <h1 class="h3 mb-1">{{ object.name }}</h1>
-    <div class="text-muted small">{{ object.event_type.name }} · {{ object.event_type.key }}</div>
-  </div>
-  <div class="d-flex gap-2 flex-wrap justify-content-end">
-    {% if can_send_digital %}
-    <form method="post" action="{% url 'workspace_notify:notify_v2_batch_send_digital' request.workspace.slug object.pk %}">
-      {% csrf_token %}
-      <button class="btn btn-sm btn-primary" type="submit">
-        <i class="bi bi-send me-1"></i>Send Digital
-      </button>
-    </form>
-    {% endif %}
-    {% if artifact_count and can_export_artifacts %}
-    <a class="btn btn-sm btn-outline-dark" href="{% url 'workspace_notify:notify_v2_batch_download_artifacts' request.workspace.slug object.pk %}">
-      <i class="bi bi-file-earmark-zip me-1"></i>Download ZIP
-    </a>
-    {% endif %}
-    {% if latest_artifact and latest_artifact.file %}
-    <a class="btn btn-sm btn-outline-dark" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk latest_artifact.pk %}" target="_blank" download>
-      <i class="bi bi-download me-1"></i>Download Latest PDF
-    </a>
-    {% endif %}
-    <form method="post" action="{% url 'workspace_notify:notify_v2_batch_mark_printed' request.workspace.slug object.pk %}">
-      {% csrf_token %}
-      <button class="btn btn-sm btn-outline-primary" type="submit">Mark Printed</button>
-    </form>
-    <form method="post" action="{% url 'workspace_notify:notify_v2_batch_mark_posted' request.workspace.slug object.pk %}">
-      {% csrf_token %}
-      <button class="btn btn-sm btn-success" type="submit">Mark Posted</button>
-    </form>
-  </div>
-</div>
-{% endblock %}
-
 {% block workspace_content %}
+<section hx-history="false">
 {% include 'notify_v2/_navigation.html' %}
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Status</div><div class="fs-5 fw-bold">{{ object.get_status_display }}</div></div></div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Recipients</div><div class="fs-5 fw-bold">{{ recipient_count }}</div></div></div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Selected Records</div><div class="fs-5 fw-bold">{{ selection_count }}</div></div></div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center h-100"><div class="card-body"><div class="text-muted small">Jobs</div><div class="fs-5 fw-bold">{{ object.job_count }}</div></div></div>
-  </div>
-</div>
-
-<div class="record-grid">
-  <div>
-    <div class="card">
-      <div class="card-header fw-semibold">Jobs</div>
-      <div class="table-responsive">
-        <table class="table app-table table-hover mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Recipient</th>
-              <th>Channel</th>
-              <th>Status</th>
-              <th>Template</th>
-              <th>Artifacts</th>
-              <th>Attempts</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for job in jobs %}
-            <tr>
-              <td>{{ job.event.recipient.name_snapshot }}</td>
-              <td>{{ job.get_channel_display }}</td>
-              <td>
-                <span class="badge {% if job.status == 'SENT' %}bg-success{% elif job.status == 'RENDERED' %}bg-primary{% elif job.status == 'FAILED' %}bg-danger{% elif job.status == 'CANCELLED' %}bg-dark{% else %}bg-secondary{% endif %}">
-                  {{ job.get_status_display }}
-                </span>
-              </td>
-              <td>{{ job.template|default:'—' }}</td>
-              <td>
-                {% with job_artifacts=job.artifacts.all %}
-                  {% if job_artifacts %}
-                    <div class="d-flex flex-wrap gap-1">
-                      {% for artifact in job_artifacts %}
-                        {% if artifact.file %}
-                        <a class="btn btn-sm btn-outline-secondary py-0 px-2" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk artifact.pk %}" target="_blank" download>
-                          <i class="bi bi-download me-1"></i>{{ artifact.artifact_type }}
-                        </a>
-                        {% else %}
-                        <span class="text-muted small">{{ artifact.artifact_type }}</span>
-                        {% endif %}
-                      {% endfor %}
-                    </div>
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                {% endwith %}
-              </td>
-              <td>{{ job.attempt_count }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-4">No jobs in this batch.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  <div class="record-context">
-    <div class="card mb-3">
-      <div class="card-header fw-semibold">Batch Details</div>
-      <div class="card-body">
-        <dl class="row mb-0 small">
-          <dt class="col-sm-5 text-muted">Created By</dt>
-          <dd class="col-sm-7">{{ object.created_by|default:'—' }}</dd>
-          <dt class="col-sm-5 text-muted">Created</dt>
-          <dd class="col-sm-7">{{ object.created|date:"d M Y, H:i" }}</dd>
-          <dt class="col-sm-5 text-muted">Printed At</dt>
-          <dd class="col-sm-7">{{ object.printed_at|date:"d M Y, H:i"|default:'—' }}</dd>
-          <dt class="col-sm-5 text-muted">Posted At</dt>
-          <dd class="col-sm-7">{{ object.posted_at|date:"d M Y, H:i"|default:'—' }}</dd>
-          <dt class="col-sm-5 text-muted">Artifacts</dt>
-          <dd class="col-sm-7">{{ artifact_count }}</dd>
-        </dl>
-      </div>
-    </div>
-    <div class="card mb-3">
-      <div class="card-header fw-semibold">Rendered Artifacts</div>
-      <div class="card-body">
-        {% if artifacts %}
-        <ul class="list-unstyled mb-0 small">
-          {% for artifact in artifacts %}
-          <li class="mb-3 border-bottom pb-2">
-            <div class="fw-semibold">{{ artifact.job.event.recipient.name_snapshot|default:'Batch Recipient' }}</div>
-            <div class="text-muted mb-1">{{ artifact.artifact_type }} · {{ artifact.created|date:"d M Y, H:i"|default:'Generated' }}</div>
-            {% if artifact.file %}
-            <a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk artifact.pk %}" target="_blank" download>
-              <i class="bi bi-download me-1"></i>Download
-            </a>
-            {% else %}
-            <span class="text-muted">Stored without file attachment</span>
-            {% endif %}
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="text-muted small">No rendered artifacts are available for this batch.</div>
-        {% endif %}
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header fw-semibold">Selection Snapshot</div>
-      <div class="card-body">
-        {% if object.selection_snapshot %}
-        <ul class="list-unstyled mb-0 small">
-          {% for item in object.selection_snapshot %}
-          <li class="mb-2">
-            <strong>{{ item.loan_id|default:'—' }}</strong><br>
-            <span class="text-muted">{{ item.borrower_name|default:'Unknown borrower' }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="text-muted small">No selection snapshot captured.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
+<h1 class="h3 text-break">{{ object.name }}</h1><p>{{ object.event_type.name }} &middot; {% translate object.get_status_display %}</p>
+<p>{% translate "Review recipients and documents before sending. Sent means dispatched, not confirmed receipt by the customer." %}</p>
+<dl class="row"><dt class="col-sm-2">{% translate "Recipients" %}</dt><dd class="col-sm-2">{{ recipient_count }}</dd><dt class="col-sm-2">{% translate "Jobs" %}</dt><dd class="col-sm-2">{{ object.job_count }}</dd><dt class="col-sm-2">{% translate "Selected records" %}</dt><dd class="col-sm-2">{{ selection_count }}</dd></dl>
+<h2 class="h5">{% translate "Recipients and delivery evidence" %}</h2>
+<ul class="list-unstyled">{% for job in jobs %}<li class="card card-body mb-3">
+  <div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h6 text-break">{{ job.event.recipient.name_snapshot }}</h3><span>{% translate job.get_status_display %}</span></div>
+  <dl class="row mb-0"><dt class="col-sm-3">{% translate "Channel" %}</dt><dd class="col-sm-3">{% translate job.get_channel_display %}</dd><dt class="col-sm-3">{% translate "Attempts" %}</dt><dd class="col-sm-3">{{ job.attempt_count }}</dd></dl>
+  {% if job.failure_reason %}<p class="alert alert-warning text-break">{{ job.failure_reason }}</p>{% endif %}
+  <details><summary>{% translate "Documents and template" %}</summary><p class="mt-2 text-break">{{ job.template|default:'—' }}</p>
+    {% for artifact in job.artifacts.all %}{% if artifact.file %}<a class="btn btn-outline-secondary mb-2" href="{% url 'workspace_notify:notify_v2_artifact_download' request.workspace.slug object.pk artifact.pk %}" download>{% translate "Download" %} {{ artifact.artifact_type }}</a>{% else %}<p>{% translate "Stored without file attachment" %}</p>{% endif %}{% empty %}<p>{% translate "No documents generated yet." %}</p>{% endfor %}
+  </details>
+</li>{% empty %}<li class="card card-body">{% translate "No jobs in this batch." %}</li>{% endfor %}</ul>
+{% if can_send_digital %}<section class="card card-body mb-3" aria-labelledby="send-title"><h2 class="h5" id="send-title">{% translate "Send or retry digital messages" %}</h2>
+  <p>{% translate "This sends eligible digital jobs and retries failed ones. Jobs already sent or cancelled are skipped." %} {% translate "Eligible jobs" %}: {{ digital_job_count }}</p>
+  <form method="post" action="{% url 'workspace_notify:notify_v2_batch_send_digital' request.workspace.slug object.pk %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% translate "Send eligible digital jobs" %}</button></form>
+</section>{% endif %}
+<details class="card card-body mb-3"><summary>{% translate "Printing, posting and downloads" %}</summary>
+  <p class="mt-3">{% translate "Mark printing or posting only after handling the documents. These buttons record the action; they do not print or send a message. Marking posted also records printing if it was not recorded." %}</p>
+  <div class="d-flex flex-wrap gap-2">{% if artifact_count and can_export_artifacts %}<a class="btn btn-outline-secondary" href="{% url 'workspace_notify:notify_v2_batch_download_artifacts' request.workspace.slug object.pk %}">{% translate "Download ZIP" %}</a>{% endif %}
+  {% if can_record_handling %}<form method="post" action="{% url 'workspace_notify:notify_v2_batch_mark_printed' request.workspace.slug object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">{% translate "Mark Printed" %}</button></form><form method="post" action="{% url 'workspace_notify:notify_v2_batch_mark_posted' request.workspace.slug object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">{% translate "Mark Posted" %}</button></form>{% endif %}</div>
+  <dl class="row mt-3 mb-0"><dt class="col-sm-3">{% translate "Printed at" %}</dt><dd class="col-sm-9">{{ object.printed_at|default:'—' }}</dd><dt class="col-sm-3">{% translate "Posted at" %}</dt><dd class="col-sm-9">{{ object.posted_at|default:'—' }}</dd></dl>
+</details>
+<details class="card card-body"><summary>{% translate "Batch history and selected records" %}</summary>
+  <p class="mt-3">{{ object.created }} &middot; {{ object.created_by|default:'—' }}</p><ul>{% for item in object.selection_snapshot %}<li class="text-break">{{ item.loan_id|default:'—' }} &middot; {{ item.borrower_name|default:'—' }}</li>{% empty %}<li>{% translate "No selection snapshot captured." %}</li>{% endfor %}</ul>
+</details>
+</section>{% endblock %}

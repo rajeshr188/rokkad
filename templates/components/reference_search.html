@@ -1,0 +1,9 @@
+{% load i18n %}
+<form id="reference-search-form" method="get" action="{{ request.path }}" class="app-filter-panel"
+  hx-get="{{ request.path }}" hx-target="#reference-results" hx-swap="outerHTML" hx-push-url="true" hx-sync="this:replace">
+  <div class="row g-3 align-items-end">{% for field in form %}<div class="col-md-5"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+    <div class="col-md-2"><button class="btn btn-primary" type="submit">{% translate "Search" %}</button></div>
+  </div><a class="d-inline-block mt-3" href="{{ request.path }}">{% translate "Clear filters" %}</a>
+</form>
+<p id="reference-search-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+<div id="reference-search-error" class="alert alert-warning" role="alert" hidden>{% translate "Search could not finish. Your filters are kept. Try Search again or reload the page." %}</div>

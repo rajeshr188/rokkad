@@ -1,10 +1,28 @@
 {% extends 'base_tenant.html' %}
-{% load crispy_forms_tags static %}
-{% block title %}{% if form.instance.pk %}Correct rate{% else %}Add rate{% endif %}{% endblock %}
+{% load i18n static %}
+{% block title %}{% if form.instance.pk %}{% translate "Correct rate" %}{% else %}{% translate "Add Rate" %}{% endif %}{% endblock %}
 {% block workspace_content %}
-<header class="app-heading"><div><div class="app-eyebrow">Rates</div><h1>{% if form.instance.pk %}Correct rate{% else %}Add a metal rate{% endif %}</h1><p>Enter prices per gram of the selected purity, excluding tax and making charges. Corrections preserve the previous record.</p></div></header>
+<section class="setup-entry" hx-history="false">
 {% include 'rates/_navigation.html' %}
-{% if not has_rate_sources %}<div class="alert alert-warning">A rate source is required before a rate can be saved. <a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">Add Rate Source</a></div>{% endif %}
-<div class="record-grid"><div class="card"><div class="card-body" data-entry-form>{% crispy form %}</div></div><aside class="record-context card" aria-label="Rate summary"><div class="card-body"><h2 class="h5">Rate summary</h2><dl class="record-facts"><dt>Source</dt><dd data-entry-field="rate_source">Not selected</dd><dt>Metal / purity</dt><dd><span data-entry-field="metal"></span> &middot; <span data-entry-field="purity"></span></dd><dt>Currency</dt><dd data-entry-field="currency"></dd><dt>Buying / gram</dt><dd data-entry-field="buying_rate"></dd><dt>Selling / gram</dt><dd data-entry-field="selling_rate"></dd></dl><div class="loan-summary-note">Loans uses INR Pure metal buying prices. Enter silver as Pure metal. Divide a per-10g price by 10 or a per-kg price by 1,000 before entry. Values are saved only when you select Save Rate.</div></div></aside></div>
-<script src="{% static 'js/entry-summary.js' %}"></script>
+<h1 class="h3">{% if form.instance.pk %}{% translate "Correct rate" %}{% else %}{% translate "Add Rate" %}{% endif %}</h1>
+<p>{% translate "Use a new quote for a new market observation. A correction replaces an error and keeps the earlier record in history." %}</p>
+{% if not has_rate_sources %}<div class="alert alert-warning">{% translate "A rate source is required before a rate can be saved." %} <a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">{% translate "Add Rate Source" %}</a></div>{% endif %}
+{% include 'components/forms/accessible.html#errors' %}
+<form method="post" novalidate>{% csrf_token %}
+  <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. Source and metal" %}</legend>
+    <p>{% translate "For loan valuation choose INR and Pure metal, including silver. Enter the item's actual purity on the loan." %}</p>
+    <div class="row">{% for field in form %}{% if field.name == 'rate_source' or field.name == 'metal' or field.name == 'currency' or field.name == 'purity' %}<div class="col-md-6">{% include 'components/forms/accessible.html#field' %}</div>{% endif %}{% endfor %}</div>
+  </fieldset>
+  <fieldset class="card card-body mb-3"><legend class="h5">{% translate "2. Prices per gram" %}</legend>
+    <p>{% translate "Exclude tax and making charges. Divide a price per 10 grams by 10, or a price per kilogram by 1,000. The source tax flag does not convert prices." %}</p>
+    <div class="row"><div class="col-md-6">{% include 'components/forms/accessible.html#field' with field=form.buying_rate %}</div><div class="col-md-6">{% include 'components/forms/accessible.html#field' with field=form.selling_rate %}</div></div>
+    <p class="small text-body-secondary">{% translate "Buying price is used for collateral valuation. Selling price is reference information." %}</p>
+  </fieldset>
+  <fieldset class="card card-body mb-3"><legend class="h5">{% translate "3. Time and evidence" %}</legend>
+    {% include 'components/forms/accessible.html#field' with field=form.effective_at %}
+    {% include 'components/forms/accessible.html#field' with field=form.reason %}
+  </fieldset>
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if form.instance.pk %}{% translate "Save correction" %}{% else %}{% translate "Save Rate" %}{% endif %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_list' request.workspace.slug %}">{% translate "Cancel" %}</a></div>
+</form></section>
 {% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

@@ -64,3 +64,9 @@ current portfolio assessment.
 
 See the [quote evidence decision](../adr/2026-09-11-rate-quote-evidence.md) and
 [Rates/appraisal delivery review](../implementation/rates-appraisal-monitoring-review.md).
+
+The directory supports source-snapshot/notes search and a metal filter with
+25 quotes per page. Open a quote to see source evidence and previous/replacement
+records. Entry groups source and metal, per-gram prices, then effective time and
+notes. English/Hindi forms retain native datetime values and linked validation
+errors. Empty withdrawal submissions require a reason and leave the quote intact.

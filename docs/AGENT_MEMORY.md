@@ -14,6 +14,13 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Rates and Notify list searches share the `reference-results` native partial/HTMX
+contract with normal GET fallbacks, strict fragment headers and no-store responses.
+Rates corrections/withdrawals remain service-backed history. Notification review
+must distinguish dispatch, printed/posted handling and provider delivery evidence;
+connection readiness is not proof of receipt. See the accessible directory delivery
+notes for browser and test coverage rather than treating it as operator acceptance.
+
 Rokkad is operational pawn-lending SaaS. Supported business apps are Party, Loans,
 Rates and Notify v2. General-ledger accounting/DEA, Girvi, Contact, Product and legacy
 Notify are retired. Do not restore their imports or product promises. Preserve

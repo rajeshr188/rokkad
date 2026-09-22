@@ -1,14 +1,10 @@
 {% extends 'base_tenant.html' %}
-
+{% load i18n %}
+{% block title %}{% translate "Delete unused source" %}{% endblock %}
 {% block workspace_content %}
-{% include 'rates/_navigation.html' %}
-  <div class="card p-4">
-    <h1>Confirm Delete</h1>
-  <p>Are you sure you want to delete {{ ratesource.name }} (only unused sources can be deleted)?</p>
-  {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}<form action="{% url 'workspace_rates:ratesource_delete' request.workspace.slug ratesource.id %}" method="post">
-    {% csrf_token %}
-    <button class="btn btn-danger" type="submit">Delete</button>
-    <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Cancel</a>
-  </form>
-  </div>
-{% endblock %}
+<section class="setup-entry" hx-history="false">{% include 'rates/_navigation.html' %}
+<h1 class="h3">{% translate "Delete unused source" %}</h1><p>{{ ratesource.name }}</p>
+<p>{% translate "Only unused sources can be deleted. A source with recorded quotes must remain in history." %}</p>
+{% if error %}<div class="alert alert-warning" role="alert">{{ error }}</div>{% endif %}
+<form method="post">{% csrf_token %}<div class="d-flex flex-wrap gap-2"><button class="btn btn-danger" type="submit">{% translate "Delete" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_detail' request.workspace.slug ratesource.pk %}">{% translate "Cancel" %}</a></div></form>
+</section>{% endblock %}

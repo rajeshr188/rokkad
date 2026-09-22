@@ -1,130 +1,22 @@
 {% extends 'base_tenant.html' %}
-{% block title %}Notify delivery batches{% endblock %}
-
-{% block page_header %}
-<div class="app-heading">
-  <div>
-    <h1 class="h3 mb-1">Notify delivery batches <span class="badge bg-secondary">{{ objects.count }}</span></h1>
-    <div class="text-muted small">Notification batches and retained delivery evidence.</div>
-  </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">
-      <i class="bi bi-sliders me-1"></i>Settings
-    </a>
-  </div>
-</div>
-{% endblock %}
-
+{% load i18n static %}
+{% block title %}{% translate "Notifications" %}{% endblock %}
 {% block workspace_content %}
+<section hx-history="false">
+<h1 class="h3">{% translate "Notifications" %}</h1>
+<p>{% translate "Open a batch to review recipients, documents and delivery attempts. Batches appear when a notification workflow creates them." %}</p>
 {% include 'notify_v2/_navigation.html' %}
-{% if admin_urls %}
-<details class="card mb-4"><summary class="p-3 fw-semibold">Configuration and provider readiness</summary>
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-      <div>
-        <h6 class="mb-1">Notification settings</h6>
-        <p class="text-muted small mb-2">
-          Templates, policies, and event types are currently configured in Django Admin.
-        </p>
-      </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_notify:notify_v2_settings' request.workspace.slug %}">
-          Settings
-        </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.templates }}">
-          Templates
-        </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.policies }}">
-          Policies
-        </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.event_types }}">
-          Event Types
-        </a>
-        <a class="btn btn-sm btn-outline-secondary" href="{{ admin_urls.recipients }}">
-          Recipients
-        </a>
-      </div>
-    </div>
-
-    <hr>
-    <div class="row g-2 small">
-      <div class="col-md-3">
-        <strong>WhatsApp Provider:</strong>
-        <div class="text-muted">{{ notify_settings.whatsapp_provider|upper }}</div>
-      </div>
-      <div class="col-md-3">
-        <strong>Cloud Phone ID:</strong>
-        <div>
-          {% if notify_settings.has_whatsapp_cloud_phone_id %}
-          <span class="badge bg-success">Set</span>
-          {% else %}
-          <span class="badge bg-secondary">Missing</span>
-          {% endif %}
-        </div>
-      </div>
-      <div class="col-md-3">
-        <strong>Cloud Access Token:</strong>
-        <div>
-          {% if notify_settings.has_whatsapp_cloud_access_token %}
-          <span class="badge bg-success">Set</span>
-          {% else %}
-          <span class="badge bg-secondary">Missing</span>
-          {% endif %}
-        </div>
-      </div>
-      <div class="col-md-3">
-        <strong>Webhook Verify Token:</strong>
-        <div>
-          {% if notify_settings.has_whatsapp_cloud_verify_token %}
-          <span class="badge bg-success">Set</span>
-          {% else %}
-          <span class="badge bg-secondary">Missing</span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-2 small text-muted">
-      Webhook endpoint: <code>{{ notify_settings.webhook_url }}</code>
-    </div>
-  </div>
-</details>
-{% endif %}
-
-<div class="card">
-  <div class="table-responsive">
-    <table class="table app-table table-hover mb-0">
-      <thead class="table-light">
-        <tr>
-          <th>Name</th>
-          <th>Event</th>
-          <th>Status</th>
-          <th>Jobs</th>
-          <th>Created By</th>
-          <th>Created</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for i in objects %}
-        <tr>
-          <td><a href="{% url 'workspace_notify:notify_v2_batch_detail' request.workspace.slug i.pk %}">{{ i.name }}</a></td>
-          <td>{{ i.event_type.name }}</td>
-          <td>
-            <span class="badge {% if i.status == 'POSTED' %}bg-success{% elif i.status == 'PRINTED' %}bg-info{% elif i.status == 'RENDERED' %}bg-primary{% elif i.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
-              {{ i.get_status_display }}
-            </span>
-          </td>
-          <td>{{ i.job_count }}</td>
-          <td>{{ i.created_by|default:'—' }}</td>
-          <td class="text-muted small">{{ i.created|date:"d M Y, H:i" }}</td>
-          <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_notify:notify_v2_batch_detail' request.workspace.slug i.pk %}">Open</a></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">No delivery batches yet. Batches appear here when a notification workflow creates them.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endblock %}
+{% include 'components/reference_search.html' %}
+{% partialdef results inline %}
+<section id="reference-results" aria-labelledby="reference-results-title" tabindex="-1">
+{% include 'components/forms/accessible.html#errors' %}
+<h2 class="h5 mt-3" id="reference-results-title" tabindex="-1">{% translate "Delivery batches" %} ({{ page_obj.paginator.count }})</h2>
+{% if not form.errors %}<ul class="list-unstyled">{% for batch in objects %}<li class="card card-body mb-3">
+  <div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h5 text-break"><a href="{% url 'workspace_notify:notify_v2_batch_detail' request.workspace.slug batch.pk %}">{{ batch.name }}</a></h3><span>{% translate batch.get_status_display %}</span></div>
+  <p>{{ batch.event_type.name }}</p><dl class="row mb-0"><dt class="col-sm-3">{% translate "Jobs" %}</dt><dd class="col-sm-3">{{ batch.job_count }}</dd><dt class="col-sm-3">{% translate "Created" %}</dt><dd class="col-sm-3">{{ batch.created|date:"d M Y, H:i" }}</dd></dl>
+</li>{% empty %}<li class="card card-body"><h3 class="h5">{% translate "No matching delivery batches" %}</h3><p>{% translate "Clear the filters if needed. A saved loan alone does not create a notification batch." %}</p></li>{% endfor %}</ul>
+{% include 'components/reference_pagination.html' %}{% endif %}
+</section>{% endpartialdef %}
+<p class="small text-body-secondary mt-3">{% translate "Batch status records workflow progress. Review each job for delivery evidence; printing or posting a batch does not prove a customer received it." %}</p>
+</section>{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/reference-directory.js' %}"></script>{% endblock %}

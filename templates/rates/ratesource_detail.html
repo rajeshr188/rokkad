@@ -1,21 +1,11 @@
 {% extends 'base_tenant.html' %}
-
+{% load i18n orgs_tags %}
+{% block title %}{{ ratesource.name }}{% endblock %}
 {% block workspace_content %}
-{% include 'rates/_navigation.html' %}
-  <div class="card">
-    <div class="card-body">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-      <h1 class="h3 mb-0">{{ ratesource.name }}</h1>
-      <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Back to list</a>
-        <a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">Add Rate</a>
-      </div>
-    </div>
-    <dl class="record-facts">
-      <dt>Location</dt><dd>{{ ratesource.location }}</dd>
-      <dt>Tax included in quotes</dt><dd>{{ ratesource.tax_included|yesno:"Yes,No" }}</dd>
-    </dl>
-    <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk %}">Edit source</a>
-    </div>
-  </div>
-{% endblock %}
+{% navigation_actions as actions %}
+<section class="setup-entry" hx-history="false">{% include 'rates/_navigation.html' %}
+<h1 class="h3">{{ ratesource.name }}</h1>
+<div class="card card-body mb-3"><dl class="row"><dt class="col-sm-4">{% translate "Location" %}</dt><dd class="col-sm-8">{{ ratesource.location }}</dd><dt class="col-sm-4">{% translate "Source publishes prices including tax" %}</dt><dd class="col-sm-8">{% if ratesource.tax_included %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}</dd></dl>
+<p>{% translate "The source is ready. Add a quote to make a price available. Prices must exclude tax; this flag does not adjust amounts." %}</p>
+<div class="d-flex flex-wrap gap-2">{% if 'data.create' in actions %}<a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">{% translate "Add Rate" %}</a>{% endif %}{% if 'data.edit' in actions %}<a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk %}">{% translate "Edit source" %}</a>{% endif %}</div></div>
+</section>{% endblock %}

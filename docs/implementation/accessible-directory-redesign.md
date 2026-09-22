@@ -348,3 +348,44 @@ Hindi date/percentage issues found in browser review were corrected. The viewpor
 and English language were restored; the policy page is left open. No business
 settings, license evidence or financial forms were submitted in the rehearsal.
 Physical touch, assistive-technology and novice-operator acceptance remain pending.
+
+## Rates and notifications (September 22)
+
+Rates forms replace crispy layouts with native grouped field/error partials. Source,
+metal, prices per gram and effective time have English/Hindi labels and explanations.
+Corrections and withdrawals still append service evidence. Source entry returns to
+its detail with the next quote action, avoiding a stale source select in another tab.
+
+Rates and Notify batch directories use 25-record pages, validated search/select
+filters, stable ordering and phone-friendly cards. Invalid filters return linked
+errors with no rows. Normal GET links/forms work without JavaScript. HTMX uses
+`reference-results`, strict response markers, full-page history/boost fallbacks,
+no-store/Vary headers and excluded history snapshots. A shared small script
+announces results, manages busy/error states and focuses the result/error heading.
+Browser review found and corrected the submit-event focus detection.
+
+Notification detail separates recipient documents, digital sending and print/post
+records; edit/export controls match existing permissions. Only eligible digital
+jobs contribute to the send count. Settings puts connection readiness before
+administration/diagnostics and does not claim delivery. WhatsApp setup groups
+connection, callback secrets and enablement; errors link to fields and secrets
+are never echoed. Empty setup/withdrawal POSTs now receive normal validation.
+
+Validation: 82 Rates/Notify tests on a fresh database, then 33 targeted tests after
+final refinements, all passed. Explicit module labels avoid the two namespace apps'
+same-named `test_rls` discovery collision. Existing restricted-role isolation,
+immutable quote and mocked delivery tests pass; new integration tests exercise
+filters/paging, escaping, full/fragment responses, Hindi forms, empty submissions
+and GET review without dispatch. Gettext compilation and supported-app boundaries
+pass. Private logs: `outputs/ux-rates-notifications-20260922/`.
+
+Local Chrome review used the accepted rehearsal without business POSTs. Empty
+directories, rate entry and WhatsApp setup were reviewed in English/Hindi at 390px
+and/or 1280px; checked pages had no horizontal overflow. Native datetime values
+remain ISO in Hindi, password controls remain empty, and live Rates search moves
+focus and announces results. English and the normal viewport were restored, with
+the notifications directory left open. Populated quote/batch pages and pagination
+are server-test coverage, not live operator acceptance. Physical touch, screen
+reader, real provider callbacks, populated browser review and staff acceptance are
+still pending. Shared shell/admin labels and technical provider errors may remain
+English; this slice does not declare translation or whole-product completion.

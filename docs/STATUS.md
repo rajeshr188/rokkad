@@ -7,6 +7,34 @@ tags: [status, architecture]
 
 # Status
 
+## Rates and notification screen simplification (2026-09-22)
+
+Rates now groups source/metal, per-gram prices and effective-time evidence in
+accessible English/Hindi forms. Quote and source detail explain corrections,
+withdrawals, history and tax/valuation boundaries. Rates and notification batches
+have searchable 25-row pages, responsive cards and native Django result partials
+with progressive HTMX, keyboard result focus and normal GET fallbacks.
+
+Notification review separates recipients/documents, eligible digital sends and
+printed/posted records. Actions follow existing permissions; sent/cancelled digital
+jobs are excluded from the send count. Setup distinguishes configuration checks
+from delivery evidence and uses grouped fields with linked errors. Empty withdrawal
+and WhatsApp setup POSTs now bind and validate; secret values never re-render.
+No delivery services, financial calculations, models or migration rules changed.
+
+Validation: 82 Rates/Notify tests passed on a fresh database, including restricted
+RLS coverage; 33 targeted tests passed after final help/permission refinements.
+Import-boundary, gettext and diff checks pass. Local Chrome review covered empty
+directories, Rates entry and WhatsApp setup at phone/desktop widths, Hindi labels,
+ISO date/time controls and live search focus. Populated lists, paging, quote history
+and batch review were exercised with isolated test fixtures. No business forms or
+notifications were submitted in the accepted rehearsal. Physical touch, screen
+reader, provider delivery and novice-operator acceptance remain pending.
+
+Next: simplify owner/team setup and finish shared navigation translations, then
+perform complete staff task acceptance before cutover. The whole-product redesign
+and production cutover are not complete. See the [UX delivery notes](implementation/accessible-directory-redesign.md).
+
 ## Existing-series continuation and policy forms (2026-09-22)
 
 An imported license can now be explicitly verified for new lending while retaining

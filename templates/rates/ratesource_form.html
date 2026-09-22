@@ -1,17 +1,15 @@
 {% extends 'base_tenant.html' %}
-{% load crispy_forms_tags %}
+{% load i18n static %}
+{% block title %}{% translate "Rate source" %}{% endblock %}
 {% block workspace_content %}
+<section class="setup-entry" hx-history="false">
 {% include 'rates/_navigation.html' %}
-<div class="rate-source-page">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1 class="h3 mb-0">{% if form.instance.pk %}Edit rate source{% else %}Add rate source{% endif %}</h1>
-        <a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">Rate Sources</a>
-    </div>
-    <div class="card">
-        <div class="card-body">
-        {% crispy form %}
-        </div>
-    </div>
-</div>
-{%endblock%}
-
+<h1 class="h3">{% if form.instance.pk %}{% translate "Edit rate source" %}{% else %}{% translate "Add rate source" %}{% endif %}</h1>
+<p>{% translate "A source identifies where you obtained the price. After saving the source, add a metal quote." %}</p>
+{% include 'components/forms/accessible.html#errors' %}
+<form method="post" class="card card-body" novalidate>{% csrf_token %}
+  {% for field in form %}{% include 'components/forms/accessible.html#field' %}{% endfor %}
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Save Source" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">{% translate "Cancel" %}</a></div>
+</form></section>
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

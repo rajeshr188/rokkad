@@ -2732,3 +2732,504 @@ msgstr "संस्करण / प्रोफ़ाइल"
 
 msgid "Percentage"
 msgstr "प्रतिशत"
+
+msgid "1. Source and metal"
+msgstr "1. स्रोत और धातु"
+
+msgid "1. WhatsApp connection"
+msgstr "1. WhatsApp कनेक्शन"
+
+msgid "2. Delivery callbacks"
+msgstr "2. डिलीवरी कॉलबैक"
+
+msgid "2. Prices per gram"
+msgstr "2. प्रति ग्राम कीमतें"
+
+msgid "3. Enable when ready"
+msgstr "3. तैयार होने पर चालू करें"
+
+msgid "3. Time and evidence"
+msgstr "3. समय और प्रमाण"
+
+msgid "A rate source is required before a rate can be saved."
+msgstr "दर सहेजने से पहले दर का स्रोत जोड़ना आवश्यक है।"
+
+msgid "A source identifies where you obtained the price. After saving the source, add a metal quote."
+msgstr "स्रोत बताता है कि कीमत कहाँ से मिली। स्रोत सहेजने के बाद धातु की दर जोड़ें।"
+
+msgid "API version"
+msgstr "API संस्करण"
+
+msgid "Access token"
+msgstr "एक्सेस टोकन"
+
+msgid "Active event types"
+msgstr "सक्रिय घटना प्रकार"
+
+msgid "Active policies"
+msgstr "सक्रिय नीतियाँ"
+
+msgid "Active recipients"
+msgstr "सक्रिय प्राप्तकर्ता"
+
+msgid "Active templates"
+msgstr "सक्रिय संदेश प्रारूप"
+
+msgid "Add Rate"
+msgstr "दर जोड़ें"
+
+msgid "Add Rate Source"
+msgstr "दर का स्रोत जोड़ें"
+
+msgid "Add Source"
+msgstr "स्रोत जोड़ें"
+
+msgid "Add a source before entering your first metal rate."
+msgstr "पहली धातु दर दर्ज करने से पहले स्रोत जोड़ें।"
+
+msgid "Add rate source"
+msgstr "दर का स्रोत जोड़ें"
+
+msgid "All metals"
+msgstr "सभी धातुएँ"
+
+msgid "All three secrets are required for initial setup."
+msgstr "पहली बार सेटअप के लिए तीनों गुप्त मान आवश्यक हैं।"
+
+msgid "Ask your workspace administrator to configure the connection."
+msgstr "कनेक्शन सेट करने के लिए अपने कार्यक्षेत्र प्रशासक से कहें।"
+
+msgid "Attempts"
+msgstr "प्रयास"
+
+msgid "Authenticated callbacks"
+msgstr "प्रमाणित कॉलबैक"
+
+msgid "Batch history and selected records"
+msgstr "बैच का इतिहास और चुने गए रिकॉर्ड"
+
+msgid "Batch status"
+msgstr "बैच की स्थिति"
+
+msgid "Batch status records workflow progress. Review each job for delivery evidence; printing or posting a batch does not prove a customer received it."
+msgstr "बैच की स्थिति काम की प्रगति दिखाती है। डिलीवरी के प्रमाण के लिए हर संदेश जाँचें; बैच प्रिंट या पोस्ट करने से ग्राहक को मिलने की पुष्टि नहीं होती।"
+
+msgid "Bronze"
+msgstr "कांसा"
+
+msgid "Buying and selling"
+msgstr "खरीद और बिक्री"
+
+msgid "Buying price is used for collateral valuation. Selling price is reference information."
+msgstr "गिरवी वस्तु के मूल्यांकन में खरीद मूल्य उपयोग होता है। बिक्री मूल्य संदर्भ के लिए है।"
+
+msgid "Buying price per gram"
+msgstr "प्रति ग्राम खरीद मूल्य"
+
+msgid "Cancelled"
+msgstr "रद्द"
+
+msgid "Channel"
+msgstr "माध्यम"
+
+msgid "Check the connection and message setup before sending customer notifications."
+msgstr "ग्राहक को सूचनाएँ भेजने से पहले कनेक्शन और संदेश सेटअप जाँचें।"
+
+msgid "City or branch"
+msgstr "शहर या शाखा"
+
+msgid "Clear the filters if needed. A saved loan alone does not create a notification batch."
+msgstr "ज़रूरत हो तो फ़िल्टर हटाएँ। केवल ऋण सहेजने से सूचना बैच नहीं बनता।"
+
+msgid "Clear the filters, or add a source and your first quote."
+msgstr "फ़िल्टर हटाएँ, या स्रोत और पहली दर जोड़ें।"
+
+msgid "Configuration checks passed"
+msgstr "कॉन्फ़िगरेशन की जाँच सफल"
+
+msgid "Configure workspace WhatsApp"
+msgstr "कार्यक्षेत्र का WhatsApp सेट करें"
+
+msgid "Connection diagnostics"
+msgstr "कनेक्शन की जाँच का विवरण"
+
+msgid "Correct rate"
+msgstr "दर सुधारें"
+
+msgid "Created"
+msgstr "बनाया गया"
+
+msgid "Credentials belong only to this workspace. Stored secrets are encrypted and are never displayed again."
+msgstr "ये क्रेडेंशियल केवल इस कार्यक्षेत्र के हैं। सहेजे गए गुप्त मान एन्क्रिप्ट किए जाते हैं और फिर नहीं दिखाए जाते।"
+
+msgid "Delete unused source"
+msgstr "अप्रयुक्त स्रोत हटाएँ"
+
+msgid "Delivery batches"
+msgstr "सूचना बैच"
+
+msgid "Describes the source's published prices only. Rate entry requires tax-exclusive prices; no automatic tax conversion is performed."
+msgstr "यह केवल स्रोत की प्रकाशित कीमतों का विवरण है। दर दर्ज करते समय कर रहित कीमतें दें; कर अपने आप नहीं घटाया जाता।"
+
+msgid "Documents and template"
+msgstr "दस्तावेज़ और संदेश प्रारूप"
+
+msgid "Download"
+msgstr "डाउनलोड करें"
+
+msgid "Download ZIP"
+msgstr "ZIP डाउनलोड करें"
+
+msgid "Draft"
+msgstr "मसौदा"
+
+msgid "Edit rate source"
+msgstr "दर का स्रोत बदलें"
+
+msgid "Edit source"
+msgstr "स्रोत बदलें"
+
+msgid "Effective at"
+msgstr "प्रभावी समय"
+
+msgid "Eligible jobs"
+msgstr "भेजने योग्य संदेश"
+
+msgid "Enable sending and webhook verification for this workspace"
+msgstr "इस कार्यक्षेत्र में संदेश भेजना और वेबहुक सत्यापन चालू करें"
+
+msgid "Exclude tax and making charges. Divide a price per 10 grams by 10, or a price per kilogram by 1,000. The source tax flag does not convert prices."
+msgstr "कर और बनवाई शामिल न करें। प्रति 10 ग्राम कीमत को 10 से, या प्रति किलोग्राम कीमत को 1,000 से भाग दें। स्रोत का कर संकेत कीमत नहीं बदलता।"
+
+msgid "Failed"
+msgstr "विफल"
+
+msgid "For loan valuation choose INR and Pure metal, including silver. Enter the item's actual purity on the loan."
+msgstr "ऋण मूल्यांकन के लिए चाँदी सहित सभी धातुओं में INR और शुद्ध धातु चुनें। वस्तु की वास्तविक शुद्धता ऋण में दर्ज करें।"
+
+msgid "For loan valuation, use INR and Pure metal for both gold and silver. Buying prices must be per gram, excluding tax and making charges."
+msgstr "ऋण मूल्यांकन में सोने और चाँदी दोनों के लिए INR और शुद्ध धातु चुनें। खरीद मूल्य प्रति ग्राम हो और उसमें कर व बनवाई शामिल न हों।"
+
+msgid "Gold"
+msgstr "सोना"
+
+msgid "How loans use these prices"
+msgstr "ऋण में इन कीमतों का उपयोग"
+
+msgid "In-App"
+msgstr "ऐप में"
+
+msgid "Jobs"
+msgstr "संदेश कार्य"
+
+msgid "Leave blank to keep the stored secret."
+msgstr "सहेजा गया गुप्त मान रखने के लिए खाली छोड़ें।"
+
+msgid "Letter"
+msgstr "पत्र"
+
+msgid "Loans uses INR Pure metal buying prices for gold and silver. Enter the item's actual purity on the loan."
+msgstr "ऋण में सोने और चाँदी के शुद्ध धातु खरीद मूल्य INR में उपयोग होते हैं। वस्तु की वास्तविक शुद्धता ऋण में दर्ज करें।"
+
+msgid "Loans uses the newest applicable INR Pure metal buying price across sources. Superseded and withdrawn quotes are excluded. An available record is not necessarily today's price; check its effective time. Saving a quote does not change an existing loan's approved terms or manual appraisal."
+msgstr "ऋण सभी स्रोतों में से नवीनतम लागू शुद्ध धातु खरीद मूल्य INR में उपयोग करता है। बदली या वापस ली गई दरें शामिल नहीं होतीं। उपलब्ध रिकॉर्ड आज की कीमत हो, यह ज़रूरी नहीं; उसका प्रभावी समय जाँचें। दर सहेजने से मौजूदा ऋण की स्वीकृत शर्तें या मैन्युअल मूल्यांकन नहीं बदलता।"
+
+msgid "Local market, jeweller, exchange, etc."
+msgstr "स्थानीय बाज़ार, जौहरी, एक्सचेंज आदि"
+
+msgid "Location"
+msgstr "स्थान"
+
+msgid "Manage Event Types"
+msgstr "घटना प्रकार प्रबंधित करें"
+
+msgid "Manage Policies"
+msgstr "नीतियाँ प्रबंधित करें"
+
+msgid "Manage Recipients"
+msgstr "प्राप्तकर्ता प्रबंधित करें"
+
+msgid "Manage Templates"
+msgstr "संदेश प्रारूप प्रबंधित करें"
+
+msgid "Mark Posted"
+msgstr "पोस्ट किया दर्ज करें"
+
+msgid "Mark Printed"
+msgstr "प्रिंट किया दर्ज करें"
+
+msgid "Mark printing or posting only after handling the documents. These buttons record the action; they do not print or send a message. Marking posted also records printing if it was not recorded."
+msgstr "दस्तावेज़ प्रिंट या पोस्ट करने के बाद ही यहाँ दर्ज करें। ये बटन केवल कार्रवाई दर्ज करते हैं; वे प्रिंट या संदेश नहीं भेजते। पोस्ट किया दर्ज करने पर प्रिंट का रिकॉर्ड न होने पर वह भी दर्ज हो जाता है।"
+
+msgid "Message setup"
+msgstr "संदेश सेटअप"
+
+msgid "Meta app secret"
+msgstr "Meta ऐप का गुप्त मान"
+
+msgid "Meta webhook callback URL"
+msgstr "Meta वेबहुक कॉलबैक URL"
+
+msgid "Metal rates"
+msgstr "धातु की दरें"
+
+msgid "Missing"
+msgstr "उपलब्ध नहीं"
+
+msgid "No"
+msgstr "नहीं"
+
+msgid "No documents generated yet."
+msgstr "अभी कोई दस्तावेज़ नहीं बना है।"
+
+msgid "No jobs in this batch."
+msgstr "इस बैच में कोई संदेश कार्य नहीं है।"
+
+msgid "No matching delivery batches"
+msgstr "कोई मेल खाता सूचना बैच नहीं"
+
+msgid "No matching metal rates"
+msgstr "कोई मेल खाती धातु दर नहीं"
+
+msgid "No rate sources yet."
+msgstr "अभी दर का कोई स्रोत नहीं है।"
+
+msgid "No selection snapshot captured."
+msgstr "चयन का कोई स्नैपशॉट दर्ज नहीं है।"
+
+msgid "Not recorded (legacy/import)"
+msgstr "दर्ज नहीं (पुराना/आयातित)"
+
+msgid "Notification settings"
+msgstr "सूचना सेटिंग"
+
+msgid "Notifications"
+msgstr "सूचनाएँ"
+
+msgid "Only unused sources can be deleted. A source with recorded quotes must remain in history."
+msgstr "केवल अप्रयुक्त स्रोत हटाए जा सकते हैं। दर्ज दरों वाला स्रोत इतिहास में बना रहना चाहिए।"
+
+msgid "Open a batch to review recipients, documents and delivery attempts. Batches appear when a notification workflow creates them."
+msgstr "प्राप्तकर्ता, दस्तावेज़ और भेजने के प्रयास जाँचने के लिए बैच खोलें। सूचना प्रक्रिया से बनाए जाने पर बैच यहाँ दिखते हैं।"
+
+msgid "Open source"
+msgstr "स्रोत खोलें"
+
+msgid "Phone-number ID"
+msgstr "फ़ोन नंबर ID"
+
+msgid "Post"
+msgstr "डाक"
+
+msgid "Posted"
+msgstr "पोस्ट किया गया"
+
+msgid "Posted at"
+msgstr "पोस्ट करने का समय"
+
+msgid "Previous quote"
+msgstr "पिछली दर"
+
+msgid "Prices are per gram, excluding tax and making charges. An older quote is not a live market price."
+msgstr "कीमतें प्रति ग्राम हैं, कर और बनवाई के बिना। पुरानी दर वर्तमान बाज़ार कीमत नहीं है।"
+
+msgid "Printed"
+msgstr "प्रिंट किया गया"
+
+msgid "Printed at"
+msgstr "प्रिंट करने का समय"
+
+msgid "Printing, posting and downloads"
+msgstr "प्रिंट, पोस्ट और डाउनलोड"
+
+msgid "Pure metal (100%%)"
+msgstr "शुद्ध धातु (100%%)"
+
+msgid "Pure metal (100%)"
+msgstr "शुद्ध धातु (100%)"
+
+msgid "Queued"
+msgstr "कतार में"
+
+msgid "Quote history"
+msgstr "दर का इतिहास"
+
+msgid "Quote purity"
+msgstr "दर की शुद्धता"
+
+msgid "Rate source"
+msgstr "दर का स्रोत"
+
+msgid "Rate sources"
+msgstr "दर के स्रोत"
+
+msgid "Reason / notes"
+msgstr "कारण / टिप्पणी"
+
+msgid "Reason for withdrawal"
+msgstr "वापस लेने का कारण"
+
+msgid "Recipients"
+msgstr "प्राप्तकर्ता"
+
+msgid "Recipients and delivery evidence"
+msgstr "प्राप्तकर्ता और डिलीवरी के प्रमाण"
+
+msgid "Record a market quote, or open an earlier quote to review its history."
+msgstr "बाज़ार की दर दर्ज करें, या इतिहास देखने के लिए पुरानी दर खोलें।"
+
+msgid "Recorded"
+msgstr "दर्ज किया गया"
+
+msgid "Recorded by"
+msgstr "दर्ज करने वाला"
+
+msgid "Recorded quote"
+msgstr "दर्ज दर"
+
+msgid "Recorded quotes"
+msgstr "दर्ज दरें"
+
+msgid "Rendered"
+msgstr "दस्तावेज़ तैयार"
+
+msgid "Replacement record"
+msgstr "बदला हुआ रिकॉर्ड"
+
+msgid "Required for corrections. The previous quote remains in history."
+msgstr "सुधार के लिए आवश्यक। पिछली दर इतिहास में बनी रहती है।"
+
+msgid "Review recipients and documents before sending. Sent means dispatched, not confirmed receipt by the customer."
+msgstr "भेजने से पहले प्राप्तकर्ता और दस्तावेज़ जाँचें। भेजा गया का अर्थ प्रेषित है; ग्राहक को मिलने की पुष्टि नहीं।"
+
+msgid "Save Rate"
+msgstr "दर सहेजें"
+
+msgid "Save Source"
+msgstr "स्रोत सहेजें"
+
+msgid "Save correction"
+msgstr "सुधार सहेजें"
+
+msgid "Save workspace integration"
+msgstr "कार्यक्षेत्र का कनेक्शन सहेजें"
+
+msgid "Saving credentials does not send a test message or prove delivery. Review notification settings and provider callbacks before live use."
+msgstr "क्रेडेंशियल सहेजने से परीक्षण संदेश नहीं भेजा जाता और डिलीवरी सिद्ध नहीं होती। वास्तविक उपयोग से पहले सूचना सेटिंग और प्रदाता के कॉलबैक जाँचें।"
+
+msgid "Search batch name or event"
+msgstr "बैच का नाम या घटना खोजें"
+
+msgid "Search sources or notes"
+msgstr "स्रोत या टिप्पणियाँ खोजें"
+
+msgid "Secret fields are cleared after an error. Re-enter new secrets before saving, or leave them blank to keep existing stored values."
+msgstr "त्रुटि के बाद गुप्त मान वाले खाने खाली हो जाते हैं। सहेजने से पहले नए मान फिर भरें, या पुराने सहेजे मान रखने के लिए खाली छोड़ें।"
+
+msgid "Select a rate source"
+msgstr "दर का स्रोत चुनें"
+
+msgid "Selected records"
+msgstr "चुने गए रिकॉर्ड"
+
+msgid "Selling price per gram"
+msgstr "प्रति ग्राम बिक्री मूल्य"
+
+msgid "Send eligible digital jobs"
+msgstr "योग्य डिजिटल संदेश भेजें"
+
+msgid "Send or retry digital messages"
+msgstr "डिजिटल संदेश भेजें या फिर प्रयास करें"
+
+msgid "Sent"
+msgstr "भेजा गया"
+
+msgid "Set"
+msgstr "सेट है"
+
+msgid "Setup needs attention"
+msgstr "सेटअप में ध्यान देना आवश्यक है"
+
+msgid "Silver"
+msgstr "चाँदी"
+
+msgid "Source name"
+msgstr "स्रोत का नाम"
+
+msgid "Source publishes prices including tax"
+msgstr "स्रोत कर सहित कीमतें प्रकाशित करता है"
+
+msgid "Sources identify where each metal rate was obtained."
+msgstr "स्रोत बताते हैं कि हर धातु की दर कहाँ से मिली।"
+
+msgid "Stored without file attachment"
+msgstr "फ़ाइल के बिना सहेजा गया"
+
+msgid "Superseded"
+msgstr "नई दर से बदला गया"
+
+msgid "Template administration requires an authorized staff account and a configured Workspace domain."
+msgstr "संदेश प्रारूप प्रबंधन के लिए अधिकृत स्टाफ खाता और कार्यक्षेत्र का सेट किया गया डोमेन आवश्यक है।"
+
+msgid "Templates and policies decide how existing notification workflows render messages. Creating a customer or loan does not by itself send a notification."
+msgstr "संदेश प्रारूप और नीतियाँ तय करती हैं कि सूचना प्रक्रियाएँ संदेश कैसे तैयार करेंगी। ग्राहक या ऋण बनाने मात्र से सूचना नहीं भेजी जाती।"
+
+msgid "The original record remains in history. Loans may fall back to an earlier applicable quote. Existing approved loan evidence stays unchanged."
+msgstr "मूल रिकॉर्ड इतिहास में बना रहेगा। ऋण में पिछली लागू दर उपयोग हो सकती है। मौजूदा स्वीकृत ऋण के प्रमाण नहीं बदलेंगे।"
+
+msgid "The source is ready. Add a quote to make a price available. Prices must exclude tax; this flag does not adjust amounts."
+msgstr "स्रोत तैयार है। कीमत उपलब्ध करने के लिए दर जोड़ें। कीमतों में कर शामिल न हो; यह संकेत राशि नहीं बदलता।"
+
+msgid "The source tax flag is descriptive; no conversion is applied. Verify the units and tax basis of legacy quotes before using them."
+msgstr "स्रोत का कर संकेत केवल जानकारी है; कोई रूपांतरण नहीं होता। पुरानी दरें उपयोग करने से पहले उनकी इकाई और कर का आधार जाँचें।"
+
+msgid "These checks do not send a message or prove customer delivery. Delivery evidence comes from each job and its provider callbacks."
+msgstr "ये जाँच संदेश नहीं भेजतीं और ग्राहक को मिलने की पुष्टि नहीं करतीं। डिलीवरी का प्रमाण हर संदेश कार्य और प्रदाता के कॉलबैक से मिलता है।"
+
+msgid "This sends eligible digital jobs and retries failed ones. Jobs already sent or cancelled are skipped."
+msgstr "यह योग्य डिजिटल संदेश भेजता है और विफल संदेशों का फिर प्रयास करता है। पहले भेजे या रद्द संदेश छोड़ दिए जाते हैं।"
+
+msgid "Unmatched callbacks"
+msgstr "बिना मेल वाले कॉलबैक"
+
+msgid "Use a new quote for a new market observation. A correction replaces an error and keeps the earlier record in history."
+msgstr "नई बाज़ार कीमत के लिए नई दर जोड़ें। सुधार गलती को बदलता है और पिछला रिकॉर्ड इतिहास में रखता है।"
+
+msgid "Webhook verify token"
+msgstr "वेबहुक सत्यापन टोकन"
+
+msgid "WhatsApp Cloud is not configured for this workspace."
+msgstr "इस कार्यक्षेत्र के लिए WhatsApp Cloud सेट नहीं है।"
+
+msgid "WhatsApp Cloud is not enabled for this workspace."
+msgstr "इस कार्यक्षेत्र के लिए WhatsApp Cloud चालू नहीं है।"
+
+msgid "WhatsApp connection"
+msgstr "WhatsApp कनेक्शन"
+
+msgid "When this price applied, in local time. Leave blank to use now for a new quote."
+msgstr "स्थानीय समय में यह कीमत कब लागू हुई। नई दर के लिए वर्तमान समय उपयोग करने हेतु खाली छोड़ें।"
+
+msgid "Withdraw"
+msgstr "वापस लें"
+
+msgid "Withdraw quote"
+msgstr "दर वापस लें"
+
+msgid "Withdrawn"
+msgstr "वापस लिया गया"
+
+msgid "Workspace WhatsApp Cloud"
+msgstr "कार्यक्षेत्र का WhatsApp Cloud"
+
+msgid "Workspace WhatsApp Cloud credentials are incomplete."
+msgstr "कार्यक्षेत्र के WhatsApp Cloud क्रेडेंशियल अधूरे हैं।"
+
+msgid "Currency per gram of the selected purity."
+msgstr "चुनी गई शुद्धता का प्रति ग्राम मूल्य, चुनी गई मुद्रा में।"
+
+msgid "Clear filters"
+msgstr "फ़िल्टर हटाएँ"
+
+msgid "Yes"
+msgstr "हाँ"
