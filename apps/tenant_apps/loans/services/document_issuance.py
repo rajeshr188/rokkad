@@ -5,6 +5,7 @@ import hashlib
 from types import SimpleNamespace
 
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from .action_access import require_loan_action
 
 from apps.tenant_apps.loans.documents import (
@@ -72,6 +73,12 @@ def issue_configurable_document(
         )
         return ConfigurableDocumentIssueResult(issue)
     layout = DocumentLayoutValidator.load(revision.definition)
+    if layout.schema_version >= 4 and payload.document_type == "loan_ticket":
+        return _issue_precision_ticket(
+            workspace=workspace, loan=loan, revision=revision, layout=layout,
+            source_type=source_type, source_id=source_id, source_fingerprint=source_fingerprint,
+            actor=actor, request=request, legacy_profile_recovery=legacy_profile_recovery,
+        )
     print_profile = None
     assets = _revision_assets(revision)
     if payload.document_type == "loan_ticket":
@@ -101,6 +108,41 @@ def issue_configurable_document(
         payload_schema_version=payload.schema_version, render_result=rendered,
         filename=payload.file_name, actor=actor, revision=revision,
         print_profile=print_profile,
+    )
+    return ConfigurableDocumentIssueResult(issue)
+
+
+@transaction.atomic
+def _issue_precision_ticket(*, workspace, loan, revision, layout, source_type, source_id, source_fingerprint, actor, request, legacy_profile_recovery):
+    from apps.tenant_apps.loans.models import PawnLoan
+    from .ticket_documents import prepare_ticket_document
+
+    if legacy_profile_recovery:
+        raise ValueError("Precision tickets require a print profile; legacy recovery is unavailable.")
+    # Serialize first issue before reading mutable Party facts or private media.
+    loan = PawnLoan.objects.select_for_update().get(pk=loan.pk, workspace=workspace)
+    existing = LoanDocumentLayoutService.find_official_issue(
+        workspace=workspace, document_type="loan_ticket", source_type=source_type,
+        source_id=source_id, source_fingerprint=source_fingerprint,
+    )
+    if existing:
+        return ConfigurableDocumentIssueResult(existing)
+    prepared = prepare_ticket_document(
+        loan=loan, layout=layout, actor=actor,
+        address_id=request.GET.get("address") if request else None,
+    )
+    if prepared.source_snapshot["approval_fingerprint"] != source_fingerprint:
+        raise ValueError("Loan approval changed. Refresh before issuing the ticket.")
+    profile = LoanDocumentPrintProfileService.resolve(workspace=workspace, document_type="loan_ticket", series=loan.series)
+    result = ConfigurableDocumentRenderer.render_with_print_profile(
+        prepared.payload, layout, profile.definition,
+        assets=_revision_assets(revision) + prepared.assets,
+    )
+    issue = LoanDocumentLayoutService.issue(
+        workspace=workspace, document_type="loan_ticket", source_type=source_type,
+        source_id=source_id, source_fingerprint=source_fingerprint,
+        payload_schema_version=2, render_result=result, filename=prepared.payload.file_name,
+        actor=actor, revision=revision, print_profile=profile, source_snapshot=prepared.source_snapshot,
     )
     return ConfigurableDocumentIssueResult(issue)
 

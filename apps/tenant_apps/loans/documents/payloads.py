@@ -1,7 +1,7 @@
 """Immutable projections used by every PawnLoan document renderer.
 
-Projection builders are the only document layer allowed to read loan models.
-Renderers receive scalar rows and never calculate loan-domain facts.
+Projection builders and the first-issue ticket service read authorized sources.
+Renderers receive typed values and never calculate loan-domain facts.
 """
 
 from dataclasses import dataclass
@@ -10,6 +10,28 @@ from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
 
 from apps.tenant_apps.loans.domain import PawnLoanState, TransactionKind
+
+
+TICKET_FIELD_KEYS = {
+    "License number": "license.number", "Customer name": "borrower.name",
+    "Customer relationship": "borrower.relationship", "Customer address": "borrower.address",
+    "Customer phone": "borrower.phone", "Customer contact block": "borrower.contact_block",
+    "Approved collateral descriptions": "collateral.description_lines",
+    "Approved net weight by metal": "collateral.net_weight_by_metal",
+    "Approved appraisal total": "collateral.approved_appraisal_total",
+    "Principal in words": "loan.principal_words", "Loan summary label": "loan.summary_label",
+}
+TICKET_MEDIA_KEYS = {
+    "Customer profile photograph": "borrower.photo",
+    "First approved collateral photograph": "collateral.first_approved_photo",
+}
+
+
+@dataclass(frozen=True)
+class DocumentMedia:
+    binding: str
+    asset_key: str
+    status: str
 
 
 class DocumentProjectionError(ValueError):
@@ -39,6 +61,7 @@ class DocumentPayload:
     verification_id: str
     fields: tuple[DocumentField, ...]
     sections: tuple[DocumentSection, ...] = ()
+    media: tuple[DocumentMedia, ...] = ()
 
     @property
     def details(self):

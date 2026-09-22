@@ -399,7 +399,7 @@ class ConfigurableDocumentRenderer:
         for copy_name, blocks in pages:
             for block in blocks:
                 if block.copy_scope in {"BOTH", copy_name} and cls._is_visible(block, fields):
-                    cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size)
+                    cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size, preview=preview)
             if preview:
                 canvas.saveState()
                 canvas.setFillColor(colors.Color(0.75, 0.1, 0.1, alpha=0.25))
@@ -460,7 +460,7 @@ class ConfigurableDocumentRenderer:
         styles = cls._styles(layout)
         for block in blocks:
             if block.copy_scope in {"BOTH", copy_scope} and cls._is_visible(block, fields):
-                cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size)
+                cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size, preview=preview)
         if preview:
             canvas.saveState()
             canvas.setFillColor(colors.Color(0.75, 0.1, 0.1, alpha=0.25))
@@ -502,7 +502,7 @@ class ConfigurableDocumentRenderer:
             left.close(); right.close(); output.close()
 
     @classmethod
-    def _draw_overlay_block(cls, canvas, block, payload, fields, sections, assets, styles, layout, page_size):
+    def _draw_overlay_block(cls, canvas, block, payload, fields, sections, assets, styles, layout, page_size, *, preview=False):
         x = block.x_mm * mm
         height = block.height_mm * mm
         width = block.width_mm * mm
@@ -512,7 +512,27 @@ class ConfigurableDocumentRenderer:
         style.leading = block.font_size_pt + 2
         style.alignment = {"LEFT": 0, "CENTER": 1, "RIGHT": 2}[block.align]
         if block.type == "image":
-            asset = assets[block.asset_key]
+            if layout.schema_version >= 4 and block.binding:
+                media = next((value for value in payload.media if value.binding == block.binding), None)
+                if media is None:
+                    raise DocumentAssetError("Bound photograph has no source evidence.")
+                if media.status != "AVAILABLE":
+                    if preview:
+                        canvas.saveState()
+                        canvas.setStrokeColor(colors.red)
+                        canvas.rect(x, y, width, height)
+                        canvas.setFont("Helvetica", 6)
+                        canvas.drawString(x + 2, y + height / 2, "Photo " + media.status.lower())
+                        canvas.restoreState()
+                        return
+                    if media.status == "ABSENT" and block.optional_photo:
+                        return
+                    raise DocumentAssetError("Bound photograph is unavailable for official printing.")
+                if media.asset_key not in assets:
+                    raise DocumentAssetError("Bound photograph bytes are missing.")
+                asset = assets[media.asset_key]
+            else:
+                asset = assets[block.asset_key]
             if asset.mime_type == "application/pdf":
                 raise DocumentAssetError("PDF assets cannot be used in image blocks.")
             image = Image(io.BytesIO(asset.content))
@@ -797,6 +817,8 @@ class ConfigurableDocumentRenderer:
                  "verification_id": payload.verification_id,
                  "fields": [(field.key, str(field.value)) for field in payload.fields],
                  "sections": [(section.key, [[str(cell) for cell in row] for row in section.rows]) for section in payload.sections]}
+        if payload.schema_version >= 2:
+            value["media"] = [(item.binding, item.asset_key, item.status) for item in payload.media]
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     @staticmethod

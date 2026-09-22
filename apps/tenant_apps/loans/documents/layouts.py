@@ -7,7 +7,7 @@ import json
 from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass
 
-from .payloads import PawnLoanDocumentProjectionBuilder
+from .payloads import PawnLoanDocumentProjectionBuilder, TICKET_FIELD_KEYS, TICKET_MEDIA_KEYS
 
 
 class LayoutValidationError(ValueError):
@@ -76,6 +76,7 @@ class LayoutBlock:
     field_label: str = ""
     padding_pt: int | float = 0
     leading_pt: int | float = 0
+    optional_photo: bool = False
 
 
 @dataclass(frozen=True)
@@ -191,6 +192,8 @@ class DocumentLayout:
                 })
             if self.schema_version >= 4:
                 value.update({"show_label": block.show_label, "field_label": block.field_label})
+                if block.optional_photo:
+                    value["optional_photo"] = True
                 if block.padding_pt:
                     value["padding_pt"] = block.padding_pt
                 if block.leading_pt:
@@ -512,6 +515,8 @@ class DocumentLayoutValidator:
         if depth > 3:
             raise LayoutValidationError("Flow containers may be nested at most three levels.")
         field_keys = frozenset(PawnLoanDocumentProjectionBuilder.FIELD_KEYS.values())
+        if schema_version >= 4:
+            field_keys |= frozenset(TICKET_FIELD_KEYS.values())
         section_keys = frozenset(PawnLoanDocumentProjectionBuilder.SECTION_KEYS.values())
         result = []
         for value in values:
@@ -521,7 +526,7 @@ class DocumentLayoutValidator:
             if schema_version >= 2:
                 allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align", "copy_scope"})
             if schema_version >= 4:
-                allowed.update({"show_label", "field_label", "padding_pt", "leading_pt"})
+                allowed.update({"show_label", "field_label", "padding_pt", "leading_pt", "optional_photo"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -547,8 +552,17 @@ class DocumentLayoutValidator:
             if block_type == "qr" and binding and binding not in field_keys and binding != "document.verification_id":
                 raise LayoutValidationError(f"Unknown QR binding: {binding}.")
             asset_key = str(value.get("asset_key") or "")
-            if block_type == "image" and not asset_key:
-                raise LayoutValidationError("Image blocks require an asset key.")
+            dynamic_photo = block_type == "image" and schema_version >= 4 and binding in TICKET_MEDIA_KEYS.values()
+            optional_photo = value.get("optional_photo", False)
+            if not isinstance(optional_photo, bool) or (optional_photo and not dynamic_photo):
+                raise LayoutValidationError("Only bound photographs may be optional.")
+            if block_type == "image":
+                if dynamic_photo and asset_key:
+                    raise LayoutValidationError("Choose a bound photo or a static asset, not both.")
+                if schema_version >= 4 and binding and not dynamic_photo:
+                    raise LayoutValidationError("Unknown photograph binding.")
+                if not dynamic_photo and not asset_key:
+                    raise LayoutValidationError("Image blocks require an asset key or registered photograph binding.")
             if block_type not in {"title", "signature", "section"} and value.get("text"):
                 raise LayoutValidationError(f"Block type {block_type} does not accept free text.")
             height = value.get("height_mm", 4)
@@ -678,7 +692,7 @@ class DocumentLayoutValidator:
                 height, asset_key, width, child_blocks, columns, grid_columns,
                 style_variant, table_columns, repeat_header, value_format,
                 overflow_policy, max_characters, visible_when, x_mm, y_mm,
-                font_size_pt, align, copy_scope, show_label, field_label, padding_pt, leading_pt,
+                font_size_pt, align, copy_scope, show_label, field_label, padding_pt, leading_pt, optional_photo,
             ))
         return tuple(result)
 

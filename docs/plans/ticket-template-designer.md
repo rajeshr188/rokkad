@@ -29,6 +29,22 @@ described below; it does not alter existing published layouts.
 
 ## Implemented foundation and isolated checks
 
+Contact/photo evidence is now implemented for precision v4 tickets. First issue
+uses payload v2 and migration 0016's nullable, immutable source snapshot; historical
+rows stay null. Concurrent first prints serialize on the loan; saved PDFs are
+returned before mutable facts/media are rebuilt. Ambiguous addresses require
+selection; unavailable approved photos fail closed. Dynamic photos and customer
+values are excluded from layout exports. The test launcher includes restricted
+database guards and real concurrent-connection issuance checks (155 checks).
+
+Run `python scripts/review_ticket_frame_mapping.py` to regenerate the synthetic
+HTML positioning aid and non-importable candidate definitions in
+`outputs/ticket-template-tests/frame-review/`. No database or media credentials
+are needed. It reports existing visible-evidence conflicts rather than changing
+the client design to satisfy them. Real artwork, copy-aware editing, reviewed
+static-stock coverage and paired activation are the remaining implementation
+work before JCL/JSK visual/physical acceptance.
+
 Create **Loan ticket > Exact PDF overlay** and select **Use precision ticket
 overlay** to opt into v4. In the existing visual overlay editor, backgrounds are
 optional; fields offer label/value or value-only display and an optional custom
@@ -170,8 +186,9 @@ pending. These are implementation targets, not changes to current validators.
    actual media inventory/visual review and executable fixtures remain pending.
 3. In progress: optional backgrounds, value-only/custom-label fields, precision
    geometry, stock profiles/guides, text padding/leading and isolated checks are
-   implemented. Dynamic media/source evidence, image/QR fit refinements and reviewed
-   static-stock declarations remain before full JCL/JSK reproduction.
+   implemented, together with dynamic media/source evidence and first-issue
+   serialization. Image/QR fit refinements and reviewed static-stock declarations
+   remain before full JCL/JSK reproduction.
 4. Simplify authoring/activation in one editor over existing services; keep JSON
    optional for advanced maintenance, unnecessary for the supported user journey.
 5. Reproduce both examples, test permissions/reprints/compatibility, then conduct

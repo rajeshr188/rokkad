@@ -35,7 +35,10 @@ evidence. The [implementation contract](../implementation/ticket-template-frame-
 now selects layout v4, stock-aware profile v2 and ticket payload v2. V4 optional
 backgrounds, field labels, precision geometry and text spacing are implemented on
 the feature branch, together with profile v2 stock mode and separate design/print
-previews. Payload/photo evidence and other authoring changes remain pending. Prior schema interpretation and exact stored artifacts survive.
+previews. Payload-v2 contact/photo evidence and the nullable immutable issue source
+snapshot are implemented; static-stock coverage, unified authoring/activation and
+actual artwork acceptance remain pending. Prior schema interpretation and exact
+stored artifacts survive.
 
 Party identity/contact/photo data is captured at first issue; approved economics
 and collateral/photo evidence retain their existing snapshot authority. A nullable

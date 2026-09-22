@@ -266,3 +266,41 @@ class PrecisionOverlayTests(SimpleTestCase):
         self.assertTrue(LoanDocumentLayoutCreateForm(data).is_valid())
         data["layout_mode"] = "FLOW"
         self.assertFalse(LoanDocumentLayoutCreateForm(data).is_valid())
+
+    def test_dynamic_photo_form_and_layout_are_explicit_and_versioned(self):
+        data = {"block_type": "image", "binding": "borrower.photo", "x_mm": 10, "y_mm": 10,
+                "width_mm": 20, "height_mm": 20, "font_size_pt": 10, "align": "LEFT",
+                "copy_scope": "BOTH", "optional_photo": True}
+        form = LoanDocumentOverlayBlockForm(data, schema_version=4)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.definition["blocks"].append(form.block_definition())
+        layout = DocumentLayoutValidator.load(self.definition)
+        self.assertTrue(layout.blocks[-1].optional_photo)
+        self.assertFalse(LoanDocumentOverlayBlockForm(data, schema_version=3).is_valid())
+        self.assertFalse(LoanDocumentOverlayBlockForm({**data, "asset_key": "logo"}, schema_version=4, asset_keys=("logo",)).is_valid())
+        self.assertFalse(LoanDocumentOverlayBlockForm({**data, "block_type": "field"}, schema_version=4).is_valid())
+        self.definition["blocks"][-1]["binding"] = "arbitrary.private.path"
+        with self.assertRaises(LayoutValidationError):
+            DocumentLayoutValidator.load(self.definition)
+
+    def test_old_static_images_keep_ignoring_unused_scalar_binding(self):
+        import io
+        from PIL import Image
+        image = io.BytesIO()
+        Image.new("RGB", (20, 20), "blue").save(image, format="PNG")
+        logo = DocumentAssetValidator.validate(key="logo", kind="IMAGE", content=image.getvalue(), workspace_id=7)
+        with fitz.open() as pdf:
+            pdf.new_page().insert_text((20, 20), "Legacy")
+            background = DocumentAssetValidator.validate(key="form.background", kind="BACKGROUND", content=pdf.tobytes(), workspace_id=7)
+        for version in (2, 3):
+            with self.subTest(version=version):
+                definition = starter_layout("loan_ticket", schema_version=version, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+                definition["blocks"].append({"type": "image", "asset_key": "logo", "binding": "loan.number",
+                    "x_mm": 150, "y_mm": 145, "width_mm": 20, "height_mm": 20})
+                layout = DocumentLayoutValidator.load(definition)
+                if version == 3:
+                    result = ConfigurableDocumentRenderer.render_with_print_profile(self.payload, layout, self.profile, assets=(logo, background))
+                else:
+                    result = ConfigurableDocumentRenderer.render(self.payload, layout, assets=(logo, background))
+                with fitz.open(stream=result.pdf, filetype="pdf") as pdf:
+                    self.assertTrue(pdf[0].get_images())

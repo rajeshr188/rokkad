@@ -23,6 +23,8 @@ def main():
         "apps.tenant_apps.loans.tests.test_print_profiles",
         "apps.tenant_apps.loans.tests.test_documents",
         "apps.tenant_apps.loans.tests.test_setup_ui",
+        "apps.tenant_apps.loans.tests.test_history_evidence_guards",
+        "apps.tenant_apps.loans.tests.test_ticket_evidence_concurrency",
     ])
     args = parser.parse_args()
     if not args.env_file.is_file():

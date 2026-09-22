@@ -576,6 +576,17 @@ data, or executable templates. They always remain drafts until reviewed.
 
 ## If Printing Fails
 
+On the isolated feature branch, precision tickets offer customer contact fields
+and customer/approved-collateral photograph bindings. Choose **Image** and the
+photograph binding instead of an uploaded static asset. **Leave absent photo
+blank** permits genuinely absent photos; an unreadable or changed selected file
+still blocks official printing. Preview placeholders are not official evidence.
+
+If a customer has multiple addresses without a clear default, printing asks which
+address to use. This selection does not edit the customer profile. First issue
+captures the chosen values/photos and saves the PDF. Reprinting returns that
+saved PDF; customer edits affect new issues, not historical tickets.
+
 1. Do not repeatedly edit or replace stored files outside Rokkad.
 2. Open **Integrity diagnostics** in Document layouts.
 3. Resolve any layout, asset, issue, scope, or hash finding.

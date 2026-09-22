@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-22
 tags: [domain, party]
 ---
 
@@ -17,6 +17,14 @@ writes require explicit Workspace context plus the existing action permissions.
 Historical `contact.*` permission aliases still participate in Party authorization;
 do not remove them as unused imports. Shared borrower identity does not grant
 permission to perform loan lifecycle actions.
+
+On the isolated ticket feature, `document_selectors.document_identity` provides
+authorized first-issue display facts to Loans. It requires matching Workspace
+context and existing read permission. The primary phone is used; addresses prefer
+the default HOME address, then a sole address, otherwise require an explicit
+selection scoped to the same Party and Workspace. This does not alter defaults.
+Loans stores rendered values, selected identity and any photograph checksum on
+its immutable issue; Party edits do not rewrite previously issued tickets.
 
 Borrower photos and documents use authorized application routes. Direct storage
 URLs are not a substitute for access checks. See [private media](../implementation/private-media-access.md)

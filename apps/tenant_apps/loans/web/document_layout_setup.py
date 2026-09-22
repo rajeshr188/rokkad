@@ -59,6 +59,9 @@ from apps.tenant_apps.loans.services import (
     LoanDocumentLayoutService,
 )
 from apps.tenant_apps.loans.web.document_assets import _revision_assets
+from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+from apps.tenant_apps.party.document_selectors import DocumentAddressSelectionRequired
+from .document_selection import address_selection_response
 from apps.tenant_apps.loans.services.print_profiles import LoanDocumentPrintProfileService
 
 
@@ -505,25 +508,30 @@ def document_layout_preview(request, revision_pk):
         if payload is None:
             return HttpResponse("Create an eligible source document before previewing this layout.", status=409, content_type="text/plain")
         layout = DocumentLayoutValidator.load(revision.definition)
+        assets = _revision_assets(revision)
         if layout.schema_version >= 3 and payload.document_type == "loan_ticket":
             profile = built_in_print_profile()
             if layout.schema_version >= 4:
+                loan_key = next(field.value for field in payload.fields if field.key == "loan.source_id")
+                loan = get_object_or_404(PawnLoan, pk=str(loan_key).split(":")[-1], workspace=request.loans_workspace)
+                prepared = prepare_ticket_document(loan=loan, layout=layout, actor=request.user, address_id=request.GET.get("address"), preview=True)
+                payload, assets = prepared.payload, assets + prepared.assets
                 if request.GET.get("profile"):
                     selected = get_object_or_404(LoanDocumentPrintProfileRevision, pk=request.GET["profile"], profile__workspace=request.loans_workspace, state__in=["DRAFT", "PUBLISHED"])
                     profile = PrintProfileValidator.load(selected.definition)
                 else:
-                    loan_key = next(field.value for field in payload.fields if field.key == "loan.source_id")
-                    loan = get_object_or_404(PawnLoan, pk=str(loan_key).split(":")[-1], workspace=request.loans_workspace)
                     profile = LoanDocumentPrintProfileService.resolve(workspace=request.loans_workspace, document_type="loan_ticket", series=loan.series).definition
             result = ConfigurableDocumentRenderer.render_with_print_profile(
                 payload, layout, profile, preview=True,
                 design_preview=layout.schema_version >= 4 and request.GET.get("mode") == "design",
-                assets=_revision_assets(revision),
+                assets=assets,
             )
         else:
             result = ConfigurableDocumentRenderer.render(
-                payload, layout, preview=True, assets=_revision_assets(revision)
+                payload, layout, preview=True, assets=assets
             )
+    except DocumentAddressSelectionRequired as exc:
+        return address_selection_response(request, exc)
     except (ValueError, ValidationError) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
     response = HttpResponse(result.pdf, content_type="application/pdf")

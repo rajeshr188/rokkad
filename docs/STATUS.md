@@ -7,6 +7,43 @@ tags: [status, architecture]
 
 # Status
 
+## Ticket contact/photo evidence and frame candidates (2026-09-22)
+
+The feature branch now exposes customer name, relationship, address, phone/contact
+block, principal in Indian-English words (including paise), approved collateral
+descriptions, net weight by metal, approved appraisal total, license number and a
+compact loan summary. V4 image frames can bind the customer profile photograph or
+the first item's first approved photograph. These are transient render inputs,
+never copied into template assets or exported packs. Older payloads/layouts retain
+their existing interpretation.
+
+First issue captures those values, chosen address and selected photo identities/
+checksums in nullable `LoanDocumentIssue.source_snapshot` (payload v2). Migration
+0016 adds Workspace/schema checks and database immutability; old rows stay null.
+It has been exercised only in `test_rokkad_ticket_template_feature`. A loan row
+lock serializes first prints. Stored reprints return before projection/media
+rebuilding, even after customer edits or media failure. Address ambiguity opens
+a scoped, non-cached selection page without changing Party defaults. Absent photos
+require an explicit optional-frame setting; unreadable, changed or unprovable
+approved photos block official issue. Previews show labelled placeholders.
+
+Validation: 155 isolated checks pass, including exact-byte reprints, two real
+PostgreSQL first-print requests, restricted-role snapshot mutation/deletion and
+foreign-Workspace denial, photo checksum/item selection, no later-photo fallback,
+address selection and privacy of exported packs. Synthetic two-copy PDF output
+was visually inspected with MuPDF (Poppler is not installed). This checks the
+new bindings, not real stationery or physical printer parity.
+
+`scripts/review_ticket_frame_mapping.py` produces a local synthetic HTML geometry
+review and candidate JSON for all 35 mapped JCL/JSK frames. It makes no database
+changes and is **not an import pack or renderer preview**. Candidates explicitly
+fail today's visible-evidence contract: internal IDs/full collateral table and
+verification remain mandatory. JSK duplicate frame 19's width reduction from
+120 to 108 mm is flagged for review. No artwork or semantic differences have been
+silently accepted. Next: implement the already-designed v4 visible business
+coverage/static-stock declarations, then copy-aware editing/paired activation and
+real-artwork/printer acceptance. No parent/rehearsal/production changes or merge.
+
 ## Stationery guides and legacy text spacing (2026-09-22)
 
 The isolated ticket feature now supports print-profile v2 paper stock: plain
@@ -2215,7 +2252,7 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
 | Area | State |
 | --- | --- |
 | Bilingual branding | Approved Rokkad / रोक्कड़ artwork applied to shared UI, portal, admin, browser icons, checkout, billing communications, and README; see [branding](implementation/branding.md) |
-| Workspace/RLS, local role grants, private-media routes, business setup | Implemented; access/media checkpoint `4d15477` published |
+| Workspace/RLS, local role grants, private-media routes, business setup | Implemented; access/media checkpoint `4d15577` published |
 | Multiple-loan full release | Implemented, owner reviewed; `4b08c3f` published |
 | CI/container runtime foundation and Workspace operator commands | Included in the local hardening checkpoint |
 | Checkout, paid expiry, recovery, processed refunds and final owner review | Included in the local hardening checkpoint; development migrations through subscriptions.0009 applied |

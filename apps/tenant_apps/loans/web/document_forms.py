@@ -2,7 +2,7 @@
 
 from django import forms
 
-from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
+from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder, TICKET_FIELD_KEYS, TICKET_MEDIA_KEYS
 from apps.tenant_apps.loans.documents.print_profiles import built_in_print_profile
 from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 
@@ -227,6 +227,7 @@ class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
 
 
 class LoanDocumentOverlayBlockForm(forms.Form):
+    optional_photo = forms.BooleanField(required=False, label="Leave absent photo blank", help_text="An unreadable or changed photo always blocks official printing.")
     padding_pt = forms.DecimalField(required=False, min_value=0, max_value=24, decimal_places=1, label="Text padding (pt)", help_text="Inset on all four sides; legacy frames use 6 pt.")
     leading_pt = forms.DecimalField(required=False, min_value=6, max_value=48, decimal_places=1, label="Line spacing (pt)", help_text="Leave blank for automatic spacing; legacy frames use 12 pt.")
     value_display = forms.ChoiceField(
@@ -264,11 +265,14 @@ class LoanDocumentOverlayBlockForm(forms.Form):
                     widget=forms.NumberInput(attrs={"step": "0.1"}),
                 )
         else:
+            self.fields.pop("optional_photo")
             self.fields.pop("padding_pt")
             self.fields.pop("leading_pt")
             self.fields.pop("value_display")
             self.fields.pop("field_label")
         field_choices = sorted((value, label) for label, value in PawnLoanDocumentProjectionBuilder.FIELD_KEYS.items())
+        if schema_version >= 4:
+            field_choices += [(value, label) for label, value in {**TICKET_FIELD_KEYS, **TICKET_MEDIA_KEYS}.items()]
         section_choices = sorted((value, f"Table: {label}") for label, value in PawnLoanDocumentProjectionBuilder.SECTION_KEYS.items())
         self.fields["binding"].choices = [("", "Verification ID / none")] + field_choices + section_choices
         self.fields["asset_key"].choices = [("", "Select an image asset")] + [(key, key) for key in sorted(asset_keys)]
@@ -279,6 +283,8 @@ class LoanDocumentOverlayBlockForm(forms.Form):
         cleaned = super().clean()
         block_type, binding = cleaned.get("block_type"), cleaned.get("binding")
         field_keys = set(PawnLoanDocumentProjectionBuilder.FIELD_KEYS.values())
+        if self.schema_version >= 4:
+            field_keys.update(TICKET_FIELD_KEYS.values())
         section_keys = set(PawnLoanDocumentProjectionBuilder.SECTION_KEYS.values())
         if block_type == "field" and binding not in field_keys:
             self.add_error("binding", "Select a registered scalar field.")
@@ -286,8 +292,15 @@ class LoanDocumentOverlayBlockForm(forms.Form):
             self.add_error("binding", "Select a registered table.")
         if block_type == "qr" and binding and binding not in field_keys:
             self.add_error("binding", "Select a registered scalar field or leave blank for verification ID.")
-        if block_type == "image" and not cleaned.get("asset_key"):
+        if block_type == "image" and not cleaned.get("asset_key") and not (self.schema_version >= 4 and binding in TICKET_MEDIA_KEYS.values()):
             self.add_error("asset_key", "Select an uploaded image asset.")
+        if self.schema_version >= 4 and block_type == "image" and binding:
+            if binding not in TICKET_MEDIA_KEYS.values():
+                self.add_error("binding", "Select a registered photograph or leave this blank for an uploaded asset.")
+            elif cleaned.get("asset_key"):
+                self.add_error("asset_key", "Choose either a customer/collateral photograph or an uploaded asset.")
+        if cleaned.get("optional_photo") and not (block_type == "image" and binding in TICKET_MEDIA_KEYS.values()):
+            self.add_error("optional_photo", "This option applies only to customer/collateral photographs.")
         return cleaned
 
     def block_definition(self):
@@ -305,6 +318,8 @@ class LoanDocumentOverlayBlockForm(forms.Form):
         if value.get("text"):
             block["text"] = value["text"]
         if self.schema_version >= 4:
+            if value["block_type"] == "image" and value.get("binding") in TICKET_MEDIA_KEYS.values():
+                block["optional_photo"] = value.get("optional_photo", False)
             if value["block_type"] in {"field", "title", "verification", "signature"}:
                 block["padding_pt"] = float(value.get("padding_pt") or 0)
                 block["leading_pt"] = float(value.get("leading_pt") or 0)

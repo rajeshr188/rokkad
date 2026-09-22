@@ -2173,6 +2173,154 @@ class LoansSetupUiTests(WorkspaceTestCase):
             1,
         )
 
+    def _rich_ticket_fixture(self):
+        import hashlib
+        from django.core.files.base import ContentFile
+        from apps.tenant_apps.loans.models import PawnCollateralPhoto
+        from apps.tenant_apps.party.models import PartyAddress
+
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "RICH-19")
+        borrower = loan.borrower
+        borrower.display_name = "Asha"
+        borrower.relation_label, borrower.relation_name = "DAUGHTER_OF", "Ram"
+        borrower.primary_phone = "9000000001"
+        image = io.BytesIO()
+        PillowImage.new("RGB", (80, 60), "blue").save(image, format="PNG")
+        content = image.getvalue()
+        borrower.profile_photo.save("customer.png", ContentFile(content), save=False)
+        borrower.save()
+        address = PartyAddress.objects.create(party=borrower, address_type="HOME", line1="10 Test Street", city="Test City", is_default=True)
+        item = PawnCollateralItem.objects.create(loan=loan, description="Test ring", metal="GOLD", gross_weight=2, net_weight=2, purity_percentage=90)
+        photo = PawnCollateralPhoto(collateral_item=item, original_filename="approved.png", mime_type="image/png", sha256=hashlib.sha256(content).hexdigest(), byte_size=len(content), workflow_source="DRAFT")
+        photo.file.save("approved.png", ContentFile(content), save=False)
+        photo.save()
+        source = {"loan_number": loan.loan_number, "loan_date": str(loan.loan_date), "principal_amount": "10000.25", "monthly_interest_rate": "2", "tenure_months": 3, "borrower_id": borrower.pk,
+                  "collateral": [{"item_id": item.pk, "description": "Test ring", "metal": "GOLD", "net_weight": "2.0000", "purity_percentage": "90", "latest_appraised_value": "12000.00", "photo_evidence": [{"photo_id": photo.pk, "sha256": photo.sha256}]}]}
+        PawnLoanApprovalSnapshot.objects.create(loan=loan, version=1, payload=source, fingerprint="rich-ticket-evidence", approved_by=self.owner)
+        loan.state = "APPROVED"
+        loan.save()
+        definition = starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict()
+        next(block for block in definition["blocks"] if block["type"] == "table")["height_mm"] = 30
+        definition["blocks"].extend([
+            {"type": "field", "binding": "borrower.contact_block", "show_label": False, "x_mm": 10, "y_mm": 145, "width_mm": 90, "height_mm": 35, "font_size_pt": 8},
+            {"type": "image", "binding": "borrower.photo", "x_mm": 110, "y_mm": 145, "width_mm": 30, "height_mm": 30},
+            {"type": "image", "binding": "collateral.first_approved_photo", "x_mm": 150, "y_mm": 145, "width_mm": 30, "height_mm": 30},
+            {"type": "field", "binding": "loan.principal_words", "x_mm": 10, "y_mm": 183, "width_mm": 180, "height_mm": 15, "font_size_pt": 8},
+        ])
+        revision = LoanDocumentLayoutService.create_layout(workspace=self.tenant, document_type="loan_ticket", name="Rich ticket", definition=definition, actor=self.owner)
+        revision = LoanDocumentLayoutService.publish(revision=revision, actor=self.owner)
+        LoanDocumentLayoutService.assign(revision=revision, workspace=self.tenant, license=license, series=series, actor=self.owner)
+        return loan, revision, photo, address
+
+    def test_rich_ticket_snapshots_contact_and_approved_photos_and_reprints_without_sources(self):
+        from apps.tenant_apps.loans.documents.packs import export_layout_pack
+        from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+        from apps.tenant_apps.loans.documents import DocumentLayoutValidator
+
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        prepared = prepare_ticket_document(loan=loan, layout=DocumentLayoutValidator.load(revision.definition), actor=self.owner)
+        self.assertEqual(prepared.source_snapshot["fields"]["loan.principal_words"], "Ten thousand rupees and twenty-five paise only")
+        self.assertEqual(prepared.source_snapshot["media"]["collateral.first_approved_photo"]["sha256"], photo.sha256)
+        url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        first = self.tenant_get(url)
+        self.assertEqual(first.status_code, 200)
+        issue = LoanDocumentIssue.objects.get(pk=first["X-Rokkad-Document-Issue"])
+        self.assertEqual(issue.source_snapshot["customer"]["address_id"], address.pk)
+        self.assertEqual(issue.payload_schema_version, 2)
+        with fitz.open(stream=first.content, filetype="pdf") as pdf:
+            self.assertIn("10 Test Street", pdf[0].get_text())
+            self.assertGreaterEqual(len(pdf[0].get_images()), 1)
+        self.assertFalse(revision.assets.exists())
+        import zipfile
+        with zipfile.ZipFile(io.BytesIO(export_layout_pack(revision))) as archive:
+            self.assertEqual(archive.namelist(), ["manifest.json"])
+            self.assertNotIn("10 Test Street", archive.read("manifest.json").decode())
+        loan.borrower.display_name = "Changed customer"
+        loan.borrower.save()
+        with patch("apps.tenant_apps.loans.web.loan_documents.PawnLoanDocumentProjectionBuilder.loan_ticket", side_effect=AssertionError("Reprint rebuilt mutable facts")), patch("apps.tenant_apps.loans.services.ticket_documents._photo_asset", side_effect=AssertionError("Reprint fetched media")):
+            self.assertEqual(self.tenant_get(url).content, first.content)
+        issue.refresh_from_db()
+        self.assertEqual(issue.source_snapshot["fields"]["borrower.name"], "Asha")
+
+    def test_rich_ticket_address_selection_does_not_mutate_party_defaults(self):
+        from apps.tenant_apps.party.models import PartyAddress
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        address.is_default = False
+        address.save()
+        second = PartyAddress.objects.create(party=loan.borrower, address_type="HOME", line1="20 Other Street", city="Other City")
+        url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        response = self.tenant_get(url)
+        self.assertContains(response, "Choose customer address", status_code=409)
+        self.assertFalse(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).exists())
+        self.assertEqual(self.tenant_get(f"{url}?address=999999999").status_code, 409)
+        response = self.tenant_get(f"{url}?address={second.pk}")
+        self.assertEqual(response.status_code, 200)
+        issue = LoanDocumentIssue.objects.get(pk=response["X-Rokkad-Document-Issue"])
+        self.assertEqual(issue.source_snapshot["customer"]["address_id"], second.pk)
+        self.assertFalse(loan.borrower.addresses.filter(is_default=True).exists())
+
+    def test_unreadable_or_changed_photo_blocks_issue_but_preview_has_placeholder(self):
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        with photo.file.storage.open(photo.file.name, "wb") as file:
+            file.write(b"corrupt-selected-photo")
+        url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        self.assertEqual(self.tenant_get(url).status_code, 409)
+        self.assertFalse(LoanDocumentIssue.objects.filter(source_id=str(loan.pk)).exists())
+        preview = self.tenant_get(f"{reverse('loans:document_layout_preview', args=[revision.pk])}?loan={loan.pk}")
+        self.assertEqual(preview.status_code, 200)
+        with fitz.open(stream=preview.content, filetype="pdf") as pdf:
+            self.assertIn("Photo unavailable", pdf[0].get_text())
+
+    def test_post_approval_photo_is_not_substituted_for_selected_approved_photo(self):
+        from django.core.files.base import ContentFile
+        from apps.tenant_apps.loans.models import PawnCollateralPhoto
+        from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+        from apps.tenant_apps.loans.documents import DocumentLayoutValidator
+        import hashlib
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        image = io.BytesIO()
+        PillowImage.new("RGB", (80, 60), "red").save(image, format="PNG")
+        content = image.getvalue()
+        later = PawnCollateralPhoto(collateral_item=photo.collateral_item, original_filename="later.png", mime_type="image/png", sha256=hashlib.sha256(content).hexdigest(), byte_size=len(content), workflow_source="POST_APPROVAL")
+        later.file.save("later.png", ContentFile(content), save=False)
+        later.save()
+        prepared = prepare_ticket_document(loan=loan, layout=DocumentLayoutValidator.load(revision.definition), actor=self.owner)
+        self.assertEqual(prepared.source_snapshot["media"]["collateral.first_approved_photo"]["photo_id"], photo.pk)
+        self.assertNotEqual(prepared.source_snapshot["media"]["collateral.first_approved_photo"]["sha256"], later.sha256)
+
+    def test_optional_photo_allows_absence_but_never_unreadable_selected_media(self):
+        from apps.tenant_apps.loans.documents import DocumentLayoutValidator, DocumentAssetError
+        from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        loan.borrower.profile_photo = ""
+        loan.borrower.save()
+        definition = revision.definition
+        with self.assertRaisesMessage(DocumentAssetError, "absent"):
+            prepare_ticket_document(loan=loan, layout=DocumentLayoutValidator.load(definition), actor=self.owner)
+        for block in definition["blocks"]:
+            if block.get("binding") in {"borrower.photo", "collateral.first_approved_photo"}:
+                block["optional_photo"] = True
+        layout = DocumentLayoutValidator.load(definition)
+        prepared = prepare_ticket_document(loan=loan, layout=layout, actor=self.owner)
+        self.assertEqual(prepared.source_snapshot["media"]["borrower.photo"]["status"], "ABSENT")
+        with photo.file.storage.open(photo.file.name, "wb") as file:
+            file.write(b"broken")
+        with self.assertRaisesMessage(DocumentAssetError, "unavailable"):
+            prepare_ticket_document(loan=loan, layout=layout, actor=self.owner)
+
+    def test_approved_photo_reference_cannot_point_at_another_collateral_item(self):
+        import copy
+        from apps.tenant_apps.loans.documents import DocumentLayoutValidator, DocumentAssetError
+        from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        source = copy.deepcopy(loan.approval_snapshots.get().payload)
+        # Valid photo ID/checksum, wrong item identity: no fallback or cross-item read.
+        source["collateral"][0]["item_id"] += 100000
+        PawnLoanApprovalSnapshot.objects.create(loan=loan, version=2, payload=source, fingerprint="wrong-photo-item", approved_by=self.owner)
+        with self.assertRaisesMessage(DocumentAssetError, "unavailable"):
+            prepare_ticket_document(loan=loan, layout=DocumentLayoutValidator.load(revision.definition), actor=self.owner)
+
     def _configured_setup(self):
         license = LoanLicense.objects.create(
             workspace=self.tenant,

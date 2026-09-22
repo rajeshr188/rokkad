@@ -356,6 +356,7 @@ class LoanDocumentIssue(models.Model):
         max_length=16, choices=PrintProfileSource.choices, blank=True,
     )
     fixed_renderer_version = models.CharField(max_length=64, blank=True)
+    source_snapshot = models.JSONField(null=True, blank=True)
     payload_schema_version = models.PositiveIntegerField()
     payload_hash = models.CharField(max_length=64)
     layout_hash = models.CharField(max_length=64, blank=True)
@@ -379,6 +380,11 @@ class LoanDocumentIssue(models.Model):
 
     def clean(self):
         errors = {}
+        if self.source_snapshot is not None:
+            if not isinstance(self.source_snapshot, dict) or self.source_snapshot.get("schema_version") != 2 or self.source_snapshot.get("workspace_id") != self.workspace_id:
+                errors["source_snapshot"] = "Source evidence must match the issue schema and Workspace."
+        if self.payload_schema_version == 2 and self.document_type == "loan_ticket" and self.source_snapshot is None:
+            errors["source_snapshot"] = "Extended tickets require first-issue source evidence."
         active = current_tenant_workspace_id()
         if active and self.workspace_id != active:
             errors["workspace"] = "Document issue workspace must match the active tenant."

@@ -237,11 +237,26 @@ test launcher pins the local test database and filesystem media. Synthetic PDF
 tests cover actual-size A5 copy positioning and background isolation; UI tests
 cover first issue and unchanged reprints after replacing the template.
 
-The contracts below still describe the full target. Richer payload/media,
-image/QR fit controls, source snapshots, static-stock declarations and paired
-activation remain unimplemented. Existing mandatory identity/verification
-rules remain intact; do not treat these starter layouts as converted JCL/JSK
-templates. See the plan for isolated test commands and manual-runtime limits.
+Payload-v2 contact/scalar/photo bindings and nullable immutable source snapshots
+are implemented. First-issue media is read through Party's authorized selector and
+approved collateral photo IDs/checksums; no live market valuation, fabricated
+quantity or fallback to later photographs is introduced. The existing aspect-fit
+image behavior is retained. Photos are required unless the frame explicitly
+allows genuine absence; missing approved evidence or broken media remains an
+error, with labelled placeholders available only in unofficial previews.
+
+`scripts/review_ticket_frame_mapping.py` converts the inventory into candidate
+v4 blocks/profile v2 definitions and a synthetic HTML positioning aid under
+`outputs/ticket-template-tests/frame-review/`. All 35 frames have registered
+bindings. The bundle is deliberately not importable yet: it records the current
+validator failures and source semantic flags. The proposed JSK duplicate amount
+width is 108 mm instead of the out-of-page 120 mm; this is a review candidate,
+not an accepted correction. Browser text wrapping is not ReportLab calibration.
+
+Image/QR fit refinements, static-stock declarations and paired activation remain
+pending. Existing mandatory identity/verification/table rules remain intact; do
+not treat candidate definitions as converted, accepted JCL/JSK templates. See the
+plan for isolated test commands and manual-runtime limits.
 
 ## Minimal editor and implementation order
 

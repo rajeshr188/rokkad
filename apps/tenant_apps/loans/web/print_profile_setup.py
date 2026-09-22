@@ -29,6 +29,9 @@ from apps.tenant_apps.loans.services.print_profiles import (
     PrintProfileServiceError,
 )
 from apps.tenant_apps.loans.web.document_assets import _revision_assets
+from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document
+from apps.tenant_apps.party.document_selectors import DocumentAddressSelectionRequired
+from .document_selection import address_selection_response
 
 
 @loans_setup_required
@@ -218,13 +221,20 @@ def document_print_profile_preview(request, revision_pk):
     )
     try:
         payload = PawnLoanDocumentProjectionBuilder.loan_ticket(loan)
+        layout = DocumentLayoutValidator.load(layout_revision.definition)
+        assets = _revision_assets(layout_revision)
+        if layout.schema_version >= 4:
+            prepared = prepare_ticket_document(loan=loan, layout=layout, actor=request.user, address_id=request.GET.get("address"), preview=True)
+            payload, assets = prepared.payload, assets + prepared.assets
         result = ConfigurableDocumentRenderer.render_with_print_profile(
             payload,
-            DocumentLayoutValidator.load(layout_revision.definition),
+            layout,
             PrintProfileValidator.load(revision.definition),
             preview=True, design_preview=request.GET.get("mode") == "design",
-            assets=_revision_assets(layout_revision),
+            assets=assets,
         )
+    except DocumentAddressSelectionRequired as exc:
+        return address_selection_response(request, exc)
     except (ValueError, ValidationError) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
     response = HttpResponse(result.pdf, content_type="application/pdf")

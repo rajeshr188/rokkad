@@ -27,6 +27,14 @@ overlays: optional backgrounds, value-only/custom-label fields, 0.1 mm geometry,
 text padding and explicit line spacing. Profile v2 distinguishes plain paper from
 preprinted stock: backgrounds are guides only for the latter, visible exclusively
 in labelled design previews. Official output and print previews omit them.
+V4 first issues use payload v2: authorized Party contact facts and selected private
+photos are captured in immutable `LoanDocumentIssue.source_snapshot`; approval
+economics and approved collateral/photo evidence remain authoritative. A loan
+row lock serializes first prints. Reprints use saved artifacts before rebuilding
+facts or fetching media. Old issue snapshots remain null; dynamic images and
+customer values never enter layout packs. Migration 0016 has only been exercised
+in the isolated feature test database. Literal mapped JCL/JSK frame candidates
+remain non-activatable pending v4 visible/static-stock rules and artwork review.
 Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
 test launcher pins a local test database and worktree-local filesystem media;
 it does not start a feature web server. See the plan for the command and limits.

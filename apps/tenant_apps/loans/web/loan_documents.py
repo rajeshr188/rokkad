@@ -23,6 +23,8 @@ from apps.tenant_apps.loans.services import (
     issue_configurable_document,
 )
 from apps.tenant_apps.loans.services.print_profiles import PrintProfileServiceError
+from apps.tenant_apps.party.document_selectors import DocumentAddressSelectionRequired
+from .document_selection import address_selection_response
 from apps.tenant_apps.loans.web.pawn_read_helpers import (
     _can_administer,
     _pawn_loan_for_workspace,
@@ -53,6 +55,8 @@ def _configurable_document_response(request, *, payload, loan, source_type, sour
             fixed_recovery=use_fixed,
             legacy_profile_recovery=use_legacy_profile,
         )
+    except DocumentAddressSelectionRequired as exc:
+        return address_selection_response(request, exc)
     except (
         ValueError, ValidationError, DocumentLayoutServiceError,
         PrintProfileServiceError,
@@ -82,8 +86,18 @@ def _issued_document_response(issue, payload):
 def pawn_loan_ticket_pdf(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
-        payload = PawnLoanDocumentProjectionBuilder.loan_ticket(loan)
         approval = loan.approval_snapshots.order_by("-version").first()
+        if approval and request.GET.get("renderer") != "fixed" and request.GET.get("print_profile") != "legacy":
+            existing = LoanDocumentLayoutService.find_official_issue(
+                workspace=request.loans_workspace, document_type="loan_ticket", source_type="PawnLoan",
+                source_id=loan.pk, source_fingerprint=approval.fingerprint,
+            )
+            if existing:
+                return _issued_document_response(existing, SimpleNamespace(
+                    file_name=f"pawn_loan_ticket_{approval.payload['loan_number']}.pdf",
+                    verification_id=PawnLoanDocumentProjectionBuilder._verification(loan, f"approval:{approval.pk}:v{approval.version}:{approval.fingerprint}"),
+                ))
+        payload = PawnLoanDocumentProjectionBuilder.loan_ticket(loan)
         response = _configurable_document_response(
             request, payload=payload, loan=loan, source_type="PawnLoan",
             source_id=loan.pk, source_fingerprint=approval.fingerprint,

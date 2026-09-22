@@ -8,12 +8,12 @@ from django.contrib.auth import get_user_model
 from django.db import connection, transaction, DatabaseError
 from django.test import TestCase
 
-from apps.orgs.models import Company
+from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.models import (
     LoanLicense, LoanSeries, PawnLoan, PawnLoanEvent, PawnLoanApprovalSnapshot,
-    RepaymentScheduleVersion, RepaymentObligation,
+    RepaymentScheduleVersion, RepaymentObligation, LoanDocumentIssue,
 )
 from .factories import ensure_test_product_version
 
@@ -78,6 +78,48 @@ class HistoryEvidenceGuardTests(TestCase):
         return PawnLoanEvent.objects.create(loan=loan, event_kind="DISBURSAL",
             effective_date=date(2026, 1, 1), payload={"principal": "1000"},
             payload_fingerprint="c" * 64, idempotency_key=uuid.uuid4().hex, created_by=self.actor)
+
+    def test_document_snapshot_is_required_immutable_and_workspace_scoped(self):
+        def record(**changes):
+            values = dict(workspace=self.a, document_type="loan_ticket", source_type="PawnLoan",
+                source_id=str(self.loans[0].pk), source_fingerprint=uuid.uuid4().hex,
+                payload_schema_version=2, payload_hash="a" * 64, pdf_hash="b" * 64,
+                artifact="test-evidence.pdf", issued_by=self.actor, source_snapshot={"schema_version": 2, "workspace_id": self.a.pk})
+            values.update(changes)
+            return LoanDocumentIssue(**values)
+
+        with self.scoped(self.a):
+            issue = record()
+            issue.save()
+            for snapshot in (None, {}, {"schema_version": 2, "workspace_id": self.b.pk}):
+                with self.subTest(snapshot=snapshot), self.assertRaises(DatabaseError), transaction.atomic():
+                    LoanDocumentIssue.objects.bulk_create([record(source_snapshot=snapshot)])
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                LoanDocumentIssue.objects.filter(pk=issue.pk).update(source_snapshot=None)
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM loans_loandocumentissue WHERE id=%s", [issue.pk])
+            legacy = record(payload_schema_version=1, source_snapshot=None)
+            legacy.save()
+            legacy.refresh_from_db()
+            self.assertIsNone(legacy.source_snapshot)
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                LoanDocumentIssue.objects.filter(pk=legacy.pk).update(source_snapshot=issue.source_snapshot)
+        with self.scoped(self.b):
+            self.assertFalse(LoanDocumentIssue.objects.filter(pk=issue.pk).exists())
+            self.assertEqual(LoanDocumentIssue.objects.filter(pk=issue.pk).update(source_snapshot=None), 0)
+
+    def test_party_document_selector_cannot_read_another_workspace(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.party.document_selectors import document_identity
+
+        role, _ = Role.objects.get_or_create(name="Owner")
+        Membership.objects.create(company=self.a, user=self.actor, role=role)
+        with self.scoped(self.a):
+            with self.assertRaises(Party.DoesNotExist):
+                document_identity(workspace=self.a, party_id=self.loans[2].borrower_id, actor=self.actor)
+            with self.assertRaises(PermissionDenied):
+                document_identity(workspace=self.b, party_id=self.loans[2].borrower_id, actor=self.actor)
 
     def test_all_profile_tables_have_enabled_guards_and_forced_rls(self):
         names = importlib.import_module("apps.tenant_apps.loans.migrations.0008_immutable_history_evidence").MODELS

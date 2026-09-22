@@ -1,0 +1,15 @@
+{% extends "base_tenant.html" %}
+{% block title %}Choose customer address{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Choose customer address</h1>
+<p>{{ message }}</p>
+<form method="get" class="card card-body" style="max-width:42rem">
+  {% for key, value in query %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+  <label class="form-label" for="document-address">Address to print</label>
+  <select id="document-address" name="address" class="form-select mb-3" required>
+    <option value="">Choose an address</option>
+    {% for value, label in choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+  </select>
+  <div><button class="btn btn-primary">Continue printing</button></div>
+</form>
+{% endblock %}

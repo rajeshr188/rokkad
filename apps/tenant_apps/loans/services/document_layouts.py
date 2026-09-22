@@ -247,7 +247,7 @@ class LoanDocumentLayoutService:
     @transaction.atomic
     def issue(cls, *, workspace, document_type, source_type, source_id, source_fingerprint,
               payload_schema_version, render_result, filename, actor=None, revision=None,
-              prior_issue=None, print_profile=None):
+              prior_issue=None, print_profile=None, source_snapshot=None):
         _require_workspace(workspace.pk)
         existing = LoanDocumentIssue.objects.select_for_update().filter(
             workspace=workspace, document_type=document_type, source_type=source_type,
@@ -274,12 +274,17 @@ class LoanDocumentLayoutService:
             ),
             print_profile_hash=print_profile.content_hash if print_profile else "",
             print_profile_source_scope=print_profile.source_scope if print_profile else "",
+            source_snapshot=source_snapshot,
             payload_schema_version=payload_schema_version, payload_hash=render_result.payload_hash,
             layout_hash=render_result.layout_hash, asset_hashes=dict(render_result.asset_hashes),
             pdf_hash=pdf_hash, prior_issue=prior_issue, issued_by=actor,
         )
         issue.artifact.save(Path(filename).name, ContentFile(render_result.pdf), save=False)
-        issue.save()
+        try:
+            issue.save()
+        except Exception:
+            issue.artifact.delete(save=False)
+            raise
         AuditLog.log(
                 "DATA_CREATE", user=actor, company=workspace,
                 description=f"Issued {document_type} for {source_type}:{source_id}.",
