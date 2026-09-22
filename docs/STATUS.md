@@ -7,6 +7,30 @@ tags: [status, architecture]
 
 # Status
 
+## Collateral wrapping with smaller text, no continuation sheets (2026-09-22)
+
+The owner superseded the briefly selected continuation-sheet option: preserve
+one ticket sheet per copy and reduce the font while wrapping. Updated only the
+existing JCL/JSK sandbox drafts' collateral-description fields and JSK summary
+label to `SHRINK`, automatic leading, and a 500-character sizing threshold. This
+threshold is not truncation: every character remains in the paragraph. Frame
+positions/sizes and source values are unchanged. Recorded the same choice in the
+reusable frame mapper. No continuation/schema/renderer change remains.
+
+A five-item long-description example that exceeded JSK's former fixed-font frame
+now fits both copies. Verified complete descriptions by PDF text extraction,
+visually inspected all three output pages, and confirmed unchanged output counts:
+two A5 JSK pages and one paired A4 JCL page. JSK uses 7-9 pt for these sample
+fields; JCL has sufficient room at 12 pt. Examples are
+`output/pdf/jsk-wrapped-collateral-preview.pdf` and
+`output/pdf/jcl-wrapped-collateral-preview.pdf`. No official issue was created;
+the owner's existing sandbox issues were preserved. Updated local recovery packs.
+
+The existing 6 pt minimum still bounds shrinking. A list that cannot fit even at
+that size still requires more frame space or shorter descriptions; it is never
+silently clipped, drawn over other frames or paginated automatically. No full
+suite rerun was required for this draft-configuration-only change.
+
 ## JSK preprinted A5 calibration draft (2026-09-22)
 
 The owner reviewed JCL's sandbox editor and reported that everything works as

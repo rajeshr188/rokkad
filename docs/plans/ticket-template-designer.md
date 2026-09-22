@@ -156,6 +156,10 @@ sample includes the owner's requested business name but synthetic licence and
 customer data. No signature boxes/backgrounds print. Confirm header/term
 placement and absence of duplicate stock text before publication. The local
 recovery pack is `outputs/ticket-template-sandbox/jsk-reviewed-layout.zip`.
+Collateral descriptions and JSK's summary label wrap and shrink inside their
+existing frames, with automatic line spacing and a 6 pt minimum. The owner chose
+this instead of continuation sheets. Exceptionally large content still needs
+more space; no item text is discarded and no extra pages are added.
 JCL's reviewed editor workflow is accepted; physical printer acceptance remains
 separate for both workspaces. See Status for the explicit source-coordinate
 adjustments; the legacy inventory is retained unchanged.

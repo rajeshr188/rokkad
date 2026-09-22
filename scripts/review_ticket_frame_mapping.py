@@ -33,6 +33,10 @@ def build_review():
                      "font_size_pt": int(source["font_size"]), "align": "LEFT"}
             if kind == "field":
                 block.update(show_label=False, padding_pt=6, leading_pt=12)
+                if block["binding"] in {"collateral.description_lines", "loan.summary_label"}:
+                    block.update(overflow_policy="SHRINK", leading_pt=0, max_characters=500)
+                    adjustments.append({"frame_id": source["id"], "status": "OWNER_REQUESTED",
+                                        "reason": "Wrap collateral text and reduce font/line spacing to fit the existing frame; no continuation sheets."})
             # Owner's reviewed design correction, separate from the source inventory.
             if template["workspace"] == "jcl" and block["binding"] == "borrower.photo":
                 adjustments.append({"frame_id": source["id"], "property": "y_mm", "source": block["y_mm"],

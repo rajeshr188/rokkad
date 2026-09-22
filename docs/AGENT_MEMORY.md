@@ -62,6 +62,10 @@ owner requested `Jai Sri Krishna` from licence business details and confirmed
 both signature areas already exist on each stock copy. Loan rate/tenure remain
 approved loan facts. JSK has no guide artwork; added heading/term positions and
 collision corrections need physical-stock calibration before activation.
+For excessive collateral text the owner's final choice is wrapping plus smaller
+font within the existing frame, NOT additional ticket sheets. Both sandbox
+drafts use SHRINK with automatic leading for collateral descriptions; JSK's
+summary label does too. Preserve complete text and the existing 6 pt floor.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable
