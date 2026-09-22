@@ -190,6 +190,11 @@ product capability.
 
 ## Next recommended action
 
+The owner selected a separate Linode server on September 22; it is not yet created.
+Use [the concrete cutover runbook](../implementation/linode-production-cutover.md)
+for readiness, timing, the final freeze and rollback. The opt-in production R2
+settings are implemented and tested locally; deployment remains pending.
+
 The three-Workspace discovery, admission, exception resolution and browser review
 are complete for the September 21 snapshot. The owner accepted the presented
 rehearsal. See the [final admission record](../implementation/linode-owner-decisions-20260921.md)

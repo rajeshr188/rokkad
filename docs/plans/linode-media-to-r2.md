@@ -21,6 +21,9 @@ Private access checks pass and all 252 financial/Party fingerprints are unchange
 See [the attachment record](../implementation/linode-media-attachments.md).
 Production runtime credentials, current lending/access setup and final frozen
 database/media reconciliation remain. The final source freeze is not scheduled.
+The owner selected a separate, not-yet-created Linode server. The tested `prod_r2`
+settings and [cutover runbook](../implementation/linode-production-cutover.md)
+prepare that deployment; no live configuration has been changed.
 
 ## Selected destination and current boundary
 

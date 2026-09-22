@@ -51,6 +51,13 @@ writes for cutover, take one final complete archive, then build the production R
 destination from that snapshot. The 2026-09-21 discovery inventory and its
 future-dated JCL loan hold are recorded in
 [the Linode discovery report](implementation/linode-production-discovery-20260921.md).
+On September 22 the owner selected a separate Linode server for the new production
+deployment and confirmed it has not been created. Prepare it independently, keeping
+the old source live until a scheduled all-writer freeze. Follow
+[the cutover runbook](implementation/linode-production-cutover.md); the old system
+is a simple fallback only before new-system business writes begin. The explicit
+`prod_r2` settings are available but not deployed; they require a separate durable
+production application prefix and runtime credentials, never the rehearsal token.
 The owner confirmed production photographs/documents are stored on the same Linode
 server filesystem, not in Cloudflare R2. Capture a separate filesystem media backup
 with paths, checksums and source-record associations alongside the final database

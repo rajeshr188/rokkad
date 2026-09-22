@@ -1,5 +1,6 @@
 """Deployment configuration must fail closed independently of developer .env."""
 import os
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -10,8 +11,8 @@ from django.test import SimpleTestCase
 
 
 class ProductionSettingsTests(SimpleTestCase):
-    def load_settings(self, **changes):
-        env = {key: value for key, value in os.environ.items() if not key.startswith(("DB_", "DJANGO_", "CLOUDFLARE_"))}
+    def load_settings(self, *, module="prod", probe=None, **changes):
+        env = {key: value for key, value in os.environ.items() if not key.startswith(("DB_", "DJANGO_", "CLOUDFLARE_", "ROKKAD_", "AWS_"))}
         env.update(DEBUG="False", SECRET_KEY="test-only", DJANGO_ALLOWED_HOSTS="localhost",
                    DB_NAME="unused", DB_USER="owner", DB_PASSWORD="owner-test",
                    DB_RUNTIME_USER="runtime", DB_RUNTIME_PASSWORD="runtime-test",
@@ -28,8 +29,8 @@ class ProductionSettingsTests(SimpleTestCase):
                 env[key] = value
         return subprocess.run([sys.executable, "-c", (
             "import environ; environ.Env.read_env=lambda *a, **k: None; "
-            "import django_project.settings.prod as s; "
-            "print(s.DATABASES['default']['USER']); print(s.ALLOWED_HOSTS)"
+            f"import django_project.settings.{module} as s; "
+            + (probe or "print(s.DATABASES['default']['USER']); print(s.ALLOWED_HOSTS)")
         )], cwd=Path(__file__).resolve().parents[1], env=env, capture_output=True, text=True)
 
     def test_explicit_runtime_credentials_win_over_owner_defaults(self):
@@ -54,6 +55,52 @@ class ProductionSettingsTests(SimpleTestCase):
             result = self.load_settings(**{field: ""})
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("must be nonempty", result.stderr)
+
+
+class ProductionMediaSettingsTests(SimpleTestCase):
+    def load_media(self, **changes):
+        values = dict(CLOUDFLARE_R2_BUCKET_ENDPOINT="https://" + "a" * 32 + ".r2.cloudflarestorage.com",
+                      ROKKAD_PRODUCTION_MEDIA_LOCATION="media/application/production/linode-rls")
+        values.update(changes)
+        return ProductionSettingsTests().load_settings(module="prod_r2", probe=(
+            "import json; from django.conf import settings; settings.configure(**{k:getattr(s,k) for k in dir(s) if k.isupper()}); "
+            "from helpers.cloudflare.storages import MediaFileStorage; "
+            "b=MediaFileStorage(**s.STORAGES['default']['OPTIONS']); "
+            "print(json.dumps(dict(location=b.location, acl=b.default_acl, signed=b.querystring_auth, "
+            "domain=b.custom_domain, overwrite=b.file_overwrite, expiry=b.querystring_expire, "
+            "cache=b.object_parameters['CacheControl'], static=s.STORAGES['staticfiles']['BACKEND'], "
+            "secure=[s.SECURE_SSL_REDIRECT,s.SESSION_COOKIE_SECURE,s.CSRF_COOKIE_SECURE], "
+            "proxy=getattr(s,'SECURE_PROXY_SSL_HEADER',None))))"
+        ), **values)
+
+    def test_private_backend_preserves_static_storage_and_requires_https(self):
+        result = self.load_media(SECURE_SSL_REDIRECT="False", SESSION_COOKIE_SECURE="False", CSRF_COOKIE_SECURE="False")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        config = json.loads(result.stdout)
+        self.assertEqual(config, dict(location="media/application/production/linode-rls", acl=None,
+            signed=True, domain=None, overwrite=False, expiry=60, cache="private, no-store",
+            static="whitenoise.storage.CompressedManifestStaticFilesStorage", secure=[True,True,True], proxy=None))
+
+    def test_rehearsal_preservation_or_ambiguous_prefix_is_rejected(self):
+        for location in (None, "", "media/legacy/source", "media/application/rehearsal",
+                         "media/application/production/../legacy", "media/application/production/app/"):
+            with self.subTest(location=location):
+                result = self.load_media(ROKKAD_PRODUCTION_MEDIA_LOCATION=location)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("ROKKAD_PRODUCTION_MEDIA_LOCATION", result.stderr)
+
+    def test_endpoint_and_credentials_fail_closed(self):
+        for key, value in (("CLOUDFLARE_R2_BUCKET_ENDPOINT", "http://localhost:9000"),
+                           ("CLOUDFLARE_R2_BUCKET_ENDPOINT", "https://example.com"),
+                           ("CLOUDFLARE_R2_BUCKET", ""), ("CLOUDFLARE_R2_ACCESS_KEY", " "),
+                           ("CLOUDFLARE_R2_SECRET_KEY", "")):
+            with self.subTest(key=key, value=value):
+                self.assertNotEqual(self.load_media(**{key:value}).returncode, 0)
+
+    def test_proxy_trust_is_explicit(self):
+        result = self.load_media(ROKKAD_TRUST_HTTPS_PROXY="True")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["proxy"], ["HTTP_X_FORWARDED_PROTO", "https"])
 
 
 class StartupGateTests(SimpleTestCase):

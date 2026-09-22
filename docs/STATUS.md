@@ -7,6 +7,29 @@ tags: [status, architecture]
 
 # Status
 
+## Separate-server cutover preparation (2026-09-22)
+
+The owner selected a separate Linode server and confirmed it is not yet created.
+The [cutover runbook](implementation/linode-production-cutover.md) now records
+preparation, all-branch write freeze, final database/media snapshot, fresh reviewed
+inputs, exact-target import/reconciliation, routing, reopening and the fallback
+boundary before/after new-system business writes. The local 101-minute database
+admission is not a production downtime estimate; measure the full run on the host.
+
+Added explicit `django_project.settings.prod_r2` and opt-in production Compose
+selection for web/monitoring. It requires a durable production-only media prefix,
+HTTPS R2 endpoint and nonempty credentials, preserves static storage, enforces
+secure cookies/HTTPS and trusts proxy scheme headers only by explicit opt-in.
+Ten deployment/settings tests pass, including rejection of preservation/rehearsal
+prefixes and invalid credentials/endpoints. No server, bucket, credential, database,
+DNS or running application was changed by this preparation.
+
+Next: provision the separate server and verified SSH access, issue permanent
+runtime credentials, configure current branch lending/access, add the guarded
+production-target media command path, and perform a timed clean-host rehearsal.
+The media command remains rehearsal-only. No production readiness or cutover is
+claimed, and no freeze window has been scheduled.
+
 ## Legacy media attachment verified in the isolated rehearsal (2026-09-22)
 
 The source-bound attachment implementation and rehearsal R2 backend are complete.
