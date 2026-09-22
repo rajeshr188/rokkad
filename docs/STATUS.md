@@ -7,6 +7,44 @@ tags: [status, architecture]
 
 # Status
 
+## Paired ticket activation implemented (2026-09-22)
+
+Added **Use this template** to supported ticket editors/revision pages. Owners
+and Admins choose a saved draft/published paper profile and Workspace default or
+Series, review paper/stock/copy/scaling settings, then submit one CSRF-protected
+action. Existing layout/profile publication and assignment services execute in
+one transaction, retaining their audit events. Failed validation rolls back
+publications, assignments and audit together. A Workspace row lock serializes
+paired activations, including initially empty scopes; repeated submissions do
+not create duplicate assignments. Reviewed definition hashes reject stale drafts.
+Existing licence/series overrides retain precedence; effective pairs are checked
+including series with their own paper-profile override. No new model/migration.
+
+Verified clone/edit/preview/activate/new-issue workflow and byte-identical old
+reprints, including unchanged source snapshot and issue/profile references.
+Restricted-role cross-Workspace denial, concurrent activations, CSRF, setup
+permission, retired/stale choices, rollback and Hindi controls are covered.
+The 69 setup/evidence/concurrency checks pass. The final 197-test focused
+document/licence regression also passes (41.501 s), including nine new activation
+checks. Log: `outputs/ticket-template-tests/activation-regression.log`. This is
+the focused feature suite, not a full-repository test run.
+Restricted sandbox system checks, import boundaries (715 tracked Python files),
+370 current-document links and staged whitespace checks also pass. No migration
+was added or applied for this activation slice.
+
+Restarted only the isolated browser sandbox on port 8082. Authenticated HTTP
+checks pass for both real draft review pages and fresh marked previews: JCL one
+A4 landscape sheet; JSK two A5 data-only sheets. Inspected all three rendered
+pages; no layout changes were made. Browser automation timed out, so no browser
+interaction or responsive visual acceptance is claimed for the new review page.
+Accepted sandbox drafts/profiles remain unactivated by this work; no production
+or rehearsal changes. Local print-check PDFs are under `output/pdf/`.
+
+The owner explicitly reports that physical printing has **not** been tested.
+The requested merge remains conditional on JCL/JSK physical acceptance. Finish
+the paper checks at 100% scale, correct any offsets in drafts, then merge after
+acceptance. Do not treat automated/PDF checks as physical printer acceptance.
+
 ## Preview acceptance and merge-readiness review (2026-09-22)
 
 The owner accepted the refreshed JSK preview after printed interest was removed;

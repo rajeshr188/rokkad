@@ -22,6 +22,43 @@ from .factories import ensure_test_product_version
 
 
 class TicketEvidenceConcurrencyTests(TransactionTestCase):
+    def test_competing_activations_leave_one_complete_pair(self):
+        from apps.tenant_apps.loans.documents import built_in_print_profile
+        from apps.tenant_apps.loans.services.print_profiles import LoanDocumentPrintProfileService
+        from apps.tenant_apps.loans.services.ticket_template_activation import use_ticket_template
+        from apps.tenant_apps.loans.models import LoanDocumentLayoutAssignment, LoanDocumentPrintProfileAssignment
+        actor = get_user_model().objects.create_user(username=uuid.uuid4().hex)
+        workspace = Company.objects.create(name="Concurrent activation", schema_name=uuid.uuid4().hex, owner=actor, creator=actor)
+        role, _ = Role.objects.get_or_create(name="Owner")
+        Membership.objects.create(company=workspace, user=actor, role=role)
+        pairs = []
+        with workspace_context(workspace.pk):
+            for index in range(2):
+                revision = LoanDocumentLayoutService.create_layout(workspace=workspace, document_type="loan_ticket", name=f"Ticket {index}",
+                    definition=starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict(), actor=actor)
+                definition = {**built_in_print_profile("LEGACY_BOTH_SIMPLEX").canonical_dict(), "name": f"Paper {index}"}
+                profile = LoanDocumentPrintProfileService.create_profile(workspace=workspace, document_type="loan_ticket",
+                    name=definition["name"], definition=definition, actor=actor)
+                pairs.append((revision, profile))
+        ready = Barrier(2)
+
+        def activate(pair):
+            revision, profile = pair
+            try:
+                with workspace_context(workspace.pk):
+                    ready.wait(timeout=10)
+                    use_ticket_template(workspace=workspace, revision=revision, profile_revision=profile, actor=actor,
+                        layout_hash=revision.content_hash, profile_hash=profile.content_hash)
+            finally:
+                connections.close_all()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            list(executor.map(activate, pairs))
+        with workspace_context(workspace.pk):
+            layout = LoanDocumentLayoutAssignment.objects.get(workspace=workspace, is_active=True)
+            profile = LoanDocumentPrintProfileAssignment.objects.get(workspace=workspace, is_active=True)
+            self.assertIn((layout.revision_id, profile.revision_id), [(a.pk, b.pk) for a, b in pairs])
+
     def test_two_first_prints_capture_once_and_return_the_same_artifact(self):
         actor = get_user_model().objects.create_user(username=uuid.uuid4().hex)
         workspace = Company.objects.create(name="Concurrent ticket test", schema_name=uuid.uuid4().hex, owner=actor, creator=actor)

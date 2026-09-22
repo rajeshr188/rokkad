@@ -2494,6 +2494,186 @@ class LoansSetupUiTests(WorkspaceTestCase):
             self.assertContains(response, "Stored PDF is unavailable", status_code=409)
             self.assertNotIn(b"private-host-secret", response.content)
 
+    def _activation_pair(self, *, stock="PLAIN", composition="LEGACY_BOTH_SIMPLEX"):
+        revision = LoanDocumentLayoutService.create_layout(
+            workspace=self.tenant, document_type="loan_ticket", name=uuid.uuid4().hex,
+            definition=starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict(), actor=self.owner)
+        definition = built_in_print_profile(composition).canonical_dict()
+        definition.update(name=uuid.uuid4().hex, schema_version=2, stock_mode=stock)
+        profile = LoanDocumentPrintProfileService.create_profile(workspace=self.tenant,
+            document_type="loan_ticket", name=definition["name"], definition=definition, actor=self.owner)
+        return revision, profile
+
+    def _activate_pair(self, revision, profile, series=None, **changes):
+        data = {"profile": profile.pk, "series": series.pk if series else "",
+                "layout_hash": revision.content_hash, "profile_hash": profile.content_hash, **changes}
+        return self.tenant_post(reverse("loans:ticket_template_use", args=[revision.pk]), data)
+
+    def test_use_template_publishes_pair_once_and_get_is_read_only(self):
+        from apps.tenant_apps.loans.models import LoanDocumentLayoutAssignment, LoanDocumentPrintProfileAssignment
+        revision, profile = self._activation_pair()
+        url = reverse("loans:ticket_template_use", args=[revision.pk])
+        page = self.tenant_get(f"{url}?profile={profile.pk}")
+        self.assertContains(page, "Use this template")
+        self.assertContains(page, "Plain paper")
+        self.assertContains(page, "Original")
+        self.assertContains(page, "Duplicate")
+        self.assertNotContains(page, "ORIGINAL_FRONT")
+        self.assertIn("no-store", page["Cache-Control"])
+        self.assertFalse(LoanDocumentLayoutAssignment.objects.filter(workspace=self.tenant).exists())
+        revision.refresh_from_db()
+        self.assertEqual(revision.state, "DRAFT")
+        for _ in range(2):
+            self.assertEqual(self._activate_pair(revision, profile).status_code, 302)
+        revision.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual((revision.state, profile.state), ("PUBLISHED", "PUBLISHED"))
+        self.assertEqual(LoanDocumentLayoutAssignment.objects.filter(workspace=self.tenant).count(), 1)
+        self.assertEqual(LoanDocumentPrintProfileAssignment.objects.filter(workspace=self.tenant).count(), 1)
+        self.assertEqual(LoanDocumentLayoutService.resolve(workspace=self.tenant, document_type="loan_ticket"), revision)
+        self.assertEqual(LoanDocumentPrintProfileService.resolve(workspace=self.tenant, document_type="loan_ticket").revision, profile)
+
+    def test_use_template_clone_edit_activate_preserves_old_pdf_and_new_issue_uses_pair(self):
+        license, series = self._configured_setup()
+        old, old_profile = self._activation_pair()
+        self.assertEqual(self._activate_pair(old, old_profile, series).status_code, 302)
+        def approved_loan(number):
+            loan = self._loan(license, series, number, state="APPROVED")
+            PawnLoanApprovalSnapshot.objects.create(loan=loan, version=1, approved_by=self.owner,
+                fingerprint=uuid.uuid4().hex, payload={"loan_number": number, "loan_date": str(loan.loan_date),
+                    "principal_amount": str(loan.principal_amount), "monthly_interest_rate": str(loan.monthly_interest_rate),
+                    "tenure_months": loan.tenure_months, "borrower_id": loan.borrower_id, "collateral": []})
+            return loan
+        first_loan = approved_loan("ACT-001")
+        old_url = reverse("loans:pawn_loan_ticket_pdf", args=[first_loan.pk])
+        first = self.tenant_get(old_url)
+        self.assertEqual(first.status_code, 200)
+        old_issue = LoanDocumentIssue.objects.get(pk=first["X-Rokkad-Document-Issue"])
+        before_snapshot, before_hash = old_issue.source_snapshot, old_issue.pdf_hash
+        self.assertEqual(self.tenant_post(reverse("loans:document_layout_clone", args=[old.pk])).status_code, 302)
+        new = old.layout.revisions.order_by("-version").first()
+        block = new.definition["blocks"][0]
+        edited = self.tenant_post(reverse("loans:document_layout_overlay_designer", args=[new.pk]), {
+            "operation": "save_block", "index": 0, "block_type": "title", "text": "Replacement ticket heading",
+            "x_mm": block["x_mm"], "y_mm": block["y_mm"], "width_mm": block["width_mm"], "height_mm": block["height_mm"],
+            "font_size_pt": 10, "align": "LEFT", "copy_scope": "BOTH",
+        })
+        self.assertEqual(edited.status_code, 302)
+        new.refresh_from_db()
+        new_profile = LoanDocumentPrintProfileService.clone_revision(revision=old_profile, actor=self.owner)
+        new_profile = LoanDocumentPrintProfileService.update_draft(revision=new_profile, actor=self.owner,
+            definition={**new_profile.definition, "stock_mode": "PREPRINTED"})
+        preview = self.tenant_get(f"{reverse('loans:document_layout_preview', args=[new.pk])}?profile={new_profile.pk}&loan={first_loan.pk}")
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(self._activate_pair(new, new_profile, series).status_code, 302)
+        reprint = self.tenant_get(old_url)
+        self.assertEqual(first.content, reprint.content)
+        self.assertEqual(first["X-Rokkad-Document-Issue"], reprint["X-Rokkad-Document-Issue"])
+        old_issue.refresh_from_db()
+        self.assertEqual((old_issue.source_snapshot, old_issue.pdf_hash, old_issue.revision_id, old_issue.print_profile_revision_id),
+                         (before_snapshot, before_hash, old.pk, old_profile.pk))
+        second = self.tenant_get(reverse("loans:pawn_loan_ticket_pdf", args=[approved_loan("ACT-002").pk]))
+        self.assertEqual(second.status_code, 200)
+        issue = LoanDocumentIssue.objects.get(pk=second["X-Rokkad-Document-Issue"])
+        self.assertEqual((issue.revision_id, issue.print_profile_revision_id), (new.pk, new_profile.pk))
+        with fitz.open(stream=second.content, filetype="pdf") as pdf:
+            self.assertIn("Replacement ticket heading", pdf[0].get_text())
+
+    def test_use_template_rolls_back_publication_assignment_and_audit_on_profile_failure(self):
+        from apps.orgs.audit import AuditLog
+        from apps.tenant_apps.loans.models import LoanDocumentLayoutAssignment, LoanDocumentPrintProfileAssignment
+        old, old_profile = self._activation_pair()
+        self.assertEqual(self._activate_pair(old, old_profile).status_code, 302)
+        revision, profile = self._activation_pair(composition="LEGACY_ORIGINAL")
+        audits = AuditLog.objects.count()
+        layouts = list(LoanDocumentLayoutAssignment.objects.filter(workspace=self.tenant).values())
+        profiles = list(LoanDocumentPrintProfileAssignment.objects.filter(workspace=self.tenant).values())
+        response = self._activate_pair(revision, profile)
+        self.assertContains(response, "must include Original and Duplicate")
+        revision.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual((revision.state, profile.state), ("DRAFT", "DRAFT"))
+        self.assertEqual(audits, AuditLog.objects.count())
+        self.assertEqual(layouts, list(LoanDocumentLayoutAssignment.objects.filter(workspace=self.tenant).values()))
+        self.assertEqual(profiles, list(LoanDocumentPrintProfileAssignment.objects.filter(workspace=self.tenant).values()))
+
+    def test_use_template_rejects_stale_review_and_retired_revisions(self):
+        revision, profile = self._activation_pair()
+        for changes in ({"layout_hash": "stale"}, {"profile_hash": "stale"}):
+            self.assertContains(self._activate_pair(revision, profile, **changes), "changed. Review the selection again")
+        revision.refresh_from_db()
+        self.assertEqual(revision.state, "DRAFT")
+        self.assertEqual(self._activate_pair(revision, profile).status_code, 302)
+        LoanDocumentLayoutService.retire(revision=revision, actor=self.owner)
+        self.assertEqual(self._activate_pair(revision, profile).status_code, 404)
+
+    def test_use_template_preserves_overrides_and_rejects_incompatible_effective_pair(self):
+        license, series = self._configured_setup()
+        override, override_profile = self._activation_pair()
+        self.assertEqual(self._activate_pair(override, override_profile, series).status_code, 302)
+        default, default_profile = self._activation_pair(stock="PREPRINTED")
+        default = LoanDocumentLayoutService.configure_ticket_signatures(revision=default, actor=self.owner,
+            sources={"ORIGINAL": "PREPRINTED", "DUPLICATE": "PREPRINTED"},
+            confirmed={"ORIGINAL": True, "DUPLICATE": True})
+        self.assertEqual(self._activate_pair(default, default_profile).status_code, 302)
+        self.assertEqual(LoanDocumentLayoutService.resolve(workspace=self.tenant, document_type="loan_ticket", license=license, series=series), override)
+        # Keep the series' plain-paper profile override, remove only its layout.
+        LoanDocumentLayoutService.retire(revision=override, actor=self.owner)
+        response = self._activate_pair(default, default_profile)
+        self.assertContains(response, "incompatible override")
+        # A series activation deliberately replaces both overrides and repairs it.
+        self.assertEqual(self._activate_pair(default, default_profile, series).status_code, 302)
+
+    def test_use_template_requires_setup_permission_and_csrf(self):
+        from apps.tenant_apps.loans.services.ticket_template_activation import use_ticket_template
+        revision, profile = self._activation_pair()
+        csrf_client = WorkspaceClient(self.tenant, enforce_csrf_checks=True)
+        csrf_client.force_login(self.owner)
+        url = reverse("loans:ticket_template_use", args=[revision.pk])
+        self.assertEqual(csrf_client.workspace_post(url, {"profile": profile.pk}).status_code, 403)
+        viewer = get_user_model().objects.create_user(username=uuid.uuid4().hex)
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        self.assertEqual(self.tenant_get(url).status_code, 403)
+        self.assertEqual(self._activate_pair(revision, profile).status_code, 403)
+        with self.assertRaises(PermissionDenied):
+            use_ticket_template(workspace=self.tenant, revision=revision, profile_revision=profile,
+                actor=viewer, layout_hash=revision.content_hash, profile_hash=profile.content_hash)
+        revision.refresh_from_db()
+        self.assertEqual(revision.state, "DRAFT")
+
+    def test_use_template_hindi_and_cross_workspace_choices(self):
+        from django.core.exceptions import ObjectDoesNotExist
+        from apps.orgs.models import Company
+        from apps.tenancy.context import without_workspace_context, workspace_context
+        from apps.tenant_apps.loans.services.ticket_template_activation import use_ticket_template
+        revision, profile = self._activation_pair()
+        foreign_workspace = Company.objects.create(name="Private template workspace", schema_name=uuid.uuid4().hex,
+            owner=self.owner, creator=self.owner)
+        with without_workspace_context(), workspace_context(foreign_workspace.pk):
+            Membership.objects.create(user=self.owner, company=foreign_workspace, role=Role.objects.get(name="Owner"))
+            foreign = LoanDocumentPrintProfileService.create_profile(workspace=foreign_workspace, document_type="loan_ticket",
+                name="Private paper settings", definition={**profile.definition, "name": "Private paper settings"}, actor=self.owner)
+            foreign_layout = LoanDocumentLayoutService.create_layout(workspace=foreign_workspace, document_type="loan_ticket",
+                name="Private ticket", definition=revision.definition, actor=self.owner)
+            foreign_license = LoanLicense.objects.create(workspace=foreign_workspace, name="Private", license_number="PRIVATE",
+                issued_on=date(2026, 1, 1), expires_on=date(2027, 1, 1))
+            foreign_series = LoanSeries.objects.create(license=foreign_license, name="Private series", code="PRIVATE")
+        url = reverse("loans:ticket_template_use", args=[revision.pk])
+        self.assertNotContains(self.tenant_get(url), "Private paper settings")
+        self.assertEqual(self.tenant_get(reverse("loans:ticket_template_use", args=[foreign_layout.pk])).status_code, 404)
+        for other_profile, other_series in ((foreign, None), (profile, foreign_series)):
+            response = self._activate_pair(revision, other_profile, other_series)
+            self.assertTrue(response.context["form"].errors)
+            with self.assertRaises(ObjectDoesNotExist):
+                use_ticket_template(workspace=self.tenant, revision=revision, profile_revision=other_profile,
+                    series=other_series, actor=self.owner, layout_hash=revision.content_hash, profile_hash=other_profile.content_hash)
+        self.client.cookies["django_language"] = "hi"
+        self.assertContains(self.tenant_get(f"{url}?profile={profile.pk}"), "इस टेम्पलेट का उपयोग करें")
+        revision.refresh_from_db()
+        self.assertEqual(revision.state, "DRAFT")
+
     def _configured_setup(self):
         license = LoanLicense.objects.create(
             workspace=self.tenant,

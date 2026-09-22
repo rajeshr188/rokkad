@@ -1,8 +1,9 @@
 {% extends "base_tenant.html" %}
-{% load l10n %}
+{% load l10n i18n %}
 {% block title %}Visual overlay editor · {{ revision.layout.name }}{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
+{% if revision.layout.document_type == 'loan_ticket' and revision.definition.schema_version >= 3 and revision.state != 'RETIRED' %}<p><a class="btn btn-success" href="{% url 'workspace_loans:ticket_template_use' request.workspace.slug revision.pk %}">{% translate "Use this template" %}</a> <span class="small text-muted">{% translate "Save your edits and check the print preview first." %}</span></p>{% endif %}
 <p><a href="{% url 'workspace_loans:document_layout_guide' request.workspace.slug %}#overlay">Overlay guide: page size, field positions, and copy backgrounds</a></p>
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
   <div><h1 class="h3 mb-1">Visual overlay editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · {{ layout.page_size }} · coordinates from top-left</p></div>

@@ -43,13 +43,14 @@ payload/issue evidence remains required. The existing admin Evidence page now
 exposes captured fields, photo evidence and issuer; loan print actions link to
 ticket history. Stored PDF reads verify checksums before serving.
 
-The current slice reaches 188 isolated checks. Licence business-name/address
+The earlier evidence slice reached 188 isolated checks. Licence business-name/address
 bindings, variable JCL tenure, per-copy signature confirmations, optional printed
 interest and Original/Duplicate canvas views are implemented. Confirmation binds
 the chosen background hash; replacement requires review and the print profile
 must match plain/preprinted stock. JCL's supplied Original/Duplicate artwork now
-renders a validated A4 paired preview with sample data. Reverse-side review,
-physical calibration, JSK artwork acceptance and unified activation remain pending.
+renders a validated A4 paired preview with sample data. Paired activation now
+brings the focused suite to 197 passing checks. Both digital previews are
+accepted; reverse-side fixed wording and physical calibration remain pending.
 
 Run `python scripts/review_ticket_frame_mapping.py` to regenerate the synthetic
 HTML positioning aid and non-importable candidate definitions in
@@ -57,8 +58,8 @@ HTML positioning aid and non-importable candidate definitions in
 are needed. It reports existing visible-evidence conflicts rather than changing
 the client design to satisfy them. The raw mapping intentionally has no local
 artwork hashes or confirmations; the separate JCL supplied-artwork proof adds
-those after review. JSK business-stock coverage and paired activation remain
-before complete JCL/JSK visual/physical acceptance.
+those after review. Reviewed sandbox drafts supply the stock confirmations;
+physical JCL/JSK acceptance remains pending.
 
 Create **Loan ticket > Exact PDF overlay** and select **Use precision ticket
 overlay** to opt into v4. In the existing visual overlay editor, backgrounds are
@@ -99,11 +100,11 @@ file, production media or customer fixtures are copied into this worktree.
 
 Synthetic checks include PDF coordinates, A5 actual-size copy positions, optional
 background ownership, UI save/preview/publish/issue and byte-identical reprints
-after replacement. Synthetic rendered images were inspected with MuPDF. No live
-feature browser/server, full adversarial RLS rerun, Tamil artwork comparison or
-physical printer acceptance is claimed. Provision a distinct runtime database,
-restricted role configuration, media root and port before manual app testing;
-do not launch this branch using the rehearsal environment.
+after replacement. Synthetic rendered images were inspected with MuPDF. The
+browser sandbox below supplies a distinct runtime database, restricted role,
+media root and port. Focused restricted-role evidence and activation checks pass;
+no full adversarial suite or physical printer acceptance is claimed. Do not
+launch this branch using the rehearsal environment.
 
 ## Local browser sandbox
 
@@ -266,10 +267,28 @@ pending. These are implementation targets, not changes to current validators.
    are reviewed. Both final JCL/JSK previews are owner-accepted. JCL's reverse
    assets are connected; their fixed-rate wording and physical printing still
    need review. JSK physical stock alignment remains unverified.
-4. Pending: simplify activation in one editor over existing services; keep JSON
-   optional for advanced maintenance, unnecessary for the supported user journey.
+4. Implemented: **Use this template** reviews paper/profile and Workspace/Series
+   scope, then publishes and assigns the pair atomically over existing services.
+   Existing overrides retain precedence and incompatible effective pairs reject
+   the transaction. No JSON is needed for this workflow. Automated clone/edit/
+   preview/activate/new-issue and unchanged historical reprint checks pass.
 5. Reproduce both examples, test permissions/reprints/compatibility, then conduct
    owner visual and physical printer acceptance before proposing a merge.
+
+Both digital previews are accepted. The owner explicitly confirms physical
+printing is not yet tested; the authorized merge remains pending that acceptance.
+Live review pages (same `ticket-designer` sandbox login):
+
+- JCL: `/w/jcl-template-sandbox-sample-only/loans/setup/documents/revisions/1/use/?profile=1`
+- JSK: `/w/jsk-template-sandbox-sample-only/loans/setup/documents/revisions/2/use/?profile=4`
+
+Use the review page's **Print preview** before activating. JCL profile 1 uses
+A4 landscape plain paper, Original/Duplicate side by side, one-sided. JSK profile
+4 uses two A5 preprinted sheets, Original then Duplicate, one-sided. Print at
+100%/Actual size in the PDF viewer, with no Fit to page or multiple-pages-per-sheet
+driver setting. Check margins, text/photo/QR positions and signature clearance;
+test long descriptions too. If choosing JCL's optional duplex profile 2, also
+review the fixed rate wording on Conditions and test the flip direction.
 
 ## Isolation, fallback and merge gate
 

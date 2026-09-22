@@ -55,6 +55,15 @@ explicit acceptance gates, not silent compatibility assumptions.
 
 ## Status and compatibility
 
+Unified activation is now implemented on the feature branch. A review page and
+single explicit POST compose the existing publication/assignment services in one
+transaction for Workspace or Series. Workspace locking serializes paired
+activations; reviewed hashes prevent stale-draft activation; existing scope
+precedence is preserved and effective layout/profile pairs are revalidated.
+Existing audit events roll back with failed activation. No new configuration
+model, profile scope or issue mutation is introduced. Both digital previews are
+accepted; physical printer acceptance and merge remain pending.
+
 The owner subsequently accepted the per-copy signature-area choice and explicit
 optional printed-interest requirement, implemented for v4 in
 [this decision](2026-09-22-ticket-signature-area-choices.md). JCL's Original and

@@ -34,9 +34,26 @@ uses the automatic value. Text can contain explicit line breaks; overflow blocks
 printing instead of silently clipping the content.
 Use a matching logical page size and an **Actual size** print profile when
 calibrating preprinted stock. Existing layouts retain their original rules.
-The feature currently has isolated automated tests, not a running manual-test
-server; follow the [feature plan](../plans/ticket-template-designer.md) before
-starting one.
+The feature has an isolated browser sandbox and automated checks; follow the
+[feature plan](../plans/ticket-template-designer.md) for its login and URLs.
+
+### Use this template
+
+After saving edits and checking a physical test print, select **Use this template**
+in the ticket editor or revision page. Choose **Paper and copies**, leave **Use
+for** at **Workspace default** or choose a particular series, then **Review
+selection**. Check paper size, orientation, stock, copy order and scaling. The
+review page has a **Print preview** link using exactly the selected profile.
+Select **Use this template** once to publish any drafts and assign both together.
+If validation fails, neither assignment nor publication is partially saved.
+
+The workspace default does not replace more-specific licence/series overrides.
+Select a series explicitly to replace its layout and paper-profile assignments.
+Incompatible overrides must be corrected before activation; error text identifies
+the affected series. If a draft changed since review, review the new values again.
+Old tickets still return their original saved PDFs; new issues use the resolved
+pair. To edit a published design, clone it to a new draft. Separate publish/assign
+controls remain available for advanced maintenance and older layouts.
 
 Open **Loans > Setup > Document layouts**, or visit:
 

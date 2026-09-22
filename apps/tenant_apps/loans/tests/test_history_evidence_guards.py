@@ -79,6 +79,39 @@ class HistoryEvidenceGuardTests(TestCase):
             effective_date=date(2026, 1, 1), payload={"principal": "1000"},
             payload_fingerprint="c" * 64, idempotency_key=uuid.uuid4().hex, created_by=self.actor)
 
+    def test_template_activation_under_restricted_role_rejects_foreign_inputs(self):
+        from django.core.exceptions import ObjectDoesNotExist
+        from apps.tenant_apps.loans.documents import starter_layout, built_in_print_profile
+        from apps.tenant_apps.loans.services import LoanDocumentLayoutService, LoanDocumentPrintProfileService
+        from apps.tenant_apps.loans.services.ticket_template_activation import use_ticket_template
+        pairs = []
+        owner_role, _ = Role.objects.get_or_create(name="Owner")
+        for workspace in (self.a, self.b):
+            with self.scoped(workspace):
+                Membership.objects.create(user=self.actor, company=workspace, role=owner_role)
+                revision = LoanDocumentLayoutService.create_layout(workspace=workspace, document_type="loan_ticket",
+                    name="Ticket", definition=starter_layout("loan_ticket", schema_version=4, layout_mode="ABSOLUTE_OVERLAY").canonical_dict(), actor=self.actor)
+                definition = built_in_print_profile("LEGACY_BOTH_SIMPLEX").canonical_dict()
+                profile = LoanDocumentPrintProfileService.create_profile(workspace=workspace, document_type="loan_ticket",
+                    name=definition["name"], definition=definition, actor=self.actor)
+                pairs.append((revision, profile))
+        local, local_profile = pairs[0]
+        foreign, foreign_profile = pairs[1]
+        with self.scoped(self.a):
+            for revision, profile, series in ((foreign, local_profile, None), (local, foreign_profile, None),
+                                             (local, local_profile, self.loans[2].series)):
+                with self.assertRaises(ObjectDoesNotExist):
+                    use_ticket_template(workspace=self.a, revision=revision, profile_revision=profile, series=series,
+                        actor=self.actor, layout_hash=revision.content_hash, profile_hash=profile.content_hash)
+            use_ticket_template(workspace=self.a, revision=local, profile_revision=local_profile,
+                actor=self.actor, layout_hash=local.content_hash, profile_hash=local_profile.content_hash)
+            self.assertEqual(LoanDocumentLayoutService.resolve(workspace=self.a, document_type="loan_ticket"), local)
+        with self.scoped(self.b):
+            foreign.refresh_from_db()
+            foreign_profile.refresh_from_db()
+            self.assertEqual((foreign.state, foreign_profile.state), ("DRAFT", "DRAFT"))
+            self.assertIsNone(LoanDocumentLayoutService.resolve(workspace=self.b, document_type="loan_ticket"))
+
     def test_document_snapshot_is_required_immutable_and_workspace_scoped(self):
         def record(**changes):
             values = dict(workspace=self.a, document_type="loan_ticket", source_type="PawnLoan",

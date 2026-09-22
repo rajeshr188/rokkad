@@ -6,10 +6,12 @@ from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 from apps.tenant_apps.loans.web.rate_readiness import pawn_valuation_readiness
 from apps.tenant_apps.loans.web.reappraisal import collateral_reappraisal
+from apps.tenant_apps.loans.web.ticket_template_activation import ticket_template_use
 
 app_name = "loans"
 
 urlpatterns = [
+    path("setup/documents/revisions/<int:revision_pk>/use/", ticket_template_use, name="ticket_template_use"),
     path("internal/<int:pk>/collateral/<int:item_pk>/reappraise/", collateral_reappraisal, name="collateral_reappraisal"),
     path("internal/valuation-readiness/", pawn_valuation_readiness, name="pawn_valuation_readiness"),
     path("releases/batch/new/", release_batches.create, name="release_batch_create"),

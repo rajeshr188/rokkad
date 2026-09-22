@@ -1,0 +1,44 @@
+{% extends "base_tenant.html" %}
+{% load i18n %}
+{% block title %}{% translate "Use this template" %}{% endblock %}
+{% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
+<h1 class="h3">{% translate "Use this template" %}</h1>
+<p>{{ revision.layout.name }} · {% translate "Revision" %} {{ revision.version }}</p>
+<p>{% translate "Choose the paper settings and where this template should be used. Drafts will be published and both assignments saved together." %}</p>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <form method="get" class="card card-body">
+      {{ form.as_p }}
+      <button class="btn btn-outline-primary">{% translate "Review selection" %}</button>
+    </form>
+    <p class="mt-3"><a href="{% url 'workspace_loans:document_print_profile_list' request.workspace.slug %}">{% translate "Manage paper settings" %}</a></p>
+    <a href="{% url 'workspace_loans:document_layout_detail' request.workspace.slug revision.pk %}">{% translate "Back to template" %}</a>
+  </div>
+  {% if profile %}
+  <div class="col-lg-7"><section class="card card-body" aria-labelledby="selection-heading">
+    <h2 class="h5" id="selection-heading">{% translate "Review before use" %}</h2>
+    <dl>
+      <dt>{% translate "Use for" %}</dt><dd>{% if series %}{{ series.license.license_number }} / {{ series.code }}{% else %}{% translate "Workspace default" %}{% endif %}</dd>
+      <dt>{% translate "Paper and copies" %}</dt><dd>{{ profile_revision.profile.name }} · {% translate "Revision" %} {{ profile_revision.version }}</dd>
+      <dt>{% translate "Paper" %}</dt><dd>{{ profile.paper_size }} · {% if profile.orientation == 'LANDSCAPE' %}{% translate "Landscape" %}{% else %}{% translate "Portrait" %}{% endif %} · {% if profile.duplex == 'DUPLEX' %}{% translate "Double-sided" %}{% else %}{% translate "One-sided" %}{% endif %}</dd>
+      <dt>{% translate "Paper stock" %}</dt><dd>{% if profile.stock_mode == 'PREPRINTED' %}{% translate "Preprinted stationery — backgrounds will not print" %}{% else %}{% translate "Plain paper — backgrounds will print" %}{% endif %}</dd>
+      <dt>{% translate "Copies" %}</dt><dd>{% for sheet in sheets %}{{ sheet|join:' + ' }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>
+      <dt>{% translate "Layout scaling" %}</dt><dd>{% if profile.scaling_policy == 'ACTUAL_SIZE' %}{% translate "Actual size" %}{% else %}{% translate "Fit proportionally to the profile slot" %}{% endif %}</dd>
+    </dl>
+    {% if flip_guidance %}<p>{{ flip_guidance }}</p>{% endif %}
+    {% if profile.printer_guidance %}<p>{{ profile.printer_guidance }}</p>{% endif %}
+    <p>{% translate "Print the PDF at 100% scale on the intended paper. Check alignment and clipping; for double-sided printing, also check the reverse orientation." %}</p>
+    <p><a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?profile={{ profile_revision.pk }}&mode=print">{% translate "Print preview" %}</a></p>
+    <p>{% translate "Existing licence and series overrides remain in effect. Previously issued tickets keep their saved PDFs; this selection applies to new document issues." %}</p>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="profile" value="{{ profile_revision.pk }}">
+      <input type="hidden" name="series" value="{{ series.pk|default:'' }}">
+      <input type="hidden" name="layout_hash" value="{{ revision.content_hash }}">
+      <input type="hidden" name="profile_hash" value="{{ profile_revision.content_hash }}">
+      <button class="btn btn-success">{% translate "Use this template" %}</button>
+    </form>
+  </section></div>
+  {% endif %}
+</div>
+{% endblock %}

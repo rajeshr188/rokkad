@@ -1,7 +1,9 @@
 {% extends "base_tenant.html" %}
+{% load i18n %}
 {% block title %}Visual Flow editor · {{ revision.layout.name }}{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
+{% if revision.layout.document_type == 'loan_ticket' and revision.definition.schema_version >= 3 and revision.state != 'RETIRED' %}<p><a class="btn btn-success" href="{% url 'workspace_loans:ticket_template_use' request.workspace.slug revision.pk %}">{% translate "Use this template" %}</a> <span class="small text-muted">{% translate "Save your edits and check the print preview first." %}</span></p>{% endif %}
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Visual Flow editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · revision {{ revision.version }} · draft</p></div>
   <div class="d-flex gap-2">{% if sample_loan %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_detail' request.workspace.slug revision.pk %}">Advanced JSON and publishing</a></div>

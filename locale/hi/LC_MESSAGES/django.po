@@ -3623,3 +3623,151 @@ msgstr "यह ऋण बंद है। नियमित स्थिति 
 
 msgid "general setup progress"
 msgstr "सामान्य सेटअप की प्रगति"
+
+#: ticket-template-activation
+msgid "Use this template"
+msgstr "इस टेम्पलेट का उपयोग करें"
+
+#: ticket-template-activation
+msgid "Revision"
+msgstr "संशोधन"
+
+#: ticket-template-activation
+msgid "Paper and copies"
+msgstr "कागज़ और प्रतियाँ"
+
+#: ticket-template-activation
+msgid "Use for"
+msgstr "इसके लिए उपयोग करें"
+
+#: ticket-template-activation
+msgid "Workspace default"
+msgstr "कार्यस्थान का डिफ़ॉल्ट"
+
+#: ticket-template-activation
+msgid "Existing licence and series overrides remain in effect. Select a series to replace its own assignment."
+msgstr "मौजूदा लाइसेंस और सीरीज़ की विशेष सेटिंग लागू रहेंगी। किसी सीरीज़ की सेटिंग बदलने के लिए उसे चुनें।"
+
+#: ticket-template-activation
+msgid "%(name)s — revision %(version)s (%(state)s)"
+msgstr "%(name)s — संशोधन %(version)s (%(state)s)"
+
+#: ticket-template-activation
+msgid "Choose the paper settings and where this template should be used. Drafts will be published and both assignments saved together."
+msgstr "कागज़ की सेटिंग और इस टेम्पलेट के उपयोग का स्थान चुनें। ड्राफ़्ट प्रकाशित होंगे और दोनों सेटिंग एक साथ सहेजी जाएँगी।"
+
+#: ticket-template-activation
+msgid "Review selection"
+msgstr "चयन की जाँच करें"
+
+#: ticket-template-activation
+msgid "Manage paper settings"
+msgstr "कागज़ की सेटिंग प्रबंधित करें"
+
+#: ticket-template-activation
+msgid "Back to template"
+msgstr "टेम्पलेट पर वापस जाएँ"
+
+#: ticket-template-activation
+msgid "Review before use"
+msgstr "उपयोग से पहले जाँचें"
+
+#: ticket-template-activation
+msgid "Paper"
+msgstr "कागज़"
+
+#: ticket-template-activation
+msgid "Landscape"
+msgstr "आड़ा"
+
+#: ticket-template-activation
+msgid "Portrait"
+msgstr "खड़ा"
+
+#: ticket-template-activation
+msgid "Double-sided"
+msgstr "दोनों तरफ़"
+
+#: ticket-template-activation
+msgid "One-sided"
+msgstr "एक तरफ़"
+
+#: ticket-template-activation
+msgid "Paper stock"
+msgstr "कागज़ का प्रकार"
+
+#: ticket-template-activation
+msgid "Preprinted stationery — backgrounds will not print"
+msgstr "पहले से छपा कागज़ — पृष्ठभूमि नहीं छपेगी"
+
+#: ticket-template-activation
+msgid "Plain paper — backgrounds will print"
+msgstr "सादा कागज़ — पृष्ठभूमि छपेगी"
+
+#: ticket-template-activation
+msgid "Copies"
+msgstr "प्रतियाँ"
+
+#: ticket-template-activation
+msgid "Layout scaling"
+msgstr "लेआउट का आकार"
+
+#: ticket-template-activation
+msgid "Actual size"
+msgstr "वास्तविक आकार"
+
+#: ticket-template-activation
+msgid "Fit proportionally to the profile slot"
+msgstr "निर्धारित स्थान में अनुपात के अनुसार समायोजित करें"
+
+#: ticket-template-activation
+msgid "Print the PDF at 100% scale on the intended paper. Check alignment and clipping; for double-sided printing, also check the reverse orientation."
+msgstr "चुने हुए कागज़ पर PDF को 100% आकार में छापें। संरेखण और कटे हुए हिस्से जाँचें; दोनों तरफ़ छापने पर पीछे की दिशा भी जाँचें।"
+
+#: ticket-template-activation
+msgid "Print preview"
+msgstr "प्रिंट पूर्वावलोकन"
+
+#: ticket-template-activation
+msgid "Existing licence and series overrides remain in effect. Previously issued tickets keep their saved PDFs; this selection applies to new document issues."
+msgstr "मौजूदा लाइसेंस और सीरीज़ की विशेष सेटिंग लागू रहेंगी। पहले जारी टिकटों की सहेजी गई PDF नहीं बदलेंगी; यह चयन नए जारी दस्तावेज़ों पर लागू होगा।"
+
+#: ticket-template-activation
+msgid "Save your edits and check the print preview first."
+msgstr "पहले बदलाव सहेजें और प्रिंट पूर्वावलोकन जाँचें।"
+
+#: ticket-template-activation
+msgid "Template and paper settings are now assigned together. Previously issued PDFs are unchanged."
+msgstr "टेम्पलेट और कागज़ की सेटिंग एक साथ लागू हो गई हैं। पहले जारी PDF नहीं बदली हैं।"
+
+#: ticket-template-activation
+msgid "The selection is no longer available. Review it again."
+msgstr "यह चयन अब उपलब्ध नहीं है। इसे फिर से जाँचें।"
+
+#: ticket-template-activation
+msgid "Original"
+msgstr "मूल प्रति"
+
+#: ticket-template-activation
+msgid "Duplicate"
+msgstr "दूसरी प्रति"
+
+#: ticket-template-activation
+msgid "Original reverse: terms"
+msgstr "मूल प्रति का पिछला भाग: शर्तें"
+
+#: ticket-template-activation
+msgid "Duplicate reverse: D3"
+msgstr "दूसरी प्रति का पिछला भाग: D3"
+
+#: ticket-template-activation
+msgid "Flip on long edge"
+msgstr "लंबे किनारे से पलटें"
+
+#: ticket-template-activation
+msgid "Flip on short edge"
+msgstr "छोटे किनारे से पलटें"
+
+#: ticket-template-activation
+msgid "Verify on the physical printer"
+msgstr "प्रिंटर पर छापकर जाँचें"

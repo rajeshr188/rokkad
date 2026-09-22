@@ -71,7 +71,14 @@ JSK's draft and calibration builder omit those frames and explicitly set
 `require_interest_rate=False`; approved rates remain required internal evidence.
 The owner has accepted both JCL and the final JSK digital previews. This is not
 physical-printer acceptance or permission to activate production templates.
-The paired Use this template action remains the bounded UX completion step.
+The paired Use this template action is implemented: review a local paper profile
+and Workspace/Series scope, then atomically publish/assign both using existing
+services. Preserve override precedence, reject stale draft hashes and check all
+effective pairs. Failed activation rolls back publication/assignment/audit; repeat
+submissions are idempotent and paired activations serialize on the Workspace.
+The owner requested merging after these checks and physical acceptance, but has
+explicitly confirmed physical printing is not yet tested. Keep the merge pending
+that gate. Existing issued PDFs and source snapshots remain unchanged.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable
