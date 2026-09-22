@@ -140,6 +140,7 @@ urlpatterns = [
     path("setup/licenses/create/", views.license_create, name="license_create"),
     path("setup/licenses/register.pdf", views.license_register_pdf, name="license_register_pdf"),
     path("setup/licenses/<int:pk>/", views.license_detail, name="license_detail"),
+    path("setup/licenses/<int:pk>/verify/", views.license_verify, name="license_verify"),
     path("setup/licenses/<int:pk>/edit/", views.license_update, name="license_update"),
     path("setup/licenses/<int:pk>/renew/", views.license_renew, name="license_renew"),
     path("setup/licenses/<int:pk>/expiry-notice/", views.license_expiry_notice_create, name="license_expiry_notice_create"),

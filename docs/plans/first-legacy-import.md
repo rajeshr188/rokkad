@@ -106,10 +106,12 @@ test ceiling; new series use the ordinary 10000 default, not source `max_limit`.
 Release receipts have separate test-prefixed counters. The audited Loans
 `reserve_sequence_through` command advances an existing sequence under its row
 lock and cannot rewind or issue a number. Import preserves source numbers.
-Current legacy-reference licences cannot be activated or reassigned to authorize
-new loans. A verified licence, active product and coordinated successor series
-can continue a familiar prefix only after overlapping ranges are resolved; that
-new-lending setup is not implemented by this rehearsal preparation.
+The September 22 [license verification workflow](../flows/legacy-license-continuation.md)
+now supports continuing the same license and series after current document and
+final frozen numbering review. It appends verification evidence without changing
+old loans. Ordinary activation still rejects unverified references; this rehearsal
+has not verified or activated them. A grouping that is not the legal license number
+still requires separate verified setup with coordinated non-overlapping numbering.
 
 ## Full-tenant preview (2026-09-12)
 

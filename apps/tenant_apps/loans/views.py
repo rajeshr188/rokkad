@@ -48,6 +48,7 @@ from apps.tenant_apps.loans.web.funding_actions import (
     funding_loan_reverse_return,
 )
 
+from apps.tenant_apps.loans.web.license_continuation import license_verify
 from apps.tenant_apps.loans.web.license_setup import (
     license_list,
     license_register_pdf,

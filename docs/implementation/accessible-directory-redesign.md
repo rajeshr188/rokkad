@@ -321,5 +321,30 @@ and existing series values. License entry, hub and series form have no page over
 at 390px; desktop series layout was also checked at 1280px. The viewport was reset
 and the setup hub left open. No settings or evidence were submitted. Hindi browser,
 physical touch, screen reader and actual upload/printing/operator acceptance remain
-pending. Calculation/fee/monitoring forms and remaining legacy detail translations
-are the next setup slice, before Rates/notifications and eventual cutover acceptance.
+pending for that slice. Calculation/fee/monitoring follows below; remaining legacy
+detail translations, Rates/notifications and cutover acceptance remain separate.
+
+## License continuation and policy guidance (September 22)
+
+Imported-license detail now links to the evidence-backed verification flow described
+in [the operator guide](../flows/legacy-license-continuation.md). The form makes
+activation explicit, requires final-source and every sequence counter review, and
+does not prefill legal validity or claimed source high-water values. It uses native
+field/error partials, document-reselection help, no-store and no HTMX history cache.
+
+Calculation/fee/monitoring use separate native disclosures and a shared Django
+partial for grouped fields. Scope/date, interest, slab/compound settings, collateral
+valuation/rounding, fees and monitoring thresholds are explained independently.
+Errors bind only the submitted form, preserve entered values and reopen its section;
+monitoring amendments preserve the existing service's immutable version handling.
+Navigation progressively opens a linked disclosure; native forms remain usable
+without JavaScript. English/Hindi fields and guidance include correctly escaped
+template percentage translations and ISO values for native date controls.
+
+Read-only local browser checks cover license verification and policy forms at 390px
+and policy forms at 1280px without page overflow. English and Hindi policy rendering,
+date values and disclosure navigation were checked; a collapsed-link issue and
+Hindi date/percentage issues found in browser review were corrected. The viewport
+and English language were restored; the policy page is left open. No business
+settings, license evidence or financial forms were submitted in the rehearsal.
+Physical touch, assistive-technology and novice-operator acceptance remain pending.

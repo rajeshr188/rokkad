@@ -2367,3 +2367,368 @@ msgstr "सक्रिय श्रृंखला के लिए भी व�
 #: templates/loans/setup/license_list.html templates/loans/setup/license_form.html templates/loans/setup/series_form.html apps/tenant_apps/loans/web/license_forms.py
 msgid "Continue the setup checklist"
 msgstr "सेटअप सूची पर आगे बढ़ें"
+
+msgid "1. Scope and start date"
+msgstr "1. लागू क्षेत्र और शुरू होने की तारीख"
+
+msgid "1. Scope and version"
+msgstr "1. लागू क्षेत्र और संस्करण"
+
+msgid "2. Fee details"
+msgstr "2. शुल्क विवरण"
+
+msgid "2. Final source and numbering"
+msgstr "2. अंतिम स्रोत और क्रमांकन"
+
+msgid "2. Maturity and overdue warnings"
+msgstr "2. देय तिथि और बकाया की चेतावनियाँ"
+
+msgid "2. Monthly interest"
+msgstr "2. मासिक ब्याज"
+
+msgid "3. Collateral risk and evidence age"
+msgstr "3. गिरवी का जोखिम और साक्ष्य की उम्र"
+
+msgid "3. Part-month and compound rules"
+msgstr "3. अधूरे महीने और चक्रवृद्धि ब्याज के नियम"
+
+msgid "4. Collateral value and rounding"
+msgstr "4. गिरवी का मूल्य और पूर्णांकन"
+
+msgid "Add a fee only if your branch charges it. The starter document charge is a fixed INR 10, deducted at payout. For a fixed fee enter rupees; for a percentage fee enter the percentage."
+msgstr "शुल्क तभी जोड़ें जब आपकी शाखा वह शुल्क लेती हो। प्रारंभिक दस्तावेज़ शुल्क ₹10 है, जो ऋण देते समय काटा जाता है। निश्चित शुल्क के लिए रुपये और प्रतिशत शुल्क के लिए प्रतिशत भरें।"
+
+msgid "Amend monitoring policy"
+msgstr "निगरानी नीति में संशोधन करें"
+
+msgid "Applies from"
+msgstr "इस तारीख से लागू"
+
+msgid "Business default (all licenses)"
+msgstr "व्यवसाय का सामान्य नियम (सभी लाइसेंस)"
+
+msgid "Calculation"
+msgstr "गणना"
+
+msgid "Calculation rules and monthly interest"
+msgstr "गणना के नियम और मासिक ब्याज"
+
+msgid "Calculation, fees and monitoring"
+msgstr "गणना, शुल्क और निगरानी"
+
+msgid "Cancel amendment"
+msgstr "संशोधन रद्द करें"
+
+msgid "Charging for part of a month"
+msgstr "अधूरे महीने का ब्याज"
+
+msgid "Complete this at cutover, after the final import and numbering review. Saving activates this license for new lending. Existing loans keep their original license evidence. Other lending setup checks still apply."
+msgstr "अंतिम आयात और क्रमांकन की समीक्षा के बाद, नई प्रणाली शुरू करते समय यह प्रक्रिया पूरी करें। सहेजने पर इस लाइसेंस में नए ऋण देना चालू होगा। पुराने ऋणों के मूल लाइसेंस साक्ष्य सुरक्षित रहेंगे। ऋण सेटअप की बाकी जाँचें भी आवश्यक हैं।"
+
+msgid "Compound interest interval (months)"
+msgstr "चक्रवृद्धि ब्याज का अंतराल (महीने)"
+
+msgid "Days past due: substandard threshold"
+msgstr "देय तिथि के बाद दिन: अवमानक सीमा"
+
+msgid "Days past due: watch threshold"
+msgstr "देय तिथि के बाद दिन: निगरानी सीमा"
+
+msgid "Deduct this fee when paying out the loan"
+msgstr "ऋण देते समय यह शुल्क काटें"
+
+msgid "Enter ratios as decimals: 0.70 means 70%%. Use Amend in the saved history to change a policy while keeping earlier versions. Amendments start today or later."
+msgstr "अनुपात दशमलव में भरें: 0.70 का अर्थ 70%% है। पुराने संस्करण सुरक्षित रखते हुए नीति बदलने के लिए सहेजे गए इतिहास में संशोधन चुनें। संशोधन आज या उसके बाद लागू होंगे।"
+
+msgid "Fee amount or percentage"
+msgstr "शुल्क की राशि या प्रतिशत"
+
+msgid "Fee code"
+msgstr "शुल्क कोड"
+
+msgid "Fee name"
+msgstr "शुल्क का नाम"
+
+msgid "Final source SHA-256"
+msgstr "अंतिम स्रोत का SHA-256"
+
+msgid "Gold: monthly interest (%)"
+msgstr "सोना: मासिक ब्याज (%)"
+
+msgid "How collateral value is chosen"
+msgstr "गिरवी का मूल्य कैसे तय करें"
+
+msgid "How the fee is calculated"
+msgstr "शुल्क की गणना का तरीका"
+
+msgid "I confirm imports are complete, the old system has stopped issuing numbers, and this review includes closed, cancelled and excluded records."
+msgstr "मैं पुष्टि करता/करती हूँ कि आयात पूरे हैं, पुरानी प्रणाली में नए क्रमांक देना बंद है और समीक्षा में बंद, रद्द तथा बाहर रखे गए रिकॉर्ड शामिल हैं।"
+
+msgid "Identify the final frozen dump and the reviewed numbering report."
+msgstr "अंतिम स्थिर डेटा डंप और समीक्षा की गई क्रमांकन रिपोर्ट का संदर्भ दें।"
+
+msgid "Interest calculation"
+msgstr "ब्याज की गणना"
+
+#, python-format
+msgid "Last used counter: %(series)s / %(kind)s"
+msgstr "अंतिम उपयोग किया गया क्रमांक: %(series)s / %(kind)s"
+
+msgid "License verified. Review the remaining setup checks before creating a loan."
+msgstr "लाइसेंस सत्यापित है। नया ऋण बनाने से पहले सेटअप की बाकी जाँचें पूरी करें।"
+
+msgid "Loan-to-value: breach ratio"
+msgstr "ऋण-मूल्य अनुपात: सीमा उल्लंघन"
+
+msgid "Loan-to-value: critical ratio"
+msgstr "ऋण-मूल्य अनुपात: गंभीर सीमा"
+
+msgid "Loan-to-value: warning ratio"
+msgstr "ऋण-मूल्य अनुपात: चेतावनी सीमा"
+
+msgid "Maximum appraisal age (days)"
+msgstr "मूल्यांकन की अधिकतम उम्र (दिन)"
+
+msgid "Maximum loan-to-value ratio"
+msgstr "अधिकतम ऋण-मूल्य अनुपात"
+
+msgid "Maximum metal-price age (days)"
+msgstr "धातु के भाव की अधिकतम उम्र (दिन)"
+
+msgid "Monitoring"
+msgstr "निगरानी"
+
+msgid "Monitoring profile name"
+msgstr "निगरानी प्रोफ़ाइल का नाम"
+
+msgid "Month fraction below the cutoff"
+msgstr "कटऑफ तक महीने का अंश"
+
+msgid "Months of interest collected upfront"
+msgstr "अग्रिम लिए जाने वाले ब्याज के महीने"
+
+msgid "Next counter"
+msgstr "अगला क्रमांक"
+
+msgid "Numbering review"
+msgstr "क्रमांकन की समीक्षा"
+
+msgid "Operational grace (days)"
+msgstr "संचालन की छूट अवधि (दिन)"
+
+msgid "PDF, PNG, or JPEG up to 10 MB. The document must match this license number."
+msgstr "10 MB तक PDF, PNG या JPEG। दस्तावेज़ पर यही लाइसेंस नंबर होना चाहिए।"
+
+msgid "Part-month cutoff (days)"
+msgstr "अधूरे महीने का कटऑफ (दिन)"
+
+msgid "Part-month cutoff and fraction apply only to slab charging. The compound interval applies only to compound interest. Enter ratios as decimals: 0.80 means 80%%."
+msgstr "कटऑफ और महीने का अंश केवल स्लैब गणना में लागू होते हैं। चक्रवृद्धि अंतराल केवल चक्रवृद्धि ब्याज में लागू होता है। अनुपात दशमलव में भरें: 0.80 का अर्थ 80%% है।"
+
+msgid "Policy scope"
+msgstr "नीति का लागू क्षेत्र"
+
+msgid "Policy sections"
+msgstr "नीति अनुभाग"
+
+#, python-format
+msgid "Prefix %(prefix)s; width %(width)s; reserved through %(floor)s. Enter the reviewed numeric counter, including numbers absent from imported loans."
+msgstr "उपसर्ग %(prefix)s; अंकों की संख्या %(width)s; %(floor)s तक आरक्षित। समीक्षा किया गया क्रमांक भरें, जिसमें आयातित ऋणों में न दिखने वाले नंबर भी शामिल हों।"
+
+msgid "Reason for the new version"
+msgstr "नए संस्करण का कारण"
+
+msgid "Reserved through"
+msgstr "यहाँ तक आरक्षित"
+
+msgid "Risk monitoring policy"
+msgstr "जोखिम निगरानी नीति"
+
+msgid "Rounding rule"
+msgstr "पूर्णांकन का नियम"
+
+msgid "Save calculation policy"
+msgstr "गणना नीति सहेजें"
+
+msgid "Save each policy separately. Choose the business default unless one license needs different rules. Earlier approved loan evidence stays unchanged."
+msgstr "हर नीति अलग से सहेजें। किसी लाइसेंस के लिए अलग नियम आवश्यक न हों तो व्यवसाय का सामान्य नियम चुनें। पहले स्वीकृत ऋणों के साक्ष्य नहीं बदलेंगे।"
+
+msgid "Save fee policy"
+msgstr "शुल्क नीति सहेजें"
+
+msgid "Save monitoring policy"
+msgstr "निगरानी नीति सहेजें"
+
+msgid "Save new policy version"
+msgstr "नीति का नया संस्करण सहेजें"
+
+msgid "Saved policy history"
+msgstr "सहेजी गई नीतियों का इतिहास"
+
+msgid "Silver: monthly interest (%)"
+msgstr "चाँदी: मासिक ब्याज (%)"
+
+msgid "Smallest currency rounding unit"
+msgstr "राशि के पूर्णांकन की सबसे छोटी इकाई"
+
+msgid "Source review date"
+msgstr "स्रोत की समीक्षा की तारीख"
+
+msgid "Source review reference"
+msgstr "स्रोत समीक्षा का संदर्भ"
+
+msgid "Starter rates are gold 2%% and silver 4%% per month. Review them before saving. Collateral valuation may also require current buying prices in Rates."
+msgstr "प्रारंभिक मासिक दरें सोने के लिए 2%% और चाँदी के लिए 4%% हैं। सहेजने से पहले उनकी समीक्षा करें। गिरवी मूल्यांकन के लिए भाव अनुभाग में वर्तमान खरीद भाव भी आवश्यक हो सकते हैं।"
+
+msgid "These thresholds control warnings about maturity, days past due and loan-to-value. They do not change interest or fees. Review the limits before saving; monitoring remains unavailable without a policy."
+msgstr "ये सीमाएँ देय तिथि, बकाया दिनों और ऋण-मूल्य अनुपात की चेतावनियाँ तय करती हैं। इनसे ब्याज या शुल्क नहीं बदलते। सहेजने से पहले सीमाएँ जाँचें; नीति के बिना निगरानी उपलब्ध नहीं होगी।"
+
+msgid "Verify and enable new lending"
+msgstr "सत्यापित करके नए ऋण चालू करें"
+
+msgid "Verify for new lending"
+msgstr "नए ऋणों के लिए सत्यापित करें"
+
+msgid "Verify that the document names this same license. If the source label is not its legal number, keep the reference and configure a separate verified license."
+msgstr "जाँचें कि दस्तावेज़ इसी लाइसेंस का है। यदि स्रोत का नाम कानूनी लाइसेंस नंबर नहीं है, तो संदर्भ सुरक्षित रखें और अलग सत्यापित लाइसेंस बनाएँ।"
+
+msgid "Warn before maturity (days)"
+msgstr "देय तिथि से पहले चेतावनी (दिन)"
+
+msgid "Choose which policy to save and try again."
+msgstr "कौन सी नीति सहेजनी है चुनें और फिर प्रयास करें।"
+
+msgid "Keep the business default unless this policy should apply only to a particular license."
+msgstr "नीति किसी खास लाइसेंस के लिए न हो तो व्यवसाय का सामान्य नियम रखें।"
+
+msgid "Enter 0.80 for 80%."
+msgstr "80% के लिए 0.80 भरें।"
+
+msgid "For slab mode, days up to this cutoff use the lower fraction."
+msgstr "स्लैब में इस कटऑफ तक के दिनों पर छोटा अंश लागू होगा।"
+
+msgid "Enter 0.5 for half a month."
+msgstr "आधे महीने के लिए 0.5 भरें।"
+
+msgid "Compound loans may capitalize after this many monthly periods."
+msgstr "चक्रवृद्धि ऋण में इतने महीनों बाद ब्याज मूलधन में जुड़ सकता है।"
+
+msgid "Use 0.01 for paise-level currency rounding."
+msgstr "पैसे तक पूर्णांकन के लिए 0.01 भरें।"
+
+msgid "Monthly percentage. Starts at 2%; change before saving if needed."
+msgstr "मासिक प्रतिशत। प्रारंभिक दर 2% है; आवश्यक हो तो सहेजने से पहले बदलें।"
+
+msgid "Monthly percentage. Starts at 4%; change before saving if needed."
+msgstr "मासिक प्रतिशत। प्रारंभिक दर 4% है; आवश्यक हो तो सहेजने से पहले बदलें।"
+
+msgid "Required when amending an existing policy. Previous versions remain in history."
+msgstr "मौजूदा नीति में संशोधन करते समय आवश्यक। पिछले संस्करण इतिहास में रहेंगे।"
+
+msgid "Maximum quote age for current collateral monitoring, inclusive in calendar days. Zero requires same-day prices."
+msgstr "गिरवी निगरानी के लिए भाव की अधिकतम उम्र, कैलेंडर दिनों में। शून्य का अर्थ उसी दिन का भाव है।"
+
+msgid "Maximum approved appraisal age for current collateral monitoring. Zero requires same-day appraisal evidence."
+msgstr "गिरवी निगरानी के लिए स्वीकृत मूल्यांकन की अधिकतम उम्र। शून्य का अर्थ उसी दिन का मूल्यांकन है।"
+
+msgid "Leave blank for the workspace default."
+msgstr "व्यवसाय के सामान्य नियम के लिए खाली छोड़ें।"
+
+msgid "The starter document charge is a fixed INR 10 per loan. Change it before saving if needed."
+msgstr "प्रारंभिक दस्तावेज़ शुल्क प्रति ऋण ₹10 है। आवश्यक हो तो सहेजने से पहले बदलें।"
+
+msgid "Always charge a full month"
+msgstr "हमेशा पूरे महीने का ब्याज लें"
+
+msgid "Use part-month slab"
+msgstr "अधूरे महीने का स्लैब उपयोग करें"
+
+msgid "Round each monthly accrual row"
+msgstr "हर मासिक ब्याज पंक्ति का पूर्णांकन करें"
+
+msgid "Simple"
+msgstr "साधारण"
+
+msgid "Compound"
+msgstr "चक्रवृद्धि"
+
+msgid "Latest Appraisal"
+msgstr "नवीनतम मूल्यांकन"
+
+msgid "Calculated Metal Value"
+msgstr "गणना किया गया धातु मूल्य"
+
+msgid "Lower Of Calculated And Appraisal"
+msgstr "गणना और मूल्यांकन में कम मूल्य"
+
+msgid "Fixed"
+msgstr "निश्चित"
+
+msgid "Percentage Of Principal"
+msgstr "मूलधन का प्रतिशत"
+
+msgid "Pawn Loan"
+msgstr "गिरवी ऋण"
+
+msgid "Pawn Loan Release"
+msgstr "गिरवी वापसी"
+
+msgid "Advance"
+msgstr "अग्रिम"
+
+msgid "Amend"
+msgstr "संशोधन करें"
+
+msgid "Current configuration history"
+msgstr "गणना नीतियों का इतिहास"
+
+msgid "DPD watch / substandard"
+msgstr "बकाया दिन: निगरानी / अवमानक"
+
+msgid "Effective from"
+msgstr "इस तारीख से लागू"
+
+msgid "Fee"
+msgstr "शुल्क"
+
+msgid "From"
+msgstr "इस तारीख से"
+
+msgid "Interest"
+msgstr "ब्याज"
+
+msgid "LTV warning / breach / critical"
+msgstr "ऋण-मूल्य अनुपात: चेतावनी / उल्लंघन / गंभीर"
+
+msgid "Metal interest rates"
+msgstr "धातु की ब्याज दरें"
+
+msgid "Monitoring policy history"
+msgstr "निगरानी नीतियों का इतिहास"
+
+msgid "No economic policy configured."
+msgstr "गणना नीति तय नहीं की गई है।"
+
+msgid "No fees configured."
+msgstr "कोई शुल्क तय नहीं किया गया है।"
+
+msgid "No monitoring policy configured. Risk assessment remains unavailable until an Owner or Admin reviews and adds one."
+msgstr "निगरानी नीति तय नहीं की गई है। मालिक या व्यवस्थापक द्वारा नीति की समीक्षा और उसे जोड़ने तक जोखिम आकलन उपलब्ध नहीं होगा।"
+
+msgid "No rates configured."
+msgstr "दरें तय नहीं की गई हैं।"
+
+msgid "Part month"
+msgstr "अधूरा महीना"
+
+msgid "Scope"
+msgstr "लागू क्षेत्र"
+
+msgid "Valuation / LTV"
+msgstr "मूल्यांकन / ऋण-मूल्य अनुपात"
+
+msgid "Version / profile"
+msgstr "संस्करण / प्रोफ़ाइल"
+
+msgid "Percentage"
+msgstr "प्रतिशत"

@@ -38,7 +38,10 @@ uses progressive phone/name/number search, responsive results and explicit filte
 errors; servicing detail groups secondary actions and links its main sections.
 Branch readiness now highlights the next incomplete check, and license/renewal and
 numbering forms use grouped accessible fields, recoverable errors and Hindi labels.
-Next simplify calculation, fee and monitoring form guidance, then Rates and notifications.
+Calculation, fee and monitoring forms now have separate disclosures, grouped fields,
+linked corrections, ratio/method guidance and Hindi labels. Audited license
+verification supports existing-series continuation at final cutover; it does not
+activate the rehearsal. Next simplify Rates and notifications.
 Terms review, payment-form accessibility and grouped
 printing guidance now extend the first-loan journey; its complete live payment
 walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator

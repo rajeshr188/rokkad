@@ -131,6 +131,13 @@ Proxy trust requires the conditions in
    source identities per branch. Check private files, cross-Workspace denial,
    media hashes, final backups, owner access and normal page/print journeys.
    The owner accepts this final report, not just the earlier rehearsal.
+   Then complete [license continuation](../flows/legacy-license-continuation.md)
+   for each matching legal license: current document/dates, final dump SHA-256 and
+   reviewed loan/release high-water counters including closed/excluded records.
+   Check next-number previews, remaining ceilings, active products and policies.
+   Rehearse new draft/approval/disbursal in an isolated copy; do not insert a fake
+   acceptance loan into the production target. Verification preserves old loan
+   evidence and series IDs. Keep business access closed until these checks pass.
 7. **Switch users, then enable new-system writes.** Route the agreed production
    hostname to the new server. Keep the old origin in maintenance/read-only mode
    throughout DNS propagation so old and new URLs cannot both accept entries.

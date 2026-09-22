@@ -7,6 +7,10 @@ tags: [loans, portability, evidence, migration]
 
 # Preserve unknown legacy validity and unverified valuations
 
+The absolute conversion prohibition below is superseded by the narrowly audited
+[September 22 verification workflow](2026-09-22-verified-legacy-license-continuation.md).
+Unknown source evidence and every imported loan's original revision remain intact.
+
 The jcl owner confirmed that licence validity was never recorded and that the
 stored valuation is old. Active opening balances, custody, three-month maturity
 fallback and three grace days have separately been reviewed for C00121. Requiring

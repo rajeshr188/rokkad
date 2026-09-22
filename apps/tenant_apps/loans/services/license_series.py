@@ -48,7 +48,7 @@ def create_legacy_license_reference(*, workspace, name, source_label, evidence_r
 
 def _require_verified_license(license):
     if license.is_legacy_reference:
-        raise LicenseSeriesError("A legacy reference has unknown validity and cannot be activated, amended or renewed. Create a verified licence separately.")
+        raise LicenseSeriesError("A legacy reference has unknown validity. Use Verify for new lending with license and numbering evidence first.")
 
 
 @transaction.atomic
@@ -441,6 +441,7 @@ def _record_license_revision(
     kind,
     actor,
     supporting_document=None,
+    verification_evidence=None,
 ) -> LoanLicenseRevision:
     document = _validated_license_document(supporting_document)
     latest = (
@@ -459,6 +460,7 @@ def _record_license_revision(
         issued_on=license.issued_on,
         expires_on=license.expires_on,
         notes=license.notes,
+        verification_evidence=verification_evidence or {},
         created_by=actor,
     )
     if document is not None:

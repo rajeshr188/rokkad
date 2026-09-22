@@ -36,6 +36,14 @@ permissions, lifecycle, billing, entitlements and RLS are separate checks. Read
 
 ## Production migration boundary
 
+Imported license continuation is explicit and audited (September 22 ADR). For a
+matching legal license, final-source numbering review plus actual validity/document
+evidence can append a VERIFICATION revision and activate the same license/series.
+Old loans retain LEGACY_REFERENCE revisions and cannot be disbursed again. Ordinary
+activation still rejects unverified references. Finish imports before verification;
+the service records an attestation, not independent proof of source freeze. The
+accepted rehearsal remains inactive; never fabricate real validity or counter review.
+
 The owner reprioritized a thorough accessibility, onboarding and daily-workflow
 redesign before cutover on September 22. Staff need desktop, tablet and phone
 support in English and Hindi. Follow [the UX plan](plans/project-wide-ux-revamp.md),

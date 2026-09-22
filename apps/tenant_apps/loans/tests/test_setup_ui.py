@@ -616,11 +616,84 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(policy.partial_month_method, "SLAB")
         self.assertEqual(PawnMetalInterestRatePolicy.objects.count(), 2)
         page = self.tenant_get(reverse("loans:pawn_economics_setup"))
-        self.assertContains(page, "PawnLoan economic policies")
+        self.assertContains(page, "Calculation, fees and monitoring")
         self.assertContains(page, "Gold")
         self.assertContains(page, "Silver")
         self.assertContains(page, "Compound")
         self.assertContains(page, "Slab")
+
+    def test_policy_forms_keep_one_error_summary_and_open_the_failed_section(self):
+        import re
+        for action in ("configuration", "fee", "monitoring"):
+            with self.subTest(action=action):
+                page = self.tenant_post(reverse("loans:pawn_economics_setup"), {"action": action})
+                self.assertEqual(page.status_code, 200)
+                html = page.content.decode()
+                self.assertEqual(html.count('id="form-errors"'), 1)
+                section = "calculation" if action == "configuration" else action
+                self.assertRegex(html, rf'<details[^>]* id="{section}-policy"[^>]*\bopen')
+                for target in re.findall(r'href="#(id_[^"]+)"', html):
+                    self.assertIn(f'id="{target}"', html)
+                self.assertIn("no-store", page["Cache-Control"])
+        self.assertFalse(PawnLoanEconomicPolicy.objects.exists())
+        self.assertFalse(LoanMonitoringPolicy.objects.exists())
+        self.assertContains(self.tenant_post(reverse("loans:pawn_economics_setup")), "Choose which policy to save")
+
+    def test_policy_forms_render_hindi_labels_and_linked_fields(self):
+        self.client.cookies["django_language"] = "hi"
+        page = self.tenant_get(reverse("loans:pawn_economics_setup"))
+        self.assertContains(page, "गणना, शुल्क और निगरानी")
+        self.assertContains(page, "सोना: मासिक ब्याज (%)")
+        self.assertContains(page, "नीति का लागू क्षेत्र")
+        self.assertContains(page, "शुल्क नीति सहेजें")
+        self.assertContains(page, "गिरवी का जोखिम और साक्ष्य की उम्र")
+        self.assertContains(page, "प्रारंभिक मासिक दरें")
+        self.assertContains(page, f'value="{timezone.localdate().isoformat()}"')
+
+    def test_legacy_verification_page_is_explicit_scoped_and_does_not_activate_on_get(self):
+        from apps.tenant_apps.loans.services.license_series import create_legacy_license_reference
+        legacy = create_legacy_license_reference(workspace=self.tenant, actor=self.owner,
+            name="Old license", source_label="813/94", evidence_reference="Source review")
+        url = reverse("workspace_loans:license_verify", kwargs={"workspace_slug": self.tenant.slug, "pk": legacy.pk})
+        page = self.client.get(url)
+        self.assertContains(page, "Verify and enable new lending")
+        self.assertContains(page, "final import and numbering review")
+        self.assertIn("no-store", page["Cache-Control"])
+        invalid = self.client.post(url, {})
+        self.assertContains(invalid, 'href="#id_supporting_document"')
+        self.assertContains(invalid, 'href="#id_confirmed_complete"')
+        legacy.refresh_from_db()
+        self.assertFalse(legacy.is_active)
+        self.assertEqual(legacy.revisions.count(), 1)
+        stranger = get_user_model().objects.create_user(username="verification-outsider")
+        self.client.force_login(stranger)
+        self.assertIn(self.client.get(url).status_code, (302, 403, 404))
+
+    def test_complete_verification_form_retains_series_and_records_evidence(self):
+        import tempfile
+        from apps.tenant_apps.loans.services.license_series import create_legacy_license_reference, create_configured_series
+        legacy = create_legacy_license_reference(workspace=self.tenant, actor=self.owner,
+            name="Old license", source_label="813/94", evidence_reference="Source review")
+        series = create_configured_series(license=legacy, name="C", code="C", is_active=True,
+            pawn_loan_prefix="C", release_prefix="CR", number_width=5, maximum_number=10000, actor=self.owner)
+        url = reverse("workspace_loans:license_verify", kwargs={"workspace_slug": self.tenant.slug, "pk": legacy.pk})
+        page = self.client.get(url)
+        form = page.context["form"]
+        today = timezone.localdate()
+        data = {**form.initial, "issued_on": (today - timedelta(days=10)).isoformat(),
+            "expires_on": (today + timedelta(days=365)).isoformat(), "issuing_authority": "Test authority",
+            "source_sha256": "a" * 64, "source_as_of": today.isoformat(),
+            "source_reference": "Final test report", "confirmed_complete": "on",
+            "supporting_document": SimpleUploadedFile("test.pdf", b"%PDF-1.4\nfixture")}
+        data.update({name: "100" for name, pk in form.counter_names})
+        with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
+            result = self.client.post(url, data)
+            self.assertEqual(result.status_code, 302)
+            legacy.refresh_from_db()
+            self.assertTrue(legacy.is_active)
+            self.assertFalse(legacy.is_legacy_reference)
+            self.assertEqual(legacy.revisions.latest("revision_number").kind, "VERIFICATION")
+            self.assertEqual(list(series.number_sequences.values_list("next_number", flat=True)), [101, 101])
 
     def test_owner_can_add_workspace_monitoring_policy(self):
         response = self.tenant_post(

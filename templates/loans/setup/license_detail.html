@@ -12,6 +12,7 @@
     <div class="text-muted">{{ license.license_number }} · {{ license.issuing_authority|default:"Issuing authority not recorded" }}</div>
   </div>
   <div class="d-flex flex-wrap gap-2">
+    {% if license.is_legacy_reference %}<a class="btn btn-primary" href="{% url 'workspace_loans:license_verify' request.workspace.slug license.pk %}">{% translate "Verify for new lending" %}</a>{% endif %}
     {% if not license.is_legacy_reference %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}">Edit</a>
     <a class="btn btn-primary" href="{% url 'workspace_loans:license_renew' request.workspace.slug license.pk %}">Record renewal</a>
     <form method="post" action="{% url 'workspace_loans:license_expiry_notice_create' request.workspace.slug license.pk %}">{% csrf_token %}<button class="btn btn-outline-warning" type="submit">Alert Owner of expiry</button></form>
@@ -66,7 +67,7 @@
     {% for revision in revisions %}
       <tr>
         <td>#{{ revision.revision_number }}</td>
-        <td>{{ revision.get_kind_display }}</td>
+        <td>{{ revision.get_kind_display }}{% if revision.verification_evidence %}<details class="mt-2"><summary>{% translate "Numbering review" %}</summary><p>{{ revision.verification_evidence.source_reference }} &middot; {{ revision.verification_evidence.source_as_of }}</p><p class="text-break font-monospace small">{{ revision.verification_evidence.source_sha256 }}</p><ul>{% for row in revision.verification_evidence.sequences %}<li>{{ row.kind }} / {{ row.prefix }}: {% translate "Reserved through" %} {{ row.last_used }}; {% translate "Next counter" %} {{ row.next_number }}</li>{% endfor %}</ul></details>{% endif %}</td>
         <td>{{ revision.issued_on|default_if_none:"Not recorded" }} &ndash; {{ revision.expires_on|default_if_none:"Not recorded" }}</td>
         <td>{% if revision.has_document %}<a href="{% url 'workspace_loans:license_revision_document' request.workspace.slug license.pk revision.pk %}">{{ revision.original_filename }}</a><div class="small text-muted font-monospace">{{ revision.sha256|slice:":12" }}</div>{% else %}<span class="text-warning">No document</span>{% endif %}</td>
         <td>{{ revision.created_at }}<div class="small text-muted">{{ revision.created_by|default:"System" }}</div></td>

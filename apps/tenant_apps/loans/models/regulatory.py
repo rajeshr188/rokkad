@@ -27,6 +27,7 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
         AMENDMENT = "AMENDMENT", "Amendment"
         RENEWAL = "RENEWAL", "Renewal"
         LEGACY_REFERENCE = "LEGACY_REFERENCE", "Legacy reference (validity unknown)"
+        VERIFICATION = "VERIFICATION", "Verified legacy license continuation"
 
     license = models.ForeignKey(
         LoanLicense,
@@ -41,6 +42,7 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
     issued_on = models.DateField(null=True, blank=True)
     expires_on = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    verification_evidence = models.JSONField(default=dict, blank=True)
     supporting_document = models.FileField(
         upload_to=loan_license_document_upload,
         blank=True,
@@ -119,7 +121,10 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
                 )
         if self.pk:
             raise ValidationError("License revision evidence is immutable.")
-        if self.license_id and ((self.kind == self.Kind.LEGACY_REFERENCE) != self.license.is_legacy_reference):
+        if self.kind == self.Kind.VERIFICATION:
+            if not self.license.is_legacy_reference or not self.has_document or not self.verification_evidence:
+                raise ValidationError("Legacy verification requires an imported reference, document and numbering evidence.")
+        elif self.license_id and ((self.kind == self.Kind.LEGACY_REFERENCE) != self.license.is_legacy_reference):
             raise ValidationError("Legacy references and verified licence revisions must remain separate.")
 
     def save(self, *args, **kwargs):

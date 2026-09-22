@@ -1,0 +1,31 @@
+{% extends "base_tenant.html" %}
+{% load i18n static %}
+{% block title %}{% translate "Verify for new lending" %}{% endblock %}
+{% block workspace_content %}
+<section class="setup-entry" hx-history="false">
+  <a href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">&larr; {{ license.name }}</a>
+  <h1 class="h3 mt-3">{% translate "Verify for new lending" %}</h1>
+  <p class="lead">{{ license.name }} &middot; {{ license.license_number }}</p>
+  <p class="alert alert-warning">{% translate "Complete this at cutover, after the final import and numbering review. Saving activates this license for new lending. Existing loans keep their original license evidence. Other lending setup checks still apply." %}</p>
+  <p>{% translate "Verify that the document names this same license. If the source label is not its legal number, keep the reference and configure a separate verified license." %}</p>
+  {% include "components/forms/accessible.html#errors" %}
+  {% if form.errors %}<p>{% translate "Choose the supporting file again before saving; browsers do not retain file selections after an error." %}</p>{% endif %}
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+    <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. License details" %}</legend>
+      {% include "components/forms/accessible.html#field" with field=form.issuing_authority %}
+      <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.issued_on %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.expires_on %}</div></div>
+      {% include "components/forms/accessible.html#field" with field=form.supporting_document %}
+    </fieldset>
+    <fieldset class="card card-body mb-3"><legend class="h5">{% translate "2. Final source and numbering" %}</legend>
+      {% include "components/forms/accessible.html#field" with field=form.source_reference %}
+      {% include "components/forms/accessible.html#field" with field=form.source_sha256 %}
+      {% include "components/forms/accessible.html#field" with field=form.source_as_of %}
+      {% for field in form.counter_fields %}{% include "components/forms/accessible.html#field" %}{% endfor %}
+      {% include "components/forms/accessible.html#field" with field=form.confirmed_complete %}
+    </fieldset>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Verify and enable new lending" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">{% translate "Cancel" %}</a></div>
+  </form>
+</section>
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

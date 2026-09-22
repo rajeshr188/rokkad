@@ -7,6 +7,42 @@ tags: [status, architecture]
 
 # Status
 
+## Existing-series continuation and policy forms (2026-09-22)
+
+An imported license can now be explicitly verified for new lending while retaining
+its license/series IDs and old loans' immutable revision links. The workflow requires
+actual current validity and document evidence, final frozen-source hash/reference
+and complete loan/release counter review. It appends an audited VERIFICATION revision,
+reserves numbers without issuing one, and activates the current license projection.
+Stale reviews, backward counters, overlapping numeric prefixes and incomplete
+evidence fail closed. Exhausted series remain exhausted. The migration preserves
+forced RLS and immutable evidence, and blocks disbursal against an old reference
+revision even after verification. See the [operator flow](flows/legacy-license-continuation.md)
+and [decision](adr/2026-09-22-verified-legacy-license-continuation.md).
+
+Calculation, fee and monitoring forms now use separate native disclosures, grouped
+Django partials, linked errors, method/ratio guidance and English/Hindi labels.
+Failed submissions and amendments reopen the relevant section. Small progressive
+navigation opens linked sections; all forms work without JavaScript. Hindi native
+date controls explicitly use ISO values. Existing policy services and financial
+rules are unchanged. Pages are no-store and excluded from HTMX history snapshots.
+
+Validation: 123 tests passed on a fresh database across regulatory evidence,
+number allocation, legacy import/export/restore, drafting and setup UI. After the
+browser corrections, all 47 final continuation/UI tests passed on another fresh
+database, including real form submission, Hindi dates/guidance, incomplete raw
+verification rejection, old-loan servicing/export and new draft/approval/disbursal.
+Migration drift, Django checks, JavaScript syntax, gettext and import-boundary
+checks pass. Browser review confirmed 390px/1280px layouts, English/Hindi policy
+rendering and disclosure navigation. Logs: `outputs/ux-license-continuation-20260922/`.
+Physical-device, screen-reader and novice-operator acceptance remain pending.
+
+The schema migration is applied only to the local accepted rehearsal. No real
+license was verified, no rehearsal business data was changed and nothing was
+deployed to Linode. Actual documents and the later final frozen numbering review
+remain required at cutover; staff product/policy/price readiness remains separate.
+Next UX slice: Rates and notifications; whole-product/operator acceptance is pending.
+
 ## Branch readiness, licenses and numbering (2026-09-22)
 
 Loan setup now highlights the first unfinished existing check and keeps access to

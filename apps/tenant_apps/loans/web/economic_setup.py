@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.forms.models import model_to_dict
 from django.http import Http404
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.utils.translation import gettext as _
 
 from apps.tenant_apps.loans.access import loans_setup_required
 from apps.tenant_apps.loans.web.economic_forms import (
@@ -29,10 +31,11 @@ from apps.tenant_apps.loans.services import (
 
 
 @loans_setup_required
+@never_cache
 def pawn_economics_setup(request):
     action = request.POST.get("action") if request.method == "POST" else None
     configuration_form = PawnEconomicConfigurationForm(
-        request.POST if action == "configuration" else None,
+        request.POST if request.method == "POST" and action not in {"fee", "monitoring"} else None,
         workspace=request.loans_workspace,
         initial={"effective_from": timezone.localdate()},
         prefix="configuration",
@@ -69,6 +72,8 @@ def pawn_economics_setup(request):
         actor=request.user,
         prefix="monitoring",
     )
+    if request.method == "POST" and action not in {"configuration", "fee", "monitoring"}:
+        configuration_form.add_error(None, _("Choose which policy to save and try again."))
     if action == "configuration" and configuration_form.is_valid():
         data = configuration_form.cleaned_data
         try:
