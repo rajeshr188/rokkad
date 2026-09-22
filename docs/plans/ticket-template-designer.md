@@ -153,7 +153,9 @@ Choose **JSK A5 Both Simplex** in the preview selector, then **Print preview**.
 This draft profile uses PREPRINTED stock and ACTUAL_SIZE. Print one-sided at
 100%, one page per A5 sheet: Original first, Duplicate second. The current
 sample includes the owner's requested business name but synthetic licence and
-customer data. No signature boxes/backgrounds print. Confirm header/term
+customer data. No signature boxes/backgrounds print. Use a fresh preview:
+monthly interest is omitted from both JSK copies
+at the owner's request, while tenure and timestamp remain. Confirm header/term
 placement and absence of duplicate stock text before publication. The local
 recovery pack is `outputs/ticket-template-sandbox/jsk-reviewed-layout.zip`.
 Collateral descriptions and JSK's summary label wrap and shrink inside their

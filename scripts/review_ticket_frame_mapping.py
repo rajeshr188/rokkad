@@ -107,6 +107,7 @@ def build_jsk_calibration_layout():
     candidate = next(item for item in build_review()["templates"] if item["workspace"] == "jsk")
     definition = candidate["layout_candidate"]
     definition["name"] = "JSK preprinted A5 - calibration draft"
+    definition["require_interest_rate"] = False
     for block in definition["blocks"]:
         if block["type"] == "field" and block["binding"] in {"loan.number", "loan.date"}:
             block["overflow_policy"] = "SHRINK"
@@ -143,7 +144,6 @@ def build_jsk_calibration_layout():
     ])
     for scope, y in (("ORIGINAL", 162), ("DUPLICATE", 150)):
         definition["blocks"].extend([
-            field("loan.monthly_interest_rate", 10, y, 68, 6, 9, scope=scope, label="Monthly interest"),
             field("loan.tenure", 82, y, 56, 6, 9, scope=scope, label="Tenure"),
         ])
     return DocumentLayoutValidator.load(definition).canonical_dict()

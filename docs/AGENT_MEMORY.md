@@ -66,6 +66,9 @@ For excessive collateral text the owner's final choice is wrapping plus smaller
 font within the existing frame, NOT additional ticket sheets. Both sandbox
 drafts use SHRINK with automatic leading for collateral descriptions; JSK's
 summary label does too. Preserve complete text and the existing 6 pt floor.
+The owner also requests no monthly interest rate on JSK paper, matching JCL.
+JSK's draft and calibration builder omit those frames and explicitly set
+`require_interest_rate=False`; approved rates remain required internal evidence.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

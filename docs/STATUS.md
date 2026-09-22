@@ -7,6 +7,18 @@ tags: [status, architecture]
 
 # Status
 
+## JSK printed interest omitted (2026-09-22)
+
+At the owner's request, removed both monthly-interest frames from JSK sandbox
+draft revision 2 and set its existing `require_interest_rate` choice to false,
+matching JCL. Updated the reusable JSK calibration builder and local recovery
+pack. Preserved all other draft fields and geometry, including wrapping, tenure
+and timestamp. Strict validation and the live two-page A5 preview pass; neither
+copy contains an interest label or percentage. Compared loan rates, approval
+payloads/fingerprints and issue counts before/after: unchanged. No publication,
+assignment, renderer change or migration. Previously downloaded sample PDFs are
+historical previews; use the editor's fresh preview for this change.
+
 ## Collateral wrapping with smaller text, no continuation sheets (2026-09-22)
 
 The owner superseded the briefly selected continuation-sheet option: preserve
