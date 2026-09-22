@@ -17,7 +17,7 @@ BILLING_INTERNALS = (
     "apps.subscriptions.razorpay_service", "apps.subscriptions.checkout",
     "apps.subscriptions.recovery", "apps.subscriptions.reviews",
 )
-BUSINESS_APPS = {"party", "loans", "rates", "notify_v2"}
+BUSINESS_APPS = {"party", "loans", "rates", "notify_v2", "data_portability"}
 
 
 def imports(source, path):

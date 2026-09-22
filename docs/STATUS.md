@@ -7,6 +7,26 @@ tags: [status, architecture]
 
 # Status
 
+## Baseline checkpoint before ticket-template experiment (2026-09-22)
+
+The owner requested a committed fallback and a separate feature branch before
+developing the simpler client-managed ticket editor. This checkpoint preserves
+the existing working-tree dashboard template/test, import navigation, boundary
+check and supporting domain/plan/ADR documentation. These are pre-existing work,
+not ticket-editor implementation. Printing behavior and schemas are unchanged.
+
+Validation: the modified dashboard permission/Workspace-queue regression passes
+under `django_project.settings.test`; supported-app import boundaries and
+`git diff --check` pass. This is a source checkpoint, not a fresh full-suite or
+production acceptance claim. Local `.tmp/`, `outputs/`, databases, credentials and
+production media are excluded from the commit and retained locally.
+
+The ticket experiment will use its own worktree. Before runtime experimentation,
+it must use a separate database and media location; switching Git revisions alone
+cannot roll back database or storage changes. Keep the accepted rehearsal and
+live production untouched. The feature branch will hold its own bounded design
+and acceptance plan before printing code changes.
+
 ## Owner workflow acceptance and visible loan closure (2026-09-22)
 
 The owner reviewed customer/photo creation, loan/collateral entry, terms,

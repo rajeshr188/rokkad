@@ -28,6 +28,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-003 | Formal lender-specific NPA classification | Unscheduled design review; no implementation approval | Intended lender type needs regulatory NPA reporting | Existing per-loan operational DPD and collateral-risk classifications documented |
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 | FW-005 | Historical market-valued loan entry | Unscheduled policy review | Owner needs backdated origination or a historical Loans import contract | Current-day quote rule implemented; historical eligibility and exceptions remain undesigned |
+| FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
 
 ## FW-001: Optional owner-configurable license scope
 
@@ -219,3 +220,25 @@ quote for historical economics or add a generic owner bypass. Coordinate with th
 historical Loans import contract when that work is selected. Existing active/closed
 loans and their immutable history are unaffected. See the
 [origination decision](../adr/2026-09-12-origination-quote-freshness.md).
+
+
+## FW-006: Party bundle history progress filter
+
+**Captured / last reviewed:** 2026-09-12. **Decision owner:** project owner.
+**State:** Shelved at owner request. **Priority/date:** unscheduled.
+
+**Problem and possible benefit.** Filter saved Party ZIP bundle attempts by progress
+so operators can find unfinished work without paging through completed attempts.
+This is optional usability, not a prerequisite for Party MVP or Loans portability.
+
+**Where it stopped.** Saved history, stable review URLs, pagination, live progress,
+combined commit and cancellation are implemented. No filter has been added.
+Individual CSV/XLSX/JSONL imports remain separate from bundle history.
+
+**When resumed.** Reuse existing batch-derived progress with Workspace-scoped
+queries and pagination. Preserve current permissions, immutable group membership
+and completed evidence. No new stored status or background worker is required
+merely to filter the list. Select the work explicitly before implementation.
+
+**References:** [Party portability scope](data-portability.md#mvp-scope-closeout-2026-09-12),
+[operator guide](../flows/party-master-portability.md).

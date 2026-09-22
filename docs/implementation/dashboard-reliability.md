@@ -106,7 +106,7 @@ health. Loans/policies stream in batches with explicit-Workspace, dated event
 prefetch; activity counts use SQL aggregates and cash evidence streams separately.
 No new schema, cache or financial rule is introduced.
 
-Within one nonempty balance batch, the entire new selector uses six queries:
+Within one nonempty balance batch, the initial metrics selector used six queries:
 customer count, active counts, loan/policy rows, events, activity counts and cash
 evidence. Each additional 250-loan batch adds one event query. Tests force smaller
 batches to verify transitions and compare money to the canonical single-loan fold,
@@ -119,3 +119,20 @@ foreign Workspace exclusion, and HTTP tests cover hidden metrics without access,
 period validation and filter-preserving queue pagination. Invalid balance or cash
 evidence cannot become a claimed complete total. Renewals and ordinary loan cash
 have deliberately separate labels and counts.
+
+## Saved financial-health cards (2026-09-12)
+
+The second increment adds one SQL aggregate across ACTIVE loans and saved risk
+assessments, bringing the combined overview selector to seven queries within one
+nonempty balance batch. Query-count tests cover both a single and multiple loans;
+additional balance batches still add one event query each. This is not a full
+HTTP latency measurement or launch-capacity test.
+
+V3 snapshot evidence copies projected interest, recorded total due and integrity
+findings from the authoritative exposure calculation. The dashboard checks dated
+current-contract completeness and the recorded-plus-projected identity before
+reporting financial totals. Guarded numeric JSON conversion makes malformed or
+missing evidence unavailable rather than causing a database cast error. Collateral
+coverage completeness is independent, and per-loan shortfalls are summed without
+netting surplus collateral elsewhere. Closed loans never enter these totals.
+See the [decision](../adr/2026-09-12-dashboard-assessment-financial-evidence.md).

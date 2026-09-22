@@ -18,6 +18,15 @@ not need a fresh price, and a calculated-only policy does not need a fresh appra
 Stale or missing required evidence makes coverage **Unknown**, not safe or zero.
 Refresh the missing evidence before relying on a coverage result.
 
+For a reviewed **Rate-based appraisal**, first record the business buying quote in
+Rates. On Reassess / history, review the reference quote, recorded net grams and
+purity, select Rate-based appraisal, and enter the displayed metal estimate with
+a review reference/reason. The service checks the quote ID, freshness and exact
+calculation again on approval. It records a current dated version without claiming
+physical inspection. Later price changes do not update this saved appraisal;
+approve a new version when reassessment is needed. The frozen loan valuation
+method and appraisal freshness limit continue to apply.
+
 To record a new staff appraisal:
 
 1. Under the held collateral item, select **Reassess / history**.

@@ -11,6 +11,7 @@
   </div>
   {% if business_overview.unavailable_balance_count %}<div class="alert alert-warning mt-3" role="status">Recorded balances need review for {{ business_overview.unavailable_balance_count }} active loan{{ business_overview.unavailable_balance_count|pluralize }}. Portfolio money totals are unavailable until that evidence is resolved. <a href="{% url 'workspace_slug_loan_list' workspace_slug=workspace.slug %}">Review loans</a>.</div>{% endif %}
 </section>
+{% include 'company/_financial_health.html' %}
 <section class="card mb-4" aria-labelledby="lending-activity-title"><div class="card-body">
   <h2 class="h5" id="lending-activity-title">Lending activity</h2>
   <form method="get" class="row g-2 align-items-end mb-3">

@@ -62,6 +62,12 @@ accounting event.
 
 ## Invariants
 
+Migration opening v2 can retain net-only collateral with null gross weight and
+explicit Bronze. This is evidence from the old register, with separate reviewed
+purity and appraisal; it does not relax native draft/approval weight requirements
+or add Bronze to the native draft form. Missing gross is shown as not recorded.
+See the [migration collateral decision](../adr/2026-09-12-legacy-collateral-evidence.md).
+
 - Item allocated principals sum exactly to gross loan principal.
 - Item interest sums exactly to aggregate monthly interest.
 - Each item passes its own LTV; excess value on one item cannot conceal an

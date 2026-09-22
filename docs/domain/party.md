@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-12
 tags: [domain, party]
 ---
 
@@ -26,3 +26,41 @@ Borrower autocomplete rebuilds an authorized Workspace queryset using signed tok
 without Redis widget state. See [cache configuration](../implementation/cache-configuration.md).
 License-scoped staff access remains optional and shelved as
 [FW-001](../plans/future-work.md#fw-001-optional-owner-configurable-license-scope).
+
+Matching names do not automatically merge source customer records. Party import
+now supports explicit per-batch decisions to keep reviewed source IDs separate,
+with names unchanged, warnings, reasons and audit. Duplicate source IDs and stronger
+identity matches remain conflicts; existing source aliases retain their normal
+source/local change checks. These decisions cannot be mapping presets or identity
+verification claims. See the
+[name-review decision](../adr/2026-09-12-reviewed-party-name-collisions.md).
+
+
+Contact methods and addresses can be ported through the staged profiles documented
+in the [operator guide](../flows/party-master-portability.md#contact-methods-and-addresses-2026-09-12).
+Party still owns phone/email/website validation, one primary/default per type and
+primary contact summary synchronization. Imported verification claims remain
+provenance, not local verification. Portable child identities survive native
+child deletion as tombstones; imports never resurrect them automatically.
+
+
+Identifiers without documents also use the
+[staged portability flow](../flows/party-master-portability.md#identifiers-without-documents-2026-09-12).
+Identifier values retain native trim/uppercase validation and per-Party/type
+uniqueness. Expiry is a source date, not an imported verification decision.
+Identifier writes do not synchronize Party tax summary fields. No checksum or
+identity-proofing policy was added by portability.
+
+
+Party business roles use the [role portability flow](../flows/party-master-portability.md#party-roles-with-explicit-type-mapping-2026-09-12).
+Explicit source-role to active Workspace PartyRoleType mapping is required. Imports
+preserve the native one-ACTIVE-role-per-type constraint and allow distinct inactive
+or ended histories; they do not create role definitions, memberships or staff grants.
+
+
+Party relationships use the [two-reference portability flow](../flows/party-master-portability.md#party-relationships-with-both-party-references-2026-09-12).
+Links are directional, may be active or inactive, and are unique by from/to/type
+regardless of active state. Self-links are prohibited; inverse links are distinct
+and are never created automatically. Both endpoints must resolve in the current
+Workspace. These links do not replace the master relation label/name. Native
+form validation and shared save behavior apply; no Party rules were changed.

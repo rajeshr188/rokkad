@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-09
+updated: 2026-09-12
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -30,6 +30,17 @@ P1 classifies the mature Girvi outcomes as follows:
 | Business calculation choices vary by workspace or license | REPLACE | Effective-dated workspace policy plus optional license-specific policy. |
 
 ## Required Setup Order
+
+For historical imports, the setup operator can reserve a reviewed numeric range
+through `reserve_sequence_through`. It requires setup authorization and a bounded
+evidence reference, locks the existing sequence, and advances only beyond the
+reviewed last used number. Lower/repeated requests never rewind later allocations.
+The maximum itself can be reserved, leaving the exhausted marker; values above
+the configured maximum fail. Reservations are audited and do not issue documents
+or alter the independent release counter. Include released and excluded source
+numbers when deriving a range. This does not certify source completeness or grant
+new lending authority to an inactive/legacy-reference licence. See the
+[legacy import plan](../plans/first-legacy-import.md).
 
 1. Create a regulatory license with supporting evidence.
 2. Create a series and configure independent PawnLoan and release sequences.

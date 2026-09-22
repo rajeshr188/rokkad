@@ -9,11 +9,16 @@ tags: [plans, active]
 
 The owner selected the first business-dashboard increment: customer/active-loan
 counts, lending activity, principal outstanding and recorded unpaid interest.
-It is implemented locally above the existing work queues, with date controls for
+It is published as `56950044` (queue-link test correction `92aa3600`) above the
+existing work queues, with date controls for
 activity and explicit missing-evidence handling. See the
 [metric definitions](../flows/business-dashboard.md). Validation is recorded in
-Status. Collateral coverage/projected interest remain separate follow-ups; this
-work does not start the monitoring worker or resume capacity tests.
+Status. The approved second increment adds saved-assessment financial-health cards
+locally: projected interest, economic exposure, eligible collateral value and
+per-loan shortfall, with explicit freshness/completeness. Older assessments need
+an ordinary refresh for V3 financial evidence. This work does not start the
+monitoring worker or resume capacity tests. Next operator acceptance is bounded
+automatic refresh in one development Workspace; launch capacity remains shelved.
 
 The owner approved the [Rates/appraisal improvement order](../implementation/rates-appraisal-monitoring-review.md).
 Increment 1 (quote readiness and actionable loan errors) is validated locally.

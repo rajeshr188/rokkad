@@ -1,0 +1,25 @@
+{% load humanize %}
+{% with health=business_overview.health %}
+<section class="card mb-4" aria-labelledby="financial-health-title"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+    <h2 class="h5 mb-0" id="financial-health-title">Financial health</h2>
+    {% if can_manage_health %}<a href="{% url 'workspace_loans:pawn_risk_portfolio' workspace.slug %}">Review Loan health</a>{% endif %}
+  </div>
+  <p class="small text-muted">Saved assessments for {{ health.as_of_date }}. Viewing this dashboard does not refresh assessments or finalize interest.</p>
+  <div class="d-flex flex-wrap gap-3 mb-3" aria-label="Assessment freshness">
+    <span>Current: <strong>{{ health.current_count|intcomma }}</strong> / {{ health.loan_count|intcomma }} active loans</span>
+    <span>Stale: <strong>{{ health.stale_count|intcomma }}</strong></span>
+    <span>Unassessed: <strong>{{ health.unassessed_count|intcomma }}</strong></span>
+    <span>Failed: <strong>{{ health.error_count|intcomma }}</strong></span>
+  </div>
+  {% if not health.financial_complete %}<div class="alert alert-warning" role="status">Financial totals are incomplete: {{ health.financial_count|intcomma }} of {{ health.loan_count|intcomma }} active loans have usable current financial assessments. {% if can_manage_health %}Use Loan health to review and refresh them.{% else %}Ask your workspace administrator to review and refresh them.{% endif %}</div>{% endif %}
+  <div class="row g-3">
+    <div class="col-sm-6"><div class="small text-muted">Estimated unfinalized interest</div><div class="h3 mb-1">{% if health.projected_interest != None %}₹{{ health.projected_interest|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><p class="small text-muted mb-0">Additional interest through today at assessment time, separate from recorded unpaid interest.</p></div>
+    <div class="col-sm-6"><div class="small text-muted">Total economic exposure</div><div class="h3 mb-1">{% if health.economic_exposure != None %}₹{{ health.economic_exposure|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><p class="small text-muted mb-0">Recorded principal, interest and fees plus estimated unfinalized interest, from the same assessments.</p></div>
+    <div class="col-sm-6"><div class="small text-muted">Eligible collateral value</div><div class="h3 mb-1">{% if health.collateral_value != None %}₹{{ health.collateral_value|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><p class="small text-muted mb-0">Uses each loan's valuation method, custody eligibility and evidence-age limits. This may differ from raw market value.</p></div>
+    <div class="col-sm-6"><div class="small text-muted">Loans with collateral shortfall</div><div class="h3 mb-1">{{ health.undercovered_count|intcomma }}{% if not health.coverage_complete %} <span class="small text-muted">known</span>{% endif %}</div><p class="small text-muted mb-0">Across {{ health.coverage_count|intcomma }} loans with usable coverage. {% if health.full_shortfall != None %}Combined shortfall: ₹{{ health.full_shortfall|floatformat:2|intcomma }}.{% else %}Whole-portfolio shortfall unavailable.{% endif %}</p></div>
+  </div>
+  {% if not health.coverage_complete %}<p class="text-warning mt-3 mb-0" role="status">Coverage is incomplete. {{ health.unknown_coverage_count|intcomma }} current assessment{{ health.unknown_coverage_count|pluralize }} lack usable coverage; stale, failed and unassessed loans are also excluded. Refreshing alone cannot fix outdated prices or appraisals.</p>{% endif %}
+  <p class="small text-muted mt-3 mb-0">Coverage is assessed loan by loan: maturity payoff for bullet/flexible loans, economic exposure for amortizing loans. Surplus collateral on one loan does not cancel another loan's shortfall.{% if health.oldest_assessed_at %} Oldest current assessment: {{ health.oldest_assessed_at|date:"d M Y H:i" }}.{% endif %}</p>
+</div></section>
+{% endwith %}

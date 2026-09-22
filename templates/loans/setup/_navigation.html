@@ -6,5 +6,6 @@
   <a  href="{% url 'workspace_loans:license_list' request.workspace.slug %}#license-register">Licenses &amp; numbering</a>
   <a  href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}">Economic setup</a>
   <a  href="{% url 'workspace_loans:loan_product_list' request.workspace.slug %}">Loan products</a>
+  {% if request.workspace.owner_id == request.user.pk %}<a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Import Loans</a>{% endif %}
   <a  href="{% url 'workspace_slug_loan_list' workspace_slug=request.workspace.slug %}">Back to PawnLoans</a>
 </nav>
