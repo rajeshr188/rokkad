@@ -80,6 +80,8 @@ submissions are idempotent and paired activations serialize on the Workspace.
 On September 22 the owner explicitly accepted the print previews, waived physical
 printing as a merge prerequisite, and authorized merging into `rls-mvp`. Do not
 reintroduce that approval gate. Record physical alignment as untested, not passed.
+The fast-forward merge completed at `e2fae88d`; the original checkout is on
+`rls-mvp`, with the isolated feature worktree and pre-feature checkpoint retained.
 Existing issued PDFs and source snapshots remain unchanged. Database migrations
 0016/0017 and transferring/assigning sandbox templates remain separate rollout
 steps; merging Git does not activate layouts or deploy the production application.

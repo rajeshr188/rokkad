@@ -9,6 +9,13 @@ tags: [status, architecture]
 
 ## Ticket designer accepted for merge (2026-09-22)
 
+Integration completed: `rls-mvp` fast-forwarded from `8b0e1ba3` to `e2fae88d`
+with no conflicts. Feature implementation is `3243147d`; documentation and
+in-app guide updates are `e2fae88d`. The updated guide rendering test passes,
+378 local documentation links pass, and diff whitespace is clean. The original
+checkout stays on `rls-mvp`; the feature worktree, checkpoint and local untracked
+artwork/output files are retained. No remote push was performed.
+
 The owner explicitly accepted the JCL/JSK print previews, chose to skip physical
 printing checks, and authorized merging `feature/ticket-template-designer` into
 `rls-mvp`. This supersedes the physical-print merge hold below; printer alignment
