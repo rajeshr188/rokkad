@@ -448,7 +448,7 @@
                         {% for document in party.documents.all %}
                         <tr>
                             <td>{{ document.get_document_type_display }}</td>
-                            <td>{% if document.file %}<a href="{% url 'workspace_party:party_document_download' workspace_slug=request.workspace.slug pk=party.pk document_pk=document.pk %}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}</td>
+                            <td>{% if document.file %}<a href="{% url 'workspace_party:party_document_download' workspace_slug=request.workspace.slug pk=party.pk document_pk=document.pk %}">{{ document.title }}</a>{% else %}{{ document.title }}{% endif %}{% if document.is_blank_legacy_image %}<span class="d-block small text-warning-emphasis">Blank source image — no usable photograph</span>{% endif %}</td>
                             <td>{{ document.is_verified|yesno:"Verified,Pending" }}</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=kyc&edit_document={{ document.pk }}"><i class="bi bi-pencil"></i></a>

@@ -86,6 +86,8 @@ def _append_collateral_photo(collateral_item_id, *, upload, actor, workflow_sour
             if item.loan.state == PawnLoanState.DRAFT.value
             else PawnCollateralPhoto.WorkflowSource.POST_APPROVAL
         )
+    if workflow_source == PawnCollateralPhoto.WorkflowSource.LEGACY_IMPORT:
+        raise PawnCollateralMediaError("Legacy photographs require the source-bound migration service.")
     if workflow_source == PawnCollateralPhoto.WorkflowSource.DRAFT and item.loan.state != PawnLoanState.DRAFT.value:
         raise PawnCollateralMediaError("Draft photographs can only be captured while the loan is a draft.")
     if workflow_source == PawnCollateralPhoto.WorkflowSource.RENEWAL and item.loan.state != PawnLoanState.DRAFT.value:

@@ -29,6 +29,8 @@ django-phonenumber-field==8.0.0
 django-redis==5.4.0
 django-render-block==0.10
 django-select2==8.2.1
+django-storages[s3]==1.14.6
+boto3==1.43.98
 django-tables2==2.7.0
 django-widget-tweaks==1.5.0
 docopt==0.6.2

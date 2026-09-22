@@ -159,5 +159,5 @@ __all__ += ["PawnReleaseBatch", "PawnReleaseBatchLine"]
 
 from .history import HistoricalLoanImport
 __all__.append("HistoricalLoanImport")
-from .archive import HistoricalLoanEvidence
-__all__.append("HistoricalLoanEvidence")
+from .archive import HistoricalLoanEvidence, HistoricalLoanAttachment
+__all__.extend(["HistoricalLoanEvidence", "HistoricalLoanAttachment"])

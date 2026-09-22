@@ -1,11 +1,40 @@
 ---
 status: active
 owner: project
-updated: 2026-09-21
+updated: 2026-09-22
 tags: [status, architecture]
 ---
 
 # Status
+
+## Legacy media attachment in the isolated rehearsal (2026-09-22)
+
+The source-bound attachment implementation and rehearsal R2 backend are in place.
+The full plan resolves 28,224 verified branch photographs: 1,148 customer photos,
+5,988 active collateral photos and 21,088 closed-history photos, requiring 29,366
+separate application objects including 1,142 default profile copies. Owner-only
+admission, immutable receipts, forced RLS, source/parent checks, private delivery,
+retry behavior and SQL immutability have passed 59 relevant tests (55 media/archive
+tests and four registry/forced-RLS metadata tests).
+
+Only `rokkad_baseline_rehearsal_linode_20260921` received the new migrations.
+Execution is in progress; the plan is not a completion receipt. The initial copy
+stopped on a dropped TLS handshake after 36 committed attachments. It resumed with
+lower concurrency and bounded transport retries, without disabling certificate
+validation or recreating committed attachments. One customer photograph has already
+rendered successfully through the ordinary-owner private rehearsal route.
+
+Visual inspection found plain grey placeholders in the source. Twelve decoded
+source hashes account for at least 24,946 blank image references: 5,283 active
+collateral, 19,661 closed-history and two customer images. Those exact fingerprints
+are labelled as blank in the application. Other images are unclassified; transfer
+integrity is not proof of usable photographic evidence.
+
+See [the attachment runbook](implementation/linode-media-attachments.md) and
+[decision](adr/2026-09-22-legacy-media-attachment-evidence.md). The private evidence
+directory is `outputs/linode-media-attachments-20260922/`. Financial/source-document
+fingerprints were saved before admission; final reconciliation and full retry proof
+remain pending. The live Linode application and original media are unchanged.
 
 ## Media preservation copy verified in private R2 (2026-09-21)
 

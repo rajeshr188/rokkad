@@ -9,6 +9,7 @@ urlpatterns = [
     path("history-archive/schema/", workspace_view(loan_archive_views.schema), name="archive_schema"),
     path("history-archive/staged/<uuid:batch_id>/", workspace_view(loan_archive_views.review), name="archive_batch"),
     path("history-archive/<uuid:evidence_id>/", workspace_view(loan_archive_views.detail), name="archive_detail"),
+    path("history-archive/<uuid:evidence_id>/media/<int:attachment_id>/", workspace_view(loan_archive_views.attachment), name="archive_attachment"),
     path("history-archive/<uuid:evidence_id>/export/", workspace_view(loan_archive_views.export), name="archive_export"),
     path("openings/", workspace_view(legacy_opening_views.listing), name="opening_list"),
     path("openings/<uuid:batch_id>/", workspace_view(legacy_opening_views.review), name="opening_batch"),

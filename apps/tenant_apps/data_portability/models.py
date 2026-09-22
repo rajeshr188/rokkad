@@ -15,6 +15,20 @@ class WorkspaceNamespace(WorkspaceOwnedModel):
         constraints = [models.UniqueConstraint(fields=["workspace"], name="port_namespace_workspace_uniq")]
 
 
+class LegacyMediaReceipt(WorkspaceOwnedModel):
+    """Immutable source admission receipt, retained after mutable Party media removal."""
+    source_system = models.CharField(max_length=120)
+    source_id = models.CharField(max_length=120)
+    evidence_sha256 = models.CharField(max_length=64)
+    source_evidence = models.JSONField()
+    target = models.JSONField()
+    imported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    imported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["workspace", "source_system", "source_id"], name="port_legacy_media_source_uniq")]
+
+
 class ImportBatch(WorkspaceOwnedModel):
     class State(models.TextChoices):
         NEEDS_MAPPING = "NEEDS_MAPPING", "Needs mapping"

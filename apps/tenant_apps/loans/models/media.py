@@ -23,6 +23,7 @@ class PawnCollateralPhoto(WorkspaceOwnedModel):
         DRAFT = "DRAFT", "Draft capture"
         RENEWAL = "RENEWAL", "Release and renew"
         POST_APPROVAL = "POST_APPROVAL", "Post-approval evidence"
+        LEGACY_IMPORT = "LEGACY_IMPORT", "Legacy source image (capture date unknown)"
 
     collateral_item = models.ForeignKey(
         "loans.PawnCollateralItem",
@@ -50,6 +51,12 @@ class PawnCollateralPhoto(WorkspaceOwnedModel):
         related_name="pawn_collateral_photos_captured",
     )
     captured_at = models.DateTimeField(auto_now_add=True)
+    source_evidence = models.JSONField(default=dict, blank=True)
+
+    @property
+    def is_blank_legacy_image(self):
+        from helpers.legacy_media import BLANK_LEGACY_IMAGE_SHA256
+        return bool(self.source_evidence) and self.sha256 in BLANK_LEGACY_IMAGE_SHA256
 
     class Meta:
         ordering = ("collateral_item_id", "captured_at", "id")

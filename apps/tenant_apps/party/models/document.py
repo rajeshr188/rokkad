@@ -88,6 +88,12 @@ class PartyDocument(WorkspaceOwnedModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_blank_legacy_image(self):
+        from helpers.legacy_media import BLANK_LEGACY_IMAGE_SHA256
+        sha = self.metadata.get("legacy_media", {}).get("verified_source_file", {}).get("sha256")
+        return sha in BLANK_LEGACY_IMAGE_SHA256
+
     class Meta:
         ordering = ("party", "document_type", "title")
         indexes = [

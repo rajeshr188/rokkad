@@ -3,7 +3,7 @@ from django import forms
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
@@ -97,6 +97,24 @@ def detail(request, evidence_id):
     return render(request, "data_portability/archive_detail.html", dict(
         evidence=evidence, document=evidence.document, report=evidence.review,
         source_json=dump(evidence.document), can_export=access.can("data.export")))
+
+
+@login_required
+@never_cache
+@require_http_methods(["GET"])
+def attachment(request, evidence_id, attachment_id):
+    evidence = get_evidence(workspace_id=request.workspace.pk, actor=request.user, evidence_id=evidence_id)
+    media = evidence.attachments.filter(pk=attachment_id, workspace_id=request.workspace.pk).first()
+    if media is None:
+        raise Http404
+    try:
+        source = media.file.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404 from exc
+    response = FileResponse(source, as_attachment=request.GET.get("inline") != "1",
+                            filename=media.original_filename, content_type=media.mime_type)
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required

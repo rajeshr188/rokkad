@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-21
+updated: 2026-09-22
 tags: [agents, context, architecture]
 ---
 
@@ -63,7 +63,8 @@ that root, the deployed historical commit and tenant-relative media settings.
 Transfer directly from Linode
 to private R2 storage; a download to the owner's computer is not required. Keep
 Workspace-authorized application delivery and preserve source schema/record
-associations. R2 configuration examples exist but are not enabled storage settings.
+associations. Ordinary development/production storage has not been switched to R2;
+the isolated rehearsal uses explicit private R2 opt-in settings.
 See [the media migration plan](plans/linode-media-to-r2.md) for pending work.
 The live inventory matches 28,224 of 31,838 discovery photo references. Missing
 branch-path references include 102 operational-loan photos, 3,507 closed-loan
@@ -76,11 +77,15 @@ owner also approved the bucket-only Object Read & Write migration token
 The owner saved the credentials and authenticated access succeeded. All 31,405
 inventoried branch files and 1,149 separately labelled recovery candidates are now
 preserved and read-back hash-verified in private R2, with 13 verified evidence files.
-No application attachments exist yet. Also retain the distinction between 102
+The bounded attachment implementation now uses immutable source receipts,
+separate application objects, explicit legacy collateral provenance and immutable
+closed-history media sidecars. Its operator command is rehearsal-only; execution
+and verification are tracked in [the attachment runbook](implementation/linode-media-attachments.md).
+Also retain the distinction between 102
 active-photo references whose branch files are missing and 203 active collateral
 items with no recorded photo reference. Preserved originals must not become mutable
 Party FileField objects: photo removal/cleanup could delete them. Use separate
-application copies through the future authorized attachment service. See the
+application copies through authorized attachment services. See the
 [preservation decision](adr/2026-09-21-legacy-media-preservation-and-application-copies.md).
 The old local R2 endpoint points to another account and must not be reused. Temporary
 SSH key access works and must be revoked after migration; credentials remain local.
