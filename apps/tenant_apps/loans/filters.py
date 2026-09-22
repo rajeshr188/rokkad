@@ -3,6 +3,7 @@ from uuid import UUID
 import django_filters
 from django import forms
 from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
 
 from apps.tenant_apps.loans.integrations.notice_delivery import (
     get_pawn_notice_delivery_states,
@@ -42,49 +43,63 @@ def _storage_text_query(field_prefix, value):
     return query
 
 
+class PawnLoanSearchForm(forms.Form):
+    def clean(self):
+        cleaned = super().clean()
+        start, end = cleaned.get("loan_date_from"), cleaned.get("loan_date_to")
+        if start and end and start > end:
+            self.add_error("loan_date_to", _("End date must be on or after start date."))
+        return cleaned
+
+
 class PawnLoanFilter(django_filters.FilterSet):
     q = django_filters.CharFilter(
         method="filter_search",
-        label="Search",
+        label=_("Find a loan"),
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Loan number, borrower, party code...",
+                "type": "search",
+                "autocomplete": "off",
+                "aria-describedby": "loan-search-help",
             }
         ),
     )
     state = django_filters.ChoiceFilter(
-        choices=PawnLoan._meta.get_field("state").choices,
-        empty_label="All states",
+        choices=[(value, _(label)) for value, label in PawnLoan._meta.get_field("state").choices],
+        label=_("Loan status"),
+        empty_label=_("All states"),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
     license = django_filters.ModelChoiceFilter(
         queryset=LoanLicense.objects.none(),
-        empty_label="All licenses",
+        label=_("License"),
+        empty_label=_("All licenses"),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
     series = django_filters.ModelChoiceFilter(
         queryset=LoanSeries.objects.none(),
-        empty_label="All series",
-        label="Series",
+        empty_label=_("All series"),
+        label=_("Series"),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
     loan_date_from = django_filters.DateFilter(
         field_name="loan_date",
         lookup_expr="gte",
-        label="Loan date from",
+        label=_("Loan date from"),
         widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
     )
     loan_date_to = django_filters.DateFilter(
         field_name="loan_date",
         lookup_expr="lte",
-        label="Loan date to",
+        label=_("Loan date to"),
         widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
     )
 
     class Meta:
         model = PawnLoan
         fields = ()
+        form = PawnLoanSearchForm
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)
@@ -106,6 +121,7 @@ class PawnLoanFilter(django_filters.FilterSet):
             Q(loan_number__icontains=value)
             | Q(borrower__display_name__icontains=value)
             | Q(borrower__party_code__icontains=value)
+            | Q(borrower__primary_phone__icontains=value)
             | Q(license__license_number__icontains=value)
             | Q(series__code__icontains=value)
         )

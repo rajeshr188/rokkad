@@ -12,6 +12,21 @@ The supported action depends on its origin, current state and staff permissions.
 Imported opening loans retain their existing full-redemption support; these UI
 changes do not enable separate repayments for those openings.
 
+## Find and review the loan
+
+Use **Loans** to search by loan number, customer name/code or phone; select a loan
+status when needed. **More filters** contains license, series and loan dates.
+Apply those filters, or clear them to start again. Invalid filters explain the
+correction before showing results. The list's principal is the amount recorded at
+creation/import; it does not state the current amount to collect.
+
+Open the loan number, confirm the customer and review **Balances and terms**.
+**Collateral and photos**, **Loan documents** and **Loan history** link to the
+corresponding sections. The recommended action follows current state and authority;
+**More loan actions** contains less frequent work. For an ordinary active loan,
+**Collect and release all collateral** is separate from repayment. An imported
+opening offers its supported full collection/release path; it does not offer auction.
+
 ## Repayment while retaining collateral
 
 Open **Record repayment**, enter the amount received and use **Preview allocation**

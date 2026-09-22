@@ -238,3 +238,49 @@ had no horizontal overflow and was reset afterward. No financial form was submit
 no release was performed and no accepted migration/custody records changed. Complete
 keyboard/screen-reader, real operator collection/handover and physical device/print
 acceptance remain pending. Next simplify loan search and the servicing overview.
+
+## Loan search and servicing overview
+
+`pawn_loan_list` now serves a native `list.html#results` partial only for its known
+HTMX target; boosted/history/ordinary requests retain a full document. Existing
+Workspace access covers both paths. Responses are no-store and vary on all four
+representation headers; `hx-history=false` prevents borrower history snapshots.
+Search is synchronized, paginated with stable ordering and announced without
+moving typing focus. Pagination/explicit search can focus the results. Session
+redirects navigate normally, and failures expose retry guidance.
+
+Responsive cards show loan/customer identity, state, date and entry principal.
+Entry principal is explicitly the stored value from creation/import: an opening
+import can carry forward principal instead of the original advance. No list-level
+financial calculator or cross-Workspace count was introduced. Phone search extends
+the existing query. The filter form rejects reversed date ranges; any filter error
+suppresses results, with correction links that open/focus the advanced controls.
+Ordinary GET and pagination links remain available without JavaScript. Staff only
+see the new-loan button with `data.create`; services still authorize all writes.
+
+Detail retains visible financial errors, balances and source explanations, while
+moving less-used actions into a native disclosure and adding section jump links.
+Recommended collection/full release stays prominent. Imported openings omit the
+auction shortcut, matching the existing service limitation. Documents retain their
+existing approval/schedule rules. No schema, financial command or import changed.
+Added labels use the existing Hindi catalogue; legacy detail copy still needs its
+remaining bilingual rollout.
+
+Validation: 127 Django tests across `test_pawn_draft_ui`, `test_opening_release`,
+`test_party_ui` and `test_shell_render_smoke` (93.191s). One added cross-Workspace
+assertion initially saw a pending creation toast from before the fixture changed
+Workspace. Consuming that message before the move fixed the fixture; the isolation,
+phone/invalid-filter and Hindi tests passed on rerun (3 tests, 1.290s). Four Node
+tests cover focus/announcements, session fallback, failed-search recovery and
+opening a linked error's disclosure. Gettext compilation, diff checking and the
+699-file import-boundary check pass; gettext retains four pre-existing metadata
+warnings. Private logs are in `outputs/ux-loan-directory-20260922/`.
+
+Read-only Chrome checks on the accepted rehearsal confirm live filtered results,
+typing focus, keyboard activation of filter-error links, imported-action visibility
+and no horizontal overflow at 390px/1280px. Desktop pointer activation of the error
+link also passed. At the phone viewport, pointer activation did not reliably focus
+its field through automation; keyboard activation did.
+Physical pointer/touch and screen-reader acceptance remain open, as does complete
+operator acceptance. The local server was restarted to refresh cached templates
+and gettext. No financial form was submitted and no accepted migration data changed.

@@ -1881,3 +1881,193 @@ msgstr "मुक्ति के दस्तावेज़"
 
 msgid "Open release history and memo"
 msgstr "मुक्ति इतिहास और पर्ची खोलें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Daily counter work"
+msgstr "दैनिक काउंटर कार्य"
+
+#: templates/loans/pawn/list.html
+msgid "Principal at entry"
+msgstr "प्रविष्टि के समय मूलधन"
+
+#: templates/loans/pawn/list.html
+msgid "Principal is the amount recorded when the loan was created or imported. Open the loan for current balances and the collection amount."
+msgstr "यह मूलधन ऋण बनाते या आयात करते समय दर्ज की गई राशि है। वर्तमान बकाया और वसूली की राशि देखने के लिए ऋण खोलें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Find the customer’s loan, check its status, then open it to continue."
+msgstr "ग्राहक का ऋण खोजें, उसकी स्थिति देखें और आगे बढ़ने के लिए उसे खोलें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "New loan"
+msgstr "नया ऋण"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "New-loan setup required."
+msgstr "नए ऋण के लिए सेटअप आवश्यक है।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Ask your Workspace owner or administrator to complete Settings → Loan setup. You can continue servicing existing loans."
+msgstr "अपने कार्यक्षेत्र के स्वामी या प्रशासक से सेटिंग्स → ऋण सेटअप पूरा करने को कहें। मौजूदा ऋणों पर काम जारी रख सकते हैं।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Search by loan number, customer name, customer code, phone, license or series."
+msgstr "ऋण संख्या, ग्राहक के नाम, ग्राहक कोड, फ़ोन, लाइसेंस या श्रृंखला से खोजें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "More filters"
+msgstr "अधिक फ़िल्टर"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Apply filters"
+msgstr "फ़िल्टर लागू करें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Check the filters to see matching loans"
+msgstr "मेल खाते ऋण देखने के लिए फ़िल्टर सुधारें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Open to review the draft."
+msgstr "मसौदे की समीक्षा के लिए खोलें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Open to review payment readiness."
+msgstr "भुगतान की तैयारी जाँचने के लिए खोलें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Open for balances and collection options."
+msgstr "बकाया और वसूली के विकल्प देखने के लिए खोलें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Open to review the loan history."
+msgstr "ऋण का इतिहास देखने के लिए खोलें।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "No matching loans"
+msgstr "कोई मेल खाता ऋण नहीं मिला"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Check the loan number, try the customer’s phone, or clear the filters."
+msgstr "ऋण संख्या जाँचें, ग्राहक के फ़ोन से खोजें या फ़िल्टर हटाएँ।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Reports, batch releases and setup"
+msgstr "रिपोर्ट, सामूहिक गिरवी वापसी और सेटअप"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Reports & reconciliation"
+msgstr "रिपोर्ट और मिलान"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Release multiple loans"
+msgstr "कई ऋणों की गिरवी लौटाएँ"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Release batches"
+msgstr "सामूहिक गिरवी वापसी के रिकॉर्ड"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Loan setup"
+msgstr "ऋण सेटअप"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Loan sections"
+msgstr "ऋण के भाग"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Balances and terms"
+msgstr "बकाया और शर्तें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Collateral and photos"
+msgstr "गिरवी और तस्वीरें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Loan history"
+msgstr "ऋण का इतिहास"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Collect and release all collateral"
+msgstr "राशि लें और पूरी गिरवी लौटाएँ"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "More loan actions"
+msgstr "ऋण के अन्य कार्य"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Party statement"
+msgstr "ग्राहक का विवरण"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Export loan data JSONL"
+msgstr "ऋण डेटा JSONL में निर्यात करें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Create notice"
+msgstr "सूचना बनाएँ"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Initiate auction"
+msgstr "नीलामी प्रक्रिया शुरू करें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Correct draft"
+msgstr "मसौदा सुधारें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Split collateral"
+msgstr "गिरवी अलग ऋण में बाँटें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Return to draft"
+msgstr "वापस मसौदा बनाएँ"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Accrue interest"
+msgstr "ब्याज दर्ज करें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Capitalize interest"
+msgstr "ब्याज को मूलधन में जोड़ें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Release and renew"
+msgstr "गिरवी वापसी और नवीनीकरण"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "End date must be on or after start date."
+msgstr "अंतिम तारीख, आरंभ की तारीख या उसके बाद की होनी चाहिए।"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Find a loan"
+msgstr "ऋण खोजें"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Loan status"
+msgstr "ऋण की स्थिति"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "All states"
+msgstr "सभी स्थितियाँ"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "All licenses"
+msgstr "सभी लाइसेंस"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "All series"
+msgstr "सभी श्रृंखलाएँ"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Loan date from"
+msgstr "ऋण की आरंभ तारीख"
+
+#: templates/loans/pawn/list.html templates/loans/pawn/detail.html apps/tenant_apps/loans/filters.py
+msgid "Loan date to"
+msgstr "ऋण की अंतिम तारीख"
+
+#: templates/loans/pawn/list.html
+msgid "%(total)s loan found"
+msgid_plural "%(total)s loans found"
+msgstr[0] "%(total)s ऋण"
+msgstr[1] "%(total)s ऋण"

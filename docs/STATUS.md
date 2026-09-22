@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## Loan search and servicing overview (2026-09-22)
+
+The loan directory now puts search and status first, with license/series/date
+filters in a disclosure and responsive cards in place of the wide table. Search
+includes customer phone numbers. Native partials provide private HTMX results,
+ordinary GET/history fallbacks, retained pagination filters and announced updates.
+Invalid choices/dates and reversed date ranges show linked corrections instead
+of partially filtered results. New-loan visibility follows the existing permission.
+
+The displayed principal is explicitly the amount at creation/import, not today's
+balance. Loan detail places the recommended action and full release before other
+actions, with jump links to balances, collateral, documents and history. Imported
+opening loans no longer advertise their unsupported auction workflow. Financial
+calculations, command permissions and immutable migration evidence are unchanged.
+New labels/guidance have compiled Hindi translations.
+
+127 focused Django tests were checked across loan UI, opening release, Party UI and
+shell rendering; one fixture/message assertion was corrected and its test plus two
+affected directory tests pass on rerun. Four JavaScript tests, gettext compilation
+and the 699-file import-boundary check pass. Read-only rehearsal browser checks
+confirm live search, typing focus, keyboard filter-error recovery, desktop pointer
+recovery and no horizontal overflow at 390px/1280px. Phone pointer/touch and complete assistive-technology/device
+acceptance remain pending. No production or rehearsal business records changed.
+See [implementation evidence](implementation/accessible-directory-redesign.md#loan-search-and-servicing-overview).
+Next: simplify branch setup forms and readiness guidance, then continue Rates and
+notifications; physical-device, print and operator acceptance still precede cutover.
+
 ## Collections and single-loan full release (2026-09-22)
 
 Full release now follows three sections: review the dated settlement, match the

@@ -50,6 +50,10 @@ The first native-partial directory slice pins Bootstrap 5.3.8 in the active shel
 Fragment headers never grant access; full-page/history fallbacks, private responses,
 keyboard focus and English/Hindi are part of each flow's contract. See
 [the frontend decision](adr/2026-09-22-native-template-partials-ui.md).
+Loan directory principal is the value recorded at creation/import, not a live
+balance or guaranteed original advance. Invalid search filters must not silently
+broaden results. Loan servicing shortcuts follow existing state/permissions and
+imported-opening limitations; financial authority remains in the commands.
 Customer writes stay ordinary CSRF-protected submissions. Native partials share
 field/error rendering; failed forms retain text, link errors to controls and explain
 file reselection. Account introduction progress/preferences never imply branch

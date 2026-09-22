@@ -1,8 +1,11 @@
 .skip-link{position:fixed;top:.5rem;left:.5rem;transform:translateY(-200%);z-index:3000;background:#fff;color:#103f3a;padding:.75rem 1rem;border:2px solid currentColor;border-radius:.4rem}
 .skip-link:focus{transform:none}
 :where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #805b15;outline-offset:3px}
-.party-directory .btn,.directory-tools summary{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
-.party-directory .form-control,.party-directory .form-select{min-height:44px}
+.party-directory .btn,.loan-directory .btn,.directory-tools summary{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.party-directory .form-control,.party-directory .form-select,.loan-directory .form-control,.loan-directory .form-select{min-height:44px}
+.loan-directory summary{min-height:44px;align-content:center;cursor:pointer}
+.loan-directory .directory-identity>div{min-width:0;overflow-wrap:anywhere}
+.loan-directory .directory-name{min-height:44px;align-content:center}
 .directory-records{display:grid;gap:.75rem}
 .directory-record{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) minmax(0,1fr) auto;align-items:center;gap:1.25rem;padding:1.25rem}
 .directory-record>*{min-width:0;overflow-wrap:anywhere}
@@ -11,9 +14,9 @@
 .directory-name{display:inline-block;padding:.3rem 0;font-size:1.05rem;font-weight:650;text-underline-offset:.2em}
 .directory-contact dt{font-size:.8rem;color:#53635a;font-weight:400;margin-bottom:.2rem}
 .directory-tools summary{cursor:pointer;text-decoration:underline;text-underline-offset:.2em}
-.party-directory [aria-busy=true]{opacity:.65}
-#party-loading{visibility:hidden}
-#party-loading.htmx-request{visibility:visible}
+.party-directory [aria-busy=true],.loan-directory [aria-busy=true]{opacity:.65}
+#party-loading,#loan-loading{visibility:hidden}
+#party-loading.htmx-request,#loan-loading.htmx-request{visibility:visible}
 html[lang=hi] .app-eyebrow{letter-spacing:normal;font-size:.875rem}
 @media(max-width:767px){.directory-record{grid-template-columns:minmax(0,1fr) auto;gap:1rem}.directory-identity{grid-column:1/-1}.directory-contact{grid-column:1/-1}.directory-record .btn{justify-self:end}}
 @media(prefers-reduced-motion:reduce){.party-directory *, .skip-link{transition:none!important;scroll-behavior:auto!important}}

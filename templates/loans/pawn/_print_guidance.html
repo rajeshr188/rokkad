@@ -1,7 +1,7 @@
 {% load i18n %}
 <section class="card mb-3" aria-labelledby="loan-documents-title">
  <div class="card-body">
- <h2 class="h5" id="loan-documents-title">{% translate "Loan documents" %}</h2>
+ <h2 class="h5" id="loan-documents-title" tabindex="-1">{% translate "Loan documents" %}</h2>
  {% if can_print_ticket or can_print_schedule %}
  <p>{% translate "Open a PDF, check the customer and loan number, then use the PDF viewer to download or print." %}</p>
  <div class="d-flex flex-wrap gap-2">

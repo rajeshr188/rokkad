@@ -511,8 +511,12 @@ class PawnDraftUiTests(WorkspaceTestCase):
         second_page = self.client.get(
             reverse("loans:pawn_loan_list"),
             {"state": "DRAFT", "page": 2},
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TARGET="loan-results",
         )
         self.assertEqual(len(second_page.context["loans"]), 1)
+        self.assertEqual(second_page["X-Rokkad-Fragment"], "loan-results")
+        self.assertContains(second_page, "?state=DRAFT&amp;page=1")
 
         filtered = self.client.get(
             reverse("loans:pawn_loan_list"),
@@ -536,6 +540,75 @@ class PawnDraftUiTests(WorkspaceTestCase):
             ),
             {license.pk, second_license.pk},
         )
+
+    def test_loan_directory_fragment_and_history_fallback_are_private(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        url = reverse("loans:pawn_loan_list")
+        headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TARGET": "loan-results"}
+        fragment = self.client.get(url, **headers)
+        self.assertContains(fragment, loan.loan_number)
+        self.assertContains(fragment, 'id="loan-results"')
+        self.assertNotContains(fragment, 'id="loan-search-form"')
+        self.assertEqual(fragment["X-Rokkad-Fragment"], "loan-results")
+        self.assertIn("no-store", fragment["Cache-Control"])
+        self.assertIn("HX-History-Restore-Request", fragment["Vary"])
+        for extra in ({}, {"HTTP_HX_HISTORY_RESTORE_REQUEST": "true"}, {"HTTP_HX_BOOSTED": "true"}, {"HTTP_HX_TARGET": "unrecognized"}):
+            request_headers = {**headers, **extra} if extra else {}
+            page = self.client.get(url, **request_headers)
+            self.assertContains(page, 'id="loan-search-form"')
+            self.assertContains(page, 'hx-history="false"')
+            self.assertNotIn("X-Rokkad-Fragment", page)
+            self.assertIn("no-store", page["Cache-Control"])
+
+    def test_loan_directory_phone_search_and_invalid_filters(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        Party.objects.filter(pk=self.party.pk).update(primary_phone="9876543210")
+        url = reverse("loans:pawn_loan_list")
+        found = self.client.get(url, {"q": " 9876543210 "})
+        self.assertEqual(list(found.context["loans"]), [loan])
+        self.assertContains(found, "Principal at entry")
+        for query, field in [({"state": "UNKNOWN"}, "state"), ({"license": "99999999"}, "license"), ({"loan_date_from": "invalid"}, "loan_date_from"), ({"loan_date_from": "2026-09-22", "loan_date_to": "2026-09-01"}, "loan_date_to")]:
+            with self.subTest(query=query):
+                response = self.client.get(url, query, HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
+                self.assertEqual(list(response.context["loans"]), [])
+                self.assertContains(response, f'href="#id_{field}"')
+                self.assertContains(response, "Check the filters to see matching loans")
+                self.assertNotContains(response, "No matching loans")
+                self.assertNotContains(response, loan.loan_number)
+
+    def test_loan_directory_read_only_member_has_no_new_loan_action(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        self._configured_setup()
+        member = get_user_model().objects.create_user(username="loan-directory-reader")
+        role, _ = Role.objects.get_or_create(name="Loan directory reader")
+        content_type = ContentType.objects.get_for_model(Company)
+        permission, _ = Permission.objects.get_or_create(content_type=content_type, codename="data_view", defaults={"name": "data_view"})
+        workspace_role_permissions(role, self.tenant).set([permission])
+        Membership.objects.create(user=member, company=self.tenant, role=role)
+        self.client.force_login(member)
+        page = self.client.get(reverse("loans:pawn_loan_list"))
+        self.assertEqual(page.status_code, 200)
+        self.assertFalse(page.context["can_create_loans"])
+        self.assertNotContains(page, 'class="btn btn-primary" href="' + reverse("loans:pawn_loan_create"))
+        self.assertEqual(self.client.get(reverse("loans:pawn_loan_create")).status_code, 403)
+        workspace_role_permissions(role, self.tenant).clear()
+        denied = self.client.get(reverse("loans:pawn_loan_list"), HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
+        self.assertEqual(denied.status_code, 403)
+
+    def test_loan_directory_hindi_full_page_and_fragment(self):
+        self.client.cookies["django_language"] = "hi"
+        for headers in ({}, {"HTTP_HX_REQUEST": "true", "HTTP_HX_TARGET": "loan-results"}):
+            response = self.client.get(reverse("loans:pawn_loan_list"), **headers)
+            self.assertContains(response, "कोई मेल खाता ऋण नहीं मिला")
+            if not headers:
+                self.assertContains(response, "ऋण खोजें")
+                self.assertContains(response, "अधिक फ़िल्टर")
 
     def test_detail_navigates_to_adjacent_loans_in_the_same_series(self):
         license, series = self._configured_setup()
@@ -1172,8 +1245,16 @@ class PawnDraftUiTests(WorkspaceTestCase):
             creator=self.owner,
         )
         other_workspace.save()
+        # Consume the earlier creation message before moving the fixture out of scope.
+        self.client.get(reverse("loans:pawn_loan_list"))
         PawnLoan.objects.filter(pk=loan.pk).update(workspace=other_workspace)
         LoanLicense.objects.filter(pk=license.pk).update(workspace=other_workspace)
+
+        for query in ({"q": loan.loan_number}, {"license": license.pk}, {"series": series.pk}):
+            page = self.client.get(reverse("loans:pawn_loan_list"), query, HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
+            self.assertEqual(list(page.context["loans"]), [])
+            self.assertNotContains(page, loan.loan_number)
+            self.assertEqual(page["X-Rokkad-Fragment"], "loan-results")
 
         scoped_routes = (
             reverse("loans:pawn_loan_detail", args=[loan.pk]),
@@ -1287,7 +1368,10 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(detail, "Accrue interest")
         self.assertNotContains(detail, "Partial release")
         self.assertContains(detail, "Release and renew")
-        self.assertContains(detail, "Full release")
+        self.assertContains(detail, "Collect and release all collateral")
+        self.assertContains(detail, "More loan actions")
+        self.assertContains(detail, 'href="#loan-overview"')
+        self.assertContains(detail, 'id="loan-overview"')
         self.assertContains(
             detail,
             reverse("loans:pawn_loan_notice_create", args=[loan.pk]),

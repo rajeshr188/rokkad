@@ -33,8 +33,11 @@ error-recovery and bilingual patterns. Camera/photo preview now works through th
 existing customer create/edit forms. Branch-readiness guidance, identity form
 accessibility and the customer-to-loan draft handoff are implemented. Single-loan
 collections/full-release guidance now follows the same field/error patterns, with
-explicit settlement, custody and concession boundaries. Next simplify the loan
-directory and servicing overview for daily counter work. Terms review, payment-form accessibility and grouped
+explicit settlement, custody and concession boundaries. The loan directory now
+uses progressive phone/name/number search, responsive results and explicit filter
+errors; servicing detail groups secondary actions and links its main sections.
+Next simplify branch setup forms/readiness guidance, then Rates and notifications.
+Terms review, payment-form accessibility and grouped
 printing guidance now extend the first-loan journey; its complete live payment
 walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator
 acceptance remain open; these slices do not complete the whole-product redesign.

@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
+from django.views.decorators.vary import vary_on_headers
 from apps.tenant_apps.loans.services.loan_workflow import make_review
 from apps.tenant_apps.loans.services.pawn_disbursal import preview_approved_disbursal
 
@@ -49,28 +50,42 @@ from apps.tenant_apps.loans.web.pawn_read_helpers import (
 
 
 @loans_workspace_required
+@never_cache
+@vary_on_headers("HX-Request", "HX-Target", "HX-History-Restore-Request", "HX-Boosted")
 def pawn_loan_list(request):
     loans = PawnLoan.objects.filter(workspace=request.loans_workspace).select_related(
         "borrower", "license", "series"
-    ).order_by("-created_at")
+    ).order_by("-created_at", "-pk")
     loan_filter = PawnLoanFilter(
         request.GET,
         queryset=loans,
         workspace=request.loans_workspace,
     )
-    page_obj = Paginator(loan_filter.qs, 25).get_page(request.GET.get("page"))
+    valid = loan_filter.is_valid()
+    page_obj = Paginator(loan_filter.qs if valid else loans.none(), 25).get_page(request.GET.get("page"))
     readiness = get_pawn_draft_readiness(request.loans_workspace)
-    return render(
+    fragment = (
+        request.headers.get("HX-Request") == "true"
+        and request.headers.get("HX-Target") == "loan-results"
+        and request.headers.get("HX-History-Restore-Request") != "true"
+        and request.headers.get("HX-Boosted") != "true"
+    )
+    response = render(
         request,
-        "loans/pawn/list.html",
+        "loans/pawn/list.html#results" if fragment else "loans/pawn/list.html",
         {
             "loans": page_obj.object_list,
             "loan_filter": loan_filter,
             "page_obj": page_obj,
             "readiness": readiness,
+            "can_create_loans": request.loans_workspace_access.can("data.create"),
+            "more_filters_open": any(request.GET.get(key) for key in ("license", "series", "loan_date_from", "loan_date_to")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
     )
+    if fragment:
+        response["X-Rokkad-Fragment"] = "loan-results"
+    return response
 
 
 @loans_workspace_required
