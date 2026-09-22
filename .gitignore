@@ -19,6 +19,7 @@ __pycache__/
 /media/
 /staticfiles/
 /outputs/ticket-template-tests/
+/outputs/ticket-template-sandbox/
 
 # Database backups and dumps
 *.dump

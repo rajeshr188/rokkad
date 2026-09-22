@@ -48,6 +48,13 @@ offset, and preserve that timestamp on exact-artifact reprints.
 Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
 test launcher pins a local test database and worktree-local filesystem media;
 it does not start a feature web server. See the plan for the command and limits.
+The separately provisioned browser sandbox now uses port 8082, database
+`rokkad_ticket_template_sandbox`, a dedicated restricted login, separate cookies
+and worktree-local media. Its workspace `jcl-template-sandbox-sample-only` has
+synthetic data only; it is not the existing JCL migration rehearsal. The reviewed
+JCL configuration is saved there as draft revision 1 with all four backgrounds.
+Keep credentials and local assets under ignored `outputs/ticket-template-sandbox/`.
+Use the sandbox settings/launcher, never the rehearsal environment, for this editor.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

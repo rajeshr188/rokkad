@@ -7,6 +7,35 @@ tags: [status, architecture]
 
 # Status
 
+## JCL draft available in the isolated browser sandbox (2026-09-22)
+
+Provisioned `rokkad_ticket_template_sandbox` with a dedicated restricted runtime
+login and ordinary owner-only migrations. The feature server listens on
+`127.0.0.1:8082`; its local media, secrets and synthetic fixtures live under the
+Git-ignored `outputs/ticket-template-sandbox/`. Separate session/CSRF cookies and
+a sample-data banner distinguish it from the existing migration rehearsal.
+No existing rehearsal database, production storage or server was changed.
+
+Workspace `jcl-template-sandbox-sample-only` contains the reviewed JCL layout as
+draft revision 1, all four supplied backgrounds, three draft print profiles and
+one synthetic preview customer/loan. This is a document fixture, not a lending
+workflow rehearsal. The original/duplicate fronts retain the approved heading,
+tenure and signature choices. `Condition1.pdf` and `D31.pdf` supply the two backs
+unchanged. No layout/profile is assigned or published; no official issue exists.
+
+Normal HTTP sign-in, both editor copy views and background endpoints, A5 original,
+A4 paired fronts and A4 duplex previews pass under the restricted runtime role.
+Cross-workspace access cannot see the layout. Visually reviewed the two-page
+duplex preview; application currency formatting required a 10 pt principal field
+inside its original 30 mm frame to avoid the artwork's In Words label. Exported
+the resulting draft pack locally for recovery. This run did not repeat the full
+188-test suite: app/domain behavior is unchanged.
+
+Before publication, review the supplied Conditions artwork's fixed interest
+wording (including 12% per annum); it does not track a loan's approved rate.
+Printer duplex alignment and physical acceptance remain pending. See the
+[sandbox access instructions](plans/ticket-template-designer.md#local-browser-sandbox).
+
 ## JCL heading line separation (2026-09-22)
 
 The owner's small layout correction is applied to both copies: business name

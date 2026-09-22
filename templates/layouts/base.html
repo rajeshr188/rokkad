@@ -34,7 +34,12 @@
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <a class="skip-link" href="{% block skip_target %}#main-content{% endblock %}">{% translate "Skip to main content" %}</a>
-    {% if rehearsal_browser %}
+    {% if ticket_template_sandbox %}
+    <div class="bg-warning text-dark text-center p-2" role="note">
+        <strong>Ticket template sandbox</strong> &middot; Sample data only.
+        Changes here do not affect your rehearsal or production workspaces.
+    </div>
+    {% elif rehearsal_browser %}
     <div class="bg-warning text-dark text-center p-2" role="note">
         <strong>Local migration rehearsal</strong> · Test data copied from the legacy system.
         Changes here stay in this rehearsal. <a href="{% url 'app_workspaces' %}" class="text-dark">Choose branch</a>

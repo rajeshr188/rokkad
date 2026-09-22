@@ -13,7 +13,10 @@ from apps.orgs.tenant_context import (
 
 def rehearsal_environment(request):
     """Only the opt-in rehearsal web settings install this display context."""
-    return {"rehearsal_browser": getattr(settings, "REHEARSAL_BROWSER", False)}
+    return {
+        "rehearsal_browser": getattr(settings, "REHEARSAL_BROWSER", False),
+        "ticket_template_sandbox": getattr(settings, "TICKET_TEMPLATE_SANDBOX", False),
+    }
 
 
 def _resolve_workspace(request):

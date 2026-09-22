@@ -105,6 +105,44 @@ physical printer acceptance is claimed. Provision a distinct runtime database,
 restricted role configuration, media root and port before manual app testing;
 do not launch this branch using the rehearsal environment.
 
+## Local browser sandbox
+
+The feature now has a persistent local browser sandbox, separate from the test
+runner and all existing rehearsal databases. Open:
+
+`http://127.0.0.1:8082/w/jcl-template-sandbox-sample-only/loans/setup/documents/revisions/1/overlay-designer/`
+
+Username: `ticket-designer`. Its generated local-only password is in
+`outputs/ticket-template-sandbox/login.txt`. Database credentials are in
+`runtime.json` in that same ignored directory; never commit either file.
+The server uses `django_project.settings.ticket_template_sandbox`, pins a dedicated
+restricted PostgreSQL role/database, uses filesystem media and memory email,
+disables payment/OAuth credentials, and has its own browser cookies. A sample-data
+banner identifies this environment. It does not copy rehearsal records or media.
+
+Restart from the feature worktree with:
+
+```powershell
+.\scripts\start_ticket_template_sandbox.ps1
+```
+
+The launcher requires the already provisioned local configuration. Initial
+provisioning used `manage.py migrate --settings django_project.settings.migration`
+with the owner connection explicitly targeting `rokkad_ticket_template_sandbox`;
+the web process never uses that owner connection. Local provisioning/fixture
+scripts and HTTP verification evidence are retained in the ignored directory.
+
+Draft revision 1 includes Original, Duplicate, Conditions and D3 backgrounds.
+Choose `JCL A4 Side By Side Duplex` in the editor's preview profile selector to
+see both sheets, or the A4 front pair/A5 original alternatives. No template or
+profile is published or assigned. The sample approved loan is a synthetic document
+fixture without financial posting and must not be used to assess lending workflows.
+`jcl-reviewed-layout.zip` is the local sanitized draft recovery pack.
+
+The supplied Conditions PDF has fixed rate text, including 12% per annum.
+It remains unchanged and needs review before activation. D3 retains its original
+blank fields. PDF checks are not physical duplex/printer acceptance.
+
 ## Evidence and acceptance examples
 
 Read-only inspection of production commit
