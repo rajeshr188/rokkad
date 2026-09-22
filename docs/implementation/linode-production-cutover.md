@@ -42,7 +42,7 @@ not be reintroduced as an approval gate. Record its alignment as untested.
 | Destination server | Owner selected separate Linode; creation, SSH address and verified access pending. |
 | Database conversion | Accepted snapshot and separate clean-target replay reconcile all source loan IDs. Fresh data and a later opening date require new preparation. |
 | Media | Rehearsal attachment, source retention, private access and duplicate-free retry verified. Missing and blank source images remain explicitly reported. |
-| Imported-loan servicing | Full-release continuation exists; ordinary partial/interest-only repayment entry remains guarded. Establish required branch collection journeys and implement/test any required unsupported path before go-live. New TEST-loan payment acceptance does not cover imported openings. |
+| Imported-loan servicing | Owner confirmed both interest-only collections and partial principal repayments are required, with reduced-principal interest from the next monthly anniversary. Both remain unsupported for imported openings and are go-live blockers. Implement and test this bounded continuation path. New TEST-loan payment acceptance does not cover imported openings. |
 | Documents and branch UX | JCL plain-paper and JSK data-only ticket previews accepted; TEST-series activation/reprints verified. Finish payment receipt/release memo and essential staff/device/language checks. |
 | Production media configuration | `prod_r2` is implemented and settings-tested; deployment and authenticated storage tests on the new host are pending. |
 | Media reliability | Local R2 reads have intermittently timed out or made photos unavailable; successful retries are not a resolution. Verify upload/read/print reliability from the destination host before opening. |
@@ -58,6 +58,74 @@ full release and supported reversal, printing and private media. Rehearse financ
 writes in a disposable target, not as throwaway transactions in the final business
 database. Ordinary partial repayments on imported openings remain guarded; go-live
 must not imply that this unsupported workflow has become available.
+
+### Imported collections: required next implementation
+
+On September 23 the owner confirmed that branches need both interest-only and
+partial-principal collections on migrated loans. The owner then confirmed for
+JCL, JSK and Lakshmi: **charge on the reduced principal from the next monthly
+anniversary**. Preserve interest already earned for the current monthly period;
+do not prorate from the payment date or shift the loan's original anniversary.
+For example, for a loan with anniversaries on the 15th, a principal repayment on
+September 23 reduces the base for the October 15 charge. Interest-only payment
+does not change that principal base. The existing reviewed rule covers unchanged
+original principal only, so this confirmed extension still needs implementation;
+the owner answer does not make the current payment handler safe to enable.
+
+Keep this work inside the existing collection workflow. Its required boundary is:
+
+- Preview and record interest-only and partial-principal payments with the
+  confirmed interest rule, preserving original dates, upfront coverage and opening
+  debt. Reconcile cash allocation, per-item principal and remaining obligations;
+  handle interest beyond the original schedule explicitly.
+- Couple any required interest catch-up with the payment in one authorized,
+  Workspace-scoped, locked and idempotent transaction. Do not merely remove
+  `assert_pawn_loan_financial_actions_allowed` or expose the internal event writer.
+- Reuse the existing fee/interest-before-principal allocation and highest-rate-item
+  principal allocation where compatible. Show the allocation before submission.
+  Resolve the exact anniversary-day and month-end boundaries in executable tests:
+  the payment must not retrospectively lower a charge already due that day.
+- Make balances, interest explanations, receipts, subsequent full release and
+  newest-first reversal agree, including same-day retry and reversal cases.
+  Payment alone must not return collateral or claim physical closure.
+- Preserve immutable repayment allocation evidence through export and restore.
+  The current opening export's frozen row contract does not include repayment
+  allocation lines; enabling payments without addressing that would leave
+  portability incomplete. Preserve existing export compatibility explicitly.
+- Test opening principal/interest/fees, month boundaries, cumulative rounding,
+  item allocations, repeated collections, release after payments, reversal,
+  transaction rollback, role permissions, cross-Workspace denial and export/restore.
+
+The existing 43 opening continuation/release/obligation/event-storage and deployment
+tests passed on September 23 in the isolated ticket test database. This proves the
+existing bounded paths, not the new payment requirement; no payment guard has
+been relaxed and no rehearsal or production financial records changed.
+
+### Accepted template transfer bundle
+
+Read-only export completed on September 23 under the rehearsal runtime role.
+Private local files are in `outputs/production-readiness-20260923/templates/`:
+`jcl-layout.zip`, `jcl-profile.json`, `jsk-layout.zip`, `jsk-profile.json` and
+`manifest.json`. Layout/profile definitions and each archived asset SHA-256 were
+checked against the current published configuration. JCL includes four background
+assets; JSK includes none and declares its business name preprinted. The existing
+front-pair profiles are retained; included reverse artwork is not automatically
+enabled. The manifest records content hashes and source revision provenance.
+
+These bundles contain configuration only, with no customers, loans, licences,
+issued documents or assignment rows. Keep them outside Git. Import into the
+destination as drafts through the supported layout-pack and profile services,
+check hashes/previews, then assign using real destination Workspace/series IDs.
+Never reuse rehearsal IDs or activate a TEST-series mapping in production.
+
+### Opening-date boundary
+
+Current opening servicing rejects an action dated on or before the opening date.
+Plan an overnight freeze after close of business on date D, a reviewed opening
+through D, and reopening no earlier than D+1 in the application timezone. The
+measured duration may require a longer window. Do not promise same-day servicing
+or backdate balances to bypass this rule; same-day opening support would need a
+separate explicit design and verification.
 
 ## New-server configuration
 
@@ -183,10 +251,12 @@ target records to simulate rollback.
 
 ## Immediate next action
 
-Prepare one release-readiness checklist around the concrete remaining work above:
-imported servicing, production media admission, essential UI/printing checks,
-destination provisioning and recovery. Resolve required business-flow gaps before
-choosing a freeze date. Create the separate Linode server when ready for hosted
+First implement and rehearse the confirmed imported-payment workflow above,
+including reversal and export/restore, while keeping unsupported operations
+guarded. Then address production media admission, essential UI/printing checks,
+destination provisioning and recovery using this single readiness checklist.
+Resolve required business-flow gaps before choosing a freeze date.
+Create the separate Linode server when ready for hosted
 deployment testing; prepare access, immutable release image, HTTPS, restricted RLS
 runtime, durable R2 credentials and verified backups while the old system remains
 live. Do not push, purchase infrastructure or switch routing as part of discussion.

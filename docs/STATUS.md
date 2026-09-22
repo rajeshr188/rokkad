@@ -7,6 +7,31 @@ tags: [status, architecture]
 
 # Status
 
+## Cutover readiness audit and template export (2026-09-23)
+
+Owner confirmed both interest-only and partial-principal collections are required
+on migrated loans. Recorded this as a go-live blocker in the existing
+[cutover runbook](implementation/linode-production-cutover.md), with the bounded
+implementation and validation scope. Owner confirmed reduced-principal interest
+starts at the next original monthly anniversary for all three branches, preserving
+the current month's already-earned interest. Existing guarded repayment, continuation,
+release/reversal and opening export were inspected. No financial code changed.
+The export contract also needs to preserve repayment allocation evidence when
+that servicing path is added. Opening servicing currently rejects the opening
+date itself, so the runbook now explicitly plans overnight reopening on D+1 or later.
+
+All 43 targeted opening release, continuation, obligation, event-storage and
+deployment tests pass (19.345 s) in the isolated test database. They validate the
+existing supported paths, not the requested payment extension. Log:
+`outputs/ticket-template-rollout-20260922/cutover-readiness-tests.log`.
+
+Exported current published JCL revision/profile 1/1 and corrected JSK 4/2 read-only
+to `outputs/production-readiness-20260923/templates/`. Verified layout/profile
+hashes and embedded background bytes. The configuration-only bundle has a manifest,
+two layout packs and two profile definitions; it excludes rehearsal business data
+and assignments. Destination setup must resolve its own IDs. No production access,
+server creation, source freeze, routing change or financial mutation occurred.
+
 ## Production cutover planning resumed (2026-09-23)
 
 Owner requested commit verification and discussion of production cutover. Verified

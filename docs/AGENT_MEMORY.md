@@ -14,6 +14,18 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+On September 23 the owner confirmed that imported loans must support both
+interest-only payments and partial principal repayments before cutover. Existing
+opening servicing supports full release/reversal only. The owner confirmed that
+principal reductions change interest from the next original monthly anniversary
+for all three branches; retain the current period's already-earned interest.
+This requires an explicit extension of unchanged-principal continuation, not a
+guard bypass. Preserve payment allocation evidence in export
+and restore as well as in balances, receipts and reversals. Current opening
+servicing requires dates strictly after the opening date; plan an overnight
+boundary unless that contract is deliberately extended. See the
+[cutover runbook](implementation/linode-production-cutover.md).
+
 The owner authorized a design-first ticket-template experiment on
 `feature/ticket-template-designer`, isolated in its own worktree from baseline
 `8b0e1ba3` on `rls-mvp`. Follow [the bounded plan](plans/ticket-template-designer.md).
