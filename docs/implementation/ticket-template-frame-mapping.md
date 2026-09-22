@@ -253,6 +253,13 @@ validator failures and source semantic flags. The proposed JSK duplicate amount
 width is 108 mm instead of the out-of-page 120 mm; this is a review candidate,
 not an accepted correction. Browser text wrapping is not ReportLab calibration.
 
+Owner review subsequently requested a common top edge for JCL's borrower photo,
+contact block and loan number. Candidate photo frame 14 moves from y=75 to y=50 mm,
+matching the other two frames, while retaining its 25 x 25 mm size. It now ends
+15 mm above the collateral description frame at y=90 mm. Apply this to both copies;
+preserve the extracted source coordinates and record this as an explicit design
+correction rather than a coordinate-conversion fix.
+
 Image/QR fit refinements, static-stock declarations and paired activation remain
 pending. Existing mandatory identity/verification/table rules remain intact; do
 not treat candidate definitions as converted, accepted JCL/JSK templates. See the

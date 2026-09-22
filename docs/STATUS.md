@@ -7,6 +7,16 @@ tags: [status, architecture]
 
 # Status
 
+## JCL customer-row alignment (2026-09-22)
+
+Owner review identified JCL's source photo frame overlapping the collateral
+description. The candidate generator now places the photo, contact block and
+loan number on the same 50 mm top edge in both copies. The 25 mm photo ends at
+75 mm; the description starts at 90 mm. The source inventory remains unchanged;
+the generated review records the photo's 75-to-50 mm move as owner-requested.
+Regenerated HTML/JSON and checked alignment and separation directly. No renderer,
+database, mandatory-field rules or production templates changed in this correction.
+
 ## Ticket contact/photo evidence and frame candidates (2026-09-22)
 
 The feature branch now exposes customer name, relationship, address, phone/contact

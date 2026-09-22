@@ -34,6 +34,12 @@ def build_review():
                      "font_size_pt": int(source["font_size"]), "align": "LEFT"}
             if kind == "field":
                 block.update(show_label=False, padding_pt=6, leading_pt=12)
+            # Owner's reviewed design correction, separate from the source inventory.
+            if template["workspace"] == "jcl" and block["binding"] == "borrower.photo":
+                adjustments.append({"frame_id": source["id"], "property": "y_mm", "source": block["y_mm"],
+                                    "candidate": 50, "status": "OWNER_REQUESTED",
+                                    "reason": "Align with customer contact and loan number; clear the collateral description."})
+                block["y_mm"] = 50
             if block["x_mm"] + block["width_mm"] > 148:
                 adjustments.append({"frame_id": source["id"], "property": "width_mm", "source": block["width_mm"],
                                     "candidate": 148 - block["x_mm"], "status": "REQUIRES_VISUAL_REVIEW"})
