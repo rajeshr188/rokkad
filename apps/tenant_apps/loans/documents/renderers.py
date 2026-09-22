@@ -67,7 +67,7 @@ class ConfigurableDocumentRenderer:
         )
         return LayoutRenderResult(
             pdf, layout.content_hash, cls._payload_hash(payload),
-            "layout-reportlab-profile-v1", output_page_size,
+            "layout-reportlab-profile-v4" if layout.schema_version >= 4 else "layout-reportlab-profile-v1", output_page_size,
             print_profile.composition,
             tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())),
         )
@@ -520,7 +520,9 @@ class ConfigurableDocumentRenderer:
         elif block.type == "field":
             field = fields[block.binding]
             value, style = cls._display_value(field.value, block, style)
-            text = f"<b>{escape(field.label)}</b>: {escape(value)}"
+            text = escape(value)
+            if block.show_label:
+                text = f"<b>{escape(block.field_label or field.label)}</b>: {text}"
         elif block.type == "verification":
             text = f"<b>Verification ID</b>: {escape(payload.verification_id)}"
         else:

@@ -7,6 +7,36 @@ tags: [status, architecture]
 
 # Status
 
+## Isolated precision ticket overlays (2026-09-22)
+
+Implemented on `feature/ticket-template-designer` only: opt-in layout v4 supports
+background-free loan tickets, optional printed backgrounds, value-only scalar
+fields/custom labels, and 0.1 mm position/size controls. The existing overlay
+editor saves these settings and its drag canvas preserves fractional positions.
+Geometry validation rejects non-finite, over-precise and out-of-page rectangles;
+v4 Letter bounds match actual paper dimensions. Default creation remains v3.
+
+`scripts/test_ticket_templates.py` uses `django_project.settings.test`, a pinned
+local `test_rokkad_ticket_template_feature` database, local media and memory email.
+The existing development env file supplies local connection credentials only;
+no credential file or production media is copied into the feature worktree.
+No feature web server is running and no new application migration is needed.
+
+Validation: all 131 focused tests pass, covering renderer/forms, A5 actual-size independent copy positions,
+asset ownership/missing assets, compatibility, persistence, issuance/reprints,
+and the complete setup UI suite. The new end-to-end test creates, edits, previews,
+publishes and issues v4, then confirms a replacement template does not change
+the original issue bytes. Synthetic MuPDF image inspection confirms background-
+free and merged output. A Node canvas smoke check verifies fractional initial
+coordinates, 0.1 mm drag, edge clamping and pointer cleanup. Supported-app
+boundaries and diff checks pass. The parent remains at checkpoint `8b0e1ba3`.
+
+Remaining: stock-aware profiles and guide-only backgrounds, text padding/leading,
+richer customer/photo evidence, copy-aware authoring and paired activation, plus
+real JCL/JSK artwork and printer acceptance. Existing mandatory fields and
+verification remain enforced. This is the overlay foundation, not completed
+production-template parity. The original `rls-mvp` rehearsal remains separate.
+
 ## Ticket frame mapping and engineering decisions (2026-09-22)
 
 Feature-only design work maps all 12 frames in JCL's default template and all 23

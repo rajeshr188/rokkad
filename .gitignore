@@ -18,6 +18,7 @@ __pycache__/
 *.sqlite3
 /media/
 /staticfiles/
+/outputs/ticket-template-tests/
 
 # Database backups and dumps
 *.dump

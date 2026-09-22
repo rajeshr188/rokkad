@@ -1650,6 +1650,86 @@ class LoansSetupUiTests(WorkspaceTestCase):
         revision.refresh_from_db()
         self.assertEqual(revision.definition["blocks"][0]["x_mm"], 20)
 
+    def test_precision_overlay_editor_saves_value_only_fractional_frames_without_background(self):
+        response = self.tenant_post(reverse("loans:document_layout_create"), {
+            "name": "Precision stationery", "document_type": "loan_ticket",
+            "layout_mode": "ABSOLUTE_OVERLAY", "precision_overlay": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        revision = LoanDocumentLayoutRevision.objects.get(layout__name="Precision stationery")
+        self.assertEqual(revision.definition["schema_version"], 4)
+        self.assertEqual(revision.definition["background_asset_key"], "")
+        editor_url = reverse("loans:document_layout_overlay_designer", args=[revision.pk])
+        editor = self.tenant_get(editor_url)
+        self.assertContains(editor, "This template prints without a background")
+        self.assertContains(editor, 'step="0.1"')
+        self.assertContains(editor, "Value only")
+        self.assertTrue(editor.context["can_preview"])
+        index, block = next((i, b) for i, b in enumerate(revision.definition["blocks"]) if b["binding"] == "loan.number")
+        response = self.tenant_post(editor_url, {
+            "operation": "save_block", "index": index, "block_type": "field",
+            "binding": "loan.number", "x_mm": "10.1", "y_mm": "25.2",
+            "width_mm": "90.3", "height_mm": "8.4", "font_size_pt": block["font_size_pt"],
+            "align": "LEFT", "copy_scope": "BOTH", "value_display": "VALUE_ONLY",
+            "field_label": "Ticket",
+        })
+        self.assertEqual(response.status_code, 302)
+        revision.refresh_from_db()
+        block = revision.definition["blocks"][index]
+        self.assertEqual(block["x_mm"], 10.1)
+        self.assertEqual(block["height_mm"], 8.4)
+        self.assertFalse(block["show_label"])
+        self.assertEqual(block["field_label"], "Ticket")
+        editor = self.tenant_get(editor_url)
+        self.assertContains(editor, 'data-x="10.1"')
+        self.assertContains(editor, 'value="VALUE_ONLY" selected')
+        self.tenant_post(editor_url, {"operation": "save_settings", "page_size": "A4"})
+        revision.refresh_from_db()
+        self.assertEqual(revision.definition["background_asset_key"], "")
+        published = LoanDocumentLayoutService.publish(revision=revision, actor=self.owner)
+        self.assertEqual(published.state, "PUBLISHED")
+
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-PRECISE-00001", state="APPROVED")
+        PawnLoanApprovalSnapshot.objects.create(
+            loan=loan, version=1, approved_by=self.owner,
+            fingerprint="precision-approved-fixture",
+            payload={
+                "loan_number": loan.loan_number, "loan_date": str(loan.loan_date),
+                "principal_amount": str(loan.principal_amount),
+                "monthly_interest_rate": str(loan.monthly_interest_rate),
+                "tenure_months": loan.tenure_months, "borrower_id": loan.borrower_id,
+                "collateral": [],
+            },
+        )
+        LoanDocumentLayoutService.assign(
+            revision=published, workspace=self.tenant, license=license, series=series, actor=self.owner,
+        )
+        preview = self.tenant_get(
+            f"{reverse('loans:document_layout_preview', args=[revision.pk])}?loan={loan.pk}"
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview["X-Rokkad-Preview"], "true")
+        url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
+        first = self.tenant_get(url)
+        self.assertEqual(first.status_code, 200)
+        issue = LoanDocumentIssue.objects.get(pk=first["X-Rokkad-Document-Issue"])
+        self.assertEqual(issue.revision_id, published.pk)
+        self.assertEqual(issue.layout_hash, published.content_hash)
+        replacement = LoanDocumentLayoutService.clone_revision(revision=published, actor=self.owner)
+        definition = replacement.definition
+        definition["blocks"][index]["show_label"] = True
+        replacement = LoanDocumentLayoutService.update_draft(
+            revision=replacement, definition=definition, actor=self.owner,
+        )
+        replacement = LoanDocumentLayoutService.publish(revision=replacement, actor=self.owner)
+        LoanDocumentLayoutService.assign(
+            revision=replacement, workspace=self.tenant, license=license, series=series, actor=self.owner,
+        )
+        reprint = self.tenant_get(url)
+        self.assertEqual(reprint.content, first.content)
+        self.assertEqual(reprint["X-Rokkad-Document-Issue"], first["X-Rokkad-Document-Issue"])
+
     def test_published_ticket_layout_drives_official_issue_and_reprint(self):
         license, series = self._configured_setup()
         loan = self._loan(license, series, "PL-DOC-00001", state="APPROVED")

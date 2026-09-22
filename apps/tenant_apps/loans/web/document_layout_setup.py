@@ -122,7 +122,7 @@ def document_layout_create(request):
             revision = LoanDocumentLayoutService.create_layout(
                 workspace=request.loans_workspace, document_type=document_type,
                 name=form.cleaned_data["name"], definition=starter_layout(
-                    document_type, schema_version=3,
+                    document_type, schema_version=4 if form.cleaned_data["precision_overlay"] else 3,
                     layout_mode=form.cleaned_data["layout_mode"] or "FLOW",
                 ).canonical_dict(),
                 actor=request.user, request=request,
@@ -273,6 +273,7 @@ def document_layout_overlay_designer(request, revision_pk):
                         request.POST,
                         background_keys=background_keys,
                         loan_ticket=layout.document_type == "loan_ticket",
+                        schema_version=layout.schema_version,
                     )
                 else:
                     form = LoanDocumentOverlaySettingsForm(
@@ -323,7 +324,7 @@ def document_layout_overlay_designer(request, revision_pk):
                         definition["sheet"] = None
                         definition["background_asset_key"] = form.cleaned_data["background_asset_key"]
             elif operation in {"add_block", "save_block"}:
-                form = LoanDocumentOverlayBlockForm(request.POST, asset_keys=image_keys)
+                form = LoanDocumentOverlayBlockForm(request.POST, asset_keys=image_keys, schema_version=layout.schema_version)
                 if not form.is_valid():
                     raise ValueError("Overlay block settings are invalid.")
                 block = form.block_definition()
@@ -354,10 +355,13 @@ def document_layout_overlay_designer(request, revision_pk):
             messages.success(request, "Overlay draft updated and validated.")
         return redirect('workspace_loans:document_layout_overlay_designer', revision_pk=revision.pk, workspace_slug=request.workspace.slug)
     page_width_mm, page_height_mm = _OVERLAY_PAGE_DIMENSIONS_MM[layout.page_size]
+    if layout.schema_version >= 4 and layout.page_size == "LETTER":
+        page_width_mm, page_height_mm = 215.9, 279.4
     if layout.schema_version >= 3:
         settings_form = LoanDocumentOverlayLogicalSettingsForm(
             background_keys=background_keys,
             loan_ticket=layout.document_type == "loan_ticket",
+            schema_version=layout.schema_version,
             initial={
                 "page_size": layout.page_size,
                 "background_asset_key": layout.background_asset_key,
@@ -379,7 +383,10 @@ def document_layout_overlay_designer(request, revision_pk):
         )
     return render(request, "loans/setup/documents/overlay_designer.html", {
         "revision": revision, "layout": layout, "settings_form": settings_form,
-        "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys),
+        "add_form": LoanDocumentOverlayBlockForm(asset_keys=image_keys, schema_version=layout.schema_version),
+        "precision_overlay": layout.schema_version >= 4,
+        "geometry_step": "0.1" if layout.schema_version >= 4 else "1",
+        "can_preview": set(layout.background_asset_keys()).issubset(background_keys),
         "image_keys": image_keys, "page_width_mm": page_width_mm,
         "page_height_mm": page_height_mm,
         "legacy_composition_controls": layout.schema_version <= 2,

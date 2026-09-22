@@ -1,21 +1,22 @@
 {% extends "base_tenant.html" %}
+{% load l10n %}
 {% block title %}Visual overlay editor · {{ revision.layout.name }}{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
 <p><a href="{% url 'workspace_loans:document_layout_guide' request.workspace.slug %}#overlay">Overlay guide: page size, field positions, and copy backgrounds</a></p>
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div><h1 class="h3 mb-1">Visual overlay editor</h1><p class="text-muted mb-0">{{ revision.layout.name }} · {{ layout.page_size }} · coordinates from top-left</p></div>
-  <div class="d-flex gap-2">{% if sample_loan and has_background %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_detail' request.workspace.slug revision.pk %}">Assets, JSON, and publishing</a></div>
+  <div class="d-flex gap-2">{% if sample_loan and can_preview %}<a class="btn btn-outline-primary" target="_blank" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}">Preview PDF</a><a class="btn btn-outline-primary" href="{% url 'workspace_loans:document_layout_preview' request.workspace.slug revision.pk %}?loan={{ sample_loan.pk }}&download=1">Test print</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_detail' request.workspace.slug revision.pk %}">Assets, JSON, and publishing</a></div>
 </div>
-{% if not has_background %}<div class="alert alert-warning">Upload a Page background using asset key <code>{{ preview_background_key }}</code> on the revision page. Geometry can be edited now, but preview and publication require that asset.</div>{% endif %}
+{% if precision_overlay and not layout.background_asset_keys %}<div class="alert alert-info">This template prints without a background. Use it on preprinted stationery, or select an uploaded background below for plain-paper printing.</div>{% elif precision_overlay and not can_preview %}<div class="alert alert-warning">Upload the backgrounds selected in this template before previewing or publishing.</div>{% elif not precision_overlay and not has_background %}<div class="alert alert-warning">Upload a Page background using asset key <code>{{ preview_background_key }}</code> on the revision page. Geometry can be edited now, but preview and publication require that asset.</div>{% endif %}
 <div class="alert alert-info">Drag a rectangle to update its X/Y inputs, then select <strong>Save block</strong>. Use the numeric fields for exact size and typography. Always confirm with a PDF test print at 100% scale.</div>
 
 <div class="row g-4">
   <div class="col-xl-8">
-    <div id="overlay-page" class="position-relative bg-white shadow-sm mx-auto overflow-hidden" data-page-width="{{ page_width_mm }}" data-page-height="{{ page_height_mm }}" style="aspect-ratio: {{ page_width_mm }} / {{ page_height_mm }}; max-width: 760px; border: 1px solid #94a3b8; touch-action: none;">
+    <div id="overlay-page" class="position-relative bg-white shadow-sm mx-auto overflow-hidden" data-page-width="{{ page_width_mm|unlocalize }}" data-page-height="{{ page_height_mm|unlocalize }}" data-step="{{ geometry_step }}" style="aspect-ratio: {{ page_width_mm|unlocalize }} / {{ page_height_mm|unlocalize }}; max-width: 760px; border: 1px solid #94a3b8; touch-action: none;">
       {% if has_background %}<img src="{% url 'workspace_loans:document_layout_overlay_background' request.workspace.slug revision.pk %}" alt="PDF background preview" class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: fill; pointer-events:none;">{% endif %}
       {% for block in layout.blocks %}
-      <div class="overlay-block position-absolute border border-primary bg-primary bg-opacity-10 small overflow-hidden" data-index="{{ forloop.counter0 }}" data-width="{{ block.width_mm }}" data-height="{{ block.height_mm }}" style="left: {% widthratio block.x_mm page_width_mm 100 %}%; top: {% widthratio block.y_mm page_height_mm 100 %}%; width: {% widthratio block.width_mm page_width_mm 100 %}%; height: {% widthratio block.height_mm page_height_mm 100 %}%; cursor: move; z-index:2;">
+      <div class="overlay-block position-absolute border border-primary bg-primary bg-opacity-10 small overflow-hidden" data-index="{{ forloop.counter0 }}" data-x="{{ block.x_mm|unlocalize }}" data-y="{{ block.y_mm|unlocalize }}" data-width="{{ block.width_mm|unlocalize }}" data-height="{{ block.height_mm|unlocalize }}" style="left: {% widthratio block.x_mm page_width_mm 100 %}%; top: {% widthratio block.y_mm page_height_mm 100 %}%; width: {% widthratio block.width_mm page_width_mm 100 %}%; height: {% widthratio block.height_mm page_height_mm 100 %}%; cursor: move; z-index:2;">
         <span class="badge text-bg-primary">{{ forloop.counter }} {{ block.type }}</span>{% if block.binding %} {{ block.binding }}{% elif block.text %} {{ block.text }}{% endif %}
       </div>
       {% endfor %}
@@ -29,11 +30,15 @@
             <div class="col-md-3"><label class="form-label">Type</label><select name="block_type" class="form-select"><option value="field"{% if block.type == 'field' %} selected{% endif %}>Field</option><option value="title"{% if block.type == 'title' %} selected{% endif %}>Title</option><option value="image"{% if block.type == 'image' %} selected{% endif %}>Image</option><option value="qr"{% if block.type == 'qr' %} selected{% endif %}>QR</option><option value="verification"{% if block.type == 'verification' %} selected{% endif %}>Verification</option><option value="signature"{% if block.type == 'signature' %} selected{% endif %}>Signature</option><option value="table"{% if block.type == 'table' %} selected{% endif %}>Table</option></select></div>
             <div class="col-md-5"><label class="form-label">Binding</label><input class="form-control" name="binding" value="{{ block.binding }}"></div>
             <div class="col-md-4"><label class="form-label">Image asset key</label><input class="form-control" name="asset_key" value="{{ block.asset_key }}"></div>
+            {% if precision_overlay %}
+            <div class="col-md-5"><label class="form-label" for="display-{{ forloop.counter0 }}">Field display</label><select id="display-{{ forloop.counter0 }}" class="form-select" name="value_display"><option value="LABEL_VALUE"{% if block.show_label %} selected{% endif %}>Label and value</option><option value="VALUE_ONLY"{% if not block.show_label %} selected{% endif %}>Value only</option></select></div>
+            <div class="col-md-7"><label class="form-label" for="label-{{ forloop.counter0 }}">Custom field label (optional)</label><input id="label-{{ forloop.counter0 }}" class="form-control" name="field_label" maxlength="100" value="{{ block.field_label }}"><div class="form-text">Applies to Field blocks. Leave blank to use the standard label.</div></div>
+            {% endif %}
             <div class="col-12"><label class="form-label">Text</label><input class="form-control" name="text" value="{{ block.text }}"></div>
-            <div class="col-4 col-md-2"><label class="form-label">X mm</label><input class="form-control geometry-x" type="number" name="x_mm" value="{{ block.x_mm }}" min="0"></div>
-            <div class="col-4 col-md-2"><label class="form-label">Y mm</label><input class="form-control geometry-y" type="number" name="y_mm" value="{{ block.y_mm }}" min="0"></div>
-            <div class="col-4 col-md-2"><label class="form-label">Width</label><input class="form-control" type="number" name="width_mm" value="{{ block.width_mm }}" min="5"></div>
-            <div class="col-4 col-md-2"><label class="form-label">Height</label><input class="form-control" type="number" name="height_mm" value="{{ block.height_mm }}" min="1"></div>
+            <div class="col-4 col-md-2"><label class="form-label">X mm</label><input class="form-control geometry-x" type="number" name="x_mm" step="{{ geometry_step }}" value="{{ block.x_mm|unlocalize }}" min="0"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Y mm</label><input class="form-control geometry-y" type="number" name="y_mm" step="{{ geometry_step }}" value="{{ block.y_mm|unlocalize }}" min="0"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Width</label><input class="form-control" type="number" name="width_mm" step="{{ geometry_step }}" value="{{ block.width_mm|unlocalize }}" min="5"></div>
+            <div class="col-4 col-md-2"><label class="form-label">Height</label><input class="form-control" type="number" name="height_mm" step="{{ geometry_step }}" value="{{ block.height_mm|unlocalize }}" min="1"></div>
             <div class="col-4 col-md-2"><label class="form-label">Font pt</label><input class="form-control" type="number" name="font_size_pt" value="{{ block.font_size_pt }}" min="6" max="24"></div>
             <div class="col-4 col-md-2"><label class="form-label">Align</label><select class="form-select" name="align"><option value="LEFT"{% if block.align == 'LEFT' %} selected{% endif %}>Left</option><option value="CENTER"{% if block.align == 'CENTER' %} selected{% endif %}>Centre</option><option value="RIGHT"{% if block.align == 'RIGHT' %} selected{% endif %}>Right</option></select></div>
             <div class="col-md-3"><label class="form-label">Copy scope</label><select class="form-select" name="copy_scope"><option value="BOTH"{% if block.copy_scope == 'BOTH' %} selected{% endif %}>Both copies</option><option value="ORIGINAL"{% if block.copy_scope == 'ORIGINAL' %} selected{% endif %}>Original only</option><option value="DUPLICATE"{% if block.copy_scope == 'DUPLICATE' %} selected{% endif %}>Duplicate only</option></select></div>
@@ -54,7 +59,13 @@
   const page = document.getElementById('overlay-page');
   const pageWidth = Number(page.dataset.pageWidth);
   const pageHeight = Number(page.dataset.pageHeight);
+  const step = Number(page.dataset.step);
+  const snap = (value) => Math.round(value / step) * step;
   page.querySelectorAll('.overlay-block').forEach((box) => {
+    box.style.left = `${Number(box.dataset.x) / pageWidth * 100}%`;
+    box.style.top = `${Number(box.dataset.y) / pageHeight * 100}%`;
+    box.style.width = `${Number(box.dataset.width) / pageWidth * 100}%`;
+    box.style.height = `${Number(box.dataset.height) / pageHeight * 100}%`;
     box.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       box.setPointerCapture(event.pointerId);
@@ -65,13 +76,15 @@
         const widthPercent = parseFloat(box.style.width), heightPercent = parseFloat(box.style.height);
         const left = Math.max(0, Math.min(100 - widthPercent, initialLeft + (current.clientX - startX) / rect.width * 100));
         const top = Math.max(0, Math.min(100 - heightPercent, initialTop + (current.clientY - startY) / rect.height * 100));
-        box.style.left = `${left}%`; box.style.top = `${top}%`;
+        const x = Math.min(snap(left * pageWidth / 100), Math.floor((pageWidth - Number(box.dataset.width)) / step + 1e-8) * step);
+        const y = Math.min(snap(top * pageHeight / 100), Math.floor((pageHeight - Number(box.dataset.height)) / step + 1e-8) * step);
+        box.style.left = `${x / pageWidth * 100}%`; box.style.top = `${y / pageHeight * 100}%`;
         const form = document.getElementById(`block-form-${box.dataset.index}`);
-        form.querySelector('.geometry-x').value = Math.round(left * pageWidth / 100);
-        form.querySelector('.geometry-y').value = Math.round(top * pageHeight / 100);
+        form.querySelector('.geometry-x').value = Number(x.toFixed(1));
+        form.querySelector('.geometry-y').value = Number(y.toFixed(1));
       };
       box.addEventListener('pointermove', move);
-      box.addEventListener('pointerup', () => box.removeEventListener('pointermove', move), {once: true});
+      box.addEventListener('lostpointercapture', () => box.removeEventListener('pointermove', move), {once: true});
     });
   });
 })();

@@ -23,8 +23,46 @@ Feature branch: `feature/ticket-template-designer`.
 Baseline: `8b0e1ba3`, also named
 `checkpoint/rls-mvp-before-ticket-designer-20260922`.
 The original checkout remains on `rls-mvp`; feature files live in
-`.worktrees/ticket-template-designer`. This first slice is design documentation
-only. No renderer, schema, runtime setup or saved template has changed.
+`.worktrees/ticket-template-designer`. The initial design and mapping slices are
+complete. The first implementation adds the bounded precision overlay foundation
+described below; it does not alter existing published layouts.
+
+## Implemented foundation and isolated checks
+
+Create **Loan ticket > Exact PDF overlay** and select **Use precision ticket
+overlay** to opt into v4. In the existing visual overlay editor, backgrounds are
+optional; fields offer label/value or value-only display and an optional custom
+label. X/Y/width/height accept 0.1 mm increments. Numeric inputs and drag positions
+share that precision. Blank backgrounds produce data-only output; selected
+backgrounds are printed. Guide-only artwork is not implemented yet.
+
+V1/v2/v3 retain their validation and canonical definitions; v3 remains the default
+creation format. V4 currently accepts loan-ticket overlays only. Required
+business fields, verification and copy validation remain enforced. No database
+migration, issue snapshot extension or new stock-profile schema is in this slice.
+
+From the feature worktree, run the focused renderer, persistence, issuance,
+profile and setup UI checks with:
+
+```powershell
+& ..\..\.venv314\Scripts\python.exe scripts/test_ticket_templates.py --env-file ..\..\.env
+```
+
+The launcher explicitly reads local development connection settings, requires a
+loopback database host, and pins Django's test database to
+`test_rokkad_ticket_template_feature`. Test setup uses owner-backed test settings;
+it is not a web runtime configuration. It keeps synthetic filesystem media under
+`outputs/ticket-template-tests/media`, uses memory email and preserves the test
+database for subsequent runs. That output directory is ignored by Git. No env
+file, production media or customer fixtures are copied into this worktree.
+
+Synthetic checks include PDF coordinates, A5 actual-size copy positions, optional
+background ownership, UI save/preview/publish/issue and byte-identical reprints
+after replacement. Synthetic rendered images were inspected with MuPDF. No live
+feature browser/server, full adversarial RLS rerun, Tamil artwork comparison or
+physical printer acceptance is claimed. Provision a distinct runtime database,
+restricted role configuration, media root and port before manual app testing;
+do not launch this branch using the rehearsal environment.
 
 ## Evidence and acceptance examples
 
@@ -121,7 +159,9 @@ pending. These are implementation targets, not changes to current validators.
 2. Complete for source configuration: 35 frame mappings, candidate coordinates,
    missing capabilities and engineering decisions. Defined synthetic test cases;
    actual media inventory/visual review and executable fixtures remain pending.
-3. Implement only missing overlay/data capabilities and their boundary tests.
+3. In progress: optional backgrounds, value-only/custom-label fields, precision
+   geometry and isolated checks are implemented. Stock profiles, padding/leading,
+   dynamic media/source evidence and reviewed static-stock declarations remain.
 4. Simplify authoring/activation in one editor over existing services; keep JSON
    optional for advanced maintenance, unnecessary for the supported user journey.
 5. Reproduce both examples, test permissions/reprints/compatibility, then conduct

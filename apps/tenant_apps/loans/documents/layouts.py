@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass
 
 from .payloads import PawnLoanDocumentProjectionBuilder
@@ -53,9 +54,9 @@ class LayoutBlock:
     binding: str = ""
     bindings: tuple[str, ...] = ()
     text: str = ""
-    height_mm: int = 4
+    height_mm: int | float = 4
     asset_key: str = ""
-    width_mm: int = 30
+    width_mm: int | float = 30
     blocks: tuple[LayoutBlock, ...] = ()
     columns: tuple[LayoutColumn, ...] = ()
     grid_columns: int = 2
@@ -66,11 +67,13 @@ class LayoutBlock:
     overflow_policy: str = "WRAP"
     max_characters: int = 120
     visible_when: VisibilityCondition | None = None
-    x_mm: int = 0
-    y_mm: int = 0
+    x_mm: int | float = 0
+    y_mm: int | float = 0
     font_size_pt: int = 10
     align: str = "LEFT"
     copy_scope: str = "BOTH"
+    show_label: bool = True
+    field_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -184,6 +187,8 @@ class DocumentLayout:
                     "align": block.align,
                     "copy_scope": block.copy_scope,
                 })
+            if self.schema_version >= 4:
+                value.update({"show_label": block.show_label, "field_label": block.field_label})
             return value
         value = {
             "schema_version": self.schema_version, "document_type": self.document_type,
@@ -270,7 +275,7 @@ class DocumentLayout:
 
 class DocumentLayoutValidator:
     SCHEMA_VERSION = 3
-    SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2, 3})
+    SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2, 3, 4})
 
     @classmethod
     def load(cls, definition):
@@ -301,6 +306,8 @@ class DocumentLayoutValidator:
         if copy_mode not in ALLOWED_COPY_MODES:
             raise LayoutValidationError("Unsupported copy mode.")
         layout_mode, margin_mm, theme = cls._composition_settings(definition, schema_version)
+        if schema_version == 4 and (document_type != "loan_ticket" or layout_mode != "ABSOLUTE_OVERLAY"):
+            raise LayoutValidationError("Schema-v4 currently supports loan-ticket overlays only.")
         blocks = cls._blocks(definition.get("blocks"), document_type, schema_version, layout_mode=layout_mode)
         back_blocks = cls._blocks(definition.get("back_blocks", []), document_type, schema_version, layout_mode=layout_mode)
         header = cls._region(definition.get("header"), document_type, schema_version, "Header")
@@ -339,11 +346,11 @@ class DocumentLayoutValidator:
             has_surface_background = bool(
                 surfaces and any(key for _, key in surfaces.backgrounds)
             )
-            if not background and sheet is None and not has_surface_background:
+            if schema_version < 4 and not background and sheet is None and not has_surface_background:
                 raise LayoutValidationError("Absolute overlay layouts require a background asset key.")
             if header or footer:
                 raise LayoutValidationError("Absolute overlay layouts do not use Flow page regions.")
-            cls._validate_overlay_geometry(blocks + back_blocks, page_size)
+            cls._validate_overlay_geometry(blocks + back_blocks, page_size, precise=schema_version >= 4)
             if sheet:
                 cls._validate_sheet_copy_evidence(sheet, blocks, document_type)
         if schema_version >= 3 and document_type == "loan_ticket":
@@ -507,6 +514,8 @@ class DocumentLayoutValidator:
             allowed = {"type", "binding", "bindings", "text", "height_mm", "asset_key", "width_mm"}
             if schema_version >= 2:
                 allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align", "copy_scope"})
+            if schema_version >= 4:
+                allowed.update({"show_label", "field_label"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -537,11 +546,15 @@ class DocumentLayoutValidator:
             if block_type not in {"title", "signature", "section"} and value.get("text"):
                 raise LayoutValidationError(f"Block type {block_type} does not accept free text.")
             height = value.get("height_mm", 4)
-            if not isinstance(height, int) or not 1 <= height <= 100:
+            if schema_version >= 4:
+                height = cls._precise_mm(height, minimum=1, maximum=100)
+            elif not isinstance(height, int) or not 1 <= height <= 100:
                 raise LayoutValidationError("Spacer/signature height must be between 1 and 100 mm.")
             width = value.get("width_mm", 30)
             maximum_width = 216 if layout_mode == "ABSOLUTE_OVERLAY" else 180
-            if not isinstance(width, int) or not 5 <= width <= maximum_width:
+            if schema_version >= 4:
+                width = cls._precise_mm(width, minimum=5, maximum=maximum_width)
+            elif not isinstance(width, int) or not 5 <= width <= maximum_width:
                 raise LayoutValidationError(f"Block width must be between 5 and {maximum_width} mm.")
             child_blocks = ()
             columns = ()
@@ -564,8 +577,17 @@ class DocumentLayoutValidator:
             font_size_pt = value.get("font_size_pt", 10)
             align = value.get("align", "LEFT")
             copy_scope = value.get("copy_scope", "BOTH")
-            if not isinstance(x_mm, int) or not isinstance(y_mm, int) or x_mm < 0 or y_mm < 0:
+            if schema_version >= 4:
+                x_mm = cls._precise_mm(x_mm, minimum=0, maximum=300)
+                y_mm = cls._precise_mm(y_mm, minimum=0, maximum=400)
+            elif not isinstance(x_mm, int) or not isinstance(y_mm, int) or x_mm < 0 or y_mm < 0:
                 raise LayoutValidationError("Block X/Y coordinates must be non-negative whole millimetres.")
+            show_label = value.get("show_label", True)
+            field_label = value.get("field_label", "")
+            if not isinstance(show_label, bool) or not isinstance(field_label, str) or len(field_label) > 100:
+                raise LayoutValidationError("Field label must be text of at most 100 characters and show_label must be boolean.")
+            if block_type != "field" and (not show_label or field_label):
+                raise LayoutValidationError("Label settings apply to scalar fields only.")
             if not isinstance(font_size_pt, int) or not 6 <= font_size_pt <= 24:
                 raise LayoutValidationError("Block font size must be between 6 and 24 points.")
             if align not in {"LEFT", "CENTER", "RIGHT"}:
@@ -641,16 +663,32 @@ class DocumentLayoutValidator:
                 height, asset_key, width, child_blocks, columns, grid_columns,
                 style_variant, table_columns, repeat_header, value_format,
                 overflow_policy, max_characters, visible_when, x_mm, y_mm,
-                font_size_pt, align, copy_scope,
+                font_size_pt, align, copy_scope, show_label, field_label,
             ))
         return tuple(result)
 
     @staticmethod
-    def _validate_overlay_geometry(blocks, page_size):
+    def _precise_mm(value, *, minimum, maximum):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise LayoutValidationError("Geometry must be a finite number in 0.1 mm increments.")
+        try:
+            number = Decimal(str(value))
+            if not number.is_finite() or not minimum <= number <= maximum or number * 10 != (number * 10).to_integral_value():
+                raise LayoutValidationError("Geometry must be within bounds in 0.1 mm increments.")
+        except InvalidOperation as exc:
+            raise LayoutValidationError("Geometry must be finite.") from exc
+        return int(number) if number == number.to_integral_value() else float(number)
+
+    @staticmethod
+    def _validate_overlay_geometry(blocks, page_size, *, precise=False):
         page_dimensions = {"A4": (210, 297), "A5": (148, 210), "LETTER": (216, 279)}
+        if precise:
+            page_dimensions["LETTER"] = (Decimal("215.9"), Decimal("279.4"))
         page_width, page_height = page_dimensions[page_size]
         for block in blocks:
-            if block.x_mm + block.width_mm > page_width or block.y_mm + block.height_mm > page_height:
+            right = Decimal(str(block.x_mm)) + Decimal(str(block.width_mm)) if precise else block.x_mm + block.width_mm
+            bottom = Decimal(str(block.y_mm)) + Decimal(str(block.height_mm)) if precise else block.y_mm + block.height_mm
+            if right > page_width or bottom > page_height:
                 raise LayoutValidationError(
                     f"Overlay block {block.type} extends beyond the {page_size} page boundary."
                 )
@@ -817,7 +855,7 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
     if schema_version >= 3 and document_type == "loan_ticket":
         definition["surfaces"] = None
     if layout_mode == "ABSOLUTE_OVERLAY":
-        definition["background_asset_key"] = "form.background"
+        definition["background_asset_key"] = "form.background" if schema_version < 4 else ""
     return DocumentLayoutValidator.load(definition)
 
 

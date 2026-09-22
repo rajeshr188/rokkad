@@ -225,6 +225,20 @@ sample-loan values, source snapshots, customer/collateral images and issue PDFs.
 Cloning static assets preserves isolation and hash checks; dynamic bindings stay
 binding names, never copied customer data.
 
+## Foundation implementation status (2026-09-22)
+
+The feature implements v4 optional printed backgrounds, value-only/custom-label
+scalar fields and 0.1 mm geometry in the existing overlay editor. A dedicated
+test launcher pins the local test database and filesystem media. Synthetic PDF
+tests cover actual-size A5 copy positioning and background isolation; UI tests
+cover first issue and unchanged reprints after replacing the template.
+
+The contracts below still describe the full target. Stock-aware profile v2,
+guide-only preview, padding/leading, richer payload/media, source snapshots and
+paired activation remain unimplemented. Existing mandatory identity/verification
+rules remain intact; do not treat these starter layouts as converted JCL/JSK
+templates. See the plan for isolated test commands and manual-runtime limits.
+
 ## Minimal editor and implementation order
 
 One page: template name; paper/stock/copies; Original/Duplicate/back tabs; canvas;

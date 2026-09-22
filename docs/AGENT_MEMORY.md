@@ -22,7 +22,11 @@ do not add a parallel legacy renderer or Girvi dependencies. JCL plain-paper and
 JSK preprinted A5 are acceptance examples of one client-configurable editor.
 Preserve historical issues and tenant isolation. Runtime work requires a separate
 database/media location; Git isolation alone does not protect rehearsal data.
-Owner acceptance precedes merge. This branch currently contains design only.
+Owner acceptance precedes merge. The feature now implements opt-in v4 ticket
+overlays: optional backgrounds, value-only/custom-label fields and 0.1 mm geometry.
+Existing creation defaults and v1/v2/v3 contracts remain unchanged. The isolated
+test launcher pins a local test database and worktree-local filesystem media;
+it does not start a feature web server. See the plan for the command and limits.
 The [frame mapping contract](implementation/ticket-template-frame-mapping.md)
 captures all 35 selected JCL/JSK frames and the chosen additive schema/evidence
 changes. Preserve explicit differences in quantity, legacy live value and license

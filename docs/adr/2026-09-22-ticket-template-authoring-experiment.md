@@ -32,8 +32,10 @@ The bounded extension needs optional backgrounds/data-only printing, value-only
 fields, production-equivalent customer/media bindings and sufficiently precise
 geometry. Review visible business requirements separately from internal audit
 evidence. The [implementation contract](../implementation/ticket-template-frame-mapping.md)
-now selects layout v4, stock-aware profile v2 and ticket payload v2; all remain
-unimplemented. Prior schema interpretation and exact stored artifacts survive.
+now selects layout v4, stock-aware profile v2 and ticket payload v2. V4 optional
+backgrounds, field labels and precision geometry are implemented on the feature
+branch. Stock profiles, payload/photo evidence and other authoring changes remain
+pending. Prior schema interpretation and exact stored artifacts survive.
 
 Party identity/contact/photo data is captured at first issue; approved economics
 and collateral/photo evidence retain their existing snapshot authority. A nullable
@@ -51,9 +53,11 @@ explicit acceptance gates, not silent compatibility assumptions.
 ## Status and compatibility
 
 The owner approved branch isolation and a design-first experiment, not a merged
-replacement. This proposed ADR does not yet supersede the existing schema,
-mandatory background/binding validation or publication rules. Compatibility must
-be proven for published definitions and issued artifacts before adoption.
+replacement. Existing schema/background/binding and publication rules remain in
+force for prior versions. The opt-in v4 foundation permits absent backgrounds;
+it retains existing mandatory business/verification fields. Compatibility checks
+pass for legacy rendering and stored reprints; physical and owner acceptance
+remain required before adoption.
 
 The plan defines acceptance examples, exclusions and isolated runtime rules.
 Keep `rls-mvp` available at checkpoint `8b0e1ba3`; use the feature worktree and a
@@ -70,4 +74,4 @@ gates, not assumptions from unit tests.
 - Keep current authoring unchanged: does not satisfy self-service customization
   or JSK's working data-only stationery workflow.
 
-Implementation is not claimed by this design record.
+The feature status/plan records partial implementation and remaining acceptance.

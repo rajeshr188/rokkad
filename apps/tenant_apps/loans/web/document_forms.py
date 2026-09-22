@@ -8,6 +8,12 @@ from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
 
 
 class LoanDocumentLayoutCreateForm(forms.Form):
+    field_order = ("name", "document_type", "layout_mode", "precision_overlay")
+    precision_overlay = forms.BooleanField(
+        required=False, label="Use precision ticket overlay",
+        help_text="Loan-ticket overlays only: optional backgrounds, value-only fields and 0.1 mm positioning.",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     name = forms.CharField(max_length=100)
     document_type = forms.ChoiceField(
         choices=(
@@ -23,7 +29,7 @@ class LoanDocumentLayoutCreateForm(forms.Form):
         choices=(("FLOW", "Flow document"), ("ABSOLUTE_OVERLAY", "Exact PDF overlay")),
         initial="FLOW",
         required=False,
-        help_text="Flow paginates automatically; overlay places data at exact millimetre coordinates over a PDF background.",
+        help_text="Flow paginates automatically; overlay places data at exact millimetre coordinates. Precision ticket overlays can also print without a background.",
     )
 
     def __init__(self, *args, **kwargs):
@@ -31,6 +37,14 @@ class LoanDocumentLayoutCreateForm(forms.Form):
         self.fields["name"].widget.attrs["class"] = "form-control"
         self.fields["document_type"].widget.attrs["class"] = "form-select"
         self.fields["layout_mode"].widget.attrs["class"] = "form-select"
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("precision_overlay") and (
+            cleaned.get("document_type") != "loan_ticket" or cleaned.get("layout_mode") != "ABSOLUTE_OVERLAY"
+        ):
+            self.add_error("precision_overlay", "Choose Loan ticket and Exact PDF overlay to use precision editing.")
+        return cleaned
 
 
 class LoanDocumentLayoutDefinitionForm(forms.Form):
@@ -174,8 +188,9 @@ class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
     original_back = forms.ChoiceField(required=False, label="Original Terms background")
     duplicate_back = forms.ChoiceField(required=False, label="Duplicate D3 background")
 
-    def __init__(self, *args, background_keys=(), loan_ticket=True, **kwargs):
+    def __init__(self, *args, background_keys=(), loan_ticket=True, schema_version=3, **kwargs):
         super().__init__(*args, **kwargs)
+        self.schema_version = schema_version
         choices = [("", "Not used")] + [
             (key, key) for key in sorted(set(background_keys) | {"form.background"})
         ]
@@ -194,7 +209,7 @@ class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
-        if not cleaned.get("background_asset_key") and not cleaned.get("original_front"):
+        if self.schema_version < 4 and not cleaned.get("background_asset_key") and not cleaned.get("original_front"):
             self.add_error(
                 "background_asset_key",
                 "Choose a shared background or an Original front background.",
@@ -212,6 +227,11 @@ class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
 
 
 class LoanDocumentOverlayBlockForm(forms.Form):
+    value_display = forms.ChoiceField(
+        required=False, initial="LABEL_VALUE",
+        choices=(("LABEL_VALUE", "Label and value"), ("VALUE_ONLY", "Value only")),
+    )
+    field_label = forms.CharField(required=False, max_length=100, label="Custom field label")
     block_type = forms.ChoiceField(choices=(
         ("field", "Field"), ("title", "Title"), ("image", "Image"),
         ("qr", "QR code"), ("verification", "Verification"),
@@ -231,8 +251,18 @@ class LoanDocumentOverlayBlockForm(forms.Form):
         choices=(("BOTH", "Both copies"), ("ORIGINAL", "Original only"), ("DUPLICATE", "Duplicate only")),
     )
 
-    def __init__(self, *args, asset_keys=(), **kwargs):
+    def __init__(self, *args, asset_keys=(), schema_version=3, **kwargs):
         super().__init__(*args, **kwargs)
+        self.schema_version = schema_version
+        if schema_version >= 4:
+            for name, minimum, maximum in (("x_mm", 0, 300), ("y_mm", 0, 400), ("width_mm", 5, 216), ("height_mm", 1, 100)):
+                self.fields[name] = forms.DecimalField(
+                    min_value=minimum, max_value=maximum, max_digits=4, decimal_places=1,
+                    widget=forms.NumberInput(attrs={"step": "0.1"}),
+                )
+        else:
+            self.fields.pop("value_display")
+            self.fields.pop("field_label")
         field_choices = sorted((value, label) for label, value in PawnLoanDocumentProjectionBuilder.FIELD_KEYS.items())
         section_choices = sorted((value, f"Table: {label}") for label, value in PawnLoanDocumentProjectionBuilder.SECTION_KEYS.items())
         self.fields["binding"].choices = [("", "Verification ID / none")] + field_choices + section_choices
@@ -269,6 +299,12 @@ class LoanDocumentOverlayBlockForm(forms.Form):
             block["asset_key"] = value["asset_key"]
         if value.get("text"):
             block["text"] = value["text"]
+        if self.schema_version >= 4:
+            for name in ("x_mm", "y_mm", "width_mm", "height_mm"):
+                block[name] = float(block[name])
+            if value["block_type"] == "field":
+                block["show_label"] = value.get("value_display") != "VALUE_ONLY"
+                block["field_label"] = value.get("field_label", "")
         return block
 
 

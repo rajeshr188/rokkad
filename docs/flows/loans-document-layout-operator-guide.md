@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-09
+updated: 2026-09-22
 tags: [loans, documents, printing, operator-guide]
 related:
   - ../plans/loans-configurable-documents-plan.md
@@ -17,6 +17,18 @@ documents. Normal loan staff do not need this setup area; their existing Print
 buttons automatically use the assigned published layout.
 
 ## Before You Start
+
+**Feature experiment:** in `feature/ticket-template-designer`, choose **Loan
+ticket**, **Exact PDF overlay**, then **Use precision ticket overlay** when
+creating a draft. This enables optional backgrounds, value-only/custom-label
+fields and 0.1 mm positions/sizes in the visual overlay editor. Leave every
+background selection empty for data-only stationery printing; any selected
+background will be printed. Preview-only stationery guides are still pending.
+Use a matching logical page size and an **Actual size** print profile when
+calibrating preprinted stock. Existing layouts retain their original rules.
+The feature currently has isolated automated tests, not a running manual-test
+server; follow the [feature plan](../plans/ticket-template-designer.md) before
+starting one.
 
 Open **Loans > Setup > Document layouts**, or visit:
 
