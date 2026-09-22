@@ -19,6 +19,11 @@ imports one complete frozen snapshot for JCL, JSK and Lakshmi together.
 
 ## Readiness before scheduling downtime
 
+The owner added a pre-cutover UX/accessibility/onboarding redesign on September 22,
+covering desktop, tablet/phone and English/Hindi. Complete its
+[task-based acceptance](../plans/project-wide-ux-revamp.md) before scheduling the
+freeze. Local design work does not require buying the production server now.
+
 | Work | Current evidence / remaining action |
 | --- | --- |
 | Destination server | Owner selected separate Linode; creation, SSH address and verified access pending. |
@@ -155,7 +160,9 @@ target records to simulate rollback.
 
 ## Immediate next action
 
-Create the separate Linode server and provide its IP/SSH login identity through the
-normal access setup. Then provision the clean target and permanent R2 credentials,
-finish guarded production media admission, and run a timed rehearsal on that host.
+Begin the prioritized UX audit and redesign on isolated data. When a hosted review
+or deployment rehearsal is needed, create the separate Linode server and provide
+its IP/SSH login identity through normal access setup. Provision the clean target
+and permanent R2 credentials, finish guarded production media admission, and run a
+timed rehearsal on that host after the redesigned workflows are accepted.
 No freeze date, DNS switch or production financial import has been executed.

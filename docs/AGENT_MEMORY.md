@@ -36,6 +36,14 @@ permissions, lifecycle, billing, entitlements and RLS are separate checks. Read
 
 ## Production migration boundary
 
+The owner reprioritized a thorough accessibility, onboarding and daily-workflow
+redesign before cutover on September 22. Staff need desktop, tablet and phone
+support in English and Hindi. Follow [the UX plan](plans/project-wide-ux-revamp.md),
+building on the counter shell. Keep the old app live and the accepted rehearsal
+intact; defer final source freeze and switch until redesigned journeys are accepted.
+The separate production server is still planned, but need not be purchased before
+local design work. CPU/RAM sizing recommendations are provisional until measured.
+
 Linode production at `4312573fa2dca9f8bea3abd1ab84aadb5bd1e1cd` is a historical
 ancestor of `rls-mvp`, but runs the former `django-tenants` schema-per-Company
 deployment. Treat JCL, JSK and Lakshmi Pawn Brokers as a read-only source-to-RLS

@@ -190,6 +190,11 @@ product capability.
 
 ## Next recommended action
 
+The owner subsequently prioritized the
+[accessibility and user-flow redesign](../plans/project-wide-ux-revamp.md) before
+cutover, for desktop/tablet/phone in English and Hindi. Keep the existing production
+app live while that work is accepted; procurement can wait until hosted testing.
+
 The owner selected a separate Linode server on September 22; it is not yet created.
 Use [the concrete cutover runbook](../implementation/linode-production-cutover.md)
 for readiness, timing, the final freeze and rollback. The opt-in production R2

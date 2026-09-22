@@ -7,6 +7,21 @@ tags: [status, architecture]
 
 # Status
 
+## UX and onboarding redesign now precedes cutover (2026-09-22)
+
+The owner requires a thorough accessibility and user-flow redesign before moving
+production. Confirmed targets: desktop, tablet/phone, **English and Hindi**. The
+[existing UX plan](plans/project-wide-ux-revamp.md) now defines a live task audit,
+first-day/returning-customer prototypes, incremental implementation and bilingual
+accessibility/operator acceptance. Initial source review identified a tour that
+collects preferences and obsolete schema/DEA onboarding documentation; these are
+audit inputs, not a claim that all live screens have been tested or redesigned.
+
+The accepted migration/media evidence remains intact. Production stays live; the
+final freeze and switch follow UX acceptance and deployment readiness. The separate
+server is still not created; procurement is no longer the immediate next task.
+No UI code, financial behavior or infrastructure changed in this planning update.
+
 ## Separate-server cutover preparation (2026-09-22)
 
 The owner selected a separate Linode server and confirmed it is not yet created.

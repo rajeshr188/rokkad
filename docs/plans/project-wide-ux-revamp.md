@@ -1,14 +1,97 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-09-22
 tags: [ux, ui, product, roadmap]
 related: [active.md, ../implementation/browser-acceptance.md, ../STATUS.md]
 ---
 
 # Project-wide UI/UX revamp
 
-## Current design checkpoint
+## Current priority: redesign before production cutover (September 22)
+
+The owner requested a thorough UI/UX and user-flow redesign for accessibility,
+ease of use and onboarding **before cutover**. Staff use desktop, tablet and phone;
+the required interface languages are **English and Hindi**. This is the next product
+workstream. The old Linode production app stays live. Preserve the accepted data
+and media rehearsal; take a fresh final snapshot only after the redesigned flows
+and production readiness are accepted. Server procurement can wait until a hosted
+review or timed deployment rehearsal is needed.
+
+Build on the existing counter-focused shell and ordinary Django/Bootstrap stack.
+Evaluate complete tasks with novice users moving from paper registers. A visual
+refresh alone does not satisfy this request. Existing approvals establish a useful
+baseline, not acceptance of all current flows or a reason to skip accessibility.
+
+### Audit and delivery sequence
+
+1. Inventory live routes and actual owner/staff journeys using isolated data.
+   Record concrete friction with route, role, device, language, task, observed
+   behavior and proposed fix. Include successful paths, invalid inputs, missing
+   setup, empty data, denied access, interruptions and retry recovery. Separate
+   observed failures from hypotheses; do not report a source-only audit as browser
+   or assistive-technology acceptance.
+2. Define the shared navigation, terminology, form/error patterns and English/Hindi
+   language behavior. Put daily counter work first and owner administration behind
+   its existing permissions. Keep the active branch visible. Prototype onboarding
+   through the first loan and a returning customer's release at desktop and phone
+   sizes before spreading new patterns across screens.
+3. Implement the first complete journey: sign in/join branch, see the next required
+   setup action, find or add a customer, enter collateral/photos, review server
+   calculations, approve/disburse and print. Keep optional detail available without
+   asking new users to understand every policy screen first.
+4. Extend the tested patterns to daily search, customer/loan details, interest and
+   elapsed-period explanations, supported collections/full release, item handoff,
+   reversals, closed history, custody, Rates and notifications. Import/export review
+   needs plain errors and outcomes; a new legacy Migration Center is not required.
+5. Complete owner setup, team/access, account recovery, billing, documents and
+   settings. Separate owner onboarding from an invited staff member's introduction
+   and from a migrated branch resuming work. Do not force migrated users to create
+   another Workspace or repeat import setup.
+6. Run accessibility and task-based acceptance in both languages on desktop,
+   tablet and phone. Then rerun migration, financial and isolation regression checks
+   against the release before the final timed cutover rehearsal.
+
+### Acceptance conditions
+
+- Target WCAG 2.2 AA for the redesigned journeys, with automated checks plus manual
+  keyboard, focus order/visibility, screen-reader, zoom/reflow, contrast and touch
+  testing. A passing automated scan is not a conformance claim. Use the
+  [W3C reference](https://www.w3.org/WAI/WCAG22/quickref/) for the exact criteria.
+- Every field has a useful label; errors explain how to recover and link to the
+  affected field. Preserve valid input and make browser-required file reselection
+  clear. Loading, success and error states are perceivable without relying on color.
+- English/Hindi selection persists appropriately, sets the page language, and
+  covers navigation, onboarding, help, validation, status and action labels. Test
+  Hindi text expansion, fonts and screen-reader pronunciation. Do not translate
+  customer names/source evidence or silently change dates, amounts or identifiers.
+  Review terminology with branch operators; translation is not just a language menu.
+- Desktop workflows support keyboard operation; touch layouts do not depend on
+  hover, hide the primary action or require navigating a wide desktop table.
+  Test physical Android/tablet photo upload and actual receipt printing before
+  release; simulated devices do not establish hardware acceptance.
+- First-time operators can find an existing customer, create a supported loan,
+  explain the displayed interest period, complete a full release and find its
+  receipt without developer guidance. Record completion, assistance, errors and
+  time against the current baseline; resolve critical task blockers before cutover.
+- Setup completion reflects actual lending prerequisites. Account creation, an
+  optional tour and Workspace creation must not imply readiness to lend.
+- Keep existing authorization, RLS, immutable evidence, idempotency and financial
+  services. Backend readiness rules remain authoritative. Do not present ordinary
+  partial repayment on imported openings as supported or change money calculations
+  merely to simplify a screen.
+
+### Initial source review (not a completed live UX audit)
+
+| Evidence | Finding / next verification |
+| --- | --- |
+| `templates/components/navigation/sidebar.html` | Daily actions and branch scope already exist; labels include Parties. Test customer-facing terminology with English/Hindi operators before renaming a shared domain concept. |
+| `templates/onboarding/step_tour.html`, `apps/onboarding/views.py` | Feature Tour currently collects preferences. Align the promised learning experience with the actual task and distinguish it from lending setup. |
+| `apps/onboarding/views.py:onboarding_complete` | The active completion route redirects to setup/list. The celebratory `complete.html` is not proof of the live completion journey; trace routes in the audit. |
+| `docs/flows/workspace-onboarding.md` | Still describes tenant schemas and retired DEA seeds. Replace after tracing current services; do not use this obsolete description as the redesign contract. |
+| September counter implementation | Shared shell and some desktop/mobile checks exist; complete keyboard, screen-reader, Hindi and physical device acceptance are not established. |
+
+## Previous design checkpoint (September 8)
 
 The user approved the counter-first visual direction and asked to implement the
 shared navigation and loan workflow, with more collateral detail in the summary.
