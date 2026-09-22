@@ -14,6 +14,16 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+The owner authorized a design-first ticket-template experiment on
+`feature/ticket-template-designer`, isolated in its own worktree from baseline
+`8b0e1ba3` on `rls-mvp`. Follow [the bounded plan](plans/ticket-template-designer.md).
+Use template/frame authoring concepts over the existing Loans document pipeline;
+do not add a parallel legacy renderer or Girvi dependencies. JCL plain-paper and
+JSK preprinted A5 are acceptance examples of one client-configurable editor.
+Preserve historical issues and tenant isolation. Runtime work requires a separate
+database/media location; Git isolation alone does not protect rehearsal data.
+Owner acceptance precedes merge. This branch initially contains design only.
+
 Owner/team forms use ordinary explicit POST actions and the existing audited
 control-plane services. Invitation and role choices come from role policy; role
 names are stored identities, not translated permission promises. Workspace-local

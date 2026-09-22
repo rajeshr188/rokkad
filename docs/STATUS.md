@@ -7,6 +7,23 @@ tags: [status, architecture]
 
 # Status
 
+## Isolated ticket-template design experiment (2026-09-22)
+
+The owner authorized `feature/ticket-template-designer`, based on checkpoint
+`8b0e1ba3` and kept in `.worktrees/ticket-template-designer`. The original checkout
+remains on `rls-mvp`; the named checkpoint branch is
+`checkpoint/rls-mvp-before-ticket-designer-20260922`. Both are local references;
+no remote push or deployment was requested.
+
+The [design plan](plans/ticket-template-designer.md) defines the simple authoring
+journey, required frame capabilities, JCL/JSK acceptance examples, remaining
+schema/evidence decisions and merge/fallback gates. The
+[proposed ADR](adr/2026-09-22-ticket-template-authoring-experiment.md) retains the
+existing issuance pipeline while simplifying authoring. This slice changes docs
+only; printing code, schemas and saved layouts are unchanged. A separate feature
+database/media/port must be provisioned before runtime testing; none is created
+by this slice. No new visual PDF or physical printer acceptance is claimed.
+
 ## Baseline checkpoint before ticket-template experiment (2026-09-22)
 
 The owner requested a committed fallback and a separate feature branch before

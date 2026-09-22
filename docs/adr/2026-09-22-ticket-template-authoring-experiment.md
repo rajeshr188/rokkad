@@ -1,0 +1,58 @@
+---
+status: proposed
+owner: loans
+updated: 2026-09-22
+tags: [adr, loans, templates, printing, experiment]
+related:
+  - 2026-08-06-loans-versioned-configurable-documents.md
+  - 2026-08-09-loans-logical-layout-and-print-profile-separation.md
+  - ../plans/ticket-template-designer.md
+---
+
+# Simplify template authoring while preserving document issuance
+
+The owner wants clients to create their own ticket designs. Production's template
+and positioned-frame approach already serves JCL plain-paper and JSK preprinted
+stationery. The successor has stronger versioning and issuance boundaries but
+exposes setup complexity and lacks several production authoring capabilities.
+
+## Proposed decision
+
+Evaluate a single template/frame editor over the existing Loans layout blocks,
+assets, print profiles, publication, assignments and issue services. Reuse the
+production authoring concepts and reviewed design data, not its Girvi-coupled
+models or renderer. Do not create another source of loan financial facts.
+
+Present paper/copy choices with the design in one user journey. Retain separate
+internal layout and print-profile contracts and immutable published versions;
+client simplicity does not require mutable historical documents. Preserve RLS,
+authorization, approved financial evidence and exact-byte artifact reprints.
+
+The bounded extension needs optional backgrounds/data-only printing, value-only
+fields, production-equivalent customer/media bindings and sufficiently precise
+geometry. Review visible business requirements separately from internal audit
+evidence. Schema/evidence details remain design work before implementation.
+
+## Status and compatibility
+
+The owner approved branch isolation and a design-first experiment, not a merged
+replacement. This proposed ADR does not yet supersede the existing schema,
+mandatory background/binding validation or publication rules. Compatibility must
+be proven for published definitions and issued artifacts before adoption.
+
+The plan defines acceptance examples, exclusions and isolated runtime rules.
+Keep `rls-mvp` available at checkpoint `8b0e1ba3`; use the feature worktree and a
+separate database/media location for experimentation. Reverting Git alone is not
+a database rollback. Physical printer and owner authoring acceptance are merge
+gates, not assumptions from unit tests.
+
+## Alternatives
+
+- Port the old mutable models/renderer wholesale: loses the successor's issuance
+  boundaries and couples printing back to retired domain models.
+- Add the old engine alongside the current one: doubles maintenance and makes
+  historical output and configuration harder to reason about.
+- Keep current authoring unchanged: does not satisfy self-service customization
+  or JSK's working data-only stationery workflow.
+
+Implementation is not claimed by this design record.
