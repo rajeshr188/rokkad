@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -36,6 +37,8 @@ from apps.tenant_apps.loans.services.pawn_economics import (
     resolve_pawn_draft_economics,
 )
 from apps.tenant_apps.party.models import Party
+
+logger = logging.getLogger(__name__)
 
 
 class PawnDraftError(ValueError):
@@ -153,7 +156,13 @@ def _save_draft_with_photos(save_draft, *, photos, actor):
     except Exception:
         for storage, name in stored_files:
             if name:
-                storage.delete(name)
+                try:
+                    storage.delete(name)
+                except Exception as cleanup_error:
+                    # A storage outage may also prevent compensation. Preserve
+                    # the original error and record the orphan for reconciliation.
+                    logger.error("Rolled-back draft photo cleanup failed: %s (%s).",
+                                 name, type(cleanup_error).__name__)
         raise
 
 

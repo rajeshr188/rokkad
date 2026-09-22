@@ -710,6 +710,89 @@ class PawnDraftUiTests(WorkspaceTestCase):
             self.assertEqual(str(response.context["form"][field].value()), str(payload[field]))
         self.assertFalse(PawnLoan.objects.exists())
 
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_upload_errors_preserve_form_and_rollback_draft_before_retry(self):
+        from botocore.exceptions import SSLError, ClientError
+        from apps.tenant_apps.loans.models import PawnCollateralPhoto, PawnCollateralItem
+        license, series = self._configured_setup()
+        storage = PawnCollateralPhoto._meta.get_field("file").storage
+        errors = (
+            SSLError(endpoint_url="https://private-storage.invalid/secret-key", error="unexpected EOF"),
+            ClientError({"Error": {"Code": "AccessDenied", "Message": "private provider detail"}}, "PutObject"),
+            OSError("private filesystem detail"),
+        )
+        for error in errors:
+            with self.subTest(error=type(error).__name__), patch.object(storage, "save", side_effect=error):
+                payload = self._payload(license, series)
+                response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+                self.assertContains(response, "The collateral photo could not be uploaded.")
+                self.assertContains(response, "The draft was not saved.")
+                self.assertNotContains(response, "secret-key")
+                self.assertNotContains(response, "private provider detail")
+                self.assertNotContains(response, "private filesystem detail")
+                for field in ("borrower", "series", "product_version", "loan_date", "tenure_months"):
+                    self.assertEqual(str(response.context["form"][field].value()), str(payload[field]))
+                self.assertEqual(response.context["formset"].forms[0]["description"].value(), "Gold chain")
+                self.assertFalse(PawnLoan.objects.exists())
+                self.assertFalse(PawnCollateralItem.objects.exists())
+                self.assertFalse(PawnCollateralPhoto.objects.exists())
+                self.assertEqual(LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN").next_number, 1)
+        response = self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(PawnLoan.objects.get().loan_number, "PL-A-00001")
+        self.assertEqual(PawnCollateralPhoto.objects.count(), 1)
+
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_edit_upload_failure_keeps_saved_draft_and_existing_photo(self):
+        from botocore.exceptions import SSLError
+        from apps.tenant_apps.loans.models import PawnCollateralPhoto
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        item = loan.collateral_items.get()
+        photo = item.photos.get()
+        payload = self._payload(license, series)
+        payload.update({"collateral-0-collateral_item_id": item.pk,
+                        "collateral-0-description": "Changed description", "tenure_months": "6"})
+        error = SSLError(endpoint_url="https://private-storage.invalid/key", error="unexpected EOF")
+        with patch.object(PawnCollateralPhoto._meta.get_field("file").storage, "save", side_effect=error):
+            response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        self.assertContains(response, "The collateral photo could not be uploaded.")
+        self.assertEqual(response.context["form"]["tenure_months"].value(), "6")
+        loan.refresh_from_db()
+        item.refresh_from_db()
+        self.assertEqual(loan.tenure_months, 3)
+        self.assertEqual(item.description, "Gold chain")
+        self.assertEqual(item.photos.get().pk, photo.pk)
+        self.assertTrue(photo.file.storage.exists(photo.file.name))
+        self.assertEqual(PawnLoan.objects.count(), 1)
+
+    def test_second_upload_and_cleanup_failure_do_not_hide_recoverable_error(self):
+        from botocore.exceptions import SSLError
+        from apps.tenant_apps.loans.models import PawnCollateralPhoto, PawnCollateralItem
+        license, series = self._configured_setup()
+        storage = PawnCollateralPhoto._meta.get_field("file").storage
+        error = SSLError(endpoint_url="https://private-storage.invalid/key", error="unexpected EOF")
+        payload = self._mixed_metal_payload(license, series)
+        payload["collateral-1-photograph"] = SimpleUploadedFile(
+            "second.jpg", b"\xff\xd8\xfftest-evidence", content_type="image/jpeg")
+        with patch.object(storage, "save", side_effect=["test-only-first.jpg", error]), patch.object(
+            storage, "delete", side_effect=error
+        ), self.assertLogs("apps.tenant_apps.loans.services.pawn_drafts", level="ERROR") as logs:
+            response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+        self.assertContains(response, "The collateral photo could not be uploaded.")
+        self.assertIn("test-only-first.jpg", logs.output[0])
+        self.assertFalse(PawnLoan.objects.exists())
+        self.assertFalse(PawnCollateralItem.objects.exists())
+        self.assertFalse(PawnCollateralPhoto.objects.exists())
+        self.assertEqual(LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN").next_number, 1)
+
     def test_edit_post_keeps_disabled_series_and_product_and_borrower(self):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))

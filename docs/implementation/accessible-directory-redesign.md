@@ -425,3 +425,34 @@ accepted rehearsal. English and the default viewport were restored, with the tea
 preview retained. Populated member actions and logo binding have isolated server
 test coverage; real email delivery, physical touch, screen-reader and staff task
 acceptance remain separate pre-cutover checks.
+
+## Collateral upload failure recovery (September 22)
+
+The first manual JCL loan attempt exposed a transport error during the R2 photo
+write. The atomic draft command already rolled back its database work, but the
+provider exception escaped to Django's debug page. Collateral media now translates
+SDK/filesystem failures into its existing domain error, so normal create/edit
+adapters re-render bound fields and photo-reselection guidance. Provider URLs and
+details are excluded from form errors. Cleanup failures are logged with the
+unreferenced object name and do not mask the original failure; this does not claim
+transactional rollback of remote storage or automatic orphan reconciliation.
+
+The explicit rehearsal/production R2 configurations retain HTTPS verification and
+use standard retries with two total attempts, 5-second connect and 15-second read
+timeouts. These bound individual network operations, not the total multi-photo
+form duration. See [Botocore configuration](https://docs.aws.amazon.com/botocore/latest/reference/config.html)
+for timeout and total-attempt semantics. No extra application retry loop or TLS
+bypass was introduced.
+
+Actual R2 upload/readback succeeded with small and 2.1 MB synthetic images. The
+full Django form path succeeded against the rehearsal storage, hash-verified its
+photo, and then rolled back its diagnostic database rows and removed its own
+object. Another probe timed out and returned the new form error. Connectivity is
+therefore intermittent; a successful probe is not an availability guarantee.
+Rehearsal remains on the restricted database role and the new server process
+serves the normal loan form. The failed manual draft did not consume its number.
+
+All 109 draft UI/service, collateral media and deployment checks passed on a fresh
+database, including create retry, edit rollback and secondary cleanup failures.
+Gettext compilation and supported-app import boundaries pass. These checks do not
+claim uninterrupted network availability or completion of the staff walkthrough.

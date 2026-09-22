@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from io import BytesIO
 
+from botocore.exceptions import BotoCoreError, ClientError
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils.translation import gettext as _
 from reportlab.graphics import renderPDF
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.shapes import Drawing
@@ -24,6 +27,7 @@ from apps.tenant_apps.loans.models import (
 
 
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
+logger = logging.getLogger(__name__)
 ALLOWED_SIGNATURES = (
     ("image/jpeg", (b"\xff\xd8\xff",)),
     ("image/png", (b"\x89PNG\r\n\x1a\n",)),
@@ -97,16 +101,25 @@ def _append_collateral_photo(collateral_item_id, *, upload, actor, workflow_sour
     for chunk in upload.chunks() if hasattr(upload, "chunks") else iter(lambda: upload.read(64 * 1024), b""):
         digest.update(chunk)
     upload.seek(position)
-    return PawnCollateralPhoto.objects.create(
-        collateral_item=item,
-        file=upload,
-        original_filename=(getattr(upload, "name", "collateral-photo") or "collateral-photo")[:255],
-        mime_type=mime_type,
-        sha256=digest.hexdigest(),
-        byte_size=int(upload.size),
-        workflow_source=workflow_source,
-        captured_by=actor,
-    )
+    try:
+        return PawnCollateralPhoto.objects.create(
+            collateral_item=item,
+            file=upload,
+            original_filename=(getattr(upload, "name", "collateral-photo") or "collateral-photo")[:255],
+            mime_type=mime_type,
+            sha256=digest.hexdigest(),
+            byte_size=int(upload.size),
+            workflow_source=workflow_source,
+            captured_by=actor,
+        )
+    except (BotoCoreError, ClientError, OSError) as exc:
+        # Let the enclosing command roll back before its adapter renders errors.
+        # Provider URLs and transport details must not become form messages.
+        logger.warning("Collateral photo upload failed (%s).", type(exc).__name__)
+        raise PawnCollateralMediaError(_(
+            "The collateral photo could not be uploaded. Select the photo again and retry. "
+            "If this continues, contact the workspace owner."
+        )) from exc
 
 
 @transaction.atomic

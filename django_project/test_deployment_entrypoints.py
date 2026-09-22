@@ -69,6 +69,7 @@ class ProductionMediaSettingsTests(SimpleTestCase):
             "print(json.dumps(dict(location=b.location, acl=b.default_acl, signed=b.querystring_auth, "
             "domain=b.custom_domain, overwrite=b.file_overwrite, expiry=b.querystring_expire, "
             "cache=b.object_parameters['CacheControl'], static=s.STORAGES['staticfiles']['BACKEND'], "
+            "retries=b.client_config.retries, timeouts=[b.client_config.connect_timeout,b.client_config.read_timeout], verify=b.verify is not False, "
             "secure=[s.SECURE_SSL_REDIRECT,s.SESSION_COOKIE_SECURE,s.CSRF_COOKIE_SECURE], "
             "proxy=getattr(s,'SECURE_PROXY_SSL_HEADER',None))))"
         ), **values)
@@ -79,7 +80,8 @@ class ProductionMediaSettingsTests(SimpleTestCase):
         config = json.loads(result.stdout)
         self.assertEqual(config, dict(location="media/application/production/linode-rls", acl=None,
             signed=True, domain=None, overwrite=False, expiry=60, cache="private, no-store",
-            static="whitenoise.storage.CompressedManifestStaticFilesStorage", secure=[True,True,True], proxy=None))
+            static="whitenoise.storage.CompressedManifestStaticFilesStorage", secure=[True,True,True], proxy=None,
+            retries={"mode": "standard", "total_max_attempts": 2}, timeouts=[5,15], verify=True))
 
     def test_rehearsal_preservation_or_ambiguous_prefix_is_rejected(self):
         for location in (None, "", "media/legacy/source", "media/application/rehearsal",

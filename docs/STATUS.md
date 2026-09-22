@@ -7,6 +7,39 @@ tags: [status, architecture]
 
 # Status
 
+## JCL collateral upload recovery and local migrations (2026-09-22)
+
+A manual JCL draft submission failed when R2's TLS connection ended unexpectedly.
+Database inspection confirmed complete rollback: no test loan or collateral row,
+2,355 existing loans unchanged, and test loan/release counters still at 1. Rehearsal
+had no pending migrations. The three reported migrations belonged to
+`rokkad_shared_dev`: portability 0015, loans 0014 and loans 0015. A 28.8 MB custom
+backup was created and its catalog checked before applying those migrations with
+owner-only settings. Both local databases now report no pending migrations.
+
+Collateral storage exceptions now return a translated form error with entered
+details retained and photo-reselection guidance. Create/edit operations roll back;
+failure to clean up an earlier uploaded file is logged without masking the original
+error. R2 web settings use standard retries with two total attempts per request,
+5-second connect and 15-second read timeouts, retaining TLS verification. These
+are socket/request limits, not an overall request-duration guarantee.
+
+Real-storage probes succeeded for 54 KB and 2.1 MB synthetic images. A full Django
+form submission using actual rehearsal R2 storage subsequently uploaded and
+hash-verified a 2.1 MB image in about five seconds; its synthetic customer/draft
+were rolled back and its object removed. One earlier form probe timed out and
+correctly rendered a recoverable error, so intermittent connectivity remains an
+observed limitation, not a proven permanent network fix. The local 8081 server was
+restarted with the change and the fresh loan form checked in Chrome. No Linode
+deployment or source change occurred. Private backup/logs/scripts are under
+`outputs/jcl-upload-fix-20260922/`.
+
+Validation: all 109 draft UI/service, collateral media and deployment tests passed
+on a fresh test database. Regression cases cover SSL/provider/filesystem failures,
+retained form data, successful retry without duplicate numbering, edit rollback
+preserving saved photographs, and cleanup failure preserving the recoverable error.
+Gettext, import-boundary and diff checks pass.
+
 ## JCL manual workflow practice setup (2026-09-22)
 
 At the owner's request, local `rehearsal-jcl-20260921` now has a separate

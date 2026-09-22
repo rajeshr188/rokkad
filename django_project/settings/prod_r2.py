@@ -24,8 +24,8 @@ STORAGES = {**STORAGES, "default": {  # noqa: F405
         "location": _location, "region_name": "auto", "addressing_style": "path",
         "custom_domain": None, "file_overwrite": False, "querystring_expire": 60,
         "object_parameters": {"CacheControl": "private, no-store"},
-        "client_config": Config(signature_version="s3v4", connect_timeout=15, read_timeout=30,
-            retries={"max_attempts": 3}, max_pool_connections=32, s3={"addressing_style": "path"},
+        "client_config": Config(signature_version="s3v4", connect_timeout=5, read_timeout=15,
+            retries={"mode": "standard", "total_max_attempts": 2}, max_pool_connections=32, s3={"addressing_style": "path"},
             request_checksum_calculation="when_required", response_checksum_validation="when_required"),
     },
 }}
