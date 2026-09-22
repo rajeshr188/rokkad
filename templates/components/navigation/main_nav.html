@@ -50,7 +50,7 @@
             {% include 'components/brand.html' %}
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="{% translate 'Toggle navigation' %}">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -65,18 +65,18 @@
                             {{ request.user.first_name|default:request.user.username|truncatechars:18 }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="{% url 'account_settings' %}"><i aria-hidden="true" class="bi bi-person"></i> My account</a></li>
-                            <li><a class="dropdown-item" href="{% url 'app_invitations' %}"><i aria-hidden="true" class="bi bi-envelope"></i> My invitations</a></li>
+                            <li><a class="dropdown-item" href="{% url 'account_settings' %}"><i aria-hidden="true" class="bi bi-person"></i> {% translate "My account" %}</a></li>
+                            <li><a class="dropdown-item" href="{% url 'app_invitations' %}"><i aria-hidden="true" class="bi bi-envelope"></i> {% translate "My invitations" %}</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}"><i aria-hidden="true" class="bi bi-box-arrow-right"></i> Sign Out</a></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'account_logout' %}"><i aria-hidden="true" class="bi bi-box-arrow-right"></i> {% translate "Sign Out" %}</a></li>
                         </ul>
                     </li>
                 {% else %}
                     <li class="nav-item">
-                        <a class="nav-link nav-pill" href="{% url 'account_login' %}"><i aria-hidden="true" class="bi bi-box-arrow-in-right me-1"></i>Sign In</a>
+                        <a class="nav-link nav-pill" href="{% url 'account_login' %}"><i aria-hidden="true" class="bi bi-box-arrow-in-right me-1"></i>{% translate "Sign In" %}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-pill" href="{% url 'account_signup' %}"><i aria-hidden="true" class="bi bi-person-plus me-1"></i>Sign Up</a>
+                        <a class="nav-link nav-pill" href="{% url 'account_signup' %}"><i aria-hidden="true" class="bi bi-person-plus me-1"></i>{% translate "Sign Up" %}</a>
                     </li>
                 {% endif %}
             </ul>

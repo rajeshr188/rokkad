@@ -1,8 +1,9 @@
+{% load i18n %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_selector' or request.resolver_match.url_name == 'app_workspaces' or request.resolver_match.url_name == 'app_dashboard' %}active{% endif %}"
    href="{% url 'app_workspaces' %}?show_all=1">
-    <i class="bi bi-grid-3x3-gap"></i> My Workspaces
+    <i class="bi bi-grid-3x3-gap"></i> {% translate "My Workspaces" %}
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'workspace_create' or request.resolver_match.url_name == 'app_workspace_create' %}active{% endif %}"
    href="{% url 'app_workspace_create' %}">
-    <i class="bi bi-plus-circle"></i> New Workspace
+    <i class="bi bi-plus-circle"></i> {% translate "New Workspace" %}
 </a>

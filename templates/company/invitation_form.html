@@ -1,103 +1,18 @@
 {% extends 'base_workspace_settings.html' %}
-{% load crispy_forms_tags %}
-{% load orgs_tags %}
-
-{% block title %}Invite Team Member - Rokkad{% endblock %}
-
-{% block mgmt_content %}
-{% include "company/_team_navigation.html" %}
-<div class="row justify-content-center">
-<div class="col-lg-7">
-<div class="container-fluid mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="bi bi-person-plus"></i> Invite Team Member
-            </h5>
-        </div>
-        <div class="card-body">
-            {{ form.media }}
-
-            {% if seat_capacity.has_limit %}
-            <div class="alert alert-warning" role="alert">
-                <div class="fw-semibold mb-1">
-                    <i class="bi bi-people"></i> Seat capacity: {{ seat_capacity.members_and_pending_used }}/{{ seat_capacity.limit }}
-                </div>
-                <div class="small mb-2">
-                    This count includes active members and pending invitations. Remaining seats: {{ seat_capacity.members_and_pending_remaining }}.
-                </div>
-                <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.slug %}" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-arrow-up-right"></i> Upgrade plan
-                </a>
-            </div>
-            {% endif %}
-            
-            {% if form.errors %}
-            <div class="alert alert-danger">
-                <h6 class="alert-heading">
-                    <i class="bi bi-exclamation-triangle"></i> Please correct the following errors:
-                </h6>
-                <ul class="mb-0">
-                    {% for field, errors in form.errors.items %}
-                        {% for error in errors %}
-                        <li>{{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            <form id="invitationForm" method="post" action="{{ url }}">
-                {% csrf_token %}
-                <div class="mb-3">
-                    {{ form|crispy }}
-                </div>
-
-                <div class="alert alert-info small">
-                    <i class="bi bi-info-circle"></i>
-                    <strong>Note:</strong> The invited team member will receive an email with instructions to accept the workspace invitation.
-                    Invitations expire after 7 days.
-                </div>
-
-                <div class="d-flex justify-content-between pt-3 border-top">
-                    <a class="btn btn-secondary" href="{% url 'workspace_slug_settings_team' workspace_slug=company.slug %}">
-                        <i class="bi bi-arrow-left"></i> Cancel
-                    </a>
-                    <button class="btn btn-success" type="submit">
-                        <i class="bi bi-send"></i> Send Workspace Invitation
-                    </button>
-                </div>
-            </form>
-
-            <!-- Role Descriptions -->
-            <div class="mt-4 p-3 bg-light rounded">
-                <h6 class="mb-2">
-                    <i class="bi bi-shield-check"></i> Role Permissions
-                </h6>
-                <div class="row small">
-                    <div class="col-md-4 mb-2">
-                        <div class="d-flex align-items-start">
-                            <span class="badge bg-danger me-2">Owner</span>
-                            <span>Full control including billing and deletion</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="d-flex align-items-start">
-                            <span class="badge bg-primary me-2">Admin</span>
-                            <span>Can manage team, settings, and all data</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <div class="d-flex align-items-start">
-                            <span class="badge bg-secondary me-2">Member</span>
-                            <span>Can view and edit assigned data</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-</div>
-</div>
-{% endblock %}
+{% load i18n static %}
+{% block title %}{% translate "Invite member" %}{% endblock %}
+{% block mgmt_content %}<section class="setup-entry" hx-history="false">
+{% include 'company/_team_navigation.html' %}
+<h1 class="h3">{% translate "Invite member" %}</h1><p class="text-break">{{ workspace.name }}</p>
+<p>{% translate "Send an invitation to the email address the person will use to sign in. They must verify that address and accept before joining." %}</p>
+{% include 'company/_seat_capacity.html' %}
+{% include 'components/forms/accessible.html#errors' %}
+<form method="post" novalidate>{% csrf_token %}{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+<fieldset class="card card-body mb-3"><legend class="h5">{% translate "Person and access" %}</legend>
+{% include 'components/forms/accessible.html#field' with field=form.email %}
+{% include 'components/forms/accessible.html#field' with field=form.role %}
+</fieldset>
+<p>{% translate "Sending this form emails an invitation. It does not transfer ownership or create a customer record." %}</p>
+<div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Send invitation email" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_slug_settings_team' workspace.slug %}">{% translate "Cancel" %}</a></div>
+</form></section>{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

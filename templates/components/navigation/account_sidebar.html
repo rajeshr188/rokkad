@@ -1,3 +1,4 @@
+{% load i18n %}
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'team_invitations' or request.resolver_match.url_name == 'app_invitations' %}active{% endif %}"
    href="{% url 'app_invitations' %}">
     <i class="bi bi-envelope-open"></i> My Invitations
@@ -7,9 +8,9 @@
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'account_settings' %}active{% endif %}"
    href="{% url 'account_settings' %}">
-    <i class="bi bi-shield-lock"></i> Account Settings
+    <i class="bi bi-shield-lock"></i> {% translate "Account Settings" %}
 </a>
 <a class="nav-link mgmt-nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
    href="{% url 'profile' %}">
-    <i class="bi bi-person-gear"></i> Profile
+    <i class="bi bi-person-gear"></i> {% translate "Profile" %}
 </a>

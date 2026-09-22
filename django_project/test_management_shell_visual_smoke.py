@@ -64,15 +64,17 @@ class ManagementShellVisualSmokeTests(SimpleTestCase):
 
         self.assertIn('href="/static/css/management.css"', html)
         self.assertIn('<main class="container-fluid p-0 mt-0 ', html)
-        self.assertIn('<div class="mgmt-accent-bar">', html)
+        self.assertIn('href="/static/css/management-ui.css"', html)
         self.assertIn('<div class="mgmt-shell">', html)
         self.assertNotIn('<main class="container-lg mt-4 ', html)
 
     def test_desktop_and_mobile_management_nav_share_visual_classes(self):
         html = self._render_management_shell()
 
-        self.assertGreaterEqual(html.count("mgmt-nav-link"), 20)
-        self.assertGreaterEqual(html.count("mgmt-section-title"), 6)
+        for route_name in ("account_settings", "profile", "app_invitations"):
+            self.assertGreaterEqual(html.count(f'href="{reverse(route_name)}"'), 2)
+        self.assertIn('aria-labelledby="mgmt-navigation-title"', html)
+        self.assertIn('aria-label="Close"', html)
         self.assertIn("mgmt-sidebar d-none d-lg-flex", html)
         self.assertIn("offcanvas offcanvas-start mgmt-offcanvas", html)
         self.assertNotIn("nav-link py-2", html)
@@ -82,7 +84,7 @@ class ManagementShellVisualSmokeTests(SimpleTestCase):
     def test_active_state_is_available_in_desktop_and_mobile_nav(self):
         html = self._render_management_shell(url_name="workspace_selector")
 
-        self.assertGreaterEqual(html.count(f'href="{reverse("app_workspaces")}"'), 2)
+        self.assertGreaterEqual(html.count(f'href="{reverse("app_workspaces")}?show_all=1"'), 2)
         self.assertGreaterEqual(html.count("mgmt-nav-link active"), 2)
 
     def test_management_visual_smoke_remains_control_plane_safe(self):
@@ -100,5 +102,6 @@ class ManagementShellVisualSmokeTests(SimpleTestCase):
 
         self.assertIn("My Workspaces", html)
         self.assertIn("New Workspace", html)
-        self.assertIn("Team Members", html)
+        self.assertNotIn("Team members", html)
+        self.assertIn("Account Settings", html)
         self.assertIn("My Invitations", html)

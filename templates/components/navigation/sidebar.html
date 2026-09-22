@@ -1,27 +1,28 @@
+{% load i18n %}
 {% load orgs_tags %}
 {% navigation_actions as nav_actions %}
 {% with effective_workspace=request.workspace %}
 {% if effective_workspace %}
-<nav class="workspace-nav p-3" aria-label="Workspace navigation">
-  <div class="workspace-nav-group-label">Work</div>
-  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}" href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-speedometer2"></i> Dashboard</a>
+<nav class="workspace-nav p-3" aria-label="{% translate 'Workspace navigation' %}">
+  <div class="workspace-nav-group-label">{% translate "Work" %}</div>
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}" href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-speedometer2"></i> {% translate "Dashboard" %}</a>
   {% if 'data.view' in nav_actions %}
-  {% if 'data.create' in nav_actions %}<a class="workspace-nav-link {% if '/internal/create/' in request.path or request.resolver_match.url_name == 'pawn_loan_create' or request.resolver_match.url_name == 'workspace_slug_loan_create' %}active{% endif %}" href="{% url 'workspace_slug_loan_create' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-plus-circle"></i> New loan</a>{% endif %}
-  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'pawn_loan_list' or request.resolver_match.url_name == 'workspace_slug_loan_list' or '/loans/internal/' in request.path and '/create/' not in request.path %}active{% endif %}" href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-cash-coin"></i> Loans</a>
-  <a class="workspace-nav-link {% if '/loans/collateral/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:pawn_collateral_list' request.workspace.slug %}"><i aria-hidden="true" class="bi bi-gem"></i> Collateral</a>
-  <a class="workspace-nav-link {% if '/loans/releases/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:pawn_release_list' request.workspace.slug %}"><i aria-hidden="true" class="bi bi-box-arrow-up"></i> Releases</a>
+  {% if 'data.create' in nav_actions %}<a class="workspace-nav-link {% if '/internal/create/' in request.path or request.resolver_match.url_name == 'pawn_loan_create' or request.resolver_match.url_name == 'workspace_slug_loan_create' %}active{% endif %}" href="{% url 'workspace_slug_loan_create' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-plus-circle"></i> {% translate "New loan" %}</a>{% endif %}
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'pawn_loan_list' or request.resolver_match.url_name == 'workspace_slug_loan_list' or '/loans/internal/' in request.path and '/create/' not in request.path %}active{% endif %}" href="{% url 'workspace_slug_loan_list' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-cash-coin"></i> {% translate "Loans" %}</a>
+  <a class="workspace-nav-link {% if '/loans/collateral/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:pawn_collateral_list' request.workspace.slug %}"><i aria-hidden="true" class="bi bi-gem"></i> {% translate "Collateral" %}</a>
+  <a class="workspace-nav-link {% if '/loans/releases/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:pawn_release_list' request.workspace.slug %}"><i aria-hidden="true" class="bi bi-box-arrow-up"></i> {% translate "Releases" %}</a>
   {% endif %}
   {% if 'data.view' in nav_actions or 'contact.view' in nav_actions %}
-  <a class="workspace-nav-link {% if '/parties/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-person-vcard"></i> Parties</a>
+  <a class="workspace-nav-link {% if '/parties/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_parties' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-person-vcard"></i> {% translate "Parties" %}</a>
   {% endif %}
   {% if 'data.view' in nav_actions %}
-  <div class="workspace-nav-group-label">Reference &amp; communication</div>
-  <a class="workspace-nav-link {% if '/rates/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-coin"></i> Rates</a>
-  <a class="workspace-nav-link {% if '/notify/' in request.path or '/notifications/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-envelope-paper"></i> Notifications</a>
+  <div class="workspace-nav-group-label">{% translate "Reference & communication" %}</div>
+  <a class="workspace-nav-link {% if '/rates/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-coin"></i> {% translate "Rates" %}</a>
+  <a class="workspace-nav-link {% if '/notify/' in request.path or '/notifications/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-envelope-paper"></i> {% translate "Notifications" %}</a>
   {% endif %}
   {% if 'workspace.settings.manage' in nav_actions or 'workspace.view' in nav_actions or 'team.view' in nav_actions or 'billing.view' in nav_actions or 'data.import' in nav_actions %}
   <details class="workspace-settings-nav mt-3" {% if '/settings/' in request.path or '/loans/setup/' in request.path %}open{% endif %}>
-    <summary class="workspace-nav-link"><i aria-hidden="true" class="bi bi-gear"></i> Settings</summary>
+    <summary class="workspace-nav-link"><i aria-hidden="true" class="bi bi-gear"></i> {% translate "Settings" %}</summary>
     {% include 'components/navigation/workspace_settings_sidebar.html' with ew=effective_workspace %}
   </details>
   {% endif %}

@@ -14,6 +14,11 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Owner/team forms use ordinary explicit POST actions and the existing audited
+control-plane services. Invitation and role choices come from role policy; role
+names are stored identities, not translated permission promises. Workspace-local
+grants remain authoritative. Working alone does not require inviting staff.
+
 Rates and Notify list searches share the `reference-results` native partial/HTMX
 contract with normal GET fallbacks, strict fragment headers and no-store responses.
 Rates corrections/withdrawals remain service-backed history. Notification review

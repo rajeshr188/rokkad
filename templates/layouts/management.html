@@ -1,4 +1,5 @@
 {% extends 'layouts/base.html' %}
+{% load i18n %}
 {% load static orgs_tags %}
 
 {# Control-plane layout for account and workspace management. #}
@@ -24,19 +25,19 @@
 
     <div class="mgmt-content">
         {% include "components/messages.html" with messages_container_class="mb-3" %}
-        <div class="d-lg-none mb-4"><button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas" aria-controls="mgmtOffcanvas" aria-label="Navigation"><i class="bi bi-list me-2"></i>Navigation</button></div>
+        <div class="d-lg-none mb-4"><button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas" aria-controls="mgmtOffcanvas" aria-label="{% translate 'Navigation' %}"><i aria-hidden="true" class="bi bi-list me-2"></i>{% translate "Navigation" %}</button></div>
         {% block breadcrumbs %}{% endblock %}
         {% block page_header %}{% endblock %}
         {% block mgmt_content %}{% endblock %}
     </div>
 </div>
 
-<div class="offcanvas offcanvas-start mgmt-offcanvas" tabindex="-1" id="mgmtOffcanvas">
+<div class="offcanvas offcanvas-start mgmt-offcanvas" tabindex="-1" id="mgmtOffcanvas" aria-labelledby="mgmt-navigation-title">
     <div class="offcanvas-header border-bottom">
-        <h6 class="offcanvas-title fw-bold">
-            <i class="bi bi-person-workspace me-1"></i> Navigation
+        <h6 class="offcanvas-title fw-bold" id="mgmt-navigation-title">
+            <i aria-hidden="true" class="bi bi-person-workspace me-1"></i> {% translate "Navigation" %}
         </h6>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% translate 'Close' %}"></button>
     </div>
     <div class="offcanvas-body p-0">
         {% if request.workspace %}{% include 'components/navigation/sidebar.html' %}{% else %}{% include 'components/navigation/personal_sidebar.html' %}{% endif %}

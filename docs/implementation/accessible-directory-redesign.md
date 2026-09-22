@@ -389,3 +389,39 @@ are server-test coverage, not live operator acceptance. Physical touch, screen
 reader, real provider callbacks, populated browser review and staff acceptance are
 still pending. Shared shell/admin labels and technical provider errors may remain
 English; this slice does not declare translation or whole-product completion.
+
+## Owner/team setup and navigation (September 22)
+
+Business profile becomes a small hub for setup, team and billing. Native grouped
+forms cover creation/editing, invitations and role changes, with linked errors,
+CSRF, explicit save/submit actions and excluded HTMX history. Role changes use
+the actor's permitted choices and the existing audited service. Owner/self
+controls remain guarded; team removal and invitation revocation disclose their
+consequence before the existing POST action. The seat summary uses the actual
+capacity snapshot fields. Editing a profile now binds request.FILES for logos.
+Management views receive no-store headers. No domain policies or database schema
+changed.
+
+Shared navigation and setup labels now have Hindi translations. Custom workspace
+and role names remain stored values. Dynamic rate-availability descriptions,
+some page titles and deeper administration/provider errors remain English.
+
+Validation: 195 organization/onboarding tests passed. Final owner/team and shared
+shell checks passed all 29 tests on a fresh database after browser refinements.
+Tests cover permitted role choices, invalid submissions without mutation,
+audited-service delegation, owner restrictions, logo binding, seat numbers,
+escaping, Hindi rendering and no-store behavior. Existing shell assertions were
+updated for the current navigation and stylesheet rather than stale markup.
+Browser review caught a replaced Select widget losing its choices; the native
+widget is now declared on the field and an option assertion prevents recurrence.
+Private logs are in `outputs/ux-owner-team-20260922/`.
+
+Read-only Chrome review covered team and invitations at 390px, business profile
+at phone width, profile editing and setup guidance at 1280px, English/Hindi
+labels, the native role options and Hindi mobile navigation. Checked screens had
+no horizontal overflow. Percentage guidance renders single percent signs. No
+invitations, member changes or business-profile forms were submitted against the
+accepted rehearsal. English and the default viewport were restored, with the team
+preview retained. Populated member actions and logo binding have isolated server
+test coverage; real email delivery, physical touch, screen-reader and staff task
+acceptance remain separate pre-cutover checks.

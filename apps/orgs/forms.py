@@ -107,7 +107,7 @@ class CompanyInvitationForm(forms.ModelForm):
         label=_("Role"),
         required=True,
         queryset=Role.objects.all(),
-        widget=Select2Widget,
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     class Meta:
@@ -138,6 +138,8 @@ class CompanyInvitationForm(forms.ModelForm):
                 initial=self.company,
                 widget=forms.HiddenInput(),
             )
+        self.fields["role"].help_text = _("Choose the access this person needs. Permissions come from this workspace's saved role settings.")
+        self.fields["email"].widget.attrs.update({"class": "form-control", "autocomplete": "email"})
 
     def validate_invitation(self, email, company):
         if (
@@ -261,6 +263,14 @@ class CompanyForm(forms.ModelForm):
         #     "theme": ColorWidget,
         # }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+        self.fields["name"].widget.attrs["autocomplete"] = "organization"
+        self.fields["theme"].label = _("Brand colour")
+        self.fields["logo"].help_text = _("Optional. If a submission fails, select the new image again before saving.")
+
     def clean_name(self):
         name = self.cleaned_data.get("name")
         if name:
@@ -304,6 +314,14 @@ class MembershipForm(forms.ModelForm):
     class Meta:
         model = Membership
         fields = ("user", "company", "role")
+
+
+class MembershipRoleForm(forms.Form):
+    role = forms.ChoiceField(label=_("Role"), widget=forms.Select(attrs={"class": "form-select"}))
+
+    def __init__(self, *args, roles, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"].choices = [(role.id, role.name) for role in roles]
 
 
 def company_preference_form_builder(instance, Preferences=[], **kwargs):

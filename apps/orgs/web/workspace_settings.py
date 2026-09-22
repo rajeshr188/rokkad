@@ -11,6 +11,7 @@ from django.shortcuts import (
 )
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from apps.onboarding.services import (
     build_workspace_setup_checklist,
@@ -88,6 +89,7 @@ WORKSPACE_MODULE_REGISTRY = [
 
 @login_required
 @audit_log("COMPANY_CREATE", description="Create new company")
+@never_cache
 def workspace_create(request):
     """
     Create a new workspace.
@@ -127,6 +129,7 @@ def workspace_list(request):
 
 
 @login_required
+@never_cache
 def workspace_detail(request, workspace_id=None, company_id=None):
     """
     Display workspace details including team members and invitations.
@@ -153,6 +156,7 @@ def workspace_detail(request, workspace_id=None, company_id=None):
         "company/company_detail.html",
         {
             "company": company,
+            "can_edit_profile": company.owner_id == request.user.pk or access_context["access"].platform_override,
             "roles": roles,
             "workspace": company,
             "can_archive_workspace": access_context["access"].can(
@@ -163,6 +167,7 @@ def workspace_detail(request, workspace_id=None, company_id=None):
 
 
 @login_required
+@never_cache
 def workspace_setup(request, workspace_id=None, company_id=None):
     """Display the read-only workspace setup checklist."""
     workspace_id = workspace_id or company_id
@@ -315,6 +320,7 @@ def workspace_security(request, workspace_id=None, company_id=None):
 @login_required
 @permission_required("workspace_edit")
 @audit_log("COMPANY_UPDATE", description="Update company settings")
+@never_cache
 def workspace_update(request, workspace_id=None, company_id=None):
     """
     Update workspace settings.
@@ -334,7 +340,7 @@ def workspace_update(request, workspace_id=None, company_id=None):
     _assert_owner_access(request, company, allow_platform_admin=True)
 
     if request.method == "POST":
-        form = CompanyForm(request.POST, instance=company)
+        form = CompanyForm(request.POST, request.FILES, instance=company)
         if form.is_valid():
             control_plane.save_workspace_update_form(
                 form=form,

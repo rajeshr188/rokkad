@@ -1,0 +1,7 @@
+{% load i18n orgs_tags %}
+{% navigation_actions as actions %}
+{% if seat_capacity.has_limit %}<section class="alert alert-info" aria-label="{% translate 'Seat capacity' %}">
+<p class="mb-1"><strong>{% translate "Seats used, including pending invitations" %}: {{ seat_capacity.members_and_pending_used }}/{{ seat_capacity.limit }}</strong></p>
+<p class="mb-1">{% translate "Members using seats" %}: {{ seat_capacity.members_used }} &middot; {% translate "Seats remaining for invitations" %}: {{ seat_capacity.members_and_pending_remaining }}</p>
+{% if 'billing.view' in actions %}<a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=workspace.slug %}">{% translate "Review plan and capacity" %}</a>{% endif %}
+</section>{% endif %}

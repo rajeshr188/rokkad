@@ -1,3 +1,4 @@
+{% load i18n %}
 <!-- Workspace Switcher Dropdown -->
 {% if workspace_switcher_variant == "navbar" %}
 <li class="nav-item dropdown workspace-switcher workspace-switcher-navbar">
@@ -6,7 +7,7 @@
         {% if request.workspace %}
             {{ request.workspace.name|truncatechars:22 }}
         {% else %}
-            Workspaces
+            {% translate "Workspaces" %}
         {% endif %}
     </button>
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="workspaceDropdown">
@@ -25,17 +26,17 @@
             </li>
         {% endif %}
         {% empty %}
-            <li><span class="dropdown-item-text text-muted">No workspaces</span></li>
+            <li><span class="dropdown-item-text text-muted">{% translate "No workspaces" %}</span></li>
         {% endfor %}
         <li><hr class="dropdown-divider"></li>
         <li>
             <a class="dropdown-item" href="{% url 'workspace_selector' %}?show_all=1">
-                <i aria-hidden="true" class="bi bi-grid-3x3-gap me-1"></i>All Workspaces
+                <i aria-hidden="true" class="bi bi-grid-3x3-gap me-1"></i>{% translate "All Workspaces" %}
             </a>
         </li>
         <li>
             <a class="dropdown-item" href="{% url 'workspace_create' %}">
-                <i aria-hidden="true" class="bi bi-plus-circle me-1"></i>Create New
+                <i aria-hidden="true" class="bi bi-plus-circle me-1"></i>{% translate "Create New" %}
             </a>
         </li>
 
@@ -49,7 +50,7 @@
             {% if request.workspace %}
                 <span class="fw-bold">{{ request.workspace.name }}</span>
             {% else %}
-                <span class="text-muted">Workspaces</span>
+                <span class="text-muted">{% translate "Workspaces" %}</span>
             {% endif %}
         </button>
         <ul class="dropdown-menu w-100" aria-labelledby="workspaceDropdownBtn">
@@ -68,17 +69,17 @@
                 </li>
             {% endif %}
         {% empty %}
-                <li><span class="dropdown-item-text text-muted">No workspaces</span></li>
+                <li><span class="dropdown-item-text text-muted">{% translate "No workspaces" %}</span></li>
             {% endfor %}
             <li><hr class="dropdown-divider"></li>
             <li>
                 <a class="dropdown-item" href="{% url 'workspace_selector' %}?show_all=1">
-                    <i aria-hidden="true" class="bi bi-window-plus"></i> View All Workspaces
+                    <i aria-hidden="true" class="bi bi-window-plus"></i> {% translate "View All Workspaces" %}
                 </a>
             </li>
             <li>
                 <a class="dropdown-item" href="{% url 'workspace_create' %}">
-                    <i aria-hidden="true" class="bi bi-plus-circle"></i> Create New
+                    <i aria-hidden="true" class="bi bi-plus-circle"></i> {% translate "Create New" %}
                 </a>
             </li>
         </ul>

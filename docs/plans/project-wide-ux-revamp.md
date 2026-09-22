@@ -44,10 +44,14 @@ verification supports existing-series continuation at final cutover; it does not
 activate the rehearsal. Rates and notifications now use grouped bilingual forms,
 responsive searchable lists and native result partials. Quote history and notification
 send/print/post distinctions remain explicit; setup checks do not imply delivery.
-Next simplify owner/team setup and finish shared navigation translations.
+Owner/team setup now uses grouped native forms, explicit role saves, accurate seat
+guidance and a business-profile hub. Shared navigation and checklist labels are
+translated; stored role names remain unchanged. Next consolidate staff workflow
+acceptance on isolated data and fix task-blocking findings before cutover.
 Terms review, payment-form accessibility and grouped
 printing guidance now extend the first-loan journey; its complete live payment
-walkthrough and physical printing remain pending. Detailed setup forms, remaining translations and physical-device/operator
+walkthrough and physical printing remain pending. Account/billing and deeper role
+administration, remaining dynamic translations and physical-device/operator
 acceptance remain open; these slices do not complete the whole-product redesign.
 
 1. Inventory live routes and actual owner/staff journeys using isolated data.
@@ -214,6 +218,7 @@ must not revive retired Girvi, Contact, DEA/accounting, or inventory modules.
 - Existing access, isolation, money/evidence, and browser regression checks pass.
 - Secondary details remain available without overwhelming the primary task.
 
-The first-loan prototype is approved and implemented locally. Review the live
-administration and setup slice next, then refine labels, ordering, and
-frequent-task shortcuts from operator feedback. Physical acceptance remains deferred.
+The first-loan prototype and the owner/team setup slice are implemented locally.
+Consolidate the full staff task walkthrough next, then refine labels, ordering
+and frequent-task shortcuts from operator feedback. Physical acceptance remains
+deferred; automated and read-only browser checks are not operator sign-off.

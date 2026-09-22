@@ -4,11 +4,11 @@
 {% block title %}{{ company.name }} - Setup - Rokkad{% endblock %}
 
 {% block breadcrumbs %}
-<nav aria-label="breadcrumb" class="mb-3">
+<nav aria-label="{% translate 'breadcrumb' %}" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'app_workspaces' %}">My Workspaces</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'app_workspaces' %}">{% translate "My Workspaces" %}</a></li>
 <li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.slug %}">{{ company.name }}</a></li>
-        <li class="breadcrumb-item active">Setup</li>
+        <li class="breadcrumb-item active">{% translate "Setup" %}</li>
     </ol>
 </nav>
 {% endblock %}
@@ -20,56 +20,56 @@
         <p class="text-muted mb-0">{% translate "Continue where you left off. Saved settings stay in this business; return here any time from Settings." %}</p>
     </div>
 <a href="{% url 'workspace_slug_dashboard' workspace_slug=company.slug %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+        <i aria-hidden="true" class="bi bi-speedometer2 me-1"></i>{% translate "Dashboard" %}
     </a>
 </div>
 {% endblock %}
 
-{% block mgmt_content %}
+{% block mgmt_content %}<section hx-history="false">
 <p class="alert alert-info">{% translate "For a new branch, complete the steps below in order. For an imported branch, review the missing setup; do not import or create your customers again." %}</p>
 <section class="card mb-4" aria-labelledby="first-loan-setup-title">
     <div class="card-body">
-        <h2 id="first-loan-setup-title" class="h5">Business and lending setup: {{ business_setup.completed_count }}/{{ business_setup.total_count }} available</h2>
-        <p class="text-muted">Checks are for {{ business_setup.as_of_date }}. Review license evidence, buying rates and product terms before lending. Each loan validates its own date and terms.</p>
+        <h2 id="first-loan-setup-title" class="h5">{% translate "Business and lending setup" %}: {{ business_setup.completed_count }}/{{ business_setup.total_count }} {% translate "Available" %}</h2>
+        <p class="text-muted">{{ business_setup.as_of_date }}. {% translate "Review license evidence, buying rates and product terms before lending. Each loan validates its own date and terms." %}</p>
         {% if business_setup.next_step %}<a class="btn btn-primary mb-3" href="{{ business_setup.next_step.action_url }}">{% translate "Continue setup" %}: {% translate business_setup.next_step.title %}</a>
         {% elif can_create_loan %}<a class="btn btn-primary mb-3" href="{% url 'workspace_slug_loan_create' workspace_slug=company.slug %}">{% translate "Create a loan" %}</a>{% endif %}
         <ol class="list-group list-group-numbered">
         {% for step in business_setup.steps %}
-            <li class="list-group-item d-flex gap-3"{% if business_setup.next_step.key == step.key %} aria-current="step"{% endif %}><div class="flex-grow-1"><h3 class="h6">{% translate step.title %} <span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}Available{% else %}Needs setup{% endif %}</span></h3><p class="small text-muted mb-2">{% translate step.description %}</p><a href="{{ step.action_url }}">{% translate step.action_label %}</a></div></li>
+            <li class="list-group-item d-flex gap-3"{% if business_setup.next_step.key == step.key %} aria-current="step"{% endif %}><div class="flex-grow-1"><h3 class="h6">{% translate step.title %} <span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}{% translate "Available" %}{% else %}{% translate "Needs setup" %}{% endif %}</span></h3><p class="small text-muted mb-2">{% translate step.description %}</p><a href="{{ step.action_url }}">{% translate step.action_label %}</a></div></li>
         {% endfor %}
         </ol>
-        <p class="small mt-3 mb-0">Economic setup starts with editable monthly interest of 2% for gold and 4% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies.</p>
-        <p class="small mt-2 mb-0">Working alone? Team invitations are optional. Your selected loan workflow stays unchanged until you explicitly change it.</p>
-        <div class="d-flex flex-wrap gap-3 mt-3"><a href="{% url 'workspace_slug_rates' workspace_slug=company.slug %}">Review buying rates</a><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">Documents and printing (customization optional)</a><a href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">Full loan setup</a></div>
+        <p class="small mt-3 mb-0">{% translate "Economic setup starts with editable monthly interest of 2% for gold and 4% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies." %}</p>
+        <p class="small mt-2 mb-0">{% translate "Working alone? Team invitations are optional. Your selected loan workflow stays unchanged until you explicitly change it." %}</p>
+        <div class="d-flex flex-wrap gap-3 mt-3"><a href="{% url 'workspace_slug_rates' workspace_slug=company.slug %}">{% translate "Review buying rates" %}</a><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">{% translate "Documents and printing (customization optional)" %}</a><a href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">{% translate "Full loan setup" %}</a></div>
     </div>
 </section>
 
 <details class="mb-4">
-<summary class="fw-semibold mb-3">General checklist and dashboard reminders</summary>
+<summary class="fw-semibold mb-3">{% translate "General checklist and dashboard reminders" %}</summary>
 {% if setup_state.is_complete %}
 <div class="alert alert-success mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
     <div>
-        <div class="fw-semibold">General checklist is complete or marked complete.</div>
-        <div class="small">Lending checks below remain independent and are recalculated whenever you return.</div>
+        <div class="fw-semibold">{% translate "General checklist is complete or marked complete." %}</div>
+        <div class="small">{% translate "Lending checks below remain independent and are recalculated whenever you return." %}</div>
     </div>
     <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.slug %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="reopen">
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button type="submit" class="btn btn-sm btn-outline-success">Reopen setup</button>
+        <button type="submit" class="btn btn-sm btn-outline-success">{% translate "Reopen setup" %}</button>
     </form>
 </div>
 {% elif setup_state.is_dismissed %}
 <div class="alert alert-secondary mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
     <div>
-        <div class="fw-semibold">Setup card is dismissed from the dashboard.</div>
-        <div class="small">You can reopen it or continue using this setup page.</div>
+        <div class="fw-semibold">{% translate "Setup card is dismissed from the dashboard." %}</div>
+        <div class="small">{% translate "You can reopen it or continue using this setup page." %}</div>
     </div>
     <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.slug %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="reopen">
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button type="submit" class="btn btn-sm btn-outline-secondary">Show on dashboard</button>
+        <button type="submit" class="btn btn-sm btn-outline-secondary">{% translate "Show on dashboard" %}</button>
     </form>
 </div>
 {% endif %}
@@ -77,13 +77,13 @@
 <section class="mgmt-setup-hero mb-4" aria-labelledby="setup-progress-title">
     <div class="mgmt-setup-summary">
         <div>
-            <div class="mgmt-kicker mb-1">Progress</div>
-            <h2 id="setup-progress-title" class="h4 fw-bold mb-1">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }} complete</h2>
-            <p class="text-muted mb-0">General profile, borrower and rate information. Optional team invitations do not affect this count.</p>
+            <div class="mgmt-kicker mb-1">{% translate "Progress" %}</div>
+            <h2 id="setup-progress-title" class="h4 fw-bold mb-1">{{ setup_checklist.completed_count }}/{{ setup_checklist.total_count }} {% translate "Complete" %}</h2>
+            <p class="text-muted mb-0">{% translate "General profile, borrower and rate information. Optional team invitations do not affect this count." %}</p>
         </div>
         <div class="text-lg-end">
             <div class="mgmt-progress-value">{{ setup_checklist.completion_percentage }}%</div>
-            <div class="small text-muted">general setup progress</div>
+            <div class="small text-muted">{% translate "general setup progress" %}</div>
         </div>
     </div>
     <div class="mgmt-progress-track mt-3">
@@ -95,7 +95,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="complete">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" class="btn btn-sm btn-primary">Hide completed general checklist</button>
+            <button type="submit" class="btn btn-sm btn-primary">{% translate "Hide completed general checklist" %}</button>
         </form>
         {% endif %}
         {% if not setup_state.is_dismissed and not setup_state.is_complete %}
@@ -103,7 +103,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="dismiss">
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss dashboard card</button>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">{% translate "Dismiss dashboard card" %}</button>
         </form>
         {% endif %}
     </div>
@@ -114,5 +114,5 @@
     {% include "components/setup/setup_checklist_task.html" with item=item workspace_id=company.id workspace_slug=company.slug task_id_prefix="setup-task" heading_level="h2" %}
     {% endfor %}
 </div>
-</details>
+</details></section>
 {% endblock %}

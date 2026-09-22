@@ -1,100 +1,15 @@
 {% extends 'base_global.html' %}
-{% load crispy_forms_tags %}
-{% load orgs_tags %}
-
-{% block title %}{% if company %}Edit {{ company.name }}{% else %}Set up your business{% endif %} - Rokkad{% endblock %}
-
-{% block mgmt_content %}
-<div class="container py-4">
-    <!-- Breadcrumbs -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'workspace_list' %}">Workspaces</a></li>
-            {% if company %}
-            <li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.slug %}">{{ company.name }}</a></li>
-            <li class="breadcrumb-item active">Edit</li>
-            {% else %}
-            <li class="breadcrumb-item active">Set up your business</li>
-            {% endif %}
-        </ol>
-    </nav>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        {% if company %}
-                        <i class="bi bi-pencil-square"></i> Update Workspace
-                        {% else %}
-                        <i class="bi bi-plus-circle"></i> Set up your business
-                        {% endif %}
-                    </h4>
-                </div>
-                <div class="card-body">
-                    {% if not company %}
-                    <div class="alert alert-info mb-4">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>Welcome!</strong> Start with your business details. We create its workspace and guide you through lending setup.
-                        You'll be assigned as the <strong>Owner</strong> with full administrative privileges.
-                    </div>
-                    {% endif %}
-
-                    <form method="POST" enctype="multipart/form-data">
-                        {% csrf_token %}
-
-                        <div class="mb-4">
-                            {{ form|crispy }}
-                        </div>
-
-                        {% if form.errors %}
-                        <div class="alert alert-danger">
-                            <h6 class="alert-heading">
-                                <i class="bi bi-exclamation-triangle"></i> Please correct the following errors:
-                            </h6>
-                            <ul class="mb-0">
-                                {% for field in form %}
-                                    {% for error in field.errors %}
-                                    <li>{{ field.label }}: {{ error }}</li>
-                                    {% endfor %}
-                                {% endfor %}
-                                {% for error in form.non_field_errors %}
-                                <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% endif %}
-
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <a href="{% url 'workspace_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Cancel
-                            </a>
-                            <button class="btn btn-primary btn-lg" type="submit">
-                                {% if company %}
-                                <i class="bi bi-check-circle"></i> Save Changes
-                                {% else %}
-                                <i class="bi bi-plus-circle"></i> Set up your business
-                                {% endif %}
-                            </button>
-                        </div>
-                    </form>
-
-                    {% if not company %}
-                    <div class="mt-4 p-3 bg-light rounded">
-                        <h6 class="mb-2">
-                            <i class="bi bi-lightbulb text-warning"></i> What happens next?
-                        </h6>
-                        <ul class="small mb-0">
-                            <li>You'll be assigned as the <strong>Owner</strong> of this workspace</li>
-                            <li>Invite team members later if needed; working alone is supported</li>
-                            <li>Add your license and numbering series, then review economics and a loan product</li>
-                            <li>Return to Business setup any time to continue with saved settings</li>
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% load i18n static %}
+{% block title %}{% if company %}{% translate "Edit business profile" %}{% else %}{% translate "Set up your business" %}{% endif %}{% endblock %}
+{% block mgmt_content %}<section class="setup-entry" hx-history="false">
+<h1 class="h3">{% if company %}{% translate "Edit business profile" %}{% else %}{% translate "Set up your business" %}{% endif %}</h1>
+{% if not company %}<p>{% translate "Create a workspace for a new business. You become its owner. If your branch was already imported, open that workspace instead." %}</p><p><a href="{% url 'app_workspaces' %}">{% translate "My Workspaces" %}</a></p>{% endif %}
+{% include 'components/forms/accessible.html#errors' %}
+<form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+<fieldset class="card card-body mb-3"><legend class="h5">{% translate "Business name" %}</legend>{% include 'components/forms/accessible.html#field' with field=form.name %}</fieldset>
+<fieldset class="card card-body mb-3"><legend class="h5">{% translate "Optional appearance" %}</legend>{% include 'components/forms/accessible.html#field' with field=form.logo %}{% include 'components/forms/accessible.html#field' with field=form.theme %}</fieldset>
+<div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if company %}{% translate "Save changes" %}{% else %}{% translate "Create workspace and continue" %}{% endif %}</button><a class="btn btn-outline-secondary" href="{% if company %}{% url 'workspace_slug_settings' company.slug %}{% else %}{% url 'app_workspaces' %}{% endif %}">{% translate "Cancel" %}</a></div>
+</form>
+{% if not company %}<p class="mt-3">{% translate "Next, review the branch's lending setup. Team invitations are optional; creating a workspace alone does not make it ready to issue loans." %}</p>{% endif %}
+</section>{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

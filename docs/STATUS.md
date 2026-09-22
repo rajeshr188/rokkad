@@ -7,6 +7,35 @@ tags: [status, architecture]
 
 # Status
 
+## Owner/team setup and shared navigation (2026-09-22)
+
+Business profile, team, invitation and role forms now use responsive grouped
+screens with English/Hindi guidance and linked validation errors. Working alone
+is explicitly supported; invitations explain their email consequence and show
+the existing seat-capacity snapshot correctly. Role changes require an explicit
+Save action and validate against the actor's permitted roles. Profile edits now
+bind uploaded logos. Existing ownership, permission and audited service rules
+remain authoritative. Sensitive management pages use no-store responses.
+
+Shared workspace/account navigation and setup checklist labels are translated.
+Stored role names remain unchanged; dynamic setup descriptions and deeper
+administration/provider messages still have translation work remaining.
+
+Validation: 195 organization/onboarding tests passed; after browser refinements,
+29 owner/team and shared-shell tests passed on a fresh database. Browser review
+found and fixed an empty invitation role selector, now covered by a regression
+assertion. Local English/Hindi phone/desktop checks covered team, invitations,
+business profile/edit and setup guidance without submitting business forms or
+sending invitations. English and the normal viewport were restored. Physical
+touch, screen-reader checks, real invitation delivery and novice-staff acceptance
+remain pending. See the [delivery notes](implementation/accessible-directory-redesign.md).
+
+Next: consolidate staff workflow acceptance on isolated test data, from customer
+entry through loan issue, payment and release. Resolve task-blocking findings
+before cutover; account/billing/deeper role administration and remaining dynamic
+translations are still outside this completed slice. Production cutover has not
+occurred.
+
 ## Rates and notification screen simplification (2026-09-22)
 
 Rates now groups source/metal, per-gram prices and effective-time evidence in
@@ -31,9 +60,9 @@ and batch review were exercised with isolated test fixtures. No business forms o
 notifications were submitted in the accepted rehearsal. Physical touch, screen
 reader, provider delivery and novice-operator acceptance remain pending.
 
-Next: simplify owner/team setup and finish shared navigation translations, then
-perform complete staff task acceptance before cutover. The whole-product redesign
-and production cutover are not complete. See the [UX delivery notes](implementation/accessible-directory-redesign.md).
+Owner/team setup and shared navigation are now delivered in the section above.
+Complete staff task acceptance remains required before cutover. The whole-product
+redesign and production cutover are not complete.
 
 ## Existing-series continuation and policy forms (2026-09-22)
 

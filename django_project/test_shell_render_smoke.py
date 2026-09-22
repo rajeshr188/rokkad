@@ -546,7 +546,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         )
 
         self.assertIn("Set up your business", html)
-        self.assertIn("1/2 complete", html)
+        self.assertIn("1/2 Complete", html)
         self.assertIn("Rates", html)
         self.assertIn("Parties", html)
         self.assertIn("Hide completed general checklist", html)

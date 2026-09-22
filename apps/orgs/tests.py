@@ -1,3 +1,4 @@
+import inspect
 import contextlib
 import re
 from types import SimpleNamespace
@@ -479,7 +480,7 @@ class OrgNavigationFlowTests(SimpleTestCase):
 			"data_import:import_data",
 		):
 			self.assertNotIn("{% url '" + unscoped_route + "'", sidebar_html)
-		self.assertEqual(sidebar_html.count("</i> Parties"), 1)
+		self.assertEqual(sidebar_html.count('{% translate "Parties" %}'), 1)
 		
 		# Verify deprecated route names are NOT used
 		self.assertNotIn("orgs_invite_delete", sidebar_html)
@@ -959,7 +960,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 
 	def _team_invite_view(self):
 		from apps.orgs import views as org_views
-		return org_views.team_invite.__wrapped__.__wrapped__.__wrapped__
+		return inspect.unwrap(org_views.team_invite)
 
 	def _remove_member_view(self):
 		from apps.orgs import views as org_views
@@ -967,7 +968,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 
 	def _change_role_view(self):
 		from apps.orgs import views as org_views
-		return org_views.team_change_role.__wrapped__.__wrapped__
+		return inspect.unwrap(org_views.team_change_role)
 
 	def test_team_invite_requires_workspace_team_invite_permission(self):
 		company = SimpleNamespace(id=9, lifecycle_state="ACTIVE")
@@ -1147,7 +1148,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		with patch("apps.orgs.web.invitations.resolve_request_workspace", return_value=workspace), \
 			 patch("apps.orgs.web.invitations._assert_workspace_access", side_effect=PermissionDenied("denied")) as mock_access:
 			with self.assertRaises(PermissionDenied):
-				org_views.companyinvitations_list.__wrapped__(request)
+				inspect.unwrap(org_views.companyinvitations_list)(request)
 
 		mock_access.assert_called_once_with(
 			request,
@@ -1184,7 +1185,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			 patch("apps.orgs.web.team_members.get_workspace_seat_capacity_snapshot", return_value=seat_capacity), \
 			 patch.object(org_views.Membership.objects, "select_related", return_value=memberships), \
 			 patch("apps.orgs.web.team_members.render") as mock_render:
-			org_views.membership_list.__wrapped__(request, workspace_id=9)
+			inspect.unwrap(org_views.membership_list)(request, workspace_id=9)
 
 		mock_get.assert_called_once_with(org_views.Company, id=9)
 		mock_resolve.assert_not_called()
@@ -1227,7 +1228,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			 patch("apps.orgs.web.invitations._assert_workspace_access", return_value={"effective_permissions": {"team_invite"}}) as mock_access, \
 			 patch.object(org_views.CompanyInvitation.objects, "select_related", return_value=invitations), \
 			 patch("apps.orgs.web.invitations.render") as mock_render:
-			org_views.companyinvitations_list.__wrapped__(request, workspace_id=9)
+			inspect.unwrap(org_views.companyinvitations_list)(request, workspace_id=9)
 
 		mock_get.assert_called_once_with(org_views.Company, id=9)
 		mock_query_workspace.assert_not_called()
@@ -1485,7 +1486,7 @@ class MembershipLifecycleGuardrailTests(SimpleTestCase):
 
 	def _change_role_view(self):
 		from apps.orgs import views as org_views
-		return org_views.team_change_role.__wrapped__.__wrapped__
+		return inspect.unwrap(org_views.team_change_role)
 
 	@patch("apps.orgs.web.team_members.redirect")
 	@patch("apps.orgs.web.team_members.messages")

@@ -6,9 +6,10 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from apps.orgs.decorators_v2 import permission_required
-from apps.orgs.forms import MembershipForm
+from apps.orgs.forms import MembershipRoleForm
 from apps.orgs.models import Company, Membership, Role
 from apps.orgs.services import control_plane
 from apps.orgs.services.membership_capacity import get_workspace_seat_capacity_snapshot
@@ -64,6 +65,7 @@ def team_remove_member(request, workspace_id=None, membership_id=None, company_i
 
 @login_required
 @permission_required("team_change_role")
+@never_cache
 def team_change_role(request, workspace_id=None, membership_id=None, company_id=None):
     """
     Change team member's role.
@@ -84,8 +86,10 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
     membership = get_object_or_404(Membership, id=membership_id, company=company)
     roles = role_policy.allowed_invitation_roles(actor=request.user, workspace=company)
 
-    if request.method in ["POST", "PATCH"]:
-        role_id = request.POST.get("role")
+    form = MembershipRoleForm(request.POST if request.method in {"POST", "PATCH"} else None,
+                              roles=roles, initial={"role": getattr(membership, "role_id", None)})
+    if request.method in ["POST", "PATCH"] and form.is_valid():
+        role_id = form.cleaned_data["role"]
         role = get_object_or_404(Role, id=role_id)
 
         try:
@@ -115,16 +119,15 @@ def team_change_role(request, workspace_id=None, membership_id=None, company_id=
         if request.htmx:
             return JsonResponse({"success": True, "role": role.name})
         return redirect("workspace_detail", workspace_id=workspace_id)
-    else:
-        form = MembershipForm(instance=membership)
     return render(
         request,
         "company/partials/role_form.html",
-        {"form": form, "membership": membership, "company": company, "roles": roles},
+        {"form": form, "membership": membership, "company": company, "workspace": company, "roles": roles},
     )
 
 
 @login_required
+@never_cache
 def membership_list(request, workspace_id=None):
     if workspace_id is not None:
         workspace = get_object_or_404(Company, id=workspace_id)

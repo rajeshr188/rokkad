@@ -3233,3 +3233,381 @@ msgstr "फ़िल्टर हटाएँ"
 
 msgid "Yes"
 msgstr "हाँ"
+
+msgid "Accepted"
+msgstr "स्वीकार किया गया"
+
+msgid "Account Settings"
+msgstr "खाते की सेटिंग"
+
+msgid "Add customers, suppliers, brokers, or employees."
+msgstr "ग्राहक, आपूर्तिकर्ता, दलाल या कर्मचारी जोड़ें।"
+
+msgid "Add parties"
+msgstr "पार्टी जोड़ें"
+
+msgid "Add usable INR pure-metal buying prices for the metals you lend against; a rate source alone is not a price."
+msgstr "जिन धातुओं पर ऋण देते हैं, उनके शुद्ध धातु खरीद मूल्य INR में जोड़ें; केवल दर का स्रोत कीमत नहीं है।"
+
+msgid "All Workspaces"
+msgstr "सभी कार्यक्षेत्र"
+
+msgid "An invitation is pending access. Accepted invitations become team memberships."
+msgstr "निमंत्रण भेजने से तुरंत पहुँच नहीं मिलती। स्वीकार करने पर व्यक्ति टीम का सदस्य बनता है।"
+
+msgid "App configuration"
+msgstr "ऐप कॉन्फ़िगरेशन"
+
+msgid "Archive Workspace"
+msgstr "कार्यक्षेत्र संग्रहित करें"
+
+msgid "Archiving stops ordinary branch access while preserving its records. Review the archive page before making this change."
+msgstr "संग्रहित करने से शाखा में सामान्य पहुँच रुक जाती है और रिकॉर्ड सुरक्षित रहते हैं। बदलाव से पहले संग्रहण पृष्ठ की जानकारी पढ़ें।"
+
+msgid "Brand colour"
+msgstr "ब्रांड का रंग"
+
+msgid "Business Name"
+msgstr "व्यवसाय का नाम"
+
+msgid "Business and lending setup"
+msgstr "व्यवसाय और ऋण सेटअप"
+
+msgid "Business name"
+msgstr "व्यवसाय का नाम"
+
+msgid "Business profile"
+msgstr "व्यवसाय की जानकारी"
+
+msgid "Cancel invitation"
+msgstr "निमंत्रण रद्द करें"
+
+msgid "Cancel this invitation if the person should no longer join using it."
+msgstr "यदि व्यक्ति को इससे नहीं जुड़ना चाहिए तो यह निमंत्रण रद्द करें।"
+
+msgid "Change role"
+msgstr "भूमिका बदलें"
+
+msgid "Check"
+msgstr "जाँचें"
+
+msgid "Choose the access this person needs. Permissions come from this workspace's saved role settings."
+msgstr "व्यक्ति को आवश्यक पहुँच चुनें। अनुमतियाँ इस कार्यक्षेत्र की सहेजी गई भूमिका सेटिंग से आती हैं।"
+
+msgid "Collateral"
+msgstr "गिरवी वस्तुएँ"
+
+msgid "Complete"
+msgstr "पूरा"
+
+msgid "Configure rates"
+msgstr "दरें सेट करें"
+
+msgid "Confirm workspace identity and basic business details."
+msgstr "कार्यक्षेत्र की पहचान और व्यवसाय की मूल जानकारी जाँचें।"
+
+msgid "Continue branch setup"
+msgstr "शाखा सेटअप जारी रखें"
+
+msgid "Create New"
+msgstr "नया बनाएँ"
+
+msgid "Create a workspace for a new business. You become its owner. If your branch was already imported, open that workspace instead."
+msgstr "नए व्यवसाय के लिए कार्यक्षेत्र बनाएँ। आप उसके मालिक बनेंगे। यदि शाखा पहले ही आयात हो चुकी है, तो वही कार्यक्षेत्र खोलें।"
+
+msgid "Create workspace and continue"
+msgstr "कार्यक्षेत्र बनाएँ और आगे बढ़ें"
+
+msgid "Data tools"
+msgstr "डेटा उपकरण"
+
+msgid "Declined"
+msgstr "अस्वीकार किया गया"
+
+msgid "Dismiss dashboard card"
+msgstr "डैशबोर्ड कार्ड छिपाएँ"
+
+msgid "Documents & printing"
+msgstr "दस्तावेज़ और प्रिंट"
+
+msgid "Documents and printing (customization optional)"
+msgstr "दस्तावेज़ और प्रिंट (बदलाव वैकल्पिक)"
+
+msgid "Economic setup starts with editable monthly interest of 2%% for gold and 4%% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies."
+msgstr "आर्थिक सेटअप में सोने के लिए 2%% और चाँदी के लिए 4%% मासिक ब्याज का प्रारंभिक सुझाव है, जिसे बदल सकते हैं। अलग शुल्क फॉर्म में वितरण पर कटने वाला INR 10 दस्तावेज़ शुल्क सुझाया गया है। सहेजने से पहले दायरा और प्रभावी तारीख जाँचें; ये सुझाव मौजूदा नीतियाँ नहीं बदलते।"
+
+msgid "Edit business profile"
+msgstr "व्यवसाय की जानकारी बदलें"
+
+msgid "Enter the workspace name exactly as shown."
+msgstr "कार्यक्षेत्र का नाम ठीक जैसा दिखाया गया है वैसा दर्ज करें।"
+
+msgid "Enter the workspace name exactly to confirm archiving."
+msgstr "संग्रहित करने की पुष्टि के लिए कार्यक्षेत्र का नाम ठीक वैसा दर्ज करें।"
+
+msgid "Full loan setup"
+msgstr "पूरा ऋण सेटअप"
+
+msgid "General checklist and dashboard reminders"
+msgstr "सामान्य चेकलिस्ट और डैशबोर्ड अनुस्मारक"
+
+msgid "General checklist is complete or marked complete."
+msgstr "सामान्य चेकलिस्ट पूरी है या पूरी चिह्नित की गई है।"
+
+msgid "General profile, borrower and rate information. Optional team invitations do not affect this count."
+msgstr "सामान्य जानकारी, ग्राहक और दरों का विवरण। वैकल्पिक टीम निमंत्रण इस गिनती को नहीं बदलते।"
+
+msgid "Hide completed general checklist"
+msgstr "पूरी सामान्य चेकलिस्ट छिपाएँ"
+
+msgid "Historical loan evidence"
+msgstr "पुराने ऋणों के प्रमाण"
+
+msgid "Invite member"
+msgstr "सदस्य को आमंत्रित करें"
+
+msgid "Invite team"
+msgstr "टीम को आमंत्रित करें"
+
+msgid "Invited by"
+msgstr "आमंत्रित करने वाला"
+
+msgid "Lending checks below remain independent and are recalculated whenever you return."
+msgstr "ऋण संबंधी जाँच स्वतंत्र हैं और हर बार लौटने पर फिर की जाती हैं।"
+
+msgid "Loan workflow"
+msgstr "ऋण कार्यप्रवाह"
+
+msgid "Logo"
+msgstr "लोगो"
+
+msgid "Manage role permissions"
+msgstr "भूमिका की अनुमतियाँ प्रबंधित करें"
+
+msgid "Member since"
+msgstr "सदस्य बनने की तारीख"
+
+msgid "Members using seats"
+msgstr "सीट उपयोग करने वाले सदस्य"
+
+msgid "My Workspaces"
+msgstr "मेरे कार्यक्षेत्र"
+
+msgid "My account"
+msgstr "मेरा खाता"
+
+msgid "My invitations"
+msgstr "मेरे निमंत्रण"
+
+msgid "Navigation"
+msgstr "नेविगेशन"
+
+msgid "New Workspace"
+msgstr "नया कार्यक्षेत्र"
+
+msgid "Next, review the branch's lending setup. Team invitations are optional; creating a workspace alone does not make it ready to issue loans."
+msgstr "अगले चरण में शाखा का ऋण सेटअप जाँचें। टीम निमंत्रण वैकल्पिक हैं; केवल कार्यक्षेत्र बनाने से ऋण जारी करने की तैयारी पूरी नहीं होती।"
+
+msgid "No invitations sent yet. You can continue working alone."
+msgstr "अभी कोई निमंत्रण नहीं भेजा गया है। आप अकेले काम जारी रख सकते हैं।"
+
+msgid "No team members found."
+msgstr "टीम का कोई सदस्य नहीं मिला।"
+
+msgid "No workspaces"
+msgstr "कोई कार्यक्षेत्र नहीं"
+
+msgid "Open Workspace navigation"
+msgstr "कार्यक्षेत्र नेविगेशन खोलें"
+
+msgid "Optional"
+msgstr "वैकल्पिक"
+
+msgid "Optional appearance"
+msgstr "वैकल्पिक स्वरूप"
+
+msgid "Optional. If a submission fails, select the new image again before saving."
+msgstr "वैकल्पिक। फॉर्म सहेजने में त्रुटि हो तो दोबारा सहेजने से पहले नई तस्वीर फिर चुनें।"
+
+msgid "Optional: invite staff when you need them. A sole owner can work alone."
+msgstr "वैकल्पिक: आवश्यकता होने पर कर्मचारी बुलाएँ। अकेला मालिक स्वयं काम कर सकता है।"
+
+msgid "Parties"
+msgstr "पार्टियाँ"
+
+msgid "Person and access"
+msgstr "व्यक्ति और पहुँच"
+
+msgid "Personal navigation"
+msgstr "व्यक्तिगत नेविगेशन"
+
+msgid "Progress"
+msgstr "प्रगति"
+
+msgid "Reference & communication"
+msgstr "संदर्भ और संचार"
+
+msgid "Releases"
+msgstr "गिरवी मुक्ति"
+
+msgid "Remove access"
+msgstr "पहुँच हटाएँ"
+
+msgid "Remove this member"
+msgstr "इस सदस्य को हटाएँ"
+
+msgid "Reopen setup"
+msgstr "सेटअप फिर खोलें"
+
+msgid "Return to workspace"
+msgstr "कार्यक्षेत्र में लौटें"
+
+msgid "Review archiving"
+msgstr "संग्रहण की जानकारी देखें"
+
+msgid "Review buying rates"
+msgstr "खरीद दरें जाँचें"
+
+msgid "Review license evidence, buying rates and product terms before lending. Each loan validates its own date and terms."
+msgstr "ऋण देने से पहले लाइसेंस प्रमाण, खरीद दरें और उत्पाद की शर्तें जाँचें। हर ऋण की अपनी तारीख और शर्तों का सत्यापन होता है।"
+
+msgid "Review plan and capacity"
+msgstr "प्लान और क्षमता देखें"
+
+msgid "Review profile"
+msgstr "जानकारी जाँचें"
+
+msgid "Review the new role before saving. This changes this person's access in this workspace; it does not edit the role's permissions or transfer ownership."
+msgstr "सहेजने से पहले नई भूमिका जाँचें। इससे इस कार्यक्षेत्र में व्यक्ति की पहुँच बदलती है; भूमिका की अनुमतियाँ नहीं बदलतीं और मालिकाना हक हस्तांतरित नहीं होता।"
+
+msgid "Review what is missing before new lending. Imported customers and loans stay in this workspace; you do not need to create them again."
+msgstr "नया ऋण देने से पहले अधूरा सेटअप जाँचें। आयातित ग्राहक और ऋण इसी कार्यक्षेत्र में रहते हैं; उन्हें फिर बनाने की आवश्यकता नहीं है।"
+
+msgid "Revoke invitation"
+msgstr "निमंत्रण वापस लें"
+
+msgid "Revoked"
+msgstr "वापस लिया गया"
+
+msgid "Role permissions are saved separately for each workspace. A role name alone does not describe all access. The owner must transfer ownership before leaving."
+msgstr "हर कार्यक्षेत्र की भूमिका अनुमतियाँ अलग सहेजी जाती हैं। केवल भूमिका के नाम से पूरी पहुँच पता नहीं चलती। छोड़ने से पहले मालिक को मालिकाना हक हस्तांतरित करना होगा।"
+
+msgid "Save role"
+msgstr "भूमिका सहेजें"
+
+msgid "Seat capacity"
+msgstr "सीट क्षमता"
+
+msgid "Seats remaining for invitations"
+msgstr "निमंत्रण के लिए बची सीटें"
+
+msgid "Seats used, including pending invitations"
+msgstr "लंबित निमंत्रण सहित उपयोग की गई सीटें"
+
+msgid "Security"
+msgstr "सुरक्षा"
+
+msgid "Send an invitation to the email address the person will use to sign in. They must verify that address and accept before joining."
+msgstr "उस ईमेल पते पर निमंत्रण भेजें जिससे व्यक्ति साइन इन करेगा। जुड़ने से पहले उसे पता सत्यापित करके निमंत्रण स्वीकार करना होगा।"
+
+msgid "Send invitation email"
+msgstr "निमंत्रण ईमेल भेजें"
+
+msgid "Sending this form emails an invitation. It does not transfer ownership or create a customer record."
+msgstr "यह फॉर्म भेजने से निमंत्रण ईमेल जाता है। मालिकाना हक हस्तांतरित नहीं होता और ग्राहक का रिकॉर्ड नहीं बनता।"
+
+msgid "Sent invitations"
+msgstr "भेजे गए निमंत्रण"
+
+msgid "Setup"
+msgstr "सेटअप"
+
+msgid "Setup card is dismissed from the dashboard."
+msgstr "सेटअप कार्ड डैशबोर्ड से छिपाया गया है।"
+
+msgid "Setup checklist"
+msgstr "सेटअप चेकलिस्ट"
+
+msgid "Show on dashboard"
+msgstr "डैशबोर्ड पर दिखाएँ"
+
+msgid "Sign In"
+msgstr "साइन इन करें"
+
+msgid "Sign Out"
+msgstr "साइन आउट करें"
+
+msgid "Sign Up"
+msgstr "खाता बनाएँ"
+
+msgid "Team (optional)"
+msgstr "टीम (वैकल्पिक)"
+
+msgid "Team members"
+msgstr "टीम के सदस्य"
+
+msgid "Team navigation"
+msgstr "टीम नेविगेशन"
+
+msgid "Theme"
+msgstr "थीम"
+
+msgid "This e-mail address has already accepted an invite for this company."
+msgstr "इस ईमेल पते ने इस व्यवसाय का निमंत्रण पहले ही स्वीकार किया है।"
+
+msgid "This e-mail address has already been invited for this company."
+msgstr "इस ईमेल पते को इस व्यवसाय के लिए पहले ही आमंत्रित किया गया है।"
+
+msgid "This person will lose access to this branch. Their recorded work remains in its history."
+msgstr "इस व्यक्ति की इस शाखा तक पहुँच समाप्त होगी। उसका दर्ज काम इतिहास में रहेगा।"
+
+msgid "Todo"
+msgstr "बाकी काम"
+
+msgid "Toggle Navigation"
+msgstr "नेविगेशन खोलें या बंद करें"
+
+msgid "Toggle navigation"
+msgstr "नेविगेशन खोलें या बंद करें"
+
+msgid "Understand roles and ownership"
+msgstr "भूमिकाएँ और मालिकाना हक समझें"
+
+msgid "View All Workspaces"
+msgstr "सभी कार्यक्षेत्र देखें"
+
+msgid "Work"
+msgstr "काम"
+
+msgid "Working alone is supported. Invite staff only when they need their own access to this branch."
+msgstr "अकेले काम करना संभव है। कर्मचारियों को तभी आमंत्रित करें जब उन्हें इस शाखा में अपनी पहुँच चाहिए।"
+
+msgid "Working alone? Team invitations are optional. Your selected loan workflow stays unchanged until you explicitly change it."
+msgstr "अकेले काम कर रहे हैं? टीम निमंत्रण वैकल्पिक हैं। चुना ऋण कार्यप्रवाह तब तक नहीं बदलता जब तक आप स्वयं उसे न बदलें।"
+
+msgid "Workspace administration"
+msgstr "कार्यक्षेत्र प्रशासन"
+
+msgid "Workspace name"
+msgstr "कार्यक्षेत्र का नाम"
+
+msgid "Workspace navigation"
+msgstr "कार्यक्षेत्र नेविगेशन"
+
+msgid "Workspace settings"
+msgstr "कार्यक्षेत्र की सेटिंग"
+
+msgid "Workspaces"
+msgstr "कार्यक्षेत्र"
+
+msgid "You"
+msgstr "आप"
+
+msgid "You can reopen it or continue using this setup page."
+msgstr "इसे फिर खोलें या इसी सेटअप पृष्ठ का उपयोग जारी रखें।"
+
+msgid "breadcrumb"
+msgstr "पृष्ठ मार्ग"
+
+msgid "general setup progress"
+msgstr "सामान्य सेटअप की प्रगति"

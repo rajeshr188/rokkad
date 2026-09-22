@@ -1,34 +1,35 @@
+{% load i18n %}
 {% load orgs_tags %}
 {% navigation_actions as nav_actions %}
 {% if 'workspace.view' in nav_actions %}
 {% url 'workspace_slug_settings' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Business profile</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Business profile" %}</a>
 {% url 'workspace_slug_settings_setup' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Setup checklist</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Setup checklist" %}</a>
 {% endif %}
 {% if 'team.view' in nav_actions %}{% url 'workspace_slug_settings_team' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Team</a>{% endif %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Team" %}</a>{% endif %}
 {% if 'billing.view' in nav_actions %}{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Billing</a>{% endif %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Billing" %}</a>{% endif %}
 {% if 'workspace.settings.manage' in nav_actions %}
 {% url 'workspace_slug_settings_numbering' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Loan setup</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Loan setup" %}</a>
 {% if 'workspace.transfer' in nav_actions %}
 {% url 'workspace_loans:loan_workflow_settings' workspace_slug=ew.slug as workflow_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == workflow_href %}active{% endif %}" href="{{ workflow_href }}">Loan workflow</a>
+<a class="nav-link mgmt-nav-link {% if request.path == workflow_href %}active{% endif %}" href="{{ workflow_href }}">{% translate "Loan workflow" %}</a>
 {% endif %}
 {% url 'workspace_loans:document_layout_list' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Documents &amp; printing</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Documents & printing" %}</a>
 {% url 'workspace_slug_settings_preferences' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Preferences</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Preferences" %}</a>
 {% url 'workspace_slug_settings_modules' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">App configuration</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "App configuration" %}</a>
 {% url 'workspace_slug_settings_security' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Security</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Security" %}</a>
 {% endif %}
 {% if 'data.import' in nav_actions %}{% url 'workspace_slug_data_tools_import' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Data tools</a>{% endif %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Data tools" %}</a>{% endif %}
 {% if 'data.view' in nav_actions %}{% url 'workspace_portability:archive_list' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Historical loan evidence</a>{% endif %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Historical loan evidence" %}</a>{% endif %}
 {% if 'workspace.archive' in nav_actions %}{% url 'workspace_slug_settings_archive' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link text-danger {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">Archive Workspace</a>{% endif %}
+<a class="nav-link mgmt-nav-link text-danger {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Archive Workspace" %}</a>{% endif %}

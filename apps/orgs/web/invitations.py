@@ -7,6 +7,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from apps.orgs.audit import audit_log
 from apps.orgs.decorators_v2 import permission_required
@@ -19,6 +20,7 @@ from apps.orgs.web.access_helpers import _assert_workspace_access
 
 
 @login_required
+@never_cache
 def companyinvitations_list(request, workspace_id=None):
     workspace = None
     if workspace_id is not None:
@@ -73,6 +75,7 @@ def companyinvitations_list(request, workspace_id=None):
 @login_required
 @permission_required("team_invite")
 @audit_log("TEAM_INVITE", description="Send team invitation")
+@never_cache
 def team_invite(request, workspace_id=None, company_id=None):
     """
     Send team invitation to new member.
