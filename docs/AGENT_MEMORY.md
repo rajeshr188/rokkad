@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-23
 tags: [agents, context, architecture]
 ---
 
@@ -32,8 +32,9 @@ photos are captured in immutable `LoanDocumentIssue.source_snapshot`; approval
 economics and approved collateral/photo evidence remain authoritative. A loan
 row lock serializes first prints. Reprints use saved artifacts before rebuilding
 facts or fetching media. Old issue snapshots remain null; dynamic images and
-customer values never enter layout packs. Migration 0016 has only been exercised
-in the isolated feature test database and browser sandbox. Literal mapped JCL/JSK frame candidates
+customer values never enter layout packs. Migrations 0016/0017 are now applied
+to local `rokkad_shared_dev` and `rokkad_baseline_rehearsal_linode_20260921`, after
+verified backups; pre-existing Loans/Party rows were preserved. Literal mapped JCL/JSK frame candidates
 remain non-activatable pending reviewed static-stock declarations and artwork review.
 V4 visible business coverage is now separate from internal audit fields: identifiers,
 fingerprints and verification text are optional on paper, while the full payload
@@ -54,7 +55,8 @@ and worktree-local media. Its workspace `jcl-template-sandbox-sample-only` has
 synthetic data only; it is not the existing JCL migration rehearsal. The reviewed
 JCL configuration is saved there as draft revision 1 with all four backgrounds.
 Keep credentials and local assets under ignored `outputs/ticket-template-sandbox/`.
-Use the sandbox settings/launcher, never the rehearsal environment, for this editor.
+Use the sandbox settings/launcher for further isolated experiments. The merged
+editor is also available in the accepted rehearsal after the rollout below.
 The owner accepted JCL's reviewed sandbox workflow. JSK now has a separate
 synthetic workspace `jsk-template-sandbox-sample-only`, draft revision 2 and
 PREPRINTED A5 Original/Duplicate profile 4, using the same sandbox login. The
@@ -82,9 +84,17 @@ printing as a merge prerequisite, and authorized merging into `rls-mvp`. Do not
 reintroduce that approval gate. Record physical alignment as untested, not passed.
 The fast-forward merge completed at `e2fae88d`; the original checkout is on
 `rls-mvp`, with the isolated feature worktree and pre-feature checkpoint retained.
-Existing issued PDFs and source snapshots remain unchanged. Database migrations
-0016/0017 and transferring/assigning sandbox templates remain separate rollout
-steps; merging Git does not activate layouts or deploy the production application.
+Existing issued PDFs and source snapshots remain unchanged. On September 23 the
+owner authorized local rollout: migrations are applied to development/rehearsal;
+accepted JCL/JSK templates and profiles are installed as unassigned drafts in
+`rehearsal-jcl-20260921` (layout/profile 1/1) and `rehearsal-jsk-20260921` (2/2).
+JCL's four R2 assets and the two existing issued PDFs are checksum-verified.
+The imported JCL draft allows long identifiers/business headers to shrink within
+unchanged frames; the accepted sandbox source stays intact. Real licence printed
+name/address fields are blank; requested owner details remain pending. Imported
+licences are unverified legacy references, so do not bypass verification to amend
+them or enable lending. No template is activated by this rollout. JSK has no
+approved sample loan in rehearsal yet. Port 8081 runs the merged `rls-mvp` code.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

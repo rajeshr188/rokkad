@@ -1,11 +1,55 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-23
 tags: [status, architecture]
 ---
 
 # Status
+
+## Merged ticket templates installed in rehearsal (2026-09-23)
+
+Continued from the original `rls-mvp` checkout (`e26b6363`), not the retained
+feature worktree. Backed up both local databases and applied exactly Loans
+0016/0017 using `django_project.settings.migration`: `rokkad_shared_dev` and
+`rokkad_baseline_rehearsal_linode_20260921`. Both now have no pending migrations.
+The custom-format backups are archive-list checked and SHA-256 recorded in the
+private `outputs/ticket-template-rollout-20260922/` directory (work began before
+midnight). Before/after original-column fingerprints match across 91 development
+and 87 rehearsal Loans/Party tables; migration introduced no business-data changes.
+
+Accepted recovery packs were compared with the isolated sandbox's current hashes.
+Imported JCL layout revision 1 / plain A4 paired profile 1 and JSK layout revision
+2 / preprinted A5 Original+Duplicate profile 2 into their **rehearsal** workspaces,
+using the restricted `rokkad_runtime` role and existing services. JCL's four
+background assets were read back from the rehearsal's private R2 application
+prefix and checksum-verified. JSK has no backgrounds. Both pairs remain unassigned
+drafts. No Lakshmi template was invented and no development workspace was assigned.
+
+The actual JCL practice identifiers and missing-business-detail placeholders
+exceeded the accepted sample frames. Adjusted only the imported JCL draft's
+licence number, loan number and business name/address fields to SHRINK with
+automatic leading, retaining geometry, maximum font sizes, the 6 pt floor and
+all source values. The accepted source sandbox and recovery packs are unchanged.
+The marked A4 preview now renders successfully with practice-loan data/photos;
+its full sheet was visually inspected. Licence business details remain visibly
+unconfigured. JSK has no approved preview loan in this rehearsal and correctly
+returns the existing explanatory 409; its accepted synthetic preview remains
+available in the separate sandbox.
+
+Restarted only local port 8081 from `rls-mvp`. Authenticated HTTP checks pass for
+both workspaces' layout list, updated guide, editor and activation review. Both
+retained issued PDFs pass read-back SHA-256 verification. After draft installation,
+82 existing non-configuration tables still match their original fingerprints,
+including customers, loans, collateral, licences, sequences, issues and assignments.
+Runtime checks report only the existing disabled-debug-toolbar warning.
+
+Pending activation: the owner has been asked for JCL's printed business name,
+address/phone and JSK's address/phone (JSK name remains the approved `Jai Sri
+Krishna`). Imported licences are still unverified legacy references; ordinary
+licence amendment must not bypass their verification requirement. JCL's existing
+practice licence is separately synthetic and can be amended through normal setup.
+No loan/licence data, production configuration or source Linode server was changed.
 
 ## Ticket designer accepted for merge (2026-09-22)
 
