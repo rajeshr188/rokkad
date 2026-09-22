@@ -33,7 +33,7 @@ economics and approved collateral/photo evidence remain authoritative. A loan
 row lock serializes first prints. Reprints use saved artifacts before rebuilding
 facts or fetching media. Old issue snapshots remain null; dynamic images and
 customer values never enter layout packs. Migration 0016 has only been exercised
-in the isolated feature test database. Literal mapped JCL/JSK frame candidates
+in the isolated feature test database and browser sandbox. Literal mapped JCL/JSK frame candidates
 remain non-activatable pending reviewed static-stock declarations and artwork review.
 V4 visible business coverage is now separate from internal audit fields: identifiers,
 fingerprints and verification text are optional on paper, while the full payload
@@ -69,6 +69,9 @@ summary label does too. Preserve complete text and the existing 6 pt floor.
 The owner also requests no monthly interest rate on JSK paper, matching JCL.
 JSK's draft and calibration builder omit those frames and explicitly set
 `require_interest_rate=False`; approved rates remain required internal evidence.
+The owner has accepted both JCL and the final JSK digital previews. This is not
+physical-printer acceptance or permission to activate production templates.
+The paired Use this template action remains the bounded UX completion step.
 The owner wants a larger licence-sourced business name and address above JCL's
 borrower row. `LoanLicense.business_name/business_address` are distinct from its
 internal staff label; ordinary amendments and renewals retain them in immutable

@@ -7,6 +7,37 @@ tags: [status, architecture]
 
 # Status
 
+## Preview acceptance and merge-readiness review (2026-09-22)
+
+The owner accepted the refreshed JSK preview after printed interest was removed;
+both JCL and JSK now have owner-accepted digital previews. Physical printer
+acceptance is still separate. No merge, template publication/assignment or target
+database migration was requested or performed during this review.
+
+Compared feature head `e29c0609` with `rls-mvp` at `8b0e1ba3`: baseline remains an
+ancestor, with no tracked changes in either checkout and no branch divergence.
+Local untracked outputs/artwork are intentionally retained. Reran all 188 focused
+document/licence checks on the isolated test database: PASS (28.604 s; local log
+`outputs/ticket-template-tests/merge-readiness.log`). Import boundaries pass for
+713 tracked Python files; 370 current-document links and diff whitespace pass.
+Owner-only dry-run migration drift check against the sandbox reports no changes.
+This is the focused feature gate, not a claim of a full-repository test run.
+
+The implementation extends the existing versioned layouts, profiles and issuance
+pipeline with opt-in precision overlays, explicit paper stock, immutable rich
+source evidence, licence print details and per-copy signature choices. It does
+not replace the renderer/model architecture or introduce financial posting logic.
+The agreed completion gates still include the simplified paired Use this template
+action, its end-to-end operator check, and physical JCL/JSK calibration. Existing
+separate publish/assignment services work and remain available.
+
+Recommendation: finish that bounded activation slice and physical acceptance,
+then merge; do not reopen the architecture. Actual rollout also requires owner
+migrations 0016/0017 and import/review/assignment of the accepted layout assets
+and print profiles in the intended workspaces. Git merge alone does not transfer
+sandbox database configuration, local artwork or credentials. JCL Conditions
+fixed-rate wording must be reviewed before using those reverse sides.
+
 ## JSK printed interest omitted (2026-09-22)
 
 At the owner's request, removed both monthly-interest frames from JSK sandbox

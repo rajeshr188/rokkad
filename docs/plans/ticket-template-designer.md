@@ -259,13 +259,14 @@ pending. These are implementation targets, not changes to current validators.
 2. Complete for source configuration: 35 frame mappings, candidate coordinates,
    missing capabilities and engineering decisions. Defined synthetic test cases;
    actual media inventory/visual review and executable fixtures remain pending.
-3. In progress: optional backgrounds, value-only/custom-label fields, precision
+3. Digital preview accepted: optional backgrounds, value-only/custom-label fields, precision
    geometry, stock profiles/guides, text padding/leading and isolated checks are
    implemented, together with dynamic media/source evidence and first-issue
    serialization. JCL front image/QR positions and signature stock declarations
-   are reviewed. JSK artwork, reverse sides and physical printing remain before
-   full JCL/JSK reproduction.
-4. Simplify authoring/activation in one editor over existing services; keep JSON
+   are reviewed. Both final JCL/JSK previews are owner-accepted. JCL's reverse
+   assets are connected; their fixed-rate wording and physical printing still
+   need review. JSK physical stock alignment remains unverified.
+4. Pending: simplify activation in one editor over existing services; keep JSON
    optional for advanced maintenance, unnecessary for the supported user journey.
 5. Reproduce both examples, test permissions/reprints/compatibility, then conduct
    owner visual and physical printer acceptance before proposing a merge.
@@ -275,7 +276,7 @@ pending. These are implementation targets, not changes to current validators.
 - Use a separate feature database, media root/private object prefix and web port
   before runtime experimentation. Do not copy rehearsal/production credentials
   or start against their database by default. Keep existing servers on their
-  original checkout. No feature runtime environment is provisioned by this plan.
+  original checkout. The separate local browser sandbox is documented above.
 - Use ordinary owner-only migrations if needed; web/workers retain restricted
   roles and forced RLS. Never run experimental migrations on the accepted
   rehearsal or production. Git branches do not isolate databases or media.
