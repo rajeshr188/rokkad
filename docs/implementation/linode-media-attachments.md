@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-23
 tags: [migration, media, rehearsal, r2]
 ---
 
@@ -9,7 +9,8 @@ tags: [migration, media, rehearsal, r2]
 
 This follows [preservation](linode-media-preservation-20260921.md) and the
 [attachment decision](../adr/2026-09-22-legacy-media-attachment-evidence.md).
-It applies to the accepted isolated rehearsal, not the live Linode application.
+It supports the accepted isolated rehearsal and an explicitly bound new production
+destination. It does not attach media to the old live Linode application.
 
 ## Operator flow
 
@@ -35,7 +36,7 @@ It applies to the accepted isolated rehearsal, not the live Linode application.
    Omitting the credential argument retains the previous filesystem-only mode.
 
 Use `manage.py linode_media --help` for the explicit arguments. The command refuses
-non-rehearsal databases, a database-name mismatch, privileged runtime roles, duplicate
+unbound non-rehearsal databases, a database-name mismatch, privileged runtime roles, duplicate
 Workspace destinations, changed evidence checksums, candidates, and changed target
 bindings. Import access is checked again at each admission and on receipt replay.
 
@@ -56,6 +57,96 @@ support separate default/static backends, private ACL defaults and authenticated
 URLs. Application links continue through Workspace-authorized routes; no public
 R2 domain is enabled. A storage URL is not a replacement for application access
 control.
+
+## Production target binding
+
+The [production admission decision](../adr/2026-09-23-production-media-target-binding.md)
+adds `--target-manifest` and `--target-sha256` to both plan and apply. Use
+`--settings django_project.settings.prod_r2` and a restricted runtime connection.
+Owner migrations remain a separate operation. Do not use the migration role for
+attachment admission.
+
+Create the manifest only after the new database, Workspaces, private R2 prefix and
+durable credentials exist. Keep this non-secret file with the private operator
+evidence. Its exact structure is shown below; these are illustrative values, not a
+reviewed or usable deployment target:
+
+```json
+{
+  "profile": "linode-media-target/1",
+  "database": {
+    "name": "rokkad_production",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "user": "rokkad_runtime",
+    "server_address": "127.0.0.1",
+    "server_port": 5432
+  },
+  "storage": {
+    "endpoint": "https://<account-id>.r2.cloudflarestorage.com",
+    "bucket": "rokkad-production-media",
+    "location": "media/application/production/<deployment-id>"
+  },
+  "source": {
+    "namespace": "<source-installation-uuid>",
+    "archive_sha256": "<reviewed-dump-sha256>"
+  },
+  "workspaces": {
+    "jcl": {"id": 1, "slug": "jcl"},
+    "jsk": {"id": 2, "slug": "jsk"},
+    "lakshmipawnbroker": {"id": 3, "slug": "lakshmipawnbroker"}
+  }
+}
+```
+
+Replace every example database value and Workspace ID/slug from the actual new
+target. Schema keys must be the actual source schema names. Read the connected
+identity under the runtime role with:
+
+```sql
+SELECT current_database(), current_user, host(inet_server_addr()), inet_server_port();
+```
+
+`host`/`port` describe the configured TCP connection; `server_address`/`server_port`
+describe the connected PostgreSQL server. Unix socket connections are not admitted
+by this contract. The manifest accepts no passwords, keys or extra properties.
+SHA-256 is over the exact file bytes; formatting changes require a new checksum
+and plan. Retain the reviewed file alongside the plan, not just its hash.
+
+Run the existing plan command with the source reference/customer file paths and
+checksums, namespace, archive checksum, explicit database, actor, Workspace map and
+output directory. Add the production settings and both target arguments:
+
+```text
+python manage.py linode_media plan --settings django_project.settings.prod_r2
+  --database <database> --actor <owner-id> --workspaces <schema-to-id-json>
+  --target-manifest <target.json> --target-sha256 <target-sha256>
+  --references <references.jsonl> --references-sha256 <references-sha256>
+  --customers <customers.jsonl> --customers-sha256 <customers-sha256>
+  --namespace <source-uuid> --archive-sha256 <dump-sha256> --output <plan-directory>
+
+python manage.py linode_media apply --settings django_project.settings.prod_r2
+  --database <database> --actor <owner-id> --workspaces <schema-to-id-json>
+  --target-manifest <target.json> --target-sha256 <target-sha256>
+  --plan <plan.jsonl> --plan-sha256 <reviewed-plan-sha256>
+  --output <apply-directory> --confirmed --workers 16
+```
+
+These are wrapped argument lists; join each invocation for the operator's shell
+and quote JSON/path values appropriately. Keep credentials in protected runtime
+configuration, never on this command line. Review the plan and its summary before
+apply. The first JSONL record binds `linode-media-plan/2` to the target checksum;
+rehearsal plans cannot be reused for production. All rows are rechecked before
+copying begins, including source snapshot, Workspace and resolved attachment/name
+bindings. A changed target, source or prefix requires replanning. Identical retry
+retains receipt idempotency and does not restore user-removed media.
+
+Production application copies use the manifest's stable production prefix;
+originals stay under `media/legacy/` in the same private bucket. Planning does not
+construct an R2 client or copy objects. Successful apply reports
+`PRODUCTION_MEDIA_ATTACHED` with `production_ready: false`: hosted storage checks,
+reconciliation, backup recovery and cutover remain separate requirements. Local
+tests use isolated PostgreSQL and filesystem copies, not production or R2.
 
 ## September rehearsal
 

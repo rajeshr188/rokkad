@@ -7,6 +7,30 @@ tags: [status, architecture]
 
 # Status
 
+## Production media target admission implemented (2026-09-23)
+
+`linode_media` now accepts a non-rehearsal target only with `prod_r2`, a reviewed
+manifest and its exact SHA-256. It binds configured/connected database identity,
+restricted runtime role, private R2 endpoint/bucket/prefix, source UUID/archive
+checksum and Workspace IDs/slugs. Production plans retain the manifest checksum
+in a required header, including empty plans. Apply checks all rows before any
+copy, rejects duplicate identities and changed bindings, and preserves receipt
+idempotency and user-removed media. Rehearsal keeps its original plan format.
+
+All 41 focused target, existing media and deployment-entrypoint tests pass in
+`test_rokkad_ticket_template_feature`, using local filesystem copies. Coverage
+includes restricted-role plan/apply/retry, unchanged rehearsal admission, changed
+database/server/role/storage/source/mapping, private TLS configuration, unbound
+plans, changed manifests, late invalid rows, privileged-role/unauthorized-owner
+denial and empty plans. Evidence: `outputs/production-media-target-tests.log`.
+No R2 objects, production data or rehearsal business records were changed.
+
+The owner reconfirmed that the separate Linode server is not created. Actual
+deployment identities/manifest, durable R2 credentials, hosted checks and a fresh
+timed migration are still pending. The importer reports media completion separately
+from production readiness. See the [operator runbook](implementation/linode-media-attachments.md)
+and [cutover checklist](implementation/linode-production-cutover.md).
+
 ## Owner accepted the imported-loan practice run (2026-09-23)
 
 The owner reported completing the practice run and that all was good. Record the

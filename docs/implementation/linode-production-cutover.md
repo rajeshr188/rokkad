@@ -8,7 +8,8 @@ tags: [migration, cutover, deployment, linode, r2]
 # Three-branch production cutover
 
 The owner selected a **separate Linode server** on September 22. It has not been
-created. Keep the existing `rokkad.com` application live during preparation. Build
+created (reconfirmed by the owner on September 23). Keep the existing `rokkad.com`
+application live during preparation. Build
 the current RLS application on the new server with a separate PostgreSQL database
 and private R2 application prefix. Never upgrade the old tenant database in place
 or promote the September 21 browser rehearsal to production.
@@ -46,7 +47,7 @@ not be reintroduced as an approval gate. Record its alignment as untested.
 | Documents and branch UX | JCL plain-paper and JSK data-only ticket previews accepted; TEST-series activation/reprints verified. Finish payment receipt/release memo and essential staff/device/language checks. |
 | Production media configuration | `prod_r2` is implemented and settings-tested; deployment and authenticated storage tests on the new host are pending. |
 | Media reliability | Local R2 reads have intermittently timed out or made photos unavailable; successful retries are not a resolution. Verify upload/read/print reliability from the destination host before opening. |
-| Production media admission | `linode_media` still refuses non-rehearsal databases. Add an exact approved target/storage binding and tests before the final timed rehearsal; never remove its guard ad hoc. |
+| Production media admission | Implemented exact manifest/checksum binding for database/server/runtime role, private R2 location, source snapshot and Workspace IDs/slugs. Local rejection and attachment/retry tests pass. Actual target manifest and hosted execution await the new server and durable credentials. |
 | Application release | Build a versioned image from a clean committed checkout, review security patch levels, apply migrations and run deployment checks. Do not include unrelated local changes or private output files. |
 | Access and lending | Configure actual owners/staff, Memberships, lifecycle/subscriptions, current licences, products, series, rates/policies and document numbering through normal services. Imported licences/products are historical references, not new-lending setup. |
 | Recovery | Capture and test restoration of the destination database and media evidence; retain the old application, database and media. Record backup locations privately. |
@@ -256,16 +257,13 @@ production media admission, essential UI/printing checks, destination provisioni
 and recovery using this single readiness checklist. Do not repeat the accepted
 collection exercise as a new approval gate.
 
-For media admission, extend the existing command with an explicit reviewed target
-manifest, not a removed database-name guard. Bind the exact destination database
-connection identity and restricted role, R2 HTTPS endpoint/bucket/application
-prefix, source namespace/archive checksum, and schema-to-Workspace mapping. The
-generated plan must retain this manifest's checksum; apply must recheck the entire
-binding before any object copy or attachment. A changed target, prefix, source or
-Workspace map invalidates the plan. Preserve rehearsal behavior and test mismatches
-without touching R2. Do not populate real deployment identities before the new
-server/database and durable credentials are configured. This is the next required
-implementation, not a claim that production media admission is already enabled.
+The production media admission command now implements the exact target contract;
+see the [manifest and operator steps](linode-media-attachments.md#production-target-binding).
+It retains rehearsal behavior and refuses mismatched targets before copying.
+Prepare the real manifest only after the separate server/database, Workspaces and
+durable credentials are configured. The owner reconfirmed the server is not yet
+created. Local tests do not establish remote R2 privacy, reliability or cutover
+readiness; run those checks from the new host.
 
 Resolve required business-flow gaps before choosing a freeze date.
 Create the separate Linode server when ready for hosted

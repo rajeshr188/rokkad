@@ -34,8 +34,14 @@ boundary unless that contract is deliberately extended. See the
 The owner subsequently reported completing the imported-loan practice run with
 everything working well. Treat that workflow as accepted, not as a pending repeat
 approval. Practice transactions are not production data. The next cutover task is
-binding media admission to the exact production database, storage and source;
-destination-host deployment and a fresh timed migration remain separate work.
+binding media admission to the exact production database, storage and source.
+That command contract is now implemented with `linode-media-target/1` and a
+checksummed `linode-media-plan/2` production header; rehearsal retains its original
+format. A changed destination/source requires replanning. See the
+[target-binding decision](adr/2026-09-23-production-media-target-binding.md).
+The owner reconfirmed the separate server is not created; real target identities,
+durable credentials, destination-host verification and a fresh timed migration
+remain pending. Do not substitute rehearsal identities or promote practice data.
 
 The owner authorized a design-first ticket-template experiment on
 `feature/ticket-template-designer`, isolated in its own worktree from baseline
