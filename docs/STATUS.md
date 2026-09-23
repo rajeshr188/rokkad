@@ -7,6 +7,24 @@ tags: [status, architecture]
 
 # Status
 
+## Owner accepted the imported-loan practice run (2026-09-23)
+
+The owner reported completing the practice run and that all was good. Record the
+imported-collection workflow as user-accepted; do not ask for the same acceptance
+again. This is the owner's reported outcome, separate from automated test and
+read-only page-verification evidence below. No new financial actions were performed
+by the agent while recording acceptance. Any practice transactions stay in rehearsal;
+the final production migration still starts from a fresh frozen source snapshot.
+
+Next bounded task is production media admission. Read-through confirms the
+`linode_media` command still deliberately accepts rehearsal databases only, while
+`R2MediaCopies` and `prod_r2` already support private application storage. The
+[cutover runbook](implementation/linode-production-cutover.md) now specifies the
+required exact target and storage binding before lifting that command restriction.
+No media-import code, credentials, infrastructure or production state changed in
+this acceptance update. The separate destination server is last recorded as not
+created; hosted deployment and a fresh timed migration remain pending.
+
 ## Imported interest-only and partial-principal payments (2026-09-23)
 
 Implemented the owner-confirmed payment rule in the existing Record payment

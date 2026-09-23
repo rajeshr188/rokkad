@@ -31,6 +31,12 @@ servicing requires dates strictly after the opening date; plan an overnight
 boundary unless that contract is deliberately extended. See the
 [cutover runbook](implementation/linode-production-cutover.md).
 
+The owner subsequently reported completing the imported-loan practice run with
+everything working well. Treat that workflow as accepted, not as a pending repeat
+approval. Practice transactions are not production data. The next cutover task is
+binding media admission to the exact production database, storage and source;
+destination-host deployment and a fresh timed migration remain separate work.
+
 The owner authorized a design-first ticket-template experiment on
 `feature/ticket-template-designer`, isolated in its own worktree from baseline
 `8b0e1ba3` on `rls-mvp`. Follow [the bounded plan](plans/ticket-template-designer.md).

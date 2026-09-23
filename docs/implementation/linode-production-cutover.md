@@ -42,7 +42,7 @@ not be reintroduced as an approval gate. Record its alignment as untested.
 | Destination server | Owner selected separate Linode; creation, SSH address and verified access pending. |
 | Database conversion | Accepted snapshot and separate clean-target replay reconcile all source loan IDs. Fresh data and a later opening date require new preparation. |
 | Media | Rehearsal attachment, source retention, private access and duplicate-free retry verified. Missing and blank source images remain explicitly reported. |
-| Imported-loan servicing | Dedicated imported interest-only/partial-principal collection, coupled reversal and payment-aware export/restore are implemented. Reduced-principal interest starts at the next original charge boundary. Finish branch rehearsal on the release candidate; new TEST-loan payment acceptance does not cover imported openings. |
+| Imported-loan servicing | Dedicated imported interest-only/partial-principal collection, coupled reversal and payment-aware export/restore are implemented. Owner completed and accepted the practice run on September 23. Reduced-principal interest starts at the next original charge boundary. Destination-host smoke checks remain part of deployment. |
 | Documents and branch UX | JCL plain-paper and JSK data-only ticket previews accepted; TEST-series activation/reprints verified. Finish payment receipt/release memo and essential staff/device/language checks. |
 | Production media configuration | `prod_r2` is implemented and settings-tested; deployment and authenticated storage tests on the new host are pending. |
 | Media reliability | Local R2 reads have intermittently timed out or made photos unavailable; successful retries are not a resolution. Verify upload/read/print reliability from the destination host before opening. |
@@ -251,10 +251,22 @@ target records to simulate rollback.
 
 ## Immediate next action
 
-First rehearse the implemented imported-payment workflow above in a disposable
-target, including reversal and export/restore, while keeping unsupported operations
-guarded. Then address production media admission, essential UI/printing checks,
-destination provisioning and recovery using this single readiness checklist.
+The owner has completed and accepted the imported-payment practice run. Move to
+production media admission, essential UI/printing checks, destination provisioning
+and recovery using this single readiness checklist. Do not repeat the accepted
+collection exercise as a new approval gate.
+
+For media admission, extend the existing command with an explicit reviewed target
+manifest, not a removed database-name guard. Bind the exact destination database
+connection identity and restricted role, R2 HTTPS endpoint/bucket/application
+prefix, source namespace/archive checksum, and schema-to-Workspace mapping. The
+generated plan must retain this manifest's checksum; apply must recheck the entire
+binding before any object copy or attachment. A changed target, prefix, source or
+Workspace map invalidates the plan. Preserve rehearsal behavior and test mismatches
+without touching R2. Do not populate real deployment identities before the new
+server/database and durable credentials are configured. This is the next required
+implementation, not a claim that production media admission is already enabled.
+
 Resolve required business-flow gaps before choosing a freeze date.
 Create the separate Linode server when ready for hosted
 deployment testing; prepare access, immutable release image, HTTPS, restricted RLS
