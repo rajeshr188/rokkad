@@ -7,22 +7,36 @@ tags: [status, architecture]
 
 # Status
 
-## Dependency refresh under validation (2026-09-24)
+## Dependency refresh verified and deployed to rehearsal (2026-09-24)
 
-The owner updated the local environment and requested verification and continuation.
-Fourteen direct dependency pins and matching constraints now capture those updates,
-including Django 6.1.1/allauth 65.19.4 and the remaining PyJWT update to 2.15.0.
-The requirements files had still contained the previous versions; local installation
-alone would not have changed the container. Local dependency consistency and Django
-system checks pass. The clean Linux dependency scan reports 71 checked, zero skipped
-and zero known advisories. Fresh/restored migrations and runtime probes preserve 116
-business, preference and identity tables. The initial 1,906-test run found one Select2
-compatibility regression: widget attribute construction replaced the signed borrower
-search token. The integration now sets the URL-bound token after base attributes are
-built; the full cache-unavailable, expiry, RBAC and cross-Workspace test passes. Broad
-regressions and the corrected candidate are being revalidated before rehearsal
-deployment. Production routing is unchanged. See the
-[refresh report](implementation/dependency-refresh-20260924.md).
+The owner's installed updates are now recorded in fourteen direct pins and matching
+constraints, including Django 6.1.1/allauth 65.19.4 and the additionally updated
+PyJWT 2.15.0. The corrected candidate is source `fd011920`, image
+`rokkad:rc-20260924-fd011920`, image ID
+`sha256:55ad097dc208746fed3f9417a68e357e13c2062f979c89a099087f2458fad934`.
+
+The final Linux image scan checked **71 distributions, zero skipped, zero known
+advisories**, with no ignore list. This clears the earlier Python dependency gate.
+The final broad regression passed **1,911 tests across 202 modules** in 684.503
+seconds. A real Select2 upgrade regression was fixed: borrower autocomplete now sets
+its signed URL token after base attribute construction. Existing cache-unavailable,
+expiry, separate-worker, RBAC and cross-Workspace checks remain intact. Five new
+Google token compatibility tests are included in CI; no real provider calls ran.
+
+Fresh/restored migrations, non-root static/startup, owner-role rejection, draft-product
+creation/rollback and runtime access probes passed, preserving 116 existing tables
+in the restored copy. After a server-only backup, the rehearsal image was switched
+and HTTPS home/login checks passed. Rehearsal verification preserved all **117**
+checked business, preference, user/membership/social-account and access-decision
+tables. Synthetic password login, borrower search in all three Workspaces, subscription
+boundaries and existing JCL/JSK PDF checksums passed; all synthetic mutations rolled
+back. Production routing remains unchanged. No financial writes or remote Git push
+were performed. See the [refresh report](implementation/dependency-refresh-20260924.md).
+
+Next is final operator acceptance and production cutover preparation: actual login
+and staff journeys, reviewed production configuration/credentials and recovery,
+then the complete frozen-source snapshot/import described in the cutover runbook.
+Known-advisory clearance is not a blanket security certification or cutover approval.
 
 ## Consolidated release candidate validated; security gate blocked (2026-09-24)
 
