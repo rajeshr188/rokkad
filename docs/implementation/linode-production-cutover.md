@@ -20,12 +20,12 @@ imports one complete frozen snapshot for JCL, JSK and Lakshmi together.
 
 ## September 24 release requirements
 
-The [consolidated candidate](release-candidate-20260924.md) now has committed source
-and a clean versioned image, with fresh/restored migration and restricted-runtime
-checks. Its security scan flags 11 dependencies; review and resolve those findings
-before promotion. This candidate has not replaced the running rehearsal image or
-changed production routing. Use the linked report for exact image identity and
-remaining gates.
+The [dependency-refreshed candidate](dependency-refresh-20260924.md) now has committed
+source and a clean versioned image, with 1,911 passing regressions, fresh/restored
+migration and restricted-runtime checks. Its scan reports no known Python dependency
+advisories across 71 checked distributions. It is deployed to rehearsal; production
+routing remains unchanged. Use the linked report for exact image identity and the
+remaining operator/configuration/recovery and frozen-source cutover requirements.
 
 Preference-library retirement and the simplified loan number/date UI were verified
 in `rokkad:rehearsal-prefs-retired-20260924`. Final production must

@@ -8,6 +8,11 @@ related: [linode-production-cutover.md, container-and-ci.md, ../STATUS.md]
 
 # Consolidated production release candidate, September 24
 
+This records the initial candidate and its historical advisory findings. The
+[dependency refresh](dependency-refresh-20260924.md) supersedes it with a corrected,
+verified image deployed to rehearsal and a clean known-advisory scan. Preserve the
+evidence below as the earlier checkpoint, not the current deployment status.
+
 ## Decision and scope
 
 The owner authorized consolidating the accumulated rehearsal changes, building one

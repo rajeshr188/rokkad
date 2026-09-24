@@ -759,7 +759,11 @@ proxy/CDN privacy still needs acceptance. See [private media](implementation/pri
 Rates has no request cache middleware or cache-writing signal. Loans reads its
 Workspace facade from PostgreSQL. Redis is optional via CACHE_URL; local memory is
 the default display cache. Borrower autocomplete uses signed tokens and rebuilds its
-authorized queryset, without cache-stored widgets. See [cache configuration](implementation/cache-configuration.md).
+authorized queryset, without cache-stored widgets. Set its URL-bound token after
+Select2's base `build_attrs` call: newer Select2 versions generate their cache token
+there and would overwrite a token set before rendering. See
+[cache configuration](implementation/cache-configuration.md) and
+[dependency refresh verification](implementation/dependency-refresh-20260924.md).
 
 ## Billing and operations
 

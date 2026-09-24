@@ -20,7 +20,7 @@ scoping or authorize production deployment.
 | Paid billing correctness | R03/R04 | Checkout binding, replay, invoice and webhook repair implemented; expiry implemented; known-payment/refund recovery implemented; owner review decisions implemented; provider acceptance shelved as FW-002 |
 | Current docs/product/residue cleanup | R08/R09/R10, verified R13 | R08/R09/R10/R13 complete; bounded removal evidence linked below |
 | Routing, dashboard and module organization | R07/R11/R12 | R07 and R11 complete locally; Loans views portion of R12 complete; orgs workspace/role settings extracted; team/invitations extracted; orgs views complete including account/preferences and slug adapters; broader model/form/renewal review separate |
-| Production operations acceptance | Remaining R06 | Hosted rehearsal verified; consolidated candidate assembled; dependency-advisory remediation blocks production promotion |
+| Production operations acceptance | Remaining R06 | Updated candidate verified/deployed to rehearsal; known dependency advisories cleared; final operator acceptance and frozen-source production cutover remain |
 
 Foundation implementation and operator commands are documented in
 [Containers and CI](../implementation/container-and-ci.md) and
@@ -29,14 +29,12 @@ action grants, protected files and historical compatibility routes remain intact
 
 ## Current delivery priority
 
-The [September 24 release candidate](../implementation/release-candidate-20260924.md)
-consolidates the subsequent rehearsal changes and validates fresh/restored migrations
-and restricted-role runtime behavior. Its package scan flags 11 dependencies.
-The next release priority is advisory applicability review and a tested dependency
-refresh: update direct pins/constraints together, rebuild, repeat security and
-functional checks, then resume production operations acceptance. Do not promote the
-current image based only on passing functional checks. No production cutover is
-authorized by this consolidation task.
+The [dependency refresh](../implementation/dependency-refresh-20260924.md) clears the
+earlier candidate's known Python advisories, fixes upgraded Select2 borrower search,
+passes 1,911 regressions and fresh/restored runtime checks, and is deployed to rehearsal.
+Resume production operations acceptance: actual login/staff journeys, production
+configuration/credentials and recovery review, then the complete frozen-source
+import and cutover runbook. Rehearsal deployment is not production cutover approval.
 
 ## Completed review increments and deferred provider work
 

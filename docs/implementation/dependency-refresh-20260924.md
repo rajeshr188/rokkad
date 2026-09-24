@@ -39,6 +39,7 @@ checked, zero skipped, zero known advisories**, without an ignore list. Audit to
 ran separately without deployment credentials or customer-data mounts. This clears
 the earlier candidate's known Python dependency findings for the scanned versions;
 it is not a claim that the entire application or operating system is vulnerability-free.
+The same unsuppressed scan passed on the corrected final image `fd011920`.
 
 The earlier no-fix PyJWT entry, [PYSEC-2025-183](https://github.com/pypa/advisory-database/blob/main/vulns/pyjwt/PYSEC-2025-183.yaml),
 is disputed upstream and lists 2.10.1 as its last affected version. Rokkad has no
@@ -67,8 +68,17 @@ separate-worker, expiry, malformed-token, cross-Workspace and permission-denial 
 This fixes borrower search without relaxing authorization or adding shared cache state.
 
 Fresh/restored migrations and restricted-runtime checks passed with 116 existing
-business/preference/identity tables preserved. The corrected image and full regression
-are being revalidated before rehearsal deployment.
+business/preference/identity tables preserved: 99 business/subscription, five retained
+preference/audit and 12 user/membership/social-account tables. The final image passed
+non-root startup and static collection, restricted-role checks, owner-role rejection,
+both draft-product creation/rollback paths, borrower searches in all three restored
+Workspaces, a synthetic allauth password-login form submission, subscription boundaries
+and existing JCL/JSK PDF checksums. All synthetic data was rolled back. The final full
+regression passed **1,911 tests across 202 modules** in 684.503 seconds, including
+the borrower-search correction and five new Google token tests. Local evidence is
+in `.tmp/dependency-candidate-tests.log` and `.tmp/dependency-test-modules.txt`;
+the aggregate result is retained with server-side evidence. App-boundary, current
+documentation-link and whitespace checks passed. No remote GitHub workflow was run.
 
 ## Release evidence
 
@@ -78,5 +88,36 @@ databases are `rokkad_deps_fresh_20260924` and `rokkad_deps_upgrade_20260924`.
 The restored upgrade includes business, retained preference, user, membership and
 social-account row fingerprints. No sensitive backup is exported to OneDrive.
 
-Record the final candidate identity, regression results and rehearsal deployment
-here when verification completes. Production cutover remains a separate operation.
+Final candidate:
+
+- Source: `fd011920`, branch `release/2026-09-24-rc1`.
+- Image: `rokkad:rc-20260924-fd011920`.
+- Image ID: `sha256:55ad097dc208746fed3f9417a68e357e13c2062f979c89a099087f2458fad934`.
+- Source archive SHA-256: `948329ec2ea04db677d8c7ae7a3a36353f942d77ba0c3db3eeb3dd2ad6a5fc3b`.
+
+## Rehearsal deployment completed
+
+The verified image is running at `https://rehearsal.rokkad.com`. The pre-deployment
+plan confirmed no pending schema operations. Web was paused for a private server-only
+database backup, owner-only migration check, static collection and rollback-only
+acceptance probes, then reopened on the exact verified image. HTTPS home and login
+checks passed. All **117** checked existing business, preference, user/membership,
+social-account and access-decision tables retained their row fingerprints.
+Synthetic password login, borrower searches in all three Workspaces, subscription
+access controls and saved JCL/JSK PDF checksums passed. No financial mutation or
+external provider call was performed.
+
+Backup metadata is in `evidence/backup.json`; its SHA-256 is
+`30335df13e9ff2b55647845852cc77d5ef1a6d0ed174554342d6c466af2360b9`.
+The old compose file is `evidence/web-compose.before.yml`; the old image remains
+`rokkad:rehearsal-access-continuity-v2-20260924`. If rollback is needed, restore that
+compose image and recollect static assets using it before reopening web. No schema
+reversal or database restore was needed for this release. Backups remain on the
+server, as instructed.
+
+The earlier dependency-advisory blocker is cleared for this candidate. Production
+routing is unchanged. Remaining work is operator acceptance (including actual login
+and staff workflows), reviewed production credentials/proxy and recovery settings,
+and the complete frozen-source import/cutover runbook. The existing HSTS deployment
+warning remains part of production proxy review. Payment-provider acceptance stays
+deferred with checkout disabled and dated administrator access available.
