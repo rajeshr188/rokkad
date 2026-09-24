@@ -14,7 +14,10 @@ release candidate. Work is on `release/2026-09-24-rc1`, with an ordinary clean-s
 Docker build, pinned Python image/dependency constraints, template-installer inclusion
 and CI coverage for the new boundaries. The existing tracked SQL backup is removed
 from this branch's index while its local file remains intact; private artifacts are
-excluded. A 201-module regression run and fresh/upgrade validation are in progress.
+excluded. Fresh and restored-upgrade migrations passed, preserving all 99 existing
+Party/Loans/subscription tables and five preference/audit tables. The 201-module
+regression is being rerun after correcting obsolete assertions and access fixtures;
+runtime probes are in progress.
 
 The corrected dependency advisory scan checked 72 distributions with zero skips and
 flagged 11 packages, including Django/allauth. This is a production promotion blocker;

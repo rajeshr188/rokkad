@@ -60,7 +60,7 @@ print(json.dumps({
                 self.assertIn('ROKKAD_REHEARSAL_DB_NAME must start with', result.stderr)
 
     def test_banner_requires_explicit_rehearsal_setting(self):
-        with override_settings(REHEARSAL_BROWSER=False):
-            self.assertEqual(rehearsal_environment(None), {'rehearsal_browser':False})
-        with override_settings(REHEARSAL_BROWSER=True):
-            self.assertEqual(rehearsal_environment(None), {'rehearsal_browser':True})
+        with override_settings(REHEARSAL_BROWSER=False, TICKET_TEMPLATE_SANDBOX=False):
+            self.assertEqual(rehearsal_environment(None), {'rehearsal_browser':False, 'ticket_template_sandbox':False})
+        with override_settings(REHEARSAL_BROWSER=True, TICKET_TEMPLATE_SANDBOX=False):
+            self.assertEqual(rehearsal_environment(None), {'rehearsal_browser':True, 'ticket_template_sandbox':False})

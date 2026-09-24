@@ -95,7 +95,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         )
         self.assertEqual(
             [pattern.name for pattern in org_urls.TEAM_MEMBER_URLPATTERNS],
-            ["team_remove_member", "team_change_role", "team_members_list", "workspace_leave", "my_memberships"],
+            ["workspace_role_permissions", "workspace_role_permissions_edit", "team_remove_member", "team_change_role", "team_members_list", "workspace_leave", "my_memberships"],
         )
 
     def test_org_urlpatterns_preserve_compatibility_order(self):
@@ -131,6 +131,8 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 "team_delete_invitation",
                 "team_invitations_list",
                 "team_invite_success",
+                "workspace_role_permissions",
+                "workspace_role_permissions_edit",
                 "team_remove_member",
                 "team_change_role",
                 "team_members_list",
@@ -178,10 +180,10 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
 
         self.assertIn("Invitations for You", global_incoming)
         self.assertIn("sent to your email", global_incoming)
-        self.assertIn("Sent Workspace Invitations", sent_invitations)
-        self.assertIn("Track invitations sent for", sent_invitations)
-        self.assertIn("Invite Team Member", invite_form)
-        self.assertIn("Send Workspace Invitation", invite_form)
+        self.assertIn("Sent invitations", sent_invitations)
+        self.assertIn("Accepted invitations become team memberships.", sent_invitations)
+        self.assertIn("Invite member", invite_form)
+        self.assertIn("Send invitation email", invite_form)
         self.assertIn("Workspace Invitation Sent", invite_success)
 
     def test_invitation_and_team_templates_do_not_contain_known_mojibake(self):
@@ -205,12 +207,13 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 self.assertNotIn("·", content)
 
     def test_workspace_scoped_redirect_cleanup_contract_is_documented_in_views(self):
-        views_content = (PROJECT_ROOT / "apps" / "orgs" / "views.py").read_text(
-            encoding="utf-8-sig"
+        views_content = "\n".join(
+            (PROJECT_ROOT / "apps" / "orgs" / "web" / name).read_text(encoding="utf-8-sig")
+            for name in ("invitations.py", "team_members.py", "access_helpers.py")
         )
 
         self.assertIn('"workspace_slug_settings_invitations"', views_content)
-        self.assertIn("workspace_id=company.id", views_content)
+        self.assertIn("workspace_slug=company.slug", views_content)
         self.assertIn("def _get_workspace_from_query(request):", views_content)
         self.assertIn('workspace_id = request.GET.get("workspace_id")', views_content)
         self.assertIn("raise Http404(\"Invalid workspace ID\")", views_content)
@@ -235,8 +238,9 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         self.assertIn("Status: complete", plan)
 
     def test_direct_accept_route_uses_orgs_adapter_with_django_fallback(self):
-        views_content = (PROJECT_ROOT / "apps" / "orgs" / "views.py").read_text(
-            encoding="utf-8-sig"
+        views_content = "\n".join(
+            (PROJECT_ROOT / "apps" / "orgs" / "web" / name).read_text(encoding="utf-8-sig")
+            for name in ("invitations.py", "team_members.py", "access_helpers.py")
         )
         urls_content = (PROJECT_ROOT / "apps" / "orgs" / "urls.py").read_text(
             encoding="utf-8-sig"
@@ -254,8 +258,9 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         self.assertEqual(app_settings.SIGNUP_REDIRECT, "account_signup")
 
     def test_custom_incoming_invitation_accept_flow_sets_workspace_context(self):
-        views_content = (PROJECT_ROOT / "apps" / "orgs" / "views.py").read_text(
-            encoding="utf-8-sig"
+        views_content = "\n".join(
+            (PROJECT_ROOT / "apps" / "orgs" / "web" / name).read_text(encoding="utf-8-sig")
+            for name in ("invitations.py", "team_members.py", "access_helpers.py")
         )
 
         self.assertIn("control_plane.accept_invitation(", views_content)
@@ -307,8 +312,9 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 self.assertIn(expected, orgs_tests)
 
     def test_phase86_views_keep_invitation_and_team_boundaries_explicit(self):
-        views_content = (PROJECT_ROOT / "apps" / "orgs" / "views.py").read_text(
-            encoding="utf-8-sig"
+        views_content = "\n".join(
+            (PROJECT_ROOT / "apps" / "orgs" / "web" / name).read_text(encoding="utf-8-sig")
+            for name in ("invitations.py", "team_members.py", "access_helpers.py")
         )
 
         for expected in (

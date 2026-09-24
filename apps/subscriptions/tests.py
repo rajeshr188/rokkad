@@ -124,6 +124,7 @@ class SubscriptionAccessServiceTests(TestCase):
 
         workspace = SimpleNamespace(
             id=9,
+            owner_id=1,
             slug="jcl",
             schema_name="legacy_jcl",
             name="JCL",
@@ -141,6 +142,8 @@ class SubscriptionAccessServiceTests(TestCase):
         request = RequestFactory().get("/w/jcl/settings/billing/plans/")
         request.user = user
         request.workspace = workspace
+        from apps.subscriptions.access_policy import WorkspaceActivity
+        request.workspace_activity = WorkspaceActivity("full", "Test subscription")
         request.resolver_match = resolve(request.path)
 
         with patch(

@@ -52,12 +52,13 @@ class ReappraisalConcurrencyTests(TransactionTestCase):
             snapshot = refresh_loan_risk_snapshot(self.loan.pk, as_of_date=self.today)
             self.assertEqual(snapshot.status, "CURRENT")
             original_value, original_date = self.original.appraised_value, self.original.effective_at
-        before = [("loans", "0005_pawnreleasebatch_pawnreleasebatchline_and_more")]
-        after = MigrationExecutor(connection).loader.graph.leaf_nodes()
-        try:
-            MigrationExecutor(connection).migrate(before)
-        finally:
-            MigrationExecutor(connection).migrate(after)
+        loader = MigrationExecutor(connection).loader
+        migration = loader.get_migration("loans", "0006_collateralappraisal_valuation_context_and_more")
+        state = loader.project_state((migration.app_label, migration.name))
+        # Test the actual historical invalidation SQL without undoing later
+        # immutable audit guards. Fresh/full upgrades are release checks.
+        with connection.schema_editor() as editor:
+            migration.operations[-1].database_forwards("loans", editor, state, state)
         with workspace_context(self.tenant.pk):
             self.original.refresh_from_db()
             snapshot.refresh_from_db()

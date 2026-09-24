@@ -255,7 +255,7 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
         request = RequestFactory().get("/", {"amend_monitoring": self.policy.pk})
         request.user, request.workspace = self.actor, self.tenant
         page = pawn_economics_setup(request)
-        self.assertContains(page, "Review these compliance thresholds")
+        self.assertContains(page, "Review the limits before saving")
         self.assertContains(page, "Amend monitoring policy")
         self.assertContains(page, "Save new policy version")
         self.assertContains(page, f'value="{self.policy.pk}"')

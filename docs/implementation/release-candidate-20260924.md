@@ -77,10 +77,25 @@ Keep payment-provider calls mocked until the separately approved acceptance work
 
 ## Validation
 
-Assembly checks are in progress. Record final source/image identity, regression
-results, fresh/upgrade migration evidence and runtime-role checks here before
-describing the candidate as technically verified. A successful build does not clear
-the security gate above.
+The initial consolidated source is `ec96cce6`. Its ordinary Docker build succeeded.
+Owner-only migrations and migration-drift checks passed on an empty database and
+a restored pre-preference-retirement rehearsal backup. Ordered row fingerprints
+preserved all 99 existing Party/Loans/subscription tables and five preference/audit
+tables; synthetic nonempty legacy preferences were included in the disposable copy.
+The fresh database has empty retained preference tables without installing the
+retired package or recording its package migrations.
+
+The first 201-module run executed 1,906 tests and exposed stale shell/navigation,
+historical-document and extracted-view assertions, missing commercial-access test
+fixtures, and two tests attempting to reverse later irreversible audit migrations.
+Those checks have been aligned with the accepted behavior. The two migration tests
+exercise the original forward SQL data operations without undoing later evidence
+protections; they do not claim to migrate a historical schema backward. The full
+fresh/restored forward migration checks are separate release evidence.
+
+The final regression run and runtime probes are in progress. Record their result
+and final source/image identity here before describing functional verification as
+complete. A successful build or functional check does not clear the security gate.
 
 ## Other cutover requirements
 

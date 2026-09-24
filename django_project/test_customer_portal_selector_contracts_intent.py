@@ -121,8 +121,8 @@ class CustomerPortalSelectorContractsIntentTests(SimpleTestCase):
                     resolve(path, urlconf=urls)
 
     def test_phase123_project_docs_point_to_selector_phase(self):
-        status = _read("docs/STATUS.md")
-        memory = _read("docs/AGENT_MEMORY.md")
+        status = _read("docs/archive/context/2026-09-09/STATUS.md")
+        memory = _read("docs/archive/context/2026-09-09/AGENT_MEMORY.md")
         audit = _read("docs/ui/saas_information_architecture_audit.md")
         portal_plan = _read("docs/ui/customer_portal_phase12_plan.md")
 

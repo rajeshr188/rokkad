@@ -216,11 +216,15 @@ class MonitoringConcurrencyTests(TransactionTestCase):
             failed = LoanRiskSnapshot.objects.create(workspace=self.tenant, loan=other,
                 as_of_date=self.today, status="ERROR", error_message="First assessment failed")
             original = (self.policy.rate_freshness_days, self.policy.effective_from, self.policy.created_by_id)
-        targets = MigrationExecutor(connection).loader.graph.leaf_nodes()
-        try:
-            MigrationExecutor(connection).migrate([("loans", "0005_pawnreleasebatch_pawnreleasebatchline_and_more")])
-        finally:
-            MigrationExecutor(connection).migrate(targets)
+        loader = MigrationExecutor(connection).loader
+        migration = loader.get_migration("loans", "0007_monitoring_policy_amendments")
+        operation = migration.operations[-1]
+        state = loader.project_state((migration.app_label, migration.name))
+        # Reinstall this migration's guard and data upgrade atomically; do not
+        # reverse unrelated, deliberately irreversible evidence migrations.
+        with connection.schema_editor() as editor:
+            operation.database_backwards("loans", editor, state, state)
+            operation.database_forwards("loans", editor, state, state)
         with workspace_context(self.tenant.pk):
             self.policy.refresh_from_db()
             snapshot.refresh_from_db()

@@ -92,8 +92,8 @@ class PublicAuthAliasTemplateRolloutIntentTests(SimpleTestCase):
         self.assertIn("Phase 9.3: Short Auth Aliases", plan)
 
     def test_phase91_public_auth_rollout_is_reflected_in_project_docs(self):
-        status = _read("docs/STATUS.md")
-        memory = _read("docs/AGENT_MEMORY.md")
+        status = _read("docs/archive/context/2026-09-09/STATUS.md")
+        memory = _read("docs/archive/context/2026-09-09/AGENT_MEMORY.md")
         audit = _read("docs/ui/saas_information_architecture_audit.md")
 
         for content in (status, memory, audit):

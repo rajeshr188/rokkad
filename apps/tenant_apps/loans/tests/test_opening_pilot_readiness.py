@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, override_settings
 
 from apps.orgs.audit import AuditLog
+from apps.tenancy.testing import start_workspace_trial
 from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.services.opening_import import adopt_opening_source_number, preview_opening_import
 from apps.tenant_apps.loans.services.pawn_release import preview_pawn_loan_full_release, release_pawn_loan_in_full
@@ -87,6 +88,7 @@ class OpeningPilotReadinessTests(OpeningImportFixture):
                 self.adopt(origin.loan)
 
     def test_opening_page_guides_full_release_without_native_accrual_warning(self):
+        start_workspace_trial(self.a)
         with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
             origin = self.write()
             self.adopt(origin.loan)

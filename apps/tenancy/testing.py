@@ -8,6 +8,18 @@ from apps.orgs.models import Company, Domain
 from .context import workspace_context
 
 
+def start_workspace_trial(workspace):
+    """Create real commercial access for HTTP and rendered-action tests."""
+    from apps.subscriptions.models import Plan, Subscription
+
+    plan = Plan.objects.create(
+        name=f"Test trial for {workspace.slug}",
+        tier=Plan.PlanTierChoices.STARTER, price=0,
+        description="Workspace test harness trial", trial_days=14,
+    )
+    return Subscription.objects.create(company=workspace, plan=plan)
+
+
 def expire_workspace_trial(workspace, *, days_ago=8):
     """Arrange commercial expiry in boundary tests without app-owned billing imports."""
     from datetime import timedelta
@@ -115,16 +127,7 @@ class WorkspaceTestCase(TestCase):
 
     def start_active_trial(self):
         """Create real, currently valid commercial state for this Workspace."""
-        from apps.subscriptions.models import Plan, Subscription
-
-        plan = Plan.objects.create(
-            name=f"Test trial for {self.tenant.slug}",
-            tier=Plan.PlanTierChoices.STARTER,
-            price=0,
-            description="Workspace test harness trial",
-            trial_days=14,
-        )
-        return Subscription.objects.create(company=self.tenant, plan=plan)
+        return start_workspace_trial(self.tenant)
 
     def workspace_reverse(self, viewname, *, args=None, kwargs=None):
         """Reverse a business route beneath the explicit Workspace path."""

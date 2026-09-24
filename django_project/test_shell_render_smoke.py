@@ -188,14 +188,14 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         request = _authenticated_request("/w/acme/settings/", url_name="workspace_slug_settings")
         html = _render(
             '{% extends "base_global.html" %}', request=request,
-            context={"user_permissions": get_permissions_for_role("Owner"), "user_role": "Owner"},
+            context={"user_permissions": get_permissions_for_role("Owner"), "user_role": "Owner", "workspace_can_write": True},
             use_request_processors=False,
         )
         for name in (
             "workspace_slug_dashboard", "workspace_slug_loan_create", "workspace_slug_loan_list",
             "workspace_slug_parties", "workspace_slug_rates", "workspace_slug_notifications",
             "workspace_slug_settings", "workspace_slug_settings_team", "workspace_slug_settings_numbering",
-            "workspace_slug_settings_preferences", "workspace_subscriptions:dashboard",
+            "workspace_subscriptions:dashboard",
         ):
             href = reverse(name, kwargs={"workspace_slug": workspace.slug})
             self.assertIn(f'href="{href}"', html)
@@ -223,7 +223,7 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Workspaces", label)
         self.assertNotIn("Acme Jewellers", label)
 
-    def test_authenticated_management_shell_shows_preferences_for_admin_role(self):
+    def test_authenticated_management_shell_omits_retired_preferences_for_admin_role(self):
         workspace = _workspace()
         html = _render(
             """
@@ -246,8 +246,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             "workspace_slug_settings_preferences",
             kwargs={"workspace_slug": workspace.slug},
         )
-        self.assertGreaterEqual(html.count(f'href="{preferences_href}"'), 2)
-        self.assertIn("Preferences", html)
+        self.assertNotIn(f'href="{preferences_href}"', html)
+        self.assertNotIn("Preferences", html)
+        self.assertIn(reverse("workspace_slug_settings", kwargs={"workspace_slug": workspace.slug}), html)
 
     def test_workspace_selector_renders_global_workspace_manager_surface(self):
         workspace = _workspace()
