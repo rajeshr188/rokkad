@@ -783,6 +783,13 @@ startup checks role/RLS and pending migrations; it never migrates. See
 [container/CI guide](implementation/container-and-ci.md) and
 [testing guide](implementation/testing-and-migrations.md).
 
+Release images use committed allowlisted source, a pinned Python base digest and
+the runtime constraints in `requirements.lock`; update direct pins and constraints
+together. Runtime database grants and static collection are explicit deployment
+steps. Functional acceptance does not clear dependency-advisory findings. Current
+candidate identity, validation and promotion blockers belong in Status and the
+[release report](implementation/release-candidate-20260924.md).
+
 Loans operator seed/integrity/notice commands require `--workspace-id` and own their
 context. Seeding/dispatch require ACTIVE; read-only integrity supports recovery.
 See [operator commands](implementation/loans-operator-commands.md).

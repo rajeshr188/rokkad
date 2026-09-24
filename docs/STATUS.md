@@ -7,24 +7,35 @@ tags: [status, architecture]
 
 # Status
 
-## Consolidated release candidate in validation (2026-09-24)
+## Consolidated release candidate validated; security gate blocked (2026-09-24)
 
 The owner authorized consolidating the rehearsal increments into one versioned
-release candidate. Work is on `release/2026-09-24-rc1`, with an ordinary clean-source
+release candidate. Source `520c8ecb` is on `release/2026-09-24-rc1`, with an ordinary clean-source
 Docker build, pinned Python image/dependency constraints, template-installer inclusion
 and CI coverage for the new boundaries. The existing tracked SQL backup is removed
 from this branch's index while its local file remains intact; private artifacts are
 excluded. Fresh and restored-upgrade migrations passed, preserving all 99 existing
-Party/Loans/subscription tables and five preference/audit tables. The 201-module
-regression is being rerun after correcting obsolete assertions and access fixtures;
-runtime probes are in progress.
+Party/Loans/subscription tables and five preference/audit tables. The final
+201-module regression passed **1,906 tests** in 668 seconds after correcting obsolete
+assertions and access fixtures; no application-policy or audit-guard weakening was
+needed. Documentation links, import boundaries and whitespace checks passed.
 
-The corrected dependency advisory scan checked 72 distributions with zero skips and
-flagged 11 packages, including Django/allauth. This is a production promotion blocker;
+The clean image is `rokkad:rc-20260924-520c8ecb`, image ID
+`sha256:e4942264d0300fe9395cab8eb864fa6a65a3e6f7cfbfe929f869fca3737e5f9c`.
+It passed restricted-role startup, non-root static collection, owner-role startup
+rejection, packaged ticket-installer and dependency-consistency checks. Fresh and
+restored databases passed both automatic draft-product creation paths and rollback
+probes. All three restored Workspaces passed owner/staff access-policy checks and
+JCL/JSK saved PDF checksum checks. Existing contents in all 104 checked tables were
+preserved. Private database backups/evidence remain on the server.
+
+The final-image dependency advisory scan checked 72 distributions with zero skips
+and flagged 11 packages, including Django/allauth. This is a production promotion blocker;
 the candidate must not be described as production-ready merely because functional
 checks pass. See the [candidate report](implementation/release-candidate-20260924.md).
 Rehearsal remains on its prior image; no production cutover or repository push is
-part of this assembly step.
+part of this assembly step. Next: review advisories, update direct dependency pins
+and constraints together, rebuild and repeat validation before production promotion.
 
 ## Subscription access continuity deployed (2026-09-24)
 

@@ -20,15 +20,23 @@ imports one complete frozen snapshot for JCL, JSK and Lakshmi together.
 
 ## September 24 release requirements
 
-The rehearsal now includes preference-library retirement and the simplified loan
-number/date UI (`rokkad:rehearsal-prefs-retired-20260924`). Final production must
+The [consolidated candidate](release-candidate-20260924.md) now has committed source
+and a clean versioned image, with fresh/restored migration and restricted-runtime
+checks. Its security scan flags 11 dependencies; review and resolve those findings
+before promotion. This candidate has not replaced the running rehearsal image or
+changed production routing. Use the linked report for exact image identity and
+remaining gates.
+
+Preference-library retirement and the simplified loan number/date UI were verified
+in `rokkad:rehearsal-prefs-retired-20260924`. Final production must
 build from the reviewed current code and requirements, including migration
 `configuration.0003_retain_legacy_preference_data`, through the owner-only settings.
 Do not install the retired preference packages or delete their retained tables.
 Fresh and populated-upgrade paths were verified on the rehearsal host. This does
 not replace final runtime-role/RLS, staff journey, recovery or source reconciliation
-checks. The final production release still needs a clean committed checkout;
-rehearsal patch images are verification artifacts, not the final release procedure.
+checks. Use a reviewed committed source and clean build with the security gate
+cleared; rehearsal patch images are verification artifacts, not the final release
+procedure.
 See [current status](../STATUS.md) for later evidence superseding the older planning
 checkpoint below.
 
