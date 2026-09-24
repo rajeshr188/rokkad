@@ -90,6 +90,7 @@ jobs:
           python manage.py test --settings django_project.settings.test --noinput
           apps.tenancy.tests apps.tenancy.test_registry
           django_project.test_deployment_entrypoints
+          django_project.test_google_token_compatibility
           apps.onboarding.tests_tour_preferences
           django_project.test_control_plane_contract_gate
           django_project.test_phase9_app_conformance_gate
