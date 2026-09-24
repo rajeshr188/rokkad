@@ -14,4 +14,6 @@ def require_party_service_permission(workspace_id, actor, *permissions):
     access = resolve_workspace_access(actor=actor, workspace=workspace)
     if not any(access.can(permission) for permission in permissions):
         raise PermissionDenied("Missing Party command permission.")
+    from apps.subscriptions.access_policy import require_business_write
+    require_business_write(workspace)
     return workspace

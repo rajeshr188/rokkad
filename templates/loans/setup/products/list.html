@@ -6,26 +6,23 @@
 {% include "loans/setup/_navigation.html" %}
 <div class="app-heading">
   <div>
-    <h1 class="h3 mb-1">Loan products</h1>
-    <p class="text-muted mb-0">Review immutable contract terms before making a version available for new PawnLoans.</p>
+    <h1 class="h3 mb-1">Choose your lending products</h1>
+    <p class="text-muted mb-0">Standard products are prepared for you. Review the repayment rules, loan term and grace period, then enable only the products your business offers.</p>
   </div>
-  <form method="post" action="{% url 'workspace_loans:loan_product_seed_defaults' request.workspace.slug %}">
-    {% csrf_token %}
-    <button class="btn btn-primary" type="submit">Seed four standard products</button>
-  </form>
 </div>
 
-<div class="alert alert-light border">Activation changes availability only. Contract terms cannot be edited after creation, retirement never changes an existing loan, and all lifecycle actions are audited.</div>
+<div class="alert alert-info">Drafts are not available on the new loan form until you enable them. Interest rates and licence/series numbering are configured separately.</div>
+<p class="small text-muted">Saved terms cannot be edited. A new version keeps earlier terms intact, and retiring a product stops its use for new loans without changing existing loans. Changes are recorded in the audit history.</p>
 
 {% for product in products %}
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between">
+  <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
     <span><strong>{{ product.code }}</strong> — {{ product.name }}</span>
-    <span>{% if product.is_active %}<span class="badge text-bg-success">Catalog active</span>{% else %}<span class="badge text-bg-secondary">Catalog inactive</span>{% endif %} <a class="btn btn-sm btn-outline-primary ms-2" href="{% url 'workspace_loans:loan_product_version_create' request.workspace.slug product.pk %}">Create next draft</a></span>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_loans:loan_product_version_create' request.workspace.slug product.pk %}">Create next version</a>
   </div>
   <div class="table-responsive">
     <table class="table app-table align-middle mb-0">
-      <thead><tr><th>Version</th><th>Repayment</th><th>Frequency</th><th>Tenor</th><th>Grace</th><th>Contract</th><th>Loans</th><th></th></tr></thead>
+      <thead><tr><th>Version</th><th>Repayment</th><th>Frequency</th><th>Loan term</th><th>Grace</th><th>Availability</th><th>Loans</th><th></th></tr></thead>
       <tbody>
       {% for version in product.versions.all %}
       <tr>
@@ -34,10 +31,10 @@
         <td>{{ version.get_payment_frequency_display }}</td>
         <td>{{ version.minimum_tenor_months }}–{{ version.maximum_tenor_months }} months</td>
         <td>{{ version.operational_grace_days }} days<div class="small text-muted">Operational only; DPD date unchanged</div></td>
-        <td>{{ version.calculation_contract_version }}<div class="small text-muted">{{ version.available_from|default:"No start limit" }} – {{ version.available_until|default:"No end limit" }}</div></td>
+        <td>{{ version.available_from|default:"No start limit" }} – {{ version.available_until|default:"No end limit" }}<details class="small text-muted mt-1"><summary>Calculation reference</summary>{{ version.calculation_contract_version }}</details></td>
         <td>{{ version.pawn_loans.count }}</td>
         <td class="text-end">
-          {% if version.status == 'DRAFT' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_activate' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit">Activate</button></form>{% endif %}
+          {% if version.status == 'DRAFT' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_activate' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit" aria-label="Enable {{ product.name }} version {{ version.version }} for new loans">Enable for new loans</button></form>{% endif %}
           {% if version.status == 'ACTIVE' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_retire' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Retire</button></form>{% endif %}
         </td>
       </tr>
@@ -47,6 +44,6 @@
   </div>
 </div>
 {% empty %}
-<div class="card"><div class="card-body text-center py-5 text-muted">No loan products exist in this workspace. Seed the reviewed standard drafts to begin.</div></div>
+<div class="card"><div class="card-body text-center py-5 text-muted">The standard products are missing from this workspace. Contact support to restore the draft choices; no existing loan terms will be changed.</div></div>
 {% endfor %}
 {% endblock %}

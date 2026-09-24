@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-24
 tags: [flow, billing, payments, operations]
 related: [../adr/2026-09-09-workspace-checkout-evidence.md, ../plans/project-hardening.md]
 ---
@@ -12,6 +12,12 @@ Provider setup/test-mode acceptance is currently shelved at the owner's request 
 [FW-002](../plans/future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).
 The steps below are a future acceptance guide, not a current request to configure
 Razorpay. They remain required before real paid onboarding.
+
+New checkout/order routes now require `BILLING_CHECKOUT_ENABLED=True`; the default
+is false. Use dated, audited platform administrator access decisions while provider
+acceptance remains unfinished. Existing captured-payment confirmation, reconciliation,
+webhook and invoice routes retain their verification and permissions. See the
+[access policy and operator guide](../domain/subscriptions.md).
 
 This is SaaS subscription billing, separate from borrower loan repayments. It does
 not introduce accounting or license-scoped access.
@@ -82,14 +88,18 @@ References: [create order](https://razorpay.com/docs/api/orders/create/),
   access pending owner review (the conservative default); they never revoke a newer
   purchase. Owners can now record a final access decision as described below.
   Chargebacks, issuing refunds and proration remain separate work. Unsupported events remain unresolved.
-- Paid access is available only while stored status is ACTIVE and now < end_date.
+- A paid commercial term is active only while stored status is ACTIVE and now < end_date.
   At the exact end time, the canonical policy derives EXPIRED without rewriting
   stored status, events or Workspace lifecycle. Missing end_date fails closed.
-  Features and limits are unavailable even with explicit entitlement overrides.
+  The separate activity policy now provides seven days of normal access after natural
+  expiry, then read-only access. Platform extensions can preserve stored entitlements;
+  an entitlement override alone does not extend commercial activity permission.
   Billing/invoice recovery remains owner-authorized; no scheduler is required.
   A newly captured purchase starts a new term after expiry (and may select another
   plan); replaying an already paid invoice never revives an expired term.
-  Trial expiry retains its existing policy; there is no implicit paid grace period.
+  Natural trial expiry uses the same seven-day grace. Cancellation/past-due/stored
+  expired states do not receive automatic grace. Latest platform restrictions remain
+  effective across renewal until lifted or expired; lifecycle restrictions always win.
 - After-commit receipts are best effort: delivery failure is logged and cannot undo
   payment. A crash may miss delivery; there is no durable receipt retry queue yet.
 - Complete provider test-mode browser/webhook/retry acceptance on an HTTPS endpoint

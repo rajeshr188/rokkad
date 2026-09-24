@@ -92,7 +92,7 @@ class Phase4BillingTests(TestCase):
         row.override_reason = "Test capacity override"
         row.override_actor = self.owner
         row.save()
-        Subscription.objects.filter(pk=self.subscription.pk).update(status="active", end_date=timezone.now() - timedelta(seconds=1))
+        Subscription.objects.filter(pk=self.subscription.pk).update(status="active", end_date=timezone.now() - timedelta(days=8))
         self.assertFalse(entitlements.enabled(self.workspace, "api.access"))
         self.assertIsNone(entitlements.limit(self.workspace, "workspace.max_members"))
         row.refresh_from_db()
@@ -309,7 +309,7 @@ class BillingMiddlewareAcceptanceTests(TestCase):
         self.assertEqual(response.context["user_overage"], 0)
         self.assertContains(response, "1/5")
 
-    def test_expired_trial_is_limited_to_billing_recovery(self):
+    def test_expired_trial_enters_grace_without_blocking_reads(self):
         self.create_subscription(
             status=Subscription.StatusChoices.TRIAL,
             trial_end_date=timezone.now() - timedelta(seconds=1),
@@ -317,17 +317,15 @@ class BillingMiddlewareAcceptanceTests(TestCase):
 
         response = self.client.get("/w/no-billing-workspace/parties/")
 
-        self.assertRedirects(
-            response,
-            "/w/no-billing-workspace/settings/billing/dashboard/",
-            fetch_redirect_response=False,
-        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Subscription grace period")
 
-    def test_expired_paid_term_blocks_business_but_preserves_owner_recovery(self):
+    def test_expired_paid_term_allows_readonly_and_preserves_owner_recovery(self):
         self.create_subscription(status=Subscription.StatusChoices.ACTIVE)
-        Subscription.objects.filter(company=self.workspace).update(end_date=timezone.now() - timedelta(seconds=1))
+        Subscription.objects.filter(company=self.workspace).update(end_date=timezone.now() - timedelta(days=8))
         response = self.client.get("/w/no-billing-workspace/parties/")
-        self.assertRedirects(response, "/w/no-billing-workspace/settings/billing/dashboard/", fetch_redirect_response=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Read-only workspace")
         dashboard = self.client.get("/w/no-billing-workspace/settings/billing/dashboard/")
         self.assertEqual(dashboard.status_code, 200)
         self.assertContains(dashboard, "Expired")

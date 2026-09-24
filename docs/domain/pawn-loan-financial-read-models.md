@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-24
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -141,6 +141,36 @@ See [collateral reassessment](../flows/collateral-reassessment.md). These monito
 limits do not become origination or settlement rules implicitly.
 
 ## Workflow use
+
+Licence/series active totals aggregate the canonical recorded balance fold, including
+repayments and reversals. Membership in these reports uses current ACTIVE state;
+the selected date applies to recorded balances, not historical lifecycle membership.
+Unavailable balances contribute to loan and error counts but not monetary totals.
+Maturity bands measure days after the balance reader's maturity date; they are not
+contractual instalment DPD or a replacement for the delinquency selector.
+
+Loans by year groups all operational loan records by the original `loan_date`
+calendar year, not their creation/import timestamp. Counts distinguish current
+active, closed, cancelled and draft/approved states. Money is canonical active
+principal at the selected report date, with unavailable balances counted separately.
+Archive-only historical evidence is excluded. This is a current cohort view, not a
+historical year-end snapshot. Charts combine years older than the latest twelve;
+tables and exports retain every year.
+
+Collateral-by-metal reports cover current active-loan items in vault or with a
+funding lender. Gross/net weights are grams. Value means the latest approved
+appraisal effective on or before the selected date, not market value or eligible
+coverage. Unverified migration valuations do not become approved appraisals.
+Missing gross weights/appraisals are counted explicitly and excluded from sums.
+Released/transferred collateral is excluded to avoid double counting retained
+source items after renewal. Charts format the same totals used by tables/exports.
+
+Report integrity checks recognise disbursal, renewal-opening and migration-opening
+events as valid financial origins. An imported opening must not require an invented
+historical disbursal. Accepting its origin does not bypass canonical balance
+validation: malformed or inconsistent opening evidence still produces a balance
+derivation finding. Paginated integrity pages describe only the loans checked on
+that page; full portfolio summaries retain complete findings.
 
 Reviewed opening v2 can now be committed through the Loans-owned opening service.
 It creates one financial origin, remaining obligations and migration-labelled

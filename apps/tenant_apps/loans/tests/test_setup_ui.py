@@ -189,6 +189,11 @@ class LoansSetupUiTests(WorkspaceTestCase):
         page = self.tenant_get(reverse("loans:loan_product_list"))
         self.assertContains(page, "Single-payment bullet")
         self.assertContains(page, "Operational only; DPD date unchanged")
+        self.assertContains(page, "Choose your lending products")
+        self.assertContains(page, "Enable for new loans", count=4)
+        self.assertNotContains(page, "Seed four standard products")
+        self.assertNotContains(page, "Catalog active")
+        self.assertNotContains(page, 'action="' + reverse("workspace_loans:loan_product_seed_defaults", args=[self.tenant.slug]) + '"')
 
         response = self.tenant_post(reverse("loans:loan_product_version_activate", args=[version.pk]))
         self.assertEqual(response.status_code, 302)

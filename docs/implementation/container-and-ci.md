@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-24
 tags: [deployment, docker, ci, rls]
 related: [postgresql-runtime-role.md, ../plans/project-hardening.md]
 ---
@@ -13,6 +13,16 @@ development/CI baseline. The multi-stage build keeps compilers out of the runtim
 image. `.dockerignore` allows only required application source, static assets and
 startup/provisioning scripts; local environment files, uploads, dumps, Git history,
 virtual environments and documentation are excluded. No credentials are build args.
+
+The Python base is pinned by digest. `requirements.txt` names direct dependencies;
+`requirements.lock` constrains the complete resolved runtime distribution set for
+the consolidated candidate. CI and Docker install with these constraints. Update
+both deliberately when resolving dependency security findings, then rebuild and
+validate. Supply `--build-arg ROKKAD_REVISION=<source-commit>` to record the source
+identity in the image. Retain the final image digest, since apt repositories and
+other build infrastructure are not fully hermetic. The bound cutover template
+installer is included; private template packs and target manifests stay outside.
+See the [candidate report](release-candidate-20260924.md) for current promotion gates.
 
 ## Local development, separate from the existing local database
 

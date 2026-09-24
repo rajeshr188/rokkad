@@ -46,14 +46,10 @@ class HtmxMessagesMiddleware(MiddlewareMixin):
 
 
 class SubscriptionValidationMiddleware(MiddlewareMixin):
-    """
-    Validates that user's workspace has an active subscription before
-    allowing access to tenant-specific features.
+    """Apply commercial activity policy after Workspace/RLS resolution.
 
-    Redirects to subscription/billing page if:
-    - Subscription is inactive/expired
-    - Workspace has no subscription
-    - Subscription is past due
+    Billing recovery keeps its own authorization. Read-only access permits
+    reviewed reads/exports and explains unavailable actions without redirecting staff.
     """
 
     # URLs that don't require subscription check
@@ -101,6 +97,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
             return None
 
         # Skip for exempt URLs
+        current_view = ""
         try:
             resolved = resolve(request.path)
             current_url = resolved.url_name
@@ -133,64 +130,21 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         if workspace.slug == "public":
             return None
 
-        # Centralized subscription evaluation.
+        # Commercial activity is separate from the truthful billing status.
         try:
-            subscription = Subscription.objects.filter(company=workspace).first()
-            if subscription is None:
-                messages.warning(
-                    request,
-                    "No subscription found. Please set up billing to continue.",
-                )
-                return redirect(
-                    "workspace_subscriptions:plan-list",
-                    workspace_slug=workspace.slug,
-                )
-
-            decision = effective_billing_state(subscription)
-
-            if not decision.commercially_available:
-                if decision.reason == "NO_SUBSCRIPTION":
-                    try:
-                        current_url = resolve(request.path).url_name
-                    except Exception:
-                        return None
-
-                    if (
-                        current_url
-                        and not current_url.startswith("subscriptions:")
-                    ):
-                        messages.warning(
-                            request,
-                            "⚠️ No active subscription found. Please set up billing to continue.",
-                        )
-                        return redirect(
-                            "workspace_subscriptions:plan-list",
-                            workspace_slug=workspace.slug,
-                        )
-
-                    return None
-
-                messages.warning(request, decision.message or "Subscription access is unavailable.")
-                return redirect(
-                    "workspace_subscriptions:dashboard",
-                    workspace_slug=workspace.slug,
-                )
-
-            if subscription and getattr(subscription, "end_date", None):
-                days_left = (subscription.end_date - timezone.now()).days
-                if 0 <= days_left <= 7:
-                    messages.info(
-                        request, f"Your current subscription period ends in {days_left} days. Open Billing to renew."
-                    )
-
+            from apps.subscriptions.access_policy import workspace_activity
+            from apps.subscriptions.route_policy import read_route_allowed
+            from django.shortcuts import render
+            decision = workspace_activity(workspace)
+            request.workspace_activity = decision
+            if decision.can_write:
+                return None
+            if decision.mode == "read_only" and read_route_allowed(current_view, request.method):
+                return None
+            if decision.mode == "recovery" and workspace.owner_id == request.user.pk:
+                return redirect("workspace_subscriptions:plan-list", workspace_slug=workspace.slug)
+            return render(request, "subscriptions/access_restricted.html", {"activity": decision}, status=403)
         except Exception:
             import logging
-
-            logger = logging.getLogger(__name__)
-            logger.exception("Subscription validation failed closed")
-            return HttpResponse(
-                "Subscription validation is temporarily unavailable.",
-                status=503,
-            )
-
-        return None
+            logging.getLogger(__name__).exception("Subscription validation failed closed")
+            return HttpResponse("Subscription validation is temporarily unavailable.", status=503)

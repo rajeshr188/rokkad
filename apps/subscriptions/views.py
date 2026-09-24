@@ -114,6 +114,12 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
 
     template_name = "subscriptions/checkout.html"
 
+    def get(self, request, *args, **kwargs):
+        if not settings.BILLING_CHECKOUT_ENABLED:
+            messages.info(request, "Online subscription payment is not yet available. Contact platform support for an access extension.")
+            return redirect("workspace_subscriptions:dashboard", workspace_slug=request.workspace.slug)
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -151,6 +157,8 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
 
 class OrderView(LoginRequiredMixin, BillingPermissionMixin, View):
     def post(self, request, *args, **kwargs):
+        if not settings.BILLING_CHECKOUT_ENABLED:
+            return JsonResponse({"success": False, "error": "Online payment is unavailable. Contact platform support for an access extension."}, status=403)
         from .checkout import create_checkout
         try:
             data = _payment_json(request)
@@ -220,6 +228,8 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
             context["billing_status_label"] = Subscription.StatusChoices(
                 context["billing_decision"].status
             ).label
+            if subscription.status == "trial" and not context["billing_decision"].commercially_available:
+                context["billing_status_label"] = "Trial ended"
 
             # Get recent invoices
             context["recent_invoices"] = Invoice.objects.filter(

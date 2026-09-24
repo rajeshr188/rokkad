@@ -164,3 +164,9 @@ class OpeningExportTests(OpeningImportFixture):
         self.assertIn("loan-opening.jsonl", response["Content-Disposition"])
         self.assertIn("no-store", response["Cache-Control"])
         self.assertTrue(json.loads(response.content.splitlines()[0])["restore_supported"])
+        # Subscription read-only mode preserves the authorized POST/CSRF export.
+        from apps.tenancy.testing import expire_workspace_trial
+        expire_workspace_trial(self.a)
+        response = client.post(url, {"csrfmiddlewaretoken": client.cookies["csrftoken"].value})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("loan-opening.jsonl", response["Content-Disposition"])

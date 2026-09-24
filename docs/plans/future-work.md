@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-24
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -29,6 +29,104 @@ plans; shelving an idea must not hide a release blocker.
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 | FW-005 | Historical market-valued loan entry | Unscheduled policy review | Owner needs backdated origination or a historical Loans import contract | Current-day quote rule implemented; historical eligibility and exceptions remain undesigned |
 | FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
+| FW-007 | Guided customer-facing legacy migration | Recorded at owner request; future work, unscheduled | Owner selects self-service migration onboarding for delivery | Customer spreadsheets and prepared loan imports work; source-specific loan preparation still requires an operator |
+| FW-008 | Servicing-only subscription restriction | Deferred beyond the pre-cutover continuity increment | Owner selects a collections-only stage after read-only/grace acceptance | Full access, seven-day grace, read-only and audited administrator decisions implemented; action-level servicing exceptions undesigned |
+
+## FW-008: Servicing-only subscription restriction
+
+**Captured:** 2026-09-24. **State:** Deferred; unscheduled.
+
+The approved pre-cutover increment provides normal grace, read-only access and
+dated administrator decisions. A later stage could allow repayments, collateral
+release and the documents needed to service existing loans while blocking new
+lending. Define exact allowed actions, reversals, renewals, backdated operations,
+document issuance, notification delivery and import/operator behavior first.
+Do not equate this with GET versus POST, loosen lifecycle/RLS, or accidentally allow
+new financial exposure. Add action-level tests and an explicit customer/admin
+explanation before enabling it. Razorpay provider acceptance remains FW-002 and is
+required before real paid onboarding. See the
+[continuity decision](../adr/2026-09-24-subscription-access-continuity.md).
+
+## FW-007: Guided customer-facing legacy migration
+
+**Captured / last reviewed:** 2026-09-24. **Decision owner:** project owner.
+**State:** Future work; unscheduled. **Implementation approval:** not granted by
+this entry. The owner explicitly requested that this gap be retained in the backlog.
+
+**Problem.** Customers should be able to bring supported legacy data and complete
+a guided migration without writing canonical JSONL, invoking server commands or
+depending on an operator for every source mapping and reconciliation decision.
+Existing portability is not a universal upload-any-spreadsheet-or-database importer.
+
+**Existing foundation to reuse.** Party CSV/XLSX/JSONL mapping, previews, identity
+checks, reusable presets and bundle commits; complete-history loan admission;
+reviewed opening balances; historical-only archives; source-specific PostgreSQL
+dump preparation; and the separate media migration pipeline. The hosted Linode
+rehearsal used these capabilities plus operator preparation, not a generic customer
+migration wizard. Preserve existing financial services and evidence contracts.
+
+**Proposed user journey.**
+
+The owner's two onboarding scenarios are explicit acceptance examples:
+
+- **Start fresh digitally:** use a new series under an existing verified licence
+  for new customers/loans; earlier paper loans remain outside Rokkad. No legacy
+  import is required. Reporting covers only recorded loans, not the whole physical
+  business portfolio.
+- **New lending plus gradual paper migration:** continue normal lending while
+  bringing earlier physical loans into the same Workspace, either by manual entry
+  or Excel. Both proposed input paths must use the same historical admission and
+  reconciliation services. A guided manual legacy-entry screen and generic loan
+  spreadsheet preparation are future work, not the ordinary new-disbursal form.
+
+For the second scenario, propose an **Add existing loan** entry point with manual
+and spreadsheet options. Support explicit matching to borrowers already created
+during new lending; the current import identity foundation does not itself provide
+a customer-facing existing-Party binding editor. Preserve old licence/series/loan
+references and protect the new live number range. Classify evidence as complete
+supported history, a reviewed outstanding opening, or archive-only closed history;
+active status alone does not select opening mode. Each admitted loan/batch needs an
+explicit financial handover date and reconciliation so a payment is recorded once,
+old interest is not charged twice, and original loan age is not reset. Different
+loans may be prepared in later batches while new lending continues. Current opening
+servicing requires dates strictly after the opening date; the proposed journey must
+explain this boundary or separately review an extension. Show migration coverage
+so partial digitisation is never presented as the complete business portfolio.
+
+1. Choose a supported source format/template or adapter, see its coverage and limits,
+   and upload source data into private Workspace staging.
+2. Map columns and source identities; resolve borrower matches and duplicates;
+   map destination licences, series, numbering and products through guided forms.
+3. Classify each loan as supported complete history, a reconciled active opening,
+   historical-only evidence, or blocked/unsupported. Explain the reason in ordinary
+   business language; never infer eligibility from active/closed status alone.
+4. Guide missing-evidence decisions and reconcile principal, interest, fees, original
+   dates, continuation rules, collateral/custody and supported media references.
+   Show source-to-destination totals and every unresolved exception before approval.
+5. Preview without creating operational financial records, obtain explicit approval,
+   and import through existing atomic, idempotent services. Show progress, safe retry,
+   retained audit/source evidence, result links and post-import reconciliation.
+
+**Acceptance boundary.** Start with an explicitly selected source/template and a
+representative customer completing the flow without hand-written JSON or CLI work.
+Test permissions, Workspace isolation, conflicting/repeated identities, changed
+source files, missing versus zero values, partial failures, retry and reconciliation.
+Show unsupported data/attachments honestly. Never execute an uploaded SQL dump
+against the application database, invent historical transactions, overwrite posted
+evidence, silently merge borrowers, or recycle reserved numbers.
+
+**Open decisions / first step when resumed.** Inventory current adapters and import
+screens, select the first supported customer source and batch sizes, and design a
+single end-to-end journey using representative data. Define media coverage, operator
+handoff cases and cancellation/resume behavior before selecting an active delivery
+slice. This backlog item does not by itself become a production-cutover blocker or
+promise arbitrary-source self-service migration.
+
+**References:** [Party workflow](../flows/party-master-portability.md),
+[loan setup preparation](../flows/loans-import-preparation.md),
+[complete-history import](../flows/loans-history-import.md),
+[prepared legacy openings](../flows/legacy-opening-import.md),
+[portability follow-up](loans-portability-audit-followup.md).
 
 ## FW-001: Optional owner-configurable license scope
 

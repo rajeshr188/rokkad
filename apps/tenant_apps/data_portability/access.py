@@ -24,6 +24,8 @@ def require_access(workspace_id, actor, operation):
             raise PermissionDenied("Workspace export is unavailable.")
     else:
         access.require("data.import")
+        from apps.subscriptions.access_policy import require_business_write
+        require_business_write(workspace)
         if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
             raise PermissionDenied("Import requires an active Workspace.")
         if operation == "commit" and not any(access.can(code) for code in PARTY_ACTION_PERMISSIONS["create"]):

@@ -124,6 +124,30 @@ class LoanProductCatalogTests(WorkspaceTestCase):
         activate_product_version(version.pk, actor=self.actor)
         form = PawnDraftForm(workspace=self.tenant)
         self.assertIn(version, form.fields["product_version"].queryset)
+        self.assertEqual(list(form.fields["product_version"].queryset), [version])
+
+    def test_seed_retry_preserves_custom_terms_and_lifecycle(self):
+        versions = seed_default_loan_products(actor=self.actor)
+        active, retired = versions[:2]
+        activate_product_version(active.pk, actor=self.actor)
+        activate_product_version(retired.pk, actor=self.actor)
+        retire_product_version(retired.pk, actor=self.actor)
+        LoanProduct.objects.filter(pk=retired.product_id).update(name="Our reviewed product", is_active=False)
+        create_product_version_draft(
+            active.product_id, actor=self.actor,
+            repayment_structure=active.repayment_structure,
+            amortisation_method=active.amortisation_method,
+            payment_frequency=active.payment_frequency,
+            minimum_tenor_months=1, maximum_tenor_months=6,
+            operational_grace_days=7,
+            extra_payment_rule=active.extra_payment_rule,
+            calculation_contract_version="OUR-REVIEWED-V2",
+        )
+        products_before = list(LoanProduct.objects.order_by("pk").values())
+        versions_before = list(LoanProductVersion.objects.order_by("pk").values())
+        seed_default_loan_products(actor=self.actor)
+        self.assertEqual(list(LoanProduct.objects.order_by("pk").values()), products_before)
+        self.assertEqual(list(LoanProductVersion.objects.order_by("pk").values()), versions_before)
 
     def test_setup_families_reject_missing_unprivileged_and_removed_actors(self):
         from functools import partial

@@ -19,7 +19,7 @@ from .razorpay_service import RazorpayService
 from .views import OrderView, PaymentView, InvoicePDFView, razorpay_webhook
 
 
-@override_settings(RAZORPAY_KEY_SECRET="test-secret", RAZORPAY_WEBHOOK_SECRET="webhook-secret")
+@override_settings(BILLING_CHECKOUT_ENABLED=True, RAZORPAY_KEY_SECRET="test-secret", RAZORPAY_WEBHOOK_SECRET="webhook-secret")
 class CheckoutTests(TestCase):
     def setUp(self):
         self.owner = get_user_model().objects.create_user(username="checkout-owner", email="owner@example.test")

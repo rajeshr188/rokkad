@@ -1,3 +1,4 @@
+from apps.subscriptions.access_policy import workspace_activity
 from .services.contact_details import save_identifier_form, save_role_form, save_relationship_form
 from .services.contact_details import (sync_party_primary_contact as _sync_party_primary_contact, save_contact_form as _save_contact_form, save_address_form as _save_address_form)
 import base64
@@ -209,6 +210,9 @@ def _party_detail_context(
     identifier_form.auto_id = "identity_%s"
     document_form.auto_id = "document_%s"
     access = request.party_workspace_access
+    can_edit_customer = workspace_activity(request.workspace).can_write and any(access.can(p) for p in ("contact.edit", "data.edit"))
+    if active_tab == "merge" and not can_edit_customer:
+        active_tab = "overview"
     return {
         "party": party,
         "role_form": PartyRoleForm(),
@@ -220,9 +224,9 @@ def _party_detail_context(
         "address_form": address_form or PartyAddressForm(instance=edit_address),
         "identifier_form": identifier_form,
         "document_form": document_form,
-        "can_edit_customer": any(access.can(p) for p in ("contact.edit", "data.edit")),
+        "can_edit_customer": can_edit_customer,
         "can_start_customer_loan": access.can("data.view") and access.can("data.create"),
-        "can_manage_customer_setup": access.can("workspace.settings.manage"),
+        "can_manage_customer_setup": workspace_activity(request.workspace).can_write and access.can("workspace.settings.manage"),
         "relationship_form": relationship_form
         or PartyRelationshipForm(instance=edit_relationship, from_party=party),
         "merge_form": merge_form or PartyMergeForm(target_party=party),
@@ -289,8 +293,8 @@ def party_list(request):
             "role_options": role_options,
             "can_export_parties": _can_export_party_data(request),
             "can_import_parties": request.party_workspace_access.can("data.import"),
-            "can_create_parties": any(request.party_workspace_access.can(p) for p in ("contact.create", "data.create")),
-            "can_edit_parties": any(request.party_workspace_access.can(p) for p in ("contact.edit", "data.edit")),
+            "can_create_parties": workspace_activity(request.workspace).can_write and any(request.party_workspace_access.can(p) for p in ("contact.create", "data.create")),
+            "can_edit_parties": workspace_activity(request.workspace).can_write and any(request.party_workspace_access.can(p) for p in ("contact.edit", "data.edit")),
             "export_querystring": _party_export_querystring(request),
         },
     )

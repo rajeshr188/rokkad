@@ -343,10 +343,14 @@ class CompanyInvitation(AbstractBaseInvitation):
         return f"Invited: {self.email} Status: {self.lifecycle_state()} "
 
 
-from dynamic_preferences.models import PerInstancePreferenceModel
 
 
-class CompanyPreferenceModel(PerInstancePreferenceModel):
+class CompanyPreferenceModel(models.Model):
+    """Retained legacy raw values; no registry, defaults or deserialization."""
+    section = models.CharField("Section Name", max_length=150, db_index=True, blank=True, null=True, default=None)
+    name = models.CharField("Name", max_length=150, db_index=True)
+    raw_value = models.TextField("Raw Value", null=True, blank=True)
+
     instance = models.ForeignKey(Company, on_delete=models.CASCADE)
 
     class Meta:

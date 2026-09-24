@@ -31,7 +31,15 @@
   <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-3" id="loan-details">{% translate "Loan details" %}</h2><div class="row g-3">
   {% for field in form %}<div class="col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}
   </div></div></div>
-  <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-2">{% translate "Loan number" %}</h2>{% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.series }} when this draft was first saved.</div>{% else %}<p class="small text-muted mb-2">These are non-consuming previews. The selected series assigns its official number only when the draft is saved; another concurrently saved draft may receive the displayed number first.</p><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Series</th><th>Next expected PawnLoan number</th></tr></thead><tbody>{% for row in number_preview_rows %}<tr><td>{{ row.series }}</td><td>{% if row.preview.value %}<strong class="font-monospace">{{ row.preview.value }}</strong>{% else %}<span class="text-danger">Unavailable: {{ row.preview.error }}</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="2" class="text-muted">No numbering series is configured.</td></tr>{% endfor %}</tbody></table></div>{% endif %}</div></div>
+  <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-2">{% translate "Loan number" %}</h2>
+  {% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.series }} when this draft was first saved.</div>
+  {% else %}
+    <div class="small text-body-secondary">{% translate "Expected loan number" %}</div>
+    <div id="expected-loan-number" class="fw-semibold mt-1" role="status" aria-live="polite" data-select-message="{% translate 'Select a series to see its expected loan number.' %}" data-unavailable-message="{% translate 'Number unavailable' %}">{% if selected_number_preview.value %}{{ selected_number_preview.value }}{% elif selected_number_preview.error %}{{ selected_number_preview.error }}{% else %}{% translate "Select a series to see its expected loan number." %}{% endif %}</div>
+    <p class="small text-body-secondary mb-0 mt-2">{% translate "Assigned when you save. Another loan saved first may change this number." %}</p>
+    {{ number_previews|json_script:"loan-number-previews" }}
+    <noscript><p class="small">{% translate "Enable JavaScript to update the preview when changing series. The official number is assigned on save." %}</p></noscript>
+  {% endif %}</div></div>
   <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-1">{% translate "Collateral and allocation" %}</h2><p class="small text-muted">Allocate the gross loan principal across the collateral items. Net weight excludes stones and non-metal material. Interest is resolved from each item's metal; valuation and LTV are enforced when you preview or save.</p>
     {{ formset.management_form }}{% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors }}</div>{% endif %}
     <div id="collateral-formset" data-appraisal-url="{% url 'workspace_loans:collateral_appraisal_suggestion' request.workspace.slug %}">
@@ -83,6 +91,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {% include "loans/pawn/_camera_capture.html" %}
 <script src="{% static 'js/pawn-draft-summary.js' %}"></script>
+<script src="{% static 'js/pawn-number-preview.js' %}"></script>
 <script src="{% static 'js/pawn-appraisal-suggestion.js' %}"></script>
 <script src="{% static 'js/pawn-rate-readiness.js' %}"></script>
 </div>

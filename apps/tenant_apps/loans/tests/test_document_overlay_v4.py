@@ -31,6 +31,21 @@ def synthetic_payload():
 
 
 class PrecisionOverlayTests(SimpleTestCase):
+    def test_rupee_format_renders_glyph_without_changing_payload(self):
+        from dataclasses import replace
+        self.payload = replace(self.payload, fields=tuple(
+            replace(field, value="INR 18600.00") if field.key == "loan.principal" else field
+            for field in self.payload.fields))
+        original = self.payload
+        for block in self.definition["blocks"]:
+            if block.get("binding") == "loan.principal":
+                block["value_format"] = "INR_SYMBOL"
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            text = "".join(page.get_text() for page in pdf)
+            self.assertIn("₹18,600.00", text)
+            self.assertNotIn("INR 18600.00", text)
+        self.assertEqual(self.payload, original)
+
     def test_preprinted_business_name_omission_requires_matching_stock_and_internal_evidence(self):
         from dataclasses import replace
         original_hash = DocumentLayoutValidator.load(self.definition).content_hash

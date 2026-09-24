@@ -1,6 +1,7 @@
 # Allow application source only; local artifacts are excluded by default.
 **
 !requirements.txt
+!requirements.lock
 !manage.py
 !accounts/**
 !apps/**
@@ -12,6 +13,7 @@
 !locale/**
 !scripts/start_web.py
 !scripts/provision_runtime_role.py
+!scripts/install_cutover_ticket_templates.py
 **/__pycache__/**
 **/*.pyc
 **/.env*

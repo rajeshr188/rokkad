@@ -118,6 +118,7 @@
 {% block mgmt_content %}
 <a class="btn btn-outline-primary mb-3" href="{% url 'workspace_subscriptions:reviews' workspace_slug=request.workspace.slug %}">Billing reviews</a>
 {% include "subscriptions/_navigation.html" %}
+{% if not billing_checkout_enabled %}<div class="alert alert-info">Online subscription payment is not yet available. Contact your Rokkad platform administrator to request a dated access extension. Your records are retained.</div>{% endif %}
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">

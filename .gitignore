@@ -18,6 +18,9 @@ __pycache__/
 *.sqlite3
 /media/
 /staticfiles/
+/outputs/
+/.tmp/
+/.worktrees/
 /outputs/ticket-template-tests/
 /outputs/ticket-template-sandbox/
 

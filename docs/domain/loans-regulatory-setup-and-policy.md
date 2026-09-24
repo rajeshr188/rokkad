@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-12
+updated: 2026-09-24
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -30,6 +30,14 @@ P1 classifies the mature Girvi outcomes as follows:
 | Business calculation choices vary by workspace or license | REPLACE | Effective-dated workspace policy plus optional license-specific policy. |
 
 ## Required Setup Order
+
+New customer Workspaces arrive with four standard loan-product drafts. In Loan
+setup > Loan products, review their repayment rules, term bounds, operational grace
+and availability, then enable only the products the business offers. Drafts cannot
+be selected for new loans. This product choice does not configure or approve the
+licence, series or interest policies below. Existing/import-created Workspaces can
+receive missing drafts through the explicit operator command; existing terms and
+statuses are preserved. See the [preparation decision](../adr/2026-09-24-automatic-draft-loan-products.md).
 
 The ticket-template feature adds optional printed business name/address fields
 to each licence, separate from its internal staff-facing name. Licence creation

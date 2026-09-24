@@ -1637,6 +1637,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
 			 patch.object(control_plane.Role.objects, "get", return_value=owner_role) as mock_role_get, \
 			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create, \
+			 patch("apps.orgs.services.control_plane._prepare_workspace_loan_products") as mock_products, \
 			 patch("apps.orgs.services.control_plane.AuditLog.log") as mock_audit:
 			created_company = control_plane.create_workspace_from_form(
 				form=FakeForm(),
@@ -1649,6 +1650,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertEqual(company.creator, user)
 		self.assertEqual(company.owner, user)
 		mock_ctx.assert_called_once()
+		mock_products.assert_called_once_with(workspace=company, actor=user, request=request)
 		mock_role_get.assert_called_once_with(name="Owner")
 		mock_domain_create.assert_called_once()
 		mock_membership_create.assert_called_once()
@@ -1672,7 +1674,8 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 			 patch.object(control_plane.Company.all_objects, "filter", return_value=SimpleNamespace(exists=lambda: False)), \
 			 patch.object(control_plane.Domain.objects, "create") as mock_domain_create, \
 			 patch.object(control_plane.Role.objects, "get", return_value=owner_role) as mock_role_get, \
-			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create:
+			 patch.object(control_plane.Membership.objects, "create") as mock_membership_create, \
+			 patch("apps.orgs.services.control_plane._prepare_workspace_loan_products") as mock_products:
 			created_company, provisioning_mode = (
 				control_plane.create_onboarding_workspace_from_form(
 					form=FakeForm(),
@@ -1690,6 +1693,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertEqual(company.creator, user)
 		self.assertEqual(company.owner, user)
 		mock_ctx.assert_called_once()
+		mock_products.assert_called_once_with(workspace=company, actor=user, request=request)
 		company.save.assert_called_once_with()
 		provision_workspace.assert_not_called()
 		seed_workspace_defaults.assert_not_called()
@@ -1850,51 +1854,10 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 
 
 class CompanyPreferenceBuilderTests(SimpleTestCase):
-	def setUp(self):
-		self.factory = RequestFactory()
-
-	def test_get_success_url_uses_workspace_preferences_route(self):
-		request = self.factory.get("/orgs/workspace/13/preferences/?section=Loan")
-		request.user = SimpleNamespace(
-			is_authenticated=True,
-			profile=SimpleNamespace(workspace=SimpleNamespace(id=13, name="Acme")),
-		)
-
-		view = CompanyPreferenceBuilder()
-		view.request = request
-		view.kwargs = {"workspace_id": 13}
-
-		self.assertEqual(
-			view.get_success_url(),
-			reverse("workspace_preferences", kwargs={"workspace_id": 13}) + "?section=Loan",
-		)
-
-	def test_template_section_links_render_with_workspace_id(self):
-		request = self.factory.get("/orgs/workspace/13/preferences/?section=Loan")
-		request.user = SimpleNamespace(is_authenticated=False)
-
-		storages = {
-			**settings.STORAGES,
-			"staticfiles": {
-				"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-			},
-		}
-		with override_settings(STORAGES=storages):
-			html = render_to_string(
-				"company/company_preferences.html",
-				{
-					"sections": [{"name": "Loan", "obj": None}],
-					"current_section": "Loan",
-					"workspace_id": 13,
-					"form": SimpleNamespace(visible_fields=[]),
-				},
-				request=request,
-			)
-
-		self.assertIn(
-			reverse("workspace_preferences", kwargs={"workspace_id": 13}) + "?section=Loan",
-			html,
-		)
+    def test_legacy_preferences_use_retired_read_only_view(self):
+        from apps.configuration.views import WorkspacePreferenceBuilder
+        self.assertTrue(issubclass(CompanyPreferenceBuilder, WorkspacePreferenceBuilder))
+        self.assertNotIn("post", CompanyPreferenceBuilder.http_method_names)
 
 
 class MiddlewareProcessRequestTests(SimpleTestCase):

@@ -4,7 +4,8 @@ from typing import Literal
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
-from .billing import effective_billing_state
+from .access_policy import workspace_activity
+from types import SimpleNamespace
 from .models import Subscription, SubscriptionEntitlement
 
 
@@ -53,9 +54,17 @@ def _row(workspace, code):
     definition = REGISTRY.get(code)
     if definition is None:
         return definition, None
-    subscription = Subscription.objects.filter(company=workspace).first()
-    if subscription is None or not effective_billing_state(subscription).commercially_available:
+    activity = workspace_activity(workspace)
+    if not activity.can_read:
         return definition, None
+    # Only a read feature survives read-only mode; never restore write capacities.
+    if not activity.can_write and code != "reporting.advanced":
+        return definition, None
+    subscription = activity.subscription
+    if subscription is None:
+        snapshot = activity.grant.entitlement_snapshot if activity.grant else []
+        value = next((item for item in snapshot if item["feature_code"] == code), None)
+        return definition, SimpleNamespace(enabled=value.get("enabled", False), value=value.get("value", "")) if value else None
     row = SubscriptionEntitlement.objects.filter(subscription=subscription, feature_code=code).first()
     if row and row.expires_at and row.expires_at <= timezone.now():
         row = None

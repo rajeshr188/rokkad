@@ -1,18 +1,25 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-23
 tags: [flows, loans, documents, printing]
 related: [../STATUS.md]
 ---
 
 # Custom loan documents: operator entry point
 
-For day-to-day printing, open the loan's **Loan documents** card. A loan ticket
-appears after approval while the loan is no longer a draft. Key facts and repayment
+After approval, use the large **Print loan ticket** button directly below the
+loan heading. It remains prominent for active loans with approval evidence,
+including loans approved and disbursed together. Drafts and imported loans without
+approval evidence do not show it. The **Loan documents** card retains ticket
+access for other eligible states and reprints. Key facts and repayment
 schedule appear when a saved schedule exists, including supported imported loans.
 Each PDF opens in a new tab; check customer/loan identity, then download or print
 from the PDF viewer. A loan ticket describes approved terms, not proof of disbursal.
+
+The loan's collateral, valuation and history sections are expandable; the Loan
+documents card and prominent ticket action remain visible. Release-document
+section links open the containing history section automatically.
 Printing does not record payment or change the loan's financial state. Existing
 document issuance/reprint evidence remains authoritative. Physical printer settings
 and paper alignment still need operator acceptance.

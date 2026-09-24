@@ -1,12 +1,24 @@
 {% extends "base_tenant.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% block title %}{{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div class="loan-workflow-grid" hx-history="false"><div class="loan-workflow-main">
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-  <div><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; {% translate "Loans" %}</a><h1 class="h3 mt-2 mb-1">{{ loan.loan_number }}</h1><div class="text-muted">{{ loan.borrower.display_name }} &middot; {% translate loan.get_state_display %} &middot; {% translate "Series" %} {{ loan.series.code }}</div><nav class="btn-group btn-group-sm mt-2" aria-label="Loans in series {{ loan.series.code }}">{% if previous_loan %}<a class="btn btn-outline-secondary" rel="prev" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug previous_loan.pk %}">&larr; Previous <span class="d-none d-sm-inline">{{ previous_loan.loan_number }}</span></a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">&larr; Previous</span>{% endif %}{% if next_loan %}<a class="btn btn-outline-secondary" rel="next" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug next_loan.pk %}">Next <span class="d-none d-sm-inline">{{ next_loan.loan_number }}</span> &rarr;</a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">Next &rarr;</span>{% endif %}</nav></div>
+  <div><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; {% translate "Loans" %}</a><h1 class="h3 mt-2 mb-1">{{ loan.loan_number }}</h1><div class="d-flex flex-wrap gap-2 small mb-2" data-loan-dates><span class="fw-semibold">{% translate "Loan date" %}: <time datetime="{{ loan.loan_date|date:'Y-m-d' }}">{{ loan.loan_date|date:"d M Y" }}</time></span><span class="text-body-secondary">&middot; {% if is_opening %}{% translate "Imported into Rokkad" %}{% else %}{% translate "Draft created" %}{% endif %}: <time datetime="{{ loan.created_at|date:'c' }}">{{ loan.created_at|date:"d M Y, H:i T" }}</time></span></div><div class="text-muted"><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}">{{ loan.borrower.display_name }} &middot; {% translate "All borrower loans" %}</a> &middot; {% translate loan.get_state_display %} &middot; {% translate "Series" %} {{ loan.series.code }}</div><nav class="btn-group btn-group-sm mt-2" aria-label="Loans in series {{ loan.series.code }}">{% if previous_loan %}<a class="btn btn-outline-secondary" rel="prev" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug previous_loan.pk %}">&larr; Previous <span class="d-none d-sm-inline">{{ previous_loan.loan_number }}</span></a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">&larr; Previous</span>{% endif %}{% if next_loan %}<a class="btn btn-outline-secondary" rel="next" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug next_loan.pk %}">Next <span class="d-none d-sm-inline">{{ next_loan.loan_number }}</span> &rarr;</a>{% else %}<span class="btn btn-outline-secondary disabled" aria-disabled="true">Next &rarr;</span>{% endif %}</nav></div>
 
 </div>
+
+{% if can_print_ticket %}
+{% if loan.state == 'APPROVED' or loan.state == 'ACTIVE' %}
+<section class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4" aria-labelledby="print-loan-ticket-title" data-print-loan-ticket>
+  <div>
+    <h2 class="h5 mb-1" id="print-loan-ticket-title">{% translate "Print loan ticket" %}</h2>
+    <p class="mb-0">{% translate "Open the approved loan ticket, check the details, then print it for the customer." %}</p>
+  </div>
+  <a class="btn btn-primary btn-lg" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_loan_ticket_pdf' request.workspace.slug loan.pk %}"><i class="bi bi-printer me-2" aria-hidden="true"></i>{% translate "Print loan ticket" %}<span class="d-block small">{% translate "PDF opens in a new tab" %}</span></a>
+</section>
+{% endif %}
+{% endif %}
 
 {% if loan.state == 'CLOSED' %}
 <section class="alert alert-success border-success border-start border-4" aria-labelledby="loan-closed-title" data-loan-closed>
@@ -16,12 +28,13 @@
 </section>
 {% endif %}
 
-<nav class="d-flex flex-wrap gap-3 mb-3" aria-label="{% translate 'Loan sections' %}">
-  <a href="#loan-overview">{% translate "Balances and terms" %}</a>
-  <a href="#collateral-gallery">{% translate "Collateral and photos" %}</a>
-  <a href="#loan-documents-title">{% translate "Loan documents" %}</a>
-  {% if loan.releases.exists %}<a href="#loan-releases">{% translate "Release documents" %}</a>{% endif %}
-  <a href="#business-events">{% translate "Loan history" %}</a>
+<nav class="nav nav-pills gap-2 mb-4" aria-label="{% translate 'Loan sections' %}">
+  <a class="nav-link border" href="#loan-overview">{% translate "Balances and terms" %}</a>
+  <a class="nav-link border" href="#collateral-gallery">{% translate "Collateral and photos" %}</a>
+  <a class="nav-link border" href="#loan-documents-title">{% translate "Loan documents" %}</a>
+  {% if repayment_rows %}<a class="nav-link border" href="#payment-receipts">{% translate "Payment receipts" %}</a>{% endif %}
+  {% if loan.releases.exists %}<a class="nav-link border" href="#loan-releases">{% translate "Release documents" %}</a>{% endif %}
+  <a class="nav-link border" href="#business-events">{% translate "Loan history" %}</a>
 </nav>
 {% if loan.state == 'DRAFT' or loan.state == 'APPROVED' %}
 {% include "loans/pawn/_origination_review.html#review" %}
@@ -58,15 +71,21 @@
 {% if approved_quote_rows %}<div class="card mb-4"><div class="card-header">Quotes recorded at the latest approval</div><div class="card-body"><ul class="mb-0">{% for quote in approved_quote_rows %}<li>{{ quote.metal }}: {{ quote.currency }} {{ quote.buying_rate }}/g of pure metal &middot; effective {{ quote.effective_time|date:"d M Y H:i" }} &middot; {{ quote.source_snapshot.name }} &middot; <a href="{% url 'workspace_rates:rate_detail' request.workspace.slug quote.rate_id %}">Quote #{{ quote.rate_id }}</a></li>{% endfor %}</ul></div></div>{% endif %}
 
 {% if balance %}<div class="card mb-4"><div class="card-header">{% if is_opening %}Recorded balance as of {{ today }} (before unposted collection interest){% else %}Current balance as of {{ today }}{% endif %}</div><div class="card-body"><div class="row g-3"><div class="col-md-3"><div class="small text-muted">Principal outstanding</div>{{ balance.principal_outstanding }}</div><div class="col-md-3"><div class="small text-muted">Interest outstanding</div>{{ balance.interest_outstanding }}</div><div class="col-md-3"><div class="small text-muted">Fees outstanding</div>{{ balance.fees_outstanding }}</div><div class="col-md-3"><div class="small text-muted">Total due</div><strong>{{ balance.total_due }}</strong></div></div></div></div>{% endif %}
+<details class="card mb-3" data-loan-section>
+<summary class="card-header py-3 fw-semibold">{% translate "Valuation, interest projection and monitoring" %}</summary><div class="card-body">
 {% if exposure %}<div class="card mb-4"><div class="card-header">Economic exposure as of {{ today }}</div><div class="card-body"><div class="row g-3"><div class="col-md-3"><div class="small text-muted">Recorded total due</div>{{ exposure.recorded_total_due }}</div><div class="col-md-3"><div class="small text-muted">Projected, unfinalized interest</div>{{ exposure.projected_interest }}</div><div class="col-md-3"><div class="small text-muted">Total economic exposure</div><strong>{{ exposure.total_economic_exposure }}</strong></div><div class="col-md-3"><div class="small text-muted">Maturity payoff / bullet LTV basis</div>{{ exposure.maturity_payoff }}</div><div class="col-md-3"><div class="small text-muted">Contractually due now</div>{{ exposure.due_now.total }}</div><div class="col-md-3"><div class="small text-muted">Overdue</div>{{ exposure.overdue.total }}</div><div class="col-md-3"><div class="small text-muted">Cash receivable basis</div>{{ exposure.cash_receivable_basis }}</div><div class="col-md-3"><div class="small text-muted">LTV exposure basis</div>{{ exposure.ltv_exposure_basis }}</div></div><div class="small text-muted mt-3">Projected interest is read-only and has not been finalized.</div>{% for finding in exposure.integrity_findings %}<div class="text-danger small">{{ finding }}</div>{% endfor %}</div></div>{% endif %}
 {% include "loans/pawn/_valuation_evidence.html" %}
 {% if risk_assessment %}<div class="card mb-4"><div class="card-header d-flex justify-content-between"><span>Monitoring assessment</span><a href="{% url 'workspace_loans:pawn_loan_kfs_schedule_pdf' request.workspace.slug loan.pk %}">KFS &amp; repayment schedule</a></div><div class="card-body"><div class="row g-3"><div class="col-md-2"><div class="small text-muted">DPD</div>{{ delinquency.assessment.days_past_due }}</div><div class="col-md-2"><div class="small text-muted">Performance</div>{{ risk_assessment.performance_class }}</div><div class="col-md-2"><div class="small text-muted">Severity</div>{{ risk_assessment.severity }}</div><div class="col-md-2"><div class="small text-muted">Collateral value</div>{{ collateral_valuation.eligible_collateral_value|default:"Unknown" }}</div><div class="col-md-2"><div class="small text-muted">Monitoring LTV</div>{{ collateral_valuation.ltv.ltv_ratio|default:"Unknown" }}</div><div class="col-md-2"><div class="small text-muted">Action hint</div>{{ risk_assessment.action_hint }}</div></div>{% for explanation in risk_assessment.explanations %}<div class="small mt-2">{{ explanation }}</div>{% empty %}<div class="small text-success mt-2">No monitoring flags.</div>{% endfor %}<div class="small text-muted mt-2">Advisory only; workflow commands recalculate their own authority.</div></div></div>{% endif %}
+</div></details>
 
 <div class="card mb-4"><div class="card-body"><div class="row g-3"><div class="col-md-3"><div class="small text-muted">Principal</div>{{ loan.principal_amount }}</div><div class="col-md-3"><div class="small text-muted">Monthly rate</div>{{ loan.monthly_interest_rate }}%</div><div class="col-md-3"><div class="small text-muted">Loan date</div>{{ loan.loan_date }}</div><div class="col-md-3"><div class="small text-muted">Tenure</div>{{ loan.tenure_months }} months</div><div class="col-md-6"><div class="small text-muted">License / series</div>{{ loan.license.license_number }} / {{ loan.series.code }}</div><div class="col-md-6"><div class="small text-muted">Product contract</div>{% if loan.product_version_id %}{{ loan.product_version }}{% else %}Legacy / unspecified{% endif %}</div></div></div></div>
 
 {% if loan.state == 'ACTIVE' and accrual_previews and can_accrue %}<div class="alert alert-info">{{ accrual_previews|length }} interest period{{ accrual_previews|length|pluralize }} available to finalize. <a href="{% url 'workspace_loans:pawn_loan_accrue' request.workspace.slug loan.pk %}">Review accruals</a>{% if loan.policy_snapshot.interest_method == 'COMPOUND' and can_capitalize %} or <a href="{% url 'workspace_loans:pawn_loan_capitalize' request.workspace.slug loan.pk %}">capitalize eligible interest</a>{% endif %}.</div>{% endif %}
 
 {% include "loans/pawn/_print_guidance.html" %}
+{% include "loans/pawn/_payment_receipts.html" %}
+<details class="card mb-3" data-loan-section {% if loan.state == 'DRAFT' or loan.state == 'APPROVED' %}open{% endif %}>
+<summary class="card-header py-3 fw-semibold">{% translate "Collateral and photographs" %} <span class="badge text-bg-secondary ms-2">{{ loan.collateral_items.count }}</span></summary><div class="card-body">
 <h2 class="h5" id="collateral-gallery" tabindex="-1">{% translate "Collateral identity, media, custody and economics" %}</h2>
 {% if opening_source_valuations %}<div class="card card-body mb-3"><h3 class="h6">Unverified values retained from the old system</h3><p>These source values were not approved appraisals at import. Current valuation and LTV require dated appraisal evidence.</p><ul class="mb-0">{% for row in opening_source_valuations %}<li>{{ row.description }}: {{ row.valuation.source_amount|default_if_none:"Value not recorded" }}; date: {{ row.valuation.source_date|default_if_none:"Not recorded" }}. </li>{% endfor %}</ul></div>{% endif %}
 {% for item in loan.collateral_items.all %}
@@ -78,6 +97,10 @@
 </div></div>
 {% endfor %}
 
+
+</div></details>
+<details class="card mb-3" data-loan-section {% if loan.state == 'CLOSED' %}open{% endif %}>
+<summary class="card-header py-3 fw-semibold">{% translate "Loan history and follow-up" %}</summary><div class="card-body">
 {% if loan.interest_accruals.exists %}<h2 class="h5">Finalized interest accruals</h2><div class="card mb-4"><div class="accordion accordion-flush">{% for accrual in loan.interest_accruals.all %}<div class="accordion-item"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accrual-{{ accrual.pk }}">{% if accrual.loan_event.payload.opening_collection %}Collection catch-up{% else %}Period{% endif %} {{ accrual.period_number }} · {{ accrual.period_start }} to {{ accrual.period_end }} · newly due {{ accrual.recognized_interest }}</button></h3><div class="accordion-collapse collapse" id="accrual-{{ accrual.pk }}"><div class="accordion-body"><div class="small text-muted mb-2">{% if accrual.loan_event.payload.opening_collection %}Collection interest since migration cutover, using original billing anniversaries. Finalized{% else %}Immutable collateral-tranche calculation finalized{% endif %} {{ accrual.finalized_at|date:"SHORT_DATETIME_FORMAT" }}{% if accrual.finalized_by %} by {{ accrual.finalized_by }}{% endif %}.</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Collateral</th><th>Principal base</th><th>Rate</th><th>Fraction</th><th>Calculated</th><th>Advance applied</th><th>Newly due</th></tr></thead><tbody>{% for line in accrual.lines.all %}<tr><td>{{ line.collateral_item.description }}</td><td>{{ line.principal_base }}</td><td>{{ line.monthly_interest_rate }}%</td><td>{{ line.period_fraction }}</td><td>{{ line.calculated_interest }}</td><td>{{ line.advance_interest_applied }}</td><td>{{ line.recognized_interest }}</td></tr>{% endfor %}</tbody></table></div></div></div></div>{% endfor %}</div></div>{% endif %}
 
 <h2 class="h5">Customer notices</h2><div class="card mb-4"><ul class="list-group list-group-flush">{% for row in notice_rows %}{% with notice=row.notice %}{% with source=notice.payload_snapshot.loans.0 %}<li class="list-group-item d-flex justify-content-between gap-3"><div><strong>{{ notice.get_notice_kind_display }}</strong> <span class="badge text-bg-secondary">{{ row.status|title }}</span><div class="small text-muted">{{ notice.get_channel_display }} &middot; scheduled {{ notice.scheduled_for }} &middot; source as of {{ source.as_of_date }}</div><div class="small">Due date {{ source.due_date }} &middot; snapshotted total {{ source.total_due }} (principal {{ source.principal_due }}, interest {{ source.interest_due }}, fees {{ source.fees_due }})</div><div class="small text-muted">Notice #{{ notice.pk }} &middot; Notify event {{ notice.notification_event_id }} / job {{ notice.notification_job_id }} &middot; attempts {{ row.attempt_count }}{% if row.last_attempt_at %} &middot; last {{ row.last_attempt_at }}{% endif %}</div>{% if row.external_reference %}<div class="small text-muted">Provider reference {{ row.external_reference }}</div>{% endif %}{% if row.failure_reason %}<div class="small text-danger">{{ row.failure_reason }}</div>{% endif %}</div>{% if row.status == 'FAILED' and can_send_notice %}<form method="post" action="{% url 'workspace_loans:pawn_loan_notice_retry' request.workspace.slug loan.pk notice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Retry notice</button></form>{% endif %}</li>{% endwith %}{% endwith %}{% empty %}<li class="list-group-item text-muted">No notices recorded for this loan.</li>{% endfor %}</ul></div>
@@ -107,6 +130,10 @@
   </li>
 {% empty %}<li class="list-group-item text-muted">No business events yet.</li>{% endfor %}
 </ul></div>
+
+</div></details>
 {% include "loans/pawn/_camera_capture.html" %}
 </div>{% include "loans/pawn/_loan_summary.html" %}</div>
 {% endblock %}
+
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/loan-sections.js' %}"></script>{% endblock %}

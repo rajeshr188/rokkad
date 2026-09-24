@@ -144,8 +144,10 @@ Make repayment structure an explicit, versioned source of contract behavior.
   grace days, extra-payment rule, and calculation-contract version.
 - Add required `PawnLoan.product_version` because development data may be reset.
 - Add workspace-leading unique constraints and indexes.
-- Seed four default products through an explicit idempotent tenant command, not
-  a migration side effect.
+- Prepare four default drafts automatically in the explicit customer Workspace
+  creation transaction. Retain the idempotent Workspace command for existing
+  installations/recovery; never seed as a migration side effect or autoactivate.
+  See [the onboarding decision](../../../adr/2026-09-24-automatic-draft-loan-products.md).
 
 ### Service changes
 

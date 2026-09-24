@@ -4,6 +4,7 @@ import django_filters
 from django import forms
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from apps.tenant_apps.party.models import Party
 
 from apps.tenant_apps.loans.integrations.notice_delivery import (
     get_pawn_notice_delivery_states,
@@ -53,6 +54,13 @@ class PawnLoanSearchForm(forms.Form):
 
 
 class PawnLoanFilter(django_filters.FilterSet):
+    borrower = django_filters.ModelChoiceFilter(
+        queryset=Party.objects.none(), widget=forms.HiddenInput(), label=_("Selected borrower"),
+    )
+    borrower_q = django_filters.CharFilter(
+        method="filter_borrower", label=_("Borrower name, code or phone"),
+        widget=forms.TextInput(attrs={"class": "form-control", "type": "search"}),
+    )
     q = django_filters.CharFilter(
         method="filter_search",
         label=_("Find a loan"),
@@ -103,6 +111,8 @@ class PawnLoanFilter(django_filters.FilterSet):
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)
+        # Include inactive borrowers: their outstanding loans still need servicing.
+        self.filters["borrower"].queryset = Party.objects.filter(workspace=workspace)
         self.filters["license"].queryset = LoanLicense.objects.filter(
             workspace=workspace
         ).order_by("license_number")
@@ -112,6 +122,14 @@ class PawnLoanFilter(django_filters.FilterSet):
             "license__license_number",
             "code",
         )
+
+    def filter_borrower(self, queryset, name, value):
+        value = value.strip()
+        return queryset.filter(
+            Q(borrower__display_name__icontains=value)
+            | Q(borrower__party_code__icontains=value)
+            | Q(borrower__primary_phone__icontains=value)
+        ) if value else queryset
 
     def filter_search(self, queryset, name, value):
         value = value.strip()

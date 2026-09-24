@@ -1,5 +1,7 @@
 """Pawn reads; existing services own business rules."""
 
+from apps.subscriptions.access_policy import workspace_activity
+
 from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
@@ -76,9 +78,10 @@ def pawn_loan_list(request):
         {
             "loans": page_obj.object_list,
             "loan_filter": loan_filter,
+            "selected_borrower": loan_filter.form.cleaned_data.get("borrower") if valid else None,
             "page_obj": page_obj,
             "readiness": readiness,
-            "can_create_loans": request.loans_workspace_access.can("data.create"),
+            "can_create_loans": workspace_activity(request.loans_workspace).can_write and request.loans_workspace_access.can("data.create"),
             "more_filters_open": any(request.GET.get(key) for key in ("license", "series", "loan_date_from", "loan_date_to")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
@@ -203,6 +206,17 @@ def pawn_loan_detail(request, pk):
             except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
                 context["collection_error"] = str(exc)
     context["simple_owner"] = request.loans_workspace.loan_workflow == "SIMPLE" and request.loans_workspace_access.can("workspace.transfer")
+    if not workspace_activity(request.loans_workspace).can_write:
+        for key in tuple(context):
+            if key.startswith("can_") and key not in {"can_print_ticket", "can_print_schedule"}:
+                context[key] = False
+        context["simple_owner"] = False
+        # Rebuild reversal controls after removing mutation permission.
+        context["event_rows"] = _event_rows(loan, can_administer=False)
+    context["repayment_rows"] = [
+        row for row in context["event_rows"]
+        if row["event"].event_kind == TransactionKind.REPAYMENT.value
+    ]
     context["primary_action"] = _primary_action(loan, context)
     return render(request, "loans/pawn/detail.html", context)
 

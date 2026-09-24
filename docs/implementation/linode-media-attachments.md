@@ -150,6 +150,49 @@ tests use isolated PostgreSQL and filesystem copies, not production or R2.
 
 ## September rehearsal
 
+### September 23 hosted reuse
+
+The hosted September 23 dataset now has 28,347 verified references attached:
+1,148 Party, 6,082 active collateral and 21,117 historical-loan photographs. This
+uses 29,489 private application objects under
+`media/application/production/hosted-rehearsal-20260923`. The explicitly bound
+prod_r2 admission path was used with the restricted runtime role; its generic
+`PRODUCTION_MEDIA_ATTACHED` report does not mean the rehearsal is production.
+
+All three exact-plan retries created nothing. All 252 business-data fingerprints
+match, fifteen private HTTP/denial probes passed, and all 32,567 earlier
+preservation objects/reports remain intact. 25,054 attached references are known
+blank source images. Of 124 newer references, 69 reused already-preserved exact
+branch paths; the remaining 55 were found and copied after explicit owner
+authorization (JCL 27, JSK 9, Lakshmi 19). Read-only, no-symlink source reads and
+conditional R2 writes/read-back hashes verified those originals, then ordinary
+restricted-role admission attached all 55 as collateral photos. The preservation
+inventory now totals 32,622 objects. Of the 55 fresh files, 53 match known blank
+source hashes. Increment plan SHA-256:
+`ce9a08dcc9133654462a34b9ea30dfe9d543557d00f0e84cac5601f90508c215`.
+The 2,465 older missing files and 1,149 unverified shared candidates remain excluded.
+The subsequent exception review rechecked all 3,614 exact branch paths read-only
+on September 23; all remain absent. Current imported-record mapping resolves
+102 active collateral references, 3,507 historical references and five customer
+photographs. Shared candidates comprise 1,144 known blank images and five
+unverified customer images; 344 exception paths also occur in another branch's
+references. No candidate was attached. Retain these exceptions explicitly rather
+than inventing photographs or inferring ownership from a matching filename.
+The aggregate review, detailed source checks and checksums are retained in the
+server-only `media-exceptions-20260923/` directory.
+Fresh old-Linode access was limited to those 55 paths; same-path changes to other
+files since the September 21 preservation are not independently checked.
+
+Detailed evidence and the post-media backup stay on the server under
+`/home/rokkad/deploy/rehearsal/` (`media-reuse/`, `media-increment-20260923/` and
+`backups/`). The owner chose
+server retention after automated review rejected exporting the database to the
+OneDrive workspace. Recursive media/customer metadata export was also rejected;
+do not retry those exports without explicit authorization. Local project docs
+contain aggregate results; older local preparation inputs are not final reports.
+
+### September 21 local dataset
+
 Private evidence directory: `outputs/linode-media-attachments-20260922/`.
 The completed import contains **28,224** source images: **1,148 Party**, **5,988 active
 collateral**, and **21,088 closed-history**. There are **29,366** separate

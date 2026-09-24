@@ -28,10 +28,10 @@ def export_history(*, workspace_id, actor, loan_id):
 
 
 def _export_history(*, workspace_id, actor, loan_id):
-    workspace=require_history_setup_access(workspace_id,actor)
+    workspace=require_history_setup_access(workspace_id,actor,read_only=True)
     resolve_workspace_access(actor=actor,workspace=workspace).require("data.export")
     Company.all_objects.select_for_update().get(pk=workspace_id)
-    workspace=require_history_setup_access(workspace_id,actor)
+    workspace=require_history_setup_access(workspace_id,actor,read_only=True)
     resolve_workspace_access(actor=actor,workspace=workspace).require("data.export")
     loan=m.PawnLoan.objects.select_for_update(of=("self",)).select_related("product_version","license_revision","policy_snapshot","disbursal_snapshot__approval_snapshot").get(workspace_id=workspace_id,pk=loan_id)
     if loan.state not in {"ACTIVE","CLOSED"}: raise HistoryError("Only active or fully released histories are supported.")

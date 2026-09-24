@@ -21,6 +21,7 @@ class PawnLoanReportDataset:
     title: str
     columns: tuple[str, ...]
     rows: tuple[tuple[object, ...], ...]
+    notes: str = ""
 
 
 def build_pawn_loan_report_dataset(report, section):
@@ -143,7 +144,11 @@ def render_report_dataset(dataset, export_format):
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("FONTSIZE", (0, 0), (-1, -1), 7),
         ]))
-        document.build([Paragraph(dataset.title, styles["Title"]), Spacer(1, 8), table])
+        story = [Paragraph(dataset.title, styles["Title"])]
+        if dataset.notes:
+            story.extend([Paragraph(dataset.notes, styles["BodyText"]), Spacer(1, 8)])
+        story.extend([Spacer(1, 8), table])
+        document.build(story)
         return output.getvalue(), "application/pdf"
     raise PawnLoanReportExportError("Report export format must be csv, xlsx, or pdf.")
 

@@ -9,7 +9,6 @@ from apps.orgs import views as org_views
 # Cross-plane service routes used by both public and tenant URLConfs.
 SERVICE_URLPATTERNS = [
     path("i18n/", include(i18n)),
-    path("dynamic_preferences/", include("dynamic_preferences.urls")),
     path("select2/", include("django_select2.urls")),
 ]
 

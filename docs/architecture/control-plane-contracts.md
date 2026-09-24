@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-08-17
+updated: 2026-09-24
 tags: [architecture, saas, control-plane, workspace, rls, rbac, billing]
 related:
   - saas-control-plane-architecture-audit.md
@@ -32,6 +32,7 @@ currently maps to `orgs.Company` in persistence.
 | Workspace action authorization | Target `WorkspaceAccess` policy |
 | Operational availability | Target Workspace lifecycle policy |
 | Commercial contract | `Subscription` effective billing state |
+| Commercial activity permission | `workspace_activity`: lifecycle, latest access decision, dated billing policy |
 | Features and limits | Target entitlement service using stable codes |
 
 Authentication, membership, authorization, RLS, lifecycle, billing, and
@@ -350,6 +351,19 @@ stored transitions are row-locked and append `SubscriptionEvent` evidence.
 provider-scoped replay identity, and billing recovery routes remain exempt from
 commercial blocking without losing explicit Workspace/RLS context.
 
+September 24 extension: `workspace_activity` separately determines usable access.
+Natural trial/paid-term expiry grants seven days of full activity, then read-only
+access to reviewed lists/details/reports, saved artifacts and authorized exports.
+Cancellation, past-due and explicit expired states receive no automatic grace.
+Missing subscriptions remain recovery-only unless platform access was granted.
+`WorkspaceAccessDecision` is immutable global billing control-plane evidence,
+explicitly scoped to Company and appendable only through platform-admin services.
+The latest decision wins; full/read-only decisions require future expiry and a
+reason. Expiry re-evaluates the original subscription policy, never older grants.
+Suspension/archive and ordinary RBAC/RLS remain stronger boundaries. Grants do not
+change billing records. See the
+[accepted decision](../adr/2026-09-24-subscription-access-continuity.md).
+
 ## 10. Entitlements
 
 The target public API is a single Workspace-scoped service:
@@ -370,8 +384,8 @@ Rules:
   plane validates the registry and resolves values;
 - boolean features return a boolean; numeric limits return a non-negative
   integer or an explicit unlimited value;
-- a missing, malformed, disabled, or commercially unavailable paid entitlement
-  fails closed;
+- a missing, malformed, disabled, or expired entitlement fails closed; commercial
+  availability is evaluated through activity policy, including approved continuity;
 - any always-on/core capability is an explicit registry default, not an
   accidental missing-row fallback;
 - plan fields are commercial configuration inputs, not runtime APIs;
@@ -392,6 +406,13 @@ is constrained in PostgreSQL. Missing, malformed, expired, and commercially
 unavailable grants fail closed. Seats, module gating, and feature decorators use
 this API; the mixed `SubscriptionAccessService` remains compatibility-only and
 has no runtime middleware or control-plane caller.
+
+September 24: grace and administrator full-access extensions preserve stored
+subscription entitlements and override expiry. Without a subscription, a platform
+full-access decision must snapshot an active Plan's entitlement projection.
+Read-only mode preserves only the advanced-reporting read feature, not write
+capacities. Existing role checks still apply. The HTTP allowlist and business
+command guards enforce activity separately from typed feature/limit evaluation.
 
 ## 11. Data-plane contract
 

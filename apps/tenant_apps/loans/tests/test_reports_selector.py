@@ -26,6 +26,57 @@ class _Manager:
 class PawnLoanReportsSelectorTests(SimpleTestCase):
     as_of = date(2026, 8, 3)
 
+    def test_year_report_uses_original_date_and_keeps_all_states_and_unknown_balances(self):
+        from unittest.mock import patch
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import build_year_analysis
+        loans = [self._loan(state=state) for state in (
+            PawnLoanState.ACTIVE, PawnLoanState.CLOSED, PawnLoanState.DRAFT,
+            PawnLoanState.APPROVED, PawnLoanState.CANCELLED, PawnLoanState.ACTIVE)]
+        for loan in loans:
+            loan.loan_date = date(2020, 12, 31)
+            loan.created_at = date(2026, 9, 23)
+        loans[-1].loan_date = date(2021, 1, 1)
+        with patch("apps.tenant_apps.loans.selectors.portfolio_analysis.calculate_pawn_loan_balance",
+                   side_effect=[SimpleNamespace(principal_outstanding=Decimal("800")), ValueError("History unavailable")]):
+            result = build_year_analysis(loans, as_of_date=self.as_of)
+        self.assertEqual(result["rows"][0]["cells"], ["2020", 5, 1, 1, 1, 2, Decimal("800"), 0])
+        self.assertEqual(result["totals"], ["Total", 6, 2, 1, 1, 2, Decimal("800"), 1])
+        self.assertEqual(result["rows"][0]["filters"], {"loan_date_from": "2020-01-01", "loan_date_to": "2020-12-31"})
+        self.assertEqual(result["charts"][0]["labels"], ["2020", "2021"])
+        self.assertEqual(result["charts"][0]["values"], ["5", "1"])
+
+    def test_grouped_active_totals_preserve_repayments_and_distinct_series(self):
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import build_active_loan_analysis
+        first = self._loan(events=(self._event(1, TransactionKind.DISBURSAL, principal="1000"),
+                                   self._event(2, TransactionKind.REPAYMENT, principal="200")))
+        second = self._loan(events=(self._event(3, TransactionKind.DISBURSAL, principal="300"),))
+        closed = self._loan(state=PawnLoanState.CLOSED)
+        for index, loan in enumerate((first, second), 1):
+            loan.license_id = index
+            loan.license = SimpleNamespace(license_number=f"L{index}")
+            loan.series_id = index
+            loan.series = SimpleNamespace(code="A")
+        result = build_active_loan_analysis((first, second, closed), section="series_totals", as_of_date=self.as_of)
+        self.assertEqual(len(result["rows"]), 2)
+        self.assertEqual(result["totals"][1], 2)
+        self.assertEqual(result["totals"][2], Decimal("1100"))
+        self.assertEqual(result["rows"][0]["cells"][2], Decimal("800"))
+        self.assertEqual(result["charts"][0]["labels"], ["L1 / A", "L2 / A"])
+
+    def test_maturity_bands_and_unavailable_balances_are_not_zero_claims(self):
+        from unittest.mock import patch
+        from datetime import timedelta
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import build_active_loan_analysis
+        days = (0, 1, 30, 31, 90, 91, 180, 181)
+        balances = [SimpleNamespace(due_date=self.as_of - timedelta(days=day),
+            principal_outstanding=Decimal("100"), interest_outstanding=Decimal("5"), total_due=Decimal("105"), is_overdue=day > 0) for day in days]
+        with patch("apps.tenant_apps.loans.selectors.portfolio_analysis.calculate_pawn_loan_balance", side_effect=balances + [ValueError("Unverifiable opening")]):
+            result = build_active_loan_analysis([self._loan() for _ in range(9)], section="maturity", as_of_date=self.as_of)
+        self.assertEqual([row["cells"][1] for row in result["rows"]], [1, 2, 2, 2, 1, 1])
+        self.assertEqual(result["totals"][2], Decimal("800"))
+        self.assertEqual(result["incomplete_count"], 1)
+        self.assertEqual(result["rows"][-1]["cells"][0], "Balance unavailable")
+
     def test_portfolio_and_transaction_reports_use_canonical_event_fold(self):
         event = self._event(1, TransactionKind.DISBURSAL, principal="1000")
         repayment = self._event(
@@ -201,6 +252,23 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
             "ITEM_PRINCIPAL_EVIDENCE_MISMATCH",
             {issue.code for issue in report.issues},
         )
+
+    def test_migration_opening_is_a_valid_origin_but_missing_origin_is_reported(self):
+        from apps.tenant_apps.loans.selectors.reports import _loan_issues
+        opening = self._event(1, TransactionKind.MIGRATION_OPENING)
+        loan = self._loan(events=(opening,))
+        codes = {issue.code for issue in _loan_issues(loan, (opening,), (), None)}
+        self.assertNotIn("MISSING_DISBURSAL_EVENT", codes)
+        codes = {issue.code for issue in _loan_issues(self._loan(), (), (), None)}
+        self.assertIn("MISSING_DISBURSAL_EVENT", codes)
+
+    def test_opening_balance_validation_errors_are_still_reported(self):
+        from unittest.mock import patch
+        opening = self._event(1, TransactionKind.MIGRATION_OPENING)
+        with patch("apps.tenant_apps.loans.selectors.reports.calculate_pawn_loan_balance", side_effect=ValueError("Invalid opening evidence")):
+            report = build_pawn_loan_reports((self._loan(events=(opening,)),), as_of_date=self.as_of)
+        self.assertIn("BALANCE_DERIVATION_ERROR", {issue.code for issue in report.issues})
+        self.assertEqual(report.portfolio[0].balance_error, "Invalid opening evidence")
 
     def _loan(
         self,

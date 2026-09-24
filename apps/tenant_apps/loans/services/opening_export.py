@@ -42,7 +42,7 @@ def _row(kind, instance):
 
 
 def _access(workspace_id, actor):
-    workspace = require_history_setup_access(workspace_id, actor)
+    workspace = require_history_setup_access(workspace_id, actor, read_only=True)
     resolve_workspace_access(actor=actor, workspace=workspace).require("data.export")
     return workspace
 

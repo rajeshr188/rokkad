@@ -1,11 +1,11 @@
 <nav class="app-section-nav" aria-label="PawnLoan setup">
   {% load orgs_tags %}{% navigation_actions as workflow_actions %}
-  <a href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}">Business setup</a>
+  <a href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}">Workspace checklist</a>
   {% if 'workspace.transfer' in workflow_actions %}<a href="{% url 'workspace_loans:loan_workflow_settings' request.workspace.slug %}">Workflow</a>{% endif %}
-  <a href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">Setup checklist</a>
+  <a href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">Lending setup</a>
   <a  href="{% url 'workspace_loans:license_list' request.workspace.slug %}#license-register">Licenses &amp; numbering</a>
-  <a  href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}">Economic setup</a>
+  <a  href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}">Interest &amp; fees</a>
   <a  href="{% url 'workspace_loans:loan_product_list' request.workspace.slug %}">Loan products</a>
   {% if request.workspace.owner_id == request.user.pk %}<a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Import Loans</a>{% endif %}
-  <a  href="{% url 'workspace_slug_loan_list' workspace_slug=request.workspace.slug %}">Back to PawnLoans</a>
+  <a  href="{% url 'workspace_slug_loan_list' workspace_slug=request.workspace.slug %}">Back to loans</a>
 </nav>

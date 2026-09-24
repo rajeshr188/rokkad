@@ -5,13 +5,18 @@ from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     PawnLoanState,
     TransactionKind,
 )
-from apps.tenant_apps.loans.models import LoanLicense, PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.loans.models import (
+    LoanLicense, PawnLoan, PawnLoanEvent, PawnLoanInterestAccrual,
+    PawnLoanRelease, PawnLoanRenewal, PawnCollateralItem, current_tenant_workspace_id,
+)
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.selectors.balances import (
     PawnLoanBalanceSelectorError,
@@ -191,7 +196,19 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise ValueError("PawnLoan reports require an active tenant schema.")
-    loans = tuple(
+    loans = tuple(_report_loans(workspace_id))
+    license_rows = _license_expiry_rows(
+        LoanLicense.objects.filter(workspace_id=workspace_id).order_by("expires_on", "license_number", "pk"), as_of_date,
+    )
+    return build_pawn_loan_reports(
+        loans,
+        as_of_date=as_of_date,
+        license_expiry=license_rows,
+    )
+
+
+def _report_loans(workspace_id):
+    return (
         PawnLoan.objects.filter(workspace_id=workspace_id)
         .select_related("borrower", "license", "series", "policy_snapshot")
         .prefetch_related(
@@ -205,9 +222,12 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
             "releases__items",
             "renewal_as_source__successor_loan",
         )
-        .order_by("loan_number")
+        .order_by("loan_number", "pk")
     )
-    license_rows = tuple(
+
+
+def _license_expiry_rows(licenses, as_of_date):
+    return tuple(
         LoanLicenseExpiryRow(
             license=license,
             days_remaining=(license.expires_on - as_of_date).days if license.expires_on else None,
@@ -218,13 +238,59 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
                 else "CURRENT"
             ),
         )
-        for license in LoanLicense.objects.filter(workspace_id=workspace_id).order_by("expires_on", "license_number")
+        for license in licenses
     )
-    return build_pawn_loan_reports(
-        loans,
-        as_of_date=as_of_date,
-        license_expiry=license_rows,
-    )
+
+
+def get_pawn_report_page(*, section, as_of_date, page=None, query=""):
+    """Bound HTML reads before loading related evidence; exports keep the full bundle."""
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise ValueError("Reports require an active Workspace context.")
+    if section == "summary":
+        report = get_pawn_loan_reports(as_of_date=as_of_date)
+        return {"report_summary": report, "as_of_date": as_of_date,
+                "balance_error_count": sum(bool(row.balance_error) for row in report.portfolio)}
+    if section in {"portfolio", "issues"}:
+        queryset = _report_loans(workspace_id)
+    elif section == "license_expiry":
+        queryset = LoanLicense.objects.filter(workspace_id=workspace_id).order_by("expires_on", "license_number", "pk")
+    elif section in {"daily", "repayments"}:
+        queryset = PawnLoanEvent.objects.filter(workspace_id=workspace_id).select_related("loan__borrower", "reversed_by_event")
+        if section == "daily":
+            queryset = queryset.filter(effective_date=as_of_date).filter(
+                Q(event_kind__in=[TransactionKind.DISBURSAL.value, TransactionKind.REPAYMENT.value])
+                | Q(event_kind=TransactionKind.REVERSAL.value, payload__reversal__original_event_kind__in=[TransactionKind.DISBURSAL.value, TransactionKind.REPAYMENT.value])
+            )
+        else:
+            queryset = queryset.filter(event_kind=TransactionKind.REPAYMENT.value)
+        queryset = queryset.order_by("pk")
+    elif section == "accruals":
+        queryset = PawnLoanInterestAccrual.objects.filter(workspace_id=workspace_id).select_related("loan").order_by("loan__loan_number", "period_number", "pk")
+    elif section == "releases":
+        queryset = PawnLoanRelease.objects.filter(workspace_id=workspace_id).select_related("loan", "reversal").prefetch_related("items").order_by("effective_date", "pk")
+    elif section == "renewals":
+        queryset = PawnLoanRenewal.objects.filter(workspace_id=workspace_id).select_related("source_loan", "successor_loan", "reversal").order_by("renewal_date", "pk")
+    elif section == "custody":
+        queryset = PawnCollateralItem.objects.filter(workspace_id=workspace_id).select_related("loan", "current_storage_location").order_by("loan__loan_number", "pk")
+    elif section == "statements":
+        queryset = Party.objects.filter(workspace_id=workspace_id, pawn_loans__workspace_id=workspace_id).distinct().order_by("display_name", "pk")
+        if query:
+            queryset = queryset.filter(Q(display_name__icontains=query) | Q(party_code__icontains=query) | Q(primary_phone__icontains=query))
+    else:
+        raise ValueError("Unknown report section.")
+    page_obj = Paginator(queryset, 50).get_page(page)
+    records = tuple(page_obj.object_list)
+    if section in {"portfolio", "issues"}:
+        bundle = build_pawn_loan_reports(records, as_of_date=as_of_date)
+        rows = bundle.portfolio if section == "portfolio" else bundle.issues
+    elif section == "license_expiry":
+        rows = _license_expiry_rows(records, as_of_date)
+    elif section == "daily":
+        rows = tuple(_event_report_row(event, as_of_date=as_of_date) for event in records)
+    else:
+        rows = records
+    return {"page_obj": page_obj, "report_rows": rows, "as_of_date": as_of_date}
 
 
 def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=()):
@@ -324,6 +390,7 @@ def _loan_issues(loan, events, collateral, balance):
         in {
             TransactionKind.DISBURSAL.value,
             TransactionKind.RENEWAL_OPENING.value,
+            TransactionKind.MIGRATION_OPENING.value,
         }
         for event in events
     ):
@@ -331,7 +398,7 @@ def _loan_issues(loan, events, collateral, balance):
             _issue(
                 "MISSING_DISBURSAL_EVENT",
                 loan,
-                "Active or closed loan has no disbursal source event.",
+                "Active or closed loan has no disbursal, renewal or migration-opening source event.",
                 action="Review lifecycle history before further servicing.",
             )
         )

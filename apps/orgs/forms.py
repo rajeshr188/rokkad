@@ -2,18 +2,12 @@ from django import forms
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django_select2.forms import Select2Widget
-from dynamic_preferences.forms import (
-    PreferenceForm,
-    SinglePerInstancePreferenceForm,
-    preference_form_builder,
-)
 from invitations.adapters import get_invitations_adapter
 from invitations.exceptions import AlreadyAccepted, AlreadyInvited
 from invitations.forms import CleanEmailMixin
 from invitations.utils import get_invitation_model
 
-from .models import Company, CompanyPreferenceModel, Membership, Role
-from .registries import company_preference_registry
+from .models import Company, Membership, Role
 from .services.role_policy import allowed_invitation_roles
 
 Invitation = get_invitation_model()
@@ -304,12 +298,6 @@ class CompanyForm(forms.ModelForm):
         return cleaned_data
 
 
-class CompanySinglePreferenceForm(SinglePerInstancePreferenceForm):
-    class Meta:
-        model = CompanyPreferenceModel
-        fields = SinglePerInstancePreferenceForm.Meta.fields
-
-
 class MembershipForm(forms.ModelForm):
     class Meta:
         model = Membership
@@ -322,13 +310,3 @@ class MembershipRoleForm(forms.Form):
     def __init__(self, *args, roles, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["role"].choices = [(role.id, role.name) for role in roles]
-
-
-def company_preference_form_builder(instance, Preferences=[], **kwargs):
-    return preference_form_builder(
-        CompanyPreferenceForm, Preferences, instance=instance, **kwargs
-    )
-
-
-class CompanyPreferenceForm(PreferenceForm):
-    registry = company_preference_registry

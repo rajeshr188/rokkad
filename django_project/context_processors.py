@@ -141,6 +141,19 @@ def subscription_context(request):
             "subscription_expired": False,
         }
 
+    from apps.subscriptions.access_policy import workspace_activity
+    from apps.orgs.permissions import is_platform_admin
+    activity = getattr(request, "workspace_activity", None) or workspace_activity(workspace)
+    from datetime import timedelta
+    from django.utils import timezone
+    access_context = {
+        "workspace_activity": activity,
+        "workspace_can_write": activity.can_write,
+        "can_manage_workspace_billing": workspace.owner_id == request.user.pk or is_platform_admin(request.user),
+        "billing_checkout_enabled": settings.BILLING_CHECKOUT_ENABLED,
+        "subscription_ends_soon": activity.mode == "full" and not activity.grant and activity.until
+            and timezone.now() <= activity.until <= timezone.now() + timedelta(days=7),
+    }
     try:
         from apps.subscriptions.models import Subscription
         from apps.subscriptions.billing import effective_billing_state
@@ -149,6 +162,7 @@ def subscription_context(request):
         billing = effective_billing_state(subscription)
 
         return {
+            **access_context,
             "has_active_subscription": billing.commercially_available,
             "subscription_plan": subscription.plan.name if subscription.plan else None,
             "days_until_renewal": subscription.days_until_renewal(),
@@ -158,6 +172,7 @@ def subscription_context(request):
     except Exception:
         # Subscription doesn't exist or error fetching
         return {
+            **access_context,
             "has_active_subscription": False,
             "subscription_plan": None,
             "days_until_renewal": None,

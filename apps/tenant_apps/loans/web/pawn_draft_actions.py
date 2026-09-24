@@ -91,7 +91,7 @@ def pawn_loan_create(request):
             "form": form,
             "formset": formset,
             "economics_preview": economics_preview,
-            "number_preview_rows": _pawn_number_preview_rows(form),
+            **_pawn_number_preview_context(form),
             "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
@@ -159,7 +159,6 @@ def pawn_loan_update(request, pk):
             "formset": formset,
             "loan": loan,
             "economics_preview": economics_preview,
-            "number_preview_rows": _pawn_number_preview_rows(form),
             "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
@@ -344,16 +343,17 @@ def _add_pawn_draft_error(form, formset, exc):
     form.add_error(None, str(exc))
 
 
-def _pawn_number_preview_rows(form):
-    """Expose non-consuming official-number previews for selectable series."""
-
-    return tuple(
-        {
-            "series": series,
-            "preview": _safe_preview(series, LoanDocumentKind.PAWN_LOAN),
-        }
+def _pawn_number_preview_context(form):
+    """Preview selectable series without reserving or consuming a number."""
+    previews = {
+        str(series.pk): _safe_preview(series, LoanDocumentKind.PAWN_LOAN)
         for series in form.fields["series"].queryset
-    )
+    }
+    selected = str(form["series"].value() or "")
+    return {
+        "number_previews": previews,
+        "selected_number_preview": previews.get(selected),
+    }
 
 
 def _draft_photo_inputs(formset):

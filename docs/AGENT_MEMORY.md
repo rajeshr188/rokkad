@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-23
+updated: 2026-09-24
 tags: [agents, context, architecture]
 ---
 
@@ -13,6 +13,84 @@ in [Future work](plans/future-work.md). Prior notes, including superseded decisi
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
 ## Product and tenant foundation
+
+Commercial expiry now uses the separate `workspace_activity` policy: seven days
+of normal-access grace from natural trial/paid-term expiry, then reviewed read-only
+routes and exports. Platform administrators can append dated full/read-only access
+decisions or return to normal policy; the latest decision wins and older grants
+never revive. This does not rewrite purchased terms, invent payments, or bypass
+membership, role permissions, suspension, archive or RLS. New checkout is disabled
+by default until provider acceptance. Servicing-only access is deferred: repayments
+and releases are still writes. See the
+[access decision](adr/2026-09-24-subscription-access-continuity.md),
+[operator guide](domain/subscriptions.md), and Status for release evidence.
+
+Customer Workspace creation now prepares four standard DRAFT loan products in the
+same transaction, through both control-plane creation services and explicit RLS
+context. Owners/setup administrators review and enable only their chosen versions;
+automatic preparation never activates products or changes terms on existing loans.
+The manual seed button is removed. The explicit idempotent operator command remains
+for existing Workspace rollout/recovery; direct import/operator Company creation
+does not imply customer onboarding. See the [decision](adr/2026-09-24-automatic-draft-loan-products.md)
+and Status for validation/deployment evidence.
+
+The owner explicitly requested preserving guided customer-facing legacy migration
+as future work. [FW-007](plans/future-work.md#fw-007-guided-customer-facing-legacy-migration)
+tracks the gap between existing staged imports/operator-prepared loan migrations
+and a supported end-to-end customer journey. It is unscheduled future work, not
+authorization to implement it now or a claim that arbitrary-source import exists.
+The owner clarified two onboarding cases: new lending in a new series with old
+paper loans left outside, and new lending alongside gradual manual/Excel migration
+of existing paper loans. FW-007 records both, including existing-borrower matching,
+separate historical admission and explicit financial handover/coverage boundaries.
+
+The owner requested borrower-specific loan discovery and more informative reports.
+Loans now support a dedicated borrower name/code/phone filter and exact scoped Party
+filter, including inactive borrowers. Customer/loan pages and statement search link
+to that borrower's full loan list. Reports add active totals by licence and series,
+collateral by metal/custody, and maturity bands, with charts and full exports.
+The subsequent Loans by year report groups all operational loan states by original
+loan-date calendar year, with current state counts and canonical active principal.
+Creation/import timestamps and archive-only historical records are not its basis.
+Grouped money must use canonical balances; current active membership is distinct
+from the balance date. Collateral values here are recorded approved appraisals,
+not current market/coverage values. Keep missing appraisal/gross-weight counts
+visible; never promote unverified migration valuations. Maturity bands are not
+contractual instalment DPD. See Status for deployment and verification evidence.
+
+The subsequent staff workflow review deployed `rokkad:rehearsal-staff-ui-20260924`:
+dashboard search/queues precede analytics, payment receipts have a visible section
+with reversed evidence labelled, and customer mutation controls follow canonical
+edit permission. Reader/editor/collector hosted probes passed with temporary access
+rolled back; 55 targeted tests passed. No financial transactions were submitted on
+rehearsal. The reports increment subsequently deployed
+`rokkad:rehearsal-report-pages-v3-20260924`: selected reports paginate 50 source
+records before fetching evidence, and borrower statements are searchable. Preserve
+as-of dates, source links and complete Workspace summaries/downloads; pagination
+must never truncate exports. Integrity pages cover only their displayed loan batch.
+Migration-opening events are valid origins alongside disbursal and renewal; invalid
+balance evidence must still raise findings. Twenty targeted tests and hosted/browser
+checks passed. HTTP success is not staff usability acceptance. See Status and the
+readiness review for scope and evidence.
+
+On September 24 the owner accepted the preferences/navigation review and
+subsequent dependency cleanup. Rehearsal image
+`rokkad:rehearsal-prefs-retired-20260924` removes dynamic-preferences and unused
+persisting-theory, replaces package model bases with plain Django raw-data
+models, and retires registries/services/forms. Compatibility migration 0003 adopts
+old global/user tables or creates them on fresh installs; preserve their values,
+audit history and user deletion relationship. No current lending workflow uses
+these retained values. Fresh-install and populated-clone migrations passed, with
+five preference/audit tables and 87 loan/party tables unchanged on upgrade.
+Legacy preference bookmarks remain authorized read-only guidance; POST rejected.
+Reports, Historical loans and Release batches are visible outside Settings.
+Loan details group secondary evidence into disclosures and show the loan date
+and separately labelled creation/import timestamp beneath the heading. New loan
+number previews follow the selected series without allocating a number. Technical
+checks and browser checks passed; broader staff usability acceptance remains open.
+Backup and detailed evidence stay on the server, never in the OneDrive checkout.
+See [the decision](adr/2026-09-24-retire-preference-editing-surfaces.md),
+[feature map](flows/workspace-feature-map.md) and [Status](STATUS.md).
 
 On September 23 the owner confirmed that imported loans must support both
 interest-only payments and partial principal repayments before cutover. The owner confirmed that
@@ -39,9 +117,119 @@ That command contract is now implemented with `linode-media-target/1` and a
 checksummed `linode-media-plan/2` production header; rehearsal retains its original
 format. A changed destination/source requires replanning. See the
 [target-binding decision](adr/2026-09-23-production-media-target-binding.md).
-The owner reconfirmed the separate server is not created; real target identities,
-durable credentials, destination-host verification and a fresh timed migration
-remain pending. Do not substitute rehearsal identities or promote practice data.
+The separate Linode is now created for hosted cutover rehearsal. Release
+`a9f793fc` is built there; PostgreSQL 16.15 hosts the newly migrated
+`rokkad_cutover_rehearsal` database, with separate owner/runtime credentials in
+private host files and restricted-role/RLS checks passed. HTTPS now serves
+`rehearsal.rokkad.com`; the app uses the existing `prod_r2` settings through a
+read-only host rehearsal wrapper, secure isolated cookies, rehearsal banner and
+in-memory email. The owner explicitly approved temporary R2 credential transfer
+for this rehearsal only. Its separate prefix is
+`media/application/production/hosted-rehearsal-20260923`; do not reuse it for final
+production. The delegated administrator is `rehearsal-admin` with an unverified
+placeholder email; its generated password stays in the host's private
+`~/deploy/rehearsal/admin-login.json`. Login/storage probes and local schema-stage
+backup/restore passed. Hosted business data is now admitted and fully reconciled
+under the restricted runtime role and ordinary `hosted-import-owner` memberships.
+All three Workspaces have Admin Memberships for `rehearsal-admin`. The owner supplied
+`backup_20260923_115257.sql`; its exact snapshot is inspected and privately staged
+on the host. New source review and owner-answer evidence are separate from the
+September 21 package. For this snapshot, JCL RA00554 and C07517 remain outstanding
+despite inactive source customers; do not extend the earlier 190 owner-confirmed
+closures to them. JCL RA00549 and JSK WH02133 are unused/cancelled, with no invented
+closure or operational loan. Lakshmi D01234 is a duplicate-entry correction:
+use original principal 11,500 and one item from its original date, not a repayment.
+The September 23 classification is 6,368 outstanding, 39,162 closed-history and
+three unused/cancelled records. All 8,634 customers and their prepared contacts and
+addresses are imported. Populated-data RLS, 19 rolled-back servicing samples,
+29 real HTTPS pages and a separate backup restoration passed; all 160 restored
+table content hashes matched. Database admission/reconciliation took 99.2 minutes,
+excluding offline preparation and media. See Status for checksums/evidence.
+Hosted media now has 28,347 references attached using 29,489 private application
+copies. After the owner authorized the incremental source check/copy, all 55
+remaining newer references were found on the old Linode, preserved directly in
+private R2 and attached to rehearsal (JCL 27, JSK 9, Lakshmi 19). Fifteen private
+access probes, an identical 55-receipt retry and 252 unchanged business-data
+fingerprints passed. Of attached references, 25,054 are known blank source images,
+including 53 of the 55 newly copied files. Older missing files and unverified
+shared candidates remain excluded. Only the 55 paths received a fresh source
+check; do not call this a fresh complete media capture. Payments/releases require
+dates after the September 23 opening.
+
+The subsequent authorized exception review rechecked all 3,614 remaining exact
+branch paths read-only; all are still missing. They affect 102 active collateral,
+3,507 historical and five customer-photo references. Of 1,149 unverified shared
+candidates, 1,144 are known blank images; the other five are unverified customer
+photos. Leave candidates unattached without ownership evidence. Detailed exception
+reports stay on the rehearsal server in `media-exceptions-20260923/`.
+The owner wants printing obvious immediately after approval. Approved/active
+loan details now show a prominent Print loan ticket action below the heading,
+using the existing eligibility flag and ordinary PDF route. Other states retain
+their existing document section. The template-only rehearsal image is now
+`rokkad:rehearsal-ticket-button-20260923`; include this template in final release.
+
+Full identical retries of both media plans recognized all 28,292 receipts and
+created nothing. Completed reports and the post-media database backup are retained
+on the rehearsal host. This is verified reuse of preserved media, not final
+production cutover or a fresh live-filesystem capture.
+Durable production credentials, operational off-server recovery policy, media
+completion and the final frozen-snapshot cutover remain pending. Do not promote
+practice data or change live routing based on this rehearsal.
+
+Keep the post-media rehearsal backup on the server: the owner explicitly chose
+this after automatic review rejected a full database export into the OneDrive
+workspace. Detailed media/reference reports also stay on the host after that
+export was rejected. Local docs may record aggregate verification results; do
+not retry those sensitive exports without explicit new authorization.
+
+For hosted JCL new-lending practice the owner chose a separate synthetic TEST
+licence instead of making the final-cutover attestation while production remains
+live. Hosted licence 5 and series 13 use `TEST-JCL-L-`/`TEST-JCL-R-` numbering;
+flexible product version 6 is active. Sample licence-scoped policies use 2%
+monthly gold/silver interest, 80% appraisal LTV and one month upfront. This is
+practice configuration, not confirmed production terms or legal licence evidence.
+Imported licences/counters remain unchanged. No verification bypass was added.
+
+Accepted layout bundles are now imported on the hosted rehearsal: JCL layout
+revision 3/profile 2 published only on TEST series 13; JSK layout revision
+4/profile 3 are unassigned drafts. Hashes match the saved accepted exports,
+including JCL's four background assets. The pre-existing JCL `test` draft remains
+unchanged. Synthetic previews passed; actual practice-loan printing and physical
+printer alignment are separate checks. Never copy these destination IDs into
+production assignments.
+
+Hosted JCL TEST series now uses layout revision 5/version 2, superseding revision
+3 only for that series: amount-in-words uses SHRINK and automatic leading in its
+unchanged frame after the 18,600 practice loan exposed overflow. Full-text preview
+passed; earlier published evidence is preserved. Re-export this correction before
+future deployment; the original September 23 bundle predates it.
+
+The owner prefers ₹ instead of INR on tickets. `INR_SYMBOL` is an opt-in layout
+value format with an embedded Unicode font; monetary payloads remain unchanged.
+Hosted JCL TEST uses revision 6/version 3 (including the amount-in-words fix);
+JSK draft revision 4 also formats principal with ₹. The rehearsal web image is
+`rokkad:rehearsal-rupee-20260923`, a derived image with this display change.
+Issued PDFs retain their original bytes. Refresh exported bundles before future
+rollout; do not redeploy the older image with the newer layout format.
+
+The owner wants absent borrower photos to leave blank space on tickets rather
+than block issuance. Use the existing optional-photo setting; do not fabricate
+identity photos or suppress unreadable-selected-media failures. Hosted JCL TEST
+now uses revision 7/version 4 and JSK draft revision 4 has this setting on all
+borrower-photo frames. Actual JCL loan 19105 passed official-mode rendering with
+recorded ABSENT/optional evidence. Collateral-photo rules were not changed.
+
+The owner explicitly requires these corrected JCL/JSK templates to work out of
+the box at production cutover. Latest private transfer bundle is
+`outputs/server-rehearsal-20260923/cutover-templates-final-20260923/`; earlier
+exports are superseded. Use `scripts/install_cutover_ticket_templates.py` with
+an explicitly bound destination JSON and restricted runtime role. It pairs each
+branch's layout and paper profile as Workspace defaults, validates every series
+and rejects conflicting overrides. On rehearsal JCL 7/2 and JSK 4/3 are both
+published defaults; JSK is no longer an unassigned draft. Default-profile previews
+pass for both branches. Retry and wrong-target rejection checks passed. Include
+INR_SYMBOL support in the production release. Do not transfer TEST data or copy
+rehearsal identity bindings. Final production installation remains a cutover step.
 
 The owner authorized a design-first ticket-template experiment on
 `feature/ticket-template-designer`, isolated in its own worktree from baseline
@@ -238,8 +426,8 @@ redesign before cutover on September 22. Staff need desktop, tablet and phone
 support in English and Hindi. Follow [the UX plan](plans/project-wide-ux-revamp.md),
 building on the counter shell. Keep the old app live and the accepted rehearsal
 intact; defer final source freeze and switch until redesigned journeys are accepted.
-The separate production server is still planned, but need not be purchased before
-local design work. CPU/RAM sizing recommendations are provisional until measured.
+The separately provisioned Linode now supports hosted rehearsal preparation.
+CPU/RAM sizing recommendations remain provisional until measured.
 The owner selected Django 6 native template partials with HTMX and the latest stable
 Bootstrap for implementation. Use progressive ordinary Django views/forms and
 existing domain services; no extra partial-template package or SPA framework.
@@ -288,7 +476,7 @@ destination from that snapshot. The 2026-09-21 discovery inventory and its
 future-dated JCL loan hold are recorded in
 [the Linode discovery report](implementation/linode-production-discovery-20260921.md).
 On September 22 the owner selected a separate Linode server for the new production
-deployment and confirmed it has not been created. Prepare it independently, keeping
+deployment; it was subsequently provisioned for hosted rehearsal. Prepare it independently, keeping
 the old source live until a scheduled all-writer freeze. Follow
 [the cutover runbook](implementation/linode-production-cutover.md); the old system
 is a simple fallback only before new-system business writes begin. The explicit

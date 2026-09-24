@@ -1,14 +1,14 @@
 ---
 status: active
 owner: project
-updated: 2026-09-23
+updated: 2026-09-24
 tags: [migration, cutover, deployment, linode, r2]
 ---
 
 # Three-branch production cutover
 
-The owner selected a **separate Linode server** on September 22. It has not been
-created (reconfirmed by the owner on September 23). Keep the existing `rokkad.com`
+The owner selected a **separate Linode server** on September 22 and subsequently
+created it for hosted cutover rehearsal on September 23. Keep the existing `rokkad.com`
 application live during preparation. Build
 the current RLS application on the new server with a separate PostgreSQL database
 and private R2 application prefix. Never upgrade the old tenant database in place
@@ -18,16 +18,57 @@ The accepted rehearsal proves conversion of its snapshot. It does not include
 customers, loans, payments, releases or media added afterwards. The final cutover
 imports one complete frozen snapshot for JCL, JSK and Lakshmi together.
 
+## September 24 release requirements
+
+The rehearsal now includes preference-library retirement and the simplified loan
+number/date UI (`rokkad:rehearsal-prefs-retired-20260924`). Final production must
+build from the reviewed current code and requirements, including migration
+`configuration.0003_retain_legacy_preference_data`, through the owner-only settings.
+Do not install the retired preference packages or delete their retained tables.
+Fresh and populated-upgrade paths were verified on the rehearsal host. This does
+not replace final runtime-role/RLS, staff journey, recovery or source reconciliation
+checks. The final production release still needs a clean committed checkout;
+rehearsal patch images are verification artifacts, not the final release procedure.
+See [current status](../STATUS.md) for later evidence superseding the older planning
+checkpoint below.
+
+Customer Workspace creation also prepares the four standard loan-product drafts
+automatically. For existing/import-created active Workspaces, run
+`python manage.py seed_default_loan_products --workspace-id ID` with the restricted
+runtime settings once per intended Workspace. This idempotent preparation preserves
+existing terms/statuses and never enables products. The owner/setup administrator
+must review and enable the products offered for new lending. Do not infer new-lending
+approval from imported product references. See the
+[product preparation decision](../adr/2026-09-24-automatic-draft-loan-products.md).
+
+Include subscription migrations `0010_workspaceaccessdecision` and
+`0011_access_decision_evidence_guard` through the owner-only migration settings.
+Keep `BILLING_CHECKOUT_ENABLED=False` until Razorpay provider acceptance. Commercial
+expiry now allows seven days of normal access before read-only access; it does not
+suspend the Workspace. Before opening production, explicitly review every intended
+Workspace's subscription, entitlements and effective activity mode. While payments
+are unfinished, use the audited platform access command/form for a dated normal
+access extension and record the reason. Choose production dates and actual target
+Workspace/platform-actor IDs at cutover; do not blindly copy rehearsal grants.
+Grants never bypass lifecycle or staff permissions and do not create paid evidence.
+Verify owner/staff reads, forbidden writes, saved PDF retrieval, exports and extension
+expiry/revocation under the runtime role. See the
+[subscription operator guide](../domain/subscriptions.md).
+
+The access migration is additive. For a rehearsal application rollback, restore the
+prior compose image and retain the new evidence table/migrations; do not reverse
+the migration and discard audited decisions. An old image does not enforce the new
+continuity policy, so confirm usable subscriptions before reopening on that image.
+
 ## Readiness before scheduling downtime
 
 The owner requested cutover planning on September 23 after the ticket designer
 merge and JSK stationery correction. The implementation checkpoint is `f2c6014d`
 on `rls-mvp`, committed locally but not pushed at this review. Tracked files are
 clean; private local outputs and scratch files are deliberately untracked.
-The accepted ticket layouts are database configuration, not Git contents: export
-the current JCL revision 1/profile 1 and corrected JSK revision 4/profile 2 plus
-assets through the supported pack/profile workflow for deployment. Do not use
-the older JSK recovery pack with duplicated business headings. TEST-series
+The accepted ticket layouts are database configuration, not Git contents. Use the
+final hosted bundle described below, including the rupee, amount-in-words and
+optional-borrower-photo fixes. Older local exports are superseded. TEST-series
 assignments, licences, customers, loans and issued sample PDFs are rehearsal only.
 
 The pre-cutover UX work covers desktop, tablet/phone and English/Hindi. The owner
@@ -40,7 +81,7 @@ not be reintroduced as an approval gate. Record its alignment as untested.
 
 | Work | Current evidence / remaining action |
 | --- | --- |
-| Destination server | Owner selected separate Linode; creation, SSH address and verified access pending. |
+| Destination server | Created: Ubuntu 26.04, approximately 4 GiB RAM, Docker/Compose and verified SSH access. Release a9f793fc serves rehearsal.rokkad.com over HTTPS. PostgreSQL 16.15 schema, runtime/RLS checks, isolated R2 probes and local schema-stage restore passed. New source data, durable credentials and off-server recovery remain pending. |
 | Database conversion | Accepted snapshot and separate clean-target replay reconcile all source loan IDs. Fresh data and a later opening date require new preparation. |
 | Media | Rehearsal attachment, source retention, private access and duplicate-free retry verified. Missing and blank source images remain explicitly reported. |
 | Imported-loan servicing | Dedicated imported interest-only/partial-principal collection, coupled reversal and payment-aware export/restore are implemented. Owner completed and accepted the practice run on September 23. Reduced-principal interest starts at the next original charge boundary. Destination-host smoke checks remain part of deployment. |
@@ -104,20 +145,55 @@ no rehearsal or production financial records were changed by implementation.
 
 ### Accepted template transfer bundle
 
-Read-only export completed on September 23 under the rehearsal runtime role.
-Private local files are in `outputs/production-readiness-20260923/templates/`:
-`jcl-layout.zip`, `jcl-profile.json`, `jsk-layout.zip`, `jsk-profile.json` and
-`manifest.json`. Layout/profile definitions and each archived asset SHA-256 were
-checked against the current published configuration. JCL includes four background
-assets; JSK includes none and declares its business name preprinted. The existing
-front-pair profiles are retained; included reverse artwork is not automatically
-enabled. The manifest records content hashes and source revision provenance.
+The owner explicitly requires JCL and JSK printing to work at cutover without
+rebuilding templates or manually selecting a paper profile. The final bundle is
+`outputs/server-rehearsal-20260923/cutover-templates-final-20260923/`, also retained
+on the rehearsal host under `/home/rokkad/deploy/rehearsal/` with the same directory
+name. It supersedes `outputs/production-readiness-20260923/templates/`.
 
-These bundles contain configuration only, with no customers, loans, licences,
-issued documents or assignment rows. Keep them outside Git. Import into the
-destination as drafts through the supported layout-pack and profile services,
-check hashes/previews, then assign using real destination Workspace/series IDs.
-Never reuse rehearsal IDs or activate a TEST-series mapping in production.
+It contains layout ZIPs, paper-profile JSON and a SHA-256 manifest. Sources are
+hosted JCL revision 7/profile 2 and JSK revision 4/profile 3. Included changes:
+JCL amount-in-words auto-fit; rupee principal formatting; optional absent borrower
+photos; JCL plain A4 side-by-side with four background assets; JSK preprinted A5
+original/duplicate with business name/address omitted. Existing front-pair
+profiles remain; reverse artwork does not automatically enable reverse printing.
+No customers, loans, licences, issued PDFs or destination assignment IDs are in
+the layout packs. Source revision IDs in the manifest are provenance only.
+
+The installer is `scripts/install_cutover_ticket_templates.py`. Build the final
+application from the checkout containing this script and `INR_SYMBOL` support;
+baseline `a9f793fc` alone cannot load the updated layouts. Keep the bundle private.
+Run with the production **restricted runtime settings/role**, after destination
+Workspace/series import and before reopening. No schema migration is required.
+
+Prepare a private `template-target.json` with the exact destination values:
+`manifest_sha256` (hash of manifest.json bytes), `database`, `database_host`,
+`runtime_role`, `media_location` (the private production storage location),
+`rehearsal: false`, and `workspaces` containing `jcl` and `jsk`, each with verified
+destination `id` and `slug`. Do not copy the bundled rehearsal target values.
+
+```sh
+python scripts/install_cutover_ticket_templates.py \
+  --bundle /private/cutover-templates-final-20260923 \
+  --target /private/template-target.json
+```
+
+The installer verifies target bindings and source checksums, imports/reuses
+matching revisions via ordinary services, then publishes/assigns layout **and
+paper profile together as each Workspace's default**. Existing/future series
+inherit the pair. Every existing series is checked for conflicting overrides;
+failure means review the override, not silently overwrite it. Each Workspace is
+atomic; rerunning reuses configuration and assignments. On rehearsal this passed
+for all eight JCL and three JSK series. Retry created no duplicate configuration;
+wrong database, storage, manifest and deployment-mode bindings were rejected.
+
+Before opening, verify default-profile previews (no manual `profile` query) and
+one representative eligible loan per branch. JCL's real licence must have the
+owner-confirmed printed business name/address/contact; actual validity/evidence
+must be configured normally. JSK requires its preprinted stationery. Neither a
+template assignment nor synthetic evidence authorizes production lending.
+Do not promote practice loans/licences. Physical alignment remains a separately
+recorded check, not a reinstated approval gate. Existing issued PDFs stay intact.
 
 ### Opening-date boundary
 
@@ -252,6 +328,91 @@ target records to simulate rollback.
 
 ## Immediate next action
 
+### Hosted rehearsal deployment
+
+The dedicated host serves `https://rehearsal.rokkad.com`; the owner manages DNS
+through Linode, not Cloudflare. Only the new subdomain was added. Caddy supplies
+HTTPS and static files; the application is bound to `127.0.0.1:8000`, and PostgreSQL
+is accessible only through the `rokkad-rehearsal` Docker network. The live production
+hostname/source is unchanged. TCP 80 and 443 are reachable; SSH remains the
+operator access path.
+
+Host configuration lives in `/home/rokkad/deploy/rehearsal/`:
+
+- `web-compose.yml` runs the pinned application image `rokkad:a9f793fc` and Caddy
+  image digest `sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52`.
+- `hosted_rehearsal.py` extends `prod_r2`, checks the exact rehearsal database/media
+  prefix, enables the existing banner, isolates secure cookies and disables outgoing
+  email via the in-memory backend. This is a read-only deployment mount, not a change
+  to the application image. Use exact `prod_r2` for target-bound media command
+  admission when appropriate; the existing command deliberately checks that module.
+- `.env.runtime` and `.env.migration` remain separate mode-0600 files. The runtime
+  file has no migration-owner password. The explicitly approved temporary R2 token
+  is for this rehearsal only; replace it before production.
+- `Caddyfile` overwrites forwarded protocol, serves only collected static files,
+  and rejects raw `/media/` paths. HTTPS uses one-hour HSTS without subdomain/preload
+  scope. Public bucket/custom-domain privacy remains a separate acceptance check.
+- `admin-login.json` contains the generated rehearsal administrator password. Read
+  it privately over SSH; never include it in logs, Git or chat. Placeholder email is
+  not verified ownership of a mailbox.
+- `backups/` retains a checksummed schema-stage dump; its separate restored check
+  database is `rokkad_restore_check_20260923`. This is a local recovery check, not an
+  off-server backup strategy. Re-test recovery after real rehearsal data is loaded.
+
+Operator commands from that directory:
+
+```bash
+sudo docker compose -f web-compose.yml ps
+sudo docker compose -f web-compose.yml logs --tail 80 web proxy
+sudo docker compose -f web-compose.yml exec web python manage.py check --deploy --database default
+```
+
+The owner supplied `C:\Users\rajes\backup_20260923_115257.sql`, SHA-256
+`3be7cedd0eaf0556b8aa1c70b5c843b6b8c7d3c016665a783243eb663ca44a21`.
+Its private host copy is `source/backup_20260923_115257.sql` in the deployment
+directory. Scoped offline preparation is retained in
+`outputs/hosted-source-20260923/`; subsequent owner answers and disjoint source
+classification are separately sealed in `outputs/hosted-owner-decisions-20260923/`.
+Use those explicit source-ID decisions for the two outstanding inactive-borrower
+exceptions, two newly cancelled records and duplicate-entry principal correction;
+see Status. The current classification has 6,368 outstanding loans, 39,162
+closed-history records and three unused/cancelled records. That source review
+preceded the completed admission described below. Preserve original source facts
+and use the recalculated September 23 openings
+through existing financial services. Do not reuse September 21 balances/package
+or turn a duplicate correction into an invented payment. No source freeze or
+production routing change is authorized by this rehearsal preparation.
+
+The owner subsequently authorized admission. The newly prepared package is
+`outputs/hosted-reviewed-package-20260923/`, SHA-256
+`cfc13d37d6eb5d052c7f6b9e1e509fa215a83a857a30390eefb66e5bf734a80b`.
+It records offline preparation explicitly; it is not labelled a capture of an
+already accepted database. The ordinary destination previews and commits remain
+mandatory. Hosted Workspace IDs are JCL 1, JSK 2 and Lakshmi 3, under
+`hosted-import-owner` Owner Memberships, with Admin Memberships for
+`rehearsal-admin`. All DML runs under the restricted runtime role.
+
+The import completed in `rokkad-reviewed-import-20260923` using the deployed release
+plus PostgreSQL client tools. Operator files and evidence are under
+`~/deploy/rehearsal/import/`; secrets remain in the existing private host settings.
+Inspect `docker logs --tail 20 rokkad-reviewed-import-20260923` and
+`import/finish.log`. All reconciliation, 19 rolled-back servicing samples,
+29 real HTTPS page checks and post-import backup recovery passed. The isolated
+render container initially needed the existing collected-static volume mounted;
+that verification-only issue is resolved. Never reset or merge another source
+package into these Workspaces. `run/completion-manifest.json` is written only after
+all queued checks pass; its SHA-256 is
+`0a470b7e15b676785d7f4b577ebd3ba81759694337d47268c468e03f56dcad0e`.
+The complete private reports are also retained locally under
+`outputs/server-rehearsal-20260923/import-results/run/`. Admission/reconciliation
+took 99.2 minutes, excluding offline preparation and media. Recovery restored the
+49,909,423-byte backup into `rokkad_import_restore_20260923`, retaining both copies;
+all 160 table content hashes and runtime/RLS/migration checks matched.
+Opening balances are dated September 23; payment/release practice starts September
+24 under the current servicing contract. Preserve verification before practice.
+
+### Remaining cutover work
+
 The owner has completed and accepted the imported-payment practice run. Move to
 production media admission, essential UI/printing checks, destination provisioning
 and recovery using this single readiness checklist. Do not repeat the accepted
@@ -261,22 +422,33 @@ The production media admission command now implements the exact target contract;
 see the [manifest and operator steps](linode-media-attachments.md#production-target-binding).
 It retains rehearsal behavior and refuses mismatched targets before copying.
 Prepare the real manifest only after the separate server/database, Workspaces and
-durable credentials are configured. The owner reconfirmed the server is not yet
-created. Local tests do not establish remote R2 privacy, reliability or cutover
-readiness; run those checks from the new host.
+durable credentials are configured. The server, HTTPS and rehearsal schema are now
+prepared, and isolated R2 probes passed using the approved temporary token.
+Workspaces and the supplied database snapshot are now imported and verified.
+Hosted media now has 28,347 verified attachments, including 55 freshly copied
+originals. All 3,614 remaining exact branch paths were rechecked and remain
+missing: 2,465 have no preserved candidate and 1,149 have unverified shared
+candidates (1,144 known blank images and five customer photographs). Carry this
+exception list into final-source review; never attach candidates by filename
+alone or claim all photos were recovered. Final frozen media capture/reconciliation
+remains pending. The approved/active loan-details print shortcut is deployed to
+rehearsal; include `templates/loans/pawn/detail.html` in the final release along
+with INR_SYMBOL support and the corrected default template packs.
+Storage probes do not establish
+complete external privacy, workload reliability or production cutover readiness.
 
 Resolve required business-flow gaps before choosing a freeze date.
-Create the separate Linode server when ready for hosted
-deployment testing; prepare access, immutable release image, HTTPS, restricted RLS
-runtime, durable R2 credentials and verified backups while the old system remains
-live. Do not push, purchase infrastructure or switch routing as part of discussion.
+Continue deployment on the separate Linode: the image, HTTPS and restricted RLS
+database are prepared. Complete durable application/provider credentials and
+off-server backup acceptance while the old system remains live. Do not switch
+production routing as part of rehearsal preparation.
 
-Then take a fresh non-frozen snapshot for a timed, disposable end-to-end rehearsal
-on that host. Source activity may continue during this rehearsal: its reports are
-preparation evidence, not the final balances. Measure extraction/preparation,
-database import, media changes and validation together; the old approximately
-101-minute database-only local run is not a promised downtime estimate.
-Use the measured result to agree the all-branch freeze window and fallback deadline,
+The fresh non-frozen September 23 snapshot completed a timed hosted database
+rehearsal in 99.2 minutes for admission/reconciliation. Complete and measure media
+separately; this is not yet an end-to-end database-plus-media timing. Source activity
+continues: rehearsal reports are preparation evidence, not final balances.
+Include extraction/preparation, media changes and final validation when agreeing
+the all-branch freeze window and fallback deadline,
 then follow the final frozen-snapshot sequence above. Never layer that final dump
 onto the practice database or assume old decisions about discarded payments apply
 to newly recorded transactions.

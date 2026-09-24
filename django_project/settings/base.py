@@ -57,8 +57,6 @@ SHARED_APPS = [
     "django_filters",
     "djmoney",
     "widget_tweaks",
-    "dynamic_preferences",
-    "dynamic_preferences.users",
     "django_htmx",
     "import_export",
     "colorfield",
@@ -385,6 +383,9 @@ RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET", default="")
 # Billing Configuration
 BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="18")  # 18% GST for India
 BILLING_ALLOW_TRIAL_START = env.bool("BILLING_ALLOW_TRIAL_START", default=DEBUG)
+SUBSCRIPTION_GRACE_DAYS = 7
+# Enable only after provider checkout/webhook acceptance on the deployment.
+BILLING_CHECKOUT_ENABLED = env.bool("BILLING_CHECKOUT_ENABLED", default=False)
 
 THOUSAND_SEPARATOR = ","
 DECIMAL_SEPARATOR = "."

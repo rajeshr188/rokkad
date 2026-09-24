@@ -20,4 +20,7 @@ def command_workspace(workspace_id, *, read_only=False):
     if not read_only and workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
         raise CommandError("This operation requires an ACTIVE Workspace.")
     with workspace_context(workspace.pk):
+        if not read_only:
+            from apps.subscriptions.access_policy import require_business_write
+            require_business_write(workspace)
         yield workspace

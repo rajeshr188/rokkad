@@ -777,6 +777,23 @@ class ConfigurableDocumentRenderer:
             except ValueError as exc:
                 raise ValueError(f"Value {value!r} is not a valid ISO date for {value_format}.") from exc
             value = parsed.strftime("%d/%m/%Y" if value_format == "DATE_DMY" else "%m/%d/%Y")
+        elif value_format == "INR_SYMBOL":
+            numeric = value.removeprefix("INR ").removeprefix("₹").strip()
+            try:
+                amount = Decimal(numeric)
+                if not amount.is_finite():
+                    raise InvalidOperation
+                value = f"₹{amount:,.2f}"
+            except InvalidOperation as exc:
+                raise ValueError(f"Value {value!r} is not a valid INR amount.") from exc
+            # Helvetica has no rupee glyph. Embed the bundled Unicode font for
+            # this monetary value without changing other ticket typography.
+            name = "RokkadUnicodeTamil"
+            if name not in pdfmetrics.getRegisteredFontNames():
+                font_path = Path(__file__).resolve().parents[4] / "static" / "fonts" / "NotoSansTamil-Regular.ttf"
+                pdfmetrics.registerFont(TTFont(name, str(font_path)))
+            base_style = base_style.clone(f"{base_style.name}-inr")
+            base_style.fontName = name
         elif value_format == "DECIMAL_2":
             try:
                 value = f"{Decimal(value):,.2f}"

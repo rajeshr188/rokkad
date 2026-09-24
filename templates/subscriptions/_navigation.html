@@ -1,5 +1,6 @@
 <nav class="app-section-nav" aria-label="Billing navigation">
 <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}">Subscription &amp; invoices</a>
+{% if request.user.is_superuser %}<a href="{% url 'workspace_subscriptions:access-controls' request.workspace.slug %}">Platform access controls</a>{% endif %}
 <a href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.slug %}">Available plans</a>
 <a href="{% url 'workspace_slug_settings' workspace_slug=request.workspace.slug %}">Workspace settings</a>
 </nav>

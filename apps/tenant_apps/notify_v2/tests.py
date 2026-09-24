@@ -38,6 +38,15 @@ from apps.tenant_apps.notify_v2.views import (
 
 class NotifyV2FoundationTests(SimpleTestCase):
     def setUp(self):
+        # These are isolated provider/rendering tests. Database-backed access
+        # and expiry enforcement is exercised by WorkspaceAccessPolicyTests.
+        for target in (
+            "apps.orgs.models.Company.all_objects.get",
+            "apps.subscriptions.access_policy.require_business_write",
+        ):
+            patcher = patch(target)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.factory = RequestFactory()
         self.user = get_user_model()(username="notifyv2")
         self.event_type = NotificationEventType(

@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from decimal import Decimal
 from dateutil.relativedelta import relativedelta
@@ -77,6 +78,45 @@ class Plan(models.Model):
         if not self.yearly_price:
             self.yearly_price = self.price * Decimal("9.6")  # 20% off
         super().save(*args, **kwargs)
+
+
+class WorkspaceAccessDecision(models.Model):
+    """Append-only platform commercial-access decision, separate from payment."""
+
+    class Mode(models.TextChoices):
+        FULL = "full", "Temporary normal access"
+        READ_ONLY = "read_only", "Temporary read-only restriction"
+        DEFAULT = "default", "Return to normal subscription policy"
+
+    workspace = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="commercial_access_decisions")
+    mode = models.CharField(max_length=12, choices=Mode.choices)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    reason = models.TextField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    plan = models.ForeignKey(Plan, on_delete=models.PROTECT, null=True, blank=True)
+    entitlement_snapshot = models.JSONField(default=list, editable=False)
+
+    class Meta:
+        ordering = ("-created_at", "-pk")
+        indexes = [models.Index(fields=["workspace", "-created_at"], name="subscription_access_latest")]
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(reason=""), name="subscription_access_reason"),
+            models.CheckConstraint(
+                condition=(models.Q(mode="default", expires_at__isnull=True) |
+                           models.Q(mode__in=["full", "read_only"], expires_at__isnull=False,
+                                    expires_at__gt=models.F("created_at"))),
+                name="subscription_access_expiry",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Access decisions are immutable. Record a new decision.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Access decision history cannot be deleted.")
 
 
 class Subscription(models.Model):

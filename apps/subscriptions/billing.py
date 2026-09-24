@@ -26,6 +26,8 @@ def effective_billing_state(subscription, *, at=None):
             status=status if available else Subscription.StatusChoices.PAST_DUE,
             commercially_available=available,
             recovery_only=not available,
+            reason="TRIAL_ACTIVE" if available else "TRIAL_ENDED",
+            message="Your trial is active." if available else "Your trial has ended. Review workspace access or contact platform support to continue.",
         )
     if status == Subscription.StatusChoices.ACTIVE:
         end_date = getattr(subscription, "end_date", None)

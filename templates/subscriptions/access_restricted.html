@@ -1,0 +1,11 @@
+{% extends "base_tenant.html" %}
+{% block title %}Workspace access{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">This action is unavailable</h1>
+<p>{{ activity.reason }}</p>
+{% if activity.can_read %}<a class="btn btn-outline-primary" href="{% url 'workspace_slug_dashboard' request.workspace.slug %}">Return to workspace</a>{% endif %}
+{% if can_manage_workspace_billing %}
+<p class="mt-3">{% if billing_checkout_enabled %}Open Billing to review renewal options.{% else %}Contact platform support to request an access extension. Online subscription payment is not yet available.{% endif %}</p>
+<a href="{% url 'workspace_subscriptions:dashboard' request.workspace.slug %}">View billing and access</a>
+{% else %}<p>Contact your workspace owner to arrange continued access.</p>{% endif %}
+{% endblock %}

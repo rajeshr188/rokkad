@@ -1,11 +1,14 @@
-FROM python:3.14-slim-bookworm AS builder
+ARG PYTHON_IMAGE=python:3.14-slim-bookworm@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56
+FROM ${PYTHON_IMAGE} AS builder
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev libpq-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
-COPY requirements.txt .
-RUN pip wheel --wheel-dir /wheels -r requirements.txt
+COPY requirements.txt requirements.lock ./
+RUN pip wheel --wheel-dir /wheels -r requirements.txt -c requirements.lock
 
-FROM python:3.14-slim-bookworm
+FROM ${PYTHON_IMAGE}
+ARG ROKKAD_REVISION=unknown
+LABEL org.opencontainers.image.revision=${ROKKAD_REVISION}
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=django_project.settings.prod
 RUN apt-get update && apt-get install -y --no-install-recommends libpq5 && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 app \

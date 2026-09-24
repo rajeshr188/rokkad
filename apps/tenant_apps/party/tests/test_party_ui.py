@@ -434,6 +434,24 @@ class PartyUITests(WorkspaceTestCase):
         self.assertContains(response, "Save Photo")
         self.assertContains(response, "Merge")
 
+    def test_viewer_sees_customer_records_without_edit_controls(self):
+        party = Party.objects.create(party_code="VIEW-ONLY", display_name="Read-only customer")
+        PartyAddress.objects.create(party=party, line1="Existing address", city="Chennai")
+        self._login_workspace_user("party-ui-detail-viewer", "Viewer")
+        response = self.client.get(reverse("party:party_detail", args=[party.pk]), {"tab": "merge"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_tab"], "overview")
+        self.assertContains(response, "Existing address")
+        self.assertContains(response, 'id="tab-loans"')
+        self.assertContains(response, 'id="tab-kyc"')
+        self.assertNotContains(response, 'id="party-photo-editor"')
+        self.assertNotContains(response, 'id="tab-merge"')
+        for route in ("party_update", "party_role_add", "party_contact_add", "party_address_add", "party_relationship_add", "party_merge"):
+            with self.subTest(route=route):
+                self.assertNotContains(response, reverse("workspace_party:" + route, args=[self.tenant.slug, party.pk]))
+        denied = self.client.post(reverse("party:party_contact_add", args=[party.pk]), {})
+        self.assertEqual(denied.status_code, 403)
+
     def test_party_update_allows_member_with_edit_permission(self):
         party = Party.objects.create(party_code="P1018", display_name="Editable Party")
         self._login_workspace_user("party-ui-edit-member", "Member")

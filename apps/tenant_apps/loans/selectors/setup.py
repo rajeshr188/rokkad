@@ -64,8 +64,8 @@ def get_pawn_setup_checklist(workspace):
          ).filter(Q(available_from__isnull=True) | Q(available_from__lte=today)).filter(
              Q(available_until__isnull=True) | Q(available_until__gte=today),
          ).exists(),
-         "description": _("Review product terms, activate a version, and check its availability dates. A new loan needs a product available for its loan date."),
-         "action_label": _("Review loan products"), "action_url": url("loan_product_list")},
+         "description": _("Standard product drafts are prepared for you. Review their terms and enable the products you offer. Check availability for the loan date."),
+         "action_label": _("Choose lending products"), "action_url": url("loan_product_list")},
     ]
     steps.append({
         "key": "metal_rates", "title": _("Metal valuation prices"), "blocking": False,

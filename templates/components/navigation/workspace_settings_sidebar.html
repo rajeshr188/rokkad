@@ -20,16 +20,12 @@
 {% endif %}
 {% url 'workspace_loans:document_layout_list' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Documents & printing" %}</a>
-{% url 'workspace_slug_settings_preferences' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Preferences" %}</a>
 {% url 'workspace_slug_settings_modules' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "App configuration" %}</a>
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Enabled apps" %}</a>
 {% url 'workspace_slug_settings_security' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Security" %}</a>
 {% endif %}
 {% if 'data.import' in nav_actions %}{% url 'workspace_slug_data_tools_import' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Data tools" %}</a>{% endif %}
-{% if 'data.view' in nav_actions %}{% url 'workspace_portability:archive_list' workspace_slug=ew.slug as settings_href %}
-<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Historical loan evidence" %}</a>{% endif %}
 {% if 'workspace.archive' in nav_actions %}{% url 'workspace_slug_settings_archive' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link text-danger {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Archive Workspace" %}</a>{% endif %}

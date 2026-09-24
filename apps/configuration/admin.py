@@ -1,12 +1,21 @@
 from django.contrib import admin
-from dynamic_preferences.admin import PerInstancePreferenceAdmin
 
 from .models import PreferenceAuditLog, WorkspacePreferenceModel
 
 
 @admin.register(WorkspacePreferenceModel)
-class WorkspacePreferenceAdmin(PerInstancePreferenceAdmin):
-    pass
+class WorkspacePreferenceAdmin(admin.ModelAdmin):
+    list_display = ("instance", "section", "name")
+    readonly_fields = ("instance", "section", "name", "raw_value")
+    # Retained storage is historical compatibility data, not operational settings.
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(PreferenceAuditLog)

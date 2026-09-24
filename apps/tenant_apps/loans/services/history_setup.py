@@ -21,7 +21,7 @@ class HistorySetupError(PortabilityValidationError):
     pass
 
 
-def require_history_setup_access(workspace_id, actor):
+def require_history_setup_access(workspace_id, actor, *, read_only=False):
     if current_workspace_id() != workspace_id or not workspace_id:
         raise PermissionDenied("Historical setup requires the matching Workspace context.")
     workspace = Company.all_objects.get(pk=workspace_id)
@@ -30,6 +30,9 @@ def require_history_setup_access(workspace_id, actor):
         raise PermissionDenied("Historical Loans preparation requires the Workspace owner.")
     for action in ("data.view", "data.import", "workspace.settings.manage"):
         access.require(action)
+    if not read_only:
+        from apps.subscriptions.access_policy import require_business_write
+        require_business_write(workspace)
     if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
         raise PermissionDenied("Historical Loans preparation requires an active Workspace.")
     return workspace

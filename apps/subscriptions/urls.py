@@ -5,10 +5,12 @@ Handles plans, checkout, payments, and invoices.
 
 from django.urls import path
 from . import views
+from .access_views import WorkspaceAccessControlsView
 
 app_name = "subscriptions"
 
 urlpatterns = [
+    path("access/", WorkspaceAccessControlsView.as_view(), name="access-controls"),
     # Plans and Subscriptions
     path("plans/", views.SubscriptionPlanListView.as_view(), name="plan-list"),
     path(

@@ -95,6 +95,7 @@
 
 {% block mgmt_content %}
 {% include "subscriptions/_navigation.html" %}
+{% if not billing_checkout_enabled %}<div class="alert alert-info">Online subscription payment is not yet available. Contact your Rokkad platform administrator to arrange access.</div>{% endif %}
 <div class="container py-5">
     <div class="row mb-5">
         <div class="col-12">
@@ -152,10 +153,10 @@
                         Start {{ plan.trial_days }}-day free trial
                     </button>
                 </form>
-                <a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.slug plan_id=plan.id %}" class="btn btn-outline-primary btn-action">
+                {% if billing_checkout_enabled %}<a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.slug plan_id=plan.id %}" class="btn btn-outline-primary btn-action">
                     Subscribe now
-                </a>
-                {% elif current_plan.id != plan.id %}
+                </a>{% endif %}
+                {% elif current_plan.id != plan.id and billing_checkout_enabled %}
                 <a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.slug plan_id=plan.id %}" class="btn btn-primary btn-action">
                     Upgrade to {{ plan.name }}
                 </a>

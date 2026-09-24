@@ -1,0 +1,8 @@
+{% if workspace_activity.mode == 'grace' or workspace_activity.mode == 'read_only' or workspace_activity.grant or subscription_ends_soon %}
+<div class="alert {% if workspace_activity.mode == 'read_only' %}alert-warning{% else %}alert-info{% endif %}" role="status">
+  <strong>{% if workspace_activity.mode == 'read_only' %}Read-only workspace{% elif workspace_activity.mode == 'grace' %}Subscription grace period{% elif subscription_ends_soon %}Subscription ending soon{% else %}Temporary workspace access{% endif %}</strong>
+  <div>{{ workspace_activity.reason }}{% if workspace_activity.until %} Until {{ workspace_activity.until|date:"d M Y, H:i T" }}.{% endif %}</div>
+  {% if workspace_activity.mode == 'read_only' %}<div>You can view existing records and use permitted exports. Changes, new lending and new document issuance are unavailable.</div>{% endif %}
+  {% if can_manage_workspace_billing %}<a class="alert-link" href="{% url 'workspace_subscriptions:dashboard' request.workspace.slug %}">{% if billing_checkout_enabled %}Review billing and renew{% else %}View access details and contact support{% endif %}</a>{% else %}<div>Contact your workspace owner to arrange continued access.</div>{% endif %}
+</div>
+{% endif %}

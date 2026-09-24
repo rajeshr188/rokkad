@@ -16,6 +16,9 @@ def require_workspace_action(workspace, actor, *actions):
     access.require("data.view")
     for action in actions:
         access.require(action)
+    if any(action not in {"data.view", "data.export"} for action in actions):
+        from apps.subscriptions.access_policy import require_business_write
+        require_business_write(workspace)
 
 
 def require_setup_administration(workspace_id, actor):
@@ -26,3 +29,5 @@ def require_setup_administration(workspace_id, actor):
     resolve_workspace_access(actor=actor, workspace=workspace).require(
         "workspace.settings.manage"
     )
+    from apps.subscriptions.access_policy import require_business_write
+    require_business_write(workspace)

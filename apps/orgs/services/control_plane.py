@@ -22,6 +22,15 @@ def _control_plane_transaction():
     return transaction.atomic()
 
 
+def _prepare_workspace_loan_products(*, workspace, actor, request):
+    """Prepare draft choices inside the creating transaction and explicit RLS scope."""
+    from apps.tenancy.context import workspace_context
+    from apps.tenant_apps.loans.services.product_catalog import seed_default_loan_products
+
+    with workspace_context(workspace.pk):
+        seed_default_loan_products(actor=actor, request=request)
+
+
 def assert_verified_invitation_identity(*, invitation, user):
     """Require proof that the accepting user controls the invited email."""
     invited_email = (invitation.email or "").strip().casefold()
@@ -61,6 +70,8 @@ def create_workspace_from_form(*, form, user, request):
         owner_role = Role.objects.get(name="Owner")
         Membership.objects.create(user=user, company=company, role=owner_role)
 
+        _prepare_workspace_loan_products(workspace=company, actor=user, request=request)
+
     AuditLog.log(
         "COMPANY_CREATE",
         user=user,
@@ -96,6 +107,8 @@ def create_onboarding_workspace_from_form(
 
         owner_role = Role.objects.get(name="Owner")
         Membership.objects.create(user=user, company=company, role=owner_role)
+
+        _prepare_workspace_loan_products(workspace=company, actor=user, request=request)
 
     return company, provisioning_mode
 

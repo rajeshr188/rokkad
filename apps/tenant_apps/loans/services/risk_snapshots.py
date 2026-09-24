@@ -182,6 +182,8 @@ def _pending_loans(queryset, workspace_id, as_of_date):
 def _require_active_workspace(workspace_id):
     if not Company.objects.filter(pk=workspace_id, lifecycle_state=Company.LifecycleState.ACTIVE).exists():
         raise RiskSnapshotRefreshError("Risk refresh requires an ACTIVE Workspace.")
+    from apps.subscriptions.access_policy import require_business_write
+    require_business_write(Company.objects.get(pk=workspace_id))
 
 
 def _record_error(loan_id, workspace_id, as_of_date, fingerprint, exc):

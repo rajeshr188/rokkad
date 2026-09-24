@@ -16,7 +16,6 @@ django-cleanup==8.1.0
 django-colorfield==0.11.0
 django-crispy-forms==2.3
 django-debug-toolbar==4.4.6
-django-dynamic-preferences==1.16.0
 django-environ==0.11.2
 django-filter==24.3
 django-htmx==1.19.0
@@ -42,7 +41,6 @@ num2words==0.5.13
 odfpy==1.4.1
 openpyxl==3.1.5
 packaging==24.1
-persisting-theory==1.0
 phonenumbers==8.13.43
 pillow==12.1.1
 psycopg2==2.9.11

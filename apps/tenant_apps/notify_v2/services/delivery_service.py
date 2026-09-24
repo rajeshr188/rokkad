@@ -354,6 +354,9 @@ def process_whatsapp_cloud_webhook(payload: dict, *, phone_number_id: str, signa
 
 
 def dispatch_job(job: NotificationJob) -> bool:
+	from apps.orgs.models import Company
+	from apps.subscriptions.access_policy import require_business_write
+	require_business_write(Company.all_objects.get(pk=job.workspace_id))
 	if job.channel not in DIGITAL_CHANNELS:
 		return False
 

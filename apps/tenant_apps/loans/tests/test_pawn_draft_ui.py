@@ -187,6 +187,10 @@ class PawnDraftUiTests(WorkspaceTestCase):
         result = record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
         replay = record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
         self.assertEqual(result.loan_event.pk, replay.loan_event.pk)
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
+        self.assertContains(detail, 'href="#payment-receipts"')
+        self.assertContains(detail, "Print payment receipt")
+        self.assertEqual([row["event"].pk for row in detail.context["repayment_rows"]], [result.loan_event.pk])
         before = loan.loan_events.count()
         workspace_role_permissions(role, self.tenant).remove(Permission.objects.get(content_type=content_type, codename="loan_repay"))
         with self.assertRaises(PermissionDenied):
@@ -892,6 +896,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, loan.loan_number)
         self.assertContains(detail, "Recommended next step")
+        self.assertContains(detail, 'data-loan-dates')
+        self.assertContains(detail, "Draft created")
+        self.assertContains(detail, loan.loan_date.strftime("%d %b %Y"))
         self.assertContains(detail, "Approve loan")
         self.assertContains(detail, "Capture collateral photograph")
         self.assertContains(detail, 'capture="environment"')
@@ -1075,7 +1082,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         payload["action"] = "preview"
 
         initial = self.client.get(reverse("loans:pawn_loan_create"))
-        self.assertContains(initial, "Next expected PawnLoan number")
+        self.assertContains(initial, "Expected loan number")
+        self.assertNotContains(initial, "Next expected PawnLoan number")
+        self.assertContains(initial, 'id="expected-loan-number"')
         self.assertContains(initial, "PL-A-00001")
 
         response = self.client.post(reverse("loans:pawn_loan_create"), payload)
@@ -1137,36 +1146,169 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
         self.assertContains(response, self.workspace_reverse("loans:license_list"))
 
-    def test_internal_reports_render_all_operational_sections(self):
+    def test_borrower_filters_keep_inactive_borrowers_and_compose_with_status(self):
+        from apps.tenant_apps.loans.filters import PawnLoanFilter
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        first = PawnLoan.objects.get()
+        other = Party.objects.create(display_name="Another Borrower", primary_phone="9876543210")
+        payload = self._payload(license, series)
+        payload["borrower"] = other.pk
+        self.client.post(reverse("loans:pawn_loan_create"), payload)
+        Party.objects.filter(pk=self.party.pk).update(status="INACTIVE")
+        url = reverse("loans:pawn_loan_list")
+        for params in ({"borrower": self.party.pk}, {"borrower_q": self.party.party_code}, {"borrower_q": "Draft Borrower"}):
+            response = self.client.get(url, params)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual([loan.pk for loan in response.context["loans"]], [first.pk])
+        response = self.client.get(url, {"borrower": self.party.pk, "state": "ACTIVE"})
+        self.assertEqual(response.context["page_obj"].paginator.count, 0)
+        response = self.client.get(url, {"borrower_q": "9876543210"})
+        self.assertEqual(response.context["loans"][0].borrower_id, other.pk)
+        response = self.client.get(url, {"borrower": "999999999"})
+        self.assertContains(response, "Check the filters")
+        self.assertEqual(response.context["page_obj"].paginator.count, 0)
+        filtered = PawnLoanFilter({"borrower": self.party.pk}, queryset=PawnLoan.objects.all(), workspace=self.tenant)
+        self.assertTrue(filtered.is_valid())
+        self.assertEqual(list(filtered.qs), [first])
 
-        response = self.client.get(reverse("loans:pawn_loan_reports"))
+    def test_analytical_reports_use_active_balances_and_export_all_groups(self):
+        import csv
+        import io
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import get_portfolio_analysis, ANALYSIS_SECTIONS
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
+        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
+        for section, _ in ANALYSIS_SECTIONS:
+            analysis = get_portfolio_analysis(section=section, as_of_date=date(2026, 7, 18))
+            self.assertEqual(analysis["totals"][1], 1)
+            if section != "collateral_totals":
+                self.assertEqual(analysis["totals"][6 if section == "year_totals" else 2], Decimal("10000"))
+                self.assertEqual(analysis["incomplete_count"], 0)
+            response = self.client.get(reverse("loans:pawn_loan_reports"), {"section": section, "as_of": "2026-07-18"})
+            self.assertContains(response, "portfolio-charts")
+            self.assertContains(response, "Totals cover every group")
+            for fmt in ("csv", "xlsx", "pdf"):
+                exported = self.client.get(reverse("loans:pawn_loan_report_export", args=[section, fmt]), {"as_of": "2026-07-18", "page": 99})
+                self.assertEqual(exported.status_code, 200)
+                if fmt == "csv":
+                    rows = list(csv.reader(io.StringIO(exported.content.decode("utf-8-sig"))))
+                    self.assertEqual(len(rows), len(analysis["rows"]) + 2)
+                    self.assertEqual(rows[-1][0], "Total")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Operational reports")
-        self.assertContains(response, "Actionable integrity findings")
-        self.assertContains(response, "Active, due &amp; overdue")
-        self.assertContains(response, "Communication")
-        self.assertContains(response, "Finalized accruals")
-        self.assertContains(response, "Repayments")
-        self.assertContains(response, "Releases")
-        self.assertContains(response, "Release and renew")
-        self.assertContains(response, "Collateral custody")
-        self.assertContains(response, "Every format below is rendered from the same")
-        for section in (
-            "active", "daily", "interest_due", "overdue",
-            "releases_renewals", "storage", "license_expiry",
-        ):
-            for export_format in ("csv", "xlsx", "pdf"):
-                self.assertContains(
-                    response,
-                    reverse(
-                        "loans:pawn_loan_report_export",
-                        args=[section, export_format],
-                    ),
-                )
-        self.assertContains(response, reverse("loans:license_register_pdf"))
+    def test_collateral_summary_uses_latest_dated_approved_appraisal_and_current_custody(self):
+        from django.utils import timezone
+        from datetime import datetime
+        from apps.tenant_apps.loans.models import CollateralAppraisal, PawnCollateralItem
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import get_portfolio_analysis
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        item = loan.collateral_items.get()
+        for version, day, status, amount in ((1, 18, "APPROVED", "50000"), (2, 19, "DISPUTED", "90000"), (3, 21, "APPROVED", "60000")):
+            CollateralAppraisal.objects.create(workspace=self.tenant, collateral_item=item,
+                version=version, effective_at=timezone.make_aware(datetime(2026, 7, day, 12)),
+                status=status, appraised_value=amount, method="TEST")
+        def report(day):
+            return get_portfolio_analysis(section="collateral_totals", as_of_date=date(2026, 7, day))
+        self.assertEqual(report(20)["totals"][4], Decimal("50000"))
+        self.assertEqual(report(22)["totals"][4], Decimal("60000"))
+        self.assertEqual(report(17)["totals"][6], 1)
+        PawnCollateralItem.objects.filter(pk=item.pk).update(gross_weight=None)
+        self.assertEqual(report(20)["totals"][5], 1)
+        self.assertEqual(report(20)["totals"][3], Decimal("9"))
+        PawnCollateralItem.objects.filter(pk=item.pk).update(custody_state="WITH_CUSTOMER")
+        self.assertEqual(report(20)["totals"][1], 0)
+
+    def test_internal_reports_select_one_section_and_keep_full_exports(self):
+        from apps.tenant_apps.loans.web.reports import REPORT_SECTIONS
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        url = reverse("loans:pawn_loan_reports")
+        for key, label in REPORT_SECTIONS:
+            response = self.client.get(url, {"section": key, "as_of": "2026-07-18"})
+            self.assertEqual(response.status_code, 200, key)
+            self.assertContains(response, f'data-report-section="{key}"')
+            self.assertEqual(response.context["section"], key)
+            self.assertNotContains(response, "Principal outstanding</div>")
+        response = self.client.get(url)
+        self.assertContains(response, "Download full reports")
+        for section in ("active", "daily", "interest_due", "overdue", "releases_renewals", "storage", "license_expiry"):
+            for fmt in ("csv", "xlsx", "pdf"):
+                self.assertContains(response, reverse("loans:pawn_loan_report_export", args=[section, fmt]))
+        for params in ({"section": "unknown"}, {"as_of": "2026-02-31"}, {"as_of": "bad-date"}):
+            self.assertEqual(self.client.get(url, params).status_code, 404)
+
+    def test_report_pagination_bounds_loan_reads_without_truncating_exports(self):
+        import copy
+        import csv
+        import io
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from apps.tenant_apps.loans.selectors.reports import build_pawn_loan_reports
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        original = PawnLoan.objects.get()
+        copies = []
+        for index in range(2, 53):
+            loan = copy.copy(original)
+            loan.pk = None
+            loan.public_id = uuid.uuid4()
+            loan.loan_number = f"PL-A-{index:05}"
+            copies.append(loan)
+        PawnLoan.objects.bulk_create(copies)
+        url = reverse("loans:pawn_loan_reports")
+        with patch("apps.tenant_apps.loans.selectors.reports.build_pawn_loan_reports", wraps=build_pawn_loan_reports) as build, CaptureQueriesContext(connection) as queries:
+            first = self.client.get(url, {"as_of": "2026-07-18"})
+            self.assertEqual(len(build.call_args.args[0]), 50)
+        self.assertTrue(any('LIMIT 50' in query['sql'] and 'loans_pawnloan' in query['sql'] for query in queries))
+        second = self.client.get(url, {"page": "2", "as_of": "2026-07-18"})
+        first_ids = {row.loan.pk for row in first.context["report_rows"]}
+        second_ids = {row.loan.pk for row in second.context["report_rows"]}
+        self.assertEqual(len(first_ids), 50)
+        self.assertEqual(len(second_ids), 2)
+        self.assertFalse(first_ids & second_ids)
+        self.assertEqual(first.context['page_obj'].paginator.count, 52)
+        self.assertContains(first, 'as_of=2026-07-18')
+        issues = self.client.get(url, {"section": "issues", "page": "2"})
+        self.assertContains(issues, 'Findings apply only to these loans')
+        self.assertNotContains(issues, 'No operational issues detected.')
+        PawnLoan.objects.update(state="ACTIVE")
+        export = self.client.get(reverse("loans:pawn_loan_report_export", args=["active", "csv"]), {"page": "2", "as_of": "2026-07-18"})
+        self.assertEqual(export.status_code, 200)
+        self.assertEqual(len(list(csv.reader(io.StringIO(export.content.decode('utf-8-sig'))))), 53)
+
+    def test_daily_report_pages_keep_as_of_correction_semantics(self):
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        def event(kind, day, payload, original=None):
+            return PawnLoanEvent.objects.create(loan=loan, event_kind=kind, effective_date=day,
+                payload=payload, payload_fingerprint=uuid.uuid4().hex * 2,
+                idempotency_key=uuid.uuid4().hex, reversal_of=original)
+        day = date(2026, 7, 18)
+        paid = event("REPAYMENT", day, {"values": {"principal": "25"}, "repayment": {"amount_received": "25"}})
+        correction = event("REVERSAL", date(2026, 7, 19), {"values": {"principal": "25"}, "reversal": {"original_event_kind": "REPAYMENT"}}, paid)
+        event("MIGRATION_OPENING", day, {"values": {}})
+        report_url = reverse("loans:pawn_loan_reports")
+        original_page = self.client.get(report_url, {"section": "daily", "as_of": day.isoformat()})
+        rows = original_page.context["report_rows"]
+        self.assertEqual([row.event.pk for row in rows], [paid.pk])
+        self.assertEqual(rows[0].correction_status, "CURRENT")
+        self.assertEqual(rows[0].amount, Decimal("25"))
+        corrected_page = self.client.get(report_url, {"section": "daily", "as_of": "2026-07-19"})
+        rows = corrected_page.context["report_rows"]
+        self.assertEqual([row.event.pk for row in rows], [correction.pk])
+        self.assertEqual(rows[0].correction_event_id, paid.pk)
+        self.assertEqual(rows[0].amount, Decimal("-25"))
+        statements = self.client.get(report_url, {"section": "statements", "q": self.party.party_code, "as_of": day.isoformat()})
+        self.assertEqual([party.pk for party in statements.context["report_rows"]], [self.party.pk])
+        self.assertContains(statements, '?as_of=2026-07-18')
 
     def test_current_overdue_report_links_directly_to_overdue_notice(self):
         license, series = self._configured_setup()

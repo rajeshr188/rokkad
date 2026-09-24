@@ -25,6 +25,7 @@
 
     <div class="mgmt-content">
         {% include "components/messages.html" with messages_container_class="mb-3" %}
+        {% if request.workspace %}{% include "subscriptions/_access_banner.html" %}{% endif %}
         <div class="d-lg-none mb-4"><button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#mgmtOffcanvas" aria-controls="mgmtOffcanvas" aria-label="{% translate 'Navigation' %}"><i aria-hidden="true" class="bi bi-list me-2"></i>{% translate "Navigation" %}</button></div>
         {% block breadcrumbs %}{% endblock %}
         {% block page_header %}{% endblock %}

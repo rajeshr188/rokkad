@@ -8,6 +8,17 @@ from apps.orgs.models import Company, Domain
 from .context import workspace_context
 
 
+def expire_workspace_trial(workspace, *, days_ago=8):
+    """Arrange commercial expiry in boundary tests without app-owned billing imports."""
+    from datetime import timedelta
+    from django.utils import timezone
+    from apps.subscriptions.models import Subscription
+
+    Subscription.objects.filter(company=workspace).update(
+        trial_end_date=timezone.now() - timedelta(days=days_ago)
+    )
+
+
 class WorkspaceClient(Client):
     def __init__(self, workspace, **defaults):
         self.workspace = workspace

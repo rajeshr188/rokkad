@@ -18,6 +18,8 @@ def _authorize(workspace, actor, permission):
         raise PermissionDenied("Quote changes require the active Workspace.")
     current = Company.all_objects.get(pk=workspace.pk)
     resolve_workspace_access(actor=actor, workspace=current).require(permission)
+    from apps.subscriptions.access_policy import require_business_write
+    require_business_write(current)
     if current.lifecycle_state != "ACTIVE":
         raise PermissionDenied("Quote changes require an active Workspace.")
 

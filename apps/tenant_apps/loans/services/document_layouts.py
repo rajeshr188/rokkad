@@ -321,6 +321,8 @@ class LoanDocumentLayoutService:
         ).first()
         if prior_issue is None and existing:
             return existing
+        from apps.subscriptions.access_policy import require_business_write
+        require_business_write(workspace)
         if prior_issue is not None and prior_issue.workspace_id != workspace.pk:
             raise DocumentLayoutServiceError("Prior issue belongs to another workspace.")
         pdf_hash = hashlib.sha256(render_result.pdf).hexdigest()

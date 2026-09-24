@@ -1,100 +1,58 @@
-from django.contrib.auth import get_user_model
-from django.http import Http404
-from django.db.models import Max
-from django.test import RequestFactory, TestCase
-from django.urls import reverse
-
+from types import SimpleNamespace
+from unittest.mock import patch
+from django.core.exceptions import PermissionDenied
+from django.test import RequestFactory, SimpleTestCase
+from django.template.loader import render_to_string
+from django.urls import Resolver404, resolve
 from apps.configuration.views import WorkspacePreferenceBuilder
-from apps.orgs.models import Company, Membership, Role
+from apps.orgs.web.account_preferences import CompanyPreferenceBuilder
 
 
-class WorkspacePreferencesViewTests(TestCase):
+class WorkspacePreferencesViewTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        User = get_user_model()
-        self.owner = User.objects.create_user(
-            username="central-pref-owner",
-            email="central-pref-owner@example.com",
-            password="pass",
-        )
-        self.other_user = User.objects.create_user(
-            username="central-pref-other",
-            email="central-pref-other@example.com",
-            password="pass",
-        )
-        self.owner_role, _ = Role.objects.get_or_create(name="Owner")
-        self.member_role, _ = Role.objects.get_or_create(name="Member")
+        self.workspace = SimpleNamespace(pk=13, id=13, slug="acme")
 
-        next_company_id = (
-            Company.all_objects.aggregate(max_id=Max("id"))["max_id"] or 0
-        ) + 1
-        self.workspace = Company(
-            id=next_company_id,
-            name="Central Preference Workspace",
-            schema_name=f"central_pref_workspace_{next_company_id}",
-            owner=self.owner,
-            creator=self.owner,
-        )
-        self.workspace.auto_create_schema = False
-        self.workspace.save()
-        Membership.objects.create(
-            user=self.owner,
-            company=self.workspace,
-            role=self.owner_role,
-        )
-        if hasattr(self.owner, "profile"):
-            self.owner.profile.workspace = self.workspace
-            self.owner.profile.save(update_fields=["workspace"])
+    def request(self, method="get"):
+        request = getattr(self.factory, method)("/w/acme/settings/preferences/")
+        request.user = SimpleNamespace(is_authenticated=True)
+        request.workspace = self.workspace
+        return request
 
-    def test_owner_can_open_central_workspace_preferences(self):
-        request = self.factory.get(
-            reverse(
-                "workspace_settings_preferences",
-                kwargs={"workspace_id": self.workspace.id},
-            )
-        )
-        request.user = self.owner
+    def test_both_bookmarks_show_guidance_and_reject_writes(self):
+        for view in (WorkspacePreferenceBuilder, CompanyPreferenceBuilder):
+            with self.subTest(view=view.__name__), patch("apps.configuration.views.get_object_or_404", return_value=self.workspace), patch("apps.configuration.views._assert_workspace_access") as access:
+                response = view.as_view()(self.request(), workspace_id=13)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context_data["workspace"], self.workspace)
+                self.assertNotIn("form", response.context_data)
+                access.assert_called_once_with(response._request, self.workspace, {"workspace_settings"})
+                response = view.as_view()(self.request("post"), workspace_id=13)
+                self.assertEqual(response.status_code, 405)
 
-        response = WorkspacePreferenceBuilder.as_view()(
-            request,
-            workspace_id=self.workspace.id,
-        )
+    def test_denied_user_cannot_read_or_post_to_either_route(self):
+        for view in (WorkspacePreferenceBuilder, CompanyPreferenceBuilder):
+            for method in ("get", "post"):
+                with self.subTest(view=view.__name__, method=method), patch("apps.configuration.views.get_object_or_404", return_value=self.workspace), patch("apps.configuration.views._assert_workspace_access", side_effect=PermissionDenied):
+                    with self.assertRaises(PermissionDenied):
+                        view.as_view()(self.request(method), workspace_id=13)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("configuration/workspace_preferences.html", response.template_name)
-        self.assertEqual(response.context_data["workspace"], self.workspace)
-        self.assertIn("accounting", [row["name"] for row in response.context_data["sections"]])
+    def test_generic_preference_editor_is_not_routed(self):
+        with self.assertRaises(Resolver404):
+            resolve("/dynamic_preferences/global/")
 
-    def test_non_member_cannot_open_central_workspace_preferences(self):
-        request = self.factory.get(
-            reverse(
-                "workspace_settings_preferences",
-                kwargs={"workspace_id": self.workspace.id},
-            )
-        )
-        request.user = self.other_user
+    def test_data_reader_can_find_archive_and_reports_without_settings(self):
+        request = self.request()
+        request.path = "/w/acme/"
+        request.resolver_match = SimpleNamespace(url_name="workspace_slug_dashboard")
+        html = render_to_string("components/navigation/sidebar.html", {"request":request,"user_permissions":{"data.view"}})
+        self.assertIn("Historical loans", html)
+        self.assertIn("Reports", html)
+        self.assertNotIn("workspace-settings-nav", html)
+        self.assertNotIn("Preferences", html)
 
-        with self.assertRaises(Http404):
-            WorkspacePreferenceBuilder.as_view()(request, workspace_id=self.workspace.id)
-
-    def test_success_url_is_a_string_and_preserves_the_selected_section(self):
-        request = self.factory.post(
-            reverse(
-                "workspace_settings_preferences",
-                kwargs={"workspace_id": self.workspace.id},
-            )
-            + "?section=accounting"
-        )
-        request.user = self.owner
-        view = WorkspacePreferenceBuilder()
-        view.request = request
-        view.workspace = self.workspace
-
-        self.assertEqual(
-            view.get_success_url(),
-            reverse(
-                "workspace_settings_preferences",
-                kwargs={"workspace_id": self.workspace.id},
-            )
-            + "?section=accounting",
-        )
+    def test_user_without_data_view_does_not_get_record_links(self):
+        request = self.request()
+        html = render_to_string("components/navigation/sidebar.html", {"request":request,"user_permissions":set()})
+        self.assertNotIn("Historical loans", html)
+        self.assertNotIn("Release batches", html)

@@ -1,16 +1,48 @@
 from django.conf import settings
 from django.db import models
-from dynamic_preferences.models import PerInstancePreferenceModel
 
 
-class WorkspacePreferenceModel(PerInstancePreferenceModel):
+class LegacyGlobalPreference(models.Model):
+    """Preserved package-owned data; never interpreted as runtime settings."""
+    id = models.AutoField(primary_key=True)
+    section = models.CharField("Section Name", max_length=150, db_index=True, blank=True, null=True, default=None)
+    name = models.CharField("Name", max_length=150, db_index=True)
+    raw_value = models.TextField("Raw Value", null=True, blank=True)
+
+    class Meta:
+        db_table = "dynamic_preferences_globalpreferencemodel"
+        unique_together = (("section", "name"),)
+        default_permissions = ()
+
+
+class LegacyUserPreference(models.Model):
+    """Keep the user relationship in Django's deletion graph after retirement."""
+    id = models.AutoField(primary_key=True)
+    section = models.CharField("Section Name", max_length=150, db_index=True, blank=True, null=True, default=None)
+    name = models.CharField("Name", max_length=150, db_index=True)
+    raw_value = models.TextField("Raw Value", null=True, blank=True)
+    instance = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="legacy_preferences")
+
+    class Meta:
+        db_table = "dynamic_preferences_users_userpreferencemodel"
+        unique_together = (("instance", "section", "name"),)
+        default_permissions = ()
+
+
+class WorkspacePreferenceModel(models.Model):
+    """Retained raw legacy values; not used as operational configuration."""
+    section = models.CharField("Section Name", max_length=150, db_index=True, blank=True, null=True, default=None)
+    name = models.CharField("Name", max_length=150, db_index=True)
+    raw_value = models.TextField("Raw Value", null=True, blank=True)
+
     instance = models.ForeignKey(
         "orgs.Company",
         related_name="configuration_preferences",
         on_delete=models.CASCADE,
     )
 
-    class Meta(PerInstancePreferenceModel.Meta):
+    class Meta:
+        unique_together = (("instance", "section", "name"),)
         app_label = "configuration"
         verbose_name = "workspace preference"
         verbose_name_plural = "workspace preferences"

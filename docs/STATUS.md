@@ -1,11 +1,662 @@
 ---
 status: active
 owner: project
-updated: 2026-09-23
+updated: 2026-09-24
 tags: [status, architecture]
 ---
 
 # Status
+
+## Consolidated release candidate in validation (2026-09-24)
+
+The owner authorized consolidating the rehearsal increments into one versioned
+release candidate. Work is on `release/2026-09-24-rc1`, with an ordinary clean-source
+Docker build, pinned Python image/dependency constraints, template-installer inclusion
+and CI coverage for the new boundaries. The existing tracked SQL backup is removed
+from this branch's index while its local file remains intact; private artifacts are
+excluded. A 201-module regression run and fresh/upgrade validation are in progress.
+
+The corrected dependency advisory scan checked 72 distributions with zero skips and
+flagged 11 packages, including Django/allauth. This is a production promotion blocker;
+the candidate must not be described as production-ready merely because functional
+checks pass. See the [candidate report](implementation/release-candidate-20260924.md).
+Rehearsal remains on its prior image; no production cutover or repository push is
+part of this assembly step.
+
+## Subscription access continuity deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-access-continuity-v2-20260924`
+(`sha256:6e1f1ede2833fc3fd79a2f73f7c9729b15a65e5861a1e658688dc80a018d35d6`).
+Natural trial/paid-term expiry enters seven days of normal access, then read-only
+lists/details/reports, saved documents and permitted exports. Staff receive an
+explanation and owner contact guidance rather than an owner-only Billing redirect.
+Platform administrators can record dated full/read-only decisions and return to
+normal policy from Billing > Platform access controls or the audited command.
+Latest decisions replace earlier ones without rewriting subscription/payment dates;
+suspension/archive, RBAC and RLS remain independent. New checkout is disabled by
+default until provider acceptance; existing payment evidence/reconciliation paths
+remain intact. Servicing-only access is deferred as FW-008.
+
+Ninety-four distinct targeted tests passed across access policy, billing, checkout,
+notification delivery, automatic product preparation and opening exports. The
+Billing-layout banner correction passed its additional regression run. Migration
+drift and diff whitespace checks passed. Owner-only additive migrations 0010/0011
+passed on a restored hosted copy and the rehearsal database. Comparisons preserved
+all 99 existing Party/Loans/subscription tables through migration, rollback probes
+and extension recording. Under `rokkad_runtime`, all three Workspaces passed owner
+and staff read/denial checks, grace/extension/revocation boundaries, immutable audit
+evidence and lifecycle precedence. Saved JCL/JSK PDF bytes matched their checksums;
+Lakshmi had no existing issued PDF for that check. Synthetic users, memberships,
+expiry changes and test decisions were rolled back. No loan financial transaction,
+provider call or outbound notification was performed.
+
+The final candidate matched all 37 packaged source files and passed ordinary-owner
+Billing checks for all three Workspaces. HTTPS recovered after restart; Chrome
+confirmed the platform form/history and visible dated access banner on Billing.
+Real normal-access decisions 13/14/15 cover JCL/JSK/Lakshmi until **2026-10-24 23:59
+Asia/Kolkata**, using the existing platform administrator and an explicit interim
+rehearsal reason. Existing subscription and entitlement records were preserved.
+
+The private backup, restored-copy validation and aggregate evidence stay on the
+server under `/home/rokkad/deploy/rehearsal/access-continuity-20260924/evidence/`;
+the database dump is referenced by its private `backup.json` and remains server-only.
+Prior images and both `web-compose.before-access-continuity[-v2]-20260924.yml`
+snapshots are retained. The final production release must include this increment,
+apply its migrations and review actual target Workspace access dates separately;
+production cutover remains pending. See the
+[decision](adr/2026-09-24-subscription-access-continuity.md),
+[operator guide](domain/subscriptions.md), and
+[cutover requirements](implementation/linode-production-cutover.md).
+
+## Automatic draft loan products deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-product-defaults-20260924`. Both customer
+Workspace creation services prepare the four standard product drafts after Owner
+Membership creation, in the same transaction and explicit RLS context. A failure
+rolls back the Workspace and its setup together. Nothing is automatically enabled.
+Loan setup now offers “Choose your lending products” and “Enable for new loans,”
+with repayment, term, grace and availability review; the manual seed button is
+removed. The existing authorized POST remains compatible, and the idempotent
+operator command remains the documented existing-Workspace/recovery path.
+
+Twenty distinct targeted tests passed after correcting the new test's allowed-host
+fixture. Coverage includes both creation paths under a restricted SQL role,
+cross-Workspace isolation/context cleanup, rollback after product preparation,
+preservation of custom terms/names/active/retired states on retry, activation-only
+form availability and existing setup authorization/lifecycle behavior. Hosted
+creation/retry/failure probes also passed under `rokkad_runtime`; their synthetic
+Workspaces were rolled back. All three product pages passed ordinary-owner checks.
+
+Existing-record comparisons passed before and after preparation: JCL and JSK needed
+no additions; Lakshmi received four missing DRAFT versions. Existing product records
+were unchanged, with no schema migration or financial transaction. The deployed JCL
+page passed browser/desktop visual verification and HTTPS passed after restart.
+Private configuration snapshots and aggregate evidence remain on the server under
+`/home/rokkad/deploy/rehearsal/product-defaults-20260924/evidence/`. The prior image
+and `web-compose.before-product-defaults-20260924.yml` remain available for rollback.
+Final production must include this code and explicitly prepare existing/import-created
+Workspaces as documented in the cutover runbook; production cutover remains pending.
+See the [decision](adr/2026-09-24-automatic-draft-loan-products.md).
+
+## Guided legacy migration captured for future work (2026-09-24)
+
+At the owner's request, [FW-007](plans/future-work.md#fw-007-guided-customer-facing-legacy-migration)
+now explicitly tracks a guided customer-facing legacy-import journey: source and
+column mapping, borrower/setup resolution, history/opening/archive classification,
+missing-evidence review, reconciliation, preview, approved import and safe retry.
+It records the existing foundation, remaining operator dependency, acceptance
+criteria and resume trigger. This is unscheduled future work; no implementation,
+deployment or data import was performed for this documentation update.
+The owner's follow-up scenarios are now explicit in FW-007: start fresh in a new
+series with paper history left outside, or continue new lending while migrating
+existing paper loans through proposed manual/Excel intake. Existing-borrower
+matching, numbering separation, per-loan/batch handover and partial-portfolio
+coverage are recorded as design/acceptance requirements, not delivered UI features.
+
+## Loans by year deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-loan-years-20260924`. Reports > Loans by year
+groups all operational loans by their original calendar loan year, with current
+active/closed/cancelled/draft-or-approved counts and canonical active principal at
+the selected report date. Two charts show counts and active principal. Year links
+open the corresponding date-filtered loan list. Full CSV/XLSX/PDF exports are
+available; charts combine earlier years beyond the latest twelve, while tables and
+exports retain every year. Import timestamps and historical archive-only records
+are explicitly excluded from the grouping basis/scope. Unavailable active balances
+are counted rather than silently treated as zero.
+
+Fourteen targeted tests passed, including original-date grouping across current
+states, unavailable balances, financial selector regressions and all analytical
+export formats. Hosted counts, active principal, CSV totals and every year drill-down
+matched canonical source records in JCL (4 years / 2,406 loans), JSK (7 / 1,525) and
+Lakshmi (5 / 2,440). Browser verification confirmed report selection, year/state
+counts, formatted totals and no chart errors. HTTPS passed after restart. No schema
+migration or financial action was performed. Aggregate evidence remains server-only
+under `/home/rokkad/deploy/rehearsal/year-report-20260924/evidence/verification.json`;
+the previous image and `web-compose.before-loan-years-20260924.yml` are retained.
+
+## Borrower filters and portfolio analysis deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-portfolio-analysis-v2-20260924`. The loan list
+has a dedicated borrower name/code/phone filter and exact, Workspace-validated
+borrower links from customer details, loan details, loan-list borrower names and
+the statement directory. Inactive borrowers remain included; filters compose with
+status/licence/series/date and persist across pages. A selected borrower is clearly
+labelled and can be removed without clearing the other filters.
+
+Reports now offer four additional sections with charts, full tables and CSV/XLSX/PDF:
+
+- Active totals by licence: count, recorded principal/interest/total due, overdue
+  count and unavailable-balance count; licence links open its active loans.
+- Active totals by series: the same figures, with licence-qualified series labels
+  and links to active loans in the series.
+- Collateral by metal/custody: item count, known gross/net weight in grams, known
+  approved appraisal sum and missing-evidence counts. Current active holdings in
+  vault/with funding lender are included; released/transferred source items are not.
+- Maturity profile: not past maturity, 1-30, 31-90, 91-180 and over 180 days past
+  maturity, with principal/counts. This is maturity ageing, not instalment DPD.
+
+Money uses the canonical recorded balance fold at the selected date, with current
+active membership. Collateral values are latest dated approved appraisal references,
+not current market values or lending coverage. JCL has 2,421 items missing gross
+weight and approved appraisal; neither field is invented. Incomplete sums/charts
+are labelled, and unverified legacy valuations remain excluded. Chart grouping
+after twelve categories never truncates tables/exports. Currency displays use the
+rupee symbol; chart tooltips retain exact formatted values and phone axes use
+compact labels. PDF report scope uses a normal paragraph beneath the title.
+
+Validation: 23 distinct targeted tests passed, covering borrower filters/inactive
+customers, pagination regressions, canonical repayment-adjusted grouping, repeated
+series codes across licences, maturity boundaries, missing balances, latest approved
+appraisals/date cutoffs/custody and all three export formats. Twelve hosted analytical
+pages (four sections in each Workspace) matched canonical active counts/principal
+and current item/net-weight aggregates. Their complete CSV totals and all group
+drill-down counts matched; the seven existing JCL CSV hashes remained unchanged.
+Borrower pagination and cross-Workspace denial passed under the restricted runtime
+connection. Four additional page checks passed after the display-only polish.
+
+Browser checks passed for report discovery, licence drill-down, combined borrower
+search, exact borrower links, collateral/maturity charts and desktop/390px layout;
+no chart errors were logged. Individual hosted active summaries took 2.2-3.7 seconds;
+collateral summaries took about 0.1 seconds. Complete balance aggregates still read
+the whole active portfolio; these timings are not a load-test guarantee.
+HTTPS passed after restart. No migration or financial transaction was performed.
+Aggregate evidence remains server-only at
+`/home/rokkad/deploy/rehearsal/portfolio-analysis-20260924/evidence/verification.json`.
+Prior images and `web-compose.before-portfolio-analysis[-v2]-20260924.yml` remain
+available for rollback. Production cutover has not been performed.
+
+## Focused operational reports deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-report-pages-v3-20260924`. Reports select one
+of eleven sections; record lists paginate 50 source records before loading related
+evidence. Borrower statements have name/code/phone search. Selected dates, source
+links and pagination filters are preserved. Full portfolio summary and existing
+CSV/XLSX/PDF downloads remain Workspace-wide; they intentionally still calculate
+the complete portfolio. Integrity pages explicitly cover only the 50 loans checked
+on that page, potentially with multiple findings per loan.
+
+The integrity checker now recognises migration-opening events as valid financial
+origins alongside disbursal and renewal-opening events. This removes 2,404 false
+missing-disbursal warnings in JCL without suppressing balance derivation errors or
+other evidence checks. No financial data or calculations changed.
+
+Validation: 20 distinct targeted report selector/export/UI tests passed, including
+bounded database reads, complete exports, date-sensitive reversal evidence and
+opening-origin validation. Hosted checks passed for all eleven JCL sections,
+next/last pages where applicable, and default reports in JSK and Lakshmi. All seven
+full CSV datasets matched baseline hashes; complete summary totals matched the
+canonical report; other integrity findings were unchanged. Browser checks passed
+for pagination, statement search, selected date and desktop/390px layout. After
+deployment JCL summary displayed zero integrity findings with unchanged totals.
+
+A single hosted comparison measured default JCL report generation at 6.148 seconds
+and 2,203,055 HTML bytes before, versus 0.289 seconds and 53,662 bytes after. This
+is an observed comparison, not a performance guarantee. HTTPS passed after startup.
+No schema migration or financial actions were needed. Aggregate verification stays
+server-only at
+`/home/rokkad/deploy/rehearsal/report-pages-20260924/evidence/verification.json`.
+Previous images and `web-compose.before-report-pages-v3-20260924.yml` are retained.
+Staff usability acceptance and final production cutover remain separate work.
+
+## Staff workflow review and fixes deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-staff-ui-20260924`. Borrower/loan search and
+work queues now precede dashboard analytics; a Business overview shortcut keeps
+those figures accessible. Loan details expose a Payment receipts section and
+navigation link when repayments exist, with direct print links to the original
+receipt route. Reversed payments retain their receipt with a clear reversed label.
+Read-only customer views now hide edit, photo, role, contact, address, relationship
+and merge controls using the existing canonical edit permission. Direct routes
+retain their existing enforcement; a viewer's merge-tab bookmark shows Overview.
+Release batches no longer highlights Releases simultaneously in the sidebar.
+
+Validation: 54 customer/receipt-navigation/counter tests and one repayment-only
+role integration test passed (55 total). The latter verifies the receipt source
+link after repayment and preserves revocation/replay denial. On the candidate
+image, 36 hosted page checks passed for explicit reader, editor and collector
+roles under the restricted runtime connection. All temporary users, roles,
+memberships, grants and test sessions were rolled back. Membership denial follows
+the existing redirect to Workspace selection; forbidden operations return 403.
+No hosted financial actions or official PDFs were submitted. Existing financial
+rehearsal acceptance is unchanged.
+
+Browser checks covered dashboard search to loan, collection screen, release list,
+reports, deployed dashboard at desktop/390px, Business overview navigation and
+retained administrator customer controls. There are no current hosted REPAYMENT
+events in the three Workspaces, so receipt rendering/source/reversal behavior was
+verified in automated fixtures, not a live receipt print. HTTPS passed after
+startup. No schema migration was needed; previous image and Compose are retained.
+Server-only aggregate evidence:
+`/home/rokkad/deploy/rehearsal/staff-workflow-20260924/evidence/verification.json`.
+
+**Resolved by the reports increment above:** the JCL operational report rendered 7,248 table
+body rows, many borrower statement links and no section shortcuts. Replace the
+all-in-one report with focused selection and pagination while keeping selected-date
+and export semantics. Do not treat the existing HTTP 200 as a usable report at
+production volume. This review is technical workflow verification, not full staff
+acceptance, Hindi/device coverage or production-cutover approval.
+
+## Preferences dependency retired and loan number/date UI simplified (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-prefs-retired-20260924`. Removed
+`django-dynamic-preferences` and its unused `persisting-theory` dependency from
+requirements and the deployed image, along with obsolete registries, services,
+forms and templates. Existing Workspace/company raw models are ordinary Django
+models. Migration `configuration.0003_retain_legacy_preference_data` adopts
+existing global/user tables or creates them on fresh installs. All existing raw
+values and audit history remain; retained models do not drive business settings.
+The user relationship remains in Django's deletion graph. Old migration history
+and content types are retained; no preference data purge was performed.
+
+New-loan forms show only the selected series' expected number, with live updates,
+a clear unselected prompt and unavailable-number errors. This remains a preview;
+allocation still occurs atomically on save. Loan details show the business loan
+date immediately below the heading and separately label the draft creation time
+or, for imported loans, the time imported into Rokkad.
+
+Validation: 17 initial configuration/route/number-allocation tests and 10 focused
+retention/preview/draft-page tests passed. An isolated fresh database migrated
+without package migrations. A restored rehearsal clone with synthetic preference
+rows retained all five preference/audit tables byte-for-byte and left 87 loan and
+party tables unchanged; both databases passed migration drift checks. Twelve
+ordinary-owner hosted page probes passed before and after the owner-only
+rehearsal migration, including anonymous/cross-Workspace denial. Browser checks
+confirmed selected/inactive/empty-series behavior and prominent date placement.
+No financial actions or official PDF issues were submitted. HTTPS recovered from
+brief startup 502s and passed. Previous image/Compose are retained for rollback.
+
+Migration evidence and the pre-change backup remain server-only under
+`/home/rokkad/deploy/rehearsal/preferences-retirement-20260924/` and `backups/`;
+page/preference evidence is under `ui-readiness-20260924/evidence/`. The two
+isolated validation databases remain on the server. This completes dependency
+retirement; broader staff journey acceptance and final production cutover remain
+separate work. See the [decision](adr/2026-09-24-retire-preference-editing-surfaces.md).
+
+## First preferences/navigation readiness cleanup deployed (2026-09-24)
+
+Rehearsal now runs `rokkad:rehearsal-ui-20260924`. Central and legacy preference
+bookmarks show authorized read-only guidance to real settings; POST is rejected.
+The generic dynamic-preferences editor route and sidebar Preferences link are
+removed. Workspace preference admin is read-only. Five preference/audit tables
+were privately inventoried on rehearsal and contain zero rows; no data or schema
+was deleted. At this first checkpoint, the package, model bases and compatibility code were
+retained; the subsequent retirement is recorded above. See the [retirement decision](adr/2026-09-24-retire-preference-editing-surfaces.md).
+
+Reports, Historical loans and Release batches now have visible Records & reports
+entries, including for data readers without Settings access. Setup labels are
+clearer and the overlapping Preferences link is gone. Loan details keep balances,
+terms, printing and next actions visible; valuation, collateral and history are
+grouped into disclosures. Collateral starts open for approval review and history
+for closed loans. Fragment links open/focus their containing section.
+
+Eight focused route/authorization/navigation tests passed under test settings;
+12 ordinary-owner hosted page checks passed, including denied preference writes,
+anonymous denial and a cross-Workspace loan denial. Browser checks passed at
+desktop and 390px phone widths: mobile navigation, collateral/history links and
+keyboard expansion. Rehearsal returned HTTP 200 after a transient startup 502.
+No financial actions or official PDF issues were submitted. Previous image and
+Compose file are retained for rollback. Server-only inventory/verification:
+`/home/rokkad/deploy/rehearsal/ui-readiness-20260924/evidence/`.
+See the [feature map](flows/workspace-feature-map.md). Wider staff journey acceptance
+remains open; this first release was not full production
+readiness or a complete application redesign.
+
+## Pre-cutover preferences and UI review (2026-09-24)
+
+The owner raised production-readiness concerns about legacy preferences,
+navigation, discoverability and crowded screens. Initial repository inspection
+found the dynamic-preferences package still wired to models/forms/routes, but no
+current business consumer of the central preference service or legacy wrapper
+outside their implementation/tests. Retired accounting/legacy loan settings remain
+registered and exposed. Bootstrap is already loaded; navigation placement and
+screen hierarchy need review. This is not a completed browser usability audit.
+See [findings and proposed scope](implementation/production-readiness-ui-preferences-review.md).
+No preferences were deleted, business behavior changed or deployment performed.
+
+## Rehearsal ticket shortcut and media exception review (2026-09-23)
+
+The loan details page now shows a large **Print loan ticket** action directly
+below its heading for APPROVED/ACTIVE loans that satisfy the existing ticket
+eligibility flag. Drafts, loans without approval evidence and closed/cancelled
+loans do not receive the prominent action; their existing document section is
+unchanged. It opens the ordinary ticket PDF route in a new tab. No issuance,
+approval, disbursal or permission rules changed. Seven state/eligibility render
+cases, the actual hosted JCL practice-loan page, anonymous denial and HTTPS passed.
+The template-only image `rokkad:rehearsal-ticket-button-20260923` is deployed to
+rehearsal; the previous Compose configuration/image remain available for rollback.
+Candidate verification initially lacked the collected-static volume; mounting the
+existing volume read-only resolved that verification setup failure before rollout.
+No new official ticket was issued by these checks; physical printing is untested.
+
+All 3,614 remaining exact branch paths were rechecked read-only on the old Linode
+and remain missing. The exception review resolves them to 102 active collateral
+references, 3,507 historical references and five customer photographs. Of these,
+2,465 have no preserved shared candidate; 1,149 have unverified shared candidates.
+The latter contain 1,144 known blank images and five unverified customer images.
+344 exception references use a path also referenced by another branch; path/name
+matching cannot certify ownership. No shared candidates were attached and no
+financial data changed. Detailed results are server-only under
+`/home/rokkad/deploy/rehearsal/media-exceptions-20260923/`; retained originals and
+all 28,347 completed attachments are unchanged. Record these as unresolved media
+exceptions for final cutover; do not claim complete photo recovery.
+
+## Hosted database imported and verified (2026-09-23)
+
+**Hosted media increment verified:** 28,347 references are attached using
+29,489 separate private application objects: 1,148 Party photographs, 6,082 active
+collateral and 21,117 historical-loan photographs. All receipt/target bindings and
+object keys/sizes reconcile. Each copied object was read back and SHA-256 verified.
+All 32,567 earlier preservation objects remain intact; 55 new originals bring
+the retained total to 32,622. Fifteen ordinary-owner HTTP
+probes passed exact-byte/private-cache checks plus anonymous and cross-Workspace
+denial. All 252 before/after business-data fingerprints match. Of the attached
+references, 25,054 match previously confirmed blank-source-image hashes; transfer
+success does not make these usable photographs.
+
+The main 28,223-reference plan SHA-256 is
+`10e9f5ea7340fd7de907670c79d100657c7a6f6ea4793adc9e49471b15c17f33`;
+its planning took 208.94 seconds and apply/recheck took 1,883.56 seconds. A second
+69-reference plan reused exact branch files preserved before their new database
+references appeared (SHA-256
+`3284853c5f10a1e832170e099afcc720dd98a00fc3689cf780fab44631dc3730`).
+Both full identical retries recognized all 28,292 existing attachments and
+created nothing. The main process completed successfully; a lingering SSH client
+was closed after its aggregate success report and exited server process were
+verified independently.
+This is hosted rehearsal, despite the target-bound command's generic
+`PRODUCTION_MEDIA_ATTACHED` label; `production_ready` remains false.
+
+The owner authorized checking/copying the remaining 55 newer references. All
+were found on the old live Linode (JCL 27, JSK 9, Lakshmi 19), read without source
+writes, copied directly to private R2 with conditional creation and SHA-256
+read-back verification, and attached as active collateral photographs. Increment
+plan SHA-256: `ce9a08dcc9133654462a34b9ea30dfe9d543557d00f0e84cac5601f90508c215`.
+Apply created 55 receipts; identical retry recognized all 55 and created nothing.
+All 252 business-data fingerprints still match. The 15 private-access probes
+include a newly attached photograph in each Workspace. Of these 55 source files,
+53 match known blank-image hashes; copying cannot recover absent image content.
+Still excluded: 2,465 previously missing files and 1,149 unverified shared
+candidates. Only the 55 paths received a fresh source check; older preserved
+bytes date from September 21 and later same-path replacement is not ruled out.
+Authoritative detailed evidence stays on the server under
+`/home/rokkad/deploy/rehearsal/media-reuse/` and `media-increment-20260923/`.
+Local preparation inputs/scripts are
+under `outputs/server-rehearsal-20260923/`; do not claim a local copy of completed
+reports. Automatic approval review rejected exporting the full dump and recursive
+customer/media-reference metadata to OneDrive. The owner chose to keep the backup
+on the server; detailed reports also remain there.
+
+Latest post-increment backup:
+`backups/rokkad_cutover_rehearsal-media-20260923T111730Z.dump`
+under the host deployment directory; 55,446,392 bytes; reverified SHA-256
+`ec603f5a5d62487611f3d5f7f34dc3f89fc07a5395201758e11e29ef7a8a017a`.
+The preceding `20260923T105639Z` snapshot is retained. The increment completion
+manifest seals 26 private evidence files on the server.
+The earlier full restore check is retained separately; this new snapshot has not
+received another full restore test and was not downloaded to OneDrive.
+
+**Ticket cutover readiness:** the owner requires JCL/JSK templates ready by default
+at production reopening. Latest configuration is exported to private
+`outputs/server-rehearsal-20260923/cutover-templates-final-20260923/`, superseding
+the earlier production-readiness exports. `scripts/install_cutover_ticket_templates.py`
+verifies explicit database/host/runtime-role/storage/mode and manifest bindings,
+imports/reuses configuration, activates layout/profile pairs as Workspace defaults,
+and checks every series for conflicting overrides. It passed on rehearsal for
+eight JCL and three JSK series; rerun created no duplicate revisions/assignments.
+Wrong database/storage/manifest/mode rejection checks passed. Both branch previews
+now return 200 without a manually supplied profile. Current defaults: JCL layout
+7/profile 2, JSK layout 4/profile 3, both published. No TEST licence/loan is in the
+template packs. See the updated cutover runbook for the target contract and command.
+Actual production target values, final release build containing INR_SYMBOL and
+installer execution are cutover steps, not completed production deployment.
+
+The owner requested JCL new-lending practice on the hosted rehearsal. Ordinary
+setup services created synthetic licence 5 (`TEST-JCL-HOSTED-20260923`), series 13
+(`TEST-JCL`) and activated flexible product version 6. Licence-scoped sample
+policies use 2% monthly gold/silver interest, latest appraisal valuation, 80%
+maximum LTV and one month upfront. The supporting image explicitly says it is not
+a legal licence; its stored hash was verified. All setup checks pass and both
+authenticated licence/new-loan pages return 200 with the TEST setup visible.
+Next numbers are `TEST-JCL-L-00001` and `TEST-JCL-R-00001`; previews consumed none.
+The 2,404 JCL imported loans, existing licences and counters were unchanged.
+No practice loan was created. Final-source licence verification still requires
+the actual cutover attestation; no rehearsal exception was added.
+Private operator script: `outputs/server-rehearsal-20260923/prepare_jcl_practice.py`.
+These practice settings/data must not be promoted to production.
+
+The owner then authorized importing the saved accepted JCL/JSK ticket bundles.
+Both layout/profile hashes match the September 23 export manifest. Hosted JCL
+layout revision 3/profile 2 are published and assigned only to TEST series 13;
+JSK layout revision 4/profile 3 remain unassigned drafts. JCL's four stored assets
+passed SHA-256 checks. Synthetic marked previews rendered and were visually
+inspected: JCL one A4 landscape sheet, JSK two A5 preprinted-stock pages. Synthetic
+photos are explicitly absent; this is not actual-loan or physical-printer proof.
+Existing loan/issued-document counts and JCL's original `test` draft are unchanged.
+Private scripts, installation report and previews are under
+`outputs/server-rehearsal-20260923/` (`installed-templates/`). No live production
+templates or assignments changed.
+
+JCL's first hosted practice loan (19105, principal 18,600) exposed amount-in-words
+overflow: its frame at (72,140) mm used WRAP with fixed 12 pt leading and 6 pt
+padding. New layout revision 5/version 2 changes only that frame to SHRINK with
+automatic leading, preserving geometry and the renderer's 6 pt minimum. It is
+assigned to TEST series 13 with profile 2. The actual-loan preview returns 200,
+contains the full amount in words and renders as one A4 sheet. Old published
+revision 3 and issued documents are unchanged. The saved September 23 transfer
+bundle still has the earlier definition; export revision 5 when preparing the
+next deployment bundle.
+
+The owner requested the rupee symbol on tickets. Optional `INR_SYMBOL` layout
+formatting now renders monetary values with the bundled Unicode font, e.g.
+₹18,600.00, without modifying stored payload values. All 29 precision-overlay
+tests pass under test settings in a network-disabled container. Hosted web now
+uses `rokkad:rehearsal-rupee-20260923`, derived from `a9f793fc` with the formatter,
+validator and regression test changes. JCL TEST series 13 uses layout revision
+6/version 3 and profile 2; JSK draft revision 4 has the same principal format.
+JCL loan 19105's marked preview contains the actual rupee glyph and was visually
+checked; issued-document rows and old published revisions are unchanged. JSK has
+no actual-loan preview for this update. Export current revisions for subsequent
+deployment; the saved original template bundles predate both display fixes.
+
+The owner requested blank space instead of an issuance error when no borrower
+photo is attached. Existing `optional_photo` configuration now enables this on
+all borrower-photo frames in JCL revision 7/version 4 (TEST series 13) and JSK
+draft revision 4. JCL loan 19105 passed `prepare_ticket_document(preview=False)`
+and official-mode rendering with ABSENT/optional evidence and a blank photo
+space; no issue was created by verification. Old published definitions and
+issued-document rows are unchanged. Selected-but-unreadable media still fails;
+collateral-photo requirements remain unchanged. No application code change was
+needed for this behavior. Export these latest revisions for future rollout.
+
+The supplied September 23 snapshot is now admitted and reconciled on
+`https://rehearsal.rokkad.com`. Final state: `HOSTED_DATABASE_REHEARSAL_VERIFIED`.
+All 45,533 source loans reconcile exactly once: 6,368 operational openings,
+39,162 closed-history records and three retained unused/cancelled exclusions.
+All 8,634 customers, 3,499 contacts and 6,726 addresses are imported. Opening
+principal is 203,977,183, interest 22,865,291 and fees zero as of September 23.
+
+| Workspace | Customers | Openings | Closed history | Excluded |
+| --- | ---: | ---: | ---: | ---: |
+| JCL | 5,885 | 2,404 | 26,664 | 1 |
+| JSK | 646 | 1,524 | 3,811 | 2 |
+| Lakshmi | 2,103 | 2,440 | 8,687 | 0 |
+
+Every source identity, Party field, opening document/evidence, balance, collateral,
+obligation and next interest boundary reconciled. Missing/cross-Workspace RLS
+checks passed on populated data; registered-model runtime/RLS checks also passed.
+Nineteen representative loan page/export/payment/release/retry simulations passed,
+with servicing rolled back. These include the newly outstanding inactive-source
+borrowers and D01234's single-item 11,500 correction. Real HTTPS login and 29
+authenticated Workspace/business pages passed. The first isolated render check
+lacked the collected-static volume; mounting the existing web volume read-only
+fixed the test environment. No application code or imported values were changed.
+
+Admission took 5,857.4 seconds; complete reconciliation took 92.0 seconds (99.2
+minutes combined). This excludes offline preparation, media and later smoke/recovery
+checks; it is not a final-cutover downtime promise. A 49,909,423-byte imported-state
+backup was restored into the separately retained `rokkad_import_restore_20260923`.
+All 160 table content fingerprints matched, and restored runtime/RLS/migration
+checks passed. Backup SHA-256:
+`481a07bfdf9bd34163d97e2d5ff385df79c4d59aa2b327a2a8db2997cdcde718`.
+A separate local copy in `outputs/server-rehearsal-20260923/import-results/`
+matches that checksum and byte count. This is a verified copy, not a scheduled
+production off-server backup/recovery policy.
+
+Private final evidence is in
+`outputs/server-rehearsal-20260923/import-results/run/`; its completion manifest
+SHA-256 is `0a470b7e15b676785d7f4b577ebd3ba81759694337d47268c468e03f56dcad0e`
+and all 24 listed evidence-file hashes were checked after download.
+At the database-only checkpoint photographs/documents were not attached. The
+preserved-media reuse above now supersedes that state: 28,292 references are
+attached and verified, with 55 newer references and older source gaps outstanding.
+September 23 is the opening date: current servicing permits payments/releases
+from September 24. The live system is unchanged; no final production cutover occurred.
+
+The owner explicitly instructed proceeding with admission. Three empty hosted
+Workspaces were created: `rehearsal-jcl` (1), `rehearsal-jsk` (2), and
+`rehearsal-lakshmipawnbroker` (3). The importer is the ordinary, non-staff,
+non-superuser `hosted-import-owner` with Owner Memberships; `rehearsal-admin`
+has Admin Memberships for browser access. All import database operations use
+the restricted runtime role. No production source or routing was changed.
+
+Fresh September 23 opening documents passed existing financial/source validators
+offline. The package is newly prepared input, not a capture of a previously
+accepted database. It retains 13 payment-exclusion decisions only after exact
+loan/payment hash comparison, all 190 earlier owner-closed source graphs,
+the two explicit borrower-active overrides with original inactive source facts,
+and corrected duplicate-entry evidence. Its SHA-256 is
+`cfc13d37d6eb5d052c7f6b9e1e509fa215a83a857a30390eefb66e5bf734a80b`;
+private files are in `outputs/hosted-reviewed-package-20260923/`.
+Prepared opening principal totals 203,977,183 and interest 22,865,291, fees zero.
+
+The dedicated `rokkad-rehearsal-operator:a9f793fc` image adds PostgreSQL 15 client
+tools to the deployed release; the web image is unchanged. Source/archive and
+all three source-index checks passed. Container `rokkad-reviewed-import-20260923`
+admitted records through existing staged Party and signed Loans services.
+The initial launch exited before execution while file transfer was incomplete;
+the complete transfer checksum was verified and extraction retried before the
+successful launch. No business writes occurred in that failed launch.
+
+Server evidence is under `~/deploy/rehearsal/import/run/`. Full reconciliation,
+restricted-role/RLS checks, rolled-back servicing samples, authenticated HTTPS
+pages and a separately restored post-import backup passed as recorded above.
+Fresh media reconciliation remains
+separate; the owner has been asked for its backup or permission to copy live media.
+
+## Fresh hosted source reviewed; owner exceptions resolved (2026-09-23)
+
+The supplied `C:\Users\rajes\backup_20260923_115257.sql` is a PostgreSQL custom
+archive (11,694,433 bytes), SHA-256
+`3be7cedd0eaf0556b8aa1c70b5c843b6b8c7d3c016665a783243eb663ca44a21`.
+A private copy on the rehearsal host matches that checksum. Scoped read-only
+extraction and Party/opening/closed-history preparation completed with database
+connections explicitly prohibited. No legacy SQL was executed against a destination.
+
+Owner replies were retained verbatim and bound to exact source IDs: both new JCL
+RA00554/C07517 are outstanding; JCL RA00549 and JSK WH02133 are unused/cancelled;
+Lakshmi D01234 is a duplicate-entry correction, not repayment or collateral return.
+Its corrected original principal is 11,500, monthly interest 230, original date
+August 24. The existing anniversary/upfront-interest calculator gives zero additional
+interest through September 23 and the next increase September 25. This is a review
+calculation, not a posting.
+
+All 45,533 loans are classified without overlap: JCL 2,404 outstanding, 26,664
+closed-history and one unused; JSK 1,524 outstanding, 3,811 closed-history and two
+unused; Lakshmi 2,440 outstanding and 8,687 closed-history. The 190 earlier JCL
+owner-reported closures retain unchanged source evidence and unknown closure dates.
+The two new outstanding cases are explicit exceptions to the old inactive-customer
+interpretation. Destination Party eligibility still needs explicit handling during
+admission while preserving original inactive source evidence.
+
+Private evidence: `outputs/hosted-source-20260923/` (sealed preparation retained),
+and `outputs/hosted-owner-decisions-20260923/` (new owner-answer/classification seal
+`79373241ae47be0fe4bddf8a2fdf0f9a9a85448daa156b3b6439cfc432325055`).
+Verified all 117 preparation file checksums and complete/disjoint source coverage.
+This source-review checkpoint preceded admission. The completed destination
+admission and timed verification are recorded above; fresh media remains separate.
+
+## Hosted HTTPS rehearsal ready for a new source dump (2026-09-23)
+
+The owner selected `rehearsal.rokkad.com` and added its Linode DNS record. Public
+HTTP redirects to HTTPS; Caddy obtained a valid certificate. The application runs
+release `a9f793fc` through the existing runtime-check/Gunicorn launcher with a
+read-only host settings module extending `prod_r2`. Application port 8000 binds
+only to loopback; PostgreSQL has no published port. Static files are collected,
+raw `/media/` paths return 404, cookies are Secure and separately named, and the
+existing rehearsal banner is enabled. Email uses the in-memory backend.
+
+The owner explicitly approved transferring the existing temporary R2 migration
+credentials after automatic review initially blocked that secret transfer.
+The host uses only `media/application/production/hosted-rehearsal-20260923` for
+new application objects. Upload and ten checksum-verified reads passed (roughly
+0.32-0.41 seconds per read in the recorded probe); the synthetic object was removed.
+Unsigned S3 access returned HTTP 400 `InvalidArgument: Authorization`, a reviewed
+authentication rejection. This is not an independent audit of bucket public-domain
+settings. Temporary credentials still require replacement before production.
+
+The owner delegated the administrator identity choice: `rehearsal-admin`, with
+unverified placeholder email `rehearsal-admin@example.invalid`, was created.
+Its generated password is stored only in the host's mode-0600
+`~/deploy/rehearsal/admin-login.json`, readable by `rokkad`. Real HTTPS login,
+authenticated Workspace page, all 14 login-page static assets, secure session cookie,
+TLS hostname validation and raw-media denial passed. No Workspaces or legacy
+business records were imported. Two HSTS subdomain/preload warnings are deliberately
+retained; this temporary hostname sets one-hour HSTS without subtree/preload scope.
+
+A 1.28 MB schema-stage backup was restored into the separate retained
+`rokkad_restore_check_20260923` database. All 160 table row counts, restricted-runtime
+RLS and pending-migration checks matched. This proves local schema-stage recovery,
+not off-server disaster recovery or restoration of a later imported dataset.
+Private reports remain in `outputs/server-rehearsal-20260923/` and on the host.
+The new supplied dump is reviewed as recorded above; do not capture the old live
+source or reuse an older rehearsal package implicitly. Continue from that snapshot under
+the [hosted deployment notes](implementation/linode-production-cutover.md#hosted-rehearsal-deployment).
+
+## Hosted rehearsal database initialized (2026-09-23)
+
+The owner created the separate Linode, completed Ubuntu 26.04 updates/reboot,
+verified key-based `rokkad` SSH/sudo access, installed Docker/Compose and built
+release `a9f793fc`. The dedicated PostgreSQL 16.15 container has persistent storage
+and no published host port. The owner explicitly authorized direct SSH setup.
+The agent verified the empty `rokkad_cutover_rehearsal` database, generated new
+owner/runtime passwords, saved separate mode-0600 settings files owned by
+`rokkad` under `~/deploy/rehearsal/`, and applied owner-only migrations.
+The previous manually entered database passwords are superseded.
+
+All 111 migrations applied; 160 public tables exist and no migrations are pending.
+Restricted-runtime database deployment checks and canonical forced-RLS checks
+pass for all 114 registered protected models; runtime DML grants are verified.
+`rokkad_runtime` is neither superuser nor RLS-bypassing and owns no protected
+tables. The pending-migration command emits the existing debug-toolbar middleware
+warning; the database-tagged deployment check reports no issues. This is database
+validation, not complete HTTPS/application deployment acceptance.
+
+Credential-free evidence is retained in `outputs/server-rehearsal-20260923/` and
+on the host. No web container, real email/R2 configuration, Workspace/owner setup,
+legacy import, source freeze or DNS switch was performed. Email/R2 settings are
+explicit inactive placeholders. Continue hosted deployment and disposable migration
+rehearsal under the [cutover runbook](implementation/linode-production-cutover.md).
 
 ## Production media target admission implemented (2026-09-23)
 
