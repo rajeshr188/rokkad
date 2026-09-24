@@ -13,6 +13,13 @@ if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Production requires explicit DJANGO_ALLOWED_HOSTS without '*'.")
 
+# Separate from HTTPS-scheme trust: enable only for a reviewed proxy chain that
+# replaces client-supplied forwarding headers and has a private upstream.
+ALLAUTH_TRUSTED_PROXY_COUNT = env.int("ROKKAD_AUTH_TRUSTED_PROXY_COUNT", default=0)
+if ALLAUTH_TRUSTED_PROXY_COUNT < 0:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("ROKKAD_AUTH_TRUSTED_PROXY_COUNT must be nonnegative.")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",

@@ -56,6 +56,30 @@ class ProductionSettingsTests(SimpleTestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("must be nonempty", result.stderr)
 
+    def test_auth_proxy_trust_defaults_to_zero_and_requires_explicit_count(self):
+        for value, expected in ((None, 0), ("1", 1)):
+            result = self.load_settings(ROKKAD_AUTH_TRUSTED_PROXY_COUNT=value,
+                probe="print(s.ALLAUTH_TRUSTED_PROXY_COUNT)")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), str(expected))
+        result = self.load_settings(ROKKAD_AUTH_TRUSTED_PROXY_COUNT="-1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must be nonnegative", result.stderr)
+
+    def test_single_proxy_keeps_clients_distinct_and_ignores_left_hand_spoof(self):
+        from allauth.core.internal.httpkit import get_client_ip
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        def request(forwarded):
+            return factory.get("/", REMOTE_ADDR="172.18.0.1", HTTP_X_FORWARDED_FOR=forwarded)
+        with self.settings(ALLAUTH_TRUSTED_PROXY_COUNT=0, ALLAUTH_TRUSTED_CLIENT_IP_HEADER=None):
+            self.assertEqual(get_client_ip(request("198.51.100.10")), "172.18.0.1")
+        with self.settings(ALLAUTH_TRUSTED_PROXY_COUNT=1, ALLAUTH_TRUSTED_CLIENT_IP_HEADER=None):
+            self.assertEqual(get_client_ip(request("198.51.100.10")), "198.51.100.10")
+            self.assertEqual(get_client_ip(request("198.51.100.11")), "198.51.100.11")
+            self.assertEqual(get_client_ip(request("203.0.113.99, 198.51.100.10")), "198.51.100.10")
+            self.assertEqual(get_client_ip(factory.get("/", REMOTE_ADDR="172.18.0.1")), "172.18.0.1")
+
 
 class ProductionMediaSettingsTests(SimpleTestCase):
     def load_media(self, **changes):
