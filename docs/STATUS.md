@@ -7,6 +7,17 @@ tags: [status, architecture]
 
 # Status
 
+## Dependency refresh under validation (2026-09-24)
+
+The owner updated the local environment and requested verification and continuation.
+Fourteen direct dependency pins and matching constraints now capture those updates,
+including Django 6.1.1/allauth 65.19.4 and the remaining PyJWT update to 2.15.0.
+The requirements files had still contained the previous versions; local installation
+alone would not have changed the container. Local dependency consistency and Django
+system checks pass. Broad regressions, a clean image build, advisory scan and
+fresh/restored runtime validation are in progress. The previous candidate's security
+gate remains uncleared until new evidence is recorded. Production routing is unchanged.
+
 ## Consolidated release candidate validated; security gate blocked (2026-09-24)
 
 The owner authorized consolidating the rehearsal increments into one versioned
