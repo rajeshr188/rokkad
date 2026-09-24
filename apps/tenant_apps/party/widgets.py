@@ -19,9 +19,13 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
     token_salt = "party.autocomplete.v1"
     token_max_age = 86400
 
-    def render(self, *args, **kwargs):
+    def build_attrs(self, base_attrs, extra_attrs=None):
+        attrs = super().build_attrs(base_attrs, extra_attrs)
+        # Select2 creates its cache token in build_attrs. Replace it afterwards
+        # so the browser receives our stateless, Workspace-URL-bound token.
         self.field_id = signing.dumps(self.get_url(), salt=self.token_salt)
-        return super().render(*args, **kwargs)
+        attrs["data-field_id"] = self.field_id
+        return attrs
 
     def set_to_cache(self):
         # The endpoint reconstructs this fixed widget under request Workspace/RLS.

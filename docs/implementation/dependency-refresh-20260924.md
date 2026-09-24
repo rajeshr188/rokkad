@@ -58,7 +58,17 @@ These tests are included in CI; real interactive Google login remains an operato
 acceptance check.
 
 Local `pip check`, Django system checks and five new Google token checks passed.
-The broad regression, fresh/restored migration and runtime checks are in progress.
+The first broad run completed 1,906 tests with one compatibility failure: Select2
+8.4.8 now creates its default cache token during `build_attrs`, overwriting the
+borrower widget's signed URL token set by `render`. The widget now installs its
+stateless URL-bound token after the base attributes are built. The existing complete
+test passes with added rendered-token assertions, preserving unavailable-cache,
+separate-worker, expiry, malformed-token, cross-Workspace and permission-denial checks.
+This fixes borrower search without relaxing authorization or adding shared cache state.
+
+Fresh/restored migrations and restricted-runtime checks passed with 116 existing
+business/preference/identity tables preserved. The corrected image and full regression
+are being revalidated before rehearsal deployment.
 
 ## Release evidence
 

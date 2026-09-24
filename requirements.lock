@@ -1,6 +1,6 @@
 # Complete dependency constraints for the consolidated release candidate.
-# Generated from the verified Linux/Python 3.14 rehearsal inventory.
-# See the release readiness report for outstanding security advisories.
+# Based on the Linux/Python 3.14 inventory, with verified dependency refreshes.
+# See docs/implementation/dependency-refresh-20260924.md for audit evidence.
 asgiref==3.9.1
 async-timeout==4.0.3
 babel==2.16.0

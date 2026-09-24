@@ -14,9 +14,15 @@ Fourteen direct dependency pins and matching constraints now capture those updat
 including Django 6.1.1/allauth 65.19.4 and the remaining PyJWT update to 2.15.0.
 The requirements files had still contained the previous versions; local installation
 alone would not have changed the container. Local dependency consistency and Django
-system checks pass. Broad regressions, a clean image build, advisory scan and
-fresh/restored runtime validation are in progress. The previous candidate's security
-gate remains uncleared until new evidence is recorded. Production routing is unchanged.
+system checks pass. The clean Linux dependency scan reports 71 checked, zero skipped
+and zero known advisories. Fresh/restored migrations and runtime probes preserve 116
+business, preference and identity tables. The initial 1,906-test run found one Select2
+compatibility regression: widget attribute construction replaced the signed borrower
+search token. The integration now sets the URL-bound token after base attributes are
+built; the full cache-unavailable, expiry, RBAC and cross-Workspace test passes. Broad
+regressions and the corrected candidate are being revalidated before rehearsal
+deployment. Production routing is unchanged. See the
+[refresh report](implementation/dependency-refresh-20260924.md).
 
 ## Consolidated release candidate validated; security gate blocked (2026-09-24)
 

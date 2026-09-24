@@ -495,10 +495,12 @@ class MVPOperatorJourneyTests(TransactionTestCase):
             self.enterContext(patch.object(cache, operation, side_effect=ConnectionError("Cache unavailable")))
         with workspace_context(self.workspace.pk):
             form = PawnDraftForm(workspace=self.workspace)
-            str(form["borrower"])
+            rendered = str(form["borrower"])
             widget = form.fields["borrower"].widget
             url = widget.get_url()
             token = widget.field_id
+            self.assertIn(f'data-field_id="{token}"', rendered)
+            self.assertEqual(signing.loads(token, salt=widget.token_salt), url)
         response = self.client.get(url, {"field_id": token, "term": "MVP"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual([str(row["id"]) for row in response.json()["results"]], [str(party.pk)])
