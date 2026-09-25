@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import TransactionKind
@@ -82,6 +83,25 @@ def _issued_document_response(issue, payload):
     if issue.print_profile_hash:
         response["X-Rokkad-Print-Profile"] = issue.print_profile_name
         response["X-Rokkad-Print-Profile-Hash"] = issue.print_profile_hash
+    return response
+
+
+@loans_workspace_required
+@require_GET
+def pawn_imported_ticket_preview(request, pk):
+    from apps.tenant_apps.loans.services.imported_ticket_preview import render_imported_ticket_preview
+
+    loan = _pawn_loan_for_workspace(request, pk)
+    try:
+        pdf, filename = render_imported_ticket_preview(loan=loan, actor=request.user, address_id=request.GET.get("address"))
+    except DocumentAddressSelectionRequired as exc:
+        return address_selection_response(request, exc)
+    except (ValueError, ValidationError) as exc:
+        return HttpResponse(str(exc), status=409, content_type="text/plain")
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{filename}"'
+    response["Cache-Control"] = "private, no-store"
+    response["X-Rokkad-Preview"] = "true"
     return response
 
 

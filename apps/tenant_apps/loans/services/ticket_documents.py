@@ -59,6 +59,15 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
     source = approval.payload
     if source["borrower_id"] != loan.borrower_id:
         raise ValueError("Approved borrower does not match this loan.")
+    return _prepare_ticket_display(
+        loan=loan, layout=layout, actor=actor, address_id=address_id, preview=preview,
+        payload=payload, source=source,
+        evidence={"approval_id": approval.pk, "approval_fingerprint": approval.fingerprint},
+    )
+
+
+def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload, source, evidence):
+    """Shared display/media projection; callers supply their own frozen evidence."""
     bindings = {block.binding for block in layout.all_blocks()}
     license_values = {
         "license.business_name": loan.license.business_name.strip(),
@@ -146,7 +155,7 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
         "schema_version": 2, "workspace_id": loan.workspace_id,
         "captured_at": captured_at.isoformat(),
         "verification_id": payload.verification_id,
-        "approval_id": approval.pk, "approval_fingerprint": approval.fingerprint,
+        **evidence,
         "customer": {"party_id": identity.party_id, "address_id": identity.address_id},
         "fields": {field.key: str(field.value) for field in fields}, "media": media_evidence,
     }

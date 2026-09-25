@@ -180,6 +180,7 @@ from apps.tenant_apps.loans.web.loan_documents import (
     pawn_loan_kfs_schedule_pdf,
     pawn_loan_renewal_pdf,
     pawn_loan_ticket_pdf,
+    pawn_imported_ticket_preview,
     pawn_release_memo_pdf,
     pawn_repayment_receipt_pdf,
 )

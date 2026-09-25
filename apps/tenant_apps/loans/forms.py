@@ -85,6 +85,13 @@ class LoanProductVersionDraftForm(forms.ModelForm):
             field.widget.attrs.setdefault("class", "form-select" if isinstance(field.widget, forms.Select) else "form-control")
 
 
+class LoanSeriesChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        sequence = next((row for row in obj.number_sequences.all() if row.document_kind == "PAWN_LOAN"), None)
+        label = (sequence.prefix or _("No prefix")) if sequence else obj.name
+        return f"{obj.license.license_number} / {label}"
+
+
 class PawnDraftForm(forms.Form):
     borrower = forms.ModelChoiceField(
         label=_("Customer"),
@@ -97,7 +104,7 @@ class PawnDraftForm(forms.Form):
             select2_options={"width": "100%"},
         ),
     )
-    series = forms.ModelChoiceField(
+    series = LoanSeriesChoiceField(
         label=_("Series (license / register)"),
         help_text=_("The selected series determines the regulatory license and loan-number sequence."),
         queryset=LoanSeries.objects.none(),
@@ -122,7 +129,7 @@ class PawnDraftForm(forms.Form):
         ).order_by("display_name", "party_code")
         self.fields["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
-        ).select_related("license").order_by("license__license_number", "code")
+        ).select_related("license").prefetch_related("number_sequences").order_by("license__license_number", "code")
         self.fields["product_version"].queryset = LoanProductVersion.objects.filter(
             product__workspace=workspace,
             product__is_active=True,

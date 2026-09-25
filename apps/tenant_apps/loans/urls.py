@@ -34,6 +34,7 @@ urlpatterns = [
     path("internal/create/", views.pawn_loan_create, name="pawn_loan_create"),
     path("internal/<int:pk>/", views.pawn_loan_detail, name="pawn_loan_detail"),
     path("internal/<int:pk>/ticket.pdf", views.pawn_loan_ticket_pdf, name="pawn_loan_ticket_pdf"),
+    path("internal/<int:pk>/imported-ticket-preview.pdf", views.pawn_imported_ticket_preview, name="pawn_imported_ticket_preview"),
     path("internal/<int:pk>/kfs-schedule.pdf", views.pawn_loan_kfs_schedule_pdf, name="pawn_loan_kfs_schedule_pdf"),
     path("internal/<int:pk>/events/<int:event_pk>/receipt.pdf", views.pawn_repayment_receipt_pdf, name="pawn_repayment_receipt_pdf"),
     path("internal/<int:pk>/edit/", views.pawn_loan_update, name="pawn_loan_update"),

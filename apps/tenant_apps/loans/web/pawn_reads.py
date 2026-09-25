@@ -117,6 +117,7 @@ def pawn_loan_detail(request, pk):
     }
     approval = loan.approval_snapshots.order_by("-version").first()
     context["can_print_ticket"] = loan.state != "DRAFT" and approval is not None
+    context["can_preview_imported_ticket"] = opening is not None and approval is None
     context["can_print_schedule"] = loan.repayment_schedules.exists()
     if loan.state in {"DRAFT", "APPROVED"}:
         try:
