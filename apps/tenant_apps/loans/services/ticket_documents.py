@@ -114,20 +114,20 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
     assets, media, media_evidence = [], [], {}
     for binding in sorted(bindings & {"borrower.photo", "collateral.first_approved_photo"}):
         key = "ticket." + binding
-        file, expected_hash, evidence = None, None, {}
+        file, expected_hash, photo_evidence = None, None, {}
         status = "ABSENT"
         if binding == "borrower.photo":
             file = identity.photo
-            evidence = {"party_id": identity.party_id, "file_name": file.name or ""}
+            photo_evidence = {"party_id": identity.party_id, "file_name": file.name or ""}
         elif items:
             first = items[0]
-            evidence = {"item_id": first["item_id"]}
+            photo_evidence = {"item_id": first["item_id"]}
             if "photo_evidence" not in first:
                 status = "UNAVAILABLE"
             elif first["photo_evidence"]:
                 approved_photo = sorted(first["photo_evidence"], key=lambda value: int(value["photo_id"]))[0]
                 expected_hash = approved_photo.get("sha256")
-                evidence.update(photo_id=approved_photo["photo_id"], sha256=expected_hash)
+                photo_evidence.update(photo_id=approved_photo["photo_id"], sha256=expected_hash)
                 photo = PawnCollateralPhoto.objects.filter(
                     pk=approved_photo["photo_id"], workspace_id=loan.workspace_id,
                     collateral_item_id=first["item_id"], collateral_item__loan_id=loan.pk,
@@ -144,12 +144,12 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
             else:
                 status = "AVAILABLE"
                 assets.append(asset)
-                evidence.update(sha256=asset.sha256, file_name=file.name)
+                photo_evidence.update(sha256=asset.sha256, file_name=file.name)
         optional = all(block.optional_photo for block in layout.all_blocks() if block.binding == binding)
         if not preview and status != "AVAILABLE" and not (status == "ABSENT" and optional):
             raise DocumentAssetError(f"{binding}: selected photograph is {status.lower()}; review the photo before issuing.")
         media.append(DocumentMedia(binding, key, status))
-        media_evidence[binding] = {**evidence, "status": status, "optional": optional}
+        media_evidence[binding] = {**photo_evidence, "status": status, "optional": optional}
     payload = replace(payload, schema_version=2, fields=fields, media=tuple(media))
     snapshot = {
         "schema_version": 2, "workspace_id": loan.workspace_id,

@@ -2347,6 +2347,9 @@ class LoansSetupUiTests(WorkspaceTestCase):
 
         loan, revision, photo, address = self._rich_ticket_fixture()
         prepared = prepare_ticket_document(loan=loan, layout=DocumentLayoutValidator.load(revision.definition), actor=self.owner)
+        approval = loan.approval_snapshots.get()
+        self.assertEqual(prepared.source_snapshot["approval_id"], approval.pk)
+        self.assertEqual(prepared.source_snapshot["approval_fingerprint"], approval.fingerprint)
         self.assertEqual(prepared.source_snapshot["fields"]["loan.principal_words"], "Ten thousand rupees and twenty-five paise only")
         self.assertEqual(prepared.source_snapshot["media"]["collateral.first_approved_photo"]["sha256"], photo.sha256)
         url = reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])
@@ -2466,6 +2469,16 @@ class LoansSetupUiTests(WorkspaceTestCase):
         layout = DocumentLayoutValidator.load(definition)
         prepared = prepare_ticket_document(loan=loan, layout=layout, actor=self.owner)
         self.assertEqual(prepared.source_snapshot["media"]["borrower.photo"]["status"], "ABSENT")
+        approval = loan.approval_snapshots.get()
+        self.assertEqual(prepared.source_snapshot["approval_id"], approval.pk)
+        self.assertEqual(prepared.source_snapshot["approval_fingerprint"], approval.fingerprint)
+        # An absent optional portrait must still allow a real first ticket issue.
+        with patch("apps.tenant_apps.loans.services.document_issuance.DocumentLayoutValidator.load", return_value=layout):
+            response = self.tenant_get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
+        self.assertEqual(response.status_code, 200)
+        issue = LoanDocumentIssue.objects.get(pk=response["X-Rokkad-Document-Issue"])
+        self.assertEqual(issue.source_snapshot["approval_fingerprint"], approval.fingerprint)
+        self.assertEqual(issue.source_snapshot["media"]["borrower.photo"]["status"], "ABSENT")
         with photo.file.storage.open(photo.file.name, "wb") as file:
             file.write(b"broken")
         with self.assertRaisesMessage(DocumentAssetError, "unavailable"):
