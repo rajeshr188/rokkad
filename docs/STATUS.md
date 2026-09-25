@@ -28,7 +28,24 @@ Validation: synthetic Chromium checks cover all three camera controls, named
 selection, front/rear switching, capture/preview, cancellation, out-of-order
 permission responses, cleanup and upload fallback. Django regression suites passed
 (62 document/import/display/export checks and 107 UI/report/overlay checks);
-all six Node customer-photo checks passed. Deployment verification is pending.
+all six Node customer-photo checks passed.
+
+Deployed `713e0b64` (main implementation `0a073957`) to production at
+`rehearsal.rokkad.com`, image
+`sha256:a045348992a0d1f63fab41ea0634a9afda4de98391078bbe3ebd84ca5ef28792`,
+static volume `rokkad_production_static_713e0b64`. Candidate and deployed checks
+passed for all three workspaces under the restricted runtime role and forced
+RLS. Each branch's two longest imported-ticket description sets rendered with
+source quantities; PDF text extraction required whitespace normalization for
+wrapped quantities. Financial-row and issued-document fingerprints stayed equal
+within each check. JSK WH rates and branch LTV policies remained intact. Public
+login and all six changed camera/summary asset hashes passed. No migration or
+live business transaction was performed by these checks.
+
+Server evidence: `acceptance-20260925/camera-money-deployment.json` under
+`/home/rokkad/deploy/cutover-20260924`. Before/after backups stayed on that server;
+after backup `backups/operational/production-20260925T145913Z.dump` is 55,717,830
+bytes, SHA256 `191208efba013f8965bcce9cd29b97277da0e3fce371123542b10a0ccc00a986`.
 Physical Android/iPhone camera hardware has not been exercised here.
 
 ## Collateral entry, visible interest and ticket amounts (2026-09-25)
