@@ -19,7 +19,17 @@ Migration 0025 preserves existing IDs/values as revision 1. All 147 economic,
 setup, draft and corrected-disbursal tests pass, including populated migrations,
 concurrent first saves, restricted-RLS DML, LTV retry without consumed numbers,
 and frozen approval/disbursal evidence. Migration drift is clean.
-Deployment and the authorized JSK-only 95% adjustment are pending. See the
+Release `4d66147a` and migration 0025 are deployed at `rehearsal.rokkad.com`.
+JSK now uses 95% maximum LTV from 25/09/2026 (policy 4, revision 2), preserving
+all other calculation values, previous rows, fees and WH 1.1%/3% overrides.
+JCL and Lakshmi remain at 80%. Restricted-runtime checks pass for all three
+setup pages; hashes across 76 JSK business models are unchanged by the setting
+update. No customer loan was created or disbursed. Runtime settings and the
+existing static volume are unchanged. Evidence:
+`acceptance-20260925/economic-revisions-deployment.json`.
+Post-deployment server-only backup:
+`backups/operational/production-20260925T115828Z.dump` (55,660,065 bytes; SHA-256
+`2b0b1c29de34edeb6c004aa4a0e6bfc21fbe41aad44df93dfc55be692ffe9a98`). See the
 [decision](adr/2026-09-25-same-day-economic-policy-revisions.md) and
 [operator guide](flows/changing-loan-calculation-settings.md).
 
