@@ -18,7 +18,14 @@ rearranges existing nodes and remembers the choice per user/workspace. See the
 All 87 UI/imported-ticket/release/browser checks pass, including seven loan/access
 states, 320/390/736/1280px widths, original control identity, photo selections,
 CSRF preservation, keyboard tabs, deep links, storage failures and Classic without
-JavaScript. Deployment verification follows; backup remains server-only.
+JavaScript. Release `cac28117` is deployed at `rehearsal.rokkad.com` with static
+volume `rokkad_production_static_cac28117`. Candidate and deployed checks passed
+under restricted runtime RLS in JCL, JSK and Lakshmi (five detail pages), with
+unchanged business-row fingerprints. Public CSS/JS hashes match the tested source;
+runtime settings are unchanged. No migrations or financial commands were run.
+Evidence: `acceptance-20260925/loan-layouts-deployment.json`. Server-only backup:
+`backups/operational/production-20260925T100217Z.dump` (55,652,527 bytes; SHA-256
+`91a293108d0a67e922f8a90bb8a6bcdd45f7cf851601bb8c3a9ab2b184a44758`).
 
 ## Final workflow acceptance and owner document deferral (2026-09-25)
 
