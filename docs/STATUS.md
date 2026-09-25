@@ -7,6 +7,20 @@ tags: [status, architecture]
 
 # Status
 
+## Selected loan detail layout and customer header (2026-09-25)
+
+Owner selected Tabs and Classic only; B/C are removed from the live layout menu
+and retired saved values fall back to Tabs. Original mockup HTML is untouched.
+Classic keeps its existing header/action layout as the comparison reference.
+Tabs now matches the mockup's top navigation, bold number/status, date/series and
+customer card. Private default photo falls back to initials when absent or
+unreadable; default contact/address use at most two scoped read queries per page.
+More actions is a grouped, keyboard-accessible dropdown over the original actions.
+No financial command, workflow, numbering, PDF, permission or migration changes.
+All 97 regression checks pass, including workspace/default-selection boundaries,
+loan detail permissions, imported tickets/releases and browser layout parity.
+See the updated [staff guide](flows/loan-detail-layouts.md). Deployment pending.
+
 ## Four-layout loan detail trial (2026-09-25)
 
 Owner approved Tabs (preferred/default), Service desk, Expandable sections and

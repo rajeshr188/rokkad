@@ -17,6 +17,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.vary import vary_on_headers
 from apps.tenant_apps.loans.services.loan_workflow import make_review
 from apps.tenant_apps.loans.services.pawn_disbursal import preview_approved_disbursal
+from apps.tenant_apps.party.selectors import party_identification
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import (
@@ -99,6 +100,7 @@ def pawn_loan_detail(request, pk):
     series_navigation = get_pawn_loan_series_navigation(loan)
     context = {
         "loan": loan,
+        "borrower_identity": party_identification(loan.borrower),
         "previous_loan": series_navigation.previous,
         "next_loan": series_navigation.next,
         "today": timezone.localdate(),

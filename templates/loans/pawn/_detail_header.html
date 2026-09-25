@@ -1,0 +1,33 @@
+{% load i18n %}
+<header class="loan-detail-header loan-enhanced-only mb-4" data-loan-block="header">
+  <div class="loan-record-navigation d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" class="small text-decoration-none">&larr; {% translate "Loans" %}</a>
+    <nav class="d-flex align-items-center gap-3 small" aria-label="{% translate 'Loans in this series' %}">
+      {% if previous_loan %}<a rel="prev" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug previous_loan.pk %}" class="text-decoration-none" title="{{ previous_loan.loan_number }}">&larr; {% translate "Previous" %}</a>{% else %}<span class="text-body-secondary" aria-disabled="true">&larr; {% translate "Previous" %}</span>{% endif %}
+      <span class="text-body-secondary">{% translate "Series" %} <strong>{{ loan.series.pawn_display_name }}</strong></span>
+      {% if next_loan %}<a rel="next" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug next_loan.pk %}" class="text-decoration-none" title="{{ next_loan.loan_number }}">{% translate "Next" %} &rarr;</a>{% else %}<span class="text-body-secondary" aria-disabled="true">{% translate "Next" %} &rarr;</span>{% endif %}
+    </nav>
+  </div>
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+    <h1 class="loan-detail-number mb-0">{{ loan.loan_number }}</h1>
+    {% include "loans/pawn/_state_badge.html" %}
+  </div>
+  <div class="d-flex flex-wrap gap-2 small mb-1">
+    <span>{% translate "Loan date" %} <strong><time datetime="{{ loan.loan_date|date:'Y-m-d' }}">{{ loan.loan_date|date:"d/m/Y" }}</time></strong></span>
+    <span class="text-body-secondary">&middot; {% translate "Series" %} {{ loan.series.pawn_display_name }}</span>
+  </div>
+  <div class="small text-body-secondary">{% if is_opening %}{% translate "Imported into Rokkad" %}{% else %}{% translate "Draft created" %}{% endif %}: <time datetime="{{ loan.created_at|date:'c' }}">{{ loan.created_at|date:"d/m/Y, H:i T" }}</time></div>
+  <div class="loan-borrower-card d-flex align-items-start gap-3 mt-3 p-3 rounded border bg-body">
+    <span class="loan-borrower-avatar" aria-hidden="true">
+      <span>{{ borrower_identity.initials }}</span>
+      {% if loan.borrower.profile_photo %}<img src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=loan.borrower_id %}" alt="" width="64" height="64" data-borrower-photo>{% endif %}
+    </span>
+    <div class="loan-borrower-identity">
+      <a class="fw-semibold text-decoration-none" href="{% url 'workspace_party:party_detail' request.workspace.slug loan.borrower_id %}">{{ loan.borrower.display_name }}</a>
+      {% if loan.borrower.relation_display %}<div class="small text-body-secondary">{{ loan.borrower.relation_display }}</div>{% endif %}
+      <div class="small mt-1"><span class="text-body-secondary">{% translate "Contact" %}:</span> {{ borrower_identity.phone|default:_("Not recorded") }}</div>
+      <div class="small"><span class="text-body-secondary">{% translate "Address" %}:</span> {{ borrower_identity.address|default:_("No default address") }}</div>
+      <a class="small d-inline-block mt-2" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}">{% translate "All borrower loans" %}</a>
+    </div>
+  </div>
+</header>

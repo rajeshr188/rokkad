@@ -54,6 +54,32 @@ class PartyModelTests(WorkspaceTestCase):
         self.assertEqual(party.status, Party.PartyStatus.ACTIVE)
         self.assertEqual(party.normalized_name, "rajesh")
 
+    def test_identification_uses_defaults_with_bounded_queries(self):
+        from apps.tenant_apps.party.selectors import party_identification
+        party = Party.objects.create(display_name="Meena Suresh", primary_phone="9000000001")
+        PartyAddress.objects.create(party=party, address_type="WORK", line1="Work address", city="Town", is_default=True)
+        PartyAddress.objects.create(party=party, address_type="HOME", line1="Home address", city="Town", is_default=True)
+        PartyAddress.objects.create(party=party, address_type="OTHER", line1="Private nondefault", city="Town")
+        PartyContactMethod.objects.create(party=party, contact_type="MOBILE", value="9000000002", is_primary=True)
+        with self.assertNumQueries(1):
+            identity = party_identification(party)
+        self.assertEqual(identity, {"initials": "MS", "phone": "9000000001", "address": "Home address, Town"})
+        party.primary_phone = ""
+        with self.assertNumQueries(2):
+            self.assertEqual(party_identification(party)["phone"], "9000000002")
+
+    def test_identification_does_not_invent_defaults_or_cross_workspace(self):
+        from django.core.exceptions import PermissionDenied
+        from unittest.mock import patch
+        from apps.tenant_apps.party.selectors import party_identification
+        party = Party.objects.create(display_name="Single")
+        PartyAddress.objects.create(party=party, address_type="HOME", line1="Not a default", city="Town")
+        PartyContactMethod.objects.create(party=party, contact_type="MOBILE", value="9000000002")
+        self.assertEqual(party_identification(party), {"initials": "S", "phone": "", "address": ""})
+        with patch('apps.tenancy.context.current_workspace_id', return_value=None), self.assertNumQueries(0):
+            with self.assertRaises(PermissionDenied):
+                party_identification(party)
+
     def test_party_code_is_auto_generated_when_blank(self):
         first = Party.objects.create(display_name="Auto One")
         second = Party.objects.create(display_name="Auto Two")

@@ -667,7 +667,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertIsNone(detail.context["previous_loan"])
         self.assertIsNone(detail.context["next_loan"])
-        self.assertContains(detail, 'aria-disabled="true"', count=2)
+        # Two headers are presentation alternatives; only the chosen one is visible.
+        self.assertContains(detail, 'aria-disabled="true"', count=4)
 
     def test_create_is_blocked_with_clear_setup_action(self):
         response = self.client.get(reverse("loans:pawn_loan_create"))

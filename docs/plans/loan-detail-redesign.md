@@ -7,6 +7,13 @@ tags: [loans, ux, mockups, discoverability]
 
 # Loan detail layout trial
 
+**Current selection:** Tabs and Classic only in production. The owner retired B
+and C after the initial trial and asked that all original mockups stay untouched.
+Tabs now follows the mockup's header/customer block and grouped More actions
+presentation; Classic remains the original comparison. Old B/C preferences fall
+back to Tabs. Current staff instructions are in the linked guide. The initial
+trial and mockup inventory below are retained as decision history.
+
 The owner prefers A (tabs) and approved trying A, B, C and the existing Classic
 layout during real work before retiring any option. The initial mockups below
 led to this decision. See the [trial decision](../adr/2026-09-25-loan-detail-layout-trial.md)

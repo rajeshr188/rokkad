@@ -29,6 +29,37 @@
     let active = 'overview';
     const key = root.dataset.layoutKey;
     const message = root.querySelector('[data-layout-message]');
+    const more = root.querySelector('.loan-more-actions');
+    const moreSummary = more.querySelector('summary');
+    const menu = more.querySelector(':scope > div');
+    const originalActions = Array.from(menu.children).filter(e => !e.classList.contains('loan-enhanced-only'));
+    for (const [group, label] of [['records', more.dataset.recordsLabel], ['operations', more.dataset.operationsLabel]]) {
+      const first = originalActions.find(e => (e.dataset.loanActionGroup || 'operations') === group);
+      if (first) {
+        const heading = document.createElement('span');
+        heading.className = 'loan-enhanced-only dropdown-header';
+        heading.textContent = label;
+        first.before(heading);
+      }
+    }
+    for (const photo of root.querySelectorAll('[data-borrower-photo]')) {
+      const fallback = () => { photo.hidden = true; };
+      photo.addEventListener('error', fallback);
+      if (photo.complete && !photo.naturalWidth) fallback();
+    }
+    more.addEventListener('keydown', event => {
+      if (!shell) return;
+      if (event.key === 'Escape') {
+        event.preventDefault(); event.stopPropagation(); more.open = false; moreSummary.focus();
+      } else if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault(); more.open = true;
+        const actions = Array.from(menu.querySelectorAll('a, button')).filter(e => !e.disabled);
+        const index = actions.indexOf(document.activeElement);
+        const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : actions.length - 1)
+          : (index + (event.key === 'ArrowDown' ? 1 : actions.length - 1)) % actions.length;
+        actions[next]?.focus();
+      }
+    });
     function restore() {
       for (const {node, marker} of slots) marker.after(node);
       for (const saved of folded) saved.node.open = saved.open;
@@ -41,10 +72,7 @@
       active = section;
       for (const panel of shell.querySelectorAll('[data-loan-panel]')) {
         const chosen = panel.dataset.loanPanel === section;
-        if (root.dataset.loanLayout === 'sections') {
-          panel.hidden = false;
-          if (chosen) panel.parentElement.open = true;
-        } else panel.hidden = !chosen;
+        panel.hidden = !chosen;
       }
       for (const tab of shell.querySelectorAll('[data-loan-tab]')) {
         const chosen = tab.dataset.loanTab === section;
@@ -55,7 +83,7 @@
       }
     }
     function apply(layout, persist = false) {
-      if (!['tabs', 'desk', 'sections', 'classic'].includes(layout)) layout = 'tabs';
+      if (!['tabs', 'classic'].includes(layout)) layout = 'tabs';
       if (root.dataset.loanLayout === 'classic') {
         for (const saved of folded) saved.open = saved.node.open;
       }
@@ -66,30 +94,6 @@
         for (const {node, region} of slots) shell.querySelector(`[data-loan-region="${region}"]`).append(node);
         for (const saved of folded) saved.node.open = true;
         root.dataset.loanLayout = layout;
-        const nav = shell.querySelector('[role="tablist"]');
-        if (layout === 'desk') {
-          shell.querySelector('.loan-desk-actions').append(shell.querySelector('.loan-action-bar'));
-          nav.classList.replace('nav-tabs', 'nav-pills');
-          nav.setAttribute('aria-orientation', 'vertical');
-        } else if (layout === 'sections') {
-          nav.hidden = true;
-          for (const panel of shell.querySelectorAll('[data-loan-panel]')) {
-            const section = panel.dataset.loanPanel;
-            const fold = document.createElement('details');
-            fold.className = 'accordion-item loan-section-fold';
-            fold.open = section === active;
-            const summary = document.createElement('summary');
-            summary.id = `loan-section-${section}`;
-            summary.textContent = shell.querySelector(`[data-loan-tab="${section}"]`).textContent;
-            panel.before(fold);
-            fold.append(summary, panel);
-            panel.className = 'accordion-body';
-            panel.removeAttribute('role');
-            panel.removeAttribute('tabindex');
-            panel.setAttribute('aria-labelledby', summary.id);
-            fold.addEventListener('toggle', () => { if (fold.isConnected && fold.open) active = section; });
-          }
-        }
         select(active);
       }
       selector.value = layout;
@@ -109,9 +113,12 @@
       target.scrollIntoView({block: 'start'});
       if (target.hasAttribute('tabindex')) target.focus({preventScroll: true});
     }
-    controllers.set(root, {reveal: revealTarget});
+    controllers.set(root, {reveal: revealTarget, dismiss: target => {
+      if (shell && !more.contains(target)) more.open = false;
+    }});
     selector.addEventListener('change', () => apply(selector.value, true));
     root.addEventListener('click', event => {
+      if (shell && (!more.contains(event.target) || event.target.closest('a'))) more.open = false;
       const tab = event.target.closest('[data-loan-tab]');
       if (tab) {
         select(tab.dataset.loanTab);
@@ -135,6 +142,9 @@
     try { apply(preferred); }
     catch { restore(); selector.value = 'classic'; }
     root.querySelector('[data-loan-layout-controls]').hidden = false;
+    root.addEventListener('focusout', event => {
+      if (shell && more.contains(event.target) && event.relatedTarget && !more.contains(event.relatedTarget)) more.open = false;
+    });
   }
   function reveal(hash) {
     if (!hash || hash === '#') return;
@@ -152,6 +162,7 @@
   }
   window.rokkadLoanLayouts = {init};
   document.addEventListener('click', event => {
+    document.querySelectorAll('[data-loan-detail]').forEach(root => controllers.get(root)?.dismiss(event.target));
     const link = event.target.closest('a[href^="#"]');
     if (link) reveal(link.hash);
   });

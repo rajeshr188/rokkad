@@ -54,6 +54,9 @@ def exercise_pages(pages):
             parsed = urlparse(route.request.url)
             if parsed.path in assets:
                 route.fulfill(path=str(assets[parsed.path]))
+            elif parsed.path.endswith('/photo/view/') and 'approved' not in page.url:
+                import base64
+                route.fulfill(body=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII='), content_type='image/png')
             elif parsed.path.startswith('/fixture/'):
                 route.fulfill(body=pages[parsed.path.split('/')[-1]], content_type='text/html')
             else:
@@ -74,6 +77,32 @@ def exercise_pages(pages):
             page.locator('[data-loan-layout="tabs"]').wait_for()
             assert page.locator('.loan-layout-nav').evaluate('(e)=>getComputedStyle(e).display') == 'flex', 'Bootstrap must load'
             root = page.locator('[data-loan-detail]')
+            assert page.locator('#loan-detail-layout option').evaluate_all('(es)=>es.map(e=>e.value)') == ['tabs', 'classic']
+            assert root.locator('.loan-detail-header [data-loan-state]').is_visible()
+            assert root.locator('.loan-borrower-card').is_visible()
+            assert not root.locator('[data-loan-classic-header]').is_visible()
+            photo = root.locator('[data-borrower-photo]')
+            if photo.count():
+                if state == 'approved':
+                    assert not photo.is_visible()
+                else:
+                    assert photo.is_visible() and photo.evaluate('(e)=>e.naturalWidth>0')
+                    assert photo.evaluate('(e)=>getComputedStyle(e).objectFit') == 'cover'
+            assert root.locator('.loan-borrower-avatar > span').inner_text().strip()
+            more = root.locator('.loan-more-actions')
+            more.locator('summary').click()
+            assert more.locator(':scope > div').evaluate('(e)=>getComputedStyle(e).position') == 'absolute'
+            more.locator('summary').focus()
+            page.keyboard.press('ArrowDown')
+            assert more.locator('a').first.evaluate('(e)=>e===document.activeElement')
+            page.keyboard.press('Escape')
+            assert more.get_attribute('open') is None
+            page.keyboard.press('ArrowUp')
+            assert more.locator('a').last.evaluate('(e)=>e===document.activeElement')
+            page.keyboard.press('Escape')
+            more.locator('summary').click()
+            root.locator('.loan-detail-number').click()
+            assert more.get_attribute('open') is None
             page.evaluate('''() => {
                 const root = document.querySelector('[data-loan-detail]');
                 window.originalControls = [...root.querySelectorAll('form, input, select, textarea, a, img, dialog')];
@@ -83,7 +112,7 @@ def exercise_pages(pages):
             files = root.locator('input[type=file]')
             if files.count():
                 files.first.set_input_files({'name': 'kept-photo.jpg', 'mimeType': 'image/jpeg', 'buffer': b'synthetic photo selection'})
-            for layout in ('tabs', 'desk', 'sections', 'classic', 'sections', 'desk', 'tabs', 'classic'):
+            for layout in ('tabs', 'classic', 'tabs', 'classic'):
                 page.locator('#loan-detail-layout').select_option(layout)
                 assert root.get_attribute('data-loan-layout') == layout
                 assert root.locator('.loan-more-actions > summary').is_visible()
@@ -99,6 +128,10 @@ def exercise_pages(pages):
                 assert len(ids) == len(set(ids)), (state, layout, 'duplicate IDs')
                 if files.count():
                     assert files.first.evaluate('(e)=>e.files[0].name') == 'kept-photo.jpg'
+                if layout == 'classic':
+                    assert root.locator('[data-loan-classic-header]').is_visible()
+                    assert not root.locator('.loan-detail-header').is_visible()
+                    assert root.locator('.loan-more-actions > div').evaluate('(e)=>getComputedStyle(e).position') == 'static'
                 if layout != 'classic':
                     for section in SECTIONS:
                         if layout == 'sections':
@@ -128,8 +161,14 @@ def exercise_pages(pages):
             assert page.locator('#loan-tab-overview').get_attribute('aria-selected') == 'true'
             for width in (1280, 736, 390, 320):
                 page.set_viewport_size({'width': width, 'height': 1000})
-                for layout in ('tabs', 'desk', 'sections'):
+                for layout in ('tabs',):
                     page.locator('#loan-detail-layout').select_option(layout)
+                    more.locator('summary').click()
+                    bounds = more.locator(':scope > div').bounding_box()
+                    assert bounds['x'] >= 0 and bounds['x'] + bounds['width'] <= width + 1
+                    if state == 'active' and width in (1280, 390):
+                        page.screenshot(path=str(OUTPUT / f'more-actions-{width}.png'), full_page=True)
+                    page.keyboard.press('Escape')
                     for section in SECTIONS:
                         if layout == 'sections':
                             page.locator('#loan-panel-' + section).locator('..').evaluate('(e)=>e.open=true')
@@ -143,25 +182,28 @@ def exercise_pages(pages):
                     if state in ('active', 'imported') and width in (1280, 390):
                         if layout != 'sections':
                             page.locator('#loan-tab-overview').click()
+                        page.evaluate('document.activeElement.blur(); window.scrollTo(0,0)')
                         page.screenshot(path=str(OUTPUT / f'{state}-{layout}-{width}.png'), full_page=True)
             page.set_viewport_size({'width': 1280, 'height': 1000})
-            page.locator('#loan-detail-layout').select_option('desk')
+            page.locator('#loan-detail-layout').select_option('classic')
             page.reload()
-            assert root.get_attribute('data-loan-layout') == 'desk'
+            assert root.get_attribute('data-loan-layout') == 'classic'
             # Duplicate/HTMX initialization must not duplicate listeners or shells.
             page.evaluate('window.rokkadLoanLayouts.init(document)')
-            assert root.locator('.loan-layout-shell').count() == 1
+            assert root.locator('.loan-layout-shell').count() == 0
             key = root.get_attribute('data-layout-key')
             page.evaluate('(key)=>localStorage.removeItem(key)', key)
             page.goto('https://loan-layout.test/fixture/' + state + '#business-events')
+            page.reload()
             assert page.locator('#loan-panel-history').is_visible()
             # Separate user/workspace preference key is never read as this user's choice.
             page.evaluate("localStorage.setItem('rokkad.loanDetailLayout.v1:other-user:other-workspace','classic')")
             page.reload()
             assert root.get_attribute('data-loan-layout') == 'tabs'
-            page.evaluate('(key)=>localStorage.setItem(key,"obsolete-layout")', key)
-            page.reload()
-            assert root.get_attribute('data-loan-layout') == 'tabs'
+            for retired in ('desk', 'sections', 'obsolete-layout'):
+                page.evaluate('([key,value])=>localStorage.setItem(key,value)', [key, retired])
+                page.reload()
+                assert root.get_attribute('data-loan-layout') == 'tabs'
             page.evaluate('(key)=>localStorage.removeItem(key)', key)
         assert not errors, errors
         # Storage failure still permits every layout for this visit.
@@ -181,13 +223,20 @@ def exercise_pages(pages):
         other.goto('https://loan-layout.test/fixture/' + next(iter(pages)))
         assert other.locator('[data-loan-detail]').get_attribute('data-loan-layout') == 'classic'
         assert not other.locator('[data-loan-layout-controls]').is_visible()
-        assert other.locator('[data-loan-block="header"]').is_visible()
+        assert other.locator('[data-loan-classic-header]').is_visible()
         browser.close()
     (OUTPUT / ('checks-' + next(iter(pages)) + '.json')).write_text(json.dumps({'state': 'PASS', 'sections_checked': checks}, indent=2))
 
 
 class NativeLayouts(PawnDraftUiTests):
     def test_browser(self):
+        from apps.tenant_apps.party.models import PartyAddress
+        self.party.relation_label = 'SON_OF'
+        self.party.relation_name = 'Suresh'
+        self.party.primary_phone = '9000000001'
+        self.party.profile_photo = 'synthetic-avatar.png'
+        self.party.save()
+        PartyAddress.objects.create(party=self.party, address_type='HOME', line1='12 Market Road', city='Town', is_default=True)
         license, series = self._configured_setup()
         self.client.post(reverse('loans:pawn_loan_create'), self._payload(license, series))
         loan = PawnLoan.objects.get()

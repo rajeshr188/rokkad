@@ -32,3 +32,19 @@ Retirement is a later owner decision based on staff experience. A future removal
 must keep a known fallback for saved preferences and preserve every feature.
 See the [staff guide](../flows/loan-detail-layouts.md) and
 [feature inventory](../plans/loan-detail-redesign.md).
+
+## Owner selection, later on 25 September 2026
+
+Retire Service desk and Expandable sections from production; preserve the original
+mockups unmodified. Keep Tabs and Classic, with retired preference values falling
+back to Tabs. Classic is the feature/workflow comparison reference and retains
+its existing rendered header and action arrangement.
+
+Tabs has its own presentation header matching the mockup: aligned record
+navigation, emphasized number/status, date/series and customer photo/default
+contact/address. The header reads current Party defaults in at most two scoped
+queries per page load; switching still does no network or database work. An image
+failure reveals initials. Header markup may differ between views; operational
+forms, evidence and permission decisions remain a single shared set of nodes.
+More actions is a grouped dropdown only in Tabs, with keyboard/outside-click
+closing. No lifecycle, posting, numbering, PDF or authorization rule changes.

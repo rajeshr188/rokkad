@@ -3,8 +3,6 @@
   <label for="loan-detail-layout" class="small fw-semibold">{% translate "Page layout" %}</label>
   <select id="loan-detail-layout" class="form-select form-select-sm w-auto" aria-describedby="loan-layout-preference">
     <option value="tabs">{% translate "A · Tabs" %}</option>
-    <option value="desk">{% translate "B · Service desk" %}</option>
-    <option value="sections">{% translate "C · Expandable sections" %}</option>
     <option value="classic">{% translate "Classic · Previous design" %}</option>
   </select>
   <span id="loan-layout-preference" class="small text-body-secondary" role="status" aria-live="polite" data-layout-message data-saved="{% translate 'Remembered for you in this browser.' %}" data-unsaved="{% translate 'Changed for this page. Browser storage is unavailable.' %}">{% translate "Remembered for you in this browser." %}</span>
@@ -23,7 +21,6 @@
     <div data-loan-region="balance"></div>
     <div class="loan-layout-body">
       <div class="loan-layout-rail">
-        <div class="loan-desk-actions"></div>
         <nav class="nav nav-tabs loan-layout-nav mb-3" role="tablist" aria-label="{% translate 'Loan sections' %}">
           <button type="button" class="nav-link" id="loan-tab-overview" data-loan-tab="overview" role="tab" aria-controls="loan-panel-overview">{% translate "Overview" %}</button>
           <button type="button" class="nav-link" id="loan-tab-money" data-loan-tab="money" role="tab" aria-controls="loan-panel-money">{% translate "Money & interest" %}</button>

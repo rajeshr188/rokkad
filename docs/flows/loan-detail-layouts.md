@@ -8,13 +8,11 @@ tags: [loans, staff-guide, navigation]
 # Choose your loan detail layout
 
 Open any loan and use **Page layout** at the top. You can switch as often as you
-like while comparing the options:
+like between these two options:
 
 | Choice | How it works |
 | --- | --- |
 | A · Tabs | Six horizontal tabs; one section at a time. This is the starting choice. |
-| B · Service desk | Section navigation and payment/printing actions beside the record on a wide screen; stacked on a phone. |
-| C · Expandable sections | Open several sections together and scroll through them. |
 | Classic · Previous design | Restores the previous loan detail arrangement. |
 
 Your choice is remembered for your login and workspace **in this browser**.
@@ -24,11 +22,19 @@ blocked, the page says so and you can still switch for the current visit.
 
 ## Find a feature
 
+Tabs starts with Loans on the left and Previous / Series / Next on the right,
+then the emphasized loan number and status badge, date and series, and a customer
+card. It uses the current default photo (initials if missing or unreadable), name,
+relation, primary contact and default HOME address, falling back to another marked
+default address. Missing contact/default address is shown explicitly. These are
+current customer details, not a change to historical document evidence.
+
 The loan number, borrower, dates, balances, warnings and main next action stay
 outside the sections. Printing remains prominent after approval and on eligible
 imported records. **More loan actions** holds less frequent actions such as
 correction, cancellation, notices, renewal and export, according to your access
-and the loan's state.
+and the loan's state. In Tabs this is a grouped dropdown; use Tab or arrow keys
+to move through it and Escape to close. Classic retains the previous arrangement.
 
 | Section | Contents |
 | --- | --- |
@@ -51,5 +57,7 @@ independent of this choice. Without JavaScript, Classic remains available.
 
 Try the normal tasks you perform: printing, finding photos, reviewing interest,
 recording a genuine collection, and checking history. Report which arrangement
-helps each task and what is hard to find. All four remain until the owner decides
-which to keep; there is no automatic expiry or retirement date.
+helps each task and what is hard to find. Service desk and Expandable sections
+were retired from production at the owner's request. Their original mockups remain
+unchanged for reference. Old B/C browser preferences open Tabs. Classic stays as
+the feature comparison reference; none of its existing actions were removed.
