@@ -77,6 +77,16 @@ class ImportedTicketPreviewTests(OpeningImportFixture):
         with self.scoped(), self.assertRaises(PermissionDenied):
             render_imported_ticket_preview(loan=self.loan, actor=None)
 
+    def test_imported_guidance_remains_visible_with_a_saved_schedule(self):
+        from django.template.loader import render_to_string
+        html = render_to_string('loans/pawn/_print_guidance.html', {
+            'loan': self.loan, 'request': SimpleNamespace(workspace=self.a),
+            'can_preview_imported_ticket': True, 'can_print_ticket': False, 'can_print_schedule': True})
+        self.assertIn('customer record', html)
+        self.assertIn('Preview imported ticket PDF', html)
+        self.assertIn('Key facts and repayment schedule', html)
+        self.assertNotIn('A loan ticket describes approved terms', html)
+
     def test_changed_evidence_cannot_be_rendered(self):
         with self.scoped():
             self.loan.historical_import.source_sha256 = '0' * 64

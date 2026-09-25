@@ -2,7 +2,14 @@
 <section class="card mb-3" aria-labelledby="loan-documents-title">
  <div class="card-body">
  <h2 class="h5" id="loan-documents-title" tabindex="-1">{% translate "Loan documents" %}</h2>
- {% if can_print_ticket or can_print_schedule %}
+ {% if can_preview_imported_ticket %}
+ <p>{% translate "This loan was imported without an original approval snapshot. Preview its recorded loan terms with the current ticket template; customer contact details and photograph reflect the current customer record. Missing evidence remains unavailable." %}</p>
+ <div class="d-flex flex-wrap gap-2">
+ <a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_imported_ticket_preview' request.workspace.slug loan.pk %}">{% translate "Preview imported ticket PDF" %}</a>
+ {% if can_print_schedule %}<a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_loan_kfs_schedule_pdf' request.workspace.slug loan.pk %}">{% translate "Key facts and repayment schedule" %}</a>{% endif %}
+ </div>
+ <p class="small text-body-secondary mt-3 mb-0">{% translate "The preview does not approve the loan, change its number or balance, or save an official ticket." %}</p>
+ {% elif can_print_ticket or can_print_schedule %}
  <p>{% translate "Open a PDF, check the customer and loan number, then use the PDF viewer to download or print." %}</p>
  <div class="d-flex flex-wrap gap-2">
  {% if can_print_ticket %}<a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_loan_ticket_pdf' request.workspace.slug loan.pk %}">{% translate "Loan ticket PDF" %} <span class="small">({% translate "new tab" %})</span></a>{% endif %}
@@ -10,10 +17,6 @@
  </div>
  {% if can_administer %}<p class="mt-3 mb-0"><a href="{% url 'workspace_loans:document_issue_list' request.workspace.slug %}?loan={{ loan.pk }}">{% translate "Ticket history & evidence" %}</a></p>{% endif %}
  <p class="small text-body-secondary mt-3 mb-0">{% translate "Printing does not record payment or change the loan. A loan ticket describes approved terms; it is not proof of disbursal." %}</p>
- {% elif can_preview_imported_ticket %}
- <p>{% translate "This loan was imported without an original approval snapshot. Preview its recorded loan terms with the current ticket template; customer contact details and photograph reflect the current customer record. Missing evidence remains unavailable." %}</p>
- <a class="btn btn-outline-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_imported_ticket_preview' request.workspace.slug loan.pk %}">{% translate "Preview imported ticket PDF" %}</a>
- <p class="small text-body-secondary mt-3 mb-0">{% translate "The preview does not approve the loan, change its number or balance, or save an official ticket." %}</p>
  {% else %}<p class="mb-0">{% translate "A loan ticket is available after approval. The key facts document is available once a repayment schedule has been saved." %}</p>{% endif %}
  </div>
 </section>
