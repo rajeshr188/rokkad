@@ -2,6 +2,14 @@
 (() => {
   if (window.rokkadLoanDirectoryReady) return;
   window.rokkadLoanDirectoryReady = true;
+  // Select2 emits jQuery change events; submit through the existing GET/HTMX form.
+  if (window.jQuery) window.jQuery(document).on('change', '#id_borrower', function () {
+    const form = document.getElementById('loan-search-form');
+    if (!form) return;
+    const legacySearch = form.querySelector('[name="borrower_q"]');
+    if (legacySearch) legacySearch.value = '';
+    form.requestSubmit();
+  });
   let focusResults = false;
   const isDirectory = event => event.detail.target?.id === 'loan-results';
   const finish = () => document.getElementById('loan-results')?.removeAttribute('aria-busy');

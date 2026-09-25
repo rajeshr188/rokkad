@@ -12,6 +12,7 @@ from apps.tenant_apps.loans.models import PawnLoan
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
         PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
+            "series__number_sequences",
             "collateral_items",
             "collateral_items__photos",
             "collateral_items__storage_movements__from_location",

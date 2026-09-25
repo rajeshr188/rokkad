@@ -14,14 +14,13 @@
   </div>{% endif %}
   <form id="loan-search-form" method="get" action="{{ request.path }}" class="app-filter-panel"
     hx-get="{{ request.path }}" hx-target="#loan-results" hx-swap="outerHTML" hx-push-url="true"
-    hx-trigger="submit, input changed delay:400ms from:#id_q, input changed delay:400ms from:#id_borrower_q, change from:#id_state"
+    hx-trigger="submit, input changed delay:400ms from:#id_q, change from:#id_state"
     hx-sync="#loan-search-form:replace" hx-indicator="#loan-loading">
     <label class="form-label fw-semibold" for="{{ loan_filter.form.q.id_for_label }}">{{ loan_filter.form.q.label }}</label>
     <div class="d-flex gap-2">{{ loan_filter.form.q }}<button class="btn btn-primary" type="submit">{% translate "Search" %}</button></div>
     <p id="loan-search-help" class="form-text">{% translate "Search by loan number, customer name, customer code, phone, license or series." %}</p>
-    {{ loan_filter.form.borrower }}
-    {% if selected_borrower %}<div class="alert alert-info py-2">{% translate "Loans for" %} <strong>{{ selected_borrower.display_name }}</strong> &middot; {{ selected_borrower.party_code }} {% querystring borrower=None page=None as clear_borrower_url %}<a class="ms-2" href="{{ clear_borrower_url }}">{% translate "Remove borrower filter" %}</a></div>{% endif %}
-    <div class="row g-3 align-items-end"><div class="col-sm-6"><label class="form-label" for="{{ loan_filter.form.borrower_q.id_for_label }}">{{ loan_filter.form.borrower_q.label }}</label>{{ loan_filter.form.borrower_q }}</div><div class="col-sm-4"><label class="form-label" for="{{ loan_filter.form.state.id_for_label }}">{{ loan_filter.form.state.label }}</label>{{ loan_filter.form.state }}</div>
+    {{ loan_filter.form.borrower_q }}
+    <div class="row g-3 align-items-end"><div class="col-sm-6"><label class="form-label" for="{{ loan_filter.form.borrower.id_for_label }}">{{ loan_filter.form.borrower.label }}</label>{{ loan_filter.form.borrower }}</div><div class="col-sm-4"><label class="form-label" for="{{ loan_filter.form.state.id_for_label }}">{{ loan_filter.form.state.label }}</label>{{ loan_filter.form.state }}</div>
       <div class="col-sm-auto"><a class="btn btn-outline-secondary" href="{{ request.path }}">{% translate "Clear" %}</a></div></div>
     <details id="loan-more-filters" class="mt-3" {% if more_filters_open %}open{% endif %}><summary>{% translate "More filters" %}</summary>
       <div class="row g-3 mt-1">
@@ -49,7 +48,7 @@
         <div class="row g-3 align-items-center">
           <div class="col-md-5"><div class="directory-identity">
             {% if loan.borrower.profile_photo %}<img loading="lazy" src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=loan.borrower_id %}" alt="" width="44" height="44" class="directory-avatar">{% else %}<span class="directory-avatar" aria-hidden="true">{{ loan.borrower.display_name|first|upper }}</span>{% endif %}
-            <div class="text-break"><a class="directory-name" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{{ loan.loan_number }}</a><div><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}" title="View all loans for this borrower">{{ loan.borrower.display_name }}</a></div><div class="small text-body-secondary">{{ loan.borrower.party_code }} · {{ loan.license.license_number }}/{{ loan.series.code }}</div></div>
+            <div class="text-break"><a class="directory-name" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{{ loan.loan_number }}</a><div><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}" title="View all loans for this borrower">{{ loan.borrower.display_name }}</a></div><div class="small text-body-secondary">{{ loan.borrower.party_code }} · {{ loan.license.license_number }}/{{ loan.series.pawn_display_name }}</div></div>
           </div></div>
           <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">{% translate "Principal at entry" %}</dt><dd class="mb-1">₹{{ loan.principal_amount }}</dd><dt class="small text-body-secondary fw-normal">{% translate "Loan date" %}</dt><dd class="mb-0">{{ loan.loan_date }}</dd></dl></div>
           <div class="col-6 col-md-4">{% include "loans/pawn/_state_badge.html" %}<p class="small mt-2 mb-0">{% if loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>

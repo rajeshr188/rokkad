@@ -1172,6 +1172,74 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertTrue(filtered.is_valid())
         self.assertEqual(list(filtered.qs), [first])
 
+    def test_series_prefix_and_borrower_dropdown_on_directory(self):
+        license, series = self._configured_setup()
+        series.code = "LINODE-10"
+        series.save(update_fields=["code"])
+        LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="C")
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get()
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
+        self.assertContains(detail, "Series C")
+        self.assertNotContains(detail, "LINODE-10")
+        response = self.client.get(reverse("loans:pawn_loan_list"), {"borrower": self.party.pk})
+        self.assertContains(response, "django-select2-heavy")
+        self.assertNotContains(response, "LINODE-10")
+        field = response.context["loan_filter"].form.fields["borrower"]
+        self.assertEqual(field.widget.get_url(), self.workspace_reverse("loans:loan_borrower_autocomplete"))
+        self.assertContains(response, self.party.display_name)
+        LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="")
+        self.assertEqual(series.pawn_display_name, "No prefix")
+
+    def test_borrower_search_paginates_inactive_customers_with_constant_queries(self):
+        from django.core import signing
+        from apps.tenant_apps.loans.widgets import LoanBorrowerAutocompleteWidget
+        from apps.tenant_apps.party.models import PartyAddress, PartyContactMethod
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        original = PawnLoan.objects.values().get()
+        original.pop("id")
+        for index in range(23):
+            party = Party.objects.create(display_name=f"Lookup borrower {index:02}", status="INACTIVE")
+            PartyAddress.objects.create(party=party, address_type="HOME", line1=f"Home {index}", is_default=True)
+            PartyContactMethod.objects.create(party=party, contact_type="MOBILE", value="+919999999999", is_primary=True)
+            PawnLoan.objects.create(**{**original, "loan_number": f"LOOKUP{index}", "borrower_id": party.pk})
+        Party.objects.create(display_name="Lookup without loans")
+        widget = LoanBorrowerAutocompleteWidget()
+        with self.assertNumQueries(3):
+            rows = list(widget.filter_queryset(None, "Lookup", widget.get_queryset().filter(workspace=self.tenant))[:21])
+            labels = [widget.label_from_instance(row) for row in rows]
+        self.assertEqual(len(labels), 21)
+        self.assertIn("Home 0", labels[0])
+        self.assertIn("+919999999999", labels[0])
+        url = self.workspace_reverse("loans:loan_borrower_autocomplete")
+        token = signing.dumps(url, salt=widget.token_salt)
+        params = {"field_id": token, "term": "Lookup"}
+        response = self.client.get(url, params)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertEqual(len(response.json()["results"]), 20)
+        self.assertTrue(response.json()["more"])
+        second = self.client.get(url, {**params, "page": 2}).json()
+        self.assertEqual(len(second["results"]), 3)
+        self.assertFalse(second["more"])
+        self.assertEqual(self.client.get(url, {**params, "field_id": "invalid"}).status_code, 404)
+        other_token = signing.dumps(url.replace(self.tenant.slug, "other-workspace"), salt=widget.token_salt)
+        self.assertEqual(self.client.get(url, {**params, "field_id": other_token}).status_code, 404)
+        self.assertEqual(self.client.get(url, {**params, "term": "L"}).json()["results"], [])
+        with self.assertNumQueries(2):
+            loans = list(PawnLoan.objects.select_related("series").prefetch_related("series__number_sequences")[:20])
+            self.assertTrue(all(loan.series.pawn_display_name for loan in loans))
+        viewer = get_user_model().objects.create_user(username="borrower-search-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        self.assertEqual(self.client.get(url, params).status_code, 200)
+        workspace_role_permissions(role, self.tenant).clear()
+        self.assertEqual(self.client.get(url, params).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.get(url, params).status_code, 302)
+
     def test_analytical_reports_use_active_balances_and_export_all_groups(self):
         import csv
         import io

@@ -57,7 +57,7 @@ from apps.tenant_apps.loans.web.pawn_read_helpers import (
 def pawn_loan_list(request):
     loans = PawnLoan.objects.filter(workspace=request.loans_workspace).select_related(
         "borrower", "license", "series"
-    ).order_by("-created_at", "-pk")
+    ).prefetch_related("series__number_sequences").order_by("-created_at", "-pk")
     loan_filter = PawnLoanFilter(
         request.GET,
         queryset=loans,

@@ -149,6 +149,13 @@ class LoanSeries(WorkspaceOwnedModel):
     def __str__(self):
         return f"{self.license.license_number}/{self.code}"
 
+    @property
+    def pawn_display_name(self):
+        from django.utils.translation import gettext
+        sequence = next((row for row in self.number_sequences.all()
+                         if row.document_kind == LoanDocumentKind.PAWN_LOAN.value), None)
+        return (sequence.prefix or gettext("No prefix")) if sequence else self.name
+
 
 class PawnLoanEconomicPolicy(models.Model):
     workspace = models.ForeignKey(

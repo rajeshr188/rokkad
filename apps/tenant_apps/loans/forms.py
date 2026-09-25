@@ -87,9 +87,7 @@ class LoanProductVersionDraftForm(forms.ModelForm):
 
 class LoanSeriesChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        sequence = next((row for row in obj.number_sequences.all() if row.document_kind == "PAWN_LOAN"), None)
-        label = (sequence.prefix or _("No prefix")) if sequence else obj.name
-        return f"{obj.license.license_number} / {label}"
+        return f"{obj.license.license_number} / {obj.pawn_display_name}"
 
 
 class PawnDraftForm(forms.Form):

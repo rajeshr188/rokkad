@@ -12,6 +12,12 @@ related:
 
 # Loans Regulatory Setup And Policy
 
+Operational loan pages and the new-loan/list series pickers display the pawn-number
+prefix, or "No prefix" for an unprefixed register. Internal migration series codes
+remain stable identifiers; presentation does not rename registers or reset counters.
+The loan directory's borrower picker includes inactive customers with existing loans,
+whereas new-loan borrower selection continues to require an active Party.
+
 ## Extracted Business Rules
 
 P1 classifies the mature Girvi outcomes as follows:

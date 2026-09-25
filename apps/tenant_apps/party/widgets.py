@@ -1,6 +1,6 @@
 from django import forms
 from django.db.models import Prefetch
-from .models import PartyAddress, PartyContactMethod
+from .models import Party, PartyAddress, PartyContactMethod
 from django.core import signing
 from django_select2 import forms as s2forms
 
@@ -20,6 +20,7 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
 
     token_salt = "party.autocomplete.v1"
     token_max_age = 86400
+    active_only = True
 
     def build_attrs(self, base_attrs, extra_attrs=None):
         attrs = super().build_attrs(base_attrs, extra_attrs)
@@ -35,7 +36,8 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
         pass
 
     def get_queryset(self):
-        return active_parties().prefetch_related(
+        parties = active_parties() if self.active_only else Party.objects.all()
+        return parties.prefetch_related(
             Prefetch("addresses", queryset=PartyAddress.objects.filter(is_default=True).order_by("pk"), to_attr="search_default_addresses"),
             Prefetch("contact_methods", queryset=PartyContactMethod.objects.filter(is_primary=True,
                 contact_type__in=["PHONE", "MOBILE", "WHATSAPP"]).order_by("pk"), to_attr="search_default_contacts"),

@@ -4,7 +4,9 @@ import django_filters
 from django import forms
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
 from apps.tenant_apps.party.models import Party
+from apps.tenant_apps.loans.widgets import LoanBorrowerAutocompleteWidget
 
 from apps.tenant_apps.loans.integrations.notice_delivery import (
     get_pawn_notice_delivery_states,
@@ -55,11 +57,13 @@ class PawnLoanSearchForm(forms.Form):
 
 class PawnLoanFilter(django_filters.FilterSet):
     borrower = django_filters.ModelChoiceFilter(
-        queryset=Party.objects.none(), widget=forms.HiddenInput(), label=_("Selected borrower"),
+        queryset=Party.objects.none(), label=_("Borrower"),
+        widget=LoanBorrowerAutocompleteWidget(attrs={"data-placeholder": _("Search borrower by name, code or phone"),
+            "data-minimum-input-length": 2, "data-ajax--delay": 300, "data-allow-clear": "true"}),
     )
     borrower_q = django_filters.CharFilter(
         method="filter_borrower", label=_("Borrower name, code or phone"),
-        widget=forms.TextInput(attrs={"class": "form-control", "type": "search"}),
+        widget=forms.HiddenInput(),
     )
     q = django_filters.CharFilter(
         method="filter_search",
@@ -113,15 +117,17 @@ class PawnLoanFilter(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
         # Include inactive borrowers: their outstanding loans still need servicing.
         self.filters["borrower"].queryset = Party.objects.filter(workspace=workspace)
+        self.filters["borrower"].field.widget.data_url = reverse("workspace_loans:loan_borrower_autocomplete", args=[workspace.slug])
         self.filters["license"].queryset = LoanLicense.objects.filter(
             workspace=workspace
         ).order_by("license_number")
         self.filters["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
-        ).select_related("license").order_by(
+        ).select_related("license").prefetch_related("number_sequences").order_by(
             "license__license_number",
             "code",
         )
+        self.filters["series"].field.label_from_instance = lambda obj: f"{obj.license.license_number} / {obj.pawn_display_name}"
 
     def filter_borrower(self, queryset, name, value):
         value = value.strip()

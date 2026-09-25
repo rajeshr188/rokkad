@@ -33,7 +33,7 @@
   {% for field in form %}<div class="col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}
   </div></div></div>
   <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-2">{% translate "Loan number" %}</h2>
-  {% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.series }} when this draft was first saved.</div>
+  {% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.license.license_number }} / {{ loan.series.pawn_display_name }} when this draft was first saved.</div>
   {% else %}
     <div class="small text-body-secondary">{% translate "Expected loan number" %}</div>
     <div id="expected-loan-number" class="fw-semibold mt-1" role="status" aria-live="polite" data-select-message="{% translate 'Select a series to see its expected loan number.' %}" data-unavailable-message="{% translate 'Number unavailable' %}">{% if selected_number_preview.value %}{{ selected_number_preview.value }}{% elif selected_number_preview.error %}{{ selected_number_preview.error }}{% else %}{% translate "Select a series to see its expected loan number." %}{% endif %}</div>
