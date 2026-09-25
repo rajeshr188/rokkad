@@ -5,7 +5,7 @@
             {% for object in objects %}
             <tr>
                 <td class="fw-semibold">{{ object }}</td>
-                <td>{{ object.created|default:object.created_at|default:object.loan_date|date:"d M Y" }}</td>
+                <td>{{ object.created|default:object.created_at|default:object.loan_date|date:"d/m/Y" }}</td>
                 <td>{{ object.status|default:"-" }}</td>
                 <td class="text-end">
                     {% if object.get_absolute_url %}

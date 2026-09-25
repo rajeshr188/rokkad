@@ -2369,7 +2369,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         generated_at = issue.source_snapshot["fields"]["document.generated_at"]
         capture = timezone.datetime.fromisoformat(issue.source_snapshot["captured_at"])
         local_capture = timezone.localtime(capture, timezone.get_default_timezone())
-        self.assertEqual(generated_at, local_capture.strftime("%d-%m-%Y %H:%M:%S IST (UTC+05:30)"))
+        self.assertEqual(generated_at, local_capture.strftime("%d/%m/%Y %H:%M:%S IST (UTC+05:30)"))
         evidence = self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk]))
         for value in ("Captured at first issue", "10 Test Street", "loans-setup-owner", photo.sha256, issue.source_snapshot["verification_id"]):
             self.assertContains(evidence, value)

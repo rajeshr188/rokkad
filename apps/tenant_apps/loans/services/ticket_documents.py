@@ -13,6 +13,7 @@ from apps.tenant_apps.loans.documents.payloads import (
 )
 from apps.tenant_apps.loans.models import PawnCollateralPhoto
 from .action_access import require_loan_action
+from apps.tenant_apps.loans.documents.display import display_date
 
 
 @dataclass(frozen=True)
@@ -95,7 +96,7 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
     captured_at = timezone.now()
     local_capture = timezone.localtime(captured_at, timezone.get_default_timezone())
     offset = local_capture.strftime("%z")
-    generated_at = local_capture.strftime("%d-%m-%Y %H:%M:%S %Z") + f" (UTC{offset[:3]}:{offset[3:]})"
+    generated_at = local_capture.strftime("%d/%m/%Y %H:%M:%S %Z") + f" (UTC{offset[:3]}:{offset[3:]})"
     values = {
         **license_values,
         "license.proprietor_name": loan.license.proprietor_name.strip(),
@@ -108,7 +109,7 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
         "collateral.net_weight_by_metal": weight_text,
         "collateral.approved_appraisal_total": appraisal,
         "loan.principal_words": _principal_words(source["principal_amount"]),
-        "loan.summary_label": "\n".join((f"{source['loan_number']} / {source['loan_date']}", f"Rs {source['principal_amount']} / {weight_text}", identity.name, descriptions)),
+        "loan.summary_label": "\n".join((f"{source['loan_number']} / {display_date(source['loan_date'])}", f"Rs {source['principal_amount']} / {weight_text}", identity.name, descriptions)),
     }
     fields = tuple(replace(field, value=f"{identity.name} ({identity.code})") if field.key == "borrower.display" else field for field in payload.fields)
     fields += tuple(DocumentField(key, label, values[key]) for label, key in TICKET_FIELD_KEYS.items())

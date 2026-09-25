@@ -898,7 +898,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(detail, "Recommended next step")
         self.assertContains(detail, 'data-loan-dates')
         self.assertContains(detail, "Draft created")
-        self.assertContains(detail, loan.loan_date.strftime("%d %b %Y"))
+        self.assertContains(detail, loan.loan_date.strftime("%d/%m/%Y"))
         self.assertContains(detail, "Approve loan")
         self.assertContains(detail, "Capture collateral photograph")
         self.assertContains(detail, 'capture="environment"')

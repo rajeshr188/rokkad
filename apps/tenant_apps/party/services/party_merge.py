@@ -14,6 +14,7 @@ from apps.tenant_apps.party.models import (
     PartyIdentifier,
     PartyRelationship,
     PartyRole,
+    PartyPhoto,
 )
 
 
@@ -55,7 +56,14 @@ def merge_parties(*, target, source, actor=None):
     if conflicts:
         raise PartyMergeConflict(conflicts)
 
+    from .photos import remember_profile_photo
+    remember_profile_photo(target, actor=actor)
+    remember_profile_photo(source, actor=actor)
     _merge_summary_fields(target, source)
+    for photo in source.photos.all():
+        PartyPhoto.objects.get_or_create(workspace_id=target.workspace_id, party=target,
+            file=photo.file.name, defaults={"created_by_id": photo.created_by_id})
+        photo.delete()
     roles_moved, role_skips = _merge_roles(target, source)
     contacts_moved = _move_contacts(target, source)
     addresses_moved = _move_addresses(target, source)

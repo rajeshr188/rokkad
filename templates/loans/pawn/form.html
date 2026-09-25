@@ -7,6 +7,7 @@
 <nav class="loan-workflow-nav" aria-label="Loan draft sections"><a href="#loan-details">1 &middot; Borrower &amp; terms</a><a href="#collateral-formset">2 &middot; Collateral</a><a href="#loan-review-actions">3 &middot; Review &amp; save</a></nav>
 <section class="alert alert-light border" aria-label="{% translate 'Before you start' %}">
 <p class="mb-2">{% translate "Confirm the customer, choose the loan terms, then add each collateral item and its photo. Preview the amounts before saving the draft." %}</p>
+<p class="small text-muted">Add the first photo here; you can add more photos from the saved loan. The loan ticket prints one approved collateral photo.</p>
 <div class="d-flex flex-wrap gap-3">
 {% if can_add_customer %}<a href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">{% translate "Add a customer in another tab" %}</a>{% endif %}
 {% if can_manage_loan_setup %}<a href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">{% translate "Review branch setup in another tab" %}</a>{% endif %}

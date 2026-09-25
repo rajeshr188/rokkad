@@ -6,7 +6,7 @@
     <div class="row g-3">
       <div class="col-md-4"><div class="small text-muted">Time since loan date</div><strong>{{ interest.elapsed_months }} months, {{ interest.elapsed_days }} days</strong><div class="small">{{ opening_review.terms.original_date }} to {{ today|date:"Y-m-d" }}</div></div>
       <div class="col-md-4"><div class="small text-muted">Months charged after the upfront month</div><strong>{{ interest.charge_months }} months</strong><div class="small">First month paid upfront, excluded from this count.</div></div>
-      <div class="col-md-4"><div class="small text-muted">Next interest increase</div><strong>{{ interest.next_increase_on|date:"d M Y" }}</strong></div>
+      <div class="col-md-4"><div class="small text-muted">Next interest increase</div><strong>{{ interest.next_increase_on|date:"d/m/Y" }}</strong></div>
     </div>
     {% if interest.has_payments %}
     <p class="mt-3 mb-2">Monthly interest on the remaining principal: <strong>{{ interest.monthly_interest }}</strong>. Principal reductions apply to subsequent monthly charges, preserving already-earned interest.</p>

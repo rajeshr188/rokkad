@@ -41,6 +41,7 @@ from .models import (
     PartyContactMethod,
     PartyDocument,
     PartyIdentifier,
+    PartyPhoto,
     PartyRelationship,
     PartyRole,
 )
@@ -218,7 +219,8 @@ def _party_detail_context(
         "role_form": PartyRoleForm(),
         "loan_history": loan_history,
         "active_tab": active_tab,
-        "photo_form": photo_form or PartyProfilePhotoForm(instance=party),
+        "photo_form": photo_form or PartyProfilePhotoForm(),
+        "gallery_photos": party.photos.order_by("pk"),
         "contact_form": contact_form
         or PartyContactMethodForm(instance=edit_contact),
         "address_form": address_form or PartyAddressForm(instance=edit_address),
@@ -249,9 +251,11 @@ def _render_party_detail(request, party, **kwargs):
 def _image_file_from_data_uri(image_data):
     if not image_data:
         return None
+    if len(image_data) > 14_000_000:
+        raise ValueError("Captured image is too large.")
     base64_str = image_data.split(",", 1)[1] if "," in image_data else image_data
     return ContentFile(
-        base64.b64decode(base64_str),
+        base64.b64decode(base64_str, validate=True),
         name=f"{uuid.uuid4()}.jpg",
     )
 
@@ -342,13 +346,17 @@ def party_create(request):
 
 @party_action_required("edit")
 @never_cache
+@transaction.atomic
 def party_update(request, pk):
-    party = get_object_or_404(Party, pk=pk)
+    party = get_object_or_404(Party.objects.select_for_update(), pk=pk)
+    previous_photo = party.profile_photo.name or ""
     form = PartyForm(request.POST if request.method == "POST" else None, request.FILES or None, instance=party)
     if request.method == "POST" and form.is_valid():
         party = form.save(commit=False)
         party.updated_by = request.user
         party.save()
+        from .services.photos import remember_profile_photo
+        remember_profile_photo(party, previous_name=previous_photo, actor=request.user)
         messages.success(request, _("Customer record updated."))
         return redirect(
             "workspace_slug_party_detail",
@@ -395,40 +403,65 @@ def party_role_end(request, pk, role_pk):
 
 @party_action_required("edit")
 @require_POST
+@transaction.atomic
 def party_profile_photo_update(request, pk):
-    party = get_object_or_404(Party, pk=pk)
+    from .services.photos import remember_profile_photo
+    party = get_object_or_404(Party.objects.select_for_update(), pk=pk)
+    previous = party.profile_photo.name or ""
+    files = request.FILES.copy()
     image_data = request.POST.get("image_data", "").strip()
-
     if image_data:
         try:
-            party.profile_photo = _image_file_from_data_uri(image_data)
-            party.save(update_fields=["profile_photo", "updated_at"])
-            messages.success(request, "Profile photo updated.")
-            return redirect(_party_detail_url(request, party, "overview"))
-        except Exception as exc:
-            messages.error(request, f"Captured photo could not be processed: {exc}")
+            files["profile_photo"] = _image_file_from_data_uri(image_data)
+        except (ValueError, TypeError):
+            messages.error(request, "Captured photo could not be processed.")
             return _render_party_detail(request, party, active_tab="overview")
-
-    form = PartyProfilePhotoForm(request.POST, request.FILES, instance=party)
-    if form.is_valid() and request.FILES.get("profile_photo"):
-        form.save()
-        messages.success(request, "Profile photo updated.")
+    form = PartyProfilePhotoForm(request.POST, files, instance=party)
+    if form.is_valid() and files.get("profile_photo"):
+        form.instance.updated_by = request.user
+        party = form.save()
+        remember_profile_photo(party, previous_name=previous, actor=request.user)
+        messages.success(request, "Photo added and selected as default. Earlier photos remain in the gallery.")
         return redirect(_party_detail_url(request, party, "overview"))
-
-    messages.error(request, "Capture a photo or choose a file before saving.")
+    messages.error(request, "Capture a photo or choose a valid image file before saving.")
     return _render_party_detail(request, party, active_tab="overview", photo_form=form)
 
 
 @party_action_required("edit")
 @require_POST
 def party_profile_photo_remove(request, pk):
+    from .services.photos import remove_photo
     party = get_object_or_404(Party, pk=pk)
-    if party.profile_photo:
-        party.profile_photo.delete(save=False)
-        party.profile_photo = ""
-        party.save(update_fields=["profile_photo", "updated_at"])
-    messages.success(request, "Profile photo removed.")
+    remove_photo(party=party, actor=request.user)
+    messages.success(request, "Photo removed. Another saved photo becomes the default if available.")
     return redirect(_party_detail_url(request, party, "overview"))
+
+
+@party_action_required("edit")
+@require_POST
+def party_photo_default(request, pk, photo_pk):
+    from .services.photos import choose_photo
+    photo = get_object_or_404(PartyPhoto, pk=photo_pk, party_id=pk, workspace=request.workspace)
+    choose_photo(party=photo.party, photo_id=photo.pk, actor=request.user)
+    messages.success(request, "Default customer photo updated.")
+    return redirect(_party_detail_url(request, photo.party, "overview"))
+
+
+@party_action_required("edit")
+@require_POST
+def party_gallery_photo_remove(request, pk, photo_pk):
+    from .services.photos import remove_photo
+    photo = get_object_or_404(PartyPhoto, pk=photo_pk, party_id=pk, workspace=request.workspace)
+    remove_photo(party=photo.party, photo_id=photo.pk, actor=request.user)
+    messages.success(request, "Photo removed from the gallery.")
+    return redirect(_party_detail_url(request, photo.party, "overview"))
+
+
+@never_cache
+@party_action_required("view")
+def party_gallery_photo(request, pk, photo_pk):
+    photo = get_object_or_404(PartyPhoto, pk=photo_pk, party_id=pk, workspace=request.workspace)
+    return _private_party_file(photo.file, image=True)
 
 
 @party_action_required("edit")

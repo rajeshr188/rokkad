@@ -2,7 +2,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.tenant_apps.party.models import Party, PartyDocument
+from apps.tenant_apps.party.models import Party, PartyDocument, PartyPhoto
 from .action_access import require_party_service_permission
 
 
@@ -20,5 +20,7 @@ def attach_legacy_photo(*, workspace_id, actor, party_id, document_name, profile
     if profile_name:
         party.profile_photo = profile_name
         party.save(update_fields=["profile_photo"])
+    PartyPhoto.objects.get_or_create(workspace_id=workspace_id, party=party,
+        file=profile_name or document_name, defaults={"created_by": actor})
     return {"kind": "party", "party_id": party.pk, "document_id": document.pk,
             "document_name": document_name, "profile_name": profile_name}

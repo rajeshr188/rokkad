@@ -19,6 +19,9 @@ urlpatterns = [
         views.party_profile_photo_remove,
         name="party_photo_remove",
     ),
+    path("<int:pk>/photos/<int:photo_pk>/", views.party_gallery_photo, name="party_gallery_photo"),
+    path("<int:pk>/photos/<int:photo_pk>/default/", views.party_photo_default, name="party_photo_default"),
+    path("<int:pk>/photos/<int:photo_pk>/remove/", views.party_gallery_photo_remove, name="party_gallery_photo_remove"),
     path("<int:pk>/roles/add/", views.party_role_add, name="party_role_add"),
     path(
         "<int:pk>/roles/<int:role_pk>/end/",

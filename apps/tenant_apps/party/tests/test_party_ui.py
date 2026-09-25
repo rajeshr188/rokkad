@@ -431,7 +431,7 @@ class PartyUITests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Accounts / Ledger")
         self.assertNotContains(response, "account mappings")
-        self.assertContains(response, "Save Photo")
+        self.assertContains(response, "Add photo")
         self.assertContains(response, "Merge")
 
     def test_viewer_sees_customer_records_without_edit_controls(self):
@@ -561,9 +561,62 @@ class PartyUITests(WorkspaceTestCase):
         self.assertEqual(remove_response.status_code, 302)
         self.assertFalse(party.profile_photo)
 
+    def test_gallery_preserves_uploads_and_changes_default(self):
+        party = Party.objects.create(party_code="GALLERY", display_name="Gallery customer")
+        image_bytes = b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+        for index in range(2):
+            response = self.client.post(reverse("party:party_photo_update", args=[party.pk]),
+                {"profile_photo": SimpleUploadedFile(f"photo{index}.gif", image_bytes, content_type="image/gif")})
+            self.assertEqual(response.status_code, 302)
+        first, second = list(party.photos.order_by("pk"))
+        party.refresh_from_db()
+        self.assertEqual(party.profile_photo.name, second.file.name)
+        detail = self.client.get(reverse("party:party_detail", args=[party.pk]))
+        self.assertContains(detail, "Use as default")
+        response = self.client.post(reverse("party:party_photo_default", args=[party.pk, first.pk]))
+        self.assertEqual(response.status_code, 302)
+        party.refresh_from_db()
+        self.assertEqual(party.profile_photo.name, first.file.name)
+        response = self.client.post(reverse("party:party_gallery_photo_remove", args=[party.pk, first.pk]))
+        self.assertEqual(response.status_code, 302)
+        party.refresh_from_db()
+        self.assertEqual(party.profile_photo.name, second.file.name)
+        self.assertEqual(party.photos.count(), 1)
+        self.assertTrue(first.file.storage.exists(first.file.name))
+        other = Party.objects.create(display_name="Different customer")
+        self.assertEqual(self.client.post(reverse("party:party_photo_default", args=[other.pk, second.pk])).status_code, 404)
+        self._login_workspace_user("gallery-viewer", "Viewer")
+        self.assertEqual(self.client.post(reverse("party:party_photo_default", args=[party.pk, second.pk])).status_code, 403)
+
+    def test_camera_rejects_non_image_data(self):
+        party = Party.objects.create(party_code="BADPHOTO", display_name="No image")
+        response = self.client.post(reverse("party:party_photo_update", args=[party.pk]),
+            {"image_data": "data:image/jpeg;base64,aGVsbG8="})
+        self.assertEqual(response.status_code, 200)
+        party.refresh_from_db()
+        self.assertFalse(party.profile_photo)
+        self.assertFalse(party.photos.exists())
+
+    def test_borrower_label_uses_one_default_address_and_contact(self):
+        from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
+        party = Party.objects.create(party_code="SEARCH", display_name="Borrower")
+        PartyAddress.objects.create(party=party, address_type="HOME", line1="Home street", is_default=True)
+        PartyAddress.objects.create(party=party, address_type="WORK", line1="Work street", is_default=True)
+        PartyContactMethod.objects.create(party=party, contact_type="MOBILE", value="+919999999999", is_primary=True)
+        widget = PartyAutocompleteWidget()
+        customer = widget.get_queryset().get(pk=party.pk)
+        with self.assertNumQueries(0):
+            label = widget.label_from_instance(customer)
+        self.assertIn("Home street", label)
+        self.assertIn("+919999999999", label)
+        self.assertNotIn("Work street", label)
+
     def test_profile_photo_can_be_saved_from_camera_capture_data(self):
         party = Party.objects.create(party_code="P1017", display_name="Camera Party")
-        image_data = "data:image/jpeg;base64,aGVsbG8="
+        import base64
+        image_data = "data:image/gif;base64," + base64.b64encode(
+            b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+        ).decode()
 
         response = self.client.post(
             reverse("party:party_photo_update", args=[party.pk]),

@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 from datetime import date
+from .display import display_date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from dataclasses import dataclass
@@ -782,6 +783,8 @@ class ConfigurableDocumentRenderer:
     def _display_value(raw_value, config, base_style):
         value = str(raw_value)
         value_format = config.value_format
+        if value_format == "DEFAULT":
+            value = display_date(raw_value)
         if value_format == "UPPER":
             value = value.upper()
         elif value_format == "LOWER":

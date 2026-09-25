@@ -162,6 +162,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/dev/topics/i18n/
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 LANGUAGE_CODE = "en-us"
+FORMAT_MODULE_PATH = "django_project.formats"
 LANGUAGES = [
     ("en", "English"),
     ("hi", "Hindi"),

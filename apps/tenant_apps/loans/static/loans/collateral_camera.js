@@ -3,6 +3,48 @@
   if (!dialog || dialog.dataset.initialized === "true") return;
   dialog.dataset.initialized = "true";
 
+  const previews = new Map();
+  const previewSelection = (input) => {
+    const old = previews.get(input);
+    if (old) { URL.revokeObjectURL(old.url); old.element.remove(); previews.delete(input); }
+    const file = input.files?.[0];
+    if (!file || !["image/jpeg", "image/png"].includes(file.type)) return;
+    const element = document.createElement("figure");
+    element.className = "mt-2 mb-0";
+    element.dataset.collateralPhotoPreview = "true";
+    const image = document.createElement("img");
+    const url = URL.createObjectURL(file);
+    image.src = url;
+    image.alt = "Selected collateral photograph";
+    image.className = "img-thumbnail";
+    image.style.cssText = "max-width:12rem;max-height:10rem;object-fit:contain";
+    const caption = document.createElement("figcaption");
+    caption.className = "small text-body-secondary mt-1";
+    caption.textContent = "Selected photo: save the form to upload it. Choose another file or use the camera to retake.";
+    element.append(image, caption);
+    (input.closest(".input-group") || input).insertAdjacentElement("afterend", element);
+    previews.set(input, {url, element});
+  };
+  document.addEventListener("change", (event) => {
+    if (event.target.matches(".js-collateral-photo-input")) previewSelection(event.target);
+  });
+  document.addEventListener("reset", (event) => setTimeout(() => {
+    event.target.querySelectorAll(".js-collateral-photo-input").forEach(previewSelection);
+  }, 0));
+  const prunePreviews = () => {
+    for (const [input, preview] of previews) if (!input.isConnected) {
+      URL.revokeObjectURL(preview.url); preview.element.remove(); previews.delete(input);
+    }
+  };
+  new MutationObserver(prunePreviews).observe(document.body, {childList:true, subtree:true});
+  window.addEventListener("pagehide", () => {
+    for (const preview of previews.values()) { URL.revokeObjectURL(preview.url); preview.element.remove(); }
+    previews.clear();
+  });
+  window.addEventListener("pageshow", () => {
+    document.querySelectorAll(".js-collateral-photo-input").forEach(previewSelection);
+  });
+
   const video = dialog.querySelector("[data-camera-video]");
   const canvas = dialog.querySelector("[data-camera-canvas]");
   const status = dialog.querySelector("[data-camera-status]");

@@ -16,4 +16,6 @@ def create_party_from_form(*, form, workspace_id, actor):
     party.created_by = actor
     party.updated_by = actor
     party.save()
+    from .photos import remember_profile_photo
+    remember_profile_photo(party, actor=actor)
     return party

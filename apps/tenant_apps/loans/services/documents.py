@@ -14,6 +14,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 
 from apps.tenant_apps.loans.documents import PawnLoanDocumentProjectionBuilder
 from apps.tenant_apps.loans.documents.payloads import DocumentProjectionError
+from apps.tenant_apps.loans.documents.display import display_date
 
 
 class PawnLoanDocumentError(ValueError):
@@ -144,7 +145,7 @@ class PawnLoanDocumentService:
             details_table = Table(
                 [[
                     Paragraph(f"<b>{escape(str(label))}</b>", styles["BodyText"]),
-                    Paragraph(escape(str(value)), styles["BodyText"]),
+                    Paragraph(escape(display_date(value)), styles["BodyText"]),
                 ] for label, value in details],
                 colWidths=[52 * mm, 125 * mm],
                 repeatRows=0,
@@ -153,7 +154,7 @@ class PawnLoanDocumentService:
             story.extend([details_table, Spacer(1, 12)])
             for heading, rows in sections:
                 section_table = Table(
-                    [[Paragraph(escape(str(cell)), styles["BodyText"]) for cell in row] for row in rows],
+                    [[Paragraph(escape(display_date(cell)), styles["BodyText"]) for cell in row] for row in rows],
                     repeatRows=1,
                     hAlign="LEFT",
                 )

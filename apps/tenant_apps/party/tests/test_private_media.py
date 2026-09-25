@@ -11,8 +11,8 @@ from django.test import RequestFactory, TestCase, override_settings
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context
 from apps.tenancy.testing import workspace_role_permissions
-from apps.tenant_apps.party.models import Party, PartyDocument
-from apps.tenant_apps.party.views import party_document_download, party_profile_photo
+from apps.tenant_apps.party.models import Party, PartyDocument, PartyPhoto
+from apps.tenant_apps.party.views import party_document_download, party_profile_photo, party_gallery_photo
 
 
 class PrivatePartyMediaTests(TestCase):
@@ -33,6 +33,7 @@ class PrivatePartyMediaTests(TestCase):
         with workspace_context(self.workspace.pk):
             self.party = Party.objects.create(party_code="PHOTO", display_name="Photo borrower")
             self.party.profile_photo.save("photo.png", ContentFile(b"photo evidence"))
+            self.photo = PartyPhoto.objects.create(party=self.party, file=self.party.profile_photo.name)
             self.document = PartyDocument.objects.create(party=self.party, title="KYC")
             self.document.file.save("kyc.pdf", ContentFile(b"document evidence"))
 
@@ -52,11 +53,12 @@ class PrivatePartyMediaTests(TestCase):
         return (
             (party_profile_photo, (request, self.party.pk)),
             (party_document_download, (request, self.party.pk, self.document.pk)),
+            (party_gallery_photo, (request, self.party.pk, self.photo.pk)),
         )
 
     def test_authorized_files_and_private_cache_headers(self):
         with workspace_context(self.workspace.pk):
-            for (view, args), content in zip(self.calls(self.request()), (b"photo evidence", b"document evidence")):
+            for (view, args), content in zip(self.calls(self.request()), (b"photo evidence", b"document evidence", b"photo evidence")):
                 response = view(*args)
                 try:
                     self.assertEqual(b"".join(response.streaming_content), content)

@@ -1,4 +1,6 @@
 from django import forms
+from django.db.models import Prefetch
+from .models import PartyAddress, PartyContactMethod
 from django.core import signing
 from django_select2 import forms as s2forms
 
@@ -33,14 +35,31 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
         pass
 
     def get_queryset(self):
-        return active_parties().order_by("display_name", "party_code")
+        return active_parties().prefetch_related(
+            Prefetch("addresses", queryset=PartyAddress.objects.filter(is_default=True).order_by("pk"), to_attr="search_default_addresses"),
+            Prefetch("contact_methods", queryset=PartyContactMethod.objects.filter(is_primary=True,
+                contact_type__in=["PHONE", "MOBILE", "WHATSAPP"]).order_by("pk"), to_attr="search_default_contacts"),
+        ).order_by("display_name", "party_code")
 
     def label_from_instance(self, obj):
         parts = [obj.display_name]
         if obj.relation_display:
             parts.append(obj.relation_display)
-        if obj.primary_phone:
-            parts.append(obj.primary_phone)
+        phone = obj.primary_phone
+        if not phone:
+            contacts = getattr(obj, "search_default_contacts", None)
+            if contacts is None:
+                contacts = list(obj.contact_methods.filter(is_primary=True,
+                    contact_type__in=["PHONE", "MOBILE", "WHATSAPP"]).order_by("pk"))
+            phone = contacts[0].value if contacts else ""
+        if phone:
+            parts.append(phone)
+        addresses = getattr(obj, "search_default_addresses", None)
+        if addresses is None:
+            addresses = list(obj.addresses.filter(is_default=True).order_by("pk"))
+        address = next((a for a in addresses if a.address_type == "HOME"), addresses[0] if addresses else None)
+        if address:
+            parts.append(str(address))
         if obj.party_code:
             parts.append(obj.party_code)
         return " | ".join(parts)

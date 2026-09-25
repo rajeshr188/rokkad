@@ -18,6 +18,16 @@ Historical `contact.*` permission aliases still participate in Party authorizati
 do not remove them as unused imports. Shared borrower identity does not grant
 permission to perform loan lifecycle actions.
 
+The customer Overview includes a private photo gallery with one default. Adding a
+photo preserves earlier photos and selects the new image; staff can select another
+default or remove an image. Removing the default selects the oldest remaining image.
+Existing profile images carry over automatically. Issued loan ticket artifacts stay
+unchanged. See the [gallery decision](../adr/2026-09-25-party-photo-gallery.md).
+
+Borrower search shows name, relation, one primary phone and one default address
+(HOME preferred, otherwise the first saved default), plus the customer code. Contact
+methods and addresses remain multiple with a primary/default per type.
+
 On the isolated ticket feature, `document_selectors.document_identity` provides
 authorized first-issue display facts to Loans. It requires matching Workspace
 context and existing read permission. The primary phone is used; addresses prefer

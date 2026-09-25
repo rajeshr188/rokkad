@@ -52,7 +52,25 @@
 
 <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
     <div class="tab-pane fade {% if active_tab == 'overview' %}show active{% endif %}" id="overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
-        {% if can_edit_customer %}<details class="border rounded p-3 mb-3" id="party-photo-editor" {% if photo_form.errors %}open{% endif %}><summary class="fw-semibold mb-3">Update profile photo &mdash; camera or upload</summary>
+        <section class="mb-3" aria-label="Customer photos">
+            <h2 class="h6">Customer photos</h2>
+            <p class="small text-muted">One default photo is used for customer identification and new loan tickets.</p>
+            <div class="d-flex flex-wrap gap-3">
+            {% for photo in gallery_photos %}
+                <div class="card" style="width:10rem">
+                    <a href="{% url 'workspace_party:party_gallery_photo' request.workspace.slug party.pk photo.pk %}" target="_blank" rel="noopener">
+                        <img src="{% url 'workspace_party:party_gallery_photo' request.workspace.slug party.pk photo.pk %}" class="card-img-top" style="height:8rem;object-fit:contain" alt="Customer photo {{ forloop.counter }}" loading="lazy">
+                    </a>
+                    <div class="card-body p-2 d-grid gap-2">
+                        {% if photo.file.name == party.profile_photo.name %}<span class="badge text-bg-primary">Default photo</span>
+                        {% elif can_edit_customer %}<form method="post" action="{% url 'workspace_party:party_photo_default' request.workspace.slug party.pk photo.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary w-100" type="submit">Use as default</button></form>{% endif %}
+                        {% if can_edit_customer %}<form method="post" action="{% url 'workspace_party:party_gallery_photo_remove' request.workspace.slug party.pk photo.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger w-100" type="submit">Remove photo</button></form>{% endif %}
+                    </div>
+                </div>
+            {% empty %}<p class="small text-muted">No photos saved yet.</p>{% endfor %}
+            </div>
+        </section>
+        {% if can_edit_customer %}<details class="border rounded p-3 mb-3" id="party-photo-editor" {% if photo_form.errors %}open{% endif %}><summary class="fw-semibold mb-3">Add customer photo &mdash; camera or upload</summary>
             {% if can_edit_customer %}<form id="party-photo-form" method="post" enctype="multipart/form-data" action="{% url 'workspace_party:party_photo_update' request.workspace.slug party.pk %}" class="row g-3 align-items-end">
                 {% csrf_token %}
                 <input type="hidden" id="party-photo-image-data" name="image_data">
@@ -82,18 +100,12 @@
                     <label class="form-label" for="{{ photo_form.profile_photo.id_for_label }}">Profile Photo</label>
                     {{ photo_form.profile_photo }}
                     {{ photo_form.profile_photo.errors }}
-                    <div class="form-text">Use camera capture or choose an image file.</div>
+                    <div class="form-text">The new photo becomes the default. Earlier photos remain in the gallery.</div>
                 </div>
                 <div class="col-lg-2">
-                    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-upload"></i> Save Photo</button>
+                    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-upload"></i> Add photo</button>
                 </div>
             </form>{% endif %}
-            {% if party.profile_photo %}
-            {% if can_edit_customer %}<form method="post" action="{% url 'workspace_party:party_photo_remove' request.workspace.slug party.pk %}" class="mt-2">
-                {% csrf_token %}
-                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Remove Photo</button>
-            </form>{% endif %}
-            {% endif %}
         </details>{% endif %}
         <div class="row g-3">
             <div class="col-md-4"><div class="text-muted small">Legal Name</div><div class="fw-semibold">{{ party.legal_name|default:"-" }}</div></div>
@@ -103,8 +115,8 @@
             <div class="col-md-4"><div class="text-muted small">PAN</div><div class="fw-semibold">{{ party.tax_pan|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">GSTIN</div><div class="fw-semibold">{{ party.gstin|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Risk Level</div><div class="fw-semibold">{{ party.risk_level|default:"-" }}</div></div>
-            <div class="col-md-4"><div class="text-muted small">Created</div><div class="fw-semibold">{{ party.created_at|date:"d M Y H:i" }}</div></div>
-            <div class="col-md-4"><div class="text-muted small">Updated</div><div class="fw-semibold">{{ party.updated_at|date:"d M Y H:i" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Created</div><div class="fw-semibold">{{ party.created_at|date:"d/m/Y H:i" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Updated</div><div class="fw-semibold">{{ party.updated_at|date:"d/m/Y H:i" }}</div></div>
         </div>
     </div>
 
@@ -323,7 +335,7 @@
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ row.loan_id }}</div>
-                                <div class="text-muted small">{{ row.loan_type }} | {{ row.loan_date|date:"d M Y" }}</div>
+                                <div class="text-muted small">{{ row.loan_type }} | {{ row.loan_date|date:"d/m/Y" }}</div>
                             </td>
                             <td>{{ row.status }}</td>
                             <td>
@@ -368,7 +380,7 @@
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ row.loan_id }}</div>
-                                <div class="text-muted small">{{ row.loan_type }} | {{ row.loan_date|date:"d M Y" }}</div>
+                                <div class="text-muted small">{{ row.loan_type }} | {{ row.loan_date|date:"d/m/Y" }}</div>
                             </td>
                             <td>{{ row.status }}</td>
                             <td>

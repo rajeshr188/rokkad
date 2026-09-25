@@ -31,6 +31,18 @@ def synthetic_payload():
 
 
 class PrecisionOverlayTests(SimpleTestCase):
+    def test_default_date_format_is_day_first_without_mutating_payload(self):
+        from dataclasses import replace
+        self.payload = replace(self.payload, fields=tuple(
+            replace(field, value="2026-09-25") if field.key == "loan.date" else field
+            for field in self.payload.fields))
+        original = self.payload
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            text = "".join(page.get_text() for page in pdf)
+            self.assertIn("25/09/2026", text)
+            self.assertNotIn("2026-09-25", text)
+        self.assertEqual(self.payload, original)
+
     def test_bold_scalar_fields_use_real_bold_fonts_and_preserve_default_hash(self):
         from dataclasses import replace
         self.payload = replace(self.payload, fields=tuple(replace(f, value="INR 160000.00") if f.key == "loan.principal" else f for f in self.payload.fields))

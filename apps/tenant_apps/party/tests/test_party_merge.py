@@ -61,7 +61,10 @@ class PartyMergeTests(WorkspaceTestCase):
             party_code="P-MERGE-S",
             display_name="Source Party",
             primary_email="source@example.com",
+            profile_photo="party_profile_photos/source.png",
         )
+        target.profile_photo = "party_profile_photos/target.png"
+        target.save(update_fields=["profile_photo"])
         role_type = PartyRoleType.objects.create(key="CUSTOMER", label="Customer")
         PartyRole.objects.create(party=source, role_type=role_type)
         PartyContactMethod.objects.create(
@@ -101,6 +104,10 @@ class PartyMergeTests(WorkspaceTestCase):
 
         self.assertEqual(source.status, Party.PartyStatus.ARCHIVED)
         self.assertEqual(target.primary_email, "source@example.com")
+        self.assertEqual(target.profile_photo.name, "party_profile_photos/target.png")
+        self.assertEqual(set(target.photos.values_list("file", flat=True)),
+            {"party_profile_photos/target.png", "party_profile_photos/source.png"})
+        self.assertFalse(source.photos.exists())
         self.assertEqual(result.roles_moved, 1)
         self.assertEqual(target.contact_methods.count(), 1)
         self.assertEqual(target.addresses.count(), 1)
