@@ -12,6 +12,22 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## SaaS landing-page design review (2026-09-25)
+
+The owner requested explicit loan management SaaS positioning and a choice of
+mockups before any production change. Added [three interactive landing concepts](plans/landing-page-positioning.md):
+A (product first), B (journey first), C (business first). All identify the
+pawn-lending audience and subscription/browser delivery while preserving the
+borrower, debt and physical pledge story. The loan list illustration contains only
+labelled invented examples. Guided Excel loan import remains labelled as planned.
+
+The preview passed 24 concept/theme/viewport combinations (A/B/C, light/dark,
+1024/736/390/320px), navigation-target and local CTA checks, with no horizontal
+overflow or JavaScript errors. Decorative icon placeholders use the conversation
+runtime; the standalone inspection wrapper omits that icon initialization.
+The source is documentation-only and the owner selection is pending. No application
+template, production route, deployment or business record was changed.
+
 ## Loan journey handbook and product story (2026-09-25)
 
 Added the [developer journey reference](flows/loan-journey.md), reproducible shared

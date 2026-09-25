@@ -14,6 +14,11 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Public positioning must explicitly identify Rokkad as loan management SaaS for
+pawn-lending businesses, alongside the borrower/debt/collateral story. The owner
+requested [three landing concepts](plans/landing-page-positioning.md) and will
+choose the production design; the mockup review is not deployment approval.
+
 The [loan journey reference](flows/loan-journey.md), shared PNG
 `static/images/loan-journey.png` and `templates/loans/journey.html` describe the
 implemented lifecycle and boundaries. Keep them synchronized when workflows

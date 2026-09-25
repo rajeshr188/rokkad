@@ -1,0 +1,195 @@
+<style>
+#rokkad-market-options{--rm-bg:light-dark(#fafaf7,#141d1a);--rm-surface:light-dark(#ffffff,#1d2824);--rm-ink:light-dark(#172e28,#e8f1eb);--rm-muted:light-dark(#5b6c65,#b0c3b8);--rm-line:light-dark(#dce5dd,#35473e);--rm-soft:light-dark(#edf3ed,#263b30);--rm-accent:light-dark(#165744,#8dd8b5);--rm-on-accent:light-dark(#fff,#12291f);--rm-gold:light-dark(#8b642b,#e7bd7a);--rm-warm:light-dark(#f4eee3,#332d24);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--rm-ink);line-height:1.55;width:100%}
+#rokkad-market-options *{box-sizing:border-box}
+#rokkad-market-options [hidden]{display:none!important}
+#rokkad-market-options button,#rokkad-market-options a{font:inherit}
+#rokkad-market-options button{cursor:inherit}
+#rokkad-market-options .rm-comparison{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0 14px}
+#rokkad-market-options .rm-option{padding:9px 14px;background:var(--rm-surface);border:1px solid var(--rm-line);border-radius:8px;color:var(--rm-ink);font-size:13px;font-weight:650;min-height:44px}
+#rokkad-market-options .rm-option[aria-pressed=true]{background:var(--rm-accent);color:var(--rm-on-accent);border-color:var(--rm-accent)}
+#rokkad-market-options .rm-preview-label{font-size:12px;color:var(--rm-muted);margin-left:auto}
+#rokkad-market-options .rm-page{background:var(--rm-bg);border:1px solid var(--rm-line);border-radius:12px;overflow:clip}
+#rokkad-market-options .rm-nav{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 5%;border-bottom:1px solid var(--rm-line)}
+#rokkad-market-options .rm-brand{font-size:24px;font-weight:800;letter-spacing:-1px;color:var(--rm-accent);text-decoration:none;white-space:nowrap}
+#rokkad-market-options .rm-brand small{display:block;font-size:10px;letter-spacing:1.4px;font-weight:600;color:var(--rm-muted)}
+#rokkad-market-options .rm-navlinks{display:flex;align-items:center;gap:20px;font-size:12px;flex-wrap:wrap}
+#rokkad-market-options .rm-navlinks a{color:var(--rm-ink);text-decoration:none}
+#rokkad-market-options .rm-login{border:0;background:transparent;color:var(--rm-ink);font-size:12px;min-height:44px;padding:0 3px}
+#rokkad-market-options .rm-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:11px 18px;border-radius:7px;border:1px solid var(--rm-accent);background:var(--rm-accent);color:var(--rm-on-accent);font-size:13px;font-weight:650;text-decoration:none}
+#rokkad-market-options .rm-button.secondary{background:transparent;color:var(--rm-ink);border-color:var(--rm-line)}
+#rokkad-market-options .rm-kicker{font-size:11px;font-weight:750;letter-spacing:1.35px;text-transform:uppercase;color:var(--rm-accent);margin:0 0 17px}
+#rokkad-market-options h1{font-size:clamp(32px,4.7vw,48px);font-weight:780;line-height:1.06;letter-spacing:-1.6px;margin:0 0 21px;color:var(--rm-ink)}
+#rokkad-market-options h1 em{font-style:normal;color:var(--rm-accent)}
+#rokkad-market-options h2{font-size:clamp(24px,3.3vw,35px);line-height:1.15;letter-spacing:-1px;margin:0 0 15px;font-weight:730;color:var(--rm-ink)}
+#rokkad-market-options h3{font-size:16px;line-height:1.35;margin:0 0 8px;font-weight:700;color:var(--rm-ink)}
+#rokkad-market-options p{margin:0 0 17px}
+#rokkad-market-options .rm-lede{font-size:16px;line-height:1.75;color:var(--rm-muted);max-width:600px}
+#rokkad-market-options .rm-actions{display:flex;flex-wrap:wrap;gap:10px;margin:25px 0 17px}
+#rokkad-market-options .rm-small{font-size:11px;color:var(--rm-muted)}
+#rokkad-market-options .rm-hero{padding:58px 5%;display:grid;grid-template-columns:1fr 1.03fr;gap:35px;align-items:center}
+#rokkad-market-options .rm-section{padding:48px 5%;border-top:1px solid var(--rm-line)}
+#rokkad-market-options .rm-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;margin-top:28px}
+#rokkad-market-options .rm-feature-grid p{font-size:13px;color:var(--rm-muted);margin:0}
+#rokkad-market-options .rm-icon{display:grid;place-items:center;width:37px;height:37px;background:var(--rm-soft);border-radius:9px;color:var(--rm-accent);margin-bottom:15px}
+#rokkad-market-options .rm-screen{background:var(--rm-surface);border:1px solid var(--rm-line);border-radius:11px;box-shadow:0 18px 35px light-dark(#173b2610,#00000026);overflow:hidden;font-size:12px}
+#rokkad-market-options .rm-screen-head{padding:13px 15px;background:var(--rm-soft);display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px}
+#rokkad-market-options .rm-dots{letter-spacing:3px;color:var(--rm-muted)}
+#rokkad-market-options .rm-screen-body{padding:21px}
+#rokkad-market-options .rm-screen-title{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:20px;font-size:20px;font-weight:750}
+#rokkad-market-options .rm-mini-action{font-size:10px;font-weight:600;padding:6px 9px;background:var(--rm-accent);color:var(--rm-on-accent);border-radius:5px}
+#rokkad-market-options .rm-search{padding:10px 12px;background:var(--rm-bg);color:var(--rm-muted);border:1px solid var(--rm-line);border-radius:6px;display:flex;gap:9px;align-items:center}
+#rokkad-market-options .rm-loan-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:16px 0;border-bottom:1px solid var(--rm-line)}
+#rokkad-market-options .rm-loan-row:last-child{border:0}
+#rokkad-market-options .rm-loan-row strong{font-size:13px}
+#rokkad-market-options .rm-loan-row small{display:block;color:var(--rm-muted);font-size:11px;margin-top:3px}
+#rokkad-market-options .rm-right{text-align:right}
+#rokkad-market-options .rm-badge{display:inline-flex;padding:3px 8px;background:var(--rm-soft);color:var(--rm-accent);font-size:10px;font-weight:650;border-radius:20px}
+#rokkad-market-options .rm-badge.gold{background:var(--rm-warm);color:var(--rm-gold)}
+#rokkad-market-options .rm-caption{font-size:10px;text-align:center;color:var(--rm-muted);margin:11px 0 0}
+#rokkad-market-options .rm-proofline{display:flex;gap:20px;flex-wrap:wrap;border-top:1px solid var(--rm-line);padding:18px 5%;font-size:12px;color:var(--rm-muted);justify-content:space-between}
+#rokkad-market-options .rm-proofline span{display:flex;align-items:center;gap:7px}
+#rokkad-market-options .rm-story-strip{display:grid;grid-template-columns:1.1fr 1fr;gap:35px;background:var(--rm-soft);align-items:center}
+#rokkad-market-options .rm-story-strip p{color:var(--rm-muted);font-size:14px;margin:0}
+#rokkad-market-options .rm-flow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px}
+#rokkad-market-options .rm-flow strong{background:var(--rm-surface);padding:10px 13px;border-radius:7px;font-size:12px}
+#rokkad-market-options .rm-bottom{display:flex;justify-content:space-between;align-items:center;gap:22px}
+#rokkad-market-options .rm-bottom h2{font-size:27px}
+#rokkad-market-options .rm-bottom p{font-size:13px;color:var(--rm-muted);margin:0}
+#rokkad-market-options .rm-footer{padding:18px 5%;display:flex;gap:15px;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--rm-line);font-size:11px;color:var(--rm-muted)}
+#rokkad-market-options .rm-b-hero{padding:50px 7% 35px;text-align:center;background:var(--rm-warm)}
+#rokkad-market-options .rm-b-hero h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(36px,5.8vw,65px);letter-spacing:-2.1px}
+#rokkad-market-options .rm-b-hero .rm-lede{margin-left:auto;margin-right:auto}
+#rokkad-market-options .rm-b-hero .rm-actions{justify-content:center}
+#rokkad-market-options .rm-b-kicker{color:var(--rm-gold)}
+#rokkad-market-options .rm-journey-board{padding:32px;background:var(--rm-surface);border:1px solid var(--rm-line);border-radius:15px;margin:30px 0 10px;text-align:left}
+#rokkad-market-options .rm-journey-stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+#rokkad-market-options .rm-stage{border-top:2px solid var(--rm-line);padding-top:17px}
+#rokkad-market-options .rm-stage-num{font-size:11px;color:var(--rm-gold);display:block;margin-bottom:12px;font-weight:700}
+#rokkad-market-options .rm-stage p{font-size:12px;color:var(--rm-muted);margin:0}
+#rokkad-market-options .rm-receipt{margin-top:24px;padding-top:20px;border-top:1px dashed var(--rm-line);display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px}
+#rokkad-market-options .rm-receipt .rm-badge{margin-left:auto}
+#rokkad-market-options .rm-two{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+#rokkad-market-options .rm-ledger{padding:25px;background:var(--rm-warm);border-radius:12px}
+#rokkad-market-options .rm-ledger>div{padding:15px 0;border-bottom:1px solid var(--rm-line);display:flex;gap:15px;align-items:center}
+#rokkad-market-options .rm-ledger>div:last-child{border:0}
+#rokkad-market-options .rm-ledger p{font-size:12px;color:var(--rm-muted);margin:3px 0 0}
+#rokkad-market-options .rm-c-hero{background:light-dark(#143e32,#1c483a);color:#ecf4ed}
+#rokkad-market-options .rm-c-hero h1{color:#f5f8f2}
+#rokkad-market-options .rm-c-hero h1 em{color:#d8bf83}
+#rokkad-market-options .rm-c-hero .rm-kicker{color:#b3d3bf}
+#rokkad-market-options .rm-c-hero .rm-lede,#rokkad-market-options .rm-c-hero .rm-small{color:#c1d9ca}
+#rokkad-market-options .rm-c-hero .rm-button{background:#e2c58c;color:#213c2f;border-color:#e2c58c}
+#rokkad-market-options .rm-c-hero .rm-button.secondary{background:transparent;color:#edf6ef;border-color:#739282}
+#rokkad-market-options .rm-c-board{background:var(--rm-surface);color:var(--rm-ink);padding:24px;border-radius:12px}
+#rokkad-market-options .rm-c-board h3{font-size:18px}
+#rokkad-market-options .rm-c-hero .rm-c-board .rm-kicker{color:var(--rm-accent)}
+#rokkad-market-options .rm-c-board .rm-board-row{display:grid;grid-template-columns:32px 1fr auto;gap:12px;padding:16px 0;border-bottom:1px solid var(--rm-line);align-items:center}
+#rokkad-market-options .rm-board-row small{display:block;font-size:11px;color:var(--rm-muted)}
+#rokkad-market-options .rm-board-row b{font-size:12px}
+#rokkad-market-options .rm-board-num{font-size:13px;font-weight:700;color:var(--rm-accent);background:var(--rm-soft);display:grid;place-items:center;width:29px;height:29px;border-radius:50%}
+#rokkad-market-options .rm-board-finish{margin-top:20px;padding:13px;background:var(--rm-soft);border-radius:7px;font-size:12px;color:var(--rm-accent);display:flex;gap:9px;align-items:center}
+#rokkad-market-options .rm-questions{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+#rokkad-market-options .rm-question{border:1px solid var(--rm-line);border-radius:10px;padding:22px;background:var(--rm-surface)}
+#rokkad-market-options .rm-question p{font-size:13px;color:var(--rm-muted);margin:0}
+#rokkad-market-options .rm-question h3{font-size:18px}
+#rokkad-market-options .rm-cta-status{font-size:12px;color:var(--rm-muted);min-height:23px;padding-top:8px}
+#rokkad-market-options .rm-compact .rm-hero{padding-top:36px;padding-bottom:36px}
+@media(max-width:480px){#rokkad-market-options .rm-brand small{display:none}#rokkad-market-options .rm-navlinks{gap:10px}}
+@media(max-width:760px){#rokkad-market-options .rm-hero{grid-template-columns:1fr;padding-top:36px;gap:28px}#rokkad-market-options .rm-hero h1{max-width:580px}#rokkad-market-options .rm-feature-grid{grid-template-columns:1fr;gap:25px}#rokkad-market-options .rm-feature-grid>div{display:grid;grid-template-columns:37px 1fr;column-gap:16px}#rokkad-market-options .rm-feature-grid .rm-icon{grid-row:1/3}#rokkad-market-options .rm-feature-grid p{grid-column:2}#rokkad-market-options .rm-story-strip,#rokkad-market-options .rm-two{grid-template-columns:1fr;gap:25px}#rokkad-market-options .rm-navlinks .rm-nav-jump{display:none}#rokkad-market-options .rm-journey-stages{grid-template-columns:1fr 1fr}#rokkad-market-options .rm-journey-board{padding:21px}#rokkad-market-options .rm-bottom{align-items:flex-start;flex-direction:column}#rokkad-market-options .rm-preview-label{margin-left:0;flex-basis:100%}#rokkad-market-options .rm-questions{grid-template-columns:1fr}#rokkad-market-options .rm-section{padding-top:34px;padding-bottom:34px}}
+@media(max-width:380px){#rokkad-market-options .rm-nav{gap:9px}#rokkad-market-options .rm-navlinks{gap:8px}#rokkad-market-options .rm-navlinks .rm-button{padding:8px 10px;font-size:11px}#rokkad-market-options .rm-b-hero{padding-left:5%;padding-right:5%}#rokkad-market-options h1{letter-spacing:-1px}#rokkad-market-options .rm-journey-stages{gap:12px}}
+</style>
+<div id="rokkad-market-options" aria-label="Rokkad landing page design concepts">
+  <div class="rm-comparison" role="group" aria-label="Compare landing page concepts">
+    <button type="button" class="rm-option cursor-interaction" data-concept="a" aria-pressed="true" aria-controls="rm-concept-a">A · Product first</button>
+    <button type="button" class="rm-option cursor-interaction" data-concept="b" aria-pressed="false" aria-controls="rm-concept-b">B · Journey first</button>
+    <button type="button" class="rm-option cursor-interaction" data-concept="c" aria-pressed="false" aria-controls="rm-concept-c">C · Business first</button>
+    <span class="rm-preview-label">Design preview · Production unchanged</span>
+  </div>
+
+  <article class="rm-page" id="rm-concept-a" aria-label="Concept A: Product first">
+    <nav class="rm-nav" aria-label="Concept A website navigation"><a class="rm-brand" href="#rm-concept-a">Rokkad<small>LOAN MANAGEMENT SAAS</small></a><div class="rm-navlinks"><a class="rm-nav-jump" href="#rm-a-features">Features</a><a class="rm-nav-jump" href="#rm-a-story">How it works</a><button type="button" class="rm-button cursor-interaction" data-cta="a">Get started</button></div></nav>
+    <section class="rm-hero">
+      <div><p class="rm-kicker">Cloud software for pawn-lending businesses</p><h1><span data-headline>Loan management software.</span><br><em>Built around your business.</em></h1><p class="rm-lede">Rokkad is a loan management SaaS platform for gold and silver lending. Manage borrowers, pledged jewellery, collections and releases in one online workspace.</p><div class="rm-actions"><button type="button" class="rm-button cursor-interaction" data-cta="a">Start workspace setup <i data-lucide="arrow-right" aria-hidden="true"></i></button><a class="rm-button secondary" href="#rm-a-story">Explore the loan journey</a></div><p class="rm-small">Subscription-based software · Access in your browser · Work with your team</p></div>
+      <div><div class="rm-screen" role="img" aria-label="Illustrative loan list showing a draft, an active loan and a closed loan, each linked to its borrower and amount"><div class="rm-screen-head"><strong>Rokkad / Your workspace</strong><span class="rm-dots" aria-hidden="true">•••</span></div><div class="rm-screen-body"><div class="rm-screen-title">Loans <span class="rm-mini-action">+ New loan</span></div><div class="rm-search"><i data-lucide="search" aria-hidden="true"></i> Find a borrower or loan</div><div class="rm-loan-row"><div><strong>G00042</strong> <span class="rm-badge">Active</span><small>Sample borrower · Gold chain</small></div><div class="rm-right"><strong>₹80,000</strong><small>Loan amount</small></div></div><div class="rm-loan-row"><div><strong>G00043</strong> <span class="rm-badge gold">Draft</span><small>Sample borrower · Gold bangles</small></div><div class="rm-right"><strong>₹1,20,000</strong><small>Review before approval</small></div></div><div class="rm-loan-row"><div><strong>S00018</strong> <span class="rm-badge">Closed</span><small>Sample borrower · Silver articles</small></div><div class="rm-right"><strong>₹25,000</strong><small>Collateral returned</small></div></div></div></div><p class="rm-caption">Illustrative product view · Sample records</p></div>
+    </section>
+    <div class="rm-proofline"><span><i data-lucide="users" aria-hidden="true"></i> Staff roles and permissions</span><span><i data-lucide="building-2" aria-hidden="true"></i> Separate business workspaces</span><span><i data-lucide="history" aria-hidden="true"></i> Traceable loan history</span></div>
+    <section class="rm-section" id="rm-a-features"><p class="rm-kicker">The tools behind a clearer lending day</p><h2>From the first application to the final return.</h2><div class="rm-feature-grid"><div><span class="rm-icon"><i data-lucide="contact" aria-hidden="true"></i></span><h3>Know the borrower</h3><p>Photos, default contact details and existing loans help your team find the right person quickly.</p></div><div><span class="rm-icon"><i data-lucide="gem" aria-hidden="true"></i></span><h3>Lend with clear terms</h3><p>Review item values, interest, fees and approvals. Print the ticket and record disbursal.</p></div><div><span class="rm-icon"><i data-lucide="receipt-text" aria-hidden="true"></i></span><h3>Collect and close</h3><p>Record payments, settle the balance and document who received the pledged items.</p></div></div></section>
+    <section class="rm-section rm-story-strip" id="rm-a-story"><div><p class="rm-kicker">Every loan has a story</p><h2>Keep the money and the jewellery connected.</h2><p>Follow what is owed, where the pledge is, and what happened next. Corrections preserve the history behind each decision.</p></div><div class="rm-flow" aria-label="Loan journey"><strong>Draft</strong><span aria-hidden="true">→</span><strong>Approve</strong><span aria-hidden="true">→</span><strong>Disburse</strong><span aria-hidden="true">→</span><strong>Collect</strong><span aria-hidden="true">→</span><strong>Return</strong></div></section>
+    <section class="rm-section rm-two"><div><p class="rm-kicker">Room to grow</p><h2>Your team. Your terms. Your view of the business.</h2></div><div><p class="rm-lede">Configure licences, series and lending policies. Track collateral custody and explore reports by borrower, licence, series or year.</p><p class="rm-small">Start with new loans. Supported legacy migrations are assisted; guided Excel loan import is planned.</p></div></section>
+    <section class="rm-section rm-bottom"><div><h2>Bring your lending day into one workspace.</h2><p>Loan management SaaS built for pawn lending.</p></div><button type="button" class="rm-button cursor-interaction" data-cta="a">Create your account</button></section>
+    <footer class="rm-footer"><strong>Rokkad · Loan management SaaS</strong><span>Borrowers · Loans · Collateral · Collections</span></footer>
+  </article>
+
+  <article class="rm-page" id="rm-concept-b" aria-label="Concept B: Journey first" hidden>
+    <nav class="rm-nav" aria-label="Concept B website navigation"><a class="rm-brand" href="#rm-concept-b">Rokkad<small>LOAN MANAGEMENT SAAS</small></a><div class="rm-navlinks"><a class="rm-nav-jump" href="#rm-b-story">The loan journey</a><a class="rm-nav-jump" href="#rm-b-tools">What you can do</a><button type="button" class="rm-button cursor-interaction" data-cta="b">Get started</button></div></nav>
+    <section class="rm-b-hero"><p class="rm-kicker rm-b-kicker">Loan management SaaS for pawn-lending businesses</p><h1>Every loan begins with trust.<br><em>Give it a clear journey.</em></h1><p class="rm-lede">Rokkad brings borrowers, pledged jewellery and payments into one cloud platform, from the first visit to the final return.</p><div class="rm-actions"><button type="button" class="rm-button cursor-interaction" data-cta="b">Start workspace setup</button><a class="rm-button secondary" href="#rm-b-tools">Discover the software</a></div><p class="rm-small">Subscription-based loan management software, available in your browser.</p>
+      <div class="rm-journey-board" id="rm-b-story"><div class="rm-journey-stages"><div class="rm-stage"><span class="rm-stage-num">01 / THE PERSON</span><h3>Recognize</h3><p>Know the borrower and their loan history.</p></div><div class="rm-stage"><span class="rm-stage-num">02 / THE AGREEMENT</span><h3>Lend</h3><p>Review the pledge, approve the terms and issue a ticket.</p></div><div class="rm-stage"><span class="rm-stage-num">03 / THE FOLLOW-THROUGH</span><h3>Collect</h3><p>Record payments and understand what is still owed.</p></div><div class="rm-stage"><span class="rm-stage-num">04 / THE RETURN</span><h3>Complete</h3><p>Settle, return the jewellery and retain the record.</p></div></div><div class="rm-receipt"><i data-lucide="notebook-pen" aria-hidden="true"></i><strong>One connected loan record</strong><span>Borrower + debt + physical pledge</span><span class="rm-badge">History preserved</span></div></div>
+    </section>
+    <section class="rm-section rm-two" id="rm-b-tools"><div><p class="rm-kicker">Software that understands the pledge</p><h2>The loan is a number.<br>The jewellery is personal.</h2><p class="rm-lede">Keep both in view. Item photographs, quantities, labels and custody records connect the customer's belongings with the agreement behind them.</p></div><div class="rm-ledger"><div><i data-lucide="wallet" aria-hidden="true"></i><span><strong>What is still owed?</strong><p>Principal, interest, fees and recorded collections.</p></span></div><div><i data-lucide="vault" aria-hidden="true"></i><span><strong>Where is the pledge?</strong><p>Photos, storage, custody and return evidence.</p></span></div><div><i data-lucide="history" aria-hidden="true"></i><span><strong>What happened along the way?</strong><p>Approvals, documents and reasoned corrections.</p></span></div></div></section>
+    <section class="rm-section"><p class="rm-kicker">Built for the work around the story</p><h2>A complete working day, in one workspace.</h2><div class="rm-feature-grid"><div><span class="rm-icon"><i data-lucide="sliders-horizontal" aria-hidden="true"></i></span><h3>Your lending terms</h3><p>Licences, series numbering, gold and silver rates, valuation policies and document layouts.</p></div><div><span class="rm-icon"><i data-lucide="users" aria-hidden="true"></i></span><h3>Your people</h3><p>Shared customer context with clear staff roles and separate business workspaces.</p></div><div><span class="rm-icon"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i></span><h3>Your next decision</h3><p>Review dues, collateral values and reports without losing sight of the individual loan.</p></div></div></section>
+    <section class="rm-section rm-story-strip"><div><p class="rm-kicker">From your books to your browser</p><h2>Move forward at your own pace.</h2></div><div><p>Start new lending digitally while older records stay in your books. Record completed paper closures during the transition, with their actual dates and collections.</p><p class="rm-small" style="margin-top:14px">Supported digital migrations are assisted. Guided Excel loan import is planned.</p></div></section>
+    <section class="rm-section rm-bottom"><div><h2>Give your next loan a clearer story.</h2><p>Rokkad. Cloud loan management for pawn lending.</p></div><button type="button" class="rm-button cursor-interaction" data-cta="b">Create your account</button></section>
+    <footer class="rm-footer"><strong>Rokkad · Loan management SaaS</strong><span>From first visit to final return.</span></footer>
+  </article>
+
+  <article class="rm-page" id="rm-concept-c" aria-label="Concept C: Business first" hidden>
+    <nav class="rm-nav" aria-label="Concept C website navigation"><a class="rm-brand" href="#rm-concept-c">Rokkad<small>LOAN MANAGEMENT SAAS</small></a><div class="rm-navlinks"><a class="rm-nav-jump" href="#rm-c-work">Daily operations</a><a class="rm-nav-jump" href="#rm-c-team">For your team</a><button type="button" class="rm-button cursor-interaction" data-cta="c">Get started</button></div></nav>
+    <section class="rm-hero rm-c-hero"><div><p class="rm-kicker">Cloud loan management SaaS</p><h1>Run your pawn-lending business.<br><em>Keep every loan in view.</em></h1><p class="rm-lede">One online workspace for your borrowers, gold and silver loans, pledged items and daily collections. Built for owners and the staff at the counter.</p><div class="rm-actions"><button type="button" class="rm-button cursor-interaction" data-cta="c">Start workspace setup</button><a class="rm-button secondary" href="#rm-c-work">Explore daily operations</a></div><p class="rm-small">Subscription-based software · Separate workspaces · Staff permissions</p></div><div class="rm-c-board"><p class="rm-kicker">A lending day, connected</p><h3>From customer visit to loan closure.</h3><div class="rm-board-row"><span class="rm-board-num">1</span><span><b>Recognize the borrower</b><small>Photo, contact and loan history</small></span><i data-lucide="contact" aria-hidden="true"></i></div><div class="rm-board-row"><span class="rm-board-num">2</span><span><b>Review and lend</b><small>Valuation, terms, ticket and payout record</small></span><i data-lucide="file-check-2" aria-hidden="true"></i></div><div class="rm-board-row"><span class="rm-board-num">3</span><span><b>Collect and follow up</b><small>Payments, dues and collateral custody</small></span><i data-lucide="wallet" aria-hidden="true"></i></div><div class="rm-board-row"><span class="rm-board-num">4</span><span><b>Settle and return</b><small>Release receipt and handover evidence</small></span><i data-lucide="package-check" aria-hidden="true"></i></div><div class="rm-board-finish"><i data-lucide="history" aria-hidden="true"></i> Every step stays connected to its history.</div></div></section>
+    <section class="rm-section" id="rm-c-work"><p class="rm-kicker">Built around the questions you ask</p><h2>Know where the business stands.</h2><div class="rm-questions"><div class="rm-question"><span class="rm-icon"><i data-lucide="search" aria-hidden="true"></i></span><h3>Which loan is the customer here for?</h3><p>Find borrowers with identifying details, then see their loans and the next available action.</p></div><div class="rm-question"><span class="rm-icon"><i data-lucide="gem" aria-hidden="true"></i></span><h3>What have we lent against this pledge?</h3><p>Keep item photos, quantities, values and interest terms beside the loan they support.</p></div><div class="rm-question"><span class="rm-icon"><i data-lucide="receipt-text" aria-hidden="true"></i></span><h3>What needs to be collected?</h3><p>Review balances and settlement quotes. Record payments and close eligible loans in batches.</p></div><div class="rm-question"><span class="rm-icon"><i data-lucide="chart-column" aria-hidden="true"></i></span><h3>How is each part of the business doing?</h3><p>Explore reports by licence, series and year, plus collateral weights and recorded values.</p></div></div></section>
+    <section class="rm-section rm-story-strip" id="rm-c-team"><div><p class="rm-kicker">Shared software. Clear responsibility.</p><h2>Give your team the same picture.</h2><p>Staff roles control access to lending and administration. Separate workspaces keep businesses distinct, while each loan retains its documents and action history.</p></div><div class="rm-screen"><div class="rm-screen-head"><strong>One workspace, connected responsibilities</strong></div><div class="rm-screen-body"><div class="rm-loan-row"><strong>At the counter</strong><span>Borrowers &amp; lending</span></div><div class="rm-loan-row"><strong>Behind the counter</strong><span>Custody &amp; returns</span></div><div class="rm-loan-row"><strong>For the owner</strong><span>Policies &amp; reports</span></div></div></div></section>
+    <section class="rm-section rm-two"><div><p class="rm-kicker">A practical start</p><h2>Set up the business.<br>Start the next loan.</h2></div><div><p class="rm-lede">Review your licences, series, policies and document layouts. Start new loans in Rokkad and use the in-app journey guide to help your staff learn the workflow.</p><p class="rm-small">Existing records need a supported, reviewed migration. Guided Excel loan import is planned.</p></div></section>
+    <section class="rm-section rm-bottom"><div><h2>Your next lending day, better organized.</h2><p>Loan management SaaS designed for pawn-lending operations.</p></div><button type="button" class="rm-button cursor-interaction" data-cta="c">Create your account</button></section>
+    <footer class="rm-footer"><strong>Rokkad · Loan management SaaS</strong><span>Clear records. Connected work. Traceable decisions.</span></footer>
+  </article>
+  <div class="rm-cta-status" aria-live="polite" id="rm-feedback"></div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('rokkad-market-options');
+  const state = { concept: 'a', compact: false, headline: 'software' };
+  const buttons = Array.from(root.querySelectorAll('[data-concept]'));
+  const pages = Array.from(root.querySelectorAll('.rm-page'));
+  const feedback = root.querySelector('#rm-feedback');
+  const choices = ['a', 'b', 'c'];
+  function render() {
+    if (!choices.includes(state.concept)) state.concept = 'a';
+    pages.forEach(page => { page.hidden = page.id !== 'rm-concept-' + state.concept; });
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.concept === state.concept)));
+    root.classList.toggle('rm-compact', state.compact);
+    root.querySelector('[data-headline]').textContent = state.headline === 'saas' ? 'Loan management SaaS.' : 'Loan management software.';
+  }
+  function restore(value) {
+    const saved = value?.modelContent || {};
+    if (choices.includes(saved.concept)) state.concept = saved.concept;
+    if (['software', 'saas'].includes(saved.headline)) state.headline = saved.headline;
+    if (typeof value?.privateContent?.compact === 'boolean') state.compact = value.privateContent.compact;
+    render();
+  }
+  function save() {
+    if (window.openai?.setWidgetState) window.openai.setWidgetState({
+      modelContent: { concept: state.concept, headline: state.headline }, privateContent: { compact: state.compact }
+    }).catch(() => {});
+  }
+  buttons.forEach(button => button.addEventListener('click', () => {
+    state.concept = button.dataset.concept; feedback.textContent = ''; render(); save();
+  }));
+  root.querySelectorAll('[data-cta]').forEach(button => button.addEventListener('click', () => {
+    feedback.textContent = 'Concept ' + button.dataset.cta.toUpperCase() + ': account setup selected. This is a design preview; no account is created.';
+  }));
+  root.querySelectorAll('.rm-navlinks').forEach(nav => {
+    const login = document.createElement('button');
+    login.type = 'button'; login.className = 'rm-login cursor-interaction'; login.textContent = 'Sign in';
+    login.addEventListener('click', () => { feedback.textContent = 'Sign in selected. This is a design preview; production sign-in is unchanged.'; });
+    nav.insertBefore(login, nav.lastElementChild);
+  });
+  restore(window.openai?.widgetState);
+  window.addEventListener('openai:set_globals', event => {
+    if (event.detail?.globals?.widgetState) restore(event.detail.globals.widgetState);
+  });
+  if (globalThis.Tweak) {
+    const tweak = new Tweak({ container: root, onChange: () => { render(); save(); } });
+    tweak.addSelect(state, 'headline', { label: 'Concept A headline', options: [{ label: 'Plain language: software', value: 'software' }, { label: 'Explicit category: SaaS', value: 'saas' }] });
+    tweak.addToggle(state, 'compact', { label: 'Compact hero spacing' });
+  }
+})();
+</script>
