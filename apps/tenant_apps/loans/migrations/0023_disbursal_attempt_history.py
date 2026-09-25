@@ -37,6 +37,9 @@ class Migration(migrations.Migration):
               FROM loans_loanpolicysnapshot s WHERE s.loan_id = l.id;
             UPDATE loans_pawnloan l SET disbursal_snapshot_id = s.id
               FROM loans_pawnloandisbursalsnapshot s WHERE s.loan_id = l.id;
+            -- Existing deferred foreign-key events must finish before Django
+            -- creates the new FK indexes at schema-editor exit on a populated DB.
+            SET CONSTRAINTS ALL IMMEDIATE;
             """, reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.RunSQL(

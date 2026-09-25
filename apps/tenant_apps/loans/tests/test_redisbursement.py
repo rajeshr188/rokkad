@@ -216,3 +216,36 @@ class RedisbursementConcurrencyTests(TransactionTestCase):
                 self.assertEqual(self.loan.loan_events.count(), 3)
                 self.assertEqual(self.loan.disbursal_snapshots.count(), 2)
                 self.assertEqual(self.loan.repayment_schedules.count(), 2)
+
+
+@override_settings(STORAGES={"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+                           "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})
+class DisbursalMigrationTests(TransactionTestCase):
+    make_loan = fixtures.CollateralReappraisalTests.make_loan
+
+    def test_populated_migration_backfills_without_changing_source_evidence(self):
+        from django.contrib.auth import get_user_model
+        from django.db.migrations.executor import MigrationExecutor
+        from apps.orgs.models import Company, Membership, Role
+        from apps.tenancy.context import workspace_context
+
+        self.actor = get_user_model().objects.create_user(username=uuid.uuid4().hex)
+        self.tenant = Company.objects.create(name="Migration test", schema_name=uuid.uuid4().hex,
+            owner=self.actor, creator=self.actor)
+        Membership.objects.create(user=self.actor, company=self.tenant, role=Role.objects.get_or_create(name="Owner")[0])
+        with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
+            with workspace_context(self.tenant.pk):
+                self.make_loan(method="LATEST_APPRAISAL", age_days=0, product_index=2)
+                original_policy = self.loan.policy_snapshot_id
+                original_disbursal = self.loan.disbursal_snapshot_id
+                events = list(self.loan.loan_events.values())
+            MigrationExecutor(connection).migrate([("loans", "0022_paper_closure_transition")])
+            try:
+                MigrationExecutor(connection).migrate([("loans", "0024_disbursal_schedule_identity")])
+                with workspace_context(self.tenant.pk):
+                    self.loan.refresh_from_db()
+                    self.assertEqual(self.loan.policy_snapshot_id, original_policy)
+                    self.assertEqual(self.loan.disbursal_snapshot_id, original_disbursal)
+                    self.assertEqual(list(self.loan.loan_events.values()), events)
+            finally:
+                MigrationExecutor(connection).migrate([("loans", "0024_disbursal_schedule_identity")])
