@@ -3,7 +3,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, Q
 from django.utils import timezone
 
@@ -539,6 +539,15 @@ class LoanNumberSequence(WorkspaceOwnedModel):
 
 
 class PawnLoan(models.Model):
+    # Current operational evidence; earlier attempts remain on the history FKs.
+    policy_snapshot = models.ForeignKey(
+        "loans.LoanPolicySnapshot", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="+",
+    )
+    disbursal_snapshot = models.ForeignKey(
+        "loans.PawnLoanDisbursalSnapshot", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="+",
+    )
     workspace = models.ForeignKey(
         "orgs.Company",
         on_delete=models.PROTECT,
@@ -634,6 +643,11 @@ class PawnLoan(models.Model):
         super().clean()
         errors = {}
         tenant_workspace_id = current_tenant_workspace_id()
+        for name in ("policy_snapshot", "disbursal_snapshot"):
+            if getattr(self, name + "_id", None):
+                snapshot = getattr(self, name)
+                if snapshot.loan_id != self.pk or snapshot.workspace_id != self.workspace_id:
+                    errors[name] = "Current snapshot must belong to this loan and workspace."
         if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
             errors["workspace"] = "Loan workspace must match the active tenant."
         if self.license_id and self.workspace_id:
@@ -816,10 +830,10 @@ class PawnCollateralItem(WorkspaceOwnedModel):
 
 
 class LoanPolicySnapshot(WorkspaceOwnedModel):
-    loan = models.OneToOneField(
+    loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
-        related_name="policy_snapshot",
+        related_name="policy_snapshots",
     )
     policy_version = models.PositiveSmallIntegerField(default=1)
     interest_method = models.CharField(
@@ -888,9 +902,15 @@ class LoanPolicySnapshot(WorkspaceOwnedModel):
         except ValueError as exc:
             raise ValidationError(str(exc)) from exc
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self.clean()
-        return super().save(*args, **kwargs)
+        result = super().save(*args, **kwargs)
+        # Also used by migration opening/renewal importers which create a policy
+        # without a native disbursal. Subsequent attempts switch in the service.
+        if PawnLoan.objects.filter(pk=self.loan_id, policy_snapshot__isnull=True).update(policy_snapshot=self):
+            self.loan.policy_snapshot = self
+        return result
 
 
 class LoanChangeLog(WorkspaceOwnedModel):
@@ -1035,10 +1055,10 @@ class PawnLoanEvent(WorkspaceOwnedModel):
 class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
     """Immutable gross-to-net evidence for one PawnLoan disbursal."""
 
-    loan = models.OneToOneField(
+    loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
-        related_name="disbursal_snapshot",
+        related_name="disbursal_snapshots",
     )
     approval_snapshot = models.ForeignKey(
         PawnLoanApprovalSnapshot,
@@ -1111,11 +1131,15 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
                 "Net cash plus advance interest and deducted fees must equal gross principal."
             )
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self.pk:
             raise ValidationError("Disbursal snapshots are immutable.")
         self.full_clean()
-        return super().save(*args, **kwargs)
+        result = super().save(*args, **kwargs)
+        if PawnLoan.objects.filter(pk=self.loan_id, disbursal_snapshot__isnull=True).update(disbursal_snapshot=self):
+            self.loan.disbursal_snapshot = self
+        return result
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Disbursal snapshots cannot be deleted.")

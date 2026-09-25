@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Max
 
 from apps.tenant_apps.loans.domain import RepaymentScheduleInput, ScheduleRateTranche
 from apps.tenant_apps.loans.domain import (
@@ -83,7 +84,7 @@ def persist_disbursal_repayment_schedule(
         workspace_id=loan.workspace_id,
         loan=loan,
         source_event=source_event,
-        version=1,
+        version=(loan.repayment_schedules.aggregate(latest=Max("version"))["latest"] or 0) + 1,
         contract_version=schedule.contract_version,
         fingerprint=schedule.fingerprint,
         disbursed_on=schedule.disbursed_on,

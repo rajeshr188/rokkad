@@ -73,6 +73,7 @@ class CollateralReappraisalTests(WorkspaceTestCase):
             with patch("django.utils.timezone.now", return_value=originated_at):
                 self.approval = approve_pawn_loan(self.loan.pk, actor=self.actor)
                 disburse_pawn_loan(self.loan.pk, effective_date=loan_date, actor=self.actor)
+            self.loan.refresh_from_db()
             self.original = self.item.appraisals.get()
         self.policy = LoanMonitoringPolicy.objects.create(workspace=self.tenant, version=1, effective_from=loan_date, compliance_profile="test",
             ltv_warning_ratio=Decimal("0.7"), ltv_breach_ratio=Decimal("0.8"), ltv_critical_ratio=Decimal("0.9"),

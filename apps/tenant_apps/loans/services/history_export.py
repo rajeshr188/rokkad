@@ -72,6 +72,7 @@ def _export_history(*, workspace_id, actor, loan_id):
         if loan.license_revision_id is None: raise HistoryError("Original licence revision is missing.")
         try: snapshot=loan.disbursal_snapshot; policy=loan.policy_snapshot
         except (m.PawnLoanDisbursalSnapshot.DoesNotExist,m.LoanPolicySnapshot.DoesNotExist) as exc: raise HistoryError("Frozen disbursal evidence is required.") from exc
+        if snapshot is None or policy is None: raise HistoryError("Frozen disbursal evidence is required.")
         approval=snapshot.approval_snapshot
         frozen={row["item_id"]:row for row in approval.payload.get("collateral",[])}
         tranches={int(row["collateral_item_id"]):row for row in snapshot.evidence.get("tranches",[])}

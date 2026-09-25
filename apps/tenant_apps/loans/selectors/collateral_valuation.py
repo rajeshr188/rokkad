@@ -62,6 +62,8 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
     loan = PawnLoan.objects.select_related("policy_snapshot").prefetch_related("collateral_items").get(pk=loan_id, workspace_id=workspace_id)
     if _exposure is not None and (_exposure.loan_id != loan.pk or _exposure.as_of_date != as_of_date):
         raise ValueError("Prepared exposure must match the scoped loan and assessment date.")
+    if loan.policy_snapshot is None:
+        raise ValueError("Loan is missing its frozen disbursal policy.")
     method = ValuationMethod(loan.policy_snapshot.valuation_method)
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
     policy_error = ""
@@ -113,9 +115,6 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
     total = None if blockers else sum((row.selected_value for row in results), Decimal("0"))
     exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date)
     ltv = calculate_ltv(exposure=exposure.ltv_exposure_basis, collateral_value=total, allowed_ltv_ratio=loan.policy_snapshot.maximum_ltv_ratio, blockers=blockers)
-    # ``policy_snapshot`` is the reverse side of LoanPolicySnapshot.loan, so
-    # PawnLoan has no generated ``policy_snapshot_id`` attribute. Use the
-    # related snapshot's primary key for stable provenance.
     return PawnLoanCollateralValuation(loan.pk, as_of_date, tuple(results), total, ltv,
         f"loan-policy-snapshot:{loan.policy_snapshot.pk}", policy.pk if policy else None,
         policy.rate_freshness_days if policy else None, policy.appraisal_freshness_days if policy else None, policy_error)

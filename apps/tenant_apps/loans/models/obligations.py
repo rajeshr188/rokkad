@@ -57,7 +57,6 @@ class RepaymentScheduleVersion(ImmutableObligationEvidence):
         ordering = ("loan_id", "version")
         constraints = [
             models.UniqueConstraint(fields=("loan", "version"), name="loans_schedule_loan_version_uniq"),
-            models.UniqueConstraint(fields=("loan", "fingerprint"), name="loans_schedule_loan_fingerprint_uniq"),
             models.CheckConstraint(condition=Q(principal__gt=0), name="loans_schedule_principal_positive"),
             models.CheckConstraint(condition=Q(contractual_interest__gte=0), name="loans_schedule_interest_nonnegative"),
             models.CheckConstraint(condition=Q(maturity_date__gte=F("disbursed_on")), name="loans_schedule_dates_valid"),

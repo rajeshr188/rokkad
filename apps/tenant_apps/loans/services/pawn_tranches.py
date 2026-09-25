@@ -5,9 +5,9 @@ from datetime import date
 from decimal import Decimal
 from itertools import groupby
 from django.db.models import Q
+from apps.tenant_apps.loans.selectors.disbursal import effective_disbursal_snapshot
 
 from apps.tenant_apps.loans.models import (
-    PawnLoanDisbursalSnapshot,
     PawnLoanPrincipalOpeningLine,
     PawnLoanRepaymentAllocationLine,
     PawnLoanPrincipalClosingLine,
@@ -42,10 +42,7 @@ def get_pawn_principal_tranche_balances(
             opening = read_opening_evidence(loan, origins[0])
         except OpeningEvidenceError as exc:
             raise PawnTrancheBalanceError(str(exc)) from exc
-    try:
-        disbursal = loan.disbursal_snapshot
-    except PawnLoanDisbursalSnapshot.DoesNotExist:
-        disbursal = None
+    disbursal = effective_disbursal_snapshot(loan, as_of_date=as_of_date)
     if opening is not None:
         if disbursal is not None:
             raise PawnTrancheBalanceError("Migration opening cannot have fabricated disbursal evidence.")
@@ -103,7 +100,7 @@ def get_pawn_principal_tranche_balances(
         current[item_id] = principal
 
     active = Q(loan_event__reversed_by_event__isnull=True)
-    if opening is not None and as_of_date is not None:
+    if as_of_date is not None:
         active |= Q(loan_event__reversed_by_event__effective_date__gt=as_of_date)
     lines = (
         PawnLoanRepaymentAllocationLine.objects.filter(active, loan_event__loan=loan)

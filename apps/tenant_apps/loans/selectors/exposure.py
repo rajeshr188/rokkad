@@ -135,6 +135,8 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
 
 
 def _project_interest_periods(loan, as_of_date):
+    if loan.policy_snapshot is None:
+        raise ValueError("Loan is missing its frozen disbursal policy.")
     # Import lazily to avoid selectors <-> services package initialization cycles.
     from apps.tenant_apps.loans.services.pawn_tranches import (
         get_pawn_principal_tranche_balances,

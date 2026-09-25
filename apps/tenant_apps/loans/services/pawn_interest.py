@@ -26,7 +26,6 @@ from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     PawnLoan,
     PawnLoanEvent,
-    PawnLoanDisbursalSnapshot,
     PawnLoanInterestAccrual,
     PawnLoanInterestAccrualLine,
     current_tenant_workspace_id,
@@ -101,6 +100,8 @@ def preview_pawn_loan_accruals(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnInterestError("Only an active PawnLoan can accrue interest.")
     policy = loan.policy_snapshot
+    if policy is None:
+        raise PawnInterestError("Loan is missing its frozen disbursal policy.")
     last_finalized = (
         loan.interest_accruals.exclude(
             release_catch_up__reversal__isnull=False
@@ -239,9 +240,9 @@ def _itemized_accrual_lines(
     currency_quantum,
     pending_advance_applied,
 ):
-    try:
-        disbursal = loan.disbursal_snapshot
-    except PawnLoanDisbursalSnapshot.DoesNotExist:
+    from apps.tenant_apps.loans.selectors.disbursal import effective_disbursal_snapshot
+    disbursal = effective_disbursal_snapshot(loan, as_of_date=as_of_date)
+    if disbursal is None:
         opening_event = loan.loan_events.filter(
             event_kind=TransactionKind.RENEWAL_OPENING.value,
             reversed_by_event__isnull=True,

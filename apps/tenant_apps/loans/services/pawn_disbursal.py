@@ -57,13 +57,15 @@ def disburse_pawn_loan(
     effective_date: date,
     actor=None,
 ) -> PawnDisbursalResult:
-    """Activate an approved loan and record its once-only operational event."""
+    """Activate an approved loan; a fully reversed attempt may be replaced."""
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.disburse")
     if loan.state == PawnLoanState.ACTIVE.value:
         return _existing_disbursal_result(loan)
     if loan.state != PawnLoanState.APPROVED.value:
         raise PawnDisbursalError("Only an approved PawnLoan can be disbursed.")
+    if loan.loan_events.filter(event_kind="DISBURSAL", reversed_by_event__isnull=True).exists():
+        raise PawnDisbursalError("Reverse the existing disbursal before disbursing again.")
 
     approval_snapshot = loan.approval_snapshots.order_by("-version").first()
     if approval_snapshot is None:
@@ -104,6 +106,12 @@ def disburse_pawn_loan(
             "tranches": economics["evidence"].get("tranches", []),
             "fees": economics["evidence"].get("fees", []),
         }
+    # Attempt identity also distinguishes equal-amount corrections on the same
+    # date. Retrying an ACTIVE loan returns the original result above instead.
+    payload.setdefault("disbursal", {}).update({
+        "approval_snapshot_id": approval_snapshot.pk,
+        "policy_snapshot_id": policy_snapshot.pk,
+    })
     event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.DISBURSAL,
@@ -136,8 +144,10 @@ def disburse_pawn_loan(
         )
     previous_state = loan.state
     loan.state = PawnLoanState.ACTIVE.value
+    loan.policy_snapshot = policy_snapshot
+    loan.disbursal_snapshot = disbursal_snapshot
     loan.updated_by = actor
-    loan.save(update_fields=["state", "updated_by", "updated_at"])
+    loan.save(update_fields=["state", "policy_snapshot", "disbursal_snapshot", "updated_by", "updated_at"])
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.DISBURSED.value,
@@ -219,13 +229,7 @@ def _persist_policy_snapshot(loan: PawnLoan, resolved_policy=None) -> LoanPolicy
         "rounding_method": policy.rounding_method.value,
         "currency_quantum": policy.currency_quantum,
     }
-    snapshot, created = LoanPolicySnapshot.objects.get_or_create(
-        loan=loan,
-        defaults=values,
-    )
-    if not created:
-        raise PawnDisbursalError("PawnLoan already has a disbursal policy snapshot.")
-    return snapshot
+    return LoanPolicySnapshot.objects.create(loan=loan, **values)
 
 
 def preview_approved_disbursal(loan):
@@ -318,12 +322,11 @@ def _approved_disbursal_policy(economics):
 
 def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:
     try:
-        event = loan.loan_events.get(event_kind=TransactionKind.DISBURSAL.value)
+        event = loan.loan_events.get(event_kind=TransactionKind.DISBURSAL.value, reversed_by_event__isnull=True)
         snapshot = loan.policy_snapshot
-        try:
-            disbursal_snapshot = loan.disbursal_snapshot
-        except PawnLoanDisbursalSnapshot.DoesNotExist:
-            disbursal_snapshot = None
+        disbursal_snapshot = loan.disbursal_snapshot
+        if snapshot is None or (disbursal_snapshot is not None and disbursal_snapshot.loan_event_id != event.pk):
+            raise PawnDisbursalError("Active PawnLoan has inconsistent disbursal evidence.")
         return PawnDisbursalResult(
             loan=loan,
             policy_snapshot=snapshot,
@@ -333,6 +336,7 @@ def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:
         )
     except (
         PawnLoanEvent.DoesNotExist,
+        PawnLoanEvent.MultipleObjectsReturned,
         LoanPolicySnapshot.DoesNotExist,
     ) as exc:
         raise PawnDisbursalError(
