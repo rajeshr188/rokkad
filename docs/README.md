@@ -25,6 +25,7 @@ not an instruction to reintroduce it.
 
 ## Business and operator flows
 
+- [The complete loan journey](flows/loan-journey.md): developer reference, shared PNG and in-app staff handbook.
 - [Set up your business](flows/business-setup.md) and [first-loan setup](flows/first-loan-setup.md).
 - [Understand dashboard customer, portfolio and lending-activity metrics](flows/business-dashboard.md).
 - [Enter, correct and withdraw metal prices](flows/metal-rate-entry.md).

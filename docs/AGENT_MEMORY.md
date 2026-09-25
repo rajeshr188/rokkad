@@ -14,6 +14,14 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+The [loan journey reference](flows/loan-journey.md), shared PNG
+`static/images/loan-journey.png` and `templates/loans/journey.html` describe the
+implemented lifecycle and boundaries. Keep them synchronized when workflows
+change. Workspace users find the guide in navigation, Loans and loan details.
+Draft split requires DRAFT, at least two collateral rows and create/edit access;
+piece quantity within one row is not multiple rows. The Overview explains this.
+Guided manual/Excel old-loan admission remains FW-007, not a shipped loan form.
+
 Monetary display uses Indian lakh/crore grouping via `display_money(grouping=True)`
 and the `indian_money` template filter. Keep input values, wire contracts and frozen
 financial evidence unformatted. Native tickets use approval quantities; imported

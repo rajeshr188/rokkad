@@ -49,7 +49,12 @@ required before real paid onboarding. See the
 
 ## FW-007: Guided customer-facing legacy migration
 
-**Captured / last reviewed:** 2026-09-24. **Decision owner:** project owner.
+Reconfirmed on 2026-09-25 in the [loan journey reference](../flows/loan-journey.md#7-imported-history-and-deliberate-digitization)
+and in-app staff guide. Manual old-paper loan admission and guided Excel loan
+imports remain future work; the published product story distinguishes them from
+the existing assisted migration foundation.
+
+**Captured:** 2026-09-24. **Last reviewed:** 2026-09-25. **Decision owner:** project owner.
 **State:** Future work; unscheduled. **Implementation approval:** not granted by
 this entry. The owner explicitly requested that this gap be retained in the backlog.
 

@@ -11,6 +11,7 @@ SOURCES = (
     "docs/plans/active.md", "docs/plans/project-hardening.md", "docs/plans/future-work.md",
     "docs/implementation/dependency-policy.md", "docs/implementation/testing-and-migrations.md",
     "docs/domain/party.md", "docs/domain/notifications.md", "docs/archive/context/README.md",
+    "docs/flows/loan-journey.md",
 )
 
 

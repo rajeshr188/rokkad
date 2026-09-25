@@ -12,6 +12,29 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Loan journey handbook and product story (2026-09-25)
+
+Added the [developer journey reference](flows/loan-journey.md), reproducible shared
+PNG overview, and read-only workspace handbook at `/w/<slug>/loans/guide/`.
+Navigation, Loans and loan details link the handbook. It explains the supported
+lifecycle, physical custody, corrections, coverage/unknown evidence, imported
+opening boundaries and paper closure transition. FW-007 was already recorded;
+its review and links now explicitly connect the manual/Excel old-loan gap to the
+handbook and product story.
+
+The public landing page now tells the customer/pledge/collection/return story with
+illustrative loan and custody cards, six benefit areas and honest migration
+positioning. No customer records appear in the illustrations. Saved drafts expose
+a split card in Overview, explaining one-row/quantity limitations; existing
+create/edit/state guards and split services are unchanged.
+
+Validation: 10 guide-access/discovery/display/template tests, two existing split
+identity/permission regressions, and two native/imported loan-layout browser
+regressions pass. Landing and handbook content were visually reviewed at desktop
+and mobile sizes, with no horizontal overflow and the PNG loaded. Documentation
+links pass. No schema migration or loan calculation changes. Deployment acceptance
+is recorded below after the candidate checks complete.
+
 ## Release documentation consolidation (2026-09-25)
 
 Reviewed and consolidated the previously unstaged delivery notes and September 24

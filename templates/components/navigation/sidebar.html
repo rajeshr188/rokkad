@@ -22,6 +22,7 @@
   <a class="workspace-nav-link {% if '/releases/paper/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:paper_closure_guide' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-journal-check"></i> {% translate "Paper closures" %}</a>
   <a class="workspace-nav-link {% if '/releases/batch/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:release_batch_list' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-collection"></i> {% translate "Release batches" %}</a>
   <div class="workspace-nav-group-label">{% translate "Reference & communication" %}</div>
+  <a class="workspace-nav-link {% if request.resolver_match.url_name == 'loan_journey_guide' %}active{% endif %}" href="{% url 'workspace_loans:loan_journey_guide' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-book"></i> {% translate "Loan journey guide" %}</a>
   <a class="workspace-nav-link {% if '/rates/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_rates' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-coin"></i> {% translate "Rates" %}</a>
   <a class="workspace-nav-link {% if '/notify/' in request.path or '/notifications/' in request.path %}active{% endif %}" href="{% url 'workspace_slug_notifications' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-envelope-paper"></i> {% translate "Notifications" %}</a>
   {% endif %}

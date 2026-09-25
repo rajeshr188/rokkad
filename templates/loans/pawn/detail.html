@@ -12,6 +12,8 @@
 </div>
 
 {% include "loans/pawn/_detail_header.html" %}
+<p class="small" data-loan-block="overview"><a href="{% url 'workspace_loans:loan_journey_guide' request.workspace.slug %}">Loan journey &amp; staff guide</a></p>
+{% include "loans/pawn/_draft_split_discovery.html" %}
 
 {% if can_preview_imported_ticket %}
 <section class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4" aria-labelledby="imported-ticket-title" data-loan-block="print">

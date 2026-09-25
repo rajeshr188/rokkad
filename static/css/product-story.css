@@ -1,0 +1,25 @@
+.story-hero { background: radial-gradient(ellipse at 90% 10%, #e3eee6, transparent 55%), #f8f8f3; }
+.story-illustration { border: 1px solid #d4ded6; border-radius: 24px; padding: 2rem; background: #eff4ef; }
+.story-illustration-label { font-size: .8rem; color: #476558; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1.5rem; }
+.story-customer { display: flex; align-items: center; gap: 1rem; }
+.story-avatar { flex-shrink: 0; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #d9e7de; color: #103f3a; font-size: 1.8rem; }
+.story-ticket { background: white; border: 1px solid #ccd9ce; border-radius: 14px; padding: 1.5rem; box-shadow: 0 12px 30px #103f3a0d; }
+.story-ticket-amount { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 750; color: #103f3a; margin: .5rem 0; }
+.story-thread { width: 2px; height: 25px; margin-left: 25px; background: #8fab98; }
+.story-return { display: flex; gap: .75rem; align-items: center; color: #103f3a; font-weight: 600; }
+.story-return i { font-size: 1.8rem; margin-left: 12px; }
+.story-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; }
+.story-steps p { color: #475569; line-height: 1.7; }
+.story-step-number { display: inline-block; font-size: 1.8rem; color: #527766; border-top: 2px solid #c6d8cd; width: 100%; padding-top: 1rem; margin-bottom: 1rem; }
+.story-feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.story-two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+.story-ledger { background: #f2eee5; border: 1px solid #e2d9c8; border-radius: 20px; padding: 2rem; }
+.story-ledger-row { display: flex; align-items: start; gap: 1rem; padding: 1.3rem 0; border-bottom: 1px solid #ddd5c5; }
+.story-ledger-row > i { font-size: 1.8rem; color: #746342; }
+.story-ledger-row p { margin: .3rem 0 0; color: #5f615b; }
+.story-ledger-footer { margin-top: 1.5rem; color: #685d45; }
+.story-team { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid #ffffff40; border-radius: 16px; color: white; }
+.story-team i { margin-right: .6rem; }
+@media (max-width: 991px) { .story-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .story-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .story-two-column { gap: 2rem; } }
+@media (max-width: 767px) { .story-feature-grid, .story-two-column { grid-template-columns: 1fr; } .story-illustration, .story-ledger { padding: 1.2rem; } .story-steps { gap: 1rem; } }
+@media (max-width: 380px) { .story-steps { grid-template-columns: 1fr; } }
