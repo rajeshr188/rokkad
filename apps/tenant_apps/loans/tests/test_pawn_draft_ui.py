@@ -1191,6 +1191,41 @@ class PawnDraftUiTests(WorkspaceTestCase):
         LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="")
         self.assertEqual(series.pawn_display_name, "No prefix")
 
+    def test_series_interest_setup_preview_approval_and_frozen_terms(self):
+        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+        from apps.tenant_apps.loans.models import PawnMetalInterestRatePolicy
+        license, series = self._configured_setup()
+        # An already-approved loan keeps the original rate after an override is added.
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        existing = PawnLoan.objects.get()
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[existing.pk])).status_code,302)
+        frozen = existing.approval_snapshots.get().payload
+        response = self.client.post(self.workspace_reverse("loans:pawn_economics_setup"), {
+            "action":"series_rates", "series-rates-series":series.pk,
+            "series-rates-effective_from":"2026-07-18",
+            "series-rates-gold_monthly_interest_rate":"1.1", "series-rates-silver_monthly_interest_rate":"3"})
+        self.assertEqual(response.status_code,302)
+        self.assertEqual(PawnMetalInterestRatePolicy.objects.filter(series=series).count(),2)
+        payload = self._payload(license,series)
+        preview = self.client.post(reverse("loans:pawn_loan_create"), {**payload,"action":"preview"})
+        self.assertEqual(preview.status_code,200)
+        self.assertEqual(preview.context["economics_preview"].economics.effective_monthly_rate,Decimal("1.1"))
+        self.assertEqual(PawnLoan.objects.count(),1)
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license,series))
+        new = PawnLoan.objects.exclude(pk=existing.pk).get()
+        self.assertEqual(new.monthly_interest_rate,Decimal("1.1"))
+        self.assertEqual(new.collateral_items.get().monthly_interest_rate,Decimal("1.1"))
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve",args=[new.pk])).status_code,302)
+        new.refresh_from_db()
+        self.assertEqual(new.state,"APPROVED")
+        self.assertEqual(existing.approval_snapshots.get().payload,frozen)
+        existing.refresh_from_db()
+        self.assertEqual(existing.monthly_interest_rate,Decimal("2"))
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_disburse",args=[existing.pk]),{"effective_date":"2026-07-18"}).status_code,302)
+        existing.refresh_from_db()
+        self.assertEqual(existing.state,"ACTIVE")
+        self.assertEqual(existing.approval_snapshots.get().payload,frozen)
+
     def test_borrower_search_paginates_inactive_customers_with_constant_queries(self):
         from django.core import signing
         from apps.tenant_apps.loans.widgets import LoanBorrowerAutocompleteWidget

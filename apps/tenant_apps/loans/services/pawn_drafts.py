@@ -191,6 +191,7 @@ def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor) -> PawnLoan:
     resolved = _resolve_new_economics(
         workspace_id=workspace_id,
         license_id=license.pk,
+        series_id=series.pk,
         as_of_date=command.loan_date,
         collateral=command.collateral,
     )
@@ -256,6 +257,7 @@ def update_pawn_draft(
     resolved = _resolve_new_economics(
         workspace_id=workspace_id,
         license_id=loan.license_id,
+        series_id=loan.series_id,
         as_of_date=command.loan_date,
         collateral=command.collateral,
     )
@@ -455,7 +457,7 @@ def _validated_collateral(loan, inputs, *, resolved=None):
     return items
 
 
-def _resolve_new_economics(*, workspace_id, license_id, as_of_date, collateral):
+def _resolve_new_economics(*, workspace_id, license_id, series_id, as_of_date, collateral):
     allocations = [item.allocated_principal for item in collateral]
     if not any(value is not None for value in allocations):
         return None
@@ -464,6 +466,7 @@ def _resolve_new_economics(*, workspace_id, license_id, as_of_date, collateral):
     return resolve_pawn_draft_economics(
         workspace_id=workspace_id,
         license_id=license_id,
+        series_id=series_id,
         as_of_date=as_of_date,
         collateral=collateral,
     )

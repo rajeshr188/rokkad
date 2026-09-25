@@ -68,6 +68,7 @@ def pawn_loan_create(request):
                 economics_preview = resolve_pawn_draft_economics(
                     workspace_id=request.loans_workspace.pk,
                     license_id=command.license_id,
+                    series_id=command.series_id,
                     as_of_date=command.loan_date,
                     collateral=command.collateral,
                 )
@@ -135,6 +136,7 @@ def pawn_loan_update(request, pk):
                 economics_preview = resolve_pawn_draft_economics(
                     workspace_id=request.loans_workspace.pk,
                     license_id=loan.license_id,
+                    series_id=loan.series_id,
                     as_of_date=command.loan_date,
                     collateral=command.collateral,
                 )

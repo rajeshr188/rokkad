@@ -100,12 +100,14 @@ def preview_pawn_draft_split(
     source_economics = resolve_pawn_draft_economics(
         workspace_id=workspace_id,
         license_id=source.license_id,
+        series_id=source.series_id,
         as_of_date=source.loan_date,
         collateral=tuple(_input(item) for item in remaining),
     )
     new_economics = resolve_pawn_draft_economics(
         workspace_id=workspace_id,
         license_id=series.license_id,
+        series_id=series.pk,
         as_of_date=loan_date,
         collateral=tuple(_input(item) for item in selected),
     )

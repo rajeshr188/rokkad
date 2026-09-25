@@ -310,6 +310,8 @@ class PawnMetalInterestRatePolicy(models.Model):
         on_delete=models.PROTECT,
         related_name="metal_interest_rate_policies",
     )
+    series = models.ForeignKey(LoanSeries, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="metal_interest_rate_policies")
     metal = models.CharField(max_length=16, choices=enum_choices(CollateralMetal))
     monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6)
     effective_from = models.DateField(default=timezone.localdate, db_index=True)
@@ -329,14 +331,18 @@ class PawnMetalInterestRatePolicy(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("workspace", "metal", "effective_from"),
-                condition=Q(license__isnull=True),
+                condition=Q(license__isnull=True, series__isnull=True),
                 name="loans_rate_ws_metal_date_uniq",
             ),
             models.UniqueConstraint(
                 fields=("license", "metal", "effective_from"),
-                condition=Q(license__isnull=False),
+                condition=Q(license__isnull=False, series__isnull=True),
                 name="loans_rate_license_date_uniq",
             ),
+            models.UniqueConstraint(fields=("series", "metal", "effective_from"),
+                condition=Q(series__isnull=False), name="loans_rate_series_date_uniq"),
+            models.CheckConstraint(condition=Q(series__isnull=True) | Q(license__isnull=False),
+                name="loans_rate_series_license"),
             models.CheckConstraint(
                 condition=Q(monthly_interest_rate__gte=0)
                 & Q(monthly_interest_rate__lte=100),
@@ -358,6 +364,9 @@ class PawnMetalInterestRatePolicy(models.Model):
     def clean(self):
         super().clean()
         _validate_policy_scope(self, label="Metal interest-rate policy")
+        if self.series_id and (self.series.workspace_id != self.workspace_id
+                               or self.series.license_id != self.license_id):
+            raise ValidationError({"series": "Series must belong to the policy workspace and license."})
 
     def save(self, *args, **kwargs):
         self.clean()

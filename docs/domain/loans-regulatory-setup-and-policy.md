@@ -75,6 +75,10 @@ avoid reusing a historical number even if its original series association differ
 2. Create a series and configure independent PawnLoan and release sequences.
 3. Add an effective workspace calculation policy, or a license override.
 4. Add the required gold/silver monthly rate policies.
+   A series can have its own effective-dated gold/silver override under
+   Calculation, fees and monitoring > Series-specific monthly interest. Resolution
+   uses series, then licence, then Workspace rates. Other economic rules still use
+   their existing licence/Workspace scopes; approved loans remain frozen.
 5. Add any fee policy deducted or collected by the business.
 6. Confirm the license detail shows non-consuming next numbers and readiness.
 

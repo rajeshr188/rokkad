@@ -12,7 +12,7 @@ from apps.tenant_apps.loans.domain import (
     RoundingMethod,
     ValuationMethod,
 )
-from apps.tenant_apps.loans.models import LoanLicense, LoanMonitoringPolicy
+from apps.tenant_apps.loans.models import LoanLicense, LoanMonitoringPolicy, LoanSeries
 
 
 class GroupedPolicyForm:
@@ -150,6 +150,21 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
                 if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
                 else "form-control",
             )
+
+
+class PawnSeriesInterestForm(GroupedPolicyForm, forms.Form):
+    groups = ((_("Series and monthly interest"), ("series", "effective_from", "gold_monthly_interest_rate", "silver_monthly_interest_rate")),)
+    series = forms.ModelChoiceField(queryset=LoanSeries.objects.none(), label=_("Series"))
+    effective_from = forms.DateField(label=_("Applies from"), widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+    gold_monthly_interest_rate = forms.DecimalField(label=_("Gold: monthly interest (%)"), max_digits=9, decimal_places=6, min_value=0, max_value=100)
+    silver_monthly_interest_rate = forms.DecimalField(label=_("Silver: monthly interest (%)"), max_digits=9, decimal_places=6, min_value=0, max_value=100)
+
+    def __init__(self, *args, workspace, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["series"].queryset = LoanSeries.objects.filter(workspace=workspace).select_related("license").prefetch_related("number_sequences")
+        self.fields["series"].label_from_instance = lambda row: f"{row.license.license_number} / {row.pawn_display_name}"
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control"
 
 
 class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):

@@ -240,6 +240,7 @@ def _validate_collateral_economics(loan, collateral):
     resolved = resolve_pawn_draft_economics(
         workspace_id=loan.workspace_id,
         license_id=loan.license_id,
+        series_id=loan.series_id,
         as_of_date=loan.loan_date,
         collateral=collateral,
         require_fresh_rates=True,

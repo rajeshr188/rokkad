@@ -21,6 +21,7 @@ from apps.tenant_apps.loans.domain import (
 )
 from apps.tenant_apps.loans.models import (
     LoanLicense,
+    LoanSeries,
     PawnLoanEconomicPolicy,
     PawnLoanFeePolicy,
     PawnMetalInterestRatePolicy,
@@ -128,6 +129,7 @@ def create_pawn_metal_interest_rate_policy(
     effective_from: date | None = None,
     effective_until: date | None = None,
     license: LoanLicense | None = None,
+    series: LoanSeries | None = None,
     actor=None,
 ) -> PawnMetalInterestRatePolicy:
     _require_scope(workspace.pk, license)
@@ -136,6 +138,7 @@ def create_pawn_metal_interest_rate_policy(
         workspace=workspace,
         license=license,
         metal=CollateralMetal(metal).value,
+        series=series,
         monthly_interest_rate=monthly_interest_rate,
         effective_from=effective_from or timezone.localdate(),
         effective_until=effective_until,
@@ -144,6 +147,27 @@ def create_pawn_metal_interest_rate_policy(
     policy.full_clean()
     policy.save()
     return policy
+
+
+@transaction.atomic
+def create_pawn_series_interest_rates(*, workspace, series, gold_monthly_interest_rate,
+                                     silver_monthly_interest_rate, effective_from, actor):
+    """Append both metal overrides together, retaining earlier dated evidence."""
+    require_setup_administration(workspace.pk, actor)
+    series = LoanSeries.objects.select_for_update().select_related("license").get(
+        pk=series.pk, workspace=workspace)
+    policies = tuple(create_pawn_metal_interest_rate_policy(workspace=workspace,
+        license=series.license, series=series, metal=metal, monthly_interest_rate=rate,
+        effective_from=effective_from, actor=actor)
+        for metal, rate in ((CollateralMetal.GOLD, gold_monthly_interest_rate),
+                            (CollateralMetal.SILVER, silver_monthly_interest_rate)))
+    from apps.orgs.audit import AuditLog
+    AuditLog.log("UPDATE", user=actor, company=workspace,
+        description="Added series-specific monthly interest rates.",
+        data={"series_id": series.pk, "policy_ids": [p.pk for p in policies],
+              "effective_from": str(effective_from), "gold": str(gold_monthly_interest_rate),
+              "silver": str(silver_monthly_interest_rate)})
+    return policies
 
 
 def create_pawn_loan_fee_policy(
@@ -201,6 +225,7 @@ def resolve_pawn_metal_interest_rate_policy(
     license_id: int | None,
     metal: CollateralMetal | str,
     as_of_date: date,
+    series_id: int | None = None,
 ) -> PawnMetalInterestRatePolicy:
     _require_scope_ids(workspace_id, license_id)
     metal_value = CollateralMetal(metal).value
@@ -208,7 +233,12 @@ def resolve_pawn_metal_interest_rate_policy(
         PawnMetalInterestRatePolicy, workspace_id, as_of_date
     ).filter(metal=metal_value)
     policy = None
-    if license_id is not None:
+    if series_id is not None:
+        if not LoanSeries.objects.filter(pk=series_id, workspace_id=workspace_id, license_id=license_id).exists():
+            raise PawnEconomicPolicyError("Series must belong to the policy workspace and license.")
+        policy = current.filter(series_id=series_id).order_by("-effective_from", "-id").first()
+    current = current.filter(series__isnull=True)
+    if policy is None and license_id is not None:
         policy = current.filter(license_id=license_id).order_by("-effective_from", "-id").first()
     if policy is None:
         policy = current.filter(license__isnull=True).order_by("-effective_from", "-id").first()

@@ -28,6 +28,37 @@ from apps.tenant_apps.loans.services import (
 
 
 class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
+    def test_series_rate_precedence_dates_and_atomic_pair(self):
+        from apps.tenant_apps.loans.models import LoanSeries, PawnMetalInterestRatePolicy
+        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+        series = LoanSeries.objects.create(license=self.license, name="WH", code="WH")
+        other = LoanSeries.objects.create(license=self.license, name="Other", code="OTHER")
+        for metal, rate in (("GOLD", "2"), ("SILVER", "4")):
+            create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=self.license,
+                metal=metal, monthly_interest_rate=Decimal(rate), effective_from=date(2026,1,1), actor=self.user)
+        policies = create_pawn_series_interest_rates(workspace=self.tenant, series=series,
+            gold_monthly_interest_rate=Decimal("1.1"), silver_monthly_interest_rate=Decimal("3"),
+            effective_from=date(2026,9,25), actor=self.user)
+        for metal, expected, default in (("GOLD", "1.1", "2"), ("SILVER", "3", "4")):
+            def resolve(series_id, day):
+                return resolve_pawn_metal_interest_rate_policy(workspace_id=self.tenant.pk,
+                    license_id=self.license.pk, series_id=series_id, metal=metal, as_of_date=day)
+            self.assertEqual(resolve(series.pk,date(2026,9,25)).monthly_interest_rate,Decimal(expected))
+            self.assertEqual(resolve(series.pk,date(2026,9,24)).monthly_interest_rate,Decimal(default))
+            self.assertEqual(resolve(other.pk,date(2026,9,25)).monthly_interest_rate,Decimal(default))
+            self.assertEqual(resolve(None,date(2026,9,25)).monthly_interest_rate,Decimal(default))
+        with self.assertRaises(ValidationError):
+            create_pawn_series_interest_rates(workspace=self.tenant, series=series,
+                gold_monthly_interest_rate=Decimal("1.2"), silver_monthly_interest_rate=Decimal("101"),
+                effective_from=date(2026,9,26), actor=self.user)
+        self.assertFalse(PawnMetalInterestRatePolicy.objects.filter(series=series,effective_from=date(2026,9,26)).exists())
+        with self.assertRaises(PawnEconomicPolicyError):
+            resolve_pawn_metal_interest_rate_policy(workspace_id=self.tenant.pk, license_id=None,
+                series_id=series.pk, metal="GOLD", as_of_date=date(2026,9,25))
+        with self.assertRaises(ValidationError):
+            create_pawn_metal_interest_rate_policy(workspace=self.tenant, series=series,
+                metal="GOLD", monthly_interest_rate=1, effective_from=date(2026,9,27), actor=self.user)
+
     test_schema_name = f"loans_economics_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
 

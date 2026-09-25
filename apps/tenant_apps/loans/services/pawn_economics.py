@@ -42,6 +42,7 @@ class ResolvedPawnDraftEconomics:
 def resolve_pawn_draft_economics(
     *, workspace_id: int, license_id: int, as_of_date: date, collateral,
     require_fresh_rates=False,
+    series_id: int | None = None,
 ) -> ResolvedPawnDraftEconomics:
     policy = resolve_pawn_loan_economic_policy(
         workspace_id=workspace_id,
@@ -66,6 +67,7 @@ def resolve_pawn_draft_economics(
     tranches = []
     for index, item in enumerate(collateral, start=1):
         rate_policy = resolve_pawn_metal_interest_rate_policy(
+            series_id=series_id,
             workspace_id=workspace_id,
             license_id=license_id,
             metal=item.metal,

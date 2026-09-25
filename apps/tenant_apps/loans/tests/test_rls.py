@@ -8,7 +8,7 @@ from django.test import TransactionTestCase
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context
 
-from apps.tenant_apps.loans.models import LoanLicense, LoanSeries
+from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnMetalInterestRatePolicy
 
 
 class LoansRLSIsolationTests(TransactionTestCase):
@@ -19,7 +19,7 @@ class LoansRLSIsolationTests(TransactionTestCase):
         quoted_role = connection.ops.quote_name(cls.runtime_role)
         tables = ", ".join(
             connection.ops.quote_name(model._meta.db_table)
-            for model in (LoanLicense, LoanSeries)
+            for model in (LoanLicense, LoanSeries, PawnMetalInterestRatePolicy)
         )
         with connection.cursor() as cursor:
             cursor.execute(
@@ -33,16 +33,17 @@ class LoansRLSIsolationTests(TransactionTestCase):
                 f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {quoted_role}"
             )
 
-        owner = get_user_model().objects.create_user(username="loans-rls-owner")
+        suffix = uuid.uuid4().hex[:12]
+        owner = get_user_model().objects.create_user(username=f"loans-rls-owner-{suffix}")
         cls.first_workspace = Company.objects.create(
-            schema_name="loans-rls-one",
-            name="Loans RLS One",
+            schema_name=f"loans-rls-one-{suffix}",
+            name=f"Loans RLS One {suffix}",
             owner=owner,
             creator=owner,
         )
         cls.second_workspace = Company.objects.create(
-            schema_name="loans-rls-two",
-            name="Loans RLS Two",
+            schema_name=f"loans-rls-two-{suffix}",
+            name=f"Loans RLS Two {suffix}",
             owner=owner,
             creator=owner,
         )
@@ -67,6 +68,25 @@ class LoansRLSIsolationTests(TransactionTestCase):
                 issued_on=date(2026, 1, 1),
                 expires_on=date(2027, 1, 1),
             )
+
+    def test_bulk_series_rate_scope_guard_and_rls(self):
+        with transaction.atomic():
+            self._assume_runtime_role()
+            self.assertEqual(PawnMetalInterestRatePolicy.objects.count(),0)
+        with workspace_context(self.first_workspace.pk):
+            self._assume_runtime_role()
+            for workspace, license in ((self.first_workspace,self.second_license),
+                                       (self.second_workspace,self.first_license)):
+                with self.assertRaises(DatabaseError), transaction.atomic():
+                    PawnMetalInterestRatePolicy.objects.bulk_create([PawnMetalInterestRatePolicy(
+                        workspace=workspace, license=license, series_id=self.first_series_id,
+                        metal="GOLD", monthly_interest_rate="1.1", effective_from=date(2026,9,25))])
+            with transaction.atomic():
+                row=PawnMetalInterestRatePolicy.objects.create(workspace=self.first_workspace,
+                    license=self.first_license, series_id=self.first_series_id,
+                    metal="GOLD",monthly_interest_rate="1.1",effective_from=date(2026,9,25))
+                self.assertTrue(PawnMetalInterestRatePolicy.objects.filter(pk=row.pk).exists())
+                transaction.set_rollback(True)
 
     @classmethod
     def tearDownClass(cls):

@@ -321,6 +321,7 @@ def preview_pawn_loan_renewal_plan(
         resolved = resolve_pawn_draft_economics(
             workspace_id=workspace_id,
             license_id=license.pk,
+            series_id=series.pk,
             as_of_date=timezone.localdate(),
             collateral=successor_collateral,
             require_fresh_rates=True,

@@ -16,7 +16,9 @@ from apps.tenant_apps.loans.web.economic_forms import (
     LoanMonitoringPolicyForm,
     PawnEconomicConfigurationForm,
     PawnFeePolicyForm,
+    PawnSeriesInterestForm,
 )
+from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
 from apps.tenant_apps.loans.models import (
     LoanMonitoringPolicy,
     PawnLoanEconomicPolicy,
@@ -35,7 +37,7 @@ from apps.tenant_apps.loans.services import (
 def pawn_economics_setup(request):
     action = request.POST.get("action") if request.method == "POST" else None
     configuration_form = PawnEconomicConfigurationForm(
-        request.POST if request.method == "POST" and action not in {"fee", "monitoring"} else None,
+        request.POST if request.method == "POST" and action not in {"fee", "monitoring", "series_rates"} else None,
         workspace=request.loans_workspace,
         initial={"effective_from": timezone.localdate()},
         prefix="configuration",
@@ -46,6 +48,17 @@ def pawn_economics_setup(request):
         initial={"effective_from": timezone.localdate()},
         prefix="fee",
     )
+    series_rate_form = PawnSeriesInterestForm(request.POST if action == "series_rates" else None,
+        workspace=request.loans_workspace, initial={"effective_from": timezone.localdate()}, prefix="series-rates")
+    if action == "series_rates" and series_rate_form.is_valid():
+        try:
+            create_pawn_series_interest_rates(workspace=request.loans_workspace, actor=request.user,
+                                             **series_rate_form.cleaned_data)
+        except (ValidationError, ValueError) as exc:
+            series_rate_form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Series monthly interest rates added. Approved loans retain their agreed rates.")
+            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     monitoring_initial = {
         "effective_from": timezone.localdate(),
         "compliance_profile": "Workspace monitoring v1",
@@ -113,6 +126,7 @@ def pawn_economics_setup(request):
             return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     context = {
         "configuration_form": configuration_form,
+        "series_rate_form": series_rate_form,
         "fee_form": fee_form,
         "monitoring_form": monitoring_form,
         "monitoring_amendment": amendment,
@@ -121,7 +135,7 @@ def pawn_economics_setup(request):
         ).select_related("license"),
         "rate_policies": PawnMetalInterestRatePolicy.objects.filter(
             workspace=request.loans_workspace
-        ).select_related("license"),
+        ).select_related("license", "series").prefetch_related("series__number_sequences"),
         "fee_policies": PawnLoanFeePolicy.objects.filter(
             workspace=request.loans_workspace
         ).select_related("license"),
