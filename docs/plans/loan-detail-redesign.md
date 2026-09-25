@@ -140,7 +140,7 @@ customer photos or database content were copied into it.
 
 ## Trial verification and rollout
 
-Release `cac28117` is live at `rehearsal.rokkad.com`. The 87-test regression run
+Initial trial release `cac28117` was deployed at `rehearsal.rokkad.com`. The 87-test regression run
 includes actual Django detail pages exercised by Chromium in draft, blocked,
 approved, active, viewer, closed and imported scenarios. Browser checks cover
 252 section visits across repeated layout changes, widths down to 320px, unique
@@ -154,3 +154,12 @@ application endpoints. Production acceptance uses GET-only detail checks under
 restricted RLS, with business-row fingerprints and rolled-back login sessions.
 All three workspaces passed; published asset hashes match source. See Status for
 the server-only backup and release evidence. Retirement remains undecided.
+
+The selected Tabs/Classic refinement is deployed as `c3679e03`. All 97
+regression checks and the final browser pass succeeded. Six detail pages across
+all three production workspaces passed restricted-runtime checks with unchanged
+business records and verified public assets. Default customer identity adds at
+most two queries per load; layout/tab switching remains local. B/C preference
+fallback, photo load/failure, menu keyboard/outside dismissal, responsive menu
+bounds, original forms and Classic presentation are covered. Original mockups
+remain unchanged; production workflows and document output were not redesigned.

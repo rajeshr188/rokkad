@@ -19,7 +19,15 @@ More actions is a grouped, keyboard-accessible dropdown over the original action
 No financial command, workflow, numbering, PDF, permission or migration changes.
 All 97 regression checks pass, including workspace/default-selection boundaries,
 loan detail permissions, imported tickets/releases and browser layout parity.
-See the updated [staff guide](flows/loan-detail-layouts.md). Deployment pending.
+See the updated [staff guide](flows/loan-detail-layouts.md). Release `c3679e03`
+is deployed with static volume `rokkad_production_static_c3679e03`. Final browser
+checks also pass after menu styling/keyboard refinements. Candidate and deployed
+restricted-RLS GET checks pass on six loan pages across JCL, JSK and Lakshmi;
+business-row fingerprints and runtime settings are unchanged. Published CSS/JS
+hashes match source. Evidence: `acceptance-20260925/tab-refinement-deployment.json`.
+Post-deployment server-only backup:
+`backups/operational/production-20260925T113556Z.dump` (55,659,513 bytes; SHA-256
+`8316ea4bd1b1be0c710d6ed8c301febf9c837b504d2a34b6207cd13bd7502a14`).
 
 ## Four-layout loan detail trial (2026-09-25)
 
