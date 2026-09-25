@@ -22,8 +22,17 @@ approved quantities; existing PDF bytes and loan values are preserved.
 All 165 regression tests pass, including authorization, zero-rate overrides,
 frozen approval/disbursal, renewal compatibility, populated migration replay,
 imported tickets and PDF rendering. Chromium verifies series/metal hint changes
-preserve typed overrides; migration drift is clean. Production deployment is
-pending. See the [staff guide](flows/collateral-entry-and-interest.md),
+preserve typed overrides; migration drift is clean. Release `706d6f57` and
+migration 0026 are deployed with static volume `rokkad_production_static_706d6f57`.
+Restricted-runtime candidate and deployed checks pass for setup, new-loan and
+detail pages in all three Workspaces. Read-only checks leave loan, event,
+collateral, numbering, release, snapshot and fee fingerprints unchanged. JSK's
+95% LTV and WH 1.1%/3% rates remain intact; published JavaScript matches source.
+Evidence: `acceptance-20260925/collateral-entry-deployment.json`.
+Post-deployment server-only backup:
+`backups/operational/production-20260925T141512Z.dump` (55,715,460 bytes; SHA-256
+`cd8eb63fd94757da69689a36006d06e4590c81ac46d9d88628033c01db4d7994`).
+See the [staff guide](flows/collateral-entry-and-interest.md),
 [decision](adr/2026-09-25-collateral-quantity-and-interest-overrides.md), and
 [portable-metadata extension](plans/collateral-portability-metadata.md).
 
