@@ -18,7 +18,7 @@
         const delta = amount - Number(row.dataset.due);
         const note = row.querySelector('.paper-difference');
         note.textContent = Number.isFinite(delta) && Math.abs(delta) > 0.005 ?
-          (delta < 0 ? `₹${(-delta).toFixed(2)} shortfall: needs an authorized interest concession.` : `₹${delta.toFixed(2)} above due: review before recording.`) : '';
+          (delta < 0 ? `₹${(-delta).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} shortfall: needs an authorized interest concession.` : `₹${delta.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} above due: review before recording.`) : '';
         note.classList.toggle('text-danger', Boolean(note.textContent));
         const details = row.querySelector('details');
         const payer = row.querySelector('[name$="-paid_by"]').value;
