@@ -1,5 +1,5 @@
 {% extends "base_customer_portal.html" %}
-{% load i18n %}
+{% load loans_display i18n %}
 
 {% block portal_content %}
 <div class="portal-page-header">
@@ -10,13 +10,13 @@
         <div class="portal-list-row">
             <strong>{{ row.label }}</strong>
             <span>{{ summary.period_label }}</span>
-            <span>{{ row.amount }}</span>
+            <span>{{ row.amount|indian_money }}</span>
         </div>
     {% endfor %}
     <div class="portal-list-row">
         <strong>{% trans "Closing balance" %}</strong>
         <span>{{ summary.period_label }}</span>
-        <span>{{ summary.closing_balance }}</span>
+        <span>{{ summary.closing_balance|indian_money }}</span>
     </div>
 </div>
 {% endblock %}

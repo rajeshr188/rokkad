@@ -14,6 +14,14 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Monetary display uses Indian lakh/crore grouping via `display_money(grouping=True)`
+and the `indian_money` template filter. Keep input values, wire contracts and frozen
+financial evidence unformatted. Native tickets use approval quantities; imported
+copies use frozen source quantities; unknown quantities are omitted. Existing
+issued PDF bytes remain unchanged. Camera selection is shared by collateral,
+customer form and customer gallery, with front/rear fallbacks and permitted named
+devices; camera IDs stay in page memory, and controllers stop stale streams.
+
 Native collateral entry defaults quantity to 1 and purity to 75% only in new
 rows; historical missing quantities remain null. Weights and amounts are row
 totals, never multiplied by quantity. Item interest overrides require a reason

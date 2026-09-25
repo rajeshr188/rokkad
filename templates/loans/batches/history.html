@@ -1,9 +1,9 @@
-{% extends "base_tenant.html" %}{% load orgs_tags %}
+{% extends "base_tenant.html" %}{% load loans_display orgs_tags %}
 {% block title %}Release batches{% endblock %}
 {% block workspace_content %}
 {% navigation_actions as actions %}
 <div class="app-heading"><h1 class="h3">Closure history</h1>{% if 'loan.release' in actions %}<a class="btn btn-primary" href="{% url 'workspace_loans:paper_closure_create' request.workspace.slug %}">Record paper closures</a><a class="btn btn-primary" href="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}">Release multiple loans</a>{% endif %}</div>
-<table class="table"><thead><tr><th>Batch</th><th>Type</th><th>Closure date</th><th>Paid by</th><th>Recorded collection (INR)</th></tr></thead><tbody>{% for batch in page %}<tr><td><a href="{% url 'workspace_loans:release_batch_detail' request.workspace.slug batch.pk %}">{{ batch.pk }}</a></td><td>{{ batch.get_mode_display }}</td><td>{{ batch.effective_date|date:"d/m/Y" }}</td><td>{{ batch.paid_by }}</td><td>{{ batch.total_amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">No release batches yet.</td></tr>{% endfor %}</tbody></table>
+<table class="table"><thead><tr><th>Batch</th><th>Type</th><th>Closure date</th><th>Paid by</th><th>Recorded collection (INR)</th></tr></thead><tbody>{% for batch in page %}<tr><td><a href="{% url 'workspace_loans:release_batch_detail' request.workspace.slug batch.pk %}">{{ batch.pk }}</a></td><td>{{ batch.get_mode_display }}</td><td>{{ batch.effective_date|date:"d/m/Y" }}</td><td>{{ batch.paid_by }}</td><td>{{ batch.total_amount|indian_money }}</td></tr>{% empty %}<tr><td colspan="5">No release batches yet.</td></tr>{% endfor %}</tbody></table>
 {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Previous</a>{% endif %} Page {{ page.number }} / {{ page.paginator.num_pages }} {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next</a>{% endif %}
 <p class="mt-3"><a href="{% url 'workspace_loans:pawn_release_list' request.workspace.slug %}">All releases</a></p>
 {% endblock %}

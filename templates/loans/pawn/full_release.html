@@ -1,5 +1,5 @@
 {% extends "base_tenant.html" %}
-{% load static i18n %}
+{% load loans_display static i18n %}
 {% block title %}{% translate "Full release" %} &middot; {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div hx-history="false">
@@ -17,11 +17,11 @@
       {% if quote.error %}<div class="alert alert-warning" role="status">{{ quote.error }}</div>
       {% else %}
       <dl class="row">
-        <dt class="col-7">{% translate "Principal settled" %}</dt><dd class="col-5 text-end text-break">{{ quote.principal_reduction_required|default_if_none:"—" }}</dd>
-        <dt class="col-7">{% translate "Interest and fees" %}</dt><dd class="col-5 text-end text-break">{{ quote.fees_and_interest_settlement }}</dd>
-        <dt class="col-7 border-top pt-3">{% translate "Exact settlement" %} (INR)</dt><dd class="col-5 text-end text-break border-top pt-3 fs-4 fw-bold">{{ quote.minimum_settlement|default_if_none:"—" }}</dd>
+        <dt class="col-7">{% translate "Principal settled" %}</dt><dd class="col-5 text-end text-break">{{ quote.principal_reduction_required|default_if_none:"—"|indian_money }}</dd>
+        <dt class="col-7">{% translate "Interest and fees" %}</dt><dd class="col-5 text-end text-break">{{ quote.fees_and_interest_settlement|indian_money }}</dd>
+        <dt class="col-7 border-top pt-3">{% translate "Exact settlement" %} (INR)</dt><dd class="col-5 text-end text-break border-top pt-3 fs-4 fw-bold">{{ quote.minimum_settlement|default_if_none:"—"|indian_money }}</dd>
       </dl>
-      <p class="small text-body-secondary">{% translate "Release-day interest" %}: {{ quote.release_day_catch_up_interest }}. {% translate "Already included in interest and fees above. Do not add it again." %}</p>
+      <p class="small text-body-secondary">{% translate "Release-day interest" %}: {{ quote.release_day_catch_up_interest|indian_money }}. {% translate "Already included in interest and fees above. Do not add it again." %}</p>
       <p class="small">{% translate "This is the total before any interest concession. Principal and fees must be collected in full. Confirmation recalculates the current settlement." %}</p>
       {% for blocker in quote.blockers %}<div class="alert alert-warning" role="status">{{ blocker.message|default:blocker }}</div>{% endfor %}
       {% endif %}

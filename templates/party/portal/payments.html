@@ -1,5 +1,5 @@
 {% extends "base_customer_portal.html" %}
-{% load i18n %}
+{% load loans_display i18n %}
 
 {% block portal_content %}
 <div class="portal-page-header">
@@ -10,7 +10,7 @@
         <div class="portal-list-row">
             <strong>{{ payment.payment_id }}</strong>
             <span>{{ payment.payment_date }}</span>
-            <span>{{ payment.total_amount.amount }} {{ payment.total_amount.currency }}</span>
+            <span>{{ payment.total_amount.amount|indian_money }} {{ payment.total_amount.currency }}</span>
         </div>
     {% empty %}
         <p class="portal-empty">{% trans "No payments are available for your portal access." %}</p>

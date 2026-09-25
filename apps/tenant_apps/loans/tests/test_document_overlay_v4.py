@@ -90,6 +90,19 @@ class PrecisionOverlayTests(SimpleTestCase):
             self.assertNotIn("INR 18600.00", text)
         self.assertEqual(self.payload, original)
 
+    def test_grouped_lakh_amount_renders_without_changing_source(self):
+        from dataclasses import replace
+        self.payload = replace(self.payload, fields=tuple(
+            replace(field, value="INR 1,23,456.50") if field.key == "loan.principal" else field
+            for field in self.payload.fields))
+        original = self.payload
+        for block in self.definition["blocks"]:
+            if block.get("binding") == "loan.principal":
+                block["value_format"] = "INR_SYMBOL"
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            self.assertIn("\u20b91,23,456.50", "".join(page.get_text() for page in pdf))
+        self.assertEqual(self.payload, original)
+
     def test_preprinted_business_name_omission_requires_matching_stock_and_internal_evidence(self):
         from dataclasses import replace
         original_hash = DocumentLayoutValidator.load(self.definition).content_hash

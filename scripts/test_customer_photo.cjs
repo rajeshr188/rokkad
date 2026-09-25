@@ -2,6 +2,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const {readFileSync} = require('node:fs');
+const selection = readFileSync('static/js/camera-selection.js', 'utf8');
 const source = readFileSync('static/js/customer-photo.js', 'utf8');
 
 function harness({secure = true, fail = false} = {}) {
@@ -29,7 +30,7 @@ function harness({secure = true, fail = false} = {}) {
     assert.equal(options.audio, false);
     return fail ? Promise.reject(new Error('denied')) : new Promise(resolve => pending.push(resolve));
   }};
-  vm.runInNewContext(source, {document, window, navigator: {mediaDevices},
+  vm.runInNewContext(selection + source, {document, window, navigator: {mediaDevices},
     URL: {createObjectURL: file => 'blob:' + file.name, revokeObjectURL: url => revoked.push(url)},
     DataTransfer: class { constructor() {this.files = []; this.items = {add: file => this.files.push(file)};} },
     File: class {constructor(parts, name, options) {this.name = name; this.type = options.type;}},

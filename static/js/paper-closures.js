@@ -26,7 +26,7 @@
         details.querySelector('summary').textContent = `Paid by ${payer}; received by ${recipient} · details`;
       });
       const output = document.getElementById('paper-total');
-      if (output) output.textContent = `${count} selected · Actual collections ₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      if (output) output.textContent = `${count} selected · Actual collections ₹${total.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
     };
     form.addEventListener('input', update);
     form.addEventListener('change', update);

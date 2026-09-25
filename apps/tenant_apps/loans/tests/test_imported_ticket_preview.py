@@ -28,6 +28,7 @@ class ImportedTicketPreviewTests(OpeningImportFixture):
             payload, source, _ = imported_ticket_payload(self.loan)
             fields = {field.key: field.value for field in payload.fields}
             self.assertEqual(source['principal_amount'], '1000')
+            self.assertEqual(source['collateral'][0]['quantity'], self.review['collateral'][0]['quantity'])
             self.assertEqual(self.loan.principal_amount, 900)
             self.assertEqual(fields['loan.number'], self.review['source']['number'])
             self.assertEqual(fields['loan.date'], self.review['terms']['original_date'])
@@ -100,6 +101,7 @@ class ImportedTicketPreviewTests(OpeningImportFixture):
                             self.assertNotIn('PREVIEW / NOT AN OFFICIAL ISSUE', text)
                             self.assertNotIn('RECONSTRUCTED IMPORT PREVIEW', text)
                         self.assertIn(self.review['source']['number'], ''.join(page.get_text() for page in pdf))
+                        self.assertIn(f"Qty {self.review['collateral'][0]['quantity']}", ''.join(page.get_text() for page in pdf))
                     self.assertEqual(name, f'imported-loan-copy-{self.loan.pk}.pdf')
                     self.assertEqual(before, self.snapshot())
 

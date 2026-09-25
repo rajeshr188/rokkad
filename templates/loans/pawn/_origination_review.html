@@ -1,11 +1,11 @@
-{% load i18n %}
+{% load loans_display i18n %}
 {% partialdef amounts %}
 {% if economics %}
 <dl class="row mb-0">
- <dt class="col-7">{% translate "Principal" %}</dt><dd class="col-5 text-end">{{ economics.gross_principal }}</dd>
- <dt class="col-7">{% translate "Advance interest" %}</dt><dd class="col-5 text-end">{{ economics.advance_interest }}</dd>
- <dt class="col-7">{% translate "Deducted fees" %}</dt><dd class="col-5 text-end">{{ economics.deducted_fees }}</dd>
- <dt class="col-7 border-top pt-3">{% translate "Net amount to pay" %}</dt><dd class="col-5 text-end border-top pt-3 fs-4 fw-bold">{{ economics.net_disbursed }}</dd>
+ <dt class="col-7">{% translate "Principal" %}</dt><dd class="col-5 text-end">{{ economics.gross_principal|indian_money }}</dd>
+ <dt class="col-7">{% translate "Advance interest" %}</dt><dd class="col-5 text-end">{{ economics.advance_interest|indian_money }}</dd>
+ <dt class="col-7">{% translate "Deducted fees" %}</dt><dd class="col-5 text-end">{{ economics.deducted_fees|indian_money }}</dd>
+ <dt class="col-7 border-top pt-3">{% translate "Net amount to pay" %}</dt><dd class="col-5 text-end border-top pt-3 fs-4 fw-bold">{{ economics.net_disbursed|indian_money }}</dd>
 </dl>
 <p class="small text-body-secondary">{% translate "Amounts in INR. Principal less advance interest and deducted fees gives the amount paid to the customer." %}</p>
 {% else %}<p>{% translate "Itemized payment amounts are unavailable for this loan. Review its recorded terms before continuing." %}</p>{% endif %}

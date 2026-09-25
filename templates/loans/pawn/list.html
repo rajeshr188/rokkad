@@ -1,5 +1,5 @@
 {% extends "base_tenant.html" %}
-{% load i18n static orgs_tags %}
+{% load loans_display i18n static orgs_tags %}
 {% block title %}{% translate "Loans" %}{% endblock %}
 {% block workspace_content %}
 {% navigation_actions as batch_actions %}
@@ -50,7 +50,7 @@
             {% if loan.borrower.profile_photo %}<img loading="lazy" src="{% url 'workspace_party:party_photo' workspace_slug=request.workspace.slug pk=loan.borrower_id %}" alt="" width="44" height="44" class="directory-avatar">{% else %}<span class="directory-avatar" aria-hidden="true">{{ loan.borrower.display_name|first|upper }}</span>{% endif %}
             <div class="text-break"><a class="directory-name" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{{ loan.loan_number }}</a><div><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}" title="View all loans for this borrower">{{ loan.borrower.display_name }}</a></div><div class="small text-body-secondary">{{ loan.borrower.party_code }} · {{ loan.license.license_number }}/{{ loan.series.pawn_display_name }}</div></div>
           </div></div>
-          <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">{% translate "Principal at entry" %}</dt><dd class="mb-1">₹{{ loan.principal_amount }}</dd><dt class="small text-body-secondary fw-normal">{% translate "Loan date" %}</dt><dd class="mb-0">{{ loan.loan_date }}</dd></dl></div>
+          <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">{% translate "Principal at entry" %}</dt><dd class="mb-1">₹{{ loan.principal_amount|indian_money }}</dd><dt class="small text-body-secondary fw-normal">{% translate "Loan date" %}</dt><dd class="mb-0">{{ loan.loan_date }}</dd></dl></div>
           <div class="col-6 col-md-4">{% include "loans/pawn/_state_badge.html" %}<p class="small mt-2 mb-0">{% if loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>
         </div>
       </li>{% empty %}<li class="card app-empty"><strong>{% translate "No matching loans" %}</strong><p>{% translate "Check the loan number, try the customer’s phone, or clear the filters." %}</p></li>{% endfor %}

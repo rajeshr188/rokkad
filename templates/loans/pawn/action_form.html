@@ -1,5 +1,5 @@
 {% extends "base_tenant.html" %}
-{% load static i18n %}
+{% load loans_display static i18n %}
 {% block title %}{{ action_label }} · {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div class="loan-workflow-grid" hx-history="false"><div class="loan-workflow-main">
@@ -15,10 +15,10 @@
     {% if is_repayment %}<div class="alert alert-info"><p class="mb-0">{% translate "A repayment reduces recorded dues and keeps collateral with the branch. To settle the loan and return all items, use Full release from the loan page." %}</p></div>{% endif %}
     {% if balance %}
       <div class="card mb-3"><div class="card-body row g-3">
-        <div class="col-md-3"><div class="small text-muted">{% translate "Fees" %}</div>{{ balance.fees_outstanding }}</div>
-        <div class="col-md-3"><div class="small text-muted">{% translate "Overdue / current interest" %}</div>{{ balance.overdue_interest_outstanding }} / {{ balance.current_interest_outstanding }}</div>
-        <div class="col-md-3"><div class="small text-muted">{% translate "Principal" %}</div>{{ balance.principal_outstanding }}</div>
-        <div class="col-md-3"><div class="small text-muted">{% translate "Total due" %}</div><strong>{{ balance.total_due }}</strong></div>
+        <div class="col-md-3"><div class="small text-muted">{% translate "Fees" %}</div>{{ balance.fees_outstanding|indian_money }}</div>
+        <div class="col-md-3"><div class="small text-muted">{% translate "Overdue / current interest" %}</div>{{ balance.overdue_interest_outstanding|indian_money }} / {{ balance.current_interest_outstanding|indian_money }}</div>
+        <div class="col-md-3"><div class="small text-muted">{% translate "Principal" %}</div>{{ balance.principal_outstanding|indian_money }}</div>
+        <div class="col-md-3"><div class="small text-muted">{% translate "Total due" %}</div><strong>{{ balance.total_due|indian_money }}</strong></div>
       </div></div>
     {% endif %}
 
@@ -38,12 +38,12 @@
     {% if repayment_preview %}
       <div class="card mb-3"><div class="card-header">{% translate "Preview only: no payment recorded" %}</div><div class="card-body">
         <div class="row g-3 mb-3">
-          <div class="col"><div class="small text-muted">{% translate "Fees" %}</div>{{ repayment_preview.allocation.fees }}</div>
-          <div class="col"><div class="small text-muted">{% translate "Overdue interest" %}</div>{{ repayment_preview.allocation.overdue_interest }}</div>
-          <div class="col"><div class="small text-muted">{% translate "Current interest" %}</div>{{ repayment_preview.allocation.current_interest }}</div>
-          <div class="col"><div class="small text-muted">{% translate "Principal" %}</div>{{ repayment_preview.allocation.principal }}</div>
+          <div class="col"><div class="small text-muted">{% translate "Fees" %}</div>{{ repayment_preview.allocation.fees|indian_money }}</div>
+          <div class="col"><div class="small text-muted">{% translate "Overdue interest" %}</div>{{ repayment_preview.allocation.overdue_interest|indian_money }}</div>
+          <div class="col"><div class="small text-muted">{% translate "Current interest" %}</div>{{ repayment_preview.allocation.current_interest|indian_money }}</div>
+          <div class="col"><div class="small text-muted">{% translate "Principal" %}</div>{{ repayment_preview.allocation.principal|indian_money }}</div>
         </div>
-        {% if repayment_item_rows %}<div class="small fw-semibold mb-2">{% translate "Principal allocation: highest monthly rate first" %}</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>{% translate "Item" %}</th><th>{% translate "Rate" %}</th><th>{% translate "Before" %}</th><th>{% translate "Applied" %}</th><th>{% translate "After" %}</th></tr></thead><tbody>{% for row in repayment_item_rows %}<tr><td>{% if row.item %}{{ row.item.description }}{% else %}Item #{{ row.allocation.collateral_item_id }}{% endif %}</td><td>{{ row.allocation.monthly_interest_rate }}%</td><td>{{ row.allocation.balance_before }}</td><td>{{ row.allocation.principal_applied }}</td><td>{{ row.allocation.balance_after }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+        {% if repayment_item_rows %}<div class="small fw-semibold mb-2">{% translate "Principal allocation: highest monthly rate first" %}</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>{% translate "Item" %}</th><th>{% translate "Rate" %}</th><th>{% translate "Before" %}</th><th>{% translate "Applied" %}</th><th>{% translate "After" %}</th></tr></thead><tbody>{% for row in repayment_item_rows %}<tr><td>{% if row.item %}{{ row.item.description }}{% else %}Item #{{ row.allocation.collateral_item_id }}{% endif %}</td><td>{{ row.allocation.monthly_interest_rate }}%</td><td>{{ row.allocation.balance_before|indian_money }}</td><td>{{ row.allocation.principal_applied|indian_money }}</td><td>{{ row.allocation.balance_after|indian_money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
         <div class="small text-muted mt-2">{% translate "Confirming records immutable allocation evidence. Previewing again does not create an event." %}</div>
       </div></div>
     {% endif %}
@@ -52,12 +52,12 @@
       <div class="card mb-3"><div class="card-header">Release readiness</div><div class="card-body">
         {% if quote.error %}<div class="alert alert-danger mb-0">{{ quote.error }}</div>{% else %}
           <div class="row g-3 mb-3">
-            <div class="col-md-3"><div class="small text-muted">Exact settlement</div><strong>{{ quote.minimum_settlement|default_if_none:"Unavailable" }}</strong></div>
-            <div class="col-md-3"><div class="small text-muted">Interest and fees</div>{{ quote.fees_and_interest_settlement }}</div>
-            <div class="col-md-3"><div class="small text-muted">Release-day interest</div>{{ quote.release_day_catch_up_interest }}</div>
-            <div class="col-md-3"><div class="small text-muted">Principal settled</div>{{ quote.principal_reduction_required|default_if_none:"Unavailable" }}</div>
+            <div class="col-md-3"><div class="small text-muted">Exact settlement</div><strong>{{ quote.minimum_settlement|default_if_none:"Unavailable"|indian_money }}</strong></div>
+            <div class="col-md-3"><div class="small text-muted">Interest and fees</div>{{ quote.fees_and_interest_settlement|indian_money }}</div>
+            <div class="col-md-3"><div class="small text-muted">Release-day interest</div>{{ quote.release_day_catch_up_interest|indian_money }}</div>
+            <div class="col-md-3"><div class="small text-muted">Principal settled</div>{{ quote.principal_reduction_required|default_if_none:"Unavailable"|indian_money }}</div>
           </div>
-          {% if quote.item_valuations %}<div class="small fw-semibold mb-2">Collateral that will be returned</div><div class="table-responsive mb-3"><table class="table table-sm mb-0"><thead><tr><th>{% translate "Item" %}</th><th>Metal</th><th>Net weight</th><th>Release valuation</th></tr></thead><tbody>{% for item in quote.item_valuations %}{% if item.selected_for_release %}<tr><td>{{ item.description }}</td><td>{{ item.metal|title }}</td><td>{{ item.net_weight }}</td><td>{{ item.valuation_amount|default_if_none:"Unavailable" }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>{% endif %}
+          {% if quote.item_valuations %}<div class="small fw-semibold mb-2">Collateral that will be returned</div><div class="table-responsive mb-3"><table class="table table-sm mb-0"><thead><tr><th>{% translate "Item" %}</th><th>Metal</th><th>Net weight</th><th>Release valuation</th></tr></thead><tbody>{% for item in quote.item_valuations %}{% if item.selected_for_release %}<tr><td>{{ item.description }}</td><td>{{ item.metal|title }}</td><td>{{ item.net_weight }}</td><td>{{ item.valuation_amount|default_if_none:"Unavailable"|indian_money }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>{% endif %}
           {% for blocker in quote.blockers %}<div class="alert alert-warning py-2 mb-2">{{ blocker.message }}</div>{% empty %}<div class="alert alert-success mb-0">Collateral and settlement checks passed.</div>{% endfor %}
         {% endif %}
       </div></div>
@@ -68,13 +68,13 @@
         {% for row in accrual_preview_rows %}{% with preview=row.preview %}
           <li class="list-group-item">
             <strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br>
-            <span class="small text-muted">Calculated {{ preview.calculated_interest }} &middot; Advance interest applied {{ preview.advance_interest_applied }} &middot; Newly due {{ preview.recognized_interest }}</span>
-            {% if row.lines %}<div class="table-responsive mt-2"><table class="table table-sm mb-0"><thead><tr><th>Collateral</th><th>Principal base</th><th>Monthly rate</th><th>Calculated</th><th>Advance applied</th><th>Newly due</th></tr></thead><tbody>{% for item_row in row.lines %}<tr><td>{% if item_row.item %}{{ item_row.item.description }}{% else %}Item #{{ item_row.line.collateral_item_id }}{% endif %}</td><td>{{ item_row.line.principal_base }}</td><td>{{ item_row.line.monthly_interest_rate }}%</td><td>{{ item_row.line.calculated_interest }}</td><td>{{ item_row.line.advance_interest_applied }}</td><td>{{ item_row.line.recognized_interest }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+            <span class="small text-muted">Calculated {{ preview.calculated_interest|indian_money }} &middot; Advance interest applied {{ preview.advance_interest_applied|indian_money }} &middot; Newly due {{ preview.recognized_interest|indian_money }}</span>
+            {% if row.lines %}<div class="table-responsive mt-2"><table class="table table-sm mb-0"><thead><tr><th>Collateral</th><th>Principal base</th><th>Monthly rate</th><th>Calculated</th><th>Advance applied</th><th>Newly due</th></tr></thead><tbody>{% for item_row in row.lines %}<tr><td>{% if item_row.item %}{{ item_row.item.description }}{% else %}Item #{{ item_row.line.collateral_item_id }}{% endif %}</td><td>{{ item_row.line.principal_base|indian_money }}</td><td>{{ item_row.line.monthly_interest_rate }}%</td><td>{{ item_row.line.calculated_interest|indian_money }}</td><td>{{ item_row.line.advance_interest_applied|indian_money }}</td><td>{{ item_row.line.recognized_interest|indian_money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
           </li>
         {% endwith %}{% endfor %}
       </ul></div>
     {% elif previews %}
-      <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">{% for preview in previews %}<li class="list-group-item"><strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br><span class="small text-muted">Calculated {{ preview.calculated_interest }} &middot; Advance interest applied {{ preview.advance_interest_applied }} &middot; Newly due {{ preview.recognized_interest }}</span></li>{% endfor %}</ul></div>
+      <div class="card mb-3"><div class="card-header">Eligible periods</div><ul class="list-group list-group-flush">{% for preview in previews %}<li class="list-group-item"><strong>Period {{ preview.period_number }}</strong>: {{ preview.period_start }} to {{ preview.period_end }}<br><span class="small text-muted">Calculated {{ preview.calculated_interest|indian_money }} &middot; Advance interest applied {{ preview.advance_interest_applied|indian_money }} &middot; Newly due {{ preview.recognized_interest|indian_money }}</span></li>{% endfor %}</ul></div>
     {% endif %}
 
     {% if loan_event %}

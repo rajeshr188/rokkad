@@ -1,3 +1,4 @@
+{% load loans_display %}
 {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
 {% if form_errors %}<div class="alert alert-danger">{{ form_errors }}</div>{% endif %}
 {% if preview %}
@@ -10,7 +11,7 @@
 <h2 class="h5"><a href="{% url 'workspace_slug_loan_detail' request.workspace.slug row.loan.pk %}" target="_blank" rel="noopener">{{ row.loan.loan_number }}</a> &middot; {{ row.loan.borrower.display_name }}</h2>
 <p class="small text-muted">License {{ row.loan.license.license_number }} / {{ row.loan.series.code }}</p>
 {% if row.error %}<div class="alert alert-warning">Cannot release: {{ row.error }}</div>{% else %}
-<p><strong>Settlement: INR {{ row.amount|floatformat:2 }}</strong> &middot; Principal: {{ row.quote.principal_reduction_required|floatformat:2 }} &middot; Interest: {{ row.interest|floatformat:2 }} &middot; Fees: {{ row.fees|floatformat:2 }}</p>
+<p><strong>Settlement: INR {{ row.amount|indian_money }}</strong> &middot; Principal: {{ row.quote.principal_reduction_required|indian_money }} &middot; Interest: {{ row.interest|indian_money }} &middot; Fees: {{ row.fees|indian_money }}</p>
 {% endif %}
 <div class="d-flex flex-wrap gap-3 mb-3">{% for item in row.loan.collateral_items.all %}<div class="border rounded p-2">{% with photo=item.photos.last %}{% if photo %}<img width="64" height="64" style="object-fit:cover" alt="{{ item.description }}" src="{% url 'workspace_loans:pawn_collateral_photo_document' request.workspace.slug row.loan.pk item.pk photo.pk %}?inline=1">{% endif %}{% endwith %}<span>{{ item.description }} &middot; {{ item.net_weight }} g</span><div class="small text-muted">CI-{{ item.public_id }} &middot; {{ item.get_custody_state_display }}</div></div>{% endfor %}</div>
 <div class="collector-fields" data-borrower="{{ row.loan.borrower.display_name }}">
@@ -24,7 +25,7 @@
 </div></div></section>
 {% endfor %}
 <div class="card"><div class="card-body">
-{% if preview.ready %}<h2 class="h4">Total to collect: INR {{ preview.total|floatformat:2 }}</h2><p>{{ preview.rows|length }} loan(s) &middot; {{ preview.date }}. Quote valid for 10 minutes; all amounts are rechecked on completion.</p>{% else %}<h2 class="h5">Resolve or remove blocked loans</h2><p>Amounts shown for ready loans are not a complete batch total.</p>{% endif %}
+{% if preview.ready %}<h2 class="h4">Total to collect: INR {{ preview.total|indian_money }}</h2><p>{{ preview.rows|length }} loan(s) &middot; {{ preview.date }}. Quote valid for 10 minutes; all amounts are rechecked on completion.</p>{% else %}<h2 class="h5">Resolve or remove blocked loans</h2><p>Amounts shown for ready loans are not a complete batch total.</p>{% endif %}
 <div class="row g-3 mb-3"><div class="col-md-6">{{ confirmation_form.paid_by.label_tag }}{{ confirmation_form.paid_by }}</div><div class="col-md-6">{{ confirmation_form.payment_reference.label_tag }}{{ confirmation_form.payment_reference }}</div></div>
 <p>{{ confirmation_form.payment_confirmed }} {{ confirmation_form.payment_confirmed.label_tag }}</p>
 <p class="small text-muted">Completion records settlement, return of every remaining item and closure for each loan. If someone will collect later, remove that loan and handle it separately. No notifications are sent automatically.</p>

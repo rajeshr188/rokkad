@@ -1,4 +1,5 @@
 {% extends "base_tenant.html" %}
+{% load loans_display %}
 {% block title %}{{ detail.summary.funding_number }}{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
@@ -24,7 +25,7 @@
 {% else %}
 <div class="alert alert-warning"><ul class="mb-0">{% for blocker in draft.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>
 {% endif %}
-<div class="table-responsive mb-4"><table class="table"><tbody><tr><th scope="row">Selected value</th><td>{{ draft.total_collateral_value }}</td><th scope="row">Maximum funded amount</th><td>{{ draft.maximum_funded_amount }}</td></tr></tbody></table></div>
+<div class="table-responsive mb-4"><table class="table"><tbody><tr><th scope="row">Selected value</th><td>{{ draft.total_collateral_value|indian_money }}</td><th scope="row">Maximum funded amount</th><td>{{ draft.maximum_funded_amount|indian_money }}</td></tr></tbody></table></div>
 {% if draft.ready %}
 <form method="post" action="{% url 'workspace_loans:funding_loan_draft_activate' request.workspace.slug detail.summary.funding_loan_id %}" class="row g-2 align-items-end mb-4">
   {% csrf_token %}
@@ -40,10 +41,10 @@
 
 <h2 class="h5">Operational balance</h2>
 <div class="row g-3 mb-4">
-  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Principal</div><div class="h5 mb-0">{{ detail.summary.principal_outstanding }}</div></div></div>
-  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Interest</div><div class="h5 mb-0">{{ detail.summary.interest_outstanding }}</div></div></div>
-  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Fees</div><div class="h5 mb-0">{{ detail.summary.fees_outstanding }}</div></div></div>
-  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Total due</div><div class="h5 mb-0">{{ detail.summary.total_due }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Principal</div><div class="h5 mb-0">{{ detail.summary.principal_outstanding|indian_money }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Interest</div><div class="h5 mb-0">{{ detail.summary.interest_outstanding|indian_money }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Fees</div><div class="h5 mb-0">{{ detail.summary.fees_outstanding|indian_money }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Total due</div><div class="h5 mb-0">{{ detail.summary.total_due|indian_money }}</div></div></div>
 </div>
 
 {% if detail.summary.state == "ACTIVE" or detail.summary.state == "SETTLEMENT_PENDING" %}
@@ -131,7 +132,7 @@
 <div class="table-responsive mb-4">
   <table class="table app-table align-middle">
     <thead><tr><th>Collateral</th><th>Source PawnLoan</th><th>Description</th><th>Custody</th><th>Membership</th><th class="text-end">Selected value</th></tr></thead>
-    <tbody>{% for item in detail.collateral %}<tr><td>#{{ item.collateral_item_id }}</td><td>{{ item.source_loan_number }}</td><td>{{ item.description }}</td><td>{{ item.custody_state }}</td><td>{% if item.active %}Active{% else %}Released{% endif %}</td><td class="text-end">{{ item.selected_collateral_value }}</td></tr>{% empty %}<tr><td colspan="6" class="text-center py-4 text-muted">No pledge evidence exists.</td></tr>{% endfor %}</tbody>
+    <tbody>{% for item in detail.collateral %}<tr><td>#{{ item.collateral_item_id }}</td><td>{{ item.source_loan_number }}</td><td>{{ item.description }}</td><td>{{ item.custody_state }}</td><td>{% if item.active %}Active{% else %}Released{% endif %}</td><td class="text-end">{{ item.selected_collateral_value|indian_money }}</td></tr>{% empty %}<tr><td colspan="6" class="text-center py-4 text-muted">No pledge evidence exists.</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 
@@ -139,7 +140,7 @@
 <div class="table-responsive mb-4">
   <table class="table app-table align-middle">
     <thead><tr><th>Seq.</th><th>Effective</th><th>Operation</th><th class="text-end">Principal effect</th><th class="text-end">Interest effect</th><th class="text-end">Fee effect</th><th class="text-end">Balance</th><th>Actor</th></tr></thead>
-    <tbody>{% for row in detail.statement %}<tr><td>{{ row.sequence }}</td><td>{{ row.effective_date }}</td><td>{{ row.operation }}{% if row.operation == "RECORD_REPAYMENT" %} <a class="small" href="{% url 'workspace_loans:funding_loan_repayment_receipt_pdf' request.workspace.slug detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td class="text-end">{{ row.principal_effect }}</td><td class="text-end">{{ row.interest_effect }}</td><td class="text-end">{{ row.fee_effect }}</td><td class="text-end fw-semibold">{{ row.total_balance }}</td><td>{{ row.actor_name }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">No financial events exist.</td></tr>{% endfor %}</tbody>
+    <tbody>{% for row in detail.statement %}<tr><td>{{ row.sequence }}</td><td>{{ row.effective_date }}</td><td>{{ row.operation }}{% if row.operation == "RECORD_REPAYMENT" %} <a class="small" href="{% url 'workspace_loans:funding_loan_repayment_receipt_pdf' request.workspace.slug detail.summary.funding_loan_id row.source_id %}">Receipt</a>{% endif %}</td><td class="text-end">{{ row.principal_effect|indian_money }}</td><td class="text-end">{{ row.interest_effect|indian_money }}</td><td class="text-end">{{ row.fee_effect|indian_money }}</td><td class="text-end fw-semibold">{{ row.total_balance|indian_money }}</td><td>{{ row.actor_name }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">No financial events exist.</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 

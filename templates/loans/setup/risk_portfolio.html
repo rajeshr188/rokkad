@@ -1,4 +1,5 @@
 {% extends "base_tenant.html" %}
+{% load loans_display %}
 {% block title %}Loan health{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
@@ -8,7 +9,7 @@
 </div>
 <div class="row g-3 mb-4">
   <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active loans</div><div class="h3 mb-0">{{ summary.loan_count }}</div><div>{{ summary.current_count }} assessed for today</div></div></div></div>
-  <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Economic exposure</div><div class="h3 mb-0">{% if summary.totals_complete %}{{ summary.total_exposure|floatformat:2 }}{% else %}Unavailable{% endif %}</div><div class="small">{% if not summary.totals_complete %}Assess every active loan before reporting a total.{% else %}Overdue: {{ summary.total_overdue|floatformat:2 }}{% endif %}</div></div></div></div>
+  <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Economic exposure</div><div class="h3 mb-0">{% if summary.totals_complete %}{{ summary.total_exposure|indian_money }}{% else %}Unavailable{% endif %}</div><div class="small">{% if not summary.totals_complete %}Assess every active loan before reporting a total.{% else %}Overdue: {{ summary.total_overdue|indian_money }}{% endif %}</div></div></div></div>
   <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Needs assessment</div><div>Unassessed: {{ summary.unassessed_count }}</div><div>Outdated: {{ summary.stale_count }}</div><div>Failed: {{ summary.error_count }}</div></div></div></div>
   <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="small text-muted">Unknown collateral coverage</div><div class="h3 mb-0">{{ summary.unknown_coverage_count }}</div><div class="small">Among today's assessments; review missing or old evidence.</div></div></div></div>
 </div>
@@ -30,8 +31,8 @@
 {% if loan.assessment_status == 'STALE' %}<div class="small">Date, rules or source evidence changed. Refresh required.</div>{% endif %}
 {% if row.error_message %}<div class="small text-danger">{{ row.error_message }}</div>{% endif %}</td>
 {% if loan.assessment_status == 'CURRENT' %}
-<td>{{ row.performance_class|default:"Unknown" }}<div>Days past due: {{ row.days_past_due|default_if_none:"Unknown" }}</div><div>Due now: {{ row.due|floatformat:2 }}</div><div>Overdue: {{ row.overdue|floatformat:2 }}</div><div class="small text-muted">Economic exposure: {{ row.exposure|floatformat:2 }}</div></td>
-<td>{% if row.ltv_ratio != None %}<div>Eligible value: {{ row.collateral_value|floatformat:2 }}</div><div>LTV ratio: {{ row.ltv_ratio|floatformat:4 }}</div><div>Full shortfall: {{ row.source_provenance.coverage.shortfall|floatformat:2 }}</div><div>Policy headroom: {{ row.source_provenance.coverage.headroom|floatformat:2 }}</div>{% else %}<strong>Unknown coverage</strong>{% endif %}<div class="small mt-2">Coverage exposure: {{ row.source_provenance.coverage.exposure|floatformat:2 }}</div><div class="small text-muted">{{ row.source_provenance.coverage.basis }}</div></td>
+<td>{{ row.performance_class|default:"Unknown" }}<div>Days past due: {{ row.days_past_due|default_if_none:"Unknown" }}</div><div>Due now: {{ row.due|indian_money }}</div><div>Overdue: {{ row.overdue|indian_money }}</div><div class="small text-muted">Economic exposure: {{ row.exposure|indian_money }}</div></td>
+<td>{% if row.ltv_ratio != None %}<div>Eligible value: {{ row.collateral_value|indian_money }}</div><div>LTV ratio: {{ row.ltv_ratio|floatformat:4 }}</div><div>Full shortfall: {{ row.source_provenance.coverage.shortfall|indian_money }}</div><div>Policy headroom: {{ row.source_provenance.coverage.headroom|indian_money }}</div>{% else %}<strong>Unknown coverage</strong>{% endif %}<div class="small mt-2">Coverage exposure: {{ row.source_provenance.coverage.exposure|indian_money }}</div><div class="small text-muted">{{ row.source_provenance.coverage.basis }}</div></td>
 <td><details><summary>Prices and appraisals</summary>{% for item in row.source_provenance.evidence %}<div class="small border-bottom py-2">Collateral #{{ item.item_id }}<br>Price: {{ item.rate_at|default:"Missing" }} ({{ item.rate_status }})<br>Appraisal: {{ item.appraisal_at|default:"Missing" }} ({{ item.appraisal_status }}){% for message in item.messages %}<div class="text-danger">{{ message }}</div>{% endfor %}</div>{% endfor %}<div class="small">Policy: {{ row.policy_identity }}</div></details></td>
 {% else %}<td colspan="3" class="text-muted">Current amounts and coverage are unavailable until this loan is assessed successfully for today. Open the loan for live details.</td>{% endif %}
 <td><form method="post" action="{% url 'workspace_loans:pawn_risk_refresh_one' request.workspace.slug loan.pk %}" hx-post="{% url 'workspace_loans:pawn_risk_refresh_one' request.workspace.slug loan.pk %}">{% csrf_token %}<input type="hidden" name="as_of" value="{% now 'Y-m-d' %}"><button class="btn btn-sm btn-outline-primary" type="submit">Refresh</button></form></td></tr>

@@ -1,4 +1,5 @@
 {% extends "base_tenant.html" %}
+{% load loans_display %}
 {% block title %}FundingLoan read console{% endblock %}
 {% block workspace_content %}
 {% include "loans/setup/_navigation.html" %}
@@ -28,10 +29,10 @@
         <td><a href="{% url 'workspace_loans:funding_loan_read_detail' request.workspace.slug loan.funding_loan_id %}">{{ loan.funding_number }}</a></td>
         <td>{{ loan.lender_name }}</td>
         <td><span class="badge text-bg-light border">{{ loan.state }}</span></td>
-        <td class="text-end">{{ loan.principal_outstanding }}</td>
-        <td class="text-end">{{ loan.interest_outstanding }}</td>
-        <td class="text-end">{{ loan.fees_outstanding }}</td>
-        <td class="text-end fw-semibold">{{ loan.total_due }}</td>
+        <td class="text-end">{{ loan.principal_outstanding|indian_money }}</td>
+        <td class="text-end">{{ loan.interest_outstanding|indian_money }}</td>
+        <td class="text-end">{{ loan.fees_outstanding|indian_money }}</td>
+        <td class="text-end fw-semibold">{{ loan.total_due|indian_money }}</td>
         <td class="text-end">{{ loan.active_collateral_count }}</td>
       </tr>
       {% empty %}

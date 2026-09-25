@@ -7,6 +7,30 @@ tags: [status, architecture]
 
 # Status
 
+## Camera selection, printed quantities and Indian monetary display (2026-09-25)
+
+Customer create/edit, customer gallery and collateral capture now offer front/rear
+choices plus available named cameras after permission. Changing a live choice
+reopens capture immediately; tracks are stopped before switching, on cancellation,
+submission, page hide and navigation. Generation guards discard late permission
+responses and captures. Ordinary file upload remains available. Gallery capture
+preserves the camera aspect ratio instead of stretching every photo to 480x360.
+
+Native and imported tickets print known frozen quantities beside descriptions.
+Imported copies now carry source quantity through their projection; unknown
+historical quantities are not invented. Previously issued native PDFs remain
+unchanged. Presentation-only Decimal formatting groups monetary amounts in lakhs
+and crores across operational pages, reports, customer portal and newly generated
+PDFs. Actual paise remain; whole rupees omit .00. Input/wire values and financial
+evidence are unchanged; no migration or financial-data update is required.
+
+Validation: synthetic Chromium checks cover all three camera controls, named
+selection, front/rear switching, capture/preview, cancellation, out-of-order
+permission responses, cleanup and upload fallback. Django regression suites passed
+(62 document/import/display/export checks and 107 UI/report/overlay checks);
+all six Node customer-photo checks passed. Deployment verification is pending.
+Physical Android/iPhone camera hardware has not been exercised here.
+
 ## Collateral entry, visible interest and ticket amounts (2026-09-25)
 
 The owner approved overrides by staff with `loan.approve`. New collateral rows

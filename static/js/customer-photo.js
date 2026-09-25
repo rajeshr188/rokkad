@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showSelection();
     start.focus();
   });
-  start.addEventListener('click', async () => {
+  async function startCamera() {
     stopCamera();
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || typeof DataTransfer === 'undefined') {
       status.textContent = root.dataset.error;
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stop.disabled = false;
     status.textContent = root.dataset.waiting;
     try {
-      const acquired = await navigator.mediaDevices.getUserMedia({video: {facingMode: facing?.value || 'user'}, audio: false});
+      const acquired = await navigator.mediaDevices.getUserMedia(window.RokkadCameraSelection.constraints(facing, 'user'));
       if (request !== generation) {
         acquired.getTracks().forEach(track => track.stop());
         return;
@@ -81,21 +81,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (request !== generation) return;
       capture.disabled = false;
       status.textContent = root.dataset.live;
+      window.RokkadCameraSelection.refresh(facing, stream, () => request === generation);
       capture.focus();
     } catch (_) {
       if (request !== generation) return;
       stopCamera();
       status.textContent = root.dataset.error;
     }
-  });
+  }
+  start.addEventListener('click', startCamera);
   stop.addEventListener('click', () => {
     stopCamera();
     status.textContent = root.dataset.stopped;
     start.focus();
   });
   facing?.addEventListener('change', () => {
-    stopCamera();
-    status.textContent = root.dataset.stopped;
+    if (stream || start.disabled) return startCamera();
   });
   capture.addEventListener('click', () => {
     if (!stream || !video.videoWidth || !video.videoHeight) return;

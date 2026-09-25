@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       list.append(item);
     });
     set('count', `${count} collateral item${count === 1 ? '' : 's'}`);
-    set('principal', complete && count ? principal.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—');
+    set('principal', complete && count ? principal.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:2}) : '—');
   }
   function changed() {
     update();

@@ -1,5 +1,6 @@
 """Read-only reconstructed tickets from frozen opening evidence, never official issues."""
 from dataclasses import replace
+from apps.tenant_apps.loans.documents.display import collateral_description
 from decimal import Decimal
 
 import fitz
@@ -26,7 +27,7 @@ def imported_ticket_payload(loan):
     if origin.source_sha256 != digest(origin.document) or origin.document.get("review") != review:
         raise ValueError("Imported ticket evidence does not match its accepted source.")
     items = [{"item_id": opening["item_mapping"][row["id"]], "description": row["description"],
-              "metal": row["metal"], "net_weight": row["net_weight"], "purity_percentage": row["purity"],
+              "quantity": row.get("quantity"), "metal": row["metal"], "net_weight": row["net_weight"], "purity_percentage": row["purity"],
               # A source valuation claim is not a verified appraisal.
               "latest_appraised_value": row["valuation"].get("amount")}
              for row in review["collateral"]]
@@ -48,7 +49,7 @@ def imported_ticket_payload(loan):
         ("Lifecycle state", "Imported opening"), ("Tenure", "Original tenure not verified"),
     )
     rows = [("Item ID", "Description", "Metal", "Net weight", "Purity", "Appraisal", "Custody")]
-    rows.extend((str(row["item_id"]), row["description"], row["metal"].title(), row["net_weight"],
+    rows.extend((str(row["item_id"]), collateral_description(row), row["metal"].title(), row["net_weight"],
                  f"{row['purity_percentage']}%", Projection._money(row["latest_appraised_value"])
                  if row["latest_appraised_value"] is not None else "Unknown", "At import") for row in items)
     payload = Projection._payload("loan_ticket", "Imported Loan Ticket Preview", f"imported-ticket-{loan.pk}.pdf",

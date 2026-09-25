@@ -5,6 +5,7 @@ Renderers receive typed values and never calculate loan-domain facts.
 """
 
 from dataclasses import dataclass
+from .display import collateral_description
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -161,7 +162,7 @@ class PawnLoanDocumentProjectionBuilder:
         rows = [("Item ID", "Description", "Metal", "Net weight", "Purity", "Appraisal", "Custody")]
         rows.extend(
             (
-                str(item["item_id"]), item["description"] + (f" (Qty {item['quantity']})" if item.get("quantity") else ""), item["metal"].title(),
+                str(item["item_id"]), collateral_description(item), item["metal"].title(),
                 item["net_weight"], f"{item['purity_percentage']}%",
                 cls._money(item["latest_appraised_value"])
                 if item["latest_appraised_value"] is not None else "—",
@@ -464,7 +465,7 @@ class PawnLoanDocumentProjectionBuilder:
     @staticmethod
     def _money(value):
         from .display import display_money
-        return "INR " + display_money(value)
+        return "INR " + display_money(value, grouping=True)
 
 
 __all__ = ["DocumentField", "DocumentPayload", "DocumentProjectionError", "DocumentSection", "PawnLoanDocumentProjectionBuilder"]

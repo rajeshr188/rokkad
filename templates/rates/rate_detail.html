@@ -1,5 +1,5 @@
 {% extends 'base_tenant.html' %}
-{% load i18n orgs_tags %}
+{% load loans_display i18n orgs_tags %}
 {% block title %}{% translate "Recorded quote" %}{% endblock %}
 {% block workspace_content %}
 {% navigation_actions as actions %}
@@ -7,7 +7,7 @@
 {% include 'rates/_navigation.html' %}
 <header class="app-heading"><div><h1 class="h3">{% translate rate.get_metal_display %} &middot; {% translate rate.get_purity_display %}</h1><p>{% translate rate.record_status %} &middot; {{ rate.source_snapshot.name|default:rate.rate_source }}</p></div>{% if rate.record_status == 'Available' and 'data.edit' in actions %}<a class="btn btn-primary" href="{% url 'workspace_rates:rate_update' request.workspace.slug rate.pk %}">{% translate "Correct rate" %}</a>{% endif %}</header>
 <div class="row g-3 mb-3"><div class="col-md-6"><section class="card card-body h-100"><h2 class="h5">{% translate "Buying and selling" %}</h2>
-<dl><dt>{% translate "Buying price per gram" %}</dt><dd class="fs-4 fw-semibold">{{ rate.buying_rate }} {{ rate.currency }}</dd><dt>{% translate "Selling price per gram" %}</dt><dd class="fs-4">{{ rate.selling_rate }} {{ rate.currency }}</dd><dt>{% translate "Effective at" %}</dt><dd>{{ rate.effective_at }}</dd></dl>
+<dl><dt>{% translate "Buying price per gram" %}</dt><dd class="fs-4 fw-semibold">{{ rate.buying_rate|indian_money }} {{ rate.currency }}</dd><dt>{% translate "Selling price per gram" %}</dt><dd class="fs-4">{{ rate.selling_rate|indian_money }} {{ rate.currency }}</dd><dt>{% translate "Effective at" %}</dt><dd>{{ rate.effective_at }}</dd></dl>
 <p>{% translate "Prices are per gram, excluding tax and making charges. An older quote is not a live market price." %}</p></section></div>
 <div class="col-md-6"><section class="card card-body h-100"><h2 class="h5">{% translate "Rate source" %}</h2><p>{{ rate.source_snapshot.name|default:rate.rate_source }}</p><p>{{ rate.source_snapshot.location }}</p>
 <p>{% translate "Source publishes prices including tax" %}: {% if rate.source_snapshot.tax_included %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}</p>

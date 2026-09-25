@@ -1,10 +1,10 @@
 {% extends 'base_tenant.html' %}
-{% load i18n static %}
+{% load loans_display i18n static %}
 {% block title %}{% translate "Withdraw quote" %}{% endblock %}
 {% block workspace_content %}
 <section class="setup-entry" hx-history="false">{% include 'rates/_navigation.html' %}
 <h1 class="h3">{% translate "Withdraw quote" %}</h1>
-<p>{{ rate.metal }} &middot; {{ rate.get_purity_display }} &middot; {{ rate.buying_rate }} {{ rate.currency }} / g &middot; {{ rate.effective_at }}</p>
+<p>{{ rate.metal }} &middot; {{ rate.get_purity_display }} &middot; {{ rate.buying_rate|indian_money }} {{ rate.currency }} / g &middot; {{ rate.effective_at }}</p>
 <p>{% translate "The original record remains in history. Loans may fall back to an earlier applicable quote. Existing approved loan evidence stays unchanged." %}</p>
 {% include 'components/forms/accessible.html#errors' %}
 <form method="post" class="card card-body" novalidate>{% csrf_token %}

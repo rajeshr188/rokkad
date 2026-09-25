@@ -1,5 +1,5 @@
 {% extends 'base_tenant.html' %}
-{% load i18n static orgs_tags %}
+{% load loans_display i18n static orgs_tags %}
 {% block title %}{% translate "Metal rates" %}{% endblock %}
 {% block workspace_content %}
 {% navigation_actions as actions %}
@@ -17,7 +17,7 @@
   {% if not form.errors %}<ul class="list-unstyled">
   {% for rate in rates %}<li class="card card-body mb-3">
     <div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h5"><a href="{% url 'workspace_rates:rate_detail' request.workspace.slug rate.pk %}">{% translate rate.get_metal_display %} &middot; {% translate rate.get_purity_display %}</a></h3><span>{% translate rate.record_status %}</span></div>
-    <dl class="row mb-2"><dt class="col-sm-3">{% translate "Buying price per gram" %}</dt><dd class="col-sm-3 fw-semibold">{{ rate.buying_rate }} {{ rate.currency }}</dd><dt class="col-sm-3">{% translate "Selling price per gram" %}</dt><dd class="col-sm-3">{{ rate.selling_rate }} {{ rate.currency }}</dd>
+    <dl class="row mb-2"><dt class="col-sm-3">{% translate "Buying price per gram" %}</dt><dd class="col-sm-3 fw-semibold">{{ rate.buying_rate|indian_money }} {{ rate.currency }}</dd><dt class="col-sm-3">{% translate "Selling price per gram" %}</dt><dd class="col-sm-3">{{ rate.selling_rate|indian_money }} {{ rate.currency }}</dd>
       <dt class="col-sm-3">{% translate "Rate source" %}</dt><dd class="col-sm-3 text-break">{{ rate.source_snapshot.name|default:rate.rate_source }}</dd><dt class="col-sm-3">{% translate "Effective at" %}</dt><dd class="col-sm-3">{{ rate.effective_at|date:"d M Y, H:i" }}</dd></dl>
     {% if rate.record_status == 'Available' %}<div class="d-flex flex-wrap gap-2">{% if 'data.edit' in actions %}<a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_update' request.workspace.slug rate.pk %}">{% translate "Correct rate" %}</a>{% endif %}{% if 'data.delete' in actions %}<a class="btn btn-outline-danger" href="{% url 'workspace_rates:rate_delete' request.workspace.slug rate.pk %}">{% translate "Withdraw" %}</a>{% endif %}</div>{% endif %}
   </li>{% empty %}<li class="card card-body"><h3 class="h5">{% translate "No matching metal rates" %}</h3><p>{% translate "Clear the filters, or add a source and your first quote." %}</p></li>{% endfor %}

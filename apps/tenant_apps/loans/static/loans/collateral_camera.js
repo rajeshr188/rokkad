@@ -49,44 +49,59 @@
   const canvas = dialog.querySelector("[data-camera-canvas]");
   const status = dialog.querySelector("[data-camera-status]");
   const captureButton = dialog.querySelector("[data-camera-capture]");
-  let stream = null;
-  let targetInput = null;
+  const choice = dialog.querySelector("[data-camera-choice]");
+  let stream = null, targetInput = null, generation = 0;
 
   const stopCamera = () => {
-    if (stream) stream.getTracks().forEach((track) => track.stop());
+    generation++;
+    if (stream) stream.getTracks().forEach(track => track.stop());
     stream = null;
     video.srcObject = null;
-    targetInput = null;
+    captureButton.disabled = true;
   };
-
   const closeCamera = () => {
     stopCamera();
+    targetInput = null;
     if (dialog.open) dialog.close();
   };
-
-  document.addEventListener("click", async (event) => {
-    const trigger = event.target.closest(".js-collateral-camera");
-    if (!trigger) return;
-    targetInput = document.getElementById(trigger.dataset.photoInput);
-    if (!targetInput) return;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      targetInput.click();
-      return;
-    }
+  const startCamera = async () => {
+    stopCamera();
+    const request = generation;
+    status.textContent = "Allow camera access, then position the collateral clearly.";
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: "environment" } },
-      });
+      const acquired = await navigator.mediaDevices.getUserMedia(window.RokkadCameraSelection.constraints(choice, "environment"));
+      if (request !== generation) { acquired.getTracks().forEach(track => track.stop()); return; }
+      stream = acquired;
       video.srcObject = stream;
       await video.play();
-      status.textContent = "Position the collateral clearly, then capture.";
-      dialog.showModal();
-    } catch (_error) {
-      targetInput.click();
+      if (request !== generation) return;
+      captureButton.disabled = false;
+      status.textContent = "Position the collateral clearly, then capture. You can change camera above.";
+      window.RokkadCameraSelection.refresh(choice, stream, () => request === generation);
+    } catch (_) {
+      if (request !== generation) return;
       stopCamera();
+      status.textContent = "Could not access this camera. Choose another camera, or cancel and choose an image file.";
     }
+  };
+  document.addEventListener("click", event => {
+    const trigger = event.target.closest(".js-collateral-camera");
+    if (!trigger) return;
+    closeCamera();
+    targetInput = document.getElementById(trigger.dataset.photoInput);
+    if (!targetInput) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof DataTransfer === "undefined") {
+      targetInput.click();
+      targetInput = null;
+      return;
+    }
+    dialog.showModal();
+    startCamera();
   });
+  choice.addEventListener("change", startCamera);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) closeCamera(); });
+  window.addEventListener("pagehide", closeCamera);
+  document.addEventListener("submit", closeCamera);
 
   dialog.querySelectorAll(".js-camera-close").forEach((button) => {
     button.addEventListener("click", closeCamera);
@@ -95,29 +110,39 @@
     event.preventDefault();
     closeCamera();
   });
+  dialog.addEventListener("close", () => { if (!dialog.open) closeCamera(); });
 
   captureButton.addEventListener("click", () => {
-    if (!targetInput || !video.videoWidth || !video.videoHeight) {
+    if (!stream || !targetInput || !video.videoWidth || !video.videoHeight) {
       status.textContent = "The camera is not ready yet.";
       return;
     }
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
+    const input = targetInput;
+    stopCamera();
+    const frame = generation;
     canvas.toBlob((blob) => {
+      if (frame !== generation || input !== targetInput) return;
       if (!blob || !targetInput) {
         status.textContent = "The photograph could not be captured. Please try again.";
+        startCamera();
         return;
       }
-      const file = new File([blob], `collateral-${Date.now()}.jpg`, {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
-      const transfer = new DataTransfer();
-      transfer.items.add(file);
-      targetInput.files = transfer.files;
-      targetInput.dispatchEvent(new Event("change", { bubbles: true }));
-      closeCamera();
+      try {
+        const file = new File([blob], `collateral-${Date.now()}.jpg`, {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        targetInput.files = transfer.files;
+        targetInput.dispatchEvent(new Event("change", { bubbles: true }));
+        closeCamera();
+      } catch (_) {
+        status.textContent = "Could not attach the photo. Cancel and choose an image file instead.";
+      }
     }, "image/jpeg", 0.9);
   });
 })();

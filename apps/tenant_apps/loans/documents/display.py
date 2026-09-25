@@ -1,12 +1,29 @@
-"""Presentation-only date formatting; source payloads keep ISO values."""
+"""Presentation-only formatting; financial evidence keeps unformatted values."""
 from datetime import date, datetime
 from decimal import Decimal
 
 
 def display_money(value, *, grouping=False):
     amount = Decimal(str(value or "0"))
-    text = format(amount, ",.2f" if grouping else ".2f")
+    if not amount.is_finite():
+        raise ValueError("Money must be finite")
+    text = format(amount, ".2f")
+    if grouping:
+        integer, fraction = text.split(".")
+        sign = "-" if integer.startswith("-") else ""
+        integer = integer.lstrip("-")
+        groups = [integer[-3:]]
+        integer = integer[:-3]
+        while integer:
+            groups.insert(0, integer[-2:])
+            integer = integer[:-2]
+        text = sign + ",".join(groups) + "." + fraction
     return text[:-3] if text.endswith(".00") else text
+
+
+def collateral_description(item):
+    description = item["description"]
+    return description + (f" (Qty {item['quantity']})" if item.get("quantity") else "")
 
 
 def display_date(value):

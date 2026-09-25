@@ -6,6 +6,11 @@
       <button type="button" class="btn-close js-camera-close" aria-label="Close camera"></button>
     </div>
     <div class="card-body">
+      <label for="collateral-camera-choice" class="form-label">Camera</label>
+      <select id="collateral-camera-choice" data-camera-choice class="form-select mb-2">
+        <option value="environment">Rear camera</option>
+        <option value="user">Front camera / webcam</option>
+      </select>
       <video class="w-100 rounded bg-dark" data-camera-video autoplay playsinline muted></video>
       <canvas data-camera-canvas hidden></canvas>
       <p class="small text-muted mt-2 mb-0" data-camera-status>Allow camera access, position the collateral clearly, then capture.</p>
@@ -16,4 +21,5 @@
     </div>
   </div>
 </dialog>
+<script src="{% static 'js/camera-selection.js' %}" defer></script>
 <script src="{% static 'loans/collateral_camera.js' %}" defer></script>

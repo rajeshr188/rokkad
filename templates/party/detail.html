@@ -1,5 +1,5 @@
 {% extends 'base_tenant.html' %}
-{% load static i18n %}
+{% load loans_display static i18n %}
 
 {% block title %}{{ party.display_name }}{% endblock %}
 
@@ -79,7 +79,12 @@
                     <div id="party-camera-panel" class="border rounded bg-light d-flex align-items-center justify-content-center mb-2" style="min-height: 220px;">
                         <span class="text-muted">Camera preview</span>
                     </div>
-                    <video id="party-camera-video" class="d-none w-100 rounded" autoplay playsinline></video>
+                    <label class="form-label" for="party-camera-choice">Camera</label>
+                    <select id="party-camera-choice" class="form-select mb-2">
+                        <option value="user">Front camera / webcam</option>
+                        <option value="environment">Rear camera</option>
+                    </select>
+                    <video muted id="party-camera-video" class="d-none w-100 rounded" autoplay playsinline></video>
                     <canvas id="party-camera-canvas" class="d-none" width="480" height="360"></canvas>
                     <div class="d-flex flex-wrap gap-2">
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="party-camera-start">
@@ -340,15 +345,15 @@
                             <td>{{ row.status }}</td>
                             <td>
                                 {% if row.total_outstanding != None %}
-                                <div class="fw-semibold">{{ row.total_outstanding }}</div>
-                                <div class="text-muted small">Principal {{ row.principal_due }} | Interest {{ row.interest_due }}</div>
+                                <div class="fw-semibold">{{ row.total_outstanding|indian_money }}</div>
+                                <div class="text-muted small">Principal {{ row.principal_due|indian_money }} | Interest {{ row.interest_due|indian_money }}</div>
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <div>{{ row.payment_count }} total</div>
-                                <div class="text-muted small">{{ row.total_payment_amount|default:"0.00" }} paid</div>
+                                <div class="text-muted small">{{ row.total_payment_amount|default:"0.00"|indian_money }} paid</div>
                                 {% if row.unposted_payment_count %}
                                 <div class="text-danger small">{{ row.unposted_payment_count }} unposted</div>
                                 {% endif %}
@@ -385,14 +390,14 @@
                             <td>{{ row.status }}</td>
                             <td>
                                 {% if row.total_outstanding != None %}
-                                {{ row.total_outstanding }}
+                                {{ row.total_outstanding|indian_money }}
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <div>{{ row.payment_count }} total</div>
-                                <div class="text-muted small">{{ row.total_payment_amount|default:"0.00" }} paid</div>
+                                <div class="text-muted small">{{ row.total_payment_amount|default:"0.00"|indian_money }} paid</div>
                             </td>
                             <td>
                                 {% for document in row.document_links %}
@@ -520,121 +525,8 @@
         </div>
     </div>{% endif %}
 </div>
-<script>
-(() => {
-    const form = document.getElementById("party-photo-form");
-    const panel = document.getElementById("party-camera-panel");
-    const video = document.getElementById("party-camera-video");
-    const canvas = document.getElementById("party-camera-canvas");
-    const imageDataInput = document.getElementById("party-photo-image-data");
-    const fileInput = document.getElementById("{{ photo_form.profile_photo.id_for_label }}");
-    const startButton = document.getElementById("party-camera-start");
-    const captureButton = document.getElementById("party-camera-capture");
-    const retakeButton = document.getElementById("party-camera-retake");
-    const stopButton = document.getElementById("party-camera-stop");
-
-    if (!form || !panel || !video || !canvas || !imageDataInput || !startButton || !captureButton || !retakeButton || !stopButton) {
-        return;
-    }
-
-    let stream = null;
-
-    function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
-            stream = null;
-        }
-        video.srcObject = null;
-        captureButton.disabled = true;
-        retakeButton.disabled = !imageDataInput.value;
-        stopButton.disabled = true;
-        startButton.disabled = false;
-    }
-
-    function resetPanel(message) {
-        panel.innerHTML = "";
-        const span = document.createElement("span");
-        span.className = "text-muted";
-        span.textContent = message;
-        panel.appendChild(span);
-    }
-
-    startButton.addEventListener("click", async () => {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            resetPanel("Camera is not available in this browser.");
-            return;
-        }
-        try {
-            stopCamera();
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user" },
-                audio: false,
-            });
-            video.srcObject = stream;
-            panel.innerHTML = "";
-            panel.appendChild(video);
-            video.classList.remove("d-none");
-            await video.play();
-            startButton.disabled = true;
-            captureButton.disabled = false;
-            retakeButton.disabled = true;
-            stopButton.disabled = false;
-        } catch (error) {
-            resetPanel("Could not access camera. Use file upload instead.");
-        }
-    });
-
-    captureButton.addEventListener("click", () => {
-        const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL("image/jpeg", 0.9);
-        imageDataInput.value = imageData;
-        if (fileInput) {
-            fileInput.value = "";
-        }
-        panel.innerHTML = "";
-        const img = document.createElement("img");
-        img.src = imageData;
-        img.alt = "Captured profile photo";
-        img.className = "img-fluid rounded";
-        img.style.maxHeight = "220px";
-        panel.appendChild(img);
-        stopCamera();
-        retakeButton.disabled = false;
-    });
-
-    retakeButton.addEventListener("click", () => {
-        imageDataInput.value = "";
-        resetPanel("Camera preview");
-        startButton.click();
-    });
-
-    stopButton.addEventListener("click", () => {
-        stopCamera();
-        resetPanel("Camera stopped");
-    });
-
-    if (fileInput) {
-        fileInput.addEventListener("change", () => {
-            if (fileInput.files.length) {
-                imageDataInput.value = "";
-                stopCamera();
-            }
-        });
-    }
-
-    form.addEventListener("submit", (event) => {
-        const hasCapture = Boolean(imageDataInput.value);
-        const hasFile = Boolean(fileInput && fileInput.files.length);
-        if (!hasCapture && !hasFile) {
-            event.preventDefault();
-            resetPanel("Capture a photo or choose an image file.");
-        }
-    });
-
-    window.addEventListener("beforeunload", stopCamera);
-})();
-</script>
+<script src="{% static 'js/camera-selection.js' %}"></script>
+<script src="{% static 'js/party-detail-camera.js' %}"></script>
 </div>
 {% endblock %}
 

@@ -798,7 +798,7 @@ class ConfigurableDocumentRenderer:
         elif value_format == "INR_SYMBOL":
             numeric = value.removeprefix("INR ").removeprefix("₹").strip()
             try:
-                amount = Decimal(numeric)
+                amount = Decimal(numeric.replace(",", ""))
                 if not amount.is_finite():
                     raise InvalidOperation
                 value = "₹" + display_money(amount, grouping=True)

@@ -17,7 +17,7 @@
     <span class="text-body-secondary">&middot; {% translate "Series" %} {{ loan.series.pawn_display_name }}</span>
   </div>
   <div class="small text-body-secondary">{% if is_opening %}{% translate "Imported into Rokkad" %}{% else %}{% translate "Draft created" %}{% endif %}: <time datetime="{{ loan.created_at|date:'c' }}">{{ loan.created_at|date:"d/m/Y, H:i T" }}</time></div>
-  <div class="d-flex flex-wrap gap-4 mt-3"><div><span class="small text-body-secondary">{% translate "Loan amount" %}</span><div class="fs-4 fw-bold">&#8377;{{ loan.principal_amount|floatformat:"-2" }}</div></div><div><span class="small text-body-secondary">{% translate "Monthly interest rate" %}</span><div class="fs-4 fw-bold">{{ loan.monthly_interest_rate|compact_decimal }}%</div><span class="small text-body-secondary">{% translate "Effective rate across collateral" %}</span></div></div>
+  <div class="d-flex flex-wrap gap-4 mt-3"><div><span class="small text-body-secondary">{% translate "Loan amount" %}</span><div class="fs-4 fw-bold">&#8377;{{ loan.principal_amount|indian_money }}</div></div><div><span class="small text-body-secondary">{% translate "Monthly interest rate" %}</span><div class="fs-4 fw-bold">{{ loan.monthly_interest_rate|compact_decimal }}%</div><span class="small text-body-secondary">{% translate "Effective rate across collateral" %}</span></div></div>
   <div class="loan-borrower-card d-flex align-items-start gap-3 mt-3 p-3 rounded border bg-body">
     <span class="loan-borrower-avatar" aria-hidden="true">
       <span>{{ borrower_identity.initials }}</span>

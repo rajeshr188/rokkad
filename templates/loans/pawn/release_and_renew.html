@@ -1,4 +1,5 @@
 {% extends "base_tenant.html" %}
+{% load loans_display %}
 {% block title %}Release and renew {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div class="mb-4">
@@ -12,11 +13,11 @@
   <div class="row g-3" id="renewal-calculator"
        data-source-principal="{{ renewal_quote.source_principal }}"
        data-base-cash="{{ renewal_quote.base_cash_received }}">
-    <div class="col-md-2"><div class="small text-muted">Source principal</div><strong>{{ renewal_quote.source_principal }}</strong></div>
-    <div class="col-md-2"><div class="small text-muted">Existing interest</div>{{ renewal_quote.balance.interest_outstanding }}</div>
-    <div class="col-md-2"><div class="small text-muted">Renewal-day interest</div>{{ renewal_quote.release_day_interest }}</div>
-    <div class="col-md-2"><div class="small text-muted">Total interest settled</div>{{ renewal_quote.interest_settled }}</div>
-    <div class="col-md-2"><div class="small text-muted">Fees settled</div>{{ renewal_quote.fees_settled }}</div>
+    <div class="col-md-2"><div class="small text-muted">Source principal</div><strong>{{ renewal_quote.source_principal|indian_money }}</strong></div>
+    <div class="col-md-2"><div class="small text-muted">Existing interest</div>{{ renewal_quote.balance.interest_outstanding|indian_money }}</div>
+    <div class="col-md-2"><div class="small text-muted">Renewal-day interest</div>{{ renewal_quote.release_day_interest|indian_money }}</div>
+    <div class="col-md-2"><div class="small text-muted">Total interest settled</div>{{ renewal_quote.interest_settled|indian_money }}</div>
+    <div class="col-md-2"><div class="small text-muted">Fees settled</div>{{ renewal_quote.fees_settled|indian_money }}</div>
     <div class="col-md-2"><div class="small text-muted">Interest + fees collected</div><strong>{{ renewal_quote.base_cash_received }}</strong></div>
   </div>
   {% endif %}
@@ -43,7 +44,7 @@
       {% for item, item_form in retained_rows %}<tr>
         <td>{{ item_form.collateral_item_id }}{{ item_form.retain }}</td>
         <td>{{ item.description }}</td><td>{{ item.get_metal_display }}</td>
-        <td>{{ item.allocated_principal|default:"Legacy" }}</td>
+        <td>{{ item.allocated_principal|default:"Legacy"|indian_money }}</td>
         <td>{{ item_form.allocated_principal }}{% for error in item_form.allocated_principal.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</td>
       </tr>{% endfor %}
     </tbody></table></div>

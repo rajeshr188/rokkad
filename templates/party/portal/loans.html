@@ -1,5 +1,5 @@
 {% extends "base_customer_portal.html" %}
-{% load i18n %}
+{% load loans_display i18n %}
 
 {% block portal_content %}
 <div class="portal-page-header">
@@ -10,7 +10,7 @@
         <div class="portal-list-row">
             <strong>{{ row.loan_id }}</strong>
             <span>{{ row.loan_type }} · {{ row.status }}</span>
-            <span>{{ row.total_outstanding|default:"" }}</span>
+            <span>{{ row.total_outstanding|default:""|indian_money }}</span>
         </div>
     {% empty %}
         <p class="portal-empty">{% trans "No loans are available for your portal access." %}</p>
