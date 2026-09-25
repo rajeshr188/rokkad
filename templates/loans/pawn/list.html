@@ -66,7 +66,7 @@
   {% endpartialdef results %}
   <details class="directory-tools mt-4"><summary>{% translate "Reports, batch releases and setup" %}</summary><div class="d-flex flex-wrap gap-2 mt-2">
     <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_reports' request.workspace.slug %}">{% translate "Reports & reconciliation" %}</a>
-    {% if 'loan.release' in batch_actions %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}">{% translate "Release multiple loans" %}</a>{% endif %}
+    {% if 'loan.release' in batch_actions %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:paper_closure_create' request.workspace.slug %}">Record paper closures</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}">{% translate "Release multiple loans" %}</a>{% endif %}
     <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}">{% translate "Release batches" %}</a>
     {% if can_manage_loan_setup %}<a class="btn btn-outline-secondary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">{% translate "Loan setup" %}</a>{% endif %}
   </div></details>

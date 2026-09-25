@@ -77,6 +77,8 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
         raise HistoryError("Only active or fully released opening loans are supported.")
     items = list(loan.collateral_items.select_for_update().order_by("pk")[:21])
     events = list(loan.loan_events.select_for_update().order_by("effective_date", "pk")[:241])
+    if any(e.payload.get("release", {}).get("paper_closure") for e in events):
+        raise HistoryError("Paper closures include date-only handovers and per-row evidence not supported by this restore profile. Use release records and the paper batch CSV; database backups retain full evidence.")
     if not 1 <= len(items) <= 20 or not 1 <= len(events) <= 240:
         raise HistoryError("Opening export requires 1-20 items and 1-240 events.")
     openings = [event for event in events if event.event_kind == "MIGRATION_OPENING"]

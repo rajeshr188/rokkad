@@ -1601,7 +1601,7 @@ class PawnLoanReleaseItem(WorkspaceOwnedModel):
         related_name="release_items",
     )
     valuation_snapshot = models.JSONField(default=dict)
-    returned_at = models.DateTimeField(default=timezone.now)
+    returned_at = models.DateTimeField(default=timezone.now, null=True, blank=True)
 
     class Meta:
         ordering = ("release_id", "id")

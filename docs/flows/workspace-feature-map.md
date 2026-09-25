@@ -24,6 +24,8 @@ and approval evidence also determine available actions.
 | Read ticket/KFS or release documents | Loan > Loan documents; Release documents section link when present |
 | Find release records | Work > Releases |
 | Release several loans / inspect a batch | Records & reports > Release batches; loan-list tools > Release multiple loans |
+| Record closures already completed in the paper book | Loans > Record paper closures; sidebar > Paper closures includes the staff guide |
+| Retire routine paper entry for this branch | Paper closures > Move this branch to system-first (owner); reason-required administrator exceptions remain available |
 | Reports and reconciliation | Records & reports > Reports > choose a report and date; record lists have 50 records per page |
 | Find borrower statement | Reports > Borrower statements > search by name, code or phone |
 | Whole-Workspace totals / exports | Reports > Portfolio summary / Download full reports |

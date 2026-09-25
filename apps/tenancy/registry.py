@@ -17,6 +17,7 @@ RLS_MIGRATION_BY_APP = {
 }
 # Models introduced after their app's original RLS rollout have their own gate.
 RLS_MIGRATION_BY_MODEL = {
+    "loans.paperclosuretransition": "0022_paper_closure_transition",
     "party.partyphoto": "0003_party_photo_gallery",
     "loans.historicalloanattachment": "0014_legacy_media",
     "data_portability.legacymediareceipt": "0015_legacy_media",

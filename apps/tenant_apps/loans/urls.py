@@ -1,7 +1,7 @@
 from django.urls import path
 
 from apps.tenant_apps.loans import views, browse
-from apps.tenant_apps.loans.web import workflow, release_batches
+from apps.tenant_apps.loans.web import workflow, release_batches, paper_closures
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 from apps.tenant_apps.loans.web.rate_readiness import pawn_valuation_readiness
@@ -12,6 +12,10 @@ from apps.tenant_apps.loans.web.borrower_search import loan_borrower_autocomplet
 app_name = "loans"
 
 urlpatterns = [
+    path("releases/paper/new/", paper_closures.create, name="paper_closure_create"),
+    path("releases/paper/guide/", paper_closures.guide, name="paper_closure_guide"),
+    path("releases/paper/settings/", paper_closures.settings, name="paper_closure_settings"),
+    path("releases/paper/<int:batch_pk>.csv", paper_closures.batch_csv, name="paper_closure_csv"),
     path("internal/borrowers/search/", loan_borrower_autocomplete, name="loan_borrower_autocomplete"),
     path("setup/documents/revisions/<int:revision_pk>/use/", ticket_template_use, name="ticket_template_use"),
     path("internal/<int:pk>/collateral/<int:item_pk>/reappraise/", collateral_reappraisal, name="collateral_reappraisal"),

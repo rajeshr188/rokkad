@@ -9,6 +9,7 @@ READ_ROUTES = {
     "workspace_loans:pawn_loan_list", "workspace_loans:pawn_loan_detail",
     "workspace_loans:pawn_collateral_list", "workspace_loans:pawn_release_list",
     "workspace_loans:pawn_release_detail", "workspace_loans:release_batch_list",
+    "workspace_loans:paper_closure_guide", "workspace_loans:paper_closure_csv",
     "workspace_loans:release_batch_detail", "workspace_loans:pawn_loan_reports",
     "workspace_loans:pawn_loan_report_export", "workspace_loans:pawn_party_statement",
     "workspace_loans:pawn_party_statement_export", "workspace_loans:pawn_collateral_photo_document",

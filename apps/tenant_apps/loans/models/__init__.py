@@ -153,7 +153,7 @@ from .risk import LoanRiskAlert, LoanRiskEvent, LoanRiskSnapshot
 __all__.append("PawnLoanCommunicationConsent")
 __all__.append("PawnLoanCommunicationPolicy")
 
-from .release_batch import PawnReleaseBatch, PawnReleaseBatchLine
+from .release_batch import PawnReleaseBatch, PawnReleaseBatchLine, PaperClosureTransition
 
 __all__ += ["PawnReleaseBatch", "PawnReleaseBatchLine"]
 

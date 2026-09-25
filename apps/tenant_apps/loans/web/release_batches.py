@@ -62,11 +62,11 @@ def search(request):
     outstanding = PawnCollateralItem.objects.filter(loan_id=OuterRef("pk"), workspace=request.loans_workspace).exclude(custody_state="WITH_CUSTOMER")
     loans = PawnLoan.objects.filter(workspace=request.loans_workspace, state="ACTIVE").filter(
         Exists(outstanding),
-    ).select_related("borrower", "license", "series").order_by("loan_number", "pk")
+    ).select_related("borrower", "license", "series").prefetch_related("series__number_sequences").order_by("loan_number", "pk")
     if query:
         loans = loans.filter(Q(loan_number__icontains=query) | Q(borrower__display_name__icontains=query) | Q(borrower__primary_phone__icontains=query))
     page = Paginator(loans, 20).get_page(request.GET.get("page", 1))
-    return JsonResponse({"results": [{"id": loan.pk, "text": f"{loan.loan_number} — {loan.borrower.display_name} — {loan.license.license_number} / {loan.series.code}"} for loan in page], "pagination": {"more": page.has_next()}})
+    return JsonResponse({"results": [{"id": loan.pk, "text": f"{loan.loan_number} — {loan.borrower.display_name} — {loan.license.license_number} / {loan.series.pawn_display_name}"} for loan in page], "pagination": {"more": page.has_next()}})
 
 
 @loans_action_required("loan.release")

@@ -103,7 +103,7 @@ class PawnFullReleasePreview:
         return self.readiness.blockers
 
 
-def preview_pawn_loan_full_release(loan_id: int) -> PawnFullReleasePreview:
+def preview_pawn_loan_full_release(loan_id: int, *, as_of_date=None) -> PawnFullReleasePreview:
     """Return the exact current-date full-release quote without mutation."""
     loan = _tenant_loan(loan_id)
     if loan.state != PawnLoanState.ACTIVE.value:
@@ -121,7 +121,7 @@ def preview_pawn_loan_full_release(loan_id: int) -> PawnFullReleasePreview:
     return _build_full_release_preview(
         loan,
         outstanding,
-        effective_date=timezone.localdate(),
+        effective_date=as_of_date or timezone.localdate(),
         lock=False,
     )
 
@@ -143,7 +143,8 @@ def release_pawn_loan_in_full(
 
 
 def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, actor,
-        interest_concession, concession_reason, effective_date, historical_number=None, returned_at=None):
+        interest_concession, concession_reason, effective_date, historical_number=None, returned_at=None,
+        paper_evidence=None):
     """Shared writer; historical parameters are only used by atomic opening restore."""
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.release")
@@ -277,6 +278,8 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
         "release_number": release_number,
         "is_full_release": True,
     }
+    if paper_evidence is not None:
+        payload["release"]["paper_closure"] = paper_evidence
     if concession:
         payload["values"]["interest_concession"] = str(concession)
         payload["release"]["interest_concession_reason"] = reason
@@ -340,7 +343,8 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
         created_by=actor,
     )
     snapshots = {item.collateral_item_id: item for item in readiness.item_valuations}
-    now = returned_at or timezone.now()
+    # Paper evidence attests a day, not an invented handover time.
+    now = None if paper_evidence is not None else returned_at or timezone.now()
     for item in outstanding_collateral:
         snapshot = snapshots[item.pk]
         PawnLoanReleaseItem.objects.create(

@@ -77,6 +77,7 @@ class PawnLoanDocumentProjectionBuilder:
     SCHEMA_VERSION = 1
     FIELD_KEYS = {
         "Release batch": "release.batch_id", "Paid by": "release.paid_by",
+        "Paper reference": "release.paper_reference", "Entry source": "release.entry_source",
         "Collected by": "release.collector_name", "Collector relationship": "release.collector_relationship",
         "Collection authorization": "release.collection_authorization",
         "Workspace": "workspace.name", "Workspace source ID": "workspace.source_id",
@@ -276,16 +277,19 @@ class PawnLoanDocumentProjectionBuilder:
                         ("Concession reason", event.payload["release"]["interest_concession_reason"]))
         if batch_line is not None:
             details += (
-                ("Release batch", batch_line.batch_id), ("Paid by", batch_line.batch.paid_by),
+                ("Release batch", batch_line.batch_id), ("Paid by", batch_line.paid_by or batch_line.batch.paid_by),
                 ("Collected by", batch_line.collector_name),
                 ("Collector relationship", "Borrower" if batch_line.collector_is_borrower else batch_line.relationship),
-                ("Collection authorization", batch_line.authorization_note or "Borrower verified; items ready for handover"),
+                ("Collection authorization", batch_line.authorization_note or ("Borrower receipt attested from paper record" if batch_line.batch.mode == "PAPER" else "Borrower verified; items ready for handover")),
             )
+            if batch_line.batch.mode == "PAPER":
+                details += (("Paper reference", batch_line.paper_reference or "Not supplied"),
+                            ("Entry source", "Paper closure; return date attested, exact time unknown"))
         item_rows = [("Item ID", "Description", "Value at release", "Returned at")]
         for item in release.items.all():
             snapshot = item.valuation_snapshot or {}
             item_rows.append((str(item.collateral_item_id), item.collateral_item.description,
-                              cls._money(snapshot.get("valuation_amount")), str(item.returned_at)))
+                              cls._money(snapshot.get("valuation_amount")), str(item.returned_at) if item.returned_at else release.effective_date.strftime("%d/%m/%Y") + " (time unknown; paper record)"))
         sections = [("Collateral returned", item_rows)]
         manager = cls._related_or_none(event, "principal_closing_lines")
         if manager is not None:

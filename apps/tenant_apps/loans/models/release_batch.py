@@ -5,6 +5,9 @@ from apps.tenancy.models import WorkspaceOwnedModel
 
 
 class PawnReleaseBatch(WorkspaceOwnedModel):
+    mode = models.CharField(max_length=12, default="COUNTER", choices=(("COUNTER", "Counter collection"), ("PAPER", "Paper closures")))
+    paper_reference = models.CharField(max_length=100, blank=True)
+    exception_reason = models.CharField(max_length=255, blank=True)
     request_key = models.UUIDField()
     request_fingerprint = models.CharField(max_length=64)
     effective_date = models.DateField()
@@ -23,6 +26,8 @@ class PawnReleaseBatch(WorkspaceOwnedModel):
 
 
 class PawnReleaseBatchLine(WorkspaceOwnedModel):
+    paid_by = models.CharField(max_length=255, blank=True)
+    paper_reference = models.CharField(max_length=100, blank=True)
     batch = models.ForeignKey(PawnReleaseBatch, on_delete=models.PROTECT, related_name="lines")
     release = models.OneToOneField("loans.PawnLoanRelease", on_delete=models.PROTECT, related_name="batch_line")
     borrower_name = models.CharField(max_length=255)
@@ -33,3 +38,14 @@ class PawnReleaseBatchLine(WorkspaceOwnedModel):
 
     class Meta:
         ordering = ("id",)
+
+
+class PaperClosureTransition(WorkspaceOwnedModel):
+    """Owner-controlled transition; completed evidence remains immutable."""
+    system_first_date = models.DateField(null=True, blank=True)
+    retired = models.BooleanField(default=False)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("workspace",), name="loans_paper_transition_workspace_uniq")]
