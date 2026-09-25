@@ -98,6 +98,7 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
     generated_at = local_capture.strftime("%d-%m-%Y %H:%M:%S %Z") + f" (UTC{offset[:3]}:{offset[3:]})"
     values = {
         **license_values,
+        "license.proprietor_name": loan.license.proprietor_name.strip(),
         "document.generated_at": generated_at,
         "license.number": loan.license.license_number,
         "borrower.name": identity.name, "borrower.relationship": identity.relationship,

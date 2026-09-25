@@ -45,6 +45,7 @@ class LoanLicense(models.Model):
     )
     name = models.CharField(max_length=255)
     business_name = models.CharField(max_length=255, blank=True, default="")
+    proprietor_name = models.CharField(max_length=255, blank=True, default="")
     business_address = models.TextField(max_length=1000, blank=True, default="")
     license_number = models.CharField(max_length=100)
     issuing_authority = models.CharField(max_length=255, blank=True)

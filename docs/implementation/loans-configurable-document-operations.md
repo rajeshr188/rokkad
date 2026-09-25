@@ -135,3 +135,18 @@ the existing PDF URL with `?renderer=fixed`; this action is audited. Diagnose
 and repair by cloning the published revision, correcting the draft, previewing
 and test-printing it, publishing it, then changing the assignment. Never mutate
 the prior published revision or issued artifact.
+
+
+## Licence proprietor and text emphasis
+
+Precision ticket fields include `license.proprietor_name`. Maintain it in the
+licence's printed business settings; amendments retain it in the immutable licence
+revision, and native first issue captures it in the document snapshot. Existing
+issued artifacts retain their original bytes on reprint. Imported copies use the
+current printed business settings, as described in their display contract.
+
+V4 absolute-overlay text frames support optional `bold: true`, also exposed in
+the frame editor. Omitted/false keeps existing canonical hashes stable. Helvetica
+uses its bold face; Unicode/rupee fields use the bundled Noto Sans Tamil bold face,
+derived at weight 700 from the repository's existing variable font. No new runtime
+font-building dependency is needed. Layout fit and overflow validation still apply.

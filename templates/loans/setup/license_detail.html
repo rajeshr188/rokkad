@@ -40,6 +40,7 @@
 <div class="card card-body mb-4">
   <h2 class="h5">{% translate "Printed business details" %}</h2>
   <div>{% if license.business_name %}{{ license.business_name }}{% else %}{% translate "Business name not configured" %}{% endif %}</div>
+  {% if license.proprietor_name %}<div>{% translate "Proprietor" %}: {{ license.proprietor_name }}</div>{% endif %}
   <div>{% if license.business_address %}{{ license.business_address|linebreaksbr }}{% else %}{% translate "Business address not configured" %}{% endif %}</div>
 </div>
 

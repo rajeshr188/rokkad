@@ -247,6 +247,7 @@ class LoanDocumentOverlayLogicalSettingsForm(forms.Form):
 
 
 class LoanDocumentOverlayBlockForm(forms.Form):
+    bold = forms.BooleanField(required=False, label="Bold text")
     optional_photo = forms.BooleanField(required=False, label="Leave absent photo blank", help_text="An unreadable or changed photo always blocks official printing.")
     padding_pt = forms.DecimalField(required=False, min_value=0, max_value=24, decimal_places=1, label="Text padding (pt)", help_text="Inset on all four sides; legacy frames use 6 pt.")
     leading_pt = forms.DecimalField(required=False, min_value=6, max_value=48, decimal_places=1, label="Line spacing (pt)", help_text="Leave blank for automatic spacing; legacy frames use 12 pt.")
@@ -285,6 +286,7 @@ class LoanDocumentOverlayBlockForm(forms.Form):
                     widget=forms.NumberInput(attrs={"step": "0.1"}),
                 )
         else:
+            self.fields.pop("bold")
             self.fields.pop("optional_photo")
             self.fields.pop("padding_pt")
             self.fields.pop("leading_pt")
@@ -319,6 +321,8 @@ class LoanDocumentOverlayBlockForm(forms.Form):
                 self.add_error("binding", "Select a registered photograph or leave this blank for an uploaded asset.")
             elif cleaned.get("asset_key"):
                 self.add_error("asset_key", "Choose either a customer/collateral photograph or an uploaded asset.")
+        if cleaned.get("bold") and block_type not in {"field", "title", "verification", "signature"}:
+            self.add_error("bold", "Bold applies to text frames only.")
         if cleaned.get("optional_photo") and not (block_type == "image" and binding in TICKET_MEDIA_KEYS.values()):
             self.add_error("optional_photo", "This option applies only to customer/collateral photographs.")
         return cleaned
@@ -345,6 +349,8 @@ class LoanDocumentOverlayBlockForm(forms.Form):
                 block["leading_pt"] = float(value.get("leading_pt") or 0)
             for name in ("x_mm", "y_mm", "width_mm", "height_mm"):
                 block[name] = float(block[name])
+            if value.get("bold"):
+                block["bold"] = True
             if value["block_type"] == "field":
                 block["show_label"] = value.get("value_display") != "VALUE_ONLY"
                 block["field_label"] = value.get("field_label", "")

@@ -91,6 +91,7 @@ class LayoutBlock:
     padding_pt: int | float = 0
     leading_pt: int | float = 0
     optional_photo: bool = False
+    bold: bool = False
 
 
 @dataclass(frozen=True)
@@ -209,6 +210,8 @@ class DocumentLayout:
                 })
             if self.schema_version >= 4:
                 value.update({"show_label": block.show_label, "field_label": block.field_label})
+                if block.bold:
+                    value["bold"] = True
                 if block.optional_photo:
                     value["optional_photo"] = True
                 if block.padding_pt:
@@ -618,7 +621,7 @@ class DocumentLayoutValidator:
             if schema_version >= 2:
                 allowed.update({"blocks", "columns", "grid_columns", "style_variant", "table_columns", "repeat_header", "value_format", "overflow_policy", "max_characters", "visible_when", "x_mm", "y_mm", "font_size_pt", "align", "copy_scope"})
             if schema_version >= 4:
-                allowed.update({"show_label", "field_label", "padding_pt", "leading_pt", "optional_photo"})
+                allowed.update({"show_label", "field_label", "padding_pt", "leading_pt", "optional_photo", "bold"})
             unknown = set(value) - allowed
             if unknown:
                 raise LayoutValidationError(f"Unknown block properties: {', '.join(sorted(unknown))}.")
@@ -687,6 +690,9 @@ class DocumentLayoutValidator:
             x_mm = value.get("x_mm", 0)
             y_mm = value.get("y_mm", 0)
             font_size_pt = value.get("font_size_pt", 10)
+            bold = value.get("bold", False)
+            if not isinstance(bold, bool) or (bold and (layout_mode != "ABSOLUTE_OVERLAY" or block_type not in {"field", "title", "verification", "signature"})):
+                raise LayoutValidationError("Bold must be boolean and applies to absolute-overlay text frames only.")
             align = value.get("align", "LEFT")
             copy_scope = value.get("copy_scope", "BOTH")
             if schema_version >= 4:
@@ -784,7 +790,7 @@ class DocumentLayoutValidator:
                 height, asset_key, width, child_blocks, columns, grid_columns,
                 style_variant, table_columns, repeat_header, value_format,
                 overflow_policy, max_characters, visible_when, x_mm, y_mm,
-                font_size_pt, align, copy_scope, show_label, field_label, padding_pt, leading_pt, optional_photo,
+                font_size_pt, align, copy_scope, show_label, field_label, padding_pt, leading_pt, optional_photo, bold,
             ))
         return tuple(result)
 

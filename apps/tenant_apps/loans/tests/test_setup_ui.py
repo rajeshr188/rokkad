@@ -754,14 +754,18 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertFalse(LoanLicense.objects.filter(name="Incomplete license").exists())
         self.assertContains(self.client.get(edit), 'name="business_name"')
         self.assertContains(self.client.get(edit), 'name="business_address"')
+        self.assertContains(self.client.get(edit), 'name="proprietor_name"')
         response = self.client.post(edit, {
             "name": license.name, "license_number": license.license_number,
             "issued_on": "2026-01-01", "expires_on": "2027-01-01",
-            "business_name": "Printed Counter Business", "business_address": "12 Business Road\nVellore",
+            "proprietor_name": "Test Proprietor", "business_name": "Printed Counter Business", "business_address": "12 Business Road\nVellore",
         })
         self.assertRedirects(response, detail, fetch_redirect_response=False)
         license.refresh_from_db()
         self.assertEqual(license.business_name, "Printed Counter Business")
+        self.assertEqual(license.proprietor_name, "Test Proprietor")
+        self.assertEqual(license.revisions.latest("revision_number").proprietor_name, "Test Proprietor")
+        self.assertContains(self.client.get(detail), "Test Proprietor")
         self.assertEqual(license.revisions.latest("revision_number").business_address, "12 Business Road\nVellore")
         self.assertContains(self.client.get(detail), "Printed Counter Business")
         for action in ("expire", "activate", "expiry_notice_create"):
@@ -2303,7 +2307,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
 
         license, series = self._configured_setup()
         from apps.tenant_apps.loans.services import update_license
-        license = update_license(license, actor=self.owner, business_name="Sample Pawnbrokers",
+        license = update_license(license, actor=self.owner, business_name="Sample Pawnbrokers", proprietor_name="Asha Proprietor",
                                  business_address="12 Business Road\nVellore")
         loan = self._loan(license, series, "RICH-19")
         borrower = loan.borrower
@@ -2359,6 +2363,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(issue.source_snapshot["customer"]["address_id"], address.pk)
         self.assertEqual(issue.payload_schema_version, 2)
         self.assertEqual(issue.source_snapshot["fields"]["license.business_name"], "Sample Pawnbrokers")
+        self.assertEqual(issue.source_snapshot["fields"]["license.proprietor_name"], "Asha Proprietor")
         self.assertEqual(issue.source_snapshot["fields"]["license.business_address"], "12 Business Road\nVellore")
         self.assertEqual(issue.source_snapshot["verification_id"], first["X-Rokkad-Verification-ID"])
         generated_at = issue.source_snapshot["fields"]["document.generated_at"]
@@ -2390,12 +2395,13 @@ class LoansSetupUiTests(WorkspaceTestCase):
         loan.borrower.display_name = "Changed customer"
         loan.borrower.save()
         from apps.tenant_apps.loans.services import update_license
-        update_license(loan.license, actor=self.owner, business_name="Changed Pawnbrokers", business_address="New address")
+        update_license(loan.license, actor=self.owner, business_name="Changed Pawnbrokers", business_address="New address", proprietor_name="Changed Proprietor")
         with patch("apps.tenant_apps.loans.web.loan_documents.PawnLoanDocumentProjectionBuilder.loan_ticket", side_effect=AssertionError("Reprint rebuilt mutable facts")), patch("apps.tenant_apps.loans.services.ticket_documents._photo_asset", side_effect=AssertionError("Reprint fetched media")), patch("apps.tenant_apps.loans.services.ticket_documents.timezone.now", return_value=capture + timedelta(days=1)):
             self.assertEqual(self.tenant_get(url).content, first.content)
             self.assertContains(self.tenant_get(reverse("loans:document_issue_detail", args=[issue.pk])), "10 Test Street")
         issue.refresh_from_db()
         self.assertEqual(issue.source_snapshot["fields"]["borrower.name"], "Asha")
+        self.assertEqual(issue.source_snapshot["fields"]["license.proprietor_name"], "Asha Proprietor")
 
     def test_license_business_fields_block_issue_when_blank_but_preview_explains(self):
         from apps.tenant_apps.loans.services.ticket_documents import prepare_ticket_document

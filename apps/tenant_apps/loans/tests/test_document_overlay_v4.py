@@ -31,6 +31,31 @@ def synthetic_payload():
 
 
 class PrecisionOverlayTests(SimpleTestCase):
+    def test_bold_scalar_fields_use_real_bold_fonts_and_preserve_default_hash(self):
+        from dataclasses import replace
+        self.payload = replace(self.payload, fields=tuple(replace(f, value="INR 160000.00") if f.key == "loan.principal" else f for f in self.payload.fields))
+        self.definition["theme"]["font_family"] = "HELVETICA"
+        original_hash = DocumentLayoutValidator.load(self.definition).content_hash
+        principal = next(b for b in self.definition["blocks"] if b.get("binding") == "loan.principal")
+        principal["bold"] = False
+        self.assertEqual(DocumentLayoutValidator.load(self.definition).content_hash, original_hash)
+        principal.update(bold=True, value_format="INR_SYMBOL")
+        business = next(b for b in self.definition["blocks"] if b.get("binding") == "workspace.name")
+        business.update(bold=True, show_label=False)
+        parsed = DocumentLayoutValidator.load(self.definition)
+        self.assertNotEqual(parsed.content_hash, original_hash)
+        self.assertEqual(DocumentLayoutValidator.load(parsed.canonical_dict()).content_hash, parsed.content_hash)
+        with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
+            spans = [s for p in pdf for b in p.get_text("dict")["blocks"] if "lines" in b for line in b["lines"] for s in line["spans"]]
+            money = [s for s in spans if "\u20b9" in s["text"]]
+            self.assertTrue(money)
+            self.assertTrue(all("Bold" in s["font"] for s in money))
+            self.assertTrue(any(s["font"] == "Helvetica-Bold" for s in spans))
+        for invalid in ("true", 1, None):
+            principal["bold"] = invalid
+            with self.assertRaises(LayoutValidationError):
+                DocumentLayoutValidator.load(self.definition)
+
     def test_rupee_format_renders_glyph_without_changing_payload(self):
         from dataclasses import replace
         self.payload = replace(self.payload, fields=tuple(

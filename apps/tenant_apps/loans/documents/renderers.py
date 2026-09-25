@@ -582,6 +582,15 @@ class ConfigurableDocumentRenderer:
             text = f"<b>Verification ID</b>: {escape(payload.verification_id)}"
         else:
             text = escape(block.text or "Signature")
+        if block.bold:
+            if style.fontName == "RokkadUnicodeTamil":
+                name = "RokkadUnicodeTamilBold"
+                if name not in pdfmetrics.getRegisteredFontNames():
+                    font_path = Path(__file__).resolve().parents[4] / "static" / "fonts" / "NotoSansTamil-Bold.ttf"
+                    pdfmetrics.registerFont(TTFont(name, str(font_path)))
+                style.fontName = name
+            else:
+                style.fontName = "Helvetica-Bold"
         if layout.schema_version >= 4:
             text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br/>")
             x += block.padding_pt

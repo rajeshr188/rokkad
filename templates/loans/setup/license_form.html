@@ -16,6 +16,7 @@
       {% if form.name %}{% include "components/forms/accessible.html#field" with field=form.name %}{% endif %}
       {% if form.business_name %}
       {% include "components/forms/accessible.html#field" with field=form.business_name %}
+      {% include "components/forms/accessible.html#field" with field=form.proprietor_name %}
       {% include "components/forms/accessible.html#field" with field=form.business_address %}
       {% endif %}
       <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.license_number %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.issuing_authority %}</div></div>
