@@ -626,6 +626,27 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertContains(page, "Silver")
         self.assertContains(page, "Compound")
         self.assertContains(page, "Slab")
+        # Editing today's business default starts from saved non-default values.
+        form = page.context["configuration_form"]
+        self.assertEqual(form["interest_method"].value(), "COMPOUND")
+        self.assertEqual(form["partial_month_method"].value(), "SLAB")
+        payload = {"action": "configuration"}
+        for name in form.fields:
+            payload[form.add_prefix(name)] = form[name].value() or ""
+        payload["configuration-effective_from"] = "2026-08-05"
+        payload["configuration-maximum_ltv_ratio"] = "0.95"
+        response = self.tenant_post(reverse("loans:pawn_economics_setup"), payload)
+        self.assertEqual(response.status_code, 302)
+        revisions = list(PawnLoanEconomicPolicy.objects.order_by("revision"))
+        self.assertEqual([row.maximum_ltv_ratio for row in revisions], [Decimal("0.8"), Decimal("0.95")])
+        self.assertEqual([row.revision for row in revisions], [1, 2])
+        self.assertEqual(revisions[1].interest_method, "COMPOUND")
+        self.assertEqual(revisions[1].partial_month_method, "SLAB")
+        self.assertEqual(PawnMetalInterestRatePolicy.objects.count(), 4)
+        page = self.tenant_get(reverse("loans:pawn_economics_setup"))
+        self.assertEqual(page.context["configuration_source"].pk, revisions[1].pk)
+        self.assertContains(page, "Use these settings")
+        self.assertEqual(self.tenant_get(reverse("loans:pawn_economics_setup") + "?copy_economics=invalid").status_code, 404)
 
     def test_policy_forms_keep_one_error_summary_and_open_the_failed_section(self):
         import re

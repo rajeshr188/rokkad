@@ -7,7 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from .action_access import require_setup_administration
@@ -72,6 +72,13 @@ def create_pawn_economic_configuration(
         monthly_interest_rate=silver_monthly_interest_rate,
         **rate_scope,
     )
+    from apps.orgs.audit import AuditLog
+    AuditLog.log("SETTINGS_UPDATE", user=actor, company=workspace,
+        description="Saved a new calculation policy revision and monthly rates.",
+        data={"economic_policy_id": economic_policy.pk, "revision": economic_policy.revision,
+              "effective_from": str(economic_policy.effective_from), "license_id": economic_policy.license_id,
+              "maximum_ltv_ratio": str(economic_policy.maximum_ltv_ratio),
+              "gold_rate_policy_id": gold_rate_policy.pk, "silver_rate_policy_id": silver_rate_policy.pk})
     return PawnEconomicConfiguration(
         economic_policy=economic_policy,
         gold_rate_policy=gold_rate_policy,
@@ -79,6 +86,7 @@ def create_pawn_economic_configuration(
     )
 
 
+@transaction.atomic
 def create_pawn_loan_economic_policy(
     *,
     workspace,
@@ -99,7 +107,10 @@ def create_pawn_loan_economic_policy(
 ) -> PawnLoanEconomicPolicy:
     _require_scope(workspace.pk, license)
     require_setup_administration(workspace.pk, actor)
+    day = effective_from or timezone.localdate()
+    revision = _next_revision(PawnLoanEconomicPolicy, workspace, license=license, effective_from=day)
     policy = PawnLoanEconomicPolicy(
+        revision=revision,
         workspace=workspace,
         license=license,
         valuation_method=ValuationMethod(valuation_method).value,
@@ -112,7 +123,7 @@ def create_pawn_loan_economic_policy(
         capitalization_interval_periods=capitalization_interval_periods,
         rounding_method=RoundingMethod(rounding_method).value,
         currency_quantum=currency_quantum,
-        effective_from=effective_from or timezone.localdate(),
+        effective_from=day,
         effective_until=effective_until,
         created_by=actor,
     )
@@ -121,6 +132,7 @@ def create_pawn_loan_economic_policy(
     return policy
 
 
+@transaction.atomic
 def create_pawn_metal_interest_rate_policy(
     *,
     workspace,
@@ -134,13 +146,17 @@ def create_pawn_metal_interest_rate_policy(
 ) -> PawnMetalInterestRatePolicy:
     _require_scope(workspace.pk, license)
     require_setup_administration(workspace.pk, actor)
+    day = effective_from or timezone.localdate()
+    revision = _next_revision(PawnMetalInterestRatePolicy, workspace, license=license,
+                              series=series, metal=CollateralMetal(metal).value, effective_from=day)
     policy = PawnMetalInterestRatePolicy(
+        revision=revision,
         workspace=workspace,
         license=license,
         metal=CollateralMetal(metal).value,
         series=series,
         monthly_interest_rate=monthly_interest_rate,
-        effective_from=effective_from or timezone.localdate(),
+        effective_from=day,
         effective_until=effective_until,
         created_by=actor,
     )
@@ -154,6 +170,7 @@ def create_pawn_series_interest_rates(*, workspace, series, gold_monthly_interes
                                      silver_monthly_interest_rate, effective_from, actor):
     """Append both metal overrides together, retaining earlier dated evidence."""
     require_setup_administration(workspace.pk, actor)
+    _lock_policy_workspace(workspace)
     series = LoanSeries.objects.select_for_update().select_related("license").get(
         pk=series.pk, workspace=workspace)
     policies = tuple(create_pawn_metal_interest_rate_policy(workspace=workspace,
@@ -209,9 +226,9 @@ def resolve_pawn_loan_economic_policy(
     current = _current_rows(PawnLoanEconomicPolicy, workspace_id, as_of_date)
     policy = None
     if license_id is not None:
-        policy = current.filter(license_id=license_id).order_by("-effective_from", "-id").first()
+        policy = current.filter(license_id=license_id).order_by("-effective_from", "-revision", "-id").first()
     if policy is None:
-        policy = current.filter(license__isnull=True).order_by("-effective_from", "-id").first()
+        policy = current.filter(license__isnull=True).order_by("-effective_from", "-revision", "-id").first()
     if policy is None:
         raise PawnEconomicPolicyError(
             "No active PawnLoan economic policy applies on the requested date."
@@ -236,12 +253,12 @@ def resolve_pawn_metal_interest_rate_policy(
     if series_id is not None:
         if not LoanSeries.objects.filter(pk=series_id, workspace_id=workspace_id, license_id=license_id).exists():
             raise PawnEconomicPolicyError("Series must belong to the policy workspace and license.")
-        policy = current.filter(series_id=series_id).order_by("-effective_from", "-id").first()
+        policy = current.filter(series_id=series_id).order_by("-effective_from", "-revision", "-id").first()
     current = current.filter(series__isnull=True)
     if policy is None and license_id is not None:
-        policy = current.filter(license_id=license_id).order_by("-effective_from", "-id").first()
+        policy = current.filter(license_id=license_id).order_by("-effective_from", "-revision", "-id").first()
     if policy is None:
-        policy = current.filter(license__isnull=True).order_by("-effective_from", "-id").first()
+        policy = current.filter(license__isnull=True).order_by("-effective_from", "-revision", "-id").first()
     if policy is None:
         raise PawnEconomicPolicyError(
             f"No active {metal_value} PawnLoan interest-rate policy applies on the requested date."
@@ -258,6 +275,17 @@ def resolve_pawn_loan_fee_policies(
     if license_id is not None:
         resolved.update(_latest_by_code(current.filter(license_id=license_id)))
     return tuple(resolved[code] for code in sorted(resolved))
+
+
+def _lock_policy_workspace(workspace):
+    # Match origination/monitoring lock order; an empty policy scope cannot lock.
+    from apps.orgs.models import Company
+    Company.all_objects.select_for_update().get(pk=workspace.pk)
+
+
+def _next_revision(model, workspace, **scope):
+    _lock_policy_workspace(workspace)
+    return (model.objects.filter(workspace=workspace, **scope).aggregate(value=Max("revision"))["value"] or 0) + 1
 
 
 def _current_rows(model, workspace_id, as_of_date):

@@ -14,6 +14,14 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Economic and metal-interest policies append same-day revisions under a Workspace
+lock. Resolution uses scope priority, latest applicable date, then revision;
+existing approvals/disbursals remain frozen. Setup loads saved defaults and can
+copy an explicitly selected history scope. Gold/silver and calculation changes
+remain atomic; fees and monitoring are separate. Do not overwrite old rows to
+resolve a duplicate-date setup error. See the
+[decision](adr/2026-09-25-same-day-economic-policy-revisions.md).
+
 Loan detail offers Tabs (default) and Classic. The owner retired Service desk and
 Expandable sections from production; preserve the original mockups unchanged.
 Retired browser preferences fall back to Tabs. Classic retains its original

@@ -239,6 +239,7 @@ class DisbursalMigrationTests(TransactionTestCase):
                 original_policy = self.loan.policy_snapshot_id
                 original_disbursal = self.loan.disbursal_snapshot_id
                 events = list(self.loan.loan_events.values())
+            latest = MigrationExecutor(connection).loader.graph.leaf_nodes()
             MigrationExecutor(connection).migrate([("loans", "0022_paper_closure_transition")])
             try:
                 MigrationExecutor(connection).migrate([("loans", "0024_disbursal_schedule_identity")])
@@ -248,4 +249,4 @@ class DisbursalMigrationTests(TransactionTestCase):
                     self.assertEqual(self.loan.disbursal_snapshot_id, original_disbursal)
                     self.assertEqual(list(self.loan.loan_events.values()), events)
             finally:
-                MigrationExecutor(connection).migrate([("loans", "0024_disbursal_schedule_identity")])
+                MigrationExecutor(connection).migrate(latest)

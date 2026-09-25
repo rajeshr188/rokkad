@@ -56,7 +56,7 @@ ECONOMIC_LABELS = {
 
 class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     groups = (
-        (_("1. Scope and start date"), ("license", "effective_from")),
+        (_("1. Scope and dates"), ("license", "effective_from", "effective_until")),
         (_("2. Monthly interest"), ("gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods")),
         (_("3. Part-month and compound rules"), ("partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction", "capitalization_interval_periods")),
         (_("4. Collateral value and rounding"), ("valuation_method", "maximum_ltv_ratio", "rounding_method", "currency_quantum")),
@@ -80,7 +80,7 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         min_value=0.000001,
         max_value=1,
         initial="0.80",
-        help_text=_("Enter 0.80 for 80%."),
+        help_text=_("Enter 0.80 for 80%, or 0.95 for 95%."),
     )
     advance_interest_periods = forms.IntegerField(min_value=0, max_value=12, initial=1)
     interest_method = forms.ChoiceField(
@@ -136,6 +136,8 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         initial=Decimal("4"), help_text=_("Monthly percentage. Starts at 4%; change before saving if needed."),
     )
     effective_from = forms.DateField(widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
+    effective_until = forms.DateField(required=False, label=_("Applies through (optional)"),
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)

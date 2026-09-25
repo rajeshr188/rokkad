@@ -93,6 +93,13 @@ capitalization, repayment, balance, and overdue rules.
 
 ## Freeze Boundary
 
+Calculation and metal-rate policies support same-day numbered revisions.
+Scope precedence is unchanged; within a scope the latest applicable effective
+date and then highest revision wins. Saving appends evidence and atomically
+retains the calculation policy with gold/silver rates. See the
+[decision](../adr/2026-09-25-same-day-economic-policy-revisions.md) and
+[operator guide](../flows/changing-loan-calculation-settings.md).
+
 Draft and approval resolve the effective policy for the loan and collateral.
 Approval stores the complete calculation and collateral economics. Disbursal
 copies that frozen evidence into the one-to-one `LoanPolicySnapshot`. A later

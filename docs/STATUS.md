@@ -7,6 +7,22 @@ tags: [status, architecture]
 
 # Status
 
+## Same-day calculation policy revisions (2026-09-25)
+
+JSK's attempted 80% to 95% LTV change exposed scope/date uniqueness rejecting
+same-day policy saves. Economic and metal-rate policies now append sequential
+revisions, retain earlier rows, and resolve latest date then revision within the
+existing scope priority. Workspace locking serializes competing saves; the full
+configuration remains atomic and audited. Setup preloads current saved settings
+and exposes a history-copy link, avoiding accidental resets to starter values.
+Migration 0025 preserves existing IDs/values as revision 1. All 147 economic,
+setup, draft and corrected-disbursal tests pass, including populated migrations,
+concurrent first saves, restricted-RLS DML, LTV retry without consumed numbers,
+and frozen approval/disbursal evidence. Migration drift is clean.
+Deployment and the authorized JSK-only 95% adjustment are pending. See the
+[decision](adr/2026-09-25-same-day-economic-policy-revisions.md) and
+[operator guide](flows/changing-loan-calculation-settings.md).
+
 ## Selected loan detail layout and customer header (2026-09-25)
 
 Owner selected Tabs and Classic only; B/C are removed from the live layout menu

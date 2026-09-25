@@ -1192,6 +1192,41 @@ class PawnDraftUiTests(WorkspaceTestCase):
         LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="")
         self.assertEqual(series.pawn_display_name, "No prefix")
 
+    def test_same_day_ltv_revision_allows_retry_and_preserves_frozen_approval(self):
+        from apps.tenant_apps.loans.services import create_pawn_economic_configuration
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        existing = PawnLoan.objects.get()
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[existing.pk])).status_code, 302)
+        frozen = existing.approval_snapshots.get().payload
+        sequence = LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN")
+        next_number = sequence.next_number
+        payload = self._payload(license, series)
+        payload["collateral-0-allocated_principal"] = "45000"
+        failed = self.client.post(reverse("loans:pawn_loan_create"), payload)
+        self.assertEqual(failed.status_code, 200)
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        sequence.refresh_from_db()
+        self.assertEqual(sequence.next_number, next_number)
+        revised = create_pawn_economic_configuration(workspace=self.tenant, license=license, actor=self.owner,
+            valuation_method="LATEST_APPRAISAL", maximum_ltv_ratio=Decimal("0.95"),
+            gold_monthly_interest_rate=Decimal("2"), silver_monthly_interest_rate=Decimal("4"),
+            effective_from=date(2026, 1, 1))
+        self.assertEqual(revised.economic_policy.revision, 2)
+        payload = self._payload(license, series)
+        payload["collateral-0-allocated_principal"] = "45000"
+        saved = self.client.post(reverse("loans:pawn_loan_create"), payload)
+        self.assertEqual(saved.status_code, 302)
+        new = PawnLoan.objects.exclude(pk=existing.pk).get()
+        self.assertEqual(new.principal_amount, Decimal("45000"))
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[new.pk])).status_code, 302)
+        self.assertEqual(existing.approval_snapshots.get().payload, frozen)
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_disburse", args=[existing.pk]),
+            {"effective_date": "2026-07-18"}).status_code, 302)
+        existing.refresh_from_db()
+        self.assertEqual(existing.state, "ACTIVE")
+        self.assertEqual(existing.approval_snapshots.get().payload, frozen)
+
     def test_series_interest_setup_preview_approval_and_frozen_terms(self):
         from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
         from apps.tenant_apps.loans.models import PawnMetalInterestRatePolicy

@@ -208,6 +208,7 @@ class PawnLoanEconomicPolicy(models.Model):
         decimal_places=4,
         default=Decimal("0.01"),
     )
+    revision = models.PositiveIntegerField(default=1)
     effective_from = models.DateField(default=timezone.localdate, db_index=True)
     effective_until = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -221,17 +222,17 @@ class PawnLoanEconomicPolicy(models.Model):
     )
 
     class Meta:
-        ordering = ("workspace_id", "license_id", "-effective_from", "-id")
+        ordering = ("workspace_id", "license_id", "-effective_from", "-revision", "-id")
         constraints = [
             models.UniqueConstraint(
-                fields=("workspace", "effective_from"),
+                fields=("workspace", "effective_from", "revision"),
                 condition=Q(license__isnull=True),
-                name="loans_econ_ws_date_uniq",
+                name="loans_econ_ws_date_rev_uniq",
             ),
             models.UniqueConstraint(
-                fields=("license", "effective_from"),
+                fields=("license", "effective_from", "revision"),
                 condition=Q(license__isnull=False),
-                name="loans_econ_license_date_uniq",
+                name="loans_econ_lic_date_rev_uniq",
             ),
             models.CheckConstraint(
                 condition=Q(maximum_ltv_ratio__gt=0)
@@ -314,6 +315,7 @@ class PawnMetalInterestRatePolicy(models.Model):
         on_delete=models.PROTECT, related_name="metal_interest_rate_policies")
     metal = models.CharField(max_length=16, choices=enum_choices(CollateralMetal))
     monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6)
+    revision = models.PositiveIntegerField(default=1)
     effective_from = models.DateField(default=timezone.localdate, db_index=True)
     effective_until = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -327,20 +329,20 @@ class PawnMetalInterestRatePolicy(models.Model):
     )
 
     class Meta:
-        ordering = ("workspace_id", "license_id", "metal", "-effective_from", "-id")
+        ordering = ("workspace_id", "license_id", "metal", "-effective_from", "-revision", "-id")
         constraints = [
             models.UniqueConstraint(
-                fields=("workspace", "metal", "effective_from"),
+                fields=("workspace", "metal", "effective_from", "revision"),
                 condition=Q(license__isnull=True, series__isnull=True),
-                name="loans_rate_ws_metal_date_uniq",
+                name="loans_rate_ws_date_rev_uniq",
             ),
             models.UniqueConstraint(
-                fields=("license", "metal", "effective_from"),
+                fields=("license", "metal", "effective_from", "revision"),
                 condition=Q(license__isnull=False, series__isnull=True),
-                name="loans_rate_license_date_uniq",
+                name="loans_rate_lic_date_rev_uniq",
             ),
-            models.UniqueConstraint(fields=("series", "metal", "effective_from"),
-                condition=Q(series__isnull=False), name="loans_rate_series_date_uniq"),
+            models.UniqueConstraint(fields=("series", "metal", "effective_from", "revision"),
+                condition=Q(series__isnull=False), name="loans_rate_ser_date_rev_uniq"),
             models.CheckConstraint(condition=Q(series__isnull=True) | Q(license__isnull=False),
                 name="loans_rate_series_license"),
             models.CheckConstraint(
