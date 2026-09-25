@@ -35,6 +35,8 @@
 
 {% if expiry_notices %}<div class="card mb-4"><div class="card-header"><strong>Expiry alerts</strong></div><div class="card-body">{% for notice in expiry_notices %}<div class="d-flex justify-content-between align-items-center mb-2"><span>{{ notice.created_at }} · {{ notice.recipient_email }}</span><form method="post" action="{% url 'workspace_loans:operational_notice_retry' request.workspace.slug notice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Retry delivery</button></form></div>{% endfor %}</div></div>{% endif %}
 
+{% if license.document_pending %}<div class="alert alert-warning" role="status"><strong>{% translate "Licence document pending" %}</strong><p class="mb-2">{% translate "New lending is enabled on the Workspace owner's recorded attestation. The licence document has not been verified." %}</p><a href="{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}" class="alert-link">{% translate "Upload the original document" %}</a></div>{% endif %}
+
 <div class="card card-body mb-4">
   <h2 class="h5">{% translate "Printed business details" %}</h2>
   <div>{% if license.business_name %}{{ license.business_name }}{% else %}{% translate "Business name not configured" %}{% endif %}</div>

@@ -46,6 +46,8 @@ def get_loan_license_register(
     for license in licenses:
         revisions = tuple(license.revisions.all())
         current_revision = revisions[-1] if revisions else None
+        document_pending = bool(current_revision and not current_revision.has_document
+                                and any(r.kind == "ATTESTATION" for r in revisions))
         if license.is_legacy_reference:
             rows.append(LoanLicenseRegisterRow(license, current_revision, "LEGACY_REFERENCE", None,
                 ("Source licence validity is unknown; this reference cannot authorize new lending.",)))
@@ -56,12 +58,16 @@ def get_loan_license_register(
             blockers.append("License is inactive.")
         if days_remaining < 0:
             blockers.append("License is expired.")
-        if current_revision is None or not current_revision.has_document:
+        if document_pending:
+            blockers.append("Owner-attested continuation; upload the original licence document when available.")
+        elif current_revision is None or not current_revision.has_document:
             blockers.append("Current license document is missing.")
         if not license.is_active:
             status = "INACTIVE"
         elif days_remaining < 0:
             status = "EXPIRED"
+        elif document_pending:
+            status = "DOCUMENT_PENDING"
         elif current_revision is None or not current_revision.has_document:
             status = "DOCUMENT_MISSING"
         elif days_remaining <= expiry_warning_days:

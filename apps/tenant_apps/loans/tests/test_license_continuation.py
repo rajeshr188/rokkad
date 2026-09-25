@@ -142,13 +142,19 @@ class LicenseContinuationTests(OpeningImportFixture):
             self.assertEqual(m.PawnLoan.objects.get(pk=loan_id).state, "CLOSED")
 
     def test_new_draft_uses_existing_series_next_number_and_verified_revision(self):
+        self._assert_new_draft()
+
+    def test_owner_attested_license_supports_new_lending_without_fabricated_document(self):
+        self._assert_new_draft(supporting_document=None, document_deferral_reason="Owner will upload original later")
+
+    def _assert_new_draft(self, **verification_changes):
         from decimal import Decimal
         from apps.tenant_apps.loans.services import (create_pawn_draft, CreatePawnDraftCommand, CollateralDraftInput,
             approve_pawn_loan, disburse_pawn_loan, append_collateral_photo,
             create_pawn_loan_economic_policy, create_pawn_metal_interest_rate_policy)
         from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_products
         with self.scoped():
-            license = verify_legacy_license(**self.verification_args())
+            license = verify_legacy_license(**self.verification_args(**verification_changes))
             product = _seed_default_loan_products()[0]
             m.LoanProductVersion.objects.filter(pk=product.pk).update(status="ACTIVE")
             create_pawn_loan_economic_policy(workspace=self.a, license=license, valuation_method="LATEST_APPRAISAL",
@@ -172,6 +178,69 @@ class LicenseContinuationTests(OpeningImportFixture):
             approve_pawn_loan(draft.pk, actor=self.actor)
             result = disburse_pawn_loan(draft.pk, effective_date=draft.loan_date, actor=self.actor)
             self.assertEqual(result.loan_event.event_kind, "DISBURSAL")
+
+    def test_attestation_preserves_history_and_later_document_is_an_amendment(self):
+        from apps.tenant_apps.loans.services.license_series import update_license
+        from apps.tenant_apps.loans.selectors.regulatory import get_loan_license_register
+        with self.scoped():
+            before = m.LoanLicenseRevision.objects.filter(pk=self.old_revision.pk).values().get()
+            license = verify_legacy_license(**self.verification_args(supporting_document=None,
+                document_deferral_reason="Original document will be supplied later"))
+            revision = license.revisions.latest("revision_number")
+            self.assertEqual(revision.kind, "ATTESTATION")
+            self.assertFalse(revision.has_document)
+            self.assertTrue(license.document_pending)
+            register = {row.license.pk: row for row in get_loan_license_register(self.a.pk)}
+            self.assertEqual(register[license.pk].status, "DOCUMENT_PENDING")
+            self.assertEqual(revision.verification_evidence["validity_basis"], "owner_attested")
+            self.assertEqual(before, m.LoanLicenseRevision.objects.filter(pk=self.old_revision.pk).values().get())
+            saved = m.LoanLicenseRevision.objects.filter(pk=revision.pk).values().get()
+            update_license(license, actor=self.actor,
+                supporting_document=SimpleUploadedFile("actual-license.pdf", b"%PDF-1.4\nfixture"))
+            self.assertFalse(license.document_pending)
+            self.assertEqual(license.revisions.latest("revision_number").kind, "AMENDMENT")
+            self.assertEqual(saved, m.LoanLicenseRevision.objects.filter(pk=revision.pk).values().get())
+
+    def test_deferral_requires_owner_reason_and_no_substitute(self):
+        with self.scoped():
+            before = list(self.legacy_series.number_sequences.order_by("pk").values())
+            for changes in ({"document_deferral_reason": ""}, {"document_deferral_reason": " "},
+                            {"document_deferral_reason": "x" * 1001}, {"document_deferral_reason": True},
+                            {"supporting_document": SimpleUploadedFile("substitute.pdf", b"%PDF-1.4\nfixture")}):
+                args = self.verification_args(supporting_document=None, document_deferral_reason="Later")
+                args.update(changes)
+                with self.subTest(changes=changes), self.assertRaises(ValueError):
+                    verify_legacy_license(**args)
+            # Even a privileged setup administrator cannot attest for the owner.
+            from django.contrib.auth import get_user_model
+            admin = get_user_model().objects.create_superuser(username="attestation-platform", email="admin@example.test")
+            with self.assertRaises(PermissionDenied):
+                verify_legacy_license(**self.verification_args(actor=admin, supporting_document=None,
+                    document_deferral_reason="Not the Workspace owner"))
+            self.assertEqual(before, list(self.legacy_series.number_sequences.order_by("pk").values()))
+
+    def test_database_rejects_incomplete_or_falsely_verified_attestation(self):
+        import copy
+        with self.scoped():
+            with transaction.atomic():
+                license = verify_legacy_license(**self.verification_args(supporting_document=None,
+                    document_deferral_reason="Owner pending original"))
+                revision = license.revisions.latest("revision_number")
+                fields = {f.attname: getattr(revision, f.attname) for f in revision._meta.concrete_fields if not f.primary_key}
+                transaction.set_rollback(True)
+            for kind, last in (("PAWN_LOAN", 520), ("PAWN_LOAN_RELEASE", 20)):
+                reserve_sequence_through(series=self.legacy_series, document_kind=kind,
+                    last_used_number=last, evidence_reference="Reviewed source", actor=self.actor)
+            for changes in ({"kind": "VERIFICATION"}, {"created_by_id": self.other_actor.pk},
+                            {"supporting_document": "substitute.pdf", "sha256": "b" * 64, "byte_size": 10},
+                            {"verification_evidence": {**fields["verification_evidence"], "document_deferral_reason": ""}},
+                            {"verification_evidence": {**fields["verification_evidence"], "document_deferred": False}},
+                            {"verification_evidence": {**fields["verification_evidence"], "confirmed_complete": False}}):
+                with self.subTest(changes=changes), self.assertRaises(DatabaseError), transaction.atomic():
+                    m.LoanLicenseRevision.objects.bulk_create([m.LoanLicenseRevision(**{**copy.deepcopy(fields), **changes})])
+            with transaction.atomic():
+                m.LoanLicenseRevision.objects.bulk_create([m.LoanLicenseRevision(**fields)])
+                transaction.set_rollback(True)
 
     def test_destination_numbers_above_reviewed_range_are_rejected(self):
         with self.scoped():

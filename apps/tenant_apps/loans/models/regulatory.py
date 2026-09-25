@@ -28,6 +28,7 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
         RENEWAL = "RENEWAL", "Renewal"
         LEGACY_REFERENCE = "LEGACY_REFERENCE", "Legacy reference (validity unknown)"
         VERIFICATION = "VERIFICATION", "Verified legacy license continuation"
+        ATTESTATION = "ATTESTATION", "Owner attestation (document pending)"
 
     license = models.ForeignKey(
         LoanLicense,
@@ -123,7 +124,15 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
                 )
         if self.pk:
             raise ValidationError("License revision evidence is immutable.")
-        if self.kind == self.Kind.VERIFICATION:
+        if self.kind == self.Kind.ATTESTATION:
+            if (not self.license.is_legacy_reference or self.has_document or self.supporting_document
+                    or self.created_by_id != self.license.workspace.owner_id
+                    or self.verification_evidence.get("document_deferred") is not True
+                    or self.verification_evidence.get("validity_basis") != "owner_attested"
+                    or not isinstance(self.verification_evidence.get("document_deferral_reason"), str)
+                    or not self.verification_evidence["document_deferral_reason"].strip()):
+                raise ValidationError("Document deferral requires an owner attestation, reason and no substitute document.")
+        elif self.kind == self.Kind.VERIFICATION:
             if not self.license.is_legacy_reference or not self.has_document or not self.verification_evidence:
                 raise ValidationError("Legacy verification requires an imported reference, document and numbering evidence.")
         elif self.license_id and ((self.kind == self.Kind.LEGACY_REFERENCE) != self.license.is_legacy_reference):

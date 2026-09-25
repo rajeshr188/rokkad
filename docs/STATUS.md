@@ -1,11 +1,225 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-09-25
 tags: [status, architecture]
 ---
 
 # Status
+
+## Final workflow acceptance and owner document deferral (2026-09-25)
+
+Final restored-copy acceptance passed three-branch payment/release/reversal flows,
+18 workflow page/PDF responses, 36 reader/editor/collector checks, three-branch
+full/grace/read-only boundaries, forbidden-write checks and six private-media
+readback/anonymous/cross-Workspace checks. Source placeholders remain labelled;
+nonblank candidates are not presumed to be usable photographs. All 161 public
+tables in both production and the restored copy match the post-import backup.
+The private loopback-only web startup also passed as non-root with a read-only
+container, Google login UI and HTTPS redirect; its temporary container was removed.
+Actual Google callback and public routing remain untested/unchanged. Detailed
+evidence stays in `cutover-20260924/acceptance-20260925/` on the server.
+
+The owner then explicitly deferred original licence documents, confirmed both JCL
+licences plus JSK/Lakshmi through January 10, 2030, and selected JSK's reviewed
+configuration for all branches. An audited owner-only `ATTESTATION` continuation
+now exists locally, retaining every source/numbering/RLS guard and visible pending
+document status. The GST PDF is not used as substitute licence evidence. Normal
+document verification remains unchanged. The focused 118-test suite and migration
+drift check pass. Fresh migration, restored-target upgrade and application of the
+approved settings are in progress; deployment/activation is not yet claimed.
+
+The initial production trial ends October 8 at approximately 23:39 IST; grace ends
+October 15 at the same time. There is one ordinary Owner Membership per branch and
+no additional staff assignments. Actual sign-in, operational access arrangements,
+current valuation prices and recovery policy remain to review before routing.
+
+## Final import, media and local recovery verified (2026-09-25)
+
+The final import exited successfully. All three branches passed complete Party,
+opening-loan, closed-history and interest-evidence reconciliation: 8,639 customers,
+6,391 outstanding loans and 39,215 closed-history records, with three approved
+unused source exclusions. The continuation completed at 02:10 IST September 25
+with state `MIGRATION_AND_LOCAL_RECOVERY_VERIFIED`.
+
+All 28,422 verified media references are attached. An identical retry recognized
+all attachments without duplicates; business fingerprints remained unchanged.
+The 3,614 missing source files remain explicitly missing. Standard product draft
+preparation and JCL/JSK template checks across imported series also passed.
+
+The post-media backup remains server-only. Its restore to
+`rokkad_production_restore_20260925` matched all 161 public tables and passed
+restricted runtime, forced RLS and migration checks. Backup SHA-256:
+`5c25cb320f32fd6a4850b37b73304095dd21c8d7210de186cab687bf8ad42401`.
+Private evidence is in `cutover-20260924/finalization/completed.json` and
+`run/backup-verification.json` on the new server. This verifies local recovery,
+not off-server disaster recovery.
+
+Public production web has not started and routing remains unchanged. Actual
+Google callback, final workflow checks, staff/new-lending/access setup, recovery
+policy and explicit owner routing approval remain outstanding. The completed
+import does not by itself mean production is ready to open. The queued-state
+sections below describe earlier checkpoints.
+
+## Durable production storage configured; continuation queued (2026-09-25)
+
+With explicit approval, account token `rokkad-production-runtime-20260925-v2` is
+active with Object Read & Write access only to `rokkad-production-media`, with no
+automatic expiry. Its credentials were transferred through a one-use loopback
+form and SSH into a root-owned mode-0600 server file, then installed in the separate
+production runtime environment. No credential file was saved in the local project.
+The initial unused token that appeared in tool output was explicitly revoked;
+Cloudflare rejects it with HTTP 401, and its server file was removed.
+
+The replacement passed disposable-object write/read/list/deletion checks without
+changing business objects. Existing JCL/JSK asset hashes and template retry passed
+using the durable credential, as did Google login UI/initiation, restricted-role,
+RLS and migration configuration checks. A new private workspace encryption key is
+prepared for future channel credentials; no integration was enabled. Public web
+and routing remain closed/unchanged. The temporary migration token remains separate
+and expires September 28; it has not been revoked while migration/rehearsal use remains.
+
+Server unit `rokkad-cutover-finalize-20260925.service` is running and currently
+waiting for exact database reconciliation. On success it prepares the standard
+product drafts, checks templates across all imported series, plans/attaches the
+28,422 verified media references, verifies an identical retry and unchanged business
+fingerprints, then creates a server-only backup and restores it to
+`rokkad_production_restore_20260925` with full table comparisons and runtime/RLS checks.
+It stops on any error and never opens web, changes DNS, contacts payment/messaging providers or enters
+synthetic business transactions. Private state/logs live in
+`/home/rokkad/deploy/cutover-20260924/finalization/`. These queued steps are **not yet
+reported complete**. Actual login, final journeys, licensing/new-lending and access
+dates, recovery policy and owner routing approval remain separate gates.
+
+## Final media source capture completed (2026-09-25)
+
+All 32,036 exact media references in the final September 24 archive were checked
+read-only against the old server. **28,422 references** have hash-verified private
+R2 originals: 28,347 existing copies passed read-back verification and **75 files**
+were newly copied. The same **3,614 source files remain missing**; no shared-path
+candidates were substituted. JCL has 11,664 preserved / 3,159 missing references,
+JSK 4,722 / 455, and Lakshmi 12,036 / 0. This is a complete bounded path/read pass,
+not an atomic filesystem snapshot; checks ran 18:12:51–18:35:33 UTC September 24.
+The old site and services remain unchanged.
+
+Sealed final media references SHA-256:
+`3316eef14ef0f537dc90d6fe0eadb1d7b86289dcc03de04f1be5c8f9240f82d8`.
+Customer-photo evidence SHA-256:
+`cca7719930a50f4db05d1d4b5b4da45135f3e0204f337cb71da40d1a9150b1e9`.
+The exact production media target is bound to the actual database/server, restricted
+role, source and Workspace IDs; target SHA-256
+`e3053687d6f62fa6bad63a13ee3f2d16192a6b1c32b0b730a24acb1538fc6bbd`.
+Detailed batches and seals remain server-only in `cutover-20260924/media/`.
+Database admission/reconciliation is still running; application-media planning
+and attachment wait for its successful completion.
+
+The owner explicitly approved Cloudflare dashboard preparation and creation/private
+transfer of a bucket-only, non-expiring production R2 runtime token. The first
+unused token was exposed in tool output during navigation, then revoked and
+replaced with explicit approval as recorded above. It was never installed in the
+application configuration.
+
+## Final package sealed; clean production import started (2026-09-24)
+
+The owner explicitly requires the old site to remain unchanged. Its Gunicorn
+service remains running; the staff write pause is operational, not a technical
+freeze. Any new source entries require renewed reconciliation before switching.
+The owner confirmed JCL RA00575/C07545 and JSK WH02133 are outstanding; JCL C07537
+is unused/cancelled. Earlier unchanged decisions remain source-hash bound.
+
+The complete September 24 package is sealed as
+`650becbb16bcd44c2cb9af2281eaeb3d5497dda72a546aaa790b2cc125028400`.
+It prepares 8,639 customers, 6,391 outstanding loans, 39,215 closed-history records
+and three unused exclusions. Opening balances are dated September 24;
+post-opening servicing requires September 25 or later. Detailed source, decisions
+and package evidence remain under `/home/rokkad/deploy/cutover-20260924/` only.
+
+Clean database `rokkad_production_20260924` has passed owner migrations and runtime
+grants with distinct `rokkad_prod_owner` / restricted `rokkad_prod_runtime` roles.
+Workspaces JCL/JSK/Lakshmi have ordinary Owner Memberships for the chosen Google
+identity. Explicitly approved Google configuration/subject transfer completed
+directly over SSH into a root-private file; credentials were not printed or saved
+locally. The existing subject is linked in the new database. Restricted runtime,
+forced RLS, migration completion, visible Google login UI and login initiation
+checks pass; the redirect uses the existing client and canonical production callback. Its test
+session rolled back, with no provider request or mail. An interactive Google
+callback is not yet verified. Initial 14-day trials are preparation state, with
+production access dates still to review before opening. No checkout or mail ran.
+
+Source `9ab5e4bd` adds explicit allauth proxy-hop configuration, defaulting to zero;
+the single-Caddy production topology is configured for one hop. Seventeen focused
+deployment/Google compatibility tests passed. The clean image is
+`rokkad:rc-20260924-9ab5e4bd`, ID
+`sha256:58c6b97a1586e3ee05238930c92f30c017fe889475b16a797204c17ebd2dcbfc`.
+Rehearsal remains on `fd011920`. Exact final-source verification passed and the
+isolated production admission/reconciliation job has started; completion is not
+yet claimed. Public production web/routing remain unchanged.
+
+Accepted JCL and JSK layout/profile pairs are installed as production Workspace
+defaults (new target revision/profile IDs 1/1 and 2/2); background read-back hashes
+and identical installer retry passed. These preserve the ₹ format, optional
+borrower photo and JSK preprinted-stationery correction. JCL had seven imported
+series at installation; JSK series were not yet admitted. Repeat the complete
+series assignment check after import, and prepare the standard draft loan products
+for these operator-created Workspaces before opening new-lending setup.
+
+Temporary R2 credentials are now explicitly authorized for final migration into
+`media/application/production/linode-rls`, not continuing production operation.
+The final dump has 32,036 media references; fresh exact-path checks and conditional
+R2 copy/read-back verification are running, with batch evidence retained privately.
+Fresh media completion/admission, final reconciliation, recovery verification, durable
+runtime credentials and final routing approval remain outstanding. The earlier
+rehearsal-only credential limitation is superseded only for this approved migration.
+
+## Final-source candidate supplied; branch freeze reported (2026-09-24)
+
+The owner supplied `C:\Users\rajes\backup_20260924_230136.sql` after today's entries
+and confirmed all three branches stopped writes after this backup. This is the
+candidate final snapshot, not an independently verified technical writer freeze
+or authorization to change production routing. The file is an 11,711,243-byte
+PostgreSQL custom archive despite its `.sql` extension; SHA-256
+`e2c91ded1d56b6391c0a9dc9c72f0392238490c654612ba477a8e002d5de09e6`.
+
+Read-only `linode_migration check-source` validated the previous package's seals
+and compared this archive with the September 23 snapshot without executing SQL.
+JCL adds 35 loans, JSK 18 and Lakshmi 23 (**76 new source loans**). JSK adds 29
+payment and 29 release rows; Lakshmi adds 24 of each. Existing changes comprise
+30 JSK loans, 24 Lakshmi loans and two Lakshmi addresses. No rows were removed
+within the adapter's inspected tables. Counts describe source rows, not yet
+accepted operational classifications or reconciled opening balances.
+
+The changed archive requires new Party/opening/closed-history preparation and
+review, including the new payments/releases, opening-date recalculation, final
+media delta and target bindings. Nothing was imported or copied into the project
+folder; detailed source records were inspected in memory and only aggregates
+reported. Authentication/proxy, production setup and recovery requirements remain.
+Keep old writes paused; if they resume, this snapshot must be superseded. See the
+[final-source checkpoint](implementation/linode-production-cutover.md#september-24-final-source-candidate).
+
+## Recovery and daily-workflow acceptance completed (2026-09-24)
+
+On image `rokkad:rc-20260924-fd011920`, the latest server-only backup restored into
+`rokkad_acceptance_20260924` with all **117** checked table fingerprints matching
+in **38.98 seconds**. Restricted runtime/RLS and migration checks passed. Across
+JCL, JSK and Lakshmi, partial-principal repayment, receipt, full release, memo,
+idempotent retry and newest-first reversal passed, restoring original exposure;
+18 page/PDF responses passed. All financial changes were rolled back in the
+disposable copy, with container-local document storage and no shared R2 writes.
+Reader/editor/collector probes passed another **36** page/permission checks.
+
+The existing administrator browser session, borrower filter and prominent loan
+date/ticket action passed fresh browser checks, including phone/tablet layouts.
+Hindi switching works but recent labels remain partly English. This does not
+establish actual staff acceptance, Google login or visual receipt/memo approval.
+
+The next technical increment is concrete authentication/proxy configuration:
+rehearsal has no Google app configured, and allauth trusts zero forwarded hops,
+so the inspected Caddy topology can group clients under one IP-based login limit.
+Hosted HTTPS/secure cookies are enabled; HSTS is already 3,600 seconds. Cloud
+firewall rules were not inspected. Production credentials, actual staff/lending
+setup, recovery destination and the new frozen-source import remain to be reviewed.
+No production routing, shared media or application code changed. See the
+[acceptance report](implementation/rehearsal-acceptance-20260924.md).
 
 ## Dependency refresh verified and deployed to rehearsal (2026-09-24)
 

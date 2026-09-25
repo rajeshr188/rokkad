@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-09-25
 tags: [agents, context, architecture]
 ---
 
@@ -13,6 +13,40 @@ in [Future work](plans/future-work.md). Prior notes, including superseded decisi
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
 ## Product and tenant foundation
+
+On September 25 the owner explicitly waived immediate licence-document upload for
+cutover. Both JCL licences (813/94 and 1513/2017), JSK 1541/2017 and Lakshmi 1055/02
+should continue to January 10, 2030 (the supplied 10/01/2030 is interpreted in local
+day/month order). Use audited owner attestation with the original document pending;
+do not attach the offered GST certificate as matching licence evidence. Valid-from
+for this continuation is its current date, not an invented historical issue date.
+The owner also selected JSK's reviewed lending configuration for all three branches:
+flexible partial payments, gold 2%/month, silver 4%/month, fixed INR 10 deducted
+document fee, simple/full-month interest, one advance period, 80% LTV and the lower
+of calculated/appraised valuation. See the
+[attestation decision](adr/2026-09-25-owner-attested-license-continuation.md).
+
+For the September 24 final cutover preparation, the owner explicitly instructed
+that the old site remain unchanged, including its running services. All three
+branches report stopping writes after the supplied final dump; do not describe
+this as a technical freeze. The chosen production Workspace owner is
+`rajeshrathodh@gmail.com`. Existing Google client configuration and this user's
+linked provider subject were explicitly approved for private SSH transfer solely
+for new production sign-in. Preserve the existing subject without copying old
+passwords/privileges or inventing email verification. Temporary R2 migration
+credentials are additionally approved for the final migration into
+`media/application/production/linode-rls`. The owner subsequently approved a separate
+bucket-only, non-expiring account token for production runtime; verified replacement
+`rokkad-production-runtime-20260925-v2` is installed privately on the new server.
+The unused first token exposed in browser output was revoked and rejected by R2.
+Keep migration/rehearsal credentials separate; do not revoke them before remaining
+authorized use is finished. Production routing requires final reviewed
+cutover approval. Detailed evidence/backups stay on the server, never OneDrive.
+In this snapshot JCL RA00575/C07545 and JSK WH02133 are outstanding; JCL C07537 is
+unused/cancelled. WH02133 supersedes its September 23 incomplete classification.
+Final source media was fully rechecked: 28,422 references have preserved verified
+files and 3,614 remain missing. This is a complete exact-path read pass, not an
+atomic filesystem snapshot; no unverified shared candidates may be substituted.
 
 Commercial expiry now uses the separate `workspace_activity` policy: seven days
 of normal-access grace from natural trial/paid-term expiry, then reviewed read-only

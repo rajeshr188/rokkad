@@ -1,10 +1,11 @@
-"""One audited transition from unknown source validity to verified new lending."""
+"""Audited continuation with document evidence or explicit owner attestation."""
 import re
 import hashlib
 import json
 from datetime import date
 
 from django.db import transaction
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 from apps.orgs.models import Company
@@ -29,11 +30,20 @@ def numbering_review_digest(sequences):
 def verify_legacy_license(*, workspace_id, license_id, actor, issued_on, expires_on,
                           issuing_authority, supporting_document, source_sha256,
                           source_as_of, source_reference, confirmed_complete, counters,
-                          expected_revision_id, expected_numbering_digest, request=None):
+                          expected_revision_id, expected_numbering_digest, request=None,
+                          document_deferral_reason=None):
     """Counters cover every existing series/kind; no new number is issued here."""
     require_setup_administration(workspace_id, actor)
     # Serializes this transition with import preparation in the same Workspace.
-    Company.all_objects.select_for_update().get(pk=workspace_id)
+    workspace = Company.all_objects.select_for_update().get(pk=workspace_id)
+    deferred = document_deferral_reason is not None
+    if deferred:
+        if actor.pk != workspace.owner_id:
+            raise PermissionDenied("Only the Workspace owner may attest validity while deferring the document.")
+        if (not isinstance(document_deferral_reason, str)
+                or not document_deferral_reason.strip() or len(document_deferral_reason) > 1000
+                or supporting_document is not None):
+            raise LicenseSeriesError("Document deferral requires a reason and no substitute document.")
     license = LoanLicense.objects.select_for_update().get(workspace_id=workspace_id, pk=license_id)
     if not license.is_legacy_reference:
         raise LicenseSeriesError("This license is already verified. Reload its current setup.")
@@ -43,7 +53,7 @@ def verify_legacy_license(*, workspace_id, license_id, actor, issued_on, expires
     today = timezone.localdate()
     if not all(type(day) is date for day in (issued_on, expires_on, source_as_of)) or not issued_on <= today <= expires_on or source_as_of > today:
         raise LicenseSeriesError("Provide currently valid license dates and a source review date no later than today.")
-    if supporting_document is None or not isinstance(issuing_authority, str) or not issuing_authority.strip():
+    if (supporting_document is None and not deferred) or not isinstance(issuing_authority, str) or not issuing_authority.strip():
         raise LicenseSeriesError("The issuing authority and supporting license document are required.")
     if (confirmed_complete is not True or not isinstance(source_sha256, str)
             or not re.fullmatch(r"[0-9a-f]{64}", source_sha256)
@@ -86,7 +96,11 @@ def verify_legacy_license(*, workspace_id, license_id, actor, issued_on, expires
                 "source_sha256": source_sha256, "source_as_of": source_as_of.isoformat(),
                 "source_reference": source_reference.strip(), "confirmed_complete": True,
                 "sequences": evidence_rows}
-    revision = _record_license_revision(license, kind=LoanLicenseRevision.Kind.VERIFICATION,
+    if deferred:
+        evidence.update(document_deferred=True, document_deferral_reason=document_deferral_reason.strip(),
+                        validity_basis="owner_attested")
+    revision = _record_license_revision(license,
+                                        kind=LoanLicenseRevision.Kind.ATTESTATION if deferred else LoanLicenseRevision.Kind.VERIFICATION,
                                         actor=actor, supporting_document=supporting_document,
                                         verification_evidence=evidence)
     license.is_legacy_reference, license.is_active = False, True

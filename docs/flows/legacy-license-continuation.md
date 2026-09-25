@@ -36,6 +36,15 @@ The accepted local rehearsal is left inactive until that evidence is supplied.
 
 ## Calculation, fee and monitoring setup
 
+An explicit Workspace-owner document deferral is also supported through the
+operator service. It creates an **Owner attestation (document pending)** revision
+without a substitute attachment, retaining the complete source and numbering
+review. It enables lending under the owner's stated validity and leaves a visible
+upload reminder. Use **Edit** to add the original document later; this appends an
+amendment and preserves the attestation. Ordinary **Verify for new lending** still
+requires its document. See the
+[owner-attestation decision](../adr/2026-09-25-owner-attested-license-continuation.md).
+
 The setup page has separate expandable forms and saved history. Calculation opens
 first; the failed form or selected monitoring amendment opens automatically.
 Each save changes only its policy family. Fields have linked corrections and

@@ -112,6 +112,11 @@ class LoanLicense(models.Model):
     def is_expired(self, as_of_date=None):
         return self.expires_on is not None and self.expires_on < (as_of_date or timezone.localdate())
 
+    @property
+    def document_pending(self):
+        latest = self.revisions.order_by("-revision_number").first()
+        return bool(latest and not latest.has_document and self.revisions.filter(kind="ATTESTATION").exists())
+
 
 class LoanSeries(WorkspaceOwnedModel):
     license = models.ForeignKey(
