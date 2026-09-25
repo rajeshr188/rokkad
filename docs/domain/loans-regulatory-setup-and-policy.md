@@ -59,6 +59,12 @@ numbers when deriving a range. This does not certify source completeness or gran
 new lending authority to an inactive/legacy-reference licence. See the
 [legacy import plan](../plans/first-legacy-import.md).
 
+Number prefixes may be empty for numeric-only registers. Keep the configured
+digit width and reserve the complete source range, including closed/excluded
+numbers; an unnamed legacy series must never receive an invented prefix.
+The Linode packager scans all matching identifiers in the source Workspace to
+avoid reusing a historical number even if its original series association differs.
+
 1. Create a regulatory license with supporting evidence.
 2. Create a series and configure independent PawnLoan and release sequences.
 3. Add an effective workspace calculation policy, or a license override.

@@ -93,6 +93,27 @@ class NumberAllocationTests(WorkspaceTestCase):
         self.assertEqual(first.value, "PL-A-0001")
         self.assertEqual(second, first)
 
+    def test_unprefixed_historical_continuation_survives_validation_and_never_rewinds(self):
+        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through
+        from apps.tenant_apps.loans.web.license_forms import LoanSeriesSetupForm
+
+        form = LoanSeriesSetupForm(data={"name": "Unnamed", "code": "NUM",
+            "is_active": True, "pawn_loan_prefix": "", "release_prefix": "",
+            "number_width": 5, "maximum_number": 10000})
+        self.assertTrue(form.is_valid(), form.errors)
+        sequence = configure_sequence(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
+            prefix="", width=5, maximum_number=10000, actor=self.user)
+        sequence.full_clean()
+        kwargs = dict(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
+            last_used_number=6702, evidence_reference="Complete reviewed source register", actor=self.user)
+        reserve_sequence_through(**kwargs)
+        for _ in range(2):
+            self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).value, "06703")
+        self.assertEqual(allocate_pawn_loan_number(series=self.series, actor=self.user).value, "06703")
+        reserve_sequence_through(**kwargs)
+        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).value, "06704")
+        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE).value, "RL-A-0001")
+
     def test_historical_reservation_continues_without_consuming_or_rewinding(self):
         from apps.orgs.audit import AuditLog
         from apps.tenant_apps.loans.services.license_series import reserve_sequence_through

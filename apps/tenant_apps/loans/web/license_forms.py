@@ -90,8 +90,8 @@ class LoanLicenseRenewalForm(forms.Form):
 
 
 class LoanSeriesSetupForm(forms.ModelForm):
-    pawn_loan_prefix = forms.CharField(max_length=24, initial="PL-", label=_("Loan number prefix"), help_text=_("Text before the loan counter, for example PL-A-."))
-    release_prefix = forms.CharField(max_length=24, initial="RL-", label=_("Release number prefix"), help_text=_("Text before the separate release counter, for example RL-A-."))
+    pawn_loan_prefix = forms.CharField(max_length=24, required=False, initial="PL-", label=_("Loan number prefix"), help_text=_("Text before the loan counter, for example PL-A-. Leave blank for numbers only."))
+    release_prefix = forms.CharField(max_length=24, required=False, initial="RL-", label=_("Release number prefix"), help_text=_("Text before the separate release counter, for example RL-A-. Leave blank for numbers only."))
     number_width = forms.IntegerField(min_value=1, max_value=12, initial=5, label=_("Counter digits"), help_text=_("Leading zeros fill this width: 5 displays counter 1 as 00001."))
     maximum_number = forms.IntegerField(min_value=1, initial=10000, label=_("Last counter number"), help_text=_("When the counter reaches this limit, open another series. Numbers are never reused."))
 

@@ -462,7 +462,7 @@ class LoanNumberSequence(WorkspaceOwnedModel):
         max_length=32,
         choices=enum_choices(LoanDocumentKind),
     )
-    prefix = models.CharField(max_length=24)
+    prefix = models.CharField(max_length=24, blank=True)
     width = models.PositiveSmallIntegerField(default=5)
     next_number = models.PositiveBigIntegerField(default=1)
     maximum_number = models.PositiveBigIntegerField(default=10000)

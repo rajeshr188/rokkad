@@ -17,6 +17,29 @@ from .test_loan_archive import document as archive_document
 
 
 class LinodeRunTests(SimpleTestCase):
+    def test_unnamed_source_series_keeps_numeric_prefix_and_complete_history_floor(self):
+        table = {"girvi_series": {
+            "1": {"name": "", "license_id": "1"},
+            "2": {"name": "WH", "license_id": "1"},
+            "3": {"name": "A+", "license_id": "1"},
+        }, "girvi_loan": {
+            "1": {"loan_id": "06700", "series_id": "1", "status": "open"},
+            "2": {"loan_id": "06702", "series_id": "1", "status": "closed"},
+            "3": {"loan_id": "06701", "series_id": "1", "status": "excluded"},
+            "4": {"loan_id": "06334", "series_id": "2", "status": "closed"},
+            "5": {"loan_id": "WH02144", "series_id": "2", "status": "open"},
+            "6": {"loan_id": "A+00009", "series_id": "3", "status": "closed"},
+        }}
+        self.assertEqual(run.source_series_configuration(table), [
+            {"id": "1", "license_id": "1", "prefix": "", "last_used": 6702},
+            {"id": "2", "license_id": "1", "prefix": "WH", "last_used": 2144},
+            {"id": "3", "license_id": "1", "prefix": "A+", "last_used": 9},
+        ])
+        table["girvi_loan"]["7"] = {"loan_id": "06704", "series_id": "2"}
+        self.assertEqual(run.source_series_configuration(table)[0]["last_used"], 6704)
+        table["girvi_loan"] = {}
+        self.assertEqual(run.source_series_configuration(table)[0]["last_used"], 0)
+
     def package(self, directory):
         root = Path(directory)/"package"
         root.mkdir()

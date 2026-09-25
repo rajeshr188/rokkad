@@ -126,6 +126,21 @@ def load_package(directory, expected_sha256):
     return root, manifest
 
 
+def source_series_configuration(table):
+    """Preserve source prefixes and reserve all matching numbers, including closed/excluded rows."""
+    series = []
+    for sid, row in table["girvi_series"].items():
+        prefix = row["name"]
+        require(isinstance(prefix, str), "Source series prefix must be text.")
+        # An unnamed register uses numeric-only identifiers. Scan the entire
+        # source namespace so historical numbers are not reused across series.
+        suffixes = [int(match[1]) for loan in table["girvi_loan"].values()
+                    if (match := re.fullmatch(re.escape(prefix)+r"([0-9]+)", loan["loan_id"]))]
+        series.append({"id":sid, "license_id":row["license_id"], "prefix":prefix,
+                       "last_used":max(suffixes, default=0)})
+    return series
+
+
 def build_package(*, directory, archive_path, workspaces, actor, expected_database,
                   namespace, approval_reference, exclusions, pg_restore="pg_restore"):
     """Capture immutable accepted inputs; refuse any financial servicing since import."""
@@ -207,12 +222,7 @@ def build_package(*, directory, archive_path, workspaces, actor, expected_databa
         require(not (opened & closed or opened & excluded or closed & excluded) and opened | closed | excluded == all_loans,
                 "Every source loan must occur exactly once in openings, closed evidence or reviewed exclusions.")
         table = extracted["tables"]
-        series = []
-        for sid, row in table["girvi_series"].items():
-            prefix = row["name"] or f"LEGACY{sid}-"
-            suffixes = [int(match[1]) for loan in table["girvi_loan"].values()
-                        if (match := re.fullmatch(re.escape(prefix)+r"([0-9]+)", loan["loan_id"]))]
-            series.append({"id":sid, "license_id":row["license_id"], "prefix":prefix, "last_used":max(suffixes, default=0)})
+        series = source_series_configuration(table)
         setup = {"licenses":[{"id":pk,"label":row["name"]} for pk,row in table["girvi_license"].items()],
                  "series":series, "max_tenure":max([12]+[r["opening"]["setup"]["tenure_months"] for r in opening_rows])}
         save(out / "setup.json", setup)
@@ -266,7 +276,7 @@ def _setup(*, workspace, actor, config, package_sha256):
         mapping = {"series":{}}
         for row in config["series"]:
             licence = licences[row["license_id"]]
-            series = create_configured_series(license=licence, name="Legacy "+row["prefix"], code="LINODE-"+row["id"],
+            series = create_configured_series(license=licence, name="Legacy "+(row["prefix"] or "unprefixed"), code="LINODE-"+row["id"],
                 is_active=True, pawn_loan_prefix=row["prefix"], release_prefix="MIG-"+row["id"]+"-R", number_width=5,
                 maximum_number=max(10000,row["last_used"]), actor=actor)
             reserve_sequence_through(series=series, document_kind="PAWN_LOAN", last_used_number=row["last_used"], evidence_reference=reference, actor=actor)
