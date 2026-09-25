@@ -1,4 +1,6 @@
+{% load loans_display %}
 <div data-rate-readiness-result data-request-key="{{ request_key }}" data-ready="{{ ready|yesno:'true,false' }}">
+  {% if interest_rates %}<p class="small mb-2">Default monthly interest: {% for rate in interest_rates %}<span data-policy-interest-metal="{{ rate.metal }}" data-policy-interest-rate="{{ rate.monthly_interest_rate|stringformat:'f' }}">{{ rate.get_metal_display }} {{ rate.monthly_interest_rate|compact_decimal }}%</span>{% if not forloop.last %} · {% endif %}{% endfor %}. Item overrides remain separate.</p>{% endif %}
   {% if message %}<p class="mb-2">{{ message }}</p>{% endif %}
   {% if needs_rates %}
   <p class="small mb-2">Buying prices for {{ as_of }}: INR per gram of pure metal. Saving a draft checks availability. Approval requires a positive same-day quote for each required metal.</p>

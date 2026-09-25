@@ -13,7 +13,7 @@ from apps.tenant_apps.loans.documents.payloads import (
 )
 from apps.tenant_apps.loans.models import PawnCollateralPhoto
 from .action_access import require_loan_action
-from apps.tenant_apps.loans.documents.display import display_date
+from apps.tenant_apps.loans.documents.display import display_date, display_money
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,7 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
         include_address=bool(bindings & {"borrower.address", "borrower.contact_block", "loan.summary_label"}),
     )
     items = source["collateral"]
-    descriptions = "\n".join(f"{index}. {item['description']}" for index, item in enumerate(items, 1))
+    descriptions = "\n".join(f"{index}. {item['description']}" + (f" (Qty {item['quantity']})" if item.get("quantity") else "") for index, item in enumerate(items, 1))
     weights = {}
     for item in items:
         metal = str(item["metal"]).title()
@@ -109,7 +109,7 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
         "collateral.net_weight_by_metal": weight_text,
         "collateral.approved_appraisal_total": appraisal,
         "loan.principal_words": _principal_words(source["principal_amount"]),
-        "loan.summary_label": "\n".join((f"{source['loan_number']} / {display_date(source['loan_date'])}", f"Rs {source['principal_amount']} / {weight_text}", identity.name, descriptions)),
+        "loan.summary_label": "\n".join((f"{source['loan_number']} / {display_date(source['loan_date'])}", f"Rs {display_money(source['principal_amount'])} / {weight_text}", identity.name, descriptions)),
     }
     fields = tuple(replace(field, value=f"{identity.name} ({identity.code})") if field.key == "borrower.display" else field for field in payload.fields)
     fields += tuple(DocumentField(key, label, values[key]) for label, key in TICKET_FIELD_KEYS.items())

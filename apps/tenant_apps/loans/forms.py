@@ -190,6 +190,11 @@ class PawnDraftForm(forms.Form):
 
 
 class PawnCollateralDraftForm(forms.ModelForm):
+    quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1, required=False,
+        help_text=_("Number of pieces. Weights and amounts below are totals for this row."))
+    interest_rate_override = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, max_value=100,
+        required=False, label=_("Override monthly interest (%)"),
+        help_text=_("Leave blank to use the policy rate shown below. Changing it requires loan approval permission."))
     collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     photograph = forms.FileField(
         required=False,
@@ -200,16 +205,24 @@ class PawnCollateralDraftForm(forms.ModelForm):
         model = PawnCollateralItem
         fields = (
             "description",
+            "quantity",
             "metal",
             "gross_weight",
             "net_weight",
             "purity_percentage",
             "latest_appraised_value",
             "allocated_principal",
+            "interest_rate_override",
+            "interest_override_reason",
         )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, can_override_interest=True, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["purity_percentage"].initial = Decimal("75")
+        self.fields["interest_override_reason"].label = _("Reason for interest override")
+        if not can_override_interest:
+            for name in ("interest_rate_override", "interest_override_reason"):
+                self.fields[name].disabled = True
         for name, label in {
             "description": _("Item description"), "metal": _("Metal"),
             "gross_weight": _("Gross weight (g)"), "net_weight": _("Net weight (g)"),
@@ -233,6 +246,14 @@ class PawnCollateralDraftForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if cleaned.get("quantity") is None and not cleaned.get("collateral_item_id"):
+            cleaned["quantity"] = 1
+        override = cleaned.get("interest_rate_override")
+        reason = (cleaned.get("interest_override_reason") or "").strip()
+        if override is not None and not reason:
+            self.add_error("interest_override_reason", _("Explain why this item needs a different interest rate."))
+        if override is None:
+            cleaned["interest_override_reason"] = ""
         if (
             cleaned.get("description")
             and not cleaned.get("collateral_item_id")
@@ -240,6 +261,16 @@ class PawnCollateralDraftForm(forms.ModelForm):
         ):
             self.add_error("photograph", "New collateral requires a JPEG or PNG photograph.")
         return cleaned
+
+    def has_changed(self):
+        # Default quantity/purity must not turn an untouched optional renewal row
+        # into a partially completed item, including older open forms without them.
+        if self.is_bound and self.empty_permitted:
+            defaults = {"quantity": (None, "", "1", 1), "purity_percentage": (None, "", "75", "75.0000", 75),
+                        "metal": (None, "", "GOLD")}
+            if all(self[name].value() in defaults.get(name, (None, "", False)) for name in self.fields):
+                return False
+        return super().has_changed()
 
 
 class PawnDraftSplitForm(forms.Form):

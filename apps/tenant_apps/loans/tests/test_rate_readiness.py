@@ -46,6 +46,10 @@ class RateReadinessTests(WorkspaceTestCase):
             issued_on=self.today - timedelta(days=1), expires_on=self.today + timedelta(days=365),
         )
         self.series = LoanSeries.objects.create(license=self.license, name="Main", code="A")
+        from apps.tenant_apps.loans.models import PawnMetalInterestRatePolicy
+        for metal, rate in (("GOLD", "2"), ("SILVER", "4")):
+            PawnMetalInterestRatePolicy.objects.create(workspace=self.tenant, metal=metal,
+                monthly_interest_rate=rate, effective_from=self.today - timedelta(days=10))
 
     def quote(self, **kwargs):
         values = dict(rate_source=self.source, metal="Gold", purity="24k", currency="INR", buying_rate="7000", selling_rate="7100")

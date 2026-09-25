@@ -31,6 +31,12 @@ def synthetic_payload():
 
 
 class PrecisionOverlayTests(SimpleTestCase):
+    def test_money_display_retains_paise_and_omits_whole_rupee_decimals(self):
+        from apps.tenant_apps.loans.documents.display import display_money
+        self.assertEqual(display_money("18600.00", grouping=True), "18,600")
+        self.assertEqual(display_money("18600.50", grouping=True), "18,600.50")
+        self.assertEqual(display_money("0.01"), "0.01")
+
     def test_default_date_format_is_day_first_without_mutating_payload(self):
         from dataclasses import replace
         self.payload = replace(self.payload, fields=tuple(
@@ -79,7 +85,8 @@ class PrecisionOverlayTests(SimpleTestCase):
                 block["value_format"] = "INR_SYMBOL"
         with fitz.open(stream=self.render().pdf, filetype="pdf") as pdf:
             text = "".join(page.get_text() for page in pdf)
-            self.assertIn("₹18,600.00", text)
+            self.assertIn("₹18,600", text)
+            self.assertNotIn("₹18,600.00", text)
             self.assertNotIn("INR 18600.00", text)
         self.assertEqual(self.payload, original)
 

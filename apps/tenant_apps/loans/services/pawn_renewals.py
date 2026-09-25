@@ -1274,6 +1274,7 @@ def _successor_collateral_plan(
             tuple(
                 CollateralDraftInput(
                     description=item.description,
+                    quantity=item.quantity,
                     metal=item.metal,
                     gross_weight=item.gross_weight,
                     net_weight=item.net_weight,
@@ -1311,6 +1312,7 @@ def _successor_collateral_plan(
         successor_inputs.append(
             CollateralDraftInput(
                 description=source.description,
+                quantity=source.quantity,
                 metal=source.metal,
                 gross_weight=source.gross_weight,
                 net_weight=source.net_weight,

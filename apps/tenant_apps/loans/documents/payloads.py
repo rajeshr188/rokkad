@@ -161,7 +161,7 @@ class PawnLoanDocumentProjectionBuilder:
         rows = [("Item ID", "Description", "Metal", "Net weight", "Purity", "Appraisal", "Custody")]
         rows.extend(
             (
-                str(item["item_id"]), item["description"], item["metal"].title(),
+                str(item["item_id"]), item["description"] + (f" (Qty {item['quantity']})" if item.get("quantity") else ""), item["metal"].title(),
                 item["net_weight"], f"{item['purity_percentage']}%",
                 cls._money(item["latest_appraised_value"])
                 if item["latest_appraised_value"] is not None else "—",
@@ -463,7 +463,8 @@ class PawnLoanDocumentProjectionBuilder:
 
     @staticmethod
     def _money(value):
-        return f"INR {Decimal(str(value or '0')).quantize(Decimal('0.01'))}"
+        from .display import display_money
+        return "INR " + display_money(value)
 
 
 __all__ = ["DocumentField", "DocumentPayload", "DocumentProjectionError", "DocumentSection", "PawnLoanDocumentProjectionBuilder"]

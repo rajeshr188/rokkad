@@ -9,7 +9,7 @@ from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import ValuationMethod
 from apps.tenant_apps.loans.models import LoanSeries
 from apps.tenant_apps.loans.selectors.rate_readiness import get_metal_rate_readiness
-from apps.tenant_apps.loans.services.economic_policies import resolve_pawn_loan_economic_policy
+from apps.tenant_apps.loans.services.economic_policies import resolve_pawn_loan_economic_policy, resolve_pawn_metal_interest_rate_policy
 
 
 class RateReadinessForm(forms.Form):
@@ -43,8 +43,11 @@ def pawn_valuation_readiness(request):
                 workspace_id=request.loans_workspace.pk, license_id=series.license_id,
                 as_of_date=values["as_of"],
             )
+            context["interest_rates"] = [resolve_pawn_metal_interest_rate_policy(
+                workspace_id=request.loans_workspace.pk, license_id=series.license_id, series_id=series.pk,
+                metal=metal, as_of_date=values["as_of"]) for metal in values["metals"]]
         except ValueError:
-            context["message"] = "No calculation policy applies to this series and loan date. Review Economic Setup."
+            context["message"] = "A calculation or monthly interest policy is missing for this series and loan date. Review Economic Setup."
         else:
             needs_rates = policy.valuation_method != ValuationMethod.LATEST_APPRAISAL.value
             rows = get_metal_rate_readiness(

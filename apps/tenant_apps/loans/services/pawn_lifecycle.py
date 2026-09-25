@@ -329,6 +329,9 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
             {
                 "item_id": item.pk,
                 "description": item.description,
+                "quantity": item.quantity,
+                "interest_rate_override": str(item.interest_rate_override) if item.interest_rate_override is not None else None,
+                "interest_override_reason": item.interest_override_reason,
                 "metal": item.metal,
                 "gross_weight": str(item.gross_weight),
                 "net_weight": str(item.net_weight),
@@ -397,6 +400,9 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
                 {
                     "collateral_item_id": item.pk,
                     "interest_rate_policy_id": rate_policy.pk,
+                    "policy_monthly_interest_rate": str(rate_policy.monthly_interest_rate),
+                    "interest_rate_override": str(item.interest_rate_override) if item.interest_rate_override is not None else None,
+                    "interest_override_reason": item.interest_override_reason,
                     "metal": tranche.metal.value,
                     "allocated_principal": str(tranche.allocated_principal),
                     "monthly_interest_rate": str(tranche.monthly_interest_rate),

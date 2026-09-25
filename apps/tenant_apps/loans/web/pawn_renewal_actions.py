@@ -43,7 +43,9 @@ def _pawn_renewal_for_workspace(request, pk):
 def _collateral_inputs(formset):
     return tuple(
         CollateralDraftInput(
-            collateral_item_id=row.get("collateral_item_id"), description=row["description"],
+            collateral_item_id=row.get("collateral_item_id"), description=row["description"], quantity=row.get("quantity"),
+            interest_rate_override=row.get("interest_rate_override"),
+            interest_override_reason=row.get("interest_override_reason", ""),
             metal=row["metal"], gross_weight=row["gross_weight"], net_weight=row["net_weight"],
             purity_percentage=row["purity_percentage"], latest_appraised_value=row.get("latest_appraised_value"),
             allocated_principal=row["allocated_principal"],

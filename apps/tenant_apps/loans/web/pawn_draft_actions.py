@@ -58,7 +58,8 @@ def pawn_loan_create(request):
         initial=initial,
     )
     formset = PawnCollateralDraftFormSet(
-        request.POST or None, request.FILES or None, prefix="collateral"
+        request.POST or None, request.FILES or None, prefix="collateral",
+        form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")}
     )
     economics_preview = None
     if request.method == "POST" and form.is_valid() and formset.is_valid():
@@ -111,6 +112,9 @@ def pawn_loan_update(request, pk):
     initial = [
         {
             "description": item.description,
+            "quantity": item.quantity,
+            "interest_rate_override": item.interest_rate_override,
+            "interest_override_reason": item.interest_override_reason,
             "collateral_item_id": item.pk,
             "metal": item.metal,
             "gross_weight": item.gross_weight,
@@ -125,7 +129,8 @@ def pawn_loan_update(request, pk):
         request.POST or None,
         request.FILES or None,
         prefix="collateral",
-        initial=None if request.method == "POST" else initial,
+        initial=initial,
+        form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")},
     )
     _attach_existing_collateral(formset, existing_items)
     economics_preview = None
@@ -318,6 +323,9 @@ def _collateral_inputs(formset):
         CollateralDraftInput(
             collateral_item_id=row.get("collateral_item_id"),
             description=row["description"],
+            quantity=row.get("quantity"),
+            interest_rate_override=row.get("interest_rate_override"),
+            interest_override_reason=row.get("interest_override_reason", ""),
             metal=row["metal"],
             gross_weight=row["gross_weight"],
             net_weight=row["net_weight"],

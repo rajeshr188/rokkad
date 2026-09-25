@@ -14,6 +14,14 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Native collateral entry defaults quantity to 1 and purity to 75% only in new
+rows; historical missing quantities remain null. Weights and amounts are row
+totals, never multiplied by quantity. Item interest overrides require a reason
+and `loan.approve` for creating/changing/clearing; blank follows policy. Approval
+freezes actual and baseline rates plus provenance. Splits retain overrides;
+renewals re-resolve retained items against successor policy. See the
+[decision](adr/2026-09-25-collateral-quantity-and-interest-overrides.md).
+
 Economic and metal-interest policies append same-day revisions under a Workspace
 lock. Resolution uses scope priority, latest applicable date, then revision;
 existing approvals/disbursals remain frozen. Setup loads saved defaults and can

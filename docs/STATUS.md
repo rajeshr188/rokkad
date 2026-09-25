@@ -7,6 +7,26 @@ tags: [status, architecture]
 
 # Status
 
+## Collateral entry, visible interest and ticket amounts (2026-09-25)
+
+The owner approved overrides by staff with `loan.approve`. New collateral rows
+start at 75% purity and quantity 1; row weights/amounts are totals. Nullable model
+fields preserve unknown historical quantities. Blank overrides use policy;
+explicit rates require a reason and service authorization, with creation/update
+logs and frozen approval evidence. Splits preserve terms; renewals retain counts
+and resolve retained items using successor policy. Detail headers expose the
+monthly effective rate and collateral shows actual item rates. Price preflight
+explains its stored-rate lookup and displays current policy defaults without
+modifying overrides. New ticket generation omits whole-rupee decimals and prints
+approved quantities; existing PDF bytes and loan values are preserved.
+All 165 regression tests pass, including authorization, zero-rate overrides,
+frozen approval/disbursal, renewal compatibility, populated migration replay,
+imported tickets and PDF rendering. Chromium verifies series/metal hint changes
+preserve typed overrides; migration drift is clean. Production deployment is
+pending. See the [staff guide](flows/collateral-entry-and-interest.md),
+[decision](adr/2026-09-25-collateral-quantity-and-interest-overrides.md), and
+[portable-metadata extension](plans/collateral-portability-metadata.md).
+
 ## Same-day calculation policy revisions (2026-09-25)
 
 JSK's attempted 80% to 95% LTV change exposed scope/date uniqueness rejecting

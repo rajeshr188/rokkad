@@ -1192,6 +1192,90 @@ class PawnDraftUiTests(WorkspaceTestCase):
         LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="")
         self.assertEqual(series.pawn_display_name, "No prefix")
 
+    def test_quantity_purity_defaults_and_frozen_interest_override(self):
+        from apps.tenant_apps.loans.models import LoanChangeLog
+        from apps.tenant_apps.loans.services import create_pawn_metal_interest_rate_policy
+        license, series = self._configured_setup()
+        page = self.client.get(reverse("loans:pawn_loan_create"))
+        item_form = page.context["formset"].forms[0]
+        self.assertEqual(item_form["purity_percentage"].value(), Decimal("75"))
+        self.assertEqual(item_form["quantity"].value(), 1)
+        self.assertIsNone(item_form["interest_rate_override"].value())
+        payload = self._payload(license, series)
+        payload.update({"collateral-0-quantity": "3", "collateral-0-interest_rate_override": "1.1",
+                        "collateral-0-interest_override_reason": "Agreed customer rate"})
+        preview = self.client.post(reverse("loans:pawn_loan_create"), {**payload, "action": "preview"})
+        self.assertEqual(preview.context["economics_preview"].economics.monthly_interest, Decimal("110"))
+        payload["collateral-0-photograph"] = self._payload(license, series)["collateral-0-photograph"]
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_create"), payload).status_code, 302)
+        loan = PawnLoan.objects.get(); item = loan.collateral_items.get()
+        self.assertEqual(item.quantity, 3)
+        self.assertEqual(item.monthly_interest_rate, Decimal("1.1"))
+        self.assertEqual(item.interest_rate_policy.monthly_interest_rate, Decimal("2"))
+        self.assertEqual(loan.principal_amount, Decimal("10000"))  # quantity never multiplies row totals
+        audit = LoanChangeLog.objects.filter(loan=loan, event_kind="DRAFT_CREATED").get()
+        self.assertEqual(audit.metadata["draft"]["collateral"][0]["interest_override_reason"], "Agreed customer rate")
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk])).status_code, 302)
+        frozen = loan.approval_snapshots.get().payload
+        self.assertEqual(frozen["collateral"][0]["quantity"], 3)
+        self.assertEqual(Decimal(frozen["collateral_economics"]["tranches"][0]["policy_monthly_interest_rate"]), Decimal("2"))
+        create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=license, actor=self.owner,
+            metal="GOLD", monthly_interest_rate=Decimal("2.5"), effective_from=date(2026, 1, 1))
+        self.assertEqual(self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            {"effective_date": "2026-07-18"}).status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
+        self.assertEqual(loan.disbursal_snapshot.monthly_interest, Decimal("110"))
+        self.assertEqual(loan.approval_snapshots.get().payload, frozen)
+        page = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
+        self.assertContains(page, "Monthly interest rate")
+        self.assertContains(page, "1.1%")
+        self.assertContains(page, "Quantity: 3")
+
+    def test_interest_override_permission_is_enforced_by_service_and_form(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services import CollateralDraftInput, UpdatePawnDraftCommand, update_pawn_draft
+        license, series = self._configured_setup()
+        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        loan = PawnLoan.objects.get(); item = loan.collateral_items.get()
+        staff = get_user_model().objects.create_user(username="draft-only-override")
+        role = Role.objects.get_or_create(name="Member")[0]
+        Membership.objects.create(user=staff, company=self.tenant, role=role)
+        def command(rate, reason):
+            return UpdatePawnDraftCommand(borrower_id=loan.borrower_id, principal_amount=loan.principal_amount,
+                monthly_interest_rate=loan.monthly_interest_rate, loan_date=loan.loan_date, tenure_months=loan.tenure_months,
+                collateral=(CollateralDraftInput(description=item.description, metal=item.metal, gross_weight=item.gross_weight,
+                    net_weight=item.net_weight, purity_percentage=item.purity_percentage, latest_appraised_value=item.latest_appraised_value,
+                    allocated_principal=item.allocated_principal, collateral_item_id=item.pk, quantity=2,
+                    interest_rate_override=rate, interest_override_reason=reason),))
+        with self.assertRaises(PermissionDenied):
+            update_pawn_draft(loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=staff)
+        update_pawn_draft(loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=self.owner)
+        with self.assertRaises(PermissionDenied):
+            update_pawn_draft(loan.pk, command(None, ""), actor=staff)
+        # Staff may retain the authorized override while editing other draft details.
+        update_pawn_draft(loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=staff)
+        item.refresh_from_db(); self.assertEqual(item.monthly_interest_rate, Decimal("0"))
+        self.client.force_login(staff)
+        page = self.client.get(reverse("loans:pawn_loan_update", args=[loan.pk]))
+        self.assertEqual(page.status_code, 200)
+        field = page.context["formset"].forms[0].fields["interest_rate_override"]
+        self.assertTrue(field.disabled)
+        self.assertEqual(page.context["formset"].forms[0]["interest_rate_override"].value(), Decimal("0"))
+
+    def test_override_and_quantity_errors_do_not_save_or_allocate(self):
+        license, series = self._configured_setup()
+        for extra in ({"quantity": "0"}, {"quantity": "10001"},
+                      {"interest_rate_override": "1"},
+                      {"interest_rate_override": "101", "interest_override_reason": "Invalid"}):
+            payload = self._payload(license, series)
+            payload.update({"collateral-0-" + name: value for name, value in extra.items()})
+            response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.context["formset"].errors)
+            self.assertFalse(PawnLoan.objects.exists())
+            self.assertEqual(LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN").next_number, 1)
+
     def test_same_day_ltv_revision_allows_retry_and_preserves_frozen_approval(self):
         from apps.tenant_apps.loans.services import create_pawn_economic_configuration
         license, series = self._configured_setup()

@@ -693,6 +693,10 @@ class PawnLoan(models.Model):
 
 
 class PawnCollateralItem(WorkspaceOwnedModel):
+    # Historical records without a piece count remain unknown.
+    quantity = models.PositiveIntegerField(null=True, blank=True)
+    interest_rate_override = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    interest_override_reason = models.CharField(max_length=255, blank=True, default="")
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     loan = models.ForeignKey(
         PawnLoan,
@@ -757,6 +761,11 @@ class PawnCollateralItem(WorkspaceOwnedModel):
     class Meta:
         ordering = ("loan_id", "id")
         constraints = [
+            models.CheckConstraint(condition=Q(quantity__isnull=True) | Q(quantity__gte=1, quantity__lte=10000),
+                name="loans_item_quantity_range"),
+            models.CheckConstraint(condition=(Q(interest_rate_override__isnull=True, interest_override_reason="") |
+                (Q(interest_rate_override__isnull=False, interest_rate_override__gte=0, interest_rate_override__lte=100) & ~Q(interest_override_reason=""))),
+                name="loans_item_override_reason"),
             models.CheckConstraint(
                 condition=Q(gross_weight__gt=0),
                 name="loans_item_gross_positive",

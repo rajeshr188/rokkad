@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = values();
     const requestKey = ++key;
     htmx.trigger(content, 'htmx:abort');
+    rows.querySelectorAll('[data-item-policy-rate]').forEach(hint => {
+      hint.textContent = 'Policy default: checking selected series and date…';
+    });
+    rows.querySelectorAll('[name$="-interest_rate_override"]').forEach(input => { input.placeholder = 'Use policy'; });
     if (!data.series || !data.as_of || !data.metals) {
       content.textContent = 'Select a series, loan date and at least one collateral metal to check prices.';
       return false;
@@ -44,6 +48,22 @@ document.addEventListener('DOMContentLoaded', () => {
         values: {...data, request_key: requestKey},
       });
       const result = content.querySelector('[data-rate-readiness-result]');
+      if (requestKey === key) {
+        rows.querySelectorAll('[data-collateral-form]').forEach(row => {
+          const metal = row.querySelector('[name$="-metal"]')?.value;
+          const input = row.querySelector('[name$="-interest_rate_override"]');
+          if (!input) return;
+          const rate = result?.querySelector(`[data-policy-interest-metal="${metal}"]`)?.dataset.policyInterestRate;
+          let hint = row.querySelector('[data-item-policy-rate]');
+          if (!hint) {
+            hint = document.createElement('div'); hint.className = 'form-text fw-semibold';
+            hint.dataset.itemPolicyRate = ''; hint.setAttribute('aria-live', 'polite'); input.after(hint);
+          }
+          const display = rate ? Number(rate).toString() + '% / month' : 'unavailable — check setup';
+          hint.textContent = 'Policy default: ' + display;
+          input.placeholder = rate ? 'Policy: ' + display : 'Use policy';
+        });
+      }
       if (!result && requestKey === key) {
         content.textContent = 'Price check unavailable. Your form and photos are retained. Check your access or connection and try again.';
       }

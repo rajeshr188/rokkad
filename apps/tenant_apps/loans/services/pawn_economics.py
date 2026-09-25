@@ -74,6 +74,9 @@ def resolve_pawn_draft_economics(
             as_of_date=as_of_date,
         )
         rate_policies.append(rate_policy)
+        override = getattr(item, "interest_rate_override", None)
+        if override is not None and not getattr(item, "interest_override_reason", "").strip():
+            raise ValueError("An interest override requires a reason.")
         metal_rate = None
         if needs_metal_value:
             metal_key = str(getattr(item.metal, "value", item.metal)).upper()
@@ -85,7 +88,7 @@ def resolve_pawn_draft_economics(
                 net_weight=item.net_weight,
                 purity_percentage=item.purity_percentage,
                 allocated_principal=item.allocated_principal,
-                monthly_interest_rate=rate_policy.monthly_interest_rate,
+                monthly_interest_rate=rate_policy.monthly_interest_rate if override is None else override,
                 metal_rate_per_unit=metal_rate,
                 latest_appraised_value=item.latest_appraised_value,
             )

@@ -1,5 +1,12 @@
 """Presentation-only date formatting; source payloads keep ISO values."""
 from datetime import date, datetime
+from decimal import Decimal
+
+
+def display_money(value, *, grouping=False):
+    amount = Decimal(str(value or "0"))
+    text = format(amount, ",.2f" if grouping else ".2f")
+    return text[:-3] if text.endswith(".00") else text
 
 
 def display_date(value):

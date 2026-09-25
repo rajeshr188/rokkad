@@ -44,6 +44,9 @@ def _input(item, *, preserve_identity=True):
     return CollateralDraftInput(
         collateral_item_id=item.pk if preserve_identity else None,
         description=item.description,
+        quantity=item.quantity,
+        interest_rate_override=item.interest_rate_override,
+        interest_override_reason=item.interest_override_reason,
         metal=item.metal,
         gross_weight=item.gross_weight,
         net_weight=item.net_weight,

@@ -55,6 +55,9 @@ class CollateralDraftInput:
     latest_appraised_value: Decimal | None = None
     allocated_principal: Decimal | None = None
     collateral_item_id: int | None = None
+    quantity: int | None = 1
+    interest_rate_override: Decimal | None = None
+    interest_override_reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -186,6 +189,7 @@ def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor) -> PawnLoan:
         workspace_id, command.product_version_id, command.loan_date, command.tenure_months
     )
     assert_series_can_issue(series)
+    _require_interest_override_access(license.workspace, actor, command.collateral)
     license_revision = license.revisions.order_by("-revision_number").first()
 
     resolved = _resolve_new_economics(
@@ -231,6 +235,7 @@ def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor) -> PawnLoan:
             "loan_number": loan.loan_number,
             "sequence_id": allocation.sequence_id,
             "collateral_count": len(collateral),
+            "draft": _draft_snapshot(loan, collateral),
         },
     )
     return loan
@@ -254,6 +259,7 @@ def update_pawn_draft(
         raise PawnDraftError("Only a draft PawnLoan can be edited.")
 
     borrower = _active_party(command.borrower_id)
+    _require_interest_override_access(loan.workspace, actor, command.collateral, loan.collateral_items.all())
     resolved = _resolve_new_economics(
         workspace_id=workspace_id,
         license_id=loan.license_id,
@@ -316,6 +322,9 @@ def update_pawn_draft(
     persisted = []
     editable_fields = (
         "description",
+        "quantity",
+        "interest_rate_override",
+        "interest_override_reason",
         "metal",
         "gross_weight",
         "net_weight",
@@ -433,6 +442,9 @@ def _validated_collateral(loan, inputs, *, resolved=None):
                 workspace_id=loan.workspace_id,
                 loan=loan,
                 description=item.description,
+                quantity=item.quantity,
+                interest_rate_override=item.interest_rate_override,
+                interest_override_reason=item.interest_override_reason.strip() if item.interest_rate_override is not None else "",
                 metal=CollateralMetal(item.metal).value,
                 gross_weight=item.gross_weight,
                 net_weight=item.net_weight,
@@ -460,6 +472,8 @@ def _validated_collateral(loan, inputs, *, resolved=None):
 def _resolve_new_economics(*, workspace_id, license_id, series_id, as_of_date, collateral):
     allocations = [item.allocated_principal for item in collateral]
     if not any(value is not None for value in allocations):
+        if any(item.interest_rate_override is not None for item in collateral):
+            raise PawnDraftError("Interest overrides require allocated collateral principal and a policy.")
         return None
     if any(value is None for value in allocations):
         raise PawnDraftError("Every collateral item requires an allocated principal.")
@@ -495,6 +509,9 @@ def _draft_snapshot(loan, collateral):
                 "collateral_item_id": item.pk,
                 "public_id": str(item.public_id),
                 "description": item.description,
+                "quantity": item.quantity,
+                "interest_rate_override": str(item.interest_rate_override) if item.interest_rate_override is not None else None,
+                "interest_override_reason": item.interest_override_reason,
                 "metal": item.metal,
                 "gross_weight": str(item.gross_weight),
                 "net_weight": str(item.net_weight),
@@ -519,3 +536,14 @@ def _draft_snapshot(loan, collateral):
             for item in collateral
         ],
     }
+
+
+def _require_interest_override_access(workspace, actor, inputs, existing=()):
+    previous = {item.pk: item for item in existing}
+    for item in inputs:
+        old = previous.get(item.collateral_item_id)
+        before = (old.interest_rate_override, old.interest_override_reason) if old else (None, "")
+        after = (item.interest_rate_override, item.interest_override_reason.strip() if item.interest_rate_override is not None else "")
+        if before != after:
+            require_workspace_action(workspace, actor, "loan.approve")
+            return

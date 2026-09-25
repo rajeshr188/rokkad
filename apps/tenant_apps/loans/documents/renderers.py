@@ -4,7 +4,7 @@ import hashlib
 import io
 import json
 from datetime import date
-from .display import display_date
+from .display import display_date, display_money
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from dataclasses import dataclass
@@ -801,7 +801,7 @@ class ConfigurableDocumentRenderer:
                 amount = Decimal(numeric)
                 if not amount.is_finite():
                     raise InvalidOperation
-                value = f"₹{amount:,.2f}"
+                value = "₹" + display_money(amount, grouping=True)
             except InvalidOperation as exc:
                 raise ValueError(f"Value {value!r} is not a valid INR amount.") from exc
             # Helvetica has no rupee glyph. Embed the bundled Unicode font for
