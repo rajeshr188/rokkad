@@ -32,8 +32,25 @@ Validation: 10 guide-access/discovery/display/template tests, two existing split
 identity/permission regressions, and two native/imported loan-layout browser
 regressions pass. Landing and handbook content were visually reviewed at desktop
 and mobile sizes, with no horizontal overflow and the PNG loaded. Documentation
-links pass. No schema migration or loan calculation changes. Deployment acceptance
-is recorded below after the candidate checks complete.
+links pass. No schema migration or loan calculation changes.
+
+Deployed application `67be05b5` as `rokkad:rc-20260925-67be05b5`, image
+`sha256:e8ff2eb91cc58e0ab72d8bc83e340c4366bdb32a373066eb33485bf86966ec68`, with
+static volume `rokkad_production_static_67be05b5`. Candidate and deployed checks
+passed for the guide, loan list/detail links, public landing and published CSS/PNG
+hashes. The restricted runtime role and forced RLS checks pass. Per-workspace
+financial/document fingerprints were unchanged; JCL/Lakshmi 80%, JSK 95% LTV and
+JSK WH interest exceptions remain intact. All three workspaces had zero saved
+drafts at verification; there was no production-eligible split to display. Local
+synthetic tests cover its visibility and actual identity-preserving split.
+
+Private acceptance: `acceptance-20260925/loan-journey-deployment.json`. Server-only
+before/after backups passed catalogue checks; the post-update backup is
+`production-20260925T180715Z.dump` (55,717,719 bytes), SHA256
+`06340dc1565316ce08d940c9a28d8ac0fe868ba98b0acda6abfbb3e7be6656de`.
+The retained production database remains at `rehearsal.rokkad.com`; the old server
+and live-domain DNS were not changed. Application and documentation are on the
+tracked release branch; no merge into `rls-mvp` was performed.
 
 ## Release documentation consolidation (2026-09-25)
 
