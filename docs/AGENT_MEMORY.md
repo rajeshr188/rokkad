@@ -14,6 +14,13 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Loan detail has an owner-approved four-layout trial: Tabs by default, Service
+desk, Expandable sections and Classic. Keep one canonical set of content/forms;
+move DOM nodes instead of maintaining four financial or permission implementations.
+Preference is browser-local, scoped by user and workspace; no-JavaScript falls
+back to Classic. Retirement needs a later owner decision. See the
+[decision](adr/2026-09-25-loan-detail-layout-trial.md).
+
 On September 25 the owner explicitly waived immediate licence-document upload for
 cutover. Both JCL licences (813/94 and 1513/2017), JSK 1541/2017 and Lakshmi 1055/02
 should continue to January 10, 2030 (the supplied 10/01/2030 is interpreted in local

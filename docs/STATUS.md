@@ -7,6 +7,19 @@ tags: [status, architecture]
 
 # Status
 
+## Four-layout loan detail trial (2026-09-25)
+
+Owner approved Tabs (preferred/default), Service desk, Expandable sections and
+Classic for a daily-use trial before deciding what to retire. One canonical
+server render preserves all forms, permissions, evidence and URLs; the browser
+rearranges existing nodes and remembers the choice per user/workspace. See the
+[decision](adr/2026-09-25-loan-detail-layout-trial.md) and
+[staff guide](flows/loan-detail-layouts.md). No schema or financial-service changes.
+All 87 UI/imported-ticket/release/browser checks pass, including seven loan/access
+states, 320/390/736/1280px widths, original control identity, photo selections,
+CSRF preservation, keyboard tabs, deep links, storage failures and Classic without
+JavaScript. Deployment verification follows; backup remains server-only.
+
 ## Final workflow acceptance and owner document deferral (2026-09-25)
 
 Final restored-copy acceptance passed three-branch payment/release/reversal flows,

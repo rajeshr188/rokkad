@@ -1,0 +1,46 @@
+{% load i18n %}
+<div class="loan-layout-controls d-flex flex-wrap align-items-center gap-2 mb-3" data-loan-layout-controls hidden>
+  <label for="loan-detail-layout" class="small fw-semibold">{% translate "Page layout" %}</label>
+  <select id="loan-detail-layout" class="form-select form-select-sm w-auto" aria-describedby="loan-layout-preference">
+    <option value="tabs">{% translate "A · Tabs" %}</option>
+    <option value="desk">{% translate "B · Service desk" %}</option>
+    <option value="sections">{% translate "C · Expandable sections" %}</option>
+    <option value="classic">{% translate "Classic · Previous design" %}</option>
+  </select>
+  <span id="loan-layout-preference" class="small text-body-secondary" role="status" aria-live="polite" data-layout-message data-saved="{% translate 'Remembered for you in this browser.' %}" data-unsaved="{% translate 'Changed for this page. Browser storage is unavailable.' %}">{% translate "Remembered for you in this browser." %}</span>
+</div>
+<noscript><p class="small text-body-secondary">{% translate "Classic layout is shown. Enable JavaScript to try the other page layouts." %}</p></noscript>
+<template data-loan-layout-template>
+  <div class="loan-layout-shell">
+    <div data-loan-region="header"></div>
+    <div data-loan-region="status"></div>
+    <div data-loan-region="attention"></div>
+    <div class="loan-action-bar mb-3">
+      <div class="loan-main-actions" data-loan-region="action"></div>
+      <div class="loan-print-actions" data-loan-region="print"></div>
+      <div class="loan-secondary-actions" data-loan-region="more"></div>
+    </div>
+    <div data-loan-region="balance"></div>
+    <div class="loan-layout-body">
+      <div class="loan-layout-rail">
+        <div class="loan-desk-actions"></div>
+        <nav class="nav nav-tabs loan-layout-nav mb-3" role="tablist" aria-label="{% translate 'Loan sections' %}">
+          <button type="button" class="nav-link" id="loan-tab-overview" data-loan-tab="overview" role="tab" aria-controls="loan-panel-overview">{% translate "Overview" %}</button>
+          <button type="button" class="nav-link" id="loan-tab-money" data-loan-tab="money" role="tab" aria-controls="loan-panel-money">{% translate "Money & interest" %}</button>
+          <button type="button" class="nav-link" id="loan-tab-collateral" data-loan-tab="collateral" role="tab" aria-controls="loan-panel-collateral">{% translate "Collateral" %}</button>
+          <button type="button" class="nav-link" id="loan-tab-documents" data-loan-tab="documents" role="tab" aria-controls="loan-panel-documents">{% translate "Documents" %}</button>
+          <button type="button" class="nav-link" id="loan-tab-history" data-loan-tab="history" role="tab" aria-controls="loan-panel-history">{% translate "History" %}</button>
+          <button type="button" class="nav-link" id="loan-tab-followup" data-loan-tab="followup" role="tab" aria-controls="loan-panel-followup">{% translate "Follow-up" %}</button>
+        </nav>
+      </div>
+      <div class="loan-layout-panels">
+        <section id="loan-panel-overview" data-loan-panel="overview" role="tabpanel" aria-labelledby="loan-tab-overview" tabindex="0"><div data-loan-region="overview"></div></section>
+        <section id="loan-panel-money" data-loan-panel="money" role="tabpanel" aria-labelledby="loan-tab-money" tabindex="0"><div data-loan-region="money"></div></section>
+        <section id="loan-panel-collateral" data-loan-panel="collateral" role="tabpanel" aria-labelledby="loan-tab-collateral" tabindex="0"><div data-loan-region="collateral"></div></section>
+        <section id="loan-panel-documents" data-loan-panel="documents" role="tabpanel" aria-labelledby="loan-tab-documents" tabindex="0"><div data-loan-region="documents"></div></section>
+        <section id="loan-panel-history" data-loan-panel="history" role="tabpanel" aria-labelledby="loan-tab-history" tabindex="0"><div data-loan-region="history"></div></section>
+        <section id="loan-panel-followup" data-loan-panel="followup" role="tabpanel" aria-labelledby="loan-tab-followup" tabindex="0"><div data-loan-region="followup"></div></section>
+      </div>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,53 @@
+[data-loan-detail] [hidden] { display: none !important; }
+[data-loan-layout="classic"] .loan-enhanced-only { display: none; }
+[data-loan-detail]:not([data-loan-layout="classic"]) [data-loan-classic-only],
+[data-loan-detail]:not([data-loan-layout="classic"]) .loan-summary { display: none; }
+[data-loan-detail]:not([data-loan-layout="classic"]) .loan-workflow-grid { display: block; }
+.loan-layout-shell, .loan-layout-panels, .loan-layout-rail { min-width: 0; }
+.loan-layout-shell [data-loan-block="header"] > div { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.loan-action-bar, .loan-main-actions, .loan-print-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.loan-action-bar { padding: 1rem; border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius-lg); background: var(--bs-tertiary-bg); }
+.loan-secondary-actions { margin-left: auto; }
+.loan-layout-shell [data-loan-block="action"], .loan-layout-shell [data-loan-block="print"] { margin: 0 !important; padding: 0; border: 0; background: none; color: inherit; }
+.loan-layout-shell [data-loan-block="action"] > div:first-child { font-size: .8rem; max-width: 19rem; }
+.loan-layout-shell [data-loan-block="action"] > div:first-child > strong { display: block; }
+.loan-layout-shell [data-loan-block="print"] .btn-lg { font-size: 1rem; padding: .375rem .75rem; }
+.loan-layout-shell [data-loan-block="print"] .btn > .small { display: none !important; }
+.loan-layout-shell [data-loan-block="balance"] .row > div { font-size: 1.35rem; font-weight: 600; }
+.loan-layout-shell [data-loan-block="balance"] .small { font-size: .8rem; font-weight: 400; }
+.loan-layout-nav { gap: .25rem; }
+.loan-layout-nav .nav-link { color: var(--bs-body-color); }
+.loan-layout-nav .nav-link.active { color: var(--bs-primary); font-weight: 600; background: var(--bs-body-bg); border-bottom: 3px solid var(--bs-primary); }
+.loan-layout-shell details[data-loan-section] { border: 0; }
+.loan-layout-shell details[data-loan-section] > summary { display: none; }
+.loan-layout-shell details[data-loan-section] > .card-body { padding: 0; }
+.loan-layout-shell .loan-more-actions { margin-bottom: 0 !important; }
+.loan-layout-shell .loan-more-actions > summary { display: list-item; cursor: pointer; font-weight: 500; }
+.loan-layout-shell .loan-more-actions[open] > div { margin-top: .75rem; }
+.loan-layout-shell .loan-more-actions[open] { max-width: 34rem; }
+.loan-layout-shell .loan-section-fold { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); margin-bottom: .75rem; overflow: hidden; }
+.loan-section-fold > summary { padding: 1rem 1.25rem; background: var(--bs-tertiary-bg); cursor: pointer; font-weight: 600; }
+.loan-section-fold[open] > summary { color: var(--bs-primary); border-bottom: 1px solid var(--bs-border-color); }
+.loan-layout-shell [data-loan-block="collateral"] .d-flex { flex-wrap: wrap; }
+[data-loan-layout="desk"] .loan-layout-body { display: grid; grid-template-columns: 205px minmax(0, 1fr); gap: 1.5rem; }
+[data-loan-layout="desk"] .loan-layout-nav { flex-direction: column; }
+[data-loan-layout="desk"] .loan-layout-nav .nav-link { text-align: left; }
+[data-loan-layout="desk"] .loan-layout-nav .nav-link.active { background: var(--bs-primary-bg-subtle); }
+[data-loan-layout="desk"] .loan-action-bar { padding: .75rem; }
+[data-loan-layout="desk"] .loan-main-actions,
+[data-loan-layout="desk"] .loan-print-actions,
+[data-loan-layout="desk"] .loan-secondary-actions { width: 100%; margin-left: 0; }
+[data-loan-layout="desk"] .loan-action-bar .btn { white-space: normal; text-align: left; }
+@media (max-width: 767.98px) {
+  .loan-secondary-actions { width: 100%; margin-left: 0; }
+  .loan-layout-nav { flex-wrap: nowrap; overflow-x: auto; }
+  .loan-layout-nav .nav-link { white-space: nowrap; }
+  [data-loan-layout="desk"] .loan-layout-body { display: block; }
+  [data-loan-layout="desk"] .loan-layout-nav { display: grid; grid-template-columns: 1fr 1fr; }
+  [data-loan-layout="desk"] .loan-layout-nav .nav-link { white-space: normal; }
+  .loan-layout-controls .form-select { max-width: 100%; }
+}
+@media print {
+  .loan-layout-controls, .loan-layout-nav { display: none !important; }
+  .loan-layout-shell [data-loan-panel][hidden] { display: block !important; }
+}
