@@ -1,11 +1,132 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-09-25
 tags: [migration, cutover, deployment, linode, r2]
 ---
 
 # Three-branch production cutover
+
+## Current application and recovery checkpoint
+
+As verified on September 25, the application release is `713e0b64`, image
+`rokkad:rc-20260925-713e0b64`, with static volume
+`rokkad_production_static_713e0b64` and Loans migrations through 0026.
+Image ID: `sha256:a045348992a0d1f63fab41ea0634a9afda4de98391078bbe3ebd84ca5ef28792`.
+It includes corrected disbursal attempts, Tabs/Classic details, same-day policy
+revisions, collateral quantities/authorized overrides, camera selection and
+Indian monetary display. Production serves the temporary hostname below.
+JSK uses 95% LTV and WH gold/silver rates of 1.1%/3%; JCL/Lakshmi retain 80% LTV.
+Previously approved terms and issued PDF bytes are preserved.
+
+Latest deployment evidence: `acceptance-20260925/camera-money-deployment.json`.
+Last deployment-verified server-only backup:
+`backups/operational/production-20260925T145913Z.dump`, 55,717,830 bytes, SHA-256
+`191208efba013f8965bcce9cd29b97277da0e3fce371123542b10a0ccc00a986`.
+The hourly timer may create newer backups; inspect its private `latest.json`
+before recovery. Detailed rollout evidence is in [Status](../STATUS.md).
+
+## Earlier September 25 deployment checkpoints
+
+The following image, migration, counter and backup values describe those earlier
+checks. They are not instructions to revert the current application or reset data.
+
+Earlier application release: `511c7cd8` (corrected disbursal attempts), image
+`rokkad:rc-20260925-511c7cd8`, static volume `rokkad_production_static_7dad893a`.
+Migrations 0023/0024 retain historical snapshots and backfill current loan links.
+The migration settles deferred constraints before Django creates FK indexes;
+the populated-upgrade regression covers this requirement. The new server's production web writers were
+briefly stopped during migration; the old legacy server was not changed. Candidate/deployed runtime checks passed for
+all three branch snapshot links and JSK 06703's INR 7,150 review/detail, without
+disbursing it or changing source events. Evidence:
+`acceptance-20260925/redisbursement-deployment.json`. Original INR 7,149.95
+disbursal and reversal are retained. Once a replacement attempt exists, fix
+forward with compatible code; do not restore the former one-to-one schema.
+See [the correction workflow](../flows/correct-a-disbursed-loan.md).
+Backup at this checkpoint: `backups/operational/production-20260925T082336Z.dump`,
+55,646,091 bytes, SHA-256
+`ab9de593d9009b5520a8ece05edd4e15254380a6bff6f4c6ee5ebdaa1a727c7d`.
+
+Previous application release: `7dad893a` (paper-closure transition), image
+`rokkad:rc-20260925-7dad893a`, static volume `rokkad_production_static_7dad893a`.
+Migration 0022 is applied. All three branches remain paper-first; owner controls
+system-first date/retirement, with administrator reason-required exceptions.
+Candidate/deployed 50-loan previews and entry/guide/history/settings pages passed,
+without recording closures or modifying loan/counter/transition rows. Evidence:
+`acceptance-20260925/paper-closures-deployment.json`. Backup at this checkpoint:
+`backups/operational/production-20260925T074416Z.dump`, 55,620,036 bytes, SHA-256
+`320ff354a61974b58639891ba105d3ff2ee8c60c4dc8bfb503abe0178d123987`.
+See [the staff workflow](../flows/paper-closure-transition.md). After paper entries
+exist, fix forward or use a compatible image; pre-paper code cannot interpret
+date-only handovers. Never restore an older production snapshot over new work.
+
+Previous application release: `58858717` (series interest overrides and setup readiness),
+image `rokkad:rc-20260925-58858717`, static volume
+`rokkad_production_static_26855c3c`. JSK WH policies 9/10 use gold 1.1% and silver
+3% monthly from 25/09/2026; every other series retains 2%/4%. Existing financial
+rows and numbering are unchanged. Migration 0021 is applied. Verification evidence:
+`acceptance-20260925/wh-interest-deployment.json` and
+`acceptance-20260925/series-readiness-deployment.json`. Backup at this checkpoint:
+`backups/operational/production-20260925T065036Z.dump` (55,610,193 bytes; SHA-256
+`81ec712171f3eedcd19009f7474e393d51b664c0d79cf7fe07ca4f5a1f40a3f8`).
+Application rollback may use `a8e78108`, which understands series policies.
+Older images require disabling active series overrides first; see the series ADR.
+
+Previous application release: `26855c3c` (loan series labels and borrower picker),
+image `rokkad:rc-20260925-26855c3c`, static volume
+`rokkad_production_static_26855c3c`. JCL C07549 displays Series C; read-only checks
+passed for all three branch borrower searches without changing loans or counters.
+Evidence: `acceptance-20260925/loan-directory-deployment.json`; backup at this
+checkpoint: `backups/operational/production-20260925T061702Z.dump`.
+
+The September 25 photo/date release is `8fa5d273`, image
+`rokkad:rc-20260925-8fa5d273`, with static volume
+`rokkad_production_static_8fa5d273`. Its additive Party migration preserved all
+1,142 current profile references in the private gallery. Candidate and deployed
+checks passed for all branches, runtime RLS, private photos, date display, imported
+ticket copies and unchanged native reprints. Server evidence is
+`acceptance-20260925/party-gallery-deployment.json`; backup at this checkpoint is
+`backups/operational/production-20260925T055540Z.dump`. The previous web/static
+configuration is saved as `production-compose.before-party-gallery.yml`.
+
+## Current operating decision: temporary production hostname
+
+On September 25 the owner authorized real retained transactions at
+`rehearsal.rokkad.com` for one or two days before changing `rokkad.com`. The owner
+reconfirmed no old-system changes since the final backup. The temporary hostname
+now routes to the configured final production database/image; the old practice
+container is stopped, with its data retained. This supersedes the earlier plan to
+wait for live-domain DNS before exposing production. Keep old services and both
+live-domain DNS records unchanged, and keep branch writes paused there.
+
+New transactions belong to production and must survive the later hostname change.
+Do not rerun snapshot import or restore pre-operation backups over this database.
+Use production Workspace paths (`jcl`, `jsk`, `lakshmipawnbroker`), not old
+`rehearsal-*` bookmarks. The owner-approved temporary Google origin and callback
+`https://rehearsal.rokkad.com/accounts/google/login/callback/` are saved, preserving
+both live-domain callbacks and the existing secret. Actual Google sign-in completed
+and showed all three production Workspaces with Owner access; the original
+`redirect_uri_mismatch` is resolved. No business transactions were submitted by
+the agent during this verification.
+
+Subsequent approved staff onboarding preserved five exact Google subjects and
+enabled the reviewed branch memberships. Shankar now owns Lakshmi; Rajesh retains
+Admin access there and ownership of JCL/JSK. JCL Member includes the four approved
+daily financial actions for Umesh, and future users of that local role. The second
+Lakshmi account remains conditional on actual verified Google sign-in. See
+[staff application evidence](../STATUS.md#approved-staff-access-and-lakshmi-ownership-applied-2026-09-25).
+
+`temporary-production.json` is the current routing evidence. The old additive
+`Caddyfile.production-candidate` is stale after this decision: regenerate it from
+the current proxy when the owner approves the later domain switch. Preserve the
+same database/storage/number counters, update allowed hosts/CSRF/Site and OAuth
+callbacks, and redirect the temporary hostname after verification. Do not blindly
+reload the earlier candidate or reopen the practice container as production.
+
+Hourly server-only database backups are active under `backups/operational` with
+an initial archive check. Review capacity/retention and off-server recovery during
+the short transition; current copies have no pruning or external failure alerts.
+See [current evidence](../STATUS.md#production-on-temporary-hostname-2026-09-25).
 
 The owner selected a **separate Linode server** on September 22 and subsequently
 created it for hosted cutover rehearsal on September 23. Keep the existing `rokkad.com`
@@ -20,12 +141,81 @@ imports one complete frozen snapshot for JCL, JSK and Lakshmi together.
 
 ## September 24 release requirements
 
+This section preserves the preparation sequence. The current production hostname,
+application and retained-data requirements above supersede pre-activation steps.
+
 The [dependency-refreshed candidate](dependency-refresh-20260924.md) now has committed
 source and a clean versioned image, with 1,911 passing regressions, fresh/restored
 migration and restricted-runtime checks. Its scan reports no known Python dependency
 advisories across 71 checked distributions. It is deployed to rehearsal; production
 routing remains unchanged. Use the linked report for exact image identity and the
 remaining operator/configuration/recovery and frozen-source cutover requirements.
+
+### September 24 final-source candidate
+
+The complete package is imported and reconciled in `rokkad_production_20260924`,
+with media attached and local recovery verified. Subsequent release `d078db38`
+supports the owner's explicit document deferral and approved branch lending setup.
+See the [current checkpoint](../STATUS.md#approved-lending-setup-applied-to-isolated-production-2026-09-25)
+for image identity, settings and remaining cutover work. The source comparison
+below records the initial inspection, not the current admission status.
+
+The owner explicitly refused maintenance changes to the old site: leave its
+services and configuration unchanged. The reported staff pause remains the freeze
+mechanism; any new entries invalidate the final-snapshot assumption. Google client
+configuration and the chosen owner's linked subject have been privately transferred
+and configured on the isolated target with explicit approval. Interactive owner
+sign-in was subsequently verified at the temporary hostname. Temporary R2 credentials are approved for final migration only;
+the separately approved durable replacement is now installed and verified in the
+production runtime environment. Its bucket-level permissions do not enforce the
+application prefix; application configuration and admission target checks bind that
+prefix. See [the completed import checkpoint](../STATUS.md#final-import-media-and-local-recovery-verified-2026-09-25)
+for source-media attachment and recovery. No DNS
+switch is authorized until final reconciliation is presented and approved.
+
+At the proprietor-header checkpoint the target used image
+`rokkad:rc-20260925-e5822c02` and migration `loans.0020_license_proprietor`. The JSK unnamed-series correction preserves
+its numeric-only register and continued at 06703 at correction time; WH then
+remained WH02145. Preserve subsequent allocations. Its audited
+forward-only reservation leaves financial rows and the sealed package intact.
+See [numbering evidence](../STATUS.md#jsk-unnamed-series-continuation-corrected-2026-09-25).
+The owner explicitly defers original licence
+documents until later; all four licences carry audited owner-attested validity
+from the continuation date to January 10, 2030. This supersedes the immediate upload
+requirement for this approved cutover; it does not claim document verification.
+The common JSK policies and owner-provided September 25 prices are installed, and
+new-loan approval/ticket/disbursal passed in the restored copy with all test writes
+rolled back. Preserve the existing licence/series identities and frozen history.
+
+Private current release/routing records are `production-release.json` and
+`temporary-production.json` under `cutover-20260924`. The older
+`routing-preparation.json` records pre-activation preparation: its compose binds
+production to `127.0.0.1:8001` and uses its own collected static volume. The candidate
+Caddyfile retains rehearsal and adds production/WWW routes; it has not been loaded.
+Both production hostnames currently resolve to the old IPv4 and IPv6 addresses.
+An approved IPv4 switch must remove/update the old AAAA records as well. Verify
+HTTPS and actual Google callback for the later live-domain switch. Branch writes
+are already authorized on the retained temporary-hostname production database.
+Same-day metal quotes must be refreshed on later dates before new-loan approval; never relabel
+the owner's September 25 references as current future-day quotes.
+
+The owner supplied the custom archive `C:\Users\rajes\backup_20260924_230136.sql`
+(11,711,243 bytes; SHA-256
+`e2c91ded1d56b6391c0a9dc9c72f0392238490c654612ba477a8e002d5de09e6`) and confirmed
+all three branches stopped writes after it. Treat this as the proposed final
+source, pending verification of all technical writers and matching media. This
+confirmation does not itself authorize a DNS switch or reopen destination writes.
+
+Read-only comparison against accepted package `cfc13d37d6eb5d052c7f6b9e1e509fa215a83a857a30390eefb66e5bf734a80b`
+found 35/18/23 added loans for JCL/JSK/Lakshmi, respectively. JSK adds 29 payments
+and 29 releases; Lakshmi adds 24 of each. Thirty existing JSK loans, 24 Lakshmi
+loans and two Lakshmi addresses changed; inspected tables have no removed rows.
+These are raw source counts, not approved classifications. The old package is
+not reusable for admission. Regenerate and review the complete package, including
+changed payment/release facts and the proposed September 24 opening boundary;
+current servicing can begin only on a later local calendar date. Confirm the
+final boundary in the accepted report before admission. Reconcile final media
+separately. No import or production routing change occurred in this inspection.
 
 Preference-library retirement and the simplified loan number/date UI were verified
 in `rokkad:rehearsal-prefs-retired-20260924`. Final production must
@@ -70,37 +260,44 @@ continuity policy, so confirm usable subscriptions before reopening on that imag
 
 ## Readiness before scheduling downtime
 
+This is the September 24 pre-activation readiness assessment, retained for its
+evidence and remaining recovery/UX limits. The current release and operating
+decision at the top supersede its unfinished import/authentication/setup tasks.
+
 The owner requested cutover planning on September 23 after the ticket designer
-merge and JSK stationery correction. The implementation checkpoint is `f2c6014d`
-on `rls-mvp`, committed locally but not pushed at this review. Tracked files are
-clean; private local outputs and scratch files are deliberately untracked.
+merge and JSK stationery correction. The rehearsal image assessed here was the verified
+`rokkad:rc-20260924-fd011920` on `release/2026-09-24-rc1`; this supersedes the earlier
+`f2c6014d` planning checkpoint. See the
+[September 24 operational acceptance](rehearsal-acceptance-20260924.md) for current
+recovery/workflow evidence and remaining configuration findings.
 The accepted ticket layouts are database configuration, not Git contents. Use the
 final hosted bundle described below, including the rupee, amount-in-words and
 optional-borrower-photo fixes. Older local exports are superseded. TEST-series
 assignments, licences, customers, loans and issued sample PDFs are rehearsal only.
 
 The pre-cutover UX work covers desktop, tablet/phone and English/Hindi. The owner
-accepted the JCL customer-to-full-release journey and ticket previews, but that
-does not establish acceptance of imported-loan servicing or every device/language.
-Finish a bounded review of daily branch tasks, payment receipts and release memos;
+accepted the JCL customer-to-full-release journey, ticket previews and imported
+payment practice. The latest restored-copy servicing and staff probes also pass,
+but do not establish every operator/device/language journey. Finish a bounded
+visual review of payment receipts/release memos and the remaining Hindi labels;
 do not reopen the document architecture or add unrelated designer features.
 Physical printing was explicitly waived as a ticket merge prerequisite and must
 not be reintroduced as an approval gate. Record its alignment as untested.
 
-| Work | Current evidence / remaining action |
+| Work | Evidence / remaining action at the September 24 checkpoint |
 | --- | --- |
-| Destination server | Created: Ubuntu 26.04, approximately 4 GiB RAM, Docker/Compose and verified SSH access. Release a9f793fc serves rehearsal.rokkad.com over HTTPS. PostgreSQL 16.15 schema, runtime/RLS checks, isolated R2 probes and local schema-stage restore passed. New source data, durable credentials and off-server recovery remain pending. |
+| Destination server | Ubuntu 26.04, approximately 4 GiB RAM; candidate `fd011920` serves rehearsal.rokkad.com over HTTPS. PostgreSQL runtime/RLS and latest-backup restore checks pass. Web is loopback-only; database has no published host port. Cloud firewall source restrictions still need direct review. |
 | Database conversion | Accepted snapshot and separate clean-target replay reconcile all source loan IDs. Fresh data and a later opening date require new preparation. |
 | Media | Rehearsal attachment, source retention, private access and duplicate-free retry verified. Missing and blank source images remain explicitly reported. |
-| Imported-loan servicing | Dedicated imported interest-only/partial-principal collection, coupled reversal and payment-aware export/restore are implemented. Owner completed and accepted the practice run on September 23. Reduced-principal interest starts at the next original charge boundary. Destination-host smoke checks remain part of deployment. |
-| Documents and branch UX | JCL plain-paper and JSK data-only ticket previews accepted; TEST-series activation/reprints verified. Finish payment receipt/release memo and essential staff/device/language checks. |
-| Production media configuration | `prod_r2` is implemented and settings-tested; deployment and authenticated storage tests on the new host are pending. |
-| Media reliability | Local R2 reads have intermittently timed out or made photos unavailable; successful retries are not a resolution. Verify upload/read/print reliability from the destination host before opening. |
-| Production media admission | Implemented exact manifest/checksum binding for database/server/runtime role, private R2 location, source snapshot and Workspace IDs/slugs. Local rejection and attachment/retry tests pass. Actual target manifest and hosted execution await the new server and durable credentials. |
-| Application release | Build a versioned image from a clean committed checkout, review security patch levels, apply migrations and run deployment checks. Do not include unrelated local changes or private output files. |
+| Imported-loan servicing | Owner accepted practice September 23. Destination admission checked 19 samples; September 24 restored-copy payment, receipt, release, memo, retry and newest-first reversal passed in all three branches. Reduced-principal interest starts at the next original charge boundary. |
+| Documents and branch UX | JCL plain-paper and JSK data-only tickets accepted. Latest image passed 36 reader/editor/collector page checks, borrower filtering and phone/tablet ticket/date display. Receipt/memo PDF responses pass; visual approval and incomplete recent Hindi labels remain. |
+| Production media configuration | `prod_r2`, private-prefix writes/reads and authenticated storage are verified on the new rehearsal host. Final production needs its separately reviewed durable credentials and deployment identity. |
+| Media reliability | Hosted private read/upload and saved PDF checksum probes pass; earlier local timeouts are retained as history. Verify the final production prefix and representative reads/prints before reopening; rehearsal success is not final-target admission. |
+| Production media admission | Hosted source-bound media attachment and duplicate-free retry completed September 23. Exact database/server/runtime-role/storage/source/Workspace bindings must be rebuilt and checked for the final frozen snapshot and fresh production target. |
+| Application release | Clean versioned candidate `fd011920` deployed; 1,911 regressions pass; 71 Python distributions checked with zero known advisories or skips. Authentication/proxy configuration findings in the acceptance report must be resolved before promotion. |
 | Access and lending | Configure actual owners/staff, Memberships, lifecycle/subscriptions, current licences, products, series, rates/policies and document numbering through normal services. Imported licences/products are historical references, not new-lending setup. |
-| Recovery | Capture and test restoration of the destination database and media evidence; retain the old application, database and media. Record backup locations privately. |
-| Timing | Local database-only cold admission took 6,059 seconds (~101 minutes). Measure preparation, database import, media and verification on the new host before choosing the window. |
+| Recovery | Latest backup restored on-host in 38.98 seconds including 117-table comparison. Backups remain server-only as instructed; server-loss recovery destination/retention is not yet accepted. Retain old application/database/media and private evidence locations. |
+| Timing | Hosted admission took 5,857.4 seconds plus 92.0 seconds reconciliation (~99.2 minutes), excluding preparation/media/smoke/recovery. Hosted media increment planning/apply took 208.94/1,883.56 seconds; these are separate samples, not a complete downtime estimate. Budget the full frozen-source workflow before choosing the window. |
 
 Required branch journeys are ordinary login and Workspace isolation, borrower
 search, a new-loan workflow with current setup, imported balance/interest display,
@@ -235,6 +432,7 @@ CLOUDFLARE_R2_ACCESS_KEY=<production-runtime-access-key>
 CLOUDFLARE_R2_SECRET_KEY=<production-runtime-secret>
 ROKKAD_PRODUCTION_MEDIA_LOCATION=media/application/production/linode-rls
 ROKKAD_TRUST_HTTPS_PROXY=True
+ROKKAD_AUTH_TRUSTED_PROXY_COUNT=1
 ```
 
 `linode-rls` is the proposed stable deployment identity. Confirm it in the target
@@ -271,11 +469,13 @@ Proxy trust requires the conditions in
    reopening. Record the responsible operator, target identity, release digest,
    source namespace and final opening date/time zone (Asia/Kolkata). Prepare the
    destination hostname/TLS and routing change in advance without moving users.
-2. **Stop every legacy business writer.** Put all old entry points into maintenance
-   mode, including direct-origin access; stop scheduled jobs, workers, admin/API
-   entry and integrations that can write. Let in-flight work finish and verify
-   writers have stopped. A banner or DNS change alone is not a write freeze.
-   Keep destination business access closed as well.
+2. **Maintain the agreed legacy write pause.** For this cutover the owner explicitly
+   requires no changes to the old site, services or configuration. Staff have
+   reported stopping entries; record that this is operational coordination, not
+   technical enforcement. Recheck for source changes before final approval; any
+   later writes require renewed source preparation. Technical maintenance of old
+   entry points would require a changed owner instruction. Keep destination
+   business access closed during preparation.
 3. **Capture the final source.** Take a complete PostgreSQL custom-format dump and
    a corresponding media snapshot/manifest while writes remain stopped. Record
    hashes, times and source commit. Retain recoverable copies; validate archive
@@ -308,8 +508,11 @@ Proxy trust requires the conditions in
    acceptance loan into the production target. Verification preserves old loan
    evidence and series IDs. Keep business access closed until these checks pass.
 7. **Switch users, then enable new-system writes.** Route the agreed production
-   hostname to the new server. Keep the old origin in maintenance/read-only mode
-   throughout DNS propagation so old and new URLs cannot both accept entries.
+   hostname to the new server only after final approval. Under the current owner
+   instruction the old origin remains unchanged and can still accept entries;
+   coordinate the staff pause throughout DNS propagation and explicitly verify
+   staff use the new origin before reopening. Do not claim a technical writer
+   freeze or silently install maintenance mode on the old server.
    Validate external HTTPS/login and all branch links; require a fresh login.
    Record the exact time business writes open and start only approved workers and
    integrations. Observe the first real entries, collections/releases and uploads.

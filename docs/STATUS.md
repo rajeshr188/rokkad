@@ -7,6 +7,30 @@ tags: [status, architecture]
 
 # Status
 
+Entries are dated delivery checkpoints, newest first. Earlier images, counters,
+access assignments and outstanding tasks describe their checkpoint, not the
+current live state; later entries supersede them. Private runtime evidence and
+backups remain on the server.
+
+## Release documentation consolidation (2026-09-25)
+
+Reviewed and consolidated the previously unstaged delivery notes and September 24
+acceptance report. Current guidance now points to application `713e0b64`, Loans
+migration 0026 and retained production at the temporary hostname; older image,
+numbering, access and readiness statements are explicitly historical. Current
+ownership and JSK policy exceptions take precedence over the initial defaults.
+Unnecessary staff email addresses are omitted from the new public-facing notes.
+Documentation links and whitespace checks pass. This checkpoint changes no
+application code, deployed image, database, DNS or financial records.
+
+Git ancestry confirms release branch creation from `rls-mvp` at `a9f793fc` on
+September 24, followed by consolidation `ec96cce6` on the release branch itself.
+The owner authorized publishing `release/2026-09-24-rc1` to the existing public
+`origin` repository and setting its upstream, without merging into `rls-mvp`.
+The outgoing-history review found no new database dump/credential-file paths or
+matches for the checked token/private-key formats; ignored local artifacts remain
+outside the release. This bounded check is not a full historical secret audit.
+
 ## Camera selection, printed quantities and Indian monetary display (2026-09-25)
 
 Customer create/edit, customer gallery and collateral capture now offer front/rear
@@ -144,6 +168,493 @@ runtime settings are unchanged. No migrations or financial commands were run.
 Evidence: `acceptance-20260925/loan-layouts-deployment.json`. Server-only backup:
 `backups/operational/production-20260925T100217Z.dump` (55,652,527 bytes; SHA-256
 `91a293108d0a67e922f8a90bb8a6bcdd45f7cf851601bb8c3a9ab2b184a44758`).
+
+## Loan detail design alternatives (2026-09-25)
+
+Owner requested mockups before choosing a production redesign. Three interactive
+options share a feature inventory: horizontal tabs (recommended), a service
+sidebar and expandable sections. Draft/approved/native/imported/closed/blocked
+examples use synthetic data and local action previews. See the
+[design and feature map](plans/loan-detail-redesign.md). Chromium checked 108
+layout/state/section combinations and desktop/phone widths. That initial design
+stage changed no production code or data. The owner subsequently approved the
+four-layout trial documented above.
+
+## Corrected disbursal regression (2026-09-25)
+
+JSK 06703 exposed a lifecycle mismatch: reversal and draft correction were allowed,
+but retained one-to-one snapshots prevented re-disbursal. The fix preserves each
+attempt, adds guarded current snapshot links, and versions replacement schedules.
+Equal-amount corrections receive distinct event identity while ACTIVE retries
+remain idempotent. See the [decision](adr/2026-09-25-corrected-disbursal-attempts.md)
+and [staff workflow](flows/correct-a-disbursed-loan.md). The 173-test lifecycle/UI/
+release regression suite and a further 20-test correction/document/history run
+passed, including real competing database connections and restricted-role writes.
+The first deployment migration rolled back on PostgreSQL deferred FK checks before
+index creation; the old application was restored. The ordering fix passes all nine
+correction tests, including a populated upgrade from migration 0022 with unchanged
+source events. Release `511c7cd8` and migrations 0023/0024 are now deployed at
+`rehearsal.rokkad.com`, retaining static volume `rokkad_production_static_7dad893a`.
+Candidate and deployed restricted-runtime checks verify current snapshot links in
+all three branches and JSK 06703's detail/review at INR 7,150. Its original
+INR 7,149.95 snapshot and reversal remain; automation recorded no new disbursal.
+Deployment evidence: `acceptance-20260925/redisbursement-deployment.json`.
+Final check leaves 06703 in DRAFT. Post-deployment server-only backup:
+`backups/operational/production-20260925T082336Z.dump` (55,646,091 bytes;
+SHA-256 `ab9de593d9009b5520a8ece05edd4e15254380a6bff6f4c6ee5ebdaa1a727c7d`).
+
+## Paper closure transition (2026-09-25)
+
+Owner approved implementation of a separate fast paper-entry workflow with 50
+loans per atomic submission, shared actual date, suggested amounts/borrower
+defaults, per-row cash and collector evidence, explicit interest concessions and
+branch-specific owner retirement. Implementation passed 107 targeted tests and
+the synthetic Chromium UI check. Fifty real test loans took
+about 2.0 seconds to preview and 7.0 seconds to complete locally. Identical
+simultaneous submissions close once. See the [decision](adr/2026-09-25-paper-closure-transition.md) and
+[staff guide](flows/paper-closure-transition.md). Existing counter batch remains
+20 loans with one exact combined collection today.
+
+Release `7dad893a` and migration 0022 are deployed at `rehearsal.rokkad.com` with
+static volume `rokkad_production_static_7dad893a`. Candidate and deployed runtime
+checks passed for 50 imported active loans per branch (about 1.5–1.6 seconds per
+preview), entry/guide/owner settings/history pages, forced RLS and hashed static
+delivery. Financial rows, releases, counters and transition settings were unchanged
+by these read-only checks; no real closures were submitted. Signed-in Chromium
+verified the hosted staff guide. All branches remain paper-first, with no retirement
+date configured. Owner chooses dates later after staff readiness/reconciliation.
+
+Server evidence: `acceptance-20260925/paper-closures-deployment.json`. Server-only
+before/after database backups passed catalog checks; latest
+`production-20260925T074416Z.dump`, 55,620,036 bytes, SHA-256
+`320ff354a61974b58639891ba105d3ff2ee8c60c4dc8bfb503abe0178d123987`.
+After paper records exist, older application rollback needs review because those
+versions do not understand unknown handover times. Preserve new transactions.
+
+Paper date-only handover evidence is preserved without invented timestamps.
+Strict restore-package export refuses paper histories until its profile supports
+that evidence; a labelled reconciliation CSV and full database backups retain it.
+
+## JSK WH series interest override (2026-09-25)
+
+Owner requested WH gold 1.1%/month and silver 3%/month, retaining other series' rates.
+Existing rate policies had only Workspace/licence scopes. Added optional series
+scope, per-scope uniqueness, a database parent guard and series-first resolution.
+Preview, draft creation/edit, approval, split and renewal pass their series. Setup
+offers an audited atomic gold/silver override form; calculation and fees stay unchanged.
+Production review identifies JSK WH as series 9, licence 3; unprefixed series is 8.
+Existing defaults are gold 2%, silver 4%, effective September 25; there are no JSK
+drafts at review time. Migration 0021 and release `a8e78108` are deployed; active
+WH policies 9/10 are gold 1.1% and silver 3%, effective 25/09/2026. All other
+active series resolve to gold 2%, silver 4%. Runtime checks confirm existing JSK
+loans, collateral, approvals, events and numbering remain unchanged. A read-only
+mixed-metal calculation gives INR 41/month for INR 1,000 gold + INR 1,000 silver.
+Candidate and deployed setup/new-loan pages pass. Server-only backups before and
+after activation passed catalog checks; evidence is
+`acceptance-20260925/wh-interest-deployment.json`.
+
+Validation: 99 economic-policy/economics/draft/default-setup tests, 59 setup UI
+tests, three RLS tests (after correcting the test savepoint), and focused frozen
+approval/disbursement and series-only readiness checks pass. No migration drift.
+The readiness selector now also passes the series to interest resolution.
+Follow-up release `58858717` is live, retaining static volume
+`rokkad_production_static_26855c3c`. Candidate/deployed verification passed;
+evidence: `acceptance-20260925/series-readiness-deployment.json`. Latest server-only
+backup is `production-20260925T065036Z.dump` (55,610,193 bytes; SHA-256
+`81ec712171f3eedcd19009f7474e393d51b664c0d79cf7fe07ca4f5a1f40a3f8`).
+Do not roll back to pre-series application code while series overrides are active;
+see the [series policy ADR](adr/2026-09-25-series-interest-rate-overrides.md).
+
+## Loan series labels and borrower filtering (2026-09-25)
+
+Loan details, summary, edit-number explanation, list rows and series filter now use
+the pawn sequence prefix (or No prefix), matching the new-loan picker. Internal
+migration codes and numbering counters remain intact. The list borrower filter is
+a Select2 picker for existing borrowers, including inactive/archived customers with
+loans. Its signed token is bound to the Workspace URL, the endpoint requires Loans
+view permission, and results are private/no-store. Existing borrower links and older
+text-filter URLs continue to work.
+
+Search starts at two characters after 300ms, returns 20 matches per page and fetches
+one extra match rather than counting every match. Default contact/address prefetching
+takes three data queries per page, verified with 23 borrowers; series labels are
+also prefetched across list rows. Sixty-three loan draft/directory checks pass across
+the main and corrected-label runs; the expanded revoked-permission/pagination checks
+and existing Party label check pass. Chromium verified selecting and clearing the
+real Select2 widget submits exactly one filter request each. No migration required.
+
+Release `26855c3c` is live at `rehearsal.rokkad.com`, with static volume
+`rokkad_production_static_26855c3c`. Candidate and deployed checks confirm JCL C07549
+shows Series C and all three borrower filters work. The sampled search data work
+took three queries and approximately 10–24ms per branch (excluding HTTP/access
+checks). Loan rows and counters were unchanged. Server-only before/after backups
+passed catalog checks; latest is `production-20260925T061702Z.dump`, 55,604,722 bytes,
+SHA-256 `41211bfafd8bb5ffd95f1f6d1d567745fd2de91604f587f03583f93d4f31ea48`.
+Evidence: `acceptance-20260925/loan-directory-deployment.json`. The reporting harness
+now captures query count before later HTTP requests reset Django's query log.
+
+## Customer photos, borrower identification and dates (2026-09-25)
+
+Added the authorized customer photo gallery with one selected default, preserving
+existing profile file references and earlier uploads. The new directly owned table
+has forced RLS, registry coverage and a database parent guard. Default selection,
+removal fallback and merge preservation use the existing Party permission boundary.
+Borrower autocomplete adds one default address and phone fallback with prefetched
+children. Collateral file/camera selection now shows a local preview, including
+dynamic rows. Existing multi-photo collateral evidence and one-photo ticket selection
+remain supported.
+
+Human date display and new document rendering use DD/MM/YYYY; native HTML date
+values and source dates retain ISO representation. Previously issued PDFs retain
+their bytes. Validation: 248 application/document tests passed; three restricted-role
+RLS checks passed after making their retained-database fixture names unique; 31 legacy
+media checks passed. Chromium exercised previews, replacement, dynamic rows, removal
+cleanup and reset. Synthetic PDF date placement was visually checked.
+
+Release `8fa5d273` is deployed to the retained production database at
+`rehearsal.rokkad.com`. Candidate and deployed checks verified all three workspaces,
+restricted runtime RLS, private gallery delivery, loan page dates, reconstructed
+ticket dates, and unchanged native C07548 reprints. Backfill preserved 13 JCL,
+249 JSK and 880 Lakshmi default photos (1,142 total). Static assets use the new
+`rokkad_production_static_8fa5d273` volume; prior files and volume remain available.
+Server-only backups before and after deployment passed catalog checks. The latest is
+`backups/operational/production-20260925T055540Z.dump` under the cutover directory,
+55,604,722 bytes, SHA-256
+`1577021c986650c1aaa5c08739f4b99dabf1b9942bdf3584a4928e932d2eaa54`.
+Acceptance: `acceptance-20260925/party-gallery-deployment.json`; no customer photos,
+PDFs or database backups were copied into this workspace.
+
+## JCL ticket header and amount emphasis (2026-09-25)
+
+Owner requested a bolder business name/amount and licence-specific proprietor in
+place of the contact line beside the icon. Release `e5822c02` adds optional licence
+proprietor fields (current record and immutable amendments), ticket projection and
+editable bold V4 text frames. Existing layout hashes stay unchanged unless bold is
+enabled. The embedded rupee font has a genuine bold face derived from the bundled
+variable font, with no runtime font-building dependency.
+
+The accepted September 24 source licence rows identify `J hanumanramji` for JCL
+813/94 and `rajesh rathod` for 1513/2017. The reviewed template uses each loan's
+licence, a 20pt bold business name and bold principal with bounded fit in its
+existing amount cell. The icon, stationery, contact footer and other branch
+templates remain unchanged. Native issued artifacts, including C07548, retain
+original bytes; new first issues and reconstructed imported copies use the update.
+
+Validation: 146 focused setup, native issuance/reprint, concurrency, imported-copy
+and document tests pass across the main run and corrected typography fixture run.
+Migration drift passes. Synthetic side-by-side PDF visually reviewed with the
+same background assets/geometry; no customer PDFs exported. Migration 0020 and deployment completed. JCL layout revision 3 is active with hash
+`45dd712739f1fb472108cd9da2831e4ac8b7c3a6500ef8b6a1afe30d576beda6`.
+All four active series passed real imported-copy rendering; native C07548 rendered
+with the revised template and correctly bound proprietor/bold fields. Its existing
+issued artifact remains byte-identical, and authenticated preview returned HTTP
+200. Authenticated native reprint and all-branch imported-copy checks pass. Loan
+rows, events, approvals, issue counts and counters are unchanged by configuration.
+The proprietor/address changes are audited licence amendments; the old published
+layout remains intact. The initial geometry comparison stopped safely before
+activation, preserving installed optional-photo/words-fit settings absent from the
+older local pack. Reviewed geometry was re-rendered and checked before activation.
+
+Image `rokkad:rc-20260925-e5822c02`; archive SHA-256
+`eb443308488962ca741f440d35bd80940fa1458136f724a7efd69b9893f23180`.
+Private evidence: `acceptance-20260925/jcl-header-deployment.json` and
+`acceptance-20260925/jcl-header/{review,apply,verify}.json`. The same directory
+contains `jcl-reviewed-layout.zip` and `jcl-profile.json` for recovery; do not
+reinstall the older cutover pack over this accepted configuration.
+Fresh server-only post-configuration backup `production-20260925T052701Z.dump`,
+55,537,895 bytes, catalogue verified, SHA-256
+`33129300f406986a61468b2120045c77264bbb6c82e745497fd74427880543c3`.
+Native preview link: `/w/jcl/loans/setup/documents/revisions/3/preview.pdf?loan=19174`.
+No old-server or DNS changes.
+
+## Native ticket photo-evidence regression (2026-09-25)
+
+JCL C07548 exposed a native first-print HTTP 500: the shared display helper reused
+its source `evidence` variable for photo metadata, discarding the approval ID and
+fingerprint required for issuance. Commit `a5a38bb9` separates photo evidence from
+source evidence without weakening approval checks or altering loan data.
+
+The exact KeyError was reproduced locally. All 73 setup/document UI, ticket
+concurrency, imported-copy and issuance tests pass after the fix. Regression
+assertions cover retained approval ID/fingerprint with present photos and an
+optional absent portrait, real first issuance and immutable artifact reprinting.
+Deployed `rokkad:rc-20260925-a5a38bb9`. Candidate rendering of actual C07548 passed
+under a database-enforced read-only transaction. The deployed authenticated route
+then issued its official one-page PDF and returned identical bytes/issue ID on
+reprint. Approval evidence matches; loan, event, approval and numbering rows remain
+unchanged. The temporary verification login session was removed. Public HTTPS
+login also passes. No schema, old-server or DNS changes were made.
+
+Source archive SHA-256:
+`3fedd74c54797b68cf700dfe69dc81e0a6eccca390b5cce754f30d6219d51f99`.
+Server-only pre-deployment backup `production-20260925T045224Z.dump`,
+55,533,066 bytes, catalogue verified, SHA-256
+`e08057fe6e4f7ded67e72db20d802ce68d7080c6b36b4bebfcddb9feedfd4da9`.
+Private evidence under `cutover-20260924/acceptance-20260925`:
+`native-ticket/acceptance.json` and `ticket-fix-deployment.json`.
+Future shared ticket-display changes must run the rich-photo native issuance UI
+tests as well as imported-preview/rendering tests; no-photo fixtures missed this
+regression during the earlier preview release.
+
+## Printable imported loan copies (2026-09-25)
+
+Deployed release `55a6e0eb` adds the owner-approved **Print imported loan copy**
+action after successful JCL/JSK preview review. It replaces the large watermark
+only for that copy with a small **Reprinted from imported records** footer on every
+page. Existing previews and native official ticket requirements remain unchanged.
+Frozen source terms and original numbers/dates are preserved; current customer
+contact/photo and template settings remain explicitly distinguished.
+
+Validation: 84 focused rendering, issuance and imported-document tests passed;
+migration drift and documentation-link checks pass. Local synthetic copy PDFs
+were rendered and visually inspected. The candidate rendered 9 real samples across
+all active series under a database-enforced read-only transaction. Deployed
+authenticated HTTP checks pass in JCL, JSK and Lakshmi for the copy and preview,
+button visibility, private/no-store responses and unchanged loan/event/approval/
+issue counts and numbering. Test sessions were rolled back. Customer PDFs and
+backup contents remain on the server. No schema, DNS or old-server changes.
+
+Image `rokkad:rc-20260925-55a6e0eb`; source archive SHA-256
+`7a1c6befa96b77cff1dc461d7296656b47851416d4e505d8abb41ce6545ea201`.
+Private evidence under `cutover-20260924`: `acceptance-20260925/imported-copy/acceptance.json`
+and `acceptance-20260925/copy-deployment.json`. Fresh pre-deployment backup:
+`backups/operational/production-20260925T041251Z.dump`, 55,529,798 bytes,
+SHA-256 `0874b84bea32887a7868fdff3f0d0d0a87044ef9847ecdd2351428db129c718d`;
+archive catalogue verified. Previous image `660571b9` is retained for code rollback.
+
+## Imported loan ticket preview and familiar series labels (2026-09-25)
+
+Deployed release `660571b9` adds a separate read-only PDF preview for imported opening loans,
+using accepted frozen source terms with explicit reconstructed/non-official marking.
+Native official tickets retain their approval requirement. The new-loan picker
+shows configured prefixes (or No prefix) alongside licence numbers instead of
+internal LINODE codes. See the
+[preview decision](adr/2026-09-25-imported-loan-ticket-preview.md).
+
+The new button appears prominently and in Loan documents, including when a
+repayment schedule exists. Current customer contact/photo and printed business
+details are distinguished from frozen imported loan facts. Unverified source
+valuations remain unknown; no current rates or fabricated approval are used.
+The route generates an in-memory marked PDF with private/no-store headers;
+it never persists an official issue, uploads an artifact or changes finance/counters.
+
+Validation: 102 focused document, origination UI and ticket-evidence concurrency
+tests passed; the final schedule-guidance refinement passed all 8 preview tests
+(one additional regression). Migration drift and documentation-link checks pass.
+Synthetic PDF pages were rendered and visually inspected locally. The candidate
+rendered 9 real source samples across all active series in a database-enforced
+read-only transaction. Customer PDFs and private evidence remain on the server.
+Authenticated HTTP checks on the final deployed image pass all three branches:
+correct series labels, prominent preview button, PDF response/marking/no-store
+and unchanged issues/approvals/events/loan counts/counters. Temporary test sessions
+were rolled back. JCL produced one page; JSK and Lakshmi produced two pages for
+the selected samples. No schema, source-server, DNS or financial changes were made.
+
+An actual Chrome loan page also showed the new button. Chrome's extension UI
+blocked subsequent PDF-viewer automation. Automatic approval review separately
+rejected copying server-generated QA images into OneDrive because their claimed
+synthetic content was not independently established as safe for export. That copy
+was not performed or retried; server PDF/HTTP checks and local synthetic visual QA
+completed. Do not claim final real-customer PDF screenshots were inspected.
+
+Image `rokkad:rc-20260925-660571b9`, source archive SHA-256
+`09753c7d27192bfd6e202c78db5be0b36d1d91d539d5b7f967b36ed2f3363a4e`.
+Private evidence: `acceptance-20260925/imported-preview/acceptance.json` and
+`preview-final-deployment.json`. Pre-release server-only backup
+`production-20260925T034552Z.dump` passed catalog validation, SHA-256
+`38214eb5e5b396a216a0bc318b5233fcacaa588949ea6d3e90698cbb90e42340`.
+
+## JSK unnamed-series continuation corrected (2026-09-25)
+
+The owner reported the active unnamed JSK series showing a next number of 1.
+Read-only diagnosis confirmed a migration defect in `linode_run.build_package`:
+an empty source series name becomes the invented prefix `LEGACY1-`, and suffix
+matching against that invented prefix finds no old numbers, leaving last-used 0.
+Production series 8 / `LINODE-1` therefore had pawn sequence 15 configured as
+`LEGACY1-`, width 5, next 1. Source JSK series 1 has 3,212 numeric loan records
+(including closed loans), maximum 6,702, so continuation must be **06703 with an
+empty prefix**. WH remains correctly configured for WH02145. The 599 operational
+loans in the unnamed destination series are all imported openings: no new loans
+or synthetic-prefix numbers have been issued there. Existing identifiers are intact.
+
+Release `c55932cd` is deployed as `rokkad:rc-20260925-c55932cd`. Migration 0019
+permits empty sequence prefixes in model validation and setup forms; the packager
+preserves them and reserves the complete matching source range. All 31 focused
+numbering, setup-service and Linode-run tests pass; migration drift check passes.
+The restored-clone correction/next allocation/forward-only replay passed with
+changes rolled back. Its first attempt failed only at rollback/context teardown;
+the temporary operator script's context order was corrected before production.
+
+The owner-approved production correction committed atomically under the restricted
+runtime role through audited configuration/reservation services: sequence 15 now
+has empty prefix, width 5 and next 6703; series 8 is named **Legacy unprefixed**.
+Guard checks found no new/non-imported loans or synthetic-prefix numbers there.
+All other JSK sequences, including WH and release, are unchanged. Full-row hashes
+for all 1,514 JSK operational loans and their import records match before/after.
+The deployed authenticated new-loan page returns HTTP 200 and preview data
+**06703 / WH02145**; test-session writes were rolled back and no loans were issued.
+Runtime migration/RLS startup and public HTTPS login checks pass. Host settings,
+sealed source package, old site and DNS are unchanged.
+
+Private evidence: `acceptance-20260925/numbering-{clone,apply,deployment}.json`.
+Pre/post-change server-only backups passed archive-catalog checks. Post-change
+`production-20260925T032545Z.dump` is 55,529,111 bytes, SHA-256
+`ff42fb0b578677af3918d27001c71f69be404ae72856bf257f5c3924f0b327ca`.
+These new backups were catalog-checked, not independently restored in this step.
+
+The earlier new-lending acceptance exercised WH and missed the unnamed branch.
+Future acceptance must check every active series, including numeric-only ones.
+Preserve sealed package/import evidence and all new production activity;
+never reimport or reset production to repair configuration.
+
+## Approved staff access and Lakshmi ownership applied (2026-09-25)
+
+The owner's explicit staff mapping is applied under the restricted production
+database role. Five ordinary active users were added with their exact existing
+Google subjects and matching verified source-email claims, unusable local
+passwords and no Django staff/superuser flags. Dilip is Admin in JCL/JSK,
+Hanumanram in JCL, Gopi in JSK, and Shankar is now Lakshmi's canonical Owner
+through the audited ownership-transfer service. Rajesh remains Owner of JCL/JSK
+and retains Admin access in Lakshmi. Membership counts are JCL 4, JSK 3, Lakshmi 2.
+
+Umesh is JCL's only Member. The ordinary local-role editing service added exactly
+`loan_approve`, `loan_disburse`, `loan_repay` and `loan_release` to JCL Member,
+leaving every other role/Workspace grant set unchanged. This is a Workspace-wide
+Member-role setting and applies to future members of that role. Umesh has customer,
+draft and full selected daily lending access without setup/team/billing ownership
+authority. The second Lakshmi address has approved conditional Admin access but
+no membership or invitation yet: actual matching Google identity/email verification
+is still required. The current target has neither a Google link nor membership
+for that address. No fake provider subject or password account was provisioned.
+
+Clone validation passed all 15 staff/Workspace access combinations (including
+cross-branch denial), 15 dashboard responses and 18 new-loan/repayment/release
+page responses, with all cloned writes rolled back. The first clone attempt
+rejected an overlong membership reason; the operator reason was shortened to the
+existing 64-character limit without changing application constraints. The same
+validated operation then committed atomically in production. Independent read-only
+verification confirmed six total users, nine memberships, correct canonical owners,
+Google links and selected financial action permissions. Every branch number counter
+is unchanged; no financial transactions or messages were submitted. Individual
+staff Google callbacks still require their first sign-ins; the owner's real callback
+was already verified. No old-server changes or live-domain DNS changes were made.
+
+Private evidence is in `acceptance-20260925/staff-onboarding-{clone,apply}.json`;
+the source identity bundle stays root-private on the server. A fresh pre-change
+server-only archive passed catalog validation (SHA-256
+`7c3ebb7fa0c02147ab9403f81201d80561e74e8a475f35370fb22613688505c5`).
+The post-change server-only archive also passed catalog validation (55,527,393
+bytes; SHA-256 `a287b8345b310308bc97438daca906e2982b2bc361b57b3963e9fa1f585b9d1d`).
+
+## Production on temporary hostname (2026-09-25)
+
+The owner explicitly selected real retained business transactions at
+`rehearsal.rokkad.com` for one or two days, with the live-domain switch later,
+and reconfirmed no old-source changes since the September 24 23:01 dump.
+At 02:00 UTC the hostname was routed to `rokkad_production_20260924` using
+`rokkad:rc-20260925-d078db38`. The older rehearsal web container is stopped;
+its database/media are retained. No old-server or DNS changes were made.
+Public HTTPS/login and production-specific secure cookies pass. Host allowlisting,
+CSRF origin and the Django Site now use the temporary hostname. Owner Google
+identity and all three Workspace ownerships are verified; no new business rows
+were entered by the agent. All future business writes must survive the later
+hostname change; do not restore the old snapshot over them.
+
+The initial browser Google initiation failed with `redirect_uri_mismatch`.
+After explicit owner approval, the existing OAuth client was saved with the
+additional `https://rehearsal.rokkad.com` JavaScript origin and
+`https://rehearsal.rokkad.com/accounts/google/login/callback/` redirect URI.
+Both existing rokkad.com/www callbacks and the client secret are unchanged.
+Actual Google sign-in as `rajeshrathodh@gmail.com` then completed successfully:
+the browser showed "Successfully signed in as rajeshrathodh" and Owner access to
+JCL, JSK and Lakshmi Pawn Broker. This verifies the external callback, beyond
+the earlier mocked/initiation checks. No business transactions were submitted.
+Current live-domain A/AAAA still point to the old server.
+
+A subsequent read-only production access audit confirmed exactly one user, one
+Google-linked account and one Owner Membership in each of the three Workspaces;
+there are no other staff memberships. Legacy staff identities/permissions have
+not been carried forward. Staff onboarding requires reviewed Google identities,
+branch membership and roles. Outbound email still uses the in-memory backend, so
+do not promise invitation-email delivery. No access grants were made by this audit.
+
+The subsequent authorized read-only legacy review found six non-owner candidate
+staff accounts across seven memberships in the three selected branches. Five have
+exactly one Google identity with matching email and a verified provider claim;
+one Lakshmi account has no Google link. The private source-derived mapping is
+`acceptance-20260925/staff-access-review.json` on the new server, with no passwords,
+tokens or Google subjects copied. Unrelated legacy workspaces/accounts are excluded.
+The proposed mapping preserves branch scope, uses Admin for legacy Admin/Owner
+memberships under the already-selected canonical owner, and carries no Django
+staff/superuser privileges. At that review checkpoint, owner decisions were pending on those four Admin users,
+the JCL Member's financial duties (the current Member role lacks approval,
+disbursal, repayment and release), and inclusion of the unlinked Lakshmi account.
+Production roles and unlimited seat capacity at that checkpoint were checked read-only;
+no accounts, grants, role changes or invitations were created.
+
+`rokkad-production-backup.timer` is active hourly. An initial server-only custom
+dump passed its archive-catalog check (55,524,230 bytes; SHA-256
+`787d68bc0a0be650d21cf11ababe923d3652cec1c0b416b570417735db608b2b`). The previously
+restored post-configuration baseline remains intact. Hourly copies are under
+`cutover-20260924/backups/operational`, protected by a non-overlap lock and a 5 GiB
+free-space guard. This short-transition setup has no pruning, external alert or
+off-server recovery; review retention/space and independent recovery promptly.
+The original server-only backup preference remains in force.
+
+Private deployment evidence: `temporary-production.json`, `production-release.json`,
+`acceptance-20260925/temporary-production-identity.log` and operational `latest.json`.
+The earlier sections below describe pre-activation checkpoints.
+
+## Approved lending setup applied to isolated production (2026-09-25)
+
+Release `d078db38` / image `rokkad:rc-20260925-d078db38` adds the explicit owner-only
+document-pending continuation. The 118 focused tests pass; a separate fresh database
+passed the 12 continuation tests, and the restored production clone passed upgrade,
+migration drift and runtime startup checks. Image ID:
+`sha256:74f1c89cc2f090f19ba703b79290968451582d42cbe8323dc04c060394f669fc`.
+Clean source archive SHA-256:
+`3666bda2122a6321ec332d352c732d8621bcd93a916d569d9219be58497f25be`.
+
+The owner-approved configuration is applied through ordinary services under the
+restricted role: all four existing licence identities continue from September 25
+to January 10, 2030 with original documents explicitly pending, and all branches use
+the reviewed JSK flexible-payment product and economics. Gold is 2% monthly,
+silver 4%, with one advance period, simple/full-month calculation, 80% LTV,
+lower-of-calculated/appraised valuation and a fixed INR 10 deducted document fee.
+The owner supplied pure-metal buying references of INR 15,500/g gold and INR 255/g
+silver for September 25. Required selling fields use the same valuation reference,
+explicitly identified as having no separately supplied retail selling quote.
+
+The restored-copy trial passed new-loan approval, actual configured ticket issuance,
+disbursal and visible pending-document guidance in every branch. Tested next numbers
+were JCL RA00585, JSK WH02145 and Lakshmi D01621. All test transactions rolled back;
+the actual counters are unconsumed. JCL's accepted printed business name/address
+were carried forward through new amendments after the first clone print correctly
+rejected missing header fields. No TEST licences or borrowers were promoted, and
+no GST file was substituted for licence evidence.
+
+Before applying setup, production and clone contents matched the prior backup
+(excluding the clone's new migration record). After applying it, all 161 tables
+were compared: only the ten expected migration/licence/policy/product/rate/audit
+tables changed. Every imported customer/financial row and number sequence remained
+unchanged. Detailed results are in `acceptance-20260925/lending-preservation.json`.
+Post-configuration backup restored to `rokkad_production_ready_restore_20260925`:
+all 161 tables matched and runtime/RLS/migrations passed. Backup SHA-256:
+`85dab079fbb313d1ba1120ab250de7ec10ab8ef9f3b8c4b3659ccc8fe68ffab2`.
+The new image also passed non-root, read-only private web startup, Google login UI
+and HTTPS redirect. `production-release.json` records the exact image/configuration
+and recovery identity. The one assessed deployment warning is HSTS not yet enabled;
+decide its rollout after production TLS is verified rather than claiming it passed.
+
+Production compose (`127.0.0.1:8001`, separate static volume) and an additive Caddy
+candidate are staged and syntax-checked. Static collection passed, but production
+web is stopped and the proxy candidate has not been loaded. DNS still points both
+`rokkad.com` and `www.rokkad.com` to `172.232.126.126` and
+`2600:3c08::f03c:94ff:fe48:1618`; a switch to `172.235.9.64` must also update/remove
+the old AAAA records to avoid split routing. This is preparation, not an approved
+traffic switch. Actual Google callback/TLS, staff/access and server-loss recovery
+arrangements and explicit owner routing approval remain outstanding. Backups remain
+on the server as instructed; current owner access runs through October 8 plus grace.
 
 ## Final workflow acceptance and owner document deferral (2026-09-25)
 

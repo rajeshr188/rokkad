@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-09-25
 tags: [plans, saas, hardening]
 related: [../architecture/2026-09-09-project-review.md, future-work.md]
 ---
@@ -20,7 +20,7 @@ scoping or authorize production deployment.
 | Paid billing correctness | R03/R04 | Checkout binding, replay, invoice and webhook repair implemented; expiry implemented; known-payment/refund recovery implemented; owner review decisions implemented; provider acceptance shelved as FW-002 |
 | Current docs/product/residue cleanup | R08/R09/R10, verified R13 | R08/R09/R10/R13 complete; bounded removal evidence linked below |
 | Routing, dashboard and module organization | R07/R11/R12 | R07 and R11 complete locally; Loans views portion of R12 complete; orgs workspace/role settings extracted; team/invitations extracted; orgs views complete including account/preferences and slug adapters; broader model/form/renewal review separate |
-| Production operations acceptance | Remaining R06 | Updated candidate verified/deployed to rehearsal; known dependency advisories cleared; final operator acceptance and frozen-source production cutover remain |
+| Production operations acceptance | Remaining R06 | Final import and approved lending/staff setup complete; real retained operations at the temporary hostname; operator review, independent recovery and later live-domain switch remain |
 
 Foundation implementation and operator commands are documented in
 [Containers and CI](../implementation/container-and-ci.md) and
@@ -29,12 +29,79 @@ action grants, protected files and historical compatibility routes remain intact
 
 ## Current delivery priority
 
+The current application release is `713e0b64` at `rehearsal.rokkad.com`, serving
+the retained production database. Recent completed work includes paper closure
+entry, corrected disbursal attempts, Tabs/Classic loan details, same-day policy
+revisions, collateral quantities/authorized interest overrides, camera selection
+and Indian monetary display. See [Status](../STATUS.md) for exact migration,
+image, validation and backup evidence.
+
+Remaining priorities are the owner/staff operational review, conditional second
+Lakshmi account verification, original licence-document upload, backup retention
+and separately approved off-server recovery, bounded receipt/Hindi review, and
+the later explicitly approved live-domain switch. Preserve all new transactions;
+do not rebuild this database from the old snapshot. Provider acceptance remains
+deferred and checkout disabled.
+
+### Completed cutover and lending checkpoints
+
+The evidence below records each rollout at its date, not current sequence values.
+
+The JSK unnamed-series defect is corrected in deployed release `c55932cd`:
+blank prefixes are supported and preserved, and an audited forward-only correction
+continued at **06703** at correction time, with WH then unchanged at WH02145. Focused tests, clone
+allocation, deployed form previews and preservation checks pass. Review every
+active series during future cutover acceptance; never reimport the operational
+database to repair configuration. See
+[correction evidence](../STATUS.md#jsk-unnamed-series-continuation-corrected-2026-09-25).
+
+Release `660571b9` also provides read-only reconstructed ticket previews for imported
+opening loans and prefix-based new-loan picker labels. The final deployed pages/PDFs
+pass checks in all three branches. See
+[preview evidence](../STATUS.md#imported-loan-ticket-preview-and-familiar-series-labels-2026-09-25).
+
+Release `55a6e0eb` adds the approved printable imported copy with a small provenance
+footer while retaining the marked preview. All three branches and nine active-series
+samples pass; no financial or numbering changes occur. See
+[copy evidence](../STATUS.md#printable-imported-loan-copies-2026-09-25).
+
+Release `a5a38bb9` corrects native ticket approval-evidence loss when photo fields
+are present. All 73 focused tests and actual C07548 issue/reprint checks pass.
+Shared display changes must include rich-photo native issuance UI coverage. See
+[fix evidence](../STATUS.md#native-ticket-photo-evidence-regression-2026-09-25).
+
+Release `e5822c02` adds licence proprietor capture and bold precision text.
+JCL's reviewed layout emphasizes the business name/principal and uses the source
+proprietor for each licence. Saved official issues retain original bytes. See
+[header evidence](../STATUS.md#jcl-ticket-header-and-amount-emphasis-2026-09-25).
+
 The [dependency refresh](../implementation/dependency-refresh-20260924.md) clears the
 earlier candidate's known Python advisories, fixes upgraded Select2 borrower search,
 passes 1,911 regressions and fresh/restored runtime checks, and is deployed to rehearsal.
-Resume production operations acceptance: actual login/staff journeys, production
-configuration/credentials and recovery review, then the complete frozen-source
-import and cutover runbook. Rehearsal deployment is not production cutover approval.
+The [operational acceptance pass](../implementation/rehearsal-acceptance-20260924.md)
+now proves latest-backup restoration, three-branch payment/release/reversal flows
+and staff permission checks on a disposable restored copy. The approved Google
+configuration/subject is now installed in the clean production target, and local
+OAuth initiation plus runtime/RLS checks pass. Source `9ab5e4bd` configures explicit
+single-Caddy client-IP trust. The complete September 24 package is imported and
+reconciled, all preserved media attached, and local backup recovery verified.
+Release `d078db38` adds owner-attested licence continuation with original documents
+pending. The owner-approved JSK policies and September 25 metal references are
+applied to all three branches after clone approval/printing/disbursal checks.
+That setup operation preserved imported customer/financial rows and counters. A fresh backup
+restored with all 161 tables matching. The owner subsequently authorized real
+retained business use at `rehearsal.rokkad.com` for one or two days before changing
+the live domain, and reconfirmed the source freeze. Production now serves that
+temporary hostname with verified HTTPS and hourly server-only backups; old practice
+web is stopped. The owner-approved Google OAuth addition is saved and actual login
+verified Owner access to all three production Workspaces. Next: the owner's
+one-to-two-day operational review and independent recovery. Approved staff access
+and Shankar's Lakshmi ownership are applied; individual staff first sign-ins and
+the second Lakshmi account's conditional Google verification remain.
+Live-domain DNS remains unchanged and its later switch still needs approval.
+Preserve all new transactions across that switch. The owner requires the old site's
+configuration/services to stay unchanged. Recent Hindi labels and receipt/memo visual
+acceptance remain bounded review items.
 
 ## Completed review increments and deferred provider work
 

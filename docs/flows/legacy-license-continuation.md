@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-25
 tags: [loans, migration, cutover, setup]
 ---
 
@@ -30,11 +30,10 @@ operation for a setup administrator, not an import shortcut or a normal renewal.
    the verified revision and next reserved number; old loans retain their original
    revision, opening balances and servicing history.
 
-The form records an attestation; it cannot freeze Linode or independently verify
-the source hash/report. Real evidence is required before activating live licenses.
-The accepted local rehearsal is left inactive until that evidence is supplied.
-
-## Calculation, fee and monitoring setup
+The ordinary form records an attestation; it cannot freeze Linode or independently
+verify the source hash/report. It requires the actual licence document before
+activation. The explicit owner-authorized document deferral below is a separate
+path; it has been used for the four production licences in this cutover.
 
 An explicit Workspace-owner document deferral is also supported through the
 operator service. It creates an **Owner attestation (document pending)** revision
@@ -44,6 +43,28 @@ upload reminder. Use **Edit** to add the original document later; this appends a
 amendment and preserves the attestation. Ordinary **Verify for new lending** still
 requires its document. See the
 [owner-attestation decision](../adr/2026-09-25-owner-attested-license-continuation.md).
+
+## Print copies of imported loans
+
+On an imported opening loan's details page, choose **Print imported loan copy**.
+It uses the current assigned ticket template and paper profile with the frozen
+source loan number/date, original item principals, rates and collateral facts.
+Customer contact details/photo and printed business details use their current
+records. Recorded source quantities print beside collateral descriptions; missing
+counts are omitted. Unknown historical appraisal/photo evidence is not invented. Every page
+has a small **Reprinted from imported records** footer, without the large preview
+watermark. This is a reconstructed copy, not a saved original official issue.
+
+**Preview imported ticket PDF** remains available with its explicit preview
+watermark for layout checks. Neither action approves or disburses a loan, consumes
+a number, saves an official ticket or changes its balances. Archive-only historical
+records are outside these opening-loan routes.
+
+The new-loan series picker shows the licence and number prefix (including **No
+prefix** for numeric-only registers). Internal LINODE migration codes and sequence
+counters are preserved.
+
+## Calculation, fee and monitoring setup
 
 The setup page has separate expandable forms and saved history. Calculation opens
 first; the failed form or selected monitoring amendment opens automatically.

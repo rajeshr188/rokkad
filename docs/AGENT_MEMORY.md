@@ -47,6 +47,117 @@ operational form/permission remains shared. Defaults add at most two scoped read
 per page; switching does no request or query. No-JavaScript uses Classic.
 See the [decision](adr/2026-09-25-loan-detail-layout-trial.md).
 
+Native disbursal corrections preserve immutable attempt history: reverse, reopen,
+edit, approve and disburse again under the same loan number. PawnLoan's current
+policy/disbursal references point to operational evidence; history foreign keys
+retain prior snapshots. Repayment schedules are unique by source event and
+loan/version, not economic fingerprint. Never delete old snapshots to unblock a
+correction or automatically disburse a customer's draft while fixing software.
+See [the decision](adr/2026-09-25-corrected-disbursal-attempts.md).
+
+The owner approved a paper-first closure transition: separate 50-loan paper entry
+with common actual date, suggested collection/borrower defaults, explicit per-row
+cash and recipient evidence, and authorized interest concessions. The existing
+20-loan counter collection remains distinct. Branch owners choose system-first
+date and retirement after backlog reconciliation; administrators retain reasoned
+exceptions. No branch has been instructed to retire automatically. Date-only
+paper handovers must not acquire an invented timestamp. See the
+[decision](adr/2026-09-25-paper-closure-transition.md) and
+[staff guide](flows/paper-closure-transition.md); deployment evidence is in Status.
+
+Metal interest policies support optional series scope, with effective-date
+precedence series, licence, Workspace. JSK WH (series 9, licence 3) uses gold
+1.1%/month and silver 3%/month from 25/09/2026; other production series retain
+gold 2% and silver 4%. This exception supersedes the initial all-branch defaults
+only for WH. Existing approved/active loan terms stay frozen. Series overrides
+are managed through Economic Setup with atomic paired rates and audit evidence.
+See [the series interest decision](adr/2026-09-25-series-interest-rate-overrides.md).
+
+Party photos are now a private Workspace-owned gallery; `Party.profile_photo` remains
+the one default used by existing document selectors. Uploads retain earlier photos,
+default removal selects the oldest remaining image, and merges preserve galleries.
+Photo access remains through authorized routes; existing issued PDF bytes are never
+rewritten by profile/default changes. Human dates use DD/MM/YYYY while persisted
+source values and native HTML date inputs retain ISO. See the
+[photo gallery decision](adr/2026-09-25-party-photo-gallery.md).
+
+On September 25 the owner approved staff migration and changed the ownership
+decision for Lakshmi: Shankar is now its canonical
+Owner; Rajesh retains Admin membership there and remains Owner of JCL/JSK.
+Dilip has Admin membership in JCL/JSK, Hanumanram in JCL, and Gopi in JSK.
+Their five existing matching, verified Google subjects (including Shankar and
+Umesh) were privately preserved without source passwords or platform privileges.
+Umesh is JCL's sole Member; that Workspace's Member grants now include loan
+approval, disbursal, repayment and release alongside its existing draft/customer
+access. These grants also apply to future JCL Members, not to other Workspace
+Member roles; no per-person role override exists. The second Lakshmi account,
+identified in the root-private staff review, has approved future Admin access conditional on actual
+matching Google sign-in/verified email. It currently has no imported identity,
+invitation or membership; do not fabricate a Google subject or treat an old local
+email verification as satisfying this explicit condition. No further permission
+question is needed for the approved conditional scope once identity is verified.
+
+On September 25 the owner chose real retained business operations at
+`rehearsal.rokkad.com` for one or two days before changing the live domain, and
+reconfirmed no old-system changes since the September 24 23:01 backup. This is
+production on a temporary hostname, not disposable practice. That hostname now
+serves `rokkad_production_20260924` (current release recorded in Status); the older practice web is stopped
+and its database retained. Preserve all new transactions during the later domain
+change; never reimport the old snapshot over them. Keep old services and live-domain
+DNS unchanged, with an operational staff write pause. Original rehearsal bookmarks
+using `rehearsal-jcl`/`rehearsal-jsk` are obsolete; production slugs are `jcl`, `jsk`
+and `lakshmipawnbroker`. The owner-approved temporary Google origin/callback is
+saved alongside both existing live callbacks. Initial Google sign-in as
+`rajeshrathodh@gmail.com` succeeded and showed Owner access to all three production
+Workspaces; no business transactions were submitted during that browser check.
+Hourly database backups stay server-only under `backups/operational`; the initial
+copy passed archive-catalog validation. No pruning or off-server recovery is
+configured; review retention, disk space and independent recovery during this
+short transition. Detailed current evidence is in Status.
+
+The owner-approved JSK unnamed-series correction is applied: series 8 / LINODE-1
+is now labelled Legacy unprefixed, with pawn sequence 15 using an empty prefix,
+width 5 and next 6703 at correction time (06703). WH remained WH02145. Preserve
+future allocations; do not rerun the one-time correction or edit sealed package
+evidence. The importer now preserves numeric-only prefixes and reserves matching
+numbers across all source statuses. Check every active series during acceptance.
+
+Imported opening loans have **Print imported loan copy** plus a separate marked
+preview (release `55a6e0eb`). The approved printable copy carries a small
+**Reprinted from imported records** footer instead of the large preview watermark;
+the preview retains its notice. Native official issuance requires a real approval
+snapshot. Both imported routes use frozen source terms and original item principals,
+with current customer contact/photo and current template/paper settings. Neither
+persists an official issue or changes financial state or numbering. Missing-photo
+preview handling remains available for these reconstructed documents. The new-loan
+series picker displays licence/prefix or No prefix while preserving internal LINODE
+codes. Archive-only historical rows are outside these routes. See the September 25
+imported-ticket-preview ADR and Status evidence.
+
+Loan details, summaries, list rows and series filters also use the pawn-number
+prefix. The loan-list borrower picker includes inactive/archived Parties with
+existing loans, under Loans view permission; the new-loan picker remains active-only.
+List suggestions are private, URL-token-bound and paginated (20 results, three
+prefetched data queries), without enumerating every customer on page load.
+
+JCL's ticket header uses a bold business name and rupee principal, with proprietor
+from `LoanLicense.proprietor_name` replacing the contact suffix beside the icon.
+The accepted source maps J hanumanramji to 813/94 and rajesh rathod to 1513/2017.
+The new optional field is editable with printed business settings, retained by
+licence amendments and captured on native first issue. Preserve already-issued
+PDF bytes; template updates apply to subsequent first issues and imported copies.
+V4 overlay text frames have opt-in bold; default canonical layout hashes remain
+stable. Retain the current optional-photo and words-fit settings when updating
+JCL geometry. Release `e5822c02` includes migration 0020 and a real bundled bold
+Unicode font. Detailed activation/backup evidence is in Status.
+
+Native first-ticket issuance with photo fields requires preserving approval ID and
+fingerprint separately from per-photo metadata. Release `a5a38bb9` fixes variable
+shadowing introduced in the shared display helper; actual JCL C07548 issuance and
+identical reprinting passed. Include rich-photo native issuance UI regressions when
+changing shared ticket display/media code; no-photo concurrency fixtures alone do
+not cover this path.
+
 On September 25 the owner explicitly waived immediate licence-document upload for
 cutover. Both JCL licences (813/94 and 1513/2017), JSK 1541/2017 and Lakshmi 1055/02
 should continue to January 10, 2030 (the supplied 10/01/2030 is interpreted in local
@@ -56,14 +167,23 @@ for this continuation is its current date, not an invented historical issue date
 The owner also selected JSK's reviewed lending configuration for all three branches:
 flexible partial payments, gold 2%/month, silver 4%/month, fixed INR 10 deducted
 document fee, simple/full-month interest, one advance period, 80% LTV and the lower
-of calculated/appraised valuation. See the
+of calculated/appraised valuation. Those are the initial cutover defaults; the
+subsequent JSK policy revision raises its LTV to 95%, and its WH series uses the
+1.1%/3% rates described above. JCL and Lakshmi retain 80% LTV. See the
 [attestation decision](adr/2026-09-25-owner-attested-license-continuation.md).
+The owner supplied pure-metal buying references of INR 15,500/g gold and INR 255/g
+silver for all three branches, effective September 25. Quote records identify them
+as owner-provided valuation references, with the same required buy/sell baseline
+and no independently supplied retail selling quote. Retain their effective date;
+do not silently refresh them on later days. JCL's accepted rehearsal printed
+business header is carried forward, without its TEST licence or financial rows.
 
 For the September 24 final cutover preparation, the owner explicitly instructed
 that the old site remain unchanged, including its running services. All three
 branches report stopping writes after the supplied final dump; do not describe
-this as a technical freeze. The chosen production Workspace owner is
-`rajeshrathodh@gmail.com`. Existing Google client configuration and this user's
+this as a technical freeze. The initial production Workspace owner was
+`rajeshrathodh@gmail.com`; the subsequent approved Lakshmi ownership transfer is
+recorded above. Existing Google client configuration and this user's
 linked provider subject were explicitly approved for private SSH transfer solely
 for new production sign-in. Preserve the existing subject without copying old
 passwords/privileges or inventing email verification. Temporary R2 migration

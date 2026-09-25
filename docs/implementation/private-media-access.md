@@ -1,21 +1,24 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-09-25
 tags: [security, media, workspace]
 ---
 
 # Private business media
 
 RLS isolates database rows. File storage and HTTP delivery are separate boundaries.
-This review covers the development application; no production deployment is in use
-and no external bucket, CDN or reverse proxy has been verified or changed.
+The retained production database is served at `rehearsal.rokkad.com` using private
+R2 storage and authorized application file routes. Deployment evidence is tracked
+in the [cutover record](linode-production-cutover.md); the application boundaries
+below also apply to local development.
 
 ## Inventory and delivery
 
 | Files / storage prefix | Application delivery | Required access |
 | --- | --- | --- |
 | Borrower photos, `party_profile_photos/` | Workspace Party photo route | Current membership and `contact.view` OR `data.view`; matching Workspace |
+| Customer photo gallery, same private files | Workspace Party/selected-photo route | Same Party view policy; photo must match both borrower and Workspace |
 | Borrower documents/KYC, `party_documents/` | Workspace Party document download | Same Party view policy; document must match Workspace and borrower |
 | Collateral photos, `loans/collateral/` | Existing loan/item/photo route | Loans `data.view`; matching loan/item/photo |
 | License evidence, `loans/regulatory/` | Existing license revision download | Workspace settings administration; matching license/revision |
@@ -41,15 +44,15 @@ opened during the authorized request and do not query the database while streami
 Membership and grants are checked on each new request. This cannot revoke bytes
 someone already downloaded. No license-scoped restrictions have been introduced.
 
-## Deployment acceptance still required before production
+## Production delivery requirements
 
-The application uses local FileSystemStorage today. The optional Cloudflare storage
-helper is not the configured default. Its development/production example options
-no longer request public-read ACLs and explicitly enable signed URL authentication.
-This does not change existing objects or a bucket-level public-serving policy. An application 404 cannot protect a file served
+Local development can use FileSystemStorage. The hosted runtime uses private R2
+objects read by server credentials, with no public-read ACL requests. Private
+application responses have no-store headers and the proxy rejects broad `/media/`
+requests. An application 404 cannot protect a file served
 directly by a separate storage origin or reverse proxy.
 
-When choosing the production serving configuration:
+Preserve these requirements when changing the production serving configuration:
 
 1. Keep business objects private. Do not publish a broad `/media/` filesystem alias,
    public bucket or CDN origin covering them. If publishing presentation media,
