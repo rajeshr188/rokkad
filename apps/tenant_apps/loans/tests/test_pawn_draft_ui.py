@@ -1226,6 +1226,25 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(existing.state,"ACTIVE")
         self.assertEqual(existing.approval_snapshots.get().payload,frozen)
 
+    def test_setup_checklist_accepts_series_only_interest_rates(self):
+        from unittest.mock import patch
+        from apps.tenant_apps.loans.models import PawnMetalInterestRatePolicy
+        from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
+        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+
+        license, series = self._configured_setup()
+        PawnMetalInterestRatePolicy.objects.all().delete()
+        create_pawn_series_interest_rates(
+            workspace=self.tenant, series=series, actor=self.owner,
+            effective_from=date(2026, 7, 18),
+            gold_monthly_interest_rate=Decimal("1.1"),
+            silver_monthly_interest_rate=Decimal("3"),
+        )
+        with patch("apps.tenant_apps.loans.selectors.setup.timezone.localdate", return_value=date(2026, 7, 18)):
+            checklist = get_pawn_setup_checklist(self.tenant)
+        economics = next(step for step in checklist["steps"] if step["key"] == "economics")
+        self.assertTrue(economics["complete"])
+
     def test_borrower_search_paginates_inactive_customers_with_constant_queries(self):
         from django.core import signing
         from apps.tenant_apps.loans.widgets import LoanBorrowerAutocompleteWidget
