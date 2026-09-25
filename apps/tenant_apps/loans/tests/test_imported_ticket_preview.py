@@ -10,7 +10,7 @@ from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.documents import starter_layout
 from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
 from apps.tenant_apps.loans.forms import PawnDraftForm
-from apps.tenant_apps.loans.services.imported_ticket_preview import imported_ticket_payload, render_imported_ticket_preview
+from apps.tenant_apps.loans.services.imported_ticket_preview import imported_ticket_payload, render_imported_ticket_preview, render_imported_ticket_copy
 from apps.tenant_apps.loans.tests.test_opening_import import OpeningImportFixture
 
 
@@ -73,9 +73,41 @@ class ImportedTicketPreviewTests(OpeningImportFixture):
         self.assertNotContains(detail, 'A loan ticket is available after approval.')
         self.assertFalse(detail.context['can_print_ticket'])
 
+        copy_url = reverse('workspace_loans:pawn_imported_ticket_copy', args=[self.a.slug, self.loan.pk])
+        printed = client.get(copy_url)
+        self.assertEqual(printed.status_code, 200)
+        self.assertEqual(printed['X-Rokkad-Document-Kind'], 'imported-copy')
+        self.assertNotIn('X-Rokkad-Preview', printed)
+        self.assertIn('no-store', printed['Cache-Control'])
+        self.assertEqual(client.post(copy_url).status_code, 405)
+        self.assertEqual(client.get(reverse('workspace_loans:pawn_imported_ticket_copy', args=[self.b.slug, self.loan.pk])).status_code, 404)
+        self.assertContains(detail, 'Print imported loan copy')
+
+    def test_imported_copy_uses_small_footer_without_preview_watermark_or_writes(self):
+        with self.scoped():
+            before = self.snapshot()
+            for mode in (None, 'ABSOLUTE_OVERLAY', 'FLOW'):
+                revision = None if mode is None else SimpleNamespace(
+                    definition=starter_layout('loan_ticket', schema_version=3 if mode == 'FLOW' else 4, layout_mode=mode).canonical_dict(),
+                    assets=SimpleNamespace(all=lambda: []))
+                with self.subTest(mode=mode), patch(
+                        'apps.tenant_apps.loans.services.imported_ticket_preview.LoanDocumentLayoutService.resolve', return_value=revision):
+                    content, name = render_imported_ticket_copy(loan=self.loan, actor=self.actor)
+                    with fitz.open(stream=content, filetype='pdf') as pdf:
+                        for page in pdf:
+                            text = page.get_text()
+                            self.assertIn('Reprinted from imported records', text)
+                            self.assertNotIn('PREVIEW / NOT AN OFFICIAL ISSUE', text)
+                            self.assertNotIn('RECONSTRUCTED IMPORT PREVIEW', text)
+                        self.assertIn(self.review['source']['number'], ''.join(page.get_text() for page in pdf))
+                    self.assertEqual(name, f'imported-loan-copy-{self.loan.pk}.pdf')
+                    self.assertEqual(before, self.snapshot())
+
     def test_service_rejects_unauthorized_actor(self):
         with self.scoped(), self.assertRaises(PermissionDenied):
             render_imported_ticket_preview(loan=self.loan, actor=None)
+        with self.scoped(), self.assertRaises(PermissionDenied):
+            render_imported_ticket_copy(loan=self.loan, actor=None)
 
     def test_imported_guidance_remains_visible_with_a_saved_schedule(self):
         from django.template.loader import render_to_string

@@ -1,4 +1,5 @@
 """Read-only reconstructed tickets from frozen opening evidence, never official issues."""
+from dataclasses import replace
 from decimal import Decimal
 
 import fitz
@@ -57,8 +58,22 @@ def imported_ticket_payload(loan):
 
 
 def render_imported_ticket_preview(*, loan, actor, address_id=None):
+    return _render_imported_ticket(loan=loan, actor=actor, address_id=address_id, as_copy=False)
+
+
+def render_imported_ticket_copy(*, loan, actor, address_id=None):
+    """Print a reconstructed imported copy, without issuing a native ticket."""
+    return _render_imported_ticket(loan=loan, actor=actor, address_id=address_id, as_copy=True)
+
+
+def _render_imported_ticket(*, loan, actor, address_id, as_copy):
     require_loan_action(loan, actor, "data.view")
     payload, source, origin = imported_ticket_payload(loan)
+    if as_copy:
+        values = {"document.name": "Imported loan copy", "document.status": "Reprinted from imported records"}
+        payload = replace(payload, title="Imported Loan Copy", file_name=f"imported-loan-copy-{loan.pk}.pdf",
+            verification_id=Projection._verification(loan, f"import-copy:{origin.public_id}:{origin.source_sha256}"),
+            fields=tuple(replace(field, value=values[field.key]) if field.key in values else field for field in payload.fields))
     revision = LoanDocumentLayoutService.resolve(workspace=loan.workspace, document_type="loan_ticket",
                                                 license=loan.license, series=loan.series)
     if revision is None:
@@ -73,13 +88,14 @@ def render_imported_ticket_preview(*, loan, actor, address_id=None):
             payload, assets = prepared.payload, assets + prepared.assets
         profile = LoanDocumentPrintProfileService.resolve(workspace=loan.workspace, document_type="loan_ticket", series=loan.series)
         result = ConfigurableDocumentRenderer.render_with_print_profile(payload, layout, profile.definition,
-                                                                        preview=True, assets=assets)
+            preview=True, assets=assets, show_preview_notice=not as_copy)
     # Keep the provenance visible even when a custom layout omits document.status.
     # This is in-memory only; no issue row, stored artifact or financial event.
     with fitz.open(stream=result.pdf, filetype="pdf") as pdf:
         for page in pdf:
             remaining = page.insert_textbox(fitz.Rect(12, page.rect.height - 20, page.rect.width - 12, page.rect.height - 4),
-                "RECONSTRUCTED IMPORT PREVIEW - NOT AN OFFICIAL ISSUE", fontsize=7, color=(0.7, 0, 0), align=1)
+                "Reprinted from imported records" if as_copy else "RECONSTRUCTED IMPORT PREVIEW - NOT AN OFFICIAL ISSUE",
+                fontsize=7, color=(0.3, 0.3, 0.3) if as_copy else (0.7, 0, 0), align=1)
             if remaining < 0:
                 raise ValueError("The imported-preview notice does not fit this paper size.")
         content = pdf.tobytes()

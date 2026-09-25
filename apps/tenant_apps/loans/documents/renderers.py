@@ -43,7 +43,8 @@ class ConfigurableDocumentRenderer:
 
     @classmethod
     def render_with_print_profile(
-        cls, payload, layout, print_profile, *, preview=False, assets=(), design_preview=False
+        cls, payload, layout, print_profile, *, preview=False, assets=(), design_preview=False,
+        show_preview_notice=True,
     ):
         """Render logical ticket surfaces, then package them using a profile."""
         if payload.document_type != "loan_ticket" or layout.document_type != "loan_ticket":
@@ -61,6 +62,7 @@ class ConfigurableDocumentRenderer:
             rendered_surfaces[surface] = cls._render_logical_surface(
                 payload, layout, fields, sections, asset_map, surface, preview,
                 include_background=print_profile.stock_mode == "PLAIN" or design_preview,
+                show_preview_notice=show_preview_notice,
             )
         pdf = cls._package_surfaces(rendered_surfaces, print_profile)
         if design_preview:
@@ -248,7 +250,8 @@ class ConfigurableDocumentRenderer:
 
     @classmethod
     def _render_logical_surface(
-        cls, payload, layout, fields, sections, assets, surface, preview, *, include_background=True
+        cls, payload, layout, fields, sections, assets, surface, preview, *, include_background=True,
+        show_preview_notice=True,
     ):
         copy_scope = "ORIGINAL" if surface.startswith("ORIGINAL") else "DUPLICATE"
         is_front = surface.endswith("FRONT")
@@ -257,11 +260,13 @@ class ConfigurableDocumentRenderer:
             pdf = cls._render_overlay_surface(
                 payload, layout, fields, sections, assets, preview,
                 blocks=blocks, copy_scope=copy_scope,
+                show_preview_notice=show_preview_notice,
             )
         else:
             pdf = cls._render_flow_surface(
                 payload, layout, fields, sections, assets, preview,
                 blocks=blocks, copy_scope=copy_scope,
+                show_preview_notice=show_preview_notice,
             )
         background_key = layout.surface_background(surface)
         return cls._apply_background(pdf, assets[background_key]) if background_key and include_background else pdf
@@ -269,7 +274,7 @@ class ConfigurableDocumentRenderer:
     @classmethod
     def _render_flow_surface(
         cls, payload, layout, fields, sections, assets, preview, *, blocks,
-        copy_scope,
+        copy_scope, show_preview_notice=True,
     ):
         buffer = io.BytesIO()
         header_height = layout.header.height_mm if layout.header else 0
@@ -287,6 +292,7 @@ class ConfigurableDocumentRenderer:
         cls._append_blocks(
             story, blocks, payload, fields, sections, styles, copy_scope,
             preview, assets, layout, available_width, enforce_copy_scope=True,
+            show_preview_notice=show_preview_notice,
         )
 
         def draw_regions(canvas, _document):
@@ -467,7 +473,7 @@ class ConfigurableDocumentRenderer:
         return cls._merge_pdf_pages([front, back]), "A4_LANDSCAPE", composition
 
     @classmethod
-    def _render_overlay_surface(cls, payload, layout, fields, sections, assets, preview, *, blocks, copy_scope):
+    def _render_overlay_surface(cls, payload, layout, fields, sections, assets, preview, *, blocks, copy_scope, show_preview_notice=True):
         buffer = io.BytesIO()
         page_size = cls.PAGE_SIZES[layout.page_size]
         canvas = pdf_canvas.Canvas(buffer, pagesize=page_size, pageCompression=0)
@@ -476,7 +482,7 @@ class ConfigurableDocumentRenderer:
         for block in blocks:
             if block.copy_scope in {"BOTH", copy_scope} and cls._is_visible(block, fields):
                 cls._draw_overlay_block(canvas, block, payload, fields, sections, assets, styles, layout, page_size, preview=preview)
-        if preview:
+        if preview and show_preview_notice:
             canvas.saveState()
             canvas.setFillColor(colors.Color(0.75, 0.1, 0.1, alpha=0.25))
             canvas.setFont("Helvetica-Bold", 20)
@@ -639,9 +645,9 @@ class ConfigurableDocumentRenderer:
         table.drawOn(canvas, x, y + height - required_height)
 
     @classmethod
-    def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False, enforce_copy_scope=False):
+    def _append_blocks(cls, story, blocks, payload, fields, sections, styles, copy_name, preview, assets, layout, available_width, *, nested=False, enforce_copy_scope=False, show_preview_notice=True):
         if not nested:
-            if preview:
+            if preview and show_preview_notice:
                 story.extend([Paragraph("PREVIEW / NOT AN OFFICIAL ISSUE", styles["Heading2"]), Spacer(1, 4)])
             story.extend([Paragraph(copy_name, styles["Heading3"]), Spacer(1, 3)])
         for block in blocks:

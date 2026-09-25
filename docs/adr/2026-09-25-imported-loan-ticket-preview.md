@@ -30,3 +30,14 @@ remain required. Closed archive-only evidence is outside this opening-loan route
 Keep internal migration series codes stable. The new-loan picker displays the
 licence number and configured pawn-number prefix, or No prefix for numeric-only
 registers; this changes labels, not IDs or counters.
+
+## Approved printable imported copies
+
+After verifying JCL/JSK previews, the owner approved a separate **Print imported
+loan copy** action. It uses the same accepted evidence and read-only boundary,
+without the large preview watermark. Every page instead carries **Reprinted from
+imported records** in a small footer. The separate preview keeps its watermark.
+Neither action claims to reproduce an original issued PDF or creates a native
+approval/official document issue. The renderer's preview media handling remains
+available for missing historical photos; only the large preview notice is omitted
+for this explicitly identified copy. Native official issuance remains unchanged.

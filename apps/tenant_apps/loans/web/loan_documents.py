@@ -89,11 +89,22 @@ def _issued_document_response(issue, payload):
 @loans_workspace_required
 @require_GET
 def pawn_imported_ticket_preview(request, pk):
-    from apps.tenant_apps.loans.services.imported_ticket_preview import render_imported_ticket_preview
+    return _imported_ticket_response(request, pk, as_copy=False)
+
+
+@loans_workspace_required
+@require_GET
+def pawn_imported_ticket_copy(request, pk):
+    return _imported_ticket_response(request, pk, as_copy=True)
+
+
+def _imported_ticket_response(request, pk, *, as_copy):
+    from apps.tenant_apps.loans.services.imported_ticket_preview import render_imported_ticket_copy, render_imported_ticket_preview
 
     loan = _pawn_loan_for_workspace(request, pk)
     try:
-        pdf, filename = render_imported_ticket_preview(loan=loan, actor=request.user, address_id=request.GET.get("address"))
+        renderer = render_imported_ticket_copy if as_copy else render_imported_ticket_preview
+        pdf, filename = renderer(loan=loan, actor=request.user, address_id=request.GET.get("address"))
     except DocumentAddressSelectionRequired as exc:
         return address_selection_response(request, exc)
     except (ValueError, ValidationError) as exc:
@@ -101,7 +112,9 @@ def pawn_imported_ticket_preview(request, pk):
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{filename}"'
     response["Cache-Control"] = "private, no-store"
-    response["X-Rokkad-Preview"] = "true"
+    if not as_copy:
+        response["X-Rokkad-Preview"] = "true"
+    response["X-Rokkad-Document-Kind"] = "imported-copy" if as_copy else "imported-preview"
     return response
 
 
