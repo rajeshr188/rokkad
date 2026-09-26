@@ -8,10 +8,12 @@ from apps.tenant_apps.loans.web.rate_readiness import pawn_valuation_readiness
 from apps.tenant_apps.loans.web.reappraisal import collateral_reappraisal
 from apps.tenant_apps.loans.web.ticket_template_activation import ticket_template_use
 from apps.tenant_apps.loans.web.borrower_search import loan_borrower_autocomplete
+from apps.tenant_apps.loans.web.valuation_review import review_updated_valuation
 
 app_name = "loans"
 
 urlpatterns = [
+    path("internal/<int:pk>/review-updated-valuation/", review_updated_valuation, name="pawn_loan_review_updated_valuation"),
     path("internal/<int:pk>/record-earlier-payout/", workflow.pawn_loan_record_earlier_payout, name="pawn_loan_record_earlier_payout"),
     path("guide/", journey.guide, name="loan_journey_guide"),
     path("releases/paper/new/", paper_closures.create, name="paper_closure_create"),

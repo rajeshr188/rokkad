@@ -28,6 +28,25 @@ separate migration/servicing workflows.
 
 ## Money has not been paid yet
 
+For an **approved** loan whose prices are no longer current, choose **Review
+updated valuation** in Recommended next step or on the disbursal screen:
+
+1. Compare previous and current prices, dates, each item's lending limit,
+   interest, deductions and net cash. Expand the policy/fees comparison as needed.
+2. If a price is missing, add or confirm it in Rates and refresh the review.
+   If LTV is exceeded, return to draft and correct the proposed loan with today's
+   date. The system does not automatically lower principal or relax a limit.
+3. A user with edit and approval permission confirms that cash has **not** been
+   paid and accepts today's date and shown terms, then chooses **Confirm updated
+   approval**. Changed prices or terms require a fresh review.
+4. Check/print the new approved ticket and complete the separate disbursal step
+   after payment. Reapproval itself does not record a payout. The number stays
+   the same, with previous approvals and tickets preserved.
+
+If cash was actually paid on an earlier day, do not use updated valuation.
+Return an approved loan to draft with a reason, retain the actual date, and use
+Record an earlier payout. Editing correct historical details is unnecessary.
+
 An overnight draft still has its original date. Edit it to the intended payment
 date, save and review the recalculated terms. Use the ordinary review/disbursal
 workflow after payment. Do not attest an earlier payout for an unpaid draft.

@@ -1,0 +1,41 @@
+{% extends "base_tenant.html" %}
+{% load loans_display static %}
+{% block title %}Review updated valuation · {{ loan.loan_number }}{% endblock %}
+{% block workspace_content %}
+<article class="mx-auto" style="max-width:1000px" hx-history="false">
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
+  <h1 class="h3 mt-3">Review updated valuation</h1>
+  <p class="lead">Review today's prices and terms before paying the borrower.</p>
+  <div class="alert alert-warning"><strong>Has the borrower already received the cash?</strong> Do not use this action. Keep the actual payment date. For an earlier day's payout, return the loan to draft with a reason, then choose <strong>Record an earlier payout</strong>. You do not need to edit correct historical details.</div>
+  {% include "components/forms/accessible.html#errors" %}
+  {% if review_error %}<div class="alert alert-danger">{{ review_error }}</div>{% endif %}
+  {% if preview %}
+  <div class="card mb-3"><div class="card-body"><h2 class="h5">Same loan, a new approval</h2>
+    <p class="mb-1">Loan <strong>{{ loan.loan_number }}</strong> · {{ loan.borrower.display_name }}</p>
+    <p class="mb-1">Current loan date: <strong>{{ loan.loan_date|date:"d/m/Y" }}</strong> → Proposed loan and payment date: <strong>{{ preview.today|date:"d/m/Y" }}</strong>.</p>
+    <p class="small mb-0">Confirmation retains the number, collateral and photos, records the change under your signed-in identity, and adds a new approval. Existing approvals and issued PDFs stay in history. Print the updated ticket before paying. This action does not record a disbursal.</p>
+  </div></div>
+  <h2 class="h5">Buying prices · INR per gram of pure metal</h2>
+  <div class="table-responsive mb-3"><table class="table table-bordered align-middle"><thead><tr><th>Metal</th><th>Previous approval</th><th>Current quote</th></tr></thead><tbody>
+    {% for row in preview.quotes %}<tr><th>{{ row.metal|title }}</th><td>{% if row.old %}₹{{ row.old.buying_rate|indian_money }}<div class="small text-muted">{{ row.old_date|date:"d/m/Y" }}</div>{% else %}Not used / not recorded{% endif %}</td><td>{% if row.current %}₹{{ row.current.buying_rate|indian_money }}<div class="small text-muted">{{ row.current_date|date:"d/m/Y" }}{% if not row.fresh %} · Needs today's confirmation{% endif %}</div>{% else %}Missing{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="small">Even if the amount is unchanged, a new dated quote needs review. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates</a> to add or confirm today's prices, then <a href="{% url 'workspace_loans:pawn_loan_review_updated_valuation' request.workspace.slug loan.pk %}">refresh this review</a>.</p>
+  {% if preview.error %}<div class="alert alert-danger"><h2 class="h6">Updated approval needs attention</h2>{{ preview.error }}<p class="mt-2 mb-0">The existing approval has not been changed. Fix missing prices and refresh this review. If the principal or collateral needs correction, return to draft, set the date to {{ preview.today|date:"d/m/Y" }} for unpaid lending, then correct and review the terms. No amount is reduced automatically.</p></div>{% endif %}
+  <h2 class="h5">Collateral and lending limits</h2>
+  <p>Maximum LTV: {{ preview.old_ltv|floatformat:"-2" }}% → {% if preview.resolved %}{{ preview.current_ltv|floatformat:"-2" }}%{% else %}Not yet validated{% endif %}. Each collateral row must fit its own limit.</p>
+  <div class="table-responsive mb-3"><table class="table table-sm align-middle"><thead><tr><th>Collateral</th><th>Allocated principal</th><th>Previous value / limit</th><th>Today's value / limit</th><th>Monthly rate<br>Previous → Today</th></tr></thead><tbody>
+    {% for row in preview.item_rows %}<tr><th>{{ row.description }}</th><td>₹{{ row.principal|indian_money }}</td><td>₹{{ row.old.selected_value|indian_money }} / ₹{{ row.old.maximum_principal|indian_money }}</td><td>{% if row.current %}₹{{ row.current.selected_value|indian_money }} / ₹{{ row.current.maximum_principal|indian_money }}{% else %}Resolve the warning above{% endif %}</td><td>{{ row.old.monthly_interest_rate|floatformat:"-2" }}% → {% if row.current %}{{ row.current.monthly_interest_rate|floatformat:"-2" }}%{% else %}—{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <h2 class="h5">Payout comparison</h2>
+  <div class="table-responsive"><table class="table"><thead><tr><th>Amount</th><th>Previous approval</th><th>Updated approval</th></tr></thead><tbody>
+    {% for row in preview.totals %}<tr{% if forloop.last %} class="fw-bold table-primary"{% endif %}><th>{{ row.label }}</th><td>₹{{ row.old|indian_money }}</td><td>{% if row.current != None %}₹{{ row.current|indian_money }}{% else %}Not yet validated{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <details class="card mb-3"><summary class="card-header">Interest calculation, valuation policy and fees</summary><div class="card-body"><table class="table table-sm"><thead><tr><th>Term</th><th>Previous approval</th><th>Updated approval</th></tr></thead><tbody>{% for row in preview.policy_rows %}<tr><th>{{ row.label }}</th><td>{{ row.old }}</td><td>{{ row.current }}</td></tr>{% endfor %}</tbody></table><div class="row"><div class="col-md-6"><h3 class="h6">Previous fees</h3><ul>{% for fee in preview.old_economics.fees %}<li>{{ fee.name }}: ₹{{ fee.amount|indian_money }}{% if fee.deducted_at_disbursal %} · deducted{% else %} · not deducted{% endif %}</li>{% empty %}<li>No fees.</li>{% endfor %}</ul></div><div class="col-md-6"><h3 class="h6">Updated fees</h3>{% if preview.resolved %}<ul>{% for fee in preview.resolved.economics.fees %}<li>{{ fee.name }}: ₹{{ fee.amount|indian_money }}{% if fee.deducted_at_disbursal %} · deducted{% else %} · not deducted{% endif %}</li>{% empty %}<li>No fees.</li>{% endfor %}</ul>{% else %}<p>Not yet validated.</p>{% endif %}</div></div></div></details>
+  {% if can_reapprove and preview.token %}<form method="post" class="card mb-3"><div class="card-body">{% csrf_token %}{{ form.review_token }}{% include "components/forms/accessible.html#field" with field=form.unpaid %}<button class="btn btn-primary" type="submit">Confirm updated approval</button><p class="small text-muted mt-2 mb-0">Next: check the updated ticket and complete the separate disbursal step after payment.</p></div></form>
+  {% elif not can_reapprove %}<p class="alert alert-info">A user with draft-edit and loan-approval permission in a writable workspace must confirm the updated approval. You can review the comparison here.</p>{% endif %}
+  {% if can_edit_loan %}<p><a href="{% url 'workspace_loans:pawn_loan_reopen' request.workspace.slug loan.pk %}">Return to draft for corrections or an earlier payout</a></p>{% endif %}
+  {% endif %}
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan</a>
+</article>
+<script src="{% static 'js/form-errors.js' %}"></script>
+{% endblock %}

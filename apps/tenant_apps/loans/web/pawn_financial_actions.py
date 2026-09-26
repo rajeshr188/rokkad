@@ -98,6 +98,10 @@ def pawn_loan_disburse(request, pk):
         economics = preview_approved_disbursal(loan)
     except (ValidationError, ValueError) as exc:
         review_error = str(exc)
+    from apps.tenant_apps.loans.services.valuation_review import valuation_refresh_reason
+    refresh_reason = valuation_refresh_reason(loan)
+    if refresh_reason:
+        review_error = refresh_reason
     return _render_action(
         request,
         loan,
@@ -106,6 +110,7 @@ def pawn_loan_disburse(request, pk):
         _("Confirm only after paying the customer. This records payment and activates the loan; it does not send a bank transfer."),
         {"can_administer": _can_administer(request), "quote_recovery": True,
          "is_disbursal": True, "economics": economics, "review_error": review_error,
+         "valuation_refresh_reason": refresh_reason,
          "can_edit_loan": request.loans_workspace_access.can("data.edit")},
     )
 

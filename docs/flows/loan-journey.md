@@ -33,6 +33,7 @@ are not additional loan states. Custody has its own state and evidence.
 | DRAFT | Split selected collateral rows | Source and new numbered destination both DRAFT; at least one row remains; original item identities/photos move |
 | DRAFT | Approve | APPROVED; frozen approval evidence and terms |
 | APPROVED | Return to draft with reason | DRAFT; prior approval evidence retained |
+| APPROVED, cash unpaid and prices outdated | Review updated valuation | Compare old/current prices and terms; edit/approve-authorized confirmation appends today's approval on the same number; disbursal remains separate |
 | DRAFT / APPROVED | Cancel with reason | CANCELLED; number not recycled |
 | APPROVED | Disburse | ACTIVE; immutable payout/policy evidence and obligations |
 | ACTIVE | Repay / applicable accrual / capitalization | ACTIVE; financial events and balances updated, not automatic handover |

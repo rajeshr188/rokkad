@@ -119,6 +119,8 @@ def pawn_loan_detail(request, pk):
     }
     approval = max(loan.approval_snapshots.all(), key=lambda row: row.version, default=None)
     context["latest_approval"] = approval
+    from apps.tenant_apps.loans.services.valuation_review import valuation_refresh_reason
+    context["valuation_refresh_reason"] = valuation_refresh_reason(loan, approval)
     context["can_record_earlier_payout"] = (loan.state == "DRAFT" and not opening
         and loan.loan_date < context["today"] and all(request.loans_workspace_access.can(action)
             for action in ("workspace.settings.manage", "data.edit", "loan.approve", "loan.disburse")))
@@ -252,6 +254,10 @@ def _primary_action(loan, context):
             "message": _("Check the customer, collateral photos and amounts below. Approval saves the terms; payment is recorded separately."),
         }
     if loan.state == PawnLoanState.APPROVED.value:
+        if context.get("valuation_refresh_reason") and (context.get("can_approve") or context.get("can_disburse")):
+            return {"label": "Review updated valuation", "url": reverse(
+                "workspace_loans:pawn_loan_review_updated_valuation", args=[loan.workspace.slug, loan.pk]),
+                "message": "Cash not yet paid? Compare the approved prices with today's prices and review the terms before payment. If cash was already paid earlier, keep the actual date and use the earlier-payout workflow."}
         if not context.get("can_disburse", False):
             return None
         return {

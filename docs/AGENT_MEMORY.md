@@ -14,6 +14,14 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Approved itemized native loans with stale quotes and no financial events have
+Review updated valuation for cash not yet paid. Compare historical approval to
+today; explicit unpaid attestation plus edit/approve permission atomically
+resaves today's date and appends approval, retaining number/photos/history.
+Disbursal remains separate. Signed review replay is tracked in the new immutable
+approval; no new table. Never use current valuation for an actual earlier payout.
+See [the unpaid review decision](adr/2026-09-26-unpaid-loan-valuation-review.md).
+
 New loan browser forms carry a signed workspace/actor-bound submission identity,
 stored immutably on PawnLoan (Loans 0027). Concurrent/repeated submissions recover
 one saved loan and never apply changed form values; use Correct draft to edit.

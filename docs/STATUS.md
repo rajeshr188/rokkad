@@ -12,6 +12,23 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Guided unpaid-loan valuation review implementation (2026-09-26)
+
+Implemented [Review updated valuation](adr/2026-09-26-unpaid-loan-valuation-review.md)
+for approved native itemized loans before actual payment. Stale approvals show
+the action on loan detail and disbursal, with old/current quote prices and dates,
+collateral limits, rates, policy terms, fees and net cash. An explicit unpaid
+attestation and current edit/approval permission authorize atomic reapproval
+for today; loan number, photographs, earlier approvals and PDF evidence remain.
+Disbursal is a separate step. Missing quotes and LTV violations block reapproval.
+Signed review checks and an immutable approval marker protect changed inputs,
+retries and concurrent submissions. No schema migration is required. Historical
+payout guidance remains separate and the workspace handbook explains both paths.
+Validation: 103 Python tests passed across updated valuation, earlier payouts,
+draft UI and price readiness, including simultaneous confirmations, restricted
+runtime execution, drift, rollback, replay and permission guards. Migration drift
+check reports no changes. Production rollout evidence will follow this checkpoint.
+
 ## New-loan submission protection deployed (2026-09-26)
 
 Production runs `rokkad:rc-20260926-9f9f67e4`, incorporating the protection in
