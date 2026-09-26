@@ -32,8 +32,18 @@ valid numeric input. No schema or calculation-policy change.
 Local validation: 38 focused origination, quote-readiness and redisbursal tests
 plus eight appraisal/handbook tests pass, including fresh quote plus previous-day
 draft, date-first legacy fallback, review recovery link, date preservation,
-quote changes and immutable history. Production rollout evidence follows after
-deployment verification.
+quote changes and immutable history.
+
+Deployed application `7972b95b`. Candidate and deployed checks passed under the
+restricted runtime role: current-date review ready, simulated previous-day date
+guidance correct, handbook present, and loan financial evidence unchanged by
+verification. Static assets, runtime settings and domain proxy were preserved.
+The owner confirmed the affected loan was unpaid and intended for today's
+disbursal. Its date was advanced through the normal audited draft-update service,
+preserving number, photos, counters and earlier approvals; it remains DRAFT for
+the user's confirmation. No approval, payout or financial event was created by
+the repair. Before/after server-only backups passed archive catalogue checks.
+Private deployment and repair evidence remain on the production server.
 
 ## Main-domain cutover completed (2026-09-26)
 

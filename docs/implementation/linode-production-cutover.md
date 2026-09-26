@@ -9,6 +9,12 @@ tags: [migration, cutover, deployment, linode, r2]
 
 ## Main-domain activation (September 26)
 
+Subsequent September 26 application release: `7972b95b`, deployed after focused
+regressions and candidate/live checks. It corrects overnight draft date guidance
+and numeric appraisal suggestions without schema changes. This supersedes the
+application image at the domain-switch checkpoint below; database and routing
+remain unchanged.
+
 The owner authorized the domain move after operating real retained transactions
 on the temporary hostname. `rokkad.com` and `www.rokkad.com` now resolve to the
 new server over both IPv4 and IPv6. Mail, MX, TXT and nameservers are unchanged.
