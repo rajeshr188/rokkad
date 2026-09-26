@@ -12,6 +12,31 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## New-loan submission protection deployed (2026-09-26)
+
+Production runs `rokkad:rc-20260926-9f9f67e4`, incorporating the protection in
+`807a78a4` and edit clarification in `9f9f67e4`. Loans 0027 was the only pending
+migration and ran with the owner-only migration connection. Runtime startup,
+forced RLS, the submission constraint/trigger, signed new-form identities and
+the staff handbook passed checks in JCL, JSK and Lakshmi. Published JavaScript
+hashes match the committed source; the web container is running without restarts.
+
+All 91 Python checks passed after the clarification, plus 9 browser-event checks.
+Repeatedly following the split-panel edit link and saving corrections retained
+one loan and one number in regression tests. Production verification used GETs
+and rolled-back authentication sessions; no real test loan was created.
+
+Prepared assets before briefly stopping old web writers. Before/after hashes
+matched existing loans, loan events, issued-document records and number sequences
+through migration. Reported duplicate JSK records were not cancelled, deleted or
+renumbered. Runtime settings and proxy configuration remained unchanged. Both
+operational backups and private deployment evidence remain on the server.
+
+Open pre-upgrade New loan forms lack the signed reference and fail closed. Check
+recent loans before opening a fresh form; do not infer that a network error means
+the previous save failed. Current forms retain their reference across validation
+and preview responses; completed resubmissions return the original saved loan.
+
 ## Correct-draft link investigation and clearer editing copy (2026-09-26)
 
 The owner identified the single-item split hint's Correct draft link as a
