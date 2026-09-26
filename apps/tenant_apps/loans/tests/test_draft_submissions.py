@@ -205,6 +205,31 @@ class DraftSubmissionTests(WorkspaceTestCase):
     def test_saved_draft_can_be_edited_repeatedly_without_new_number(self):
         loan, _ = self.submit()
         identity = loan.creation_submission_id
+        detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
+        from html.parser import HTMLParser
+        class SplitLink(HTMLParser):
+            in_panel = False
+            links = []
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "section" and "data-draft-split-discovery" in attrs:
+                    self.in_panel = True
+                if self.in_panel and tag == "a":
+                    self.links.append(attrs["href"])
+            def handle_endtag(self, tag):
+                if tag == "section":
+                    self.in_panel = False
+        parser = SplitLink()
+        parser.feed(detail.content.decode())
+        update_url = reverse("workspace_loans:pawn_loan_update", args=[self.tenant.slug, loan.pk])
+        self.assertEqual(parser.links, [update_url])
+        for _ in range(3):
+            edit = self.client.get(update_url)
+            self.assertEqual(edit.context["loan"].pk, loan.pk)
+            self.assertContains(edit, f'action="{update_url}"')
+            self.assertContains(edit, "Save changes")
+            self.assertContains(edit, "keeps the same loan number")
+            self.assertNotContains(edit, "Saving creates")
         for amount in ("11000", "12000"):
             payload = self._payload(self.license, self.series)
             payload.pop("submission_token")

@@ -12,6 +12,23 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Correct-draft link investigation and clearer editing copy (2026-09-26)
+
+The owner identified the single-item split hint's Correct draft link as a
+possible cause. A rollback-only production check on JSK 06707 followed that
+exact rendered link three times: each GET opened its existing loan-specific
+edit route; loan count and numbering remained unchanged. The edit service
+updates that ID under a lock and does not allocate a new loan number. Available
+container logs did not provide matching requests for the incident window, so
+the original physical click sequence remains unconfirmed.
+
+The shared edit form misleadingly said saving creates a draft. It now says
+editing keeps the same number, uses Save changes and has an explicit edit action.
+The single-row split hint uses Edit this draft and explains that editing does
+not create another loan. Regression coverage follows the rendered link repeatedly
+and saves repeated corrections. Keep browser progress feedback and durable
+server protection: a button guard alone cannot cover every repeated request.
+
 ## New-loan submission protection implementation (2026-09-26)
 
 Implemented the [durable form-identity decision](adr/2026-09-26-new-loan-submission-identity.md):
