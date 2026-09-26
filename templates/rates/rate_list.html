@@ -6,6 +6,12 @@
 <section hx-history="false">
 <header class="app-heading"><div><h1>{% translate "Metal rates" %}</h1><p>{% translate "Record a market quote, or open an earlier quote to review its history." %}</p></div>{% if 'data.create' in actions %}<a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">{% translate "Add Rate" %}</a>{% endif %}</header>
 {% include 'rates/_navigation.html' %}
+<section class="card card-body mb-3" aria-labelledby="daily-prices-title">
+<h2 class="h5" id="daily-prices-title">Today's lending prices</h2>
+<p>If your buying and selling prices are unchanged, confirm each required metal below. This records a new dated confirmation under your signed-in user; yesterday's quote stays in the history.</p>
+{% for quote in daily_quotes %}<div class="d-flex flex-wrap justify-content-between gap-2 border-top py-3"><div><strong>{{ quote.metal }} · buying ₹{{ quote.buying_rate|indian_money }}/g</strong><div class="small">Selling ₹{{ quote.selling_rate|indian_money }}/g · effective {{ quote.effective_at|date:"d/m/Y, H:i T" }} · {{ quote.source_snapshot.name }}</div>{% if quote.is_today %}<span class="badge text-bg-success">Ready for today</span>{% endif %}</div>
+{% if not quote.is_today and 'data.create' in actions %}<form method="post" action="{% url 'workspace_rates:rate_confirm_unchanged' request.workspace.slug quote.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-primary">Confirm {{ quote.metal|lower }} price unchanged for today</button></form>{% endif %}</div>{% empty %}<p>No applicable INR pure-metal quotes yet. Add your first rate.</p>{% endfor %}
+</section>
 <p class="alert alert-info">{% translate "For loan valuation, use INR and Pure metal for both gold and silver. Buying prices must be per gram, excluding tax and making charges." %}</p>
 {% if not has_rate_sources %}<div class="alert alert-warning">{% translate "Add a source before entering your first metal rate." %} {% if 'data.create' in actions %}<a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">{% translate "Add Rate Source" %}</a>{% endif %}</div>{% endif %}
 {% include 'components/reference_search.html' %}

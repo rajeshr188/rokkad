@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 
 from django.utils import timezone
 
@@ -43,32 +44,44 @@ def resolve_pawn_draft_economics(
     *, workspace_id: int, license_id: int, as_of_date: date, collateral,
     require_fresh_rates=False,
     series_id: int | None = None,
+    historical_context=None,
 ) -> ResolvedPawnDraftEconomics:
-    policy = resolve_pawn_loan_economic_policy(
-        workspace_id=workspace_id,
-        license_id=license_id,
-        as_of_date=as_of_date,
-    )
+    collateral = tuple(collateral)
+    if historical_context is not None:
+        from .historical_origination import historical_policies
+        policy, historical_rates, historical_fees = historical_policies(
+            historical_context, collateral, license_id=license_id, series_id=series_id)
+    else:
+        policy = resolve_pawn_loan_economic_policy(
+            workspace_id=workspace_id,
+            license_id=license_id,
+            as_of_date=as_of_date,
+        )
     needs_metal_value = policy.valuation_method in {
         ValuationMethod.CALCULATED_METAL_VALUE.value,
         ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
     }
-    collateral = tuple(collateral)
     evaluated_at = timezone.now()
-    if require_fresh_rates and needs_metal_value:
+    if require_fresh_rates and needs_metal_value and historical_context is None:
         # Reject the date before looking up quotes at that date. Today's newly
         # entered quote cannot repair a review that still selects yesterday.
         require_current_origination_date(as_of_date, at=evaluated_at)
     quote_rows = get_origination_quote_rows(workspace_id=workspace_id, loan_date=as_of_date,
         metals=tuple(str(getattr(item.metal, "value", item.metal)).upper() for item in collateral),
-        at=evaluated_at) if needs_metal_value else []
-    if require_fresh_rates:
+        at=evaluated_at) if needs_metal_value and historical_context is None else []
+    if require_fresh_rates and historical_context is None:
         require_fresh_quotes(quote_rows)
     valuation_rates = {row["metal"]: row["rate"].buying_rate if row["usable"] else None for row in quote_rows}
+    valuation_quotes = {row["metal"]: row["evidence"] for row in quote_rows}
+    if historical_context is not None:
+        from .historical_origination import historical_quotes
+        valuation_quotes = historical_quotes(historical_context, method=policy.valuation_method,
+            metals=tuple(str(getattr(item.metal, "value", item.metal)).upper() for item in collateral))
+        valuation_rates = {metal: Decimal(row["buying_rate"]) for metal, row in valuation_quotes.items()}
     rate_policies = []
     tranches = []
     for index, item in enumerate(collateral, start=1):
-        rate_policy = resolve_pawn_metal_interest_rate_policy(
+        rate_policy = historical_rates[index - 1] if historical_context is not None else resolve_pawn_metal_interest_rate_policy(
             series_id=series_id,
             workspace_id=workspace_id,
             license_id=license_id,
@@ -95,7 +108,7 @@ def resolve_pawn_draft_economics(
                 latest_appraised_value=item.latest_appraised_value,
             )
         )
-    fee_policies = tuple(
+    fee_policies = historical_fees if historical_context is not None else tuple(
         resolve_pawn_loan_fee_policies(
             workspace_id=workspace_id,
             license_id=license_id,
@@ -124,7 +137,7 @@ def resolve_pawn_draft_economics(
         economic_policy=policy,
         rate_policies=tuple(rate_policies),
         fee_policies=fee_policies,
-        valuation_quotes={row["metal"]: row["evidence"] for row in quote_rows},
+        valuation_quotes=valuation_quotes,
         evaluated_at=evaluated_at,
     )
 

@@ -117,14 +117,23 @@ def pawn_loan_detail(request, pk):
             "opening_event",
         ),
     }
-    approval = loan.approval_snapshots.order_by("-version").first()
+    approval = max(loan.approval_snapshots.all(), key=lambda row: row.version, default=None)
+    context["latest_approval"] = approval
+    context["can_record_earlier_payout"] = (loan.state == "DRAFT" and not opening
+        and loan.loan_date < context["today"] and all(request.loans_workspace_access.can(action)
+            for action in ("workspace.settings.manage", "data.edit", "loan.approve", "loan.disburse")))
     context["can_print_ticket"] = loan.state != "DRAFT" and approval is not None
     context["can_preview_imported_ticket"] = opening is not None and approval is None
     context["can_print_schedule"] = loan.repayment_schedules.exists()
     if loan.state in {"DRAFT", "APPROVED"}:
         try:
             if loan.state == "DRAFT":
-                context["economics"], _token = make_review(loan)
+                if context["can_record_earlier_payout"]:
+                    context["is_earlier_payout_review"] = True
+                    from apps.tenant_apps.loans.services.loan_workflow import make_earlier_payout_review
+                    context["economics"], _token, _quotes, _basis = make_earlier_payout_review(loan, actor=request.user)
+                else:
+                    context["economics"], _token = make_review(loan)
             else:
                 context["economics"] = preview_approved_disbursal(loan)
         except (ValidationError, ValueError) as exc:
@@ -220,12 +229,18 @@ def pawn_loan_detail(request, pk):
         row for row in context["event_rows"]
         if row["event"].event_kind == TransactionKind.REPAYMENT.value
     ]
+    context["current_disbursal"] = next((row["event"] for row in context["event_rows"]
+        if row["event"].event_kind == "DISBURSAL" and not row["reversed_event"]), None)
     context["primary_action"] = _primary_action(loan, context)
     return render(request, "loans/pawn/detail.html", context)
 
 
 def _primary_action(loan, context):
     if loan.state == PawnLoanState.DRAFT.value:
+        if context.get("can_record_earlier_payout"):
+            return {"label": "Record an earlier payout", "url": reverse(
+                "workspace_loans:pawn_loan_record_earlier_payout", args=[loan.workspace.slug, loan.pk]),
+                "message": "If the money was already paid on the loan date, review and record that earlier payout. If still unpaid, edit the draft to the intended payment date."}
         if context.get("simple_owner"):
             return {"label": "Review and disburse", "url": reverse('workspace_loans:pawn_loan_review_disburse', args=[loan.workspace.slug, loan.pk]), "message": "Review the summary and confirm payment in one action."}
         if not context.get("can_approve", False):
@@ -270,7 +285,7 @@ def _primary_action(loan, context):
 def _event_rows(loan, *, can_administer):
     events = tuple(
         loan.loan_events.select_related(
-            "reversed_by_event", "loan__workspace"
+            "reversed_by_event", "loan__workspace", "created_by"
         ).order_by("-effective_date", "-pk")
     )
     latest_event_id = next(

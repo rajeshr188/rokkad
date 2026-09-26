@@ -51,6 +51,8 @@ class Rate(WorkspaceOwnedModel):
     is_withdrawal = models.BooleanField(default=False, editable=False)
     reason = models.CharField(max_length=500, blank=True)
     source_snapshot = models.JSONField(default=dict, editable=False)
+    confirmed_from = models.ForeignKey("self", null=True, blank=True, editable=False,
+        on_delete=models.PROTECT, related_name="daily_confirmations")
 
     # related Fields
     rate_source = models.ForeignKey("RateSource", on_delete=models.PROTECT)
@@ -76,6 +78,8 @@ class Rate(WorkspaceOwnedModel):
             self.source_snapshot = {"name": self.rate_source.name, "location": self.rate_source.location, "tax_included": self.rate_source.tax_included}
         if self.supersedes_id and self.supersedes.workspace_id != self.workspace_id:
             raise ValidationError("A correction must belong to the original Workspace.")
+        if self.confirmed_from_id and self.confirmed_from.workspace_id != self.workspace_id:
+            raise ValidationError("A confirmation must belong to the original Workspace.")
         return super().save(*args, **kwargs)
 
     def clean(self):
@@ -88,6 +92,13 @@ class Rate(WorkspaceOwnedModel):
             errors["purity"] = "Use Pure metal for silver or bronze; karats apply to gold."
         if self.supersedes_id and (not self.reason.strip() or not self.recorded_by_id):
             errors["reason"] = "A correction or withdrawal requires a reason and actor."
+        if self.confirmed_from_id:
+            previous = self.confirmed_from
+            unchanged = ("metal", "currency", "purity", "buying_rate", "selling_rate", "rate_source_id")
+            if (self.supersedes_id or self.is_withdrawal or not self.recorded_by_id
+                    or previous.is_withdrawal
+                    or any(getattr(self, name) != getattr(previous, name) for name in unchanged)):
+                errors["confirmed_from"] = "A daily confirmation requires unchanged quote values and its recording user."
         if errors:
             raise ValidationError(errors)
 

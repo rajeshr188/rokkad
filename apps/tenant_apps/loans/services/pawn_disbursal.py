@@ -56,6 +56,7 @@ def disburse_pawn_loan(
     *,
     effective_date: date,
     actor=None,
+    earlier_payout_reason=None,
 ) -> PawnDisbursalResult:
     """Activate an approved loan; a fully reversed attempt may be replaced."""
     loan = _locked_loan(loan_id)
@@ -72,9 +73,22 @@ def disburse_pawn_loan(
         raise PawnDisbursalError("Approved PawnLoan is missing its approval snapshot.")
     economics = _approved_economics(loan, approval_snapshot)
     resolved_policy = _approved_disbursal_policy(economics)
-    assert_approved_quotes_current(workspace_id=loan.workspace_id,
-        method=resolved_policy.valuation_method,
-        evidence=approval_snapshot.payload.get("origination_rates"), effective_date=effective_date)
+    def validate_approval():
+        recording = approval_snapshot.payload.get("earlier_payout")
+        if recording is not None:
+            from .historical_origination import assert_historical_approval
+            if earlier_payout_reason is None or earlier_payout_reason.strip() != recording.get("reason"):
+                raise PawnDisbursalError("Use the earlier-payout review to confirm this historical recording.")
+            assert_historical_approval(loan, actor=actor,
+                evidence=approval_snapshot.payload.get("origination_rates"),
+                recording=recording, effective_date=effective_date)
+        else:
+            if earlier_payout_reason is not None:
+                raise PawnDisbursalError("Historical recording requires an earlier-payout approval.")
+            assert_approved_quotes_current(workspace_id=loan.workspace_id,
+                method=resolved_policy.valuation_method,
+                evidence=approval_snapshot.payload.get("origination_rates"), effective_date=effective_date)
+    validate_approval()
     try:
         assert_series_can_issue(loan.series, as_of_date=effective_date)
     except Exception as exc:
@@ -112,6 +126,8 @@ def disburse_pawn_loan(
         "approval_snapshot_id": approval_snapshot.pk,
         "policy_snapshot_id": policy_snapshot.pk,
     })
+    if approval_snapshot.payload.get("earlier_payout"):
+        payload["earlier_payout"] = approval_snapshot.payload["earlier_payout"]
     event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.DISBURSAL,
@@ -154,6 +170,7 @@ def disburse_pawn_loan(
         from_state=previous_state,
         to_state=PawnLoanState.ACTIVE.value,
         actor=actor,
+        reason=earlier_payout_reason or "",
         metadata={
             "effective_date": effective_date.isoformat(),
             "policy_snapshot_id": policy_snapshot.pk,
@@ -165,9 +182,7 @@ def disburse_pawn_loan(
             "repayment_schedule_version_id": repayment_schedule.pk,
         },
     )
-    assert_approved_quotes_current(workspace_id=loan.workspace_id,
-        method=resolved_policy.valuation_method,
-        evidence=approval_snapshot.payload.get("origination_rates"), effective_date=effective_date)
+    validate_approval()
     return PawnDisbursalResult(
         loan, policy_snapshot, event, disbursal_snapshot
     )

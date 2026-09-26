@@ -5,6 +5,16 @@ register = template.Library()
 
 
 @register.filter
+def actor_label(user):
+    """Describe the recorded actor, never substitute the viewer or owner."""
+    if user is None:
+        return "Not recorded (legacy/import or system action)"
+    name = user.get_full_name().strip()
+    email = getattr(user, "email", "").strip()
+    return f"{name} ({email})" if name and email else name or email or user.get_username()
+
+
+@register.filter
 def indian_money(value):
     """Display rupees using lakh/crore grouping, preserving any actual paise."""
     if value is None or value == "":

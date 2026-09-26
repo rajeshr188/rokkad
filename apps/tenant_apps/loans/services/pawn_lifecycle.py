@@ -38,11 +38,17 @@ class PawnLifecycleError(ValueError):
 
 
 @transaction.atomic
-def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
+def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
+                      earlier_review_digest="") -> PawnLoanApprovalSnapshot:
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.approve")
     _require_transition(loan, PawnLoanState.APPROVED)
-    assert_series_can_issue(loan.series)
+    historical = None
+    if earlier_payout_reason is not None:
+        from .historical_origination import authorize, historical_basis
+        authorize(loan, actor)
+        historical = historical_basis(loan)
+    assert_series_can_issue(loan.series, as_of_date=loan.loan_date if historical else None)
     loan.full_clean()
     collateral = tuple(loan.collateral_items.all())
     if not collateral:
@@ -53,7 +59,7 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
             raise PawnLifecycleError(
                 f"Collateral {item.description} requires at least one photograph before approval."
             )
-    resolved_economics = _validate_collateral_economics(loan, collateral)
+    resolved_economics = _validate_collateral_economics(loan, collateral, historical_context=historical)
     quote_evidence = approval_quote_evidence(loan, collateral, resolved_economics)
     appraisals = _freeze_approved_appraisals(loan, collateral, actor=actor)
 
@@ -61,9 +67,17 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
         loan, collateral, resolved_economics, appraisals=appraisals
     )
     payload["origination_rates"] = quote_evidence
-    assert_approved_quotes_current(workspace_id=loan.workspace_id,
-        method=quote_evidence["valuation_method"], evidence=quote_evidence,
-        effective_date=loan.loan_date)
+    if historical is not None:
+        from .historical_origination import RULE as EARLIER_RULE, recording_evidence, assert_historical_approval
+        quote_evidence["rule"] = EARLIER_RULE
+        payload["earlier_payout"] = recording_evidence(loan, historical, actor=actor,
+            reason=earlier_payout_reason, review_digest=earlier_review_digest)
+        assert_historical_approval(loan, actor=actor, evidence=quote_evidence,
+            recording=payload["earlier_payout"], effective_date=loan.loan_date)
+    else:
+        assert_approved_quotes_current(workspace_id=loan.workspace_id,
+            method=quote_evidence["valuation_method"], evidence=quote_evidence,
+            effective_date=loan.loan_date)
     fingerprint = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -87,6 +101,7 @@ def approve_pawn_loan(loan_id: int, *, actor=None) -> PawnLoanApprovalSnapshot:
         from_state=PawnLoanState.DRAFT.value,
         to_state=PawnLoanState.APPROVED.value,
         actor=actor,
+        reason=earlier_payout_reason or "",
         metadata={
             "approval_snapshot_id": snapshot.pk,
             "approval_version": version,
@@ -229,9 +244,11 @@ def _set_state(loan, state, actor):
     loan.save(update_fields=["state", "updated_by", "updated_at"])
 
 
-def _validate_collateral_economics(loan, collateral):
+def _validate_collateral_economics(loan, collateral, *, historical_context=None):
     allocations = [item.allocated_principal for item in collateral]
     if not any(value is not None for value in allocations):
+        if historical_context is not None:
+            raise PawnLifecycleError("Earlier payouts require itemized collateral allocations.")
         return None
     if any(value is None for value in allocations):
         raise PawnLifecycleError(
@@ -244,6 +261,7 @@ def _validate_collateral_economics(loan, collateral):
         as_of_date=loan.loan_date,
         collateral=collateral,
         require_fresh_rates=True,
+        historical_context=historical_context,
     )
     if resolved.economics.gross_principal != loan.principal_amount:
         raise PawnLifecycleError(

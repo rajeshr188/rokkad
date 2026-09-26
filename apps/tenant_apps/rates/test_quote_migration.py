@@ -15,7 +15,7 @@ from apps.tenant_apps.rates.services import withdraw_quote
 class QuoteMigrationTests(TransactionTestCase):
     def test_existing_values_dates_and_unknown_authors_are_preserved(self):
         before = [("rates", "0002_enable_workspace_rls")]
-        after = [("rates", "0003_rate_effective_at_rate_is_withdrawal_rate_reason_and_more")]
+        after = [("rates", "0004_rate_daily_confirmation")]
         executor = MigrationExecutor(connection)
         executor.migrate(before)
         try:

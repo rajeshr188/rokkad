@@ -16,7 +16,7 @@ def requires_quotes(method):
 
 
 def quote_evidence(rate):
-    return {
+    evidence = {
         "rate_id": rate.pk, "workspace_id": rate.workspace_id,
         "metal": rate.metal, "currency": rate.currency, "purity": rate.purity,
         "unit": "gram", "buying_rate": str(rate.buying_rate),
@@ -26,6 +26,9 @@ def quote_evidence(rate):
         "source_id": rate.rate_source_id,
         "source_snapshot": deepcopy(rate.source_snapshot),
     }
+    if rate.confirmed_from_id is not None:
+        evidence["confirmed_from_id"] = rate.confirmed_from_id
+    return evidence
 
 
 def origination_quote_cutoff(loan_date, *, at=None):
@@ -77,7 +80,7 @@ def require_current_origination_date(value, *, label="Loan", at=None):
             "If the money is being handed over today, edit the draft's loan date, "
             "save it and review the recalculated terms. If the money was already "
             "handed over on the original date, keep that date and contact your "
-            "administrator; historical disbursal needs a separate workflow."
+            "administrator to use Record an earlier payout."
         )
 
 

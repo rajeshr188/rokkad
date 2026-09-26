@@ -82,8 +82,8 @@ interest are distinct amounts.
 
 Calculated-metal and lower-of valuation require positive INR pure-metal buying
 quotes effective today in the same Workspace, for each consumed metal. A price
-need not change numerically: record a new quote effective today when confirming
-an unchanged price. Appraisal-only policy does not impose this quote requirement;
+need not change numerically: use **Confirm price unchanged for today** in Rates
+to append a dated, actor-attributed confirmation without retyping. Appraisal-only policy does not impose this quote requirement;
 repayments/releases do not acquire a daily Rates gate. Monitoring freshness is a
 separate policy. A same-day quote replaced before disbursal requires another review.
 
@@ -92,7 +92,12 @@ explicitly changes and saves it. To lend today, correct that date and review the
 recalculated terms. Adding today's rate alone cannot fix a prior-date draft.
 Review validates the date before quote freshness and identifies both dates in
 DD/MM/YYYY. Never move an actual historical payout date just to pass approval;
-historical disbursal requires a separate admission workflow.
+an administrator with edit/approve/disburse access uses **Record an earlier
+payout**, reviews historical terms and confirms with a reason. The actual date
+and recording time remain separate; earlier approvals and tickets are preserved.
+Missing historical evidence cannot be replaced by today's price. See the
+[staff instructions](earlier-payout-and-daily-prices.md). The Overview identifies
+creator, approver and payout recorder; the history identifies correction actors.
 
 Draft split moves whole rows into a new draft; it does not divide a row's piece
 quantity, duplicate photographs, or perform a partial release. Both proposed

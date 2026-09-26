@@ -1,4 +1,7 @@
 from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
@@ -11,7 +14,7 @@ from .access import rate_action_required
 from .forms import RateForm, RateSourceForm, RateWithdrawalForm, RateListForm
 from .models import Rate, RateSource
 from .facade import get_workspace_rate_dashboard_summary
-from .services import record_quote, withdraw_quote
+from .services import record_quote, withdraw_quote, confirm_quote_unchanged
 
 
 # Create your views here.
@@ -47,14 +50,32 @@ def rate_list(request):
     page = Paginator(rates, 25).get_page(request.GET.get("page"))
     fragment = (request.headers.get("HX-Request") == "true" and request.headers.get("HX-Target") == "reference-results"
                 and request.headers.get("HX-History-Restore-Request") != "true" and request.headers.get("HX-Boosted") != "true")
+    summary = get_workspace_rate_dashboard_summary()
+    daily_quotes = [row for row in (summary["gold_rate"], summary["silver_rate"]) if row]
+    for row in daily_quotes:
+        row.is_today = timezone.localdate(row.effective_at) == timezone.localdate()
     response = render(
         request,
         "rates/rate_list.html#results" if fragment else "rates/rate_list.html",
-        {"rates": page.object_list, "page_obj": page, "form": form, "has_rate_sources": RateSource.objects.exists()},
+        {"rates": page.object_list, "page_obj": page, "form": form,
+         "has_rate_sources": RateSource.objects.exists(), "daily_quotes": daily_quotes},
     )
     if fragment:
         response["X-Rokkad-Fragment"] = "reference-results"
     return response
+
+
+@rate_action_required("create")
+@never_cache
+@require_POST
+def rate_confirm_unchanged(request, pk):
+    try:
+        quote = confirm_quote_unchanged(workspace=request.workspace, actor=request.user, quote_id=pk)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    else:
+        messages.success(request, f"{quote.metal} price is ready for today. The quote retains its recorded user and time.")
+    return redirect("workspace_rates:rate_list", workspace_slug=request.workspace.slug)
 
 @rate_action_required("view")
 @never_cache

@@ -40,10 +40,10 @@ def set_loan_workflow(*, actor, mode):
     return workspace
 
 
-def review_values(loan):
+def review_values(loan, *, historical_context=None):
     """Fingerprint persisted input and newly resolved economics; no writes."""
     items = tuple(loan.collateral_items.order_by("pk"))
-    resolved = _validate_collateral_economics(loan, items)
+    resolved = _validate_collateral_economics(loan, items, historical_context=historical_context)
     economics = resolved.economics if resolved else None
     quotes = approval_quote_evidence(loan, items, resolved)
     payload = {
@@ -53,6 +53,10 @@ def review_values(loan):
         "photos": [list(item.photos.order_by("pk").values()) for item in items],
         "economics": asdict(economics) if economics else None,
         "valuation_quotes": quotes["quotes"],
+        "policy_ids": ([resolved.economic_policy.pk, [p.pk for p in resolved.rate_policies],
+                        [p.pk for p in resolved.fee_policies]] if resolved else None),
+        "basis_approval_id": (historical_context["approval"].pk
+            if historical_context and historical_context["approval"] else None),
     }
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
     return economics, digest, quotes["quotes"]
@@ -94,3 +98,53 @@ def review_and_disburse(loan_id, *, actor, effective_date, token):
             if frozen.get(name) != str(getattr(economics, name)):
                 raise ValueError("Loan economics changed during confirmation. Review the loan again.")
     return disburse_pawn_loan(loan.pk, actor=actor, effective_date=effective_date)
+
+
+EARLIER_SALT = "loans.earlier-payout-review.v1"
+
+
+def make_earlier_payout_review(loan, *, actor):
+    from .historical_origination import authorize, historical_basis
+    authorize(loan, actor)
+    context = historical_basis(loan)
+    economics, digest, quotes = review_values(loan, historical_context=context)
+    token = signing.dumps({"workspace": loan.workspace_id, "loan": loan.pk,
+        "actor": actor.pk, "date": loan.loan_date.isoformat(), "digest": digest}, salt=EARLIER_SALT)
+    return economics, token, quotes, context["approval"]
+
+
+@transaction.atomic
+def record_earlier_payout(loan_id, *, actor, token, reason, confirmed=False):
+    from .historical_origination import authorize, historical_basis
+    workspace = Company.objects.select_for_update().get(pk=current_tenant_workspace_id())
+    loan = PawnLoan.objects.select_for_update().select_related("borrower", "license", "series").get(
+        pk=loan_id, workspace=workspace)
+    authorize(loan, actor)
+    if confirmed is not True:
+        raise ValueError("Confirm that the money was actually paid on the recorded loan date.")
+    try:
+        reviewed = signing.loads(token, salt=EARLIER_SALT, max_age=3600)
+    except signing.BadSignature as exc:
+        raise ValueError("The earlier-payout review expired. Refresh and review it again.") from exc
+    if (reviewed.get("workspace") != workspace.pk or reviewed.get("loan") != loan.pk
+            or reviewed.get("actor") != actor.pk or reviewed.get("date") != loan.loan_date.isoformat()):
+        raise ValueError("This review belongs to another loan, date or signed-in user.")
+    if loan.state == "ACTIVE":
+        event = loan.loan_events.filter(event_kind="DISBURSAL", reversed_by_event__isnull=True).first()
+        recording = event.payload.get("earlier_payout", {}) if event else {}
+        if recording.get("review_digest") != reviewed["digest"] or recording.get("recorded_by_id") != actor.pk:
+            raise ValueError("Another payout has already been recorded. Reload the loan.")
+        return disburse_pawn_loan(loan.pk, actor=actor, effective_date=loan.loan_date)
+    context = historical_basis(loan)
+    economics, digest, quotes = review_values(loan, historical_context=context)
+    if reviewed.get("digest") != digest:
+        raise ValueError("Loan details or historical evidence changed. Refresh the review before confirming.")
+    approval = approve_pawn_loan(loan.pk, actor=actor, earlier_payout_reason=reason,
+        earlier_review_digest=digest)
+    if approval.payload["origination_rates"]["quotes"] != quotes:
+        raise ValueError("Historical quotes changed during recording. Review again.")
+    for name in ("net_disbursed", "advance_interest", "deducted_fees", "monthly_interest"):
+        if approval.payload["collateral_economics"].get(name) != str(getattr(economics, name)):
+            raise ValueError("Historical economics changed during recording. Review again.")
+    return disburse_pawn_loan(loan.pk, actor=actor, effective_date=loan.loan_date,
+        earlier_payout_reason=reason)

@@ -12,6 +12,29 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Earlier payout, daily quote confirmation and actor attribution (2026-09-26)
+
+Owner-approved implementation adds a separate administrator-reviewed native earlier
+payout action, preserving actual date, historical policy/quote references and all
+prior evidence. Signed actor-bound review, reason and cash attestation precede
+atomic approval/disbursal; repeated confirmation is idempotent. Historical quotes
+must already have been recorded by the actual date; today's or retrospectively
+entered quotes cannot substitute. Ordinary same-day origination remains guarded.
+
+Rates now appends explicit daily unchanged-price confirmations with protected
+source-quote relationship and recording actor/time. Database guards preserve
+workspace boundaries, prices and append-only evidence; workspace locking serializes
+quote commands. Loan Overview/history now distinguish creator, approver, recorder,
+effective date, recording time and correction reasons. Both detail layouts share it.
+The workspace handbook and developer/staff docs explain the workflow and boundaries.
+
+Validation: 80 focused tests pass, including historical completion/correction,
+actor-bound review, authorization, quote evidence and concurrency, schema upgrade,
+restricted-role RLS cross-workspace rejection, ordinary origination/redisbursal,
+economic policies and handbook rendering. Migration drift check passes. Production
+delivery is pending. No real loan has been approved or disbursed for this feature. The affected draft retains its
+actual September 25 date for the user's own final review.
+
 ## Overnight draft date and quote guidance correction (2026-09-26)
 
 **Owner correction after deployment:** the affected loan's cash was actually paid

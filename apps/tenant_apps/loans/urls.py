@@ -12,6 +12,7 @@ from apps.tenant_apps.loans.web.borrower_search import loan_borrower_autocomplet
 app_name = "loans"
 
 urlpatterns = [
+    path("internal/<int:pk>/record-earlier-payout/", workflow.pawn_loan_record_earlier_payout, name="pawn_loan_record_earlier_payout"),
     path("guide/", journey.guide, name="loan_journey_guide"),
     path("releases/paper/new/", paper_closures.create, name="paper_closure_create"),
     path("releases/paper/guide/", paper_closures.guide, name="paper_closure_guide"),

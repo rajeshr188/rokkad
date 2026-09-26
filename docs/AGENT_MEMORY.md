@@ -14,22 +14,23 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
-Market-valued origination still requires today's loan/disbursal date and applicable
-same-day quotes. Review/approval checks the loan date before quote freshness, so
-adding today's quote to yesterday's draft produces actionable date guidance.
-Unpaid overnight drafts require an explicit editor date change and recalculation;
-never auto-advance dates or redraft an actual historical payout to pass this gate.
-The workspace handbook explains daily quote entry and appraisal-only/servicing
-exceptions. Keep appraisal suggestion's numeric data attribute unformatted even
-when visible amounts use Indian grouping.
+Ordinary market-valued origination requires today's loan/disbursal date and
+applicable same-day quotes. An authorized administrator can instead record an
+actual earlier native payout through a signed, reasoned review, preserving the
+actual date and historical evidence. Never auto-advance or automatically disburse
+a real loan during a software fix. Corrections retain reversal/approval history.
+The September 26 affected loan's actual date is September 25; its cash and ticket
+were handed over then. See the [earlier payout decision](adr/2026-09-26-earlier-payout-and-daily-price-confirmation.md).
 
-The September 26 affected-loan date repair was subsequently corrected by the
-owner: cash and the customer ticket were dated September 25, despite the loan
-being DRAFT in the application. Its actual date was restored with an audited
-update; no payout was recorded. Do not infer that a DRAFT means cash has not
-physically been paid. Historical completion remains blocked by the current rule.
-The owner is reconsidering daily quote repetition and actual-date handling;
-the discussion is recorded in FW-005, not approved policy implementation.
+Rates supports explicit daily unchanged-price confirmation: append a quote linked
+to the prior quote, with actual signed-in actor/time; never silently reuse old
+prices. Same-workspace DB guards and serialized quote commands preserve evidence.
+A broader quote-age window and missing-evidence historical admission remain future
+work. Loan detail distinguishes creator/approver/recorder and effective date;
+unknown actors must never be inferred from the viewer or workspace owner.
+Keep appraisal suggestion's numeric data attribute unformatted even when visible
+amounts use Indian grouping. Staff instructions live in the workspace handbook
+and [flow guide](flows/earlier-payout-and-daily-prices.md).
 
 Public positioning must explicitly identify Rokkad as loan management SaaS for
 pawn-lending businesses, alongside the borrower/debt/collateral story. The owner

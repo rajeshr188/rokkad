@@ -220,10 +220,12 @@ def create_pawn_loan_fee_policy(
 
 
 def resolve_pawn_loan_economic_policy(
-    *, workspace_id: int, license_id: int | None, as_of_date: date
+    *, workspace_id: int, license_id: int | None, as_of_date: date, recorded_before=None
 ) -> PawnLoanEconomicPolicy:
     _require_scope_ids(workspace_id, license_id)
     current = _current_rows(PawnLoanEconomicPolicy, workspace_id, as_of_date)
+    if recorded_before is not None:
+        current = current.filter(created_at__lt=recorded_before)
     policy = None
     if license_id is not None:
         policy = current.filter(license_id=license_id).order_by("-effective_from", "-revision", "-id").first()
@@ -243,12 +245,15 @@ def resolve_pawn_metal_interest_rate_policy(
     metal: CollateralMetal | str,
     as_of_date: date,
     series_id: int | None = None,
+    recorded_before=None,
 ) -> PawnMetalInterestRatePolicy:
     _require_scope_ids(workspace_id, license_id)
     metal_value = CollateralMetal(metal).value
     current = _current_rows(
         PawnMetalInterestRatePolicy, workspace_id, as_of_date
     ).filter(metal=metal_value)
+    if recorded_before is not None:
+        current = current.filter(created_at__lt=recorded_before)
     policy = None
     if series_id is not None:
         if not LoanSeries.objects.filter(pk=series_id, workspace_id=workspace_id, license_id=license_id).exists():
@@ -267,10 +272,12 @@ def resolve_pawn_metal_interest_rate_policy(
 
 
 def resolve_pawn_loan_fee_policies(
-    *, workspace_id: int, license_id: int | None, as_of_date: date
+    *, workspace_id: int, license_id: int | None, as_of_date: date, recorded_before=None
 ) -> tuple[PawnLoanFeePolicy, ...]:
     _require_scope_ids(workspace_id, license_id)
     current = _current_rows(PawnLoanFeePolicy, workspace_id, as_of_date)
+    if recorded_before is not None:
+        current = current.filter(created_at__lt=recorded_before)
     resolved = _latest_by_code(current.filter(license__isnull=True))
     if license_id is not None:
         resolved.update(_latest_by_code(current.filter(license_id=license_id)))

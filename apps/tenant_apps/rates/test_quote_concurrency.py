@@ -7,11 +7,12 @@ from django.core.exceptions import ValidationError
 from django.db import connections
 from django.test import TransactionTestCase
 from django.utils import timezone
+from datetime import timedelta
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context
 from apps.tenant_apps.rates.models import Rate, RateSource
-from apps.tenant_apps.rates.services import record_quote
+from apps.tenant_apps.rates.services import record_quote, confirm_quote_unchanged
 
 
 class QuoteConcurrencyTests(TransactionTestCase):
@@ -45,3 +46,27 @@ class QuoteConcurrencyTests(TransactionTestCase):
             self.assertEqual(Rate.objects.filter(supersedes=original).count(), 1)
             original.refresh_from_db()
             self.assertEqual(original.buying_rate, 10)
+
+    def test_two_daily_confirmations_create_one_quote(self):
+        suffix = uuid.uuid4().hex[:10]
+        actor = get_user_model().objects.create_user(username=f"daily-race-{suffix}")
+        workspace = Company.objects.create(name="Daily race", schema_name=f"daily-race-{suffix}", owner=actor, creator=actor)
+        Membership.objects.create(user=actor, company=workspace, role=Role.objects.get_or_create(name="Owner")[0])
+        with workspace_context(workspace.pk):
+            source = RateSource.objects.create(name="Market", location="Local")
+            original = record_quote(workspace=workspace, actor=actor, values=dict(rate_source=source,
+                metal="Gold", currency="INR", purity="24k", buying_rate=10, selling_rate=11,
+                effective_at=timezone.now() - timedelta(days=1)))
+        barrier = Barrier(2)
+        def confirm(_):
+            try:
+                barrier.wait(timeout=10)
+                with workspace_context(workspace.pk):
+                    return confirm_quote_unchanged(workspace=workspace, actor=actor, quote_id=original.pk).pk
+            finally:
+                connections.close_all()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(confirm, range(2)))
+        self.assertEqual(results[0], results[1])
+        with workspace_context(workspace.pk):
+            self.assertEqual(Rate.objects.filter(confirmed_from=original).count(), 1)

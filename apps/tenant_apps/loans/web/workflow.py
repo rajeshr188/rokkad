@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 
-from apps.tenant_apps.loans.access import loans_owner_required
+from apps.tenant_apps.loans.access import loans_owner_required, loans_setup_required
 from apps.tenant_apps.loans.forms import PawnDisbursalForm
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.services.loan_workflow import make_review, review_and_disburse, set_loan_workflow
@@ -65,3 +65,42 @@ def pawn_loan_review_disburse(request, pk):
         "available": available, "review_error": review_error,
         "can_edit_loan": request.loans_workspace_access.can("data.edit"),
     })
+
+
+class EarlierPayoutForm(forms.Form):
+    review_token = forms.CharField(widget=forms.HiddenInput)
+    reason = forms.CharField(label="Why is this payout being recorded or corrected now?", max_length=500,
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        help_text="Include a paper ticket or other reference where available.")
+    confirmed = forms.BooleanField(label="I confirm the money was already paid on the actual payout date shown, and these are the correct terms.",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
+
+
+@loans_setup_required
+@never_cache
+def pawn_loan_record_earlier_payout(request, pk):
+    from apps.tenant_apps.loans.services.loan_workflow import make_earlier_payout_review, record_earlier_payout
+    loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"),
+        pk=pk, workspace=request.loans_workspace)
+    form = EarlierPayoutForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            record_earlier_payout(loan.pk, actor=request.user, token=form.cleaned_data["review_token"],
+                reason=form.cleaned_data["reason"], confirmed=form.cleaned_data["confirmed"])
+        except (ValueError, ValidationError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Earlier payout recorded with its actual date. Your signed-in identity and today's recording time are in the loan history.")
+            return redirect("workspace_loans:pawn_loan_detail", workspace_slug=request.workspace.slug, pk=loan.pk)
+    economics, quotes, basis, error = None, {}, None, None
+    try:
+        economics, token, quotes, basis = make_earlier_payout_review(loan, actor=request.user)
+        if request.method != "POST":
+            form.initial["review_token"] = token
+    except (ValueError, ValidationError) as exc:
+        error = str(exc)
+    return render(request, "loans/pawn/earlier_payout.html", {"loan": loan, "form": form,
+        "economics": economics, "quotes": quotes, "basis_approval": basis,
+        "review_error": error, "available": error is None,
+        "is_earlier_payout_review": True,
+        "can_edit_loan": request.loans_workspace_access.can("data.edit")})

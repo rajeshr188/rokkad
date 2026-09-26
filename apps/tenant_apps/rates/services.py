@@ -2,6 +2,7 @@
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.orgs.access import resolve_workspace_access
 from apps.orgs.models import Company
@@ -16,7 +17,7 @@ QUOTE_FIELDS = ("metal", "currency", "purity", "buying_rate", "selling_rate", "e
 def _authorize(workspace, actor, permission):
     if current_workspace_id() != workspace.pk:
         raise PermissionDenied("Quote changes require the active Workspace.")
-    current = Company.all_objects.get(pk=workspace.pk)
+    current = Company.all_objects.select_for_update().get(pk=workspace.pk)
     resolve_workspace_access(actor=actor, workspace=current).require(permission)
     from apps.subscriptions.access_policy import require_business_write
     require_business_write(current)
@@ -55,5 +56,34 @@ def withdraw_quote(*, workspace, actor, quote_id, reason):
                  supersedes=previous, is_withdrawal=True, reason=reason.strip(),
                  **{name: getattr(previous, name) for name in QUOTE_FIELDS})
     quote.full_clean(exclude=("buying_rate", "selling_rate", "purity", "source_snapshot"))
+    quote.save()
+    return quote
+
+
+@transaction.atomic
+def confirm_quote_unchanged(*, workspace, actor, quote_id):
+    """Append today's explicit affirmation. The Workspace lock serializes writes."""
+    from .facade import get_latest_commodity_valuation_rate
+    _authorize(workspace, actor, "data.create")
+    try:
+        original = Rate.objects.get(workspace=workspace, pk=quote_id)
+    except Rate.DoesNotExist as exc:
+        raise ValidationError("Select a quote in this Workspace.") from exc
+    if original.metal not in ("Gold", "Silver") or original.currency != "INR" or original.purity != "24k":
+        raise ValidationError("Daily loan-price confirmation requires an INR pure gold or silver quote.")
+    now = timezone.now()
+    today = timezone.localdate(now)
+    current = get_latest_commodity_valuation_rate(commodity_code=original.metal.upper(), as_of=now).rate
+    if current and timezone.localdate(current.effective_at) == today:
+        if current.pk == original.pk or current.confirmed_from_id == original.pk:
+            return current
+    if current is None or current.pk != original.pk:
+        raise ValidationError("The applicable quote changed. Reload Rates and review its latest price.")
+    if timezone.localdate(original.effective_at) >= today:
+        raise ValidationError("Only an earlier applicable quote can be confirmed for today.")
+    quote = Rate(workspace=workspace, rate_source=original.rate_source, recorded_by=actor,
+        confirmed_from=original, effective_at=now, reason="Price confirmed unchanged for today.",
+        **{name: getattr(original, name) for name in QUOTE_FIELDS if name != "effective_at"})
+    quote.full_clean(exclude=("source_snapshot",))
     quote.save()
     return quote

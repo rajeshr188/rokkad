@@ -27,7 +27,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-002 | Razorpay setup and provider test-mode acceptance | Shelved at owner request; required before real paid onboarding | Owner starts Razorpay setup and explicitly resumes provider testing | Billing implementation and mocked tests complete; no provider setup or end-to-end rehearsal |
 | FW-003 | Formal lender-specific NPA classification | Unscheduled design review; no implementation approval | Intended lender type needs regulatory NPA reporting | Existing per-loan operational DPD and collateral-risk classifications documented |
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
-| FW-005 | Historical market-valued loan entry | Unscheduled policy review | Owner needs backdated origination or a historical Loans import contract | Current-day quote rule implemented; historical eligibility and exceptions remain undesigned |
+| FW-005 | Broader historical loan admission and quote-age policy | Partial scope implemented; remaining work unscheduled | Missing historical evidence or a guided import contract is needed | Native earlier payouts and explicit daily confirmations are implemented; wider exceptions remain deferred |
 | FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
 | FW-007 | Guided customer-facing legacy migration | Recorded at owner request; future work, unscheduled | Owner selects self-service migration onboarding for delivery | Customer spreadsheets and prepared loan imports work; source-specific loan preparation still requires an operator |
 | FW-008 | Servicing-only subscription restriction | Deferred beyond the pre-cutover continuity increment | Owner selects a collections-only stage after read-only/grace acceptance | Full access, seven-day grace, read-only and audited administrator decisions implemented; action-level servicing exceptions undesigned |
@@ -309,38 +309,21 @@ history reads. Assess those separately when capacity work resumes.
 
 ## FW-005: Historical market-valued loan entry
 
-**Captured:** 2026-09-12. **Priority/date:** unscheduled; no exception workflow is approved.
+**Captured:** 2026-09-12. **Updated:** 2026-09-26.
 
-The owner chose same-day quotes at approval. The first implementation uses today's
-loan/disbursal dates for methods that consume Rates, as the recommended implementation
-assumption. Appraisal-only date behavior is unchanged. A separate owner preference
-about historical entry has not been confirmed.
+The owner approved native earlier-payout/correction recording and explicit daily
+unchanged-price confirmations. Implemented scope is documented in the
+[decision](../adr/2026-09-26-earlier-payout-and-daily-price-confirmation.md) and
+[staff flow](../flows/earlier-payout-and-daily-prices.md); deployment evidence is
+in Status. This preserves an actual previous-day payout date instead of moving it
+to pass the ordinary current-day gate.
 
-**September 26 operating case:** the owner reported a native loan whose money
-and printed ticket were handed over the previous day, but which was returned to
-draft while exploring corrections. A prior description as unpaid was explicitly
-corrected; the actual loan date was restored. The current same-day gate blocks
-finishing this record. This is also a native correction/late-recording concern,
-not solely bulk legacy migration. Never change the actual date to pass the gate.
-
-The owner questioned mandatory new daily quotes when the price is unchanged.
-Discussion proposal, not approved implementation: separate transaction date from
-recording/approval timestamp; preserve original quote/approval evidence for
-corrections; define authorized historical completion with reason and provenance;
-and distinguish price age from explicit review of an unchanged price. A short
-workspace quote-age policy or audited "confirm unchanged" action could reduce
-re-entry while preventing indefinite silent reuse. Agree the age/exception rules
-before implementing, and retain recalculation review, LTV checks, immutable
-evidence and no duplicate disbursal. Today's price must not silently reprice an
-actual previous-day loan.
-
-Before enabling backdated market origination, define the business date versus
-actual approval/disbursal time, historical quote applicability/knowledge, evidence
-provenance, permissions and any exceptional review. Do not silently use today's
-quote for historical economics or add a generic owner bypass. Coordinate with the
-historical Loans import contract when that work is selected. Existing active/closed
-loans and their immutable history are unaffected. See the
-[origination decision](../adr/2026-09-12-origination-quote-freshness.md).
+Remaining work is unscheduled: guided historical admission when contemporaneous
+policy/quote evidence is missing, authorized external evidence review, and any
+configurable multi-day quote-age allowance. These need explicit business rules;
+the current implementation provides no generic bypass or silent price carryover.
+Coordinate broader historical/Excel onboarding with FW-007. Active/closed history
+must remain immutable and corrections must not duplicate cash or principal.
 
 
 ## FW-006: Party bundle history progress filter

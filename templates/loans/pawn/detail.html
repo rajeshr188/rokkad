@@ -14,6 +14,7 @@
 {% include "loans/pawn/_detail_header.html" %}
 <p class="small" data-loan-block="overview"><a href="{% url 'workspace_loans:loan_journey_guide' request.workspace.slug %}">Loan journey &amp; staff guide</a></p>
 {% include "loans/pawn/_draft_split_discovery.html" %}
+{% include "loans/pawn/_recorded_by.html" %}
 
 {% if can_preview_imported_ticket %}
 <section class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4" aria-labelledby="imported-ticket-title" data-loan-block="print">
@@ -146,7 +147,7 @@
 
 </div>
 <div data-loan-block="history">
-<h2 class="h5">Audit trail</h2><div class="card mb-4"><ul class="list-group list-group-flush">{% for event in loan.change_log.all %}<li class="list-group-item"><strong>{{ event.get_event_kind_display }}</strong><div class="small text-muted">{{ event.created_at }}{% if event.actor %} by {{ event.actor }}{% endif %}</div></li>{% endfor %}</ul></div>
+<h2 class="h5">Audit trail</h2><div class="card mb-4"><ul class="list-group list-group-flush">{% for event in loan.change_log.all %}<li class="list-group-item"><strong>{{ event.get_event_kind_display }}</strong><div class="small text-muted">{{ event.created_at|date:"d/m/Y, H:i T" }} ? {{ event.actor|actor_label }}{% if event.reason %}<div>{{ event.reason }}</div>{% endif %}</div></li>{% endfor %}</ul></div>
 
 </div>
 <div data-loan-block="documents">
@@ -159,7 +160,7 @@
   <li class="list-group-item d-flex justify-content-between gap-3">
     <div>
       <strong>{{ row.event.get_event_kind_display }}</strong>
-      <div class="small text-muted">Effective {{ row.event.effective_date }} &middot; Event #{{ row.event.pk }}</div>
+      <div class="small text-muted">Effective {{ row.event.effective_date|date:"d/m/Y" }} &middot; Event #{{ row.event.pk }}</div><div class="small text-muted">Recorded by {{ row.event.created_by|actor_label }} ? {{ row.event.created_at|date:"d/m/Y, H:i T" }}</div>
       {% if row.reversed_event %}<div class="small text-warning">Corrected by compensating event #{{ row.reversed_event.pk }}. Original evidence retained.</div>
       {% elif row.event.event_kind == 'REVERSAL' %}<div class="small text-warning">Compensates event #{{ row.event.reversal_of_id }} &middot; reason: {{ row.event.payload.reversal.reason }}</div>
       {% elif row.reversal_blocker and can_administer %}<div class="small text-muted">{{ row.reversal_blocker }}</div>{% endif %}
