@@ -316,6 +316,24 @@ loan/disbursal dates for methods that consume Rates, as the recommended implemen
 assumption. Appraisal-only date behavior is unchanged. A separate owner preference
 about historical entry has not been confirmed.
 
+**September 26 operating case:** the owner reported a native loan whose money
+and printed ticket were handed over the previous day, but which was returned to
+draft while exploring corrections. A prior description as unpaid was explicitly
+corrected; the actual loan date was restored. The current same-day gate blocks
+finishing this record. This is also a native correction/late-recording concern,
+not solely bulk legacy migration. Never change the actual date to pass the gate.
+
+The owner questioned mandatory new daily quotes when the price is unchanged.
+Discussion proposal, not approved implementation: separate transaction date from
+recording/approval timestamp; preserve original quote/approval evidence for
+corrections; define authorized historical completion with reason and provenance;
+and distinguish price age from explicit review of an unchanged price. A short
+workspace quote-age policy or audited "confirm unchanged" action could reduce
+re-entry while preventing indefinite silent reuse. Agree the age/exception rules
+before implementing, and retain recalculation review, LTV checks, immutable
+evidence and no duplicate disbursal. Today's price must not silently reprice an
+actual previous-day loan.
+
 Before enabling backdated market origination, define the business date versus
 actual approval/disbursal time, historical quote applicability/knowledge, evidence
 provenance, permissions and any exceptional review. Do not silently use today's

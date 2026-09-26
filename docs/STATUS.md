@@ -14,6 +14,19 @@ backups remain on the server.
 
 ## Overnight draft date and quote guidance correction (2026-09-26)
 
+**Owner correction after deployment:** the affected loan's cash was actually paid
+and its printed ticket handed over on September 25. This supersedes the earlier
+unpaid-draft statement below. The owner explicitly requested restoring September
+25, which was applied through the audited draft service after a backup and
+rollback-only preview. Principal, interest, borrower, tenure, photos, issued
+documents, approval history and counters were preserved. No disbursal event was
+created. The loan remains DRAFT in the application and the historical review
+gate still blocks completion; do not report it as ready to disburse or move its
+date forward again. Private restoration evidence is saved on the server.
+The owner reopened the daily-quote/date policy discussion; the proposed redesign
+is recorded under [FW-005](plans/future-work.md#fw-005-historical-market-valued-loan-entry).
+No freshness or historical-admission policy change has been approved or deployed.
+
 A previous-day draft selected prices at its saved loan date, then failed today's
 freshness check before reaching the loan-date guard. Adding a valid current-day
 quote could therefore never resolve the displayed instruction. Review/approval

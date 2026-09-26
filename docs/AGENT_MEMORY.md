@@ -23,6 +23,14 @@ The workspace handbook explains daily quote entry and appraisal-only/servicing
 exceptions. Keep appraisal suggestion's numeric data attribute unformatted even
 when visible amounts use Indian grouping.
 
+The September 26 affected-loan date repair was subsequently corrected by the
+owner: cash and the customer ticket were dated September 25, despite the loan
+being DRAFT in the application. Its actual date was restored with an audited
+update; no payout was recorded. Do not infer that a DRAFT means cash has not
+physically been paid. Historical completion remains blocked by the current rule.
+The owner is reconsidering daily quote repetition and actual-date handling;
+the discussion is recorded in FW-005, not approved policy implementation.
+
 Public positioning must explicitly identify Rokkad as loan management SaaS for
 pawn-lending businesses, alongside the borrower/debt/collateral story. The owner
 requested [three landing concepts](plans/landing-page-positioning.md) and will
