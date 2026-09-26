@@ -12,6 +12,29 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Overnight draft date and quote guidance correction (2026-09-26)
+
+A previous-day draft selected prices at its saved loan date, then failed today's
+freshness check before reaching the loan-date guard. Adding a valid current-day
+quote could therefore never resolve the displayed instruction. Review/approval
+now validates the date first, including the legacy unitemized path, and identifies
+both dates with an explicit draft-edit recovery. Preflight gives the same date
+guidance; the review links authorized editors directly to the draft. Dates are
+never advanced automatically and actual historical payouts must retain their date.
+
+The existing same-day quote/date contract remains unchanged. The workspace loan
+handbook now explains daily quotes per required metal, unchanged-price entry,
+overnight unpaid drafts, appraisal-only exemption and servicing independence.
+Also corrected appraisal suggestion's machine-readable numeric attribute to keep
+commas only in visible display, so applying an Indian-formatted amount remains a
+valid numeric input. No schema or calculation-policy change.
+
+Local validation: 38 focused origination, quote-readiness and redisbursal tests
+plus eight appraisal/handbook tests pass, including fresh quote plus previous-day
+draft, date-first legacy fallback, review recovery link, date preservation,
+quote changes and immutable history. Production rollout evidence follows after
+deployment verification.
+
 ## Main-domain cutover completed (2026-09-26)
 
 Owner-authorized DNS now sends root/www IPv4 and IPv6 to the new server.

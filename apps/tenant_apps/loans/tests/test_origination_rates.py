@@ -62,10 +62,60 @@ class OriginationRateTests(WorkspaceTestCase):
 
     def test_previous_day_quote_blocks_without_creating_evidence(self):
         with patch("django.utils.timezone.now", return_value=timezone.now() + timedelta(days=1)):
+            self.loan.loan_date = timezone.localdate()
+            self.loan.save(update_fields=["loan_date"])
             with self.assertRaisesMessage(ValueError, "same-day"):
                 self.approve()
         self.assertFalse(self.loan.approval_snapshots.exists())
         self.assertFalse(self.item.appraisals.exists())
+
+    def test_yesterdays_draft_reports_date_even_after_todays_quote_is_added(self):
+        original_date = self.loan.loan_date
+        next_day = timezone.now() + timedelta(days=1)
+        with patch("django.utils.timezone.now", return_value=next_day):
+            self.new_quote(effective_at=next_day, buying_rate=3200)
+            for review in (lambda: make_review(self.loan), self.approve):
+                with self.subTest(review=review), self.assertRaisesMessage(ValueError, "Loan date must be today") as error:
+                    review()
+                self.assertIn(original_date.strftime("%d/%m/%Y"), str(error.exception))
+                self.assertIn("Adding today's price does not change the loan date", str(error.exception))
+            self.loan.refresh_from_db()
+            self.assertEqual(self.loan.loan_date, original_date)
+            self.assertEqual(self.loan.state, "DRAFT")
+            self.assertFalse(self.loan.approval_snapshots.exists())
+            self.assertFalse(self.loan.loan_events.exists())
+            self.assertFalse(self.item.appraisals.exists())
+            # Explicitly resaving the date resolves the date gate and selects
+            # today's quote. The application never advances dates implicitly.
+            self.loan.loan_date = timezone.localdate()
+            self.loan.save(update_fields=["loan_date"])
+            self.assertTrue(make_review(self.loan)[1])
+            self.approve()
+
+    def test_unitemized_review_reports_date_before_quote_error(self):
+        from apps.tenant_apps.loans.services.pawn_lifecycle import approval_quote_evidence
+        from types import SimpleNamespace
+        from apps.tenant_apps.loans.domain import ValuationMethod
+        policy = SimpleNamespace(valuation_method=ValuationMethod.CALCULATED_METAL_VALUE)
+        with patch("django.utils.timezone.now", return_value=timezone.now() + timedelta(days=1)), patch(
+            "apps.tenant_apps.loans.services.pawn_lifecycle.resolve_policy", return_value=policy
+        ):
+            with self.assertRaisesMessage(ValueError, "Loan date must be today"):
+                approval_quote_evidence(self.loan, [self.item], None)
+
+    def test_review_page_explains_date_and_links_to_draft_without_confirmation(self):
+        from apps.tenant_apps.loans.web.workflow import pawn_loan_review_disburse
+        from django.urls import reverse
+        self.tenant.loan_workflow = "SIMPLE"
+        self.tenant.save(update_fields=["loan_workflow"])
+        request = RequestFactory().get("/")
+        request.user, request.workspace = self.actor, self.tenant
+        with patch("django.utils.timezone.now", return_value=timezone.now() + timedelta(days=1)):
+            response = pawn_loan_review_disburse(request, self.loan.pk)
+        self.assertContains(response, "Loan date must be today")
+        self.assertContains(response, "Edit draft")
+        self.assertContains(response, reverse("workspace_loans:pawn_loan_update", args=[self.tenant.slug, self.loan.pk]))
+        self.assertNotContains(response, 'type="submit" class="btn btn-primary"')
 
     def test_future_effective_quote_is_not_selected_today(self):
         future = self.new_quote(effective_at=timezone.now() + timedelta(hours=1), buying_rate=9000)

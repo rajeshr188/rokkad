@@ -60,4 +60,8 @@ def pawn_loan_review_disburse(request, pk):
     except (ValueError, ValidationError) as exc:
         available = False
         review_error = str(exc)
-    return render(request, "loans/pawn/review_disburse.html", {"loan": loan, "form": form, "economics": economics, "available": available, "review_error": review_error})
+    return render(request, "loans/pawn/review_disburse.html", {
+        "loan": loan, "form": form, "economics": economics,
+        "available": available, "review_error": review_error,
+        "can_edit_loan": request.loans_workspace_access.can("data.edit"),
+    })

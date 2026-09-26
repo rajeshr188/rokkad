@@ -55,13 +55,15 @@ def resolve_pawn_draft_economics(
     }
     collateral = tuple(collateral)
     evaluated_at = timezone.now()
+    if require_fresh_rates and needs_metal_value:
+        # Reject the date before looking up quotes at that date. Today's newly
+        # entered quote cannot repair a review that still selects yesterday.
+        require_current_origination_date(as_of_date, at=evaluated_at)
     quote_rows = get_origination_quote_rows(workspace_id=workspace_id, loan_date=as_of_date,
         metals=tuple(str(getattr(item.metal, "value", item.metal)).upper() for item in collateral),
         at=evaluated_at) if needs_metal_value else []
     if require_fresh_rates:
         require_fresh_quotes(quote_rows)
-        if needs_metal_value:
-            require_current_origination_date(as_of_date, at=evaluated_at)
     valuation_rates = {row["metal"]: row["rate"].buying_rate if row["usable"] else None for row in quote_rows}
     rate_policies = []
     tranches = []

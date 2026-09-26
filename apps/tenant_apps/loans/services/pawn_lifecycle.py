@@ -275,10 +275,10 @@ def approval_quote_evidence(loan, collateral, resolved):
     at = resolved.evaluated_at if resolved else timezone.now()
     quotes = resolved.valuation_quotes if resolved else {}
     if resolved is None and requires_quotes(method):
+        require_current_origination_date(loan.loan_date, at=at)
         rows = get_origination_quote_rows(workspace_id=loan.workspace_id,
             loan_date=loan.loan_date, metals=tuple(item.metal for item in collateral), at=at)
         require_fresh_quotes(rows)
-        require_current_origination_date(loan.loan_date, at=at)
         quotes = {row["metal"]: row["evidence"] for row in rows}
     return {"rule": RULE, "valuation_method": str(method),
         "loan_date": loan.loan_date.isoformat(), "evaluated_at": at.isoformat(),

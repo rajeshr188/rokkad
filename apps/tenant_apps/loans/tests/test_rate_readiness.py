@@ -132,6 +132,20 @@ class RateReadinessTests(WorkspaceTestCase):
         self.assertContains(response, 'data-ready="true"')
         self.assertContains(response, "approval needs today's loan date and quotes")
 
+    @patch("apps.tenant_apps.loans.web.rate_readiness.resolve_pawn_loan_economic_policy")
+    def test_previous_day_draft_guidance_identifies_date_instead_of_requesting_more_quotes(self, policy):
+        policy.return_value = SimpleNamespace(valuation_method="CALCULATED_METAL_VALUE")
+        self.quote(effective_at=timezone.now() - timedelta(days=1))
+        self.quote()
+        yesterday = self.today - timedelta(days=1)
+        response = pawn_valuation_readiness(self.request(as_of=yesterday))
+        self.assertContains(response, 'data-ready="true"')
+        self.assertContains(response, "Loan date must be today")
+        self.assertContains(response, yesterday.strftime("%d/%m/%Y"))
+        self.assertNotContains(response, "add today's prices in Rates")
+        policy.return_value = SimpleNamespace(valuation_method="LATEST_APPRAISAL")
+        self.assertNotContains(pawn_valuation_readiness(self.request(as_of=yesterday)), "Loan date must be today")
+
 
 class MissingValuationInputTests(SimpleTestCase):
     def test_error_names_only_missing_inputs_and_targets_the_collateral_row(self):

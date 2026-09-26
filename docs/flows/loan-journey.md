@@ -80,6 +80,20 @@ interest are distinct amounts.
 
 ## 3. Draft, approve, print and disburse
 
+Calculated-metal and lower-of valuation require positive INR pure-metal buying
+quotes effective today in the same Workspace, for each consumed metal. A price
+need not change numerically: record a new quote effective today when confirming
+an unchanged price. Appraisal-only policy does not impose this quote requirement;
+repayments/releases do not acquire a daily Rates gate. Monitoring freshness is a
+separate policy. A same-day quote replaced before disbursal requires another review.
+
+An unpaid draft prepared yesterday retains yesterday's loan date until an editor
+explicitly changes and saves it. To lend today, correct that date and review the
+recalculated terms. Adding today's rate alone cannot fix a prior-date draft.
+Review validates the date before quote freshness and identifies both dates in
+DD/MM/YYYY. Never move an actual historical payout date just to pass approval;
+historical disbursal requires a separate admission workflow.
+
 Draft split moves whole rows into a new draft; it does not divide a row's piece
 quantity, duplicate photographs, or perform a partial release. Both proposed
 loans are validated. A fingerprint rejects a stale confirmation. Creation,

@@ -9,6 +9,7 @@ from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.loans.domain import ValuationMethod
 from apps.tenant_apps.loans.models import LoanSeries
 from apps.tenant_apps.loans.selectors.rate_readiness import get_metal_rate_readiness
+from apps.tenant_apps.loans.selectors.origination_rates import require_current_origination_date
 from apps.tenant_apps.loans.services.economic_policies import resolve_pawn_loan_economic_policy, resolve_pawn_metal_interest_rate_policy
 
 
@@ -50,6 +51,11 @@ def pawn_valuation_readiness(request):
             context["message"] = "A calculation or monthly interest policy is missing for this series and loan date. Review Economic Setup."
         else:
             needs_rates = policy.valuation_method != ValuationMethod.LATEST_APPRAISAL.value
+            if needs_rates:
+                try:
+                    require_current_origination_date(values["as_of"])
+                except ValueError as exc:
+                    context["date_error"] = str(exc)
             rows = get_metal_rate_readiness(
                 workspace=request.loans_workspace, as_of_date=values["as_of"], metals=values["metals"],
             ) if needs_rates else []

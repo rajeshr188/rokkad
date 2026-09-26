@@ -16,9 +16,10 @@
  <div class="card-body">
  <h2 class="h5" id="origination-review-title">{% translate "Check before continuing" %}</h2>
  <dl class="row"><dt class="col-sm-4">{% translate "Customer" %}</dt><dd class="col-sm-8">{{ loan.borrower.display_name }} &middot; {{ loan.borrower.party_code }}</dd>
- <dt class="col-sm-4">{% translate "Loan date" %}</dt><dd class="col-sm-8">{{ loan.loan_date }}</dd>
+ <dt class="col-sm-4">{% translate "Loan date" %}</dt><dd class="col-sm-8">{{ loan.loan_date|date:"d/m/Y" }}</dd>
  <dt class="col-sm-4">{% translate "Tenure" %}</dt><dd class="col-sm-8">{{ loan.tenure_months }} {% translate "months" %}</dd></dl>
  {% if review_error %}<div class="alert alert-warning" role="status"><strong>{% translate "Review needs attention" %}</strong><p class="mb-0">{{ review_error }}</p></div>
+ {% if loan.state == 'DRAFT' and can_edit_loan %}<a class="btn btn-outline-primary mb-3" href="{% url 'workspace_loans:pawn_loan_update' request.workspace.slug loan.pk %}">{% translate "Edit draft" %}</a>{% endif %}
  {% else %}{% partial amounts %}{% endif %}
  {% if loan.state == 'APPROVED' %}<p class="small mb-0">{% translate "These amounts come from the saved approval. Confirmation rechecks whether the loan can be disbursed." %}</p>
  {% else %}<p class="small mb-0">{% translate "This is a current preview. Approval checks the latest terms, collateral evidence and required rates again." %}</p>{% endif %}

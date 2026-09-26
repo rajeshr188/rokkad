@@ -1,5 +1,5 @@
 {% load loans_display %}
-<div data-appraisal-result data-request-key="{{ request_key }}"{% if value %} data-value="{{ value|indian_money }}"{% endif %}>
+<div data-appraisal-result data-request-key="{{ request_key }}"{% if value %} data-value="{{ value }}"{% endif %}>
 {% if value %}
   <span>Suggested appraisal: ₹{{ value|indian_money }}. Net weight × purity percentage × buying rate (₹{{ rate.buying_rate|indian_money }}/g; rate dated {{ rate.effective_at|date:"d/m/Y" }}).</span>
   <button type="button" class="btn btn-sm btn-link" data-apply-appraisal>Use suggestion</button>

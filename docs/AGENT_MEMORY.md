@@ -14,6 +14,15 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+Market-valued origination still requires today's loan/disbursal date and applicable
+same-day quotes. Review/approval checks the loan date before quote freshness, so
+adding today's quote to yesterday's draft produces actionable date guidance.
+Unpaid overnight drafts require an explicit editor date change and recalculation;
+never auto-advance dates or redraft an actual historical payout to pass this gate.
+The workspace handbook explains daily quote entry and appraisal-only/servicing
+exceptions. Keep appraisal suggestion's numeric data attribute unformatted even
+when visible amounts use Indian grouping.
+
 Public positioning must explicitly identify Rokkad as loan management SaaS for
 pawn-lending businesses, alongside the borrower/debt/collateral story. The owner
 requested [three landing concepts](plans/landing-page-positioning.md) and will

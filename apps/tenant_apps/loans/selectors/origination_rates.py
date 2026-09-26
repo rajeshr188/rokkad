@@ -68,10 +68,16 @@ def require_fresh_quotes(rows):
 
 
 def require_current_origination_date(value, *, label="Loan", at=None):
-    if value != timezone.localdate(at or timezone.now()):
+    today = timezone.localdate(at or timezone.now())
+    if value != today:
         raise ValueError(
-            f"{label} date must be today when using metal quotes. "
-            "Return to the draft and review today's terms; historical entry needs a separate workflow."
+            f"{label} date must be today ({today:%d/%m/%Y}) when using metal quotes; "
+            f"the selected date is {value:%d/%m/%Y}. "
+            "Adding today's price does not change the loan date. "
+            "If the money is being handed over today, edit the draft's loan date, "
+            "save it and review the recalculated terms. If the money was already "
+            "handed over on the original date, keep that date and contact your "
+            "administrator; historical disbursal needs a separate workflow."
         )
 
 
