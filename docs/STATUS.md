@@ -12,6 +12,28 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Duplicate new-draft submission investigation (2026-09-26)
+
+Read-only production inspection of the reported six JSK records found identical
+borrower/terms/photo evidence created by the same staff user within four seconds.
+Five remain DRAFT; the sixth was approved, had a document issued and was later
+CANCELLED. None has a recorded financial event. This strongly supports repeated
+new-form submission; database history alone cannot identify individual clicks.
+
+The new-draft endpoint allocates a new loan and number on each successful POST;
+it has no durable submission identity. The browser price-preflight guard only
+covers its asynchronous quote check, not the subsequent save request. Updating
+an existing draft uses its loan ID and retains its number. Preview does not
+create a loan. Recommended next fix: server-enforced idempotency for a new-form
+submission, plus a visible saving state and repeat-submit guard, with concurrent
+request/retry tests. Do not deduplicate by borrower/amount alone: separate genuine
+loans can have identical terms.
+
+Existing cleanup is reasoned cancellation, not operational hard deletion or
+number reuse. Determine whether any intended draft should be retained before
+cancelling the unwanted records. No loans, documents, numbers, code or runtime
+configuration were changed by this investigation.
+
 ## Earlier payout, daily quote confirmation and actor attribution (2026-09-26)
 
 Owner-approved implementation adds a separate administrator-reviewed native earlier
