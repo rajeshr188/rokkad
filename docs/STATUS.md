@@ -31,9 +31,20 @@ The workspace handbook and developer/staff docs explain the workflow and boundar
 Validation: 80 focused tests pass, including historical completion/correction,
 actor-bound review, authorization, quote evidence and concurrency, schema upgrade,
 restricted-role RLS cross-workspace rejection, ordinary origination/redisbursal,
-economic policies and handbook rendering. Migration drift check passes. Production
-delivery is pending. No real loan has been approved or disbursed for this feature. The affected draft retains its
-actual September 25 date for the user's own final review.
+economic policies and handbook rendering. Migration drift check passes.
+
+Deployed application `100222ba` after server-only backup and owner-only Rates 0004
+migration. Candidate and deployed restricted-runtime checks passed for all three
+workspaces' details, Rates and handbook. HTTPS and runtime startup passed; proxy,
+settings and static assets were preserved. The initial smoke-test script used an
+incorrect Lakshmi slug; correcting the script resolved it before activation.
+
+The affected JSK draft's earlier-payout review is available with its actual
+September 25 date and original approval/quote. No real loan was approved or
+disbursed and no price confirmation was recorded by deployment. Read-only checks
+verified loan, photo, approval, event, schedule, document, sequence and quote
+evidence unchanged. Before/after backups and private delivery evidence remain
+on the server. The user must review and confirm the actual payout themselves.
 
 ## Overnight draft date and quote guidance correction (2026-09-26)
 
