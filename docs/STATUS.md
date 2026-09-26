@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-09-26
 tags: [status, architecture]
 ---
 
@@ -11,6 +11,46 @@ Entries are dated delivery checkpoints, newest first. Earlier images, counters,
 access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
+
+## Main-domain cutover completed (2026-09-26)
+
+Owner-authorized DNS now sends root/www IPv4 and IPv6 to the new server.
+`https://rokkad.com` serves the existing production database and application
+`67be05b5`; www and rehearsal GET/HEAD requests redirect there with paths intact.
+Stale rehearsal form submissions receive an explicit 409 and are not replayed
+across hostnames. No import, schema change, financial posting, counter reset or
+application rebuild occurred. The landing mockup choice remains pending.
+
+`https://legacy.rokkad.com` proxies through the new edge to the pinned old server
+over verified HTTPS. The old code/configuration/services and business records were
+not modified, and editing remains available as requested; the owner/staff must
+continue enforcing the old-system write pause. The explicitly approved legacy
+Google callback was saved without changing credentials or existing callbacks.
+Actual Google sign-ins returned to the old JCL dashboard at legacy and the new
+JCL dashboard at root. Both systems keep separate host-only sessions.
+
+All five authoritative DNS servers returned the new root addresses. Server HTTPS
+checks passed for root, www, rehearsal and legacy; main IPv6 passed separately.
+Before/after restricted-runtime checks passed for JCL, JSK and Lakshmi loan
+forms/list/detail/guide pages, policy settings and financial fingerprints, with
+test session writes rolled back. Canonical Site/host/CSRF settings were updated;
+mail/MX/TXT/NS records were preserved. Browser DNS cached the old site briefly
+before naturally resolving the new endpoint; interactive sign-in then passed.
+
+Private evidence: `domain-cutover-20260926/activation.json`, `check-before.json`,
+`check-after.json`, validation logs and pre-change settings/proxy snapshots.
+Post-switch server-only archive:
+`backups/operational/production-20260926T012400Z.dump` (55,718,136 bytes), SHA-256
+`49956e1fecbf3e9a8b2376ca9e3b32c9b2b0bf8bf5af0e1d82f80243beac2b06`;
+archive catalogue checked. Hourly backups remain enabled.
+
+The untouched old Certbot timer uses nginx and its upstream certificate expires
+December 2. The new edge forwards root/www HTTP ACME challenge paths to preserve
+that renewal route; a real old-server renewal was not forced. Observe successful
+renewal before expiry. Backup retention/off-server recovery remain outstanding.
+See the [cutover runbook](implementation/linode-production-cutover.md) for routing,
+certificate ownership and recovery constraints. Never restore an old snapshot or
+route new financial work back to legacy as a rollback.
 
 ## SaaS landing-page design review (2026-09-25)
 

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-09-26
 tags: [agents, context, architecture]
 ---
 
@@ -110,14 +110,28 @@ invitation or membership; do not fabricate a Google subject or treat an old loca
 email verification as satisfying this explicit condition. No further permission
 question is needed for the approved conditional scope once identity is verified.
 
+On September 26 the owner authorized the main-domain switch. `rokkad.com` now
+routes to the same production database previously used at the temporary hostname;
+`www` and rehearsal GET/HEAD requests redirect to the main domain; stale rehearsal
+submissions are rejected with 409 rather than replayed. Main-domain Google sign-in
+was verified against the new JCL dashboard. `legacy.rokkad.com` is a verified-TLS proxy
+through the new edge to the pinned old server, with the legacy Host header.
+The owner explicitly prohibited old-server changes and retained editing there;
+staff must enforce the no-new-entries rule. No old application/configuration/service
+changes were made. Legacy Google callback was explicitly approved and actual
+owner login reached its JCL dashboard. The new edge forwards root/www HTTP ACME
+challenge paths to preserve the existing old Certbot nginx renewal route;
+actual renewal remains to be observed before the old certificate's December 2
+expiry. See the [cutover runbook](implementation/linode-production-cutover.md).
+
 On September 25 the owner chose real retained business operations at
 `rehearsal.rokkad.com` for one or two days before changing the live domain, and
 reconfirmed no old-system changes since the September 24 23:01 backup. This is
 production on a temporary hostname, not disposable practice. That hostname now
 serves `rokkad_production_20260924` (current release recorded in Status); the older practice web is stopped
-and its database retained. Preserve all new transactions during the later domain
-change; never reimport the old snapshot over them. Keep old services and live-domain
-DNS unchanged, with an operational staff write pause. Original rehearsal bookmarks
+and its database retained. Preserve all new transactions across domain changes;
+never reimport the old snapshot over them. The September 26 domain move supersedes
+the earlier DNS hold; keep old services unchanged with an operational staff write pause. Original rehearsal bookmarks
 using `rehearsal-jcl`/`rehearsal-jsk` are obsolete; production slugs are `jcl`, `jsk`
 and `lakshmipawnbroker`. The owner-approved temporary Google origin/callback is
 saved alongside both existing live callbacks. Initial Google sign-in as

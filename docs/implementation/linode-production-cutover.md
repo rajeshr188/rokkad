@@ -1,13 +1,71 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-09-26
 tags: [migration, cutover, deployment, linode, r2]
 ---
 
 # Three-branch production cutover
 
-## Current application and recovery checkpoint
+## Main-domain activation (September 26)
+
+The owner authorized the domain move after operating real retained transactions
+on the temporary hostname. `rokkad.com` and `www.rokkad.com` now resolve to the
+new server over both IPv4 and IPv6. Mail, MX, TXT and nameservers are unchanged.
+The running application remains `67be05b5`, image
+`rokkad:rc-20260925-67be05b5`, with static volume
+`rokkad_production_static_67be05b5`. No rebuild, import, migration, financial
+correction or counter reset is part of this hostname change.
+
+The canonical Django Site is `rokkad.com`. Host/CSRF allowlists include the main,
+www and temporary names; session and CSRF cookies remain host-only and retain
+their production-specific names. Google main-domain callbacks were already
+authorized. The existing client now also accepts the explicitly approved
+`https://legacy.rokkad.com/accounts/google/login/callback/`.
+Actual main-domain Google sign-in opened the new JCL dashboard. The www hostname
+redirects to root. Rehearsal GET/HEAD requests redirect to root with paths and
+queries preserved; other methods receive 409 with instructions to reopen/re-enter
+at the new address, preventing automatic cross-host replay of stale forms.
+Users sign in again at the new hostname because sessions are host-only.
+
+`legacy.rokkad.com` points to the new HTTPS edge, which proxies to the pinned old
+server IP over verified TLS with SNI `rokkad.com` and request Host
+`legacy.rokkad.com`. This preserves old authenticated profile/workspace routing.
+Actual owner Google sign-in returned to the old JCL dashboard at the legacy
+hostname. No old-server code, configuration, service or business data was changed;
+ordinary login/session activity occurs when using the site. Editing remains
+available by owner request. Staff must continue making all new entries in the
+new system; there is no synchronization from legacy after the frozen import.
+
+The old upstream certificate currently expires **December 2, 2026**. Its existing
+`snap.certbot.renew.timer` and nginx authenticator remain untouched. On the new
+edge only, HTTP `/.well-known/acme-challenge/*` requests for root/www are forwarded
+to the old nginx HTTP listener; Caddy handles its own active challenges first.
+This preserves the old renewal validation route. A real legacy renewal has not
+been forced or proven, because doing so would modify the old server. Verify that
+the old certificate renews before expiry; never disable upstream TLS validation.
+
+Server-only evidence/configuration snapshots are in
+`domain-cutover-20260926/` under the production deployment directory. Before/after
+restricted-runtime checks passed for all three workspace loan pages, borrower
+forms, guides, policies and financial fingerprints, with test session writes
+rolled back. The pre-switch server-only archive is
+`backups/operational/production-20260926T011353Z.dump` (55,717,241 bytes; SHA-256
+`854c711420d9f0b0a1c752cb6fbdf98caf207d6a0ac53502c2dcc13f139e0aa0`).
+Post-switch archive: `backups/operational/production-20260926T012400Z.dump`
+(55,718,136 bytes; SHA-256
+`49956e1fecbf3e9a8b2376ca9e3b32c9b2b0bf8bf5af0e1d82f80243beac2b06`).
+Both archive catalogues were checked. The activation report confirms verified
+HTTPS for all four hostnames and the temporary-host unsafe-method rejection.
+
+Do not roll DNS back to the old writable application as an application recovery
+procedure: its dataset excludes real transactions already recorded in the new
+system. Recover/fix the new deployment against its existing database. Saved
+pre-change proxy/settings files are reference snapshots, not a database rollback.
+The old SSH endpoint remains its pinned IP with the original host-key alias,
+so changing public DNS does not remove operator access.
+
+## Earlier September 25 application and recovery checkpoint
 
 As verified on September 25, the application release is `713e0b64`, image
 `rokkad:rc-20260925-713e0b64`, with static volume
@@ -89,7 +147,7 @@ ticket copies and unchanged native reprints. Server evidence is
 `backups/operational/production-20260925T055540Z.dump`. The previous web/static
 configuration is saved as `production-compose.before-party-gallery.yml`.
 
-## Current operating decision: temporary production hostname
+## Earlier operating decision: temporary production hostname
 
 On September 25 the owner authorized real retained transactions at
 `rehearsal.rokkad.com` for one or two days before changing `rokkad.com`. The owner
