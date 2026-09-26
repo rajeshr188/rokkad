@@ -326,7 +326,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
         response = self.client.get(url)
         self.assertContains(response, "Confirm disbursal")
-        self.assertContains(response, "9800.00")
+        self.assertContains(response, "9,800")
         _, token = make_review(loan)
         data = {"effective_date": "2026-07-18", "review_token": token, "confirmed": "on"}
         with patch("apps.tenant_apps.loans.services.loan_workflow.disburse_pawn_loan", side_effect=ValueError("Payment record failed")):
@@ -341,14 +341,15 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(loan.approval_snapshots.count(), 1)
         self.assertEqual(loan.loan_events.filter(event_kind="DISBURSAL").count(), 1)
 
-    def test_disbursal_review_uses_frozen_amounts_and_empty_post_records_nothing(self):
+    @patch("django.utils.timezone.localdate", return_value=date(2026, 7, 18))
+    def test_disbursal_review_uses_frozen_amounts_and_empty_post_records_nothing(self, _today):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         detail_url = reverse("loans:pawn_loan_detail", args=[loan.pk])
         draft = self.client.get(detail_url)
         self.assertContains(draft, "Check before continuing")
-        self.assertContains(draft, "9800.00")
+        self.assertContains(draft, "9,800")
         self.assertNotContains(draft, 'target="_blank" rel="noopener" href="' + reverse("workspace_loans:pawn_loan_ticket_pdf", args=[self.tenant.slug, loan.pk]))
         self.assertEqual(loan.approval_snapshots.count(), 0)
         self.assertEqual(loan.loan_events.count(), 0)
@@ -356,7 +357,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         url = reverse("loans:pawn_loan_disburse", args=[loan.pk])
         with patch("apps.tenant_apps.loans.services.pawn_lifecycle.resolve_pawn_draft_economics", side_effect=AssertionError("Must read frozen approval")):
             response = self.client.get(url)
-        self.assertContains(response, "9800.00")
+        self.assertContains(response, "9,800")
         self.assertContains(response, "saved approval")
         self.assertIn("no-store", response.headers["Cache-Control"])
         self.assertContains(response, 'hx-history="false"')
@@ -869,7 +870,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
         self.assertContains(response, "django-select2")
 
-    def test_staff_can_create_view_and_correct_a_draft_only(self):
+    @patch("django.utils.timezone.localdate", return_value=date(2026, 7, 18))
+    def test_staff_can_create_view_and_correct_a_draft_only(self, _today):
         license, series = self._configured_setup()
         response = self.client.post(
             reverse("loans:pawn_loan_create"),
@@ -1092,8 +1094,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Economic preview")
-        self.assertContains(response, "10000.00")
-        self.assertContains(response, "9800.00")
+        self.assertContains(response, "10,000")
+        self.assertContains(response, "9,800")
         self.assertContains(response, "PL-A-00001")
         self.assertFalse(PawnLoan.objects.exists())
         sequence = LoanNumberSequence.objects.get(
@@ -1114,8 +1116,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(response, "2.000000%")
         self.assertContains(response, "4.000000%")
         self.assertContains(response, "Maximum at LTV")
-        self.assertContains(response, "260.00")
-        self.assertContains(response, "8740.00")
+        self.assertContains(response, ">260<")
+        self.assertContains(response, "8,740")
         self.assertFalse(PawnLoan.objects.exists())
 
     def test_ltv_failure_is_attached_to_offending_item_principal(self):
@@ -1373,6 +1375,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         original = PawnLoan.objects.values().get()
         original.pop("id")
+        original["creation_submission_id"] = None  # Independent non-browser fixtures.
         for index in range(23):
             party = Party.objects.create(display_name=f"Lookup borrower {index:02}", status="INACTIVE")
             PartyAddress.objects.create(party=party, address_type="HOME", line1=f"Home {index}", is_default=True)
@@ -1500,6 +1503,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         for index in range(2, 53):
             loan = copy.copy(original)
             loan.pk = None
+            loan.creation_submission_id = None
             loan.public_id = uuid.uuid4()
             loan.loan_number = f"PL-A-{index:05}"
             copies.append(loan)
@@ -1690,7 +1694,13 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_unknown_and_cross_workspace_loan_sources_are_not_exposed(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        # This fixture deliberately moves between workspaces. Browser-created
+        # loans now have an immutable workspace/submission identity.
+        from apps.tenant_apps.loans.services.pawn_drafts import create_pawn_draft_with_photos
+        def internal_submission(command, *, actor, token, photos):
+            return create_pawn_draft_with_photos(command, actor=actor, photos=photos), True
+        with patch("apps.tenant_apps.loans.web.pawn_draft_actions.submit_new_draft", side_effect=internal_submission):
+            self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
         item = loan.collateral_items.get()
         event = PawnLoanEvent.objects.create(
@@ -2397,7 +2407,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         return license, series
 
     def _payload(self, license, series):
+        from apps.tenant_apps.loans.services.draft_submissions import new_draft_submission
         return {
+            "submission_token": new_draft_submission(workspace=self.tenant, actor=self.owner),
             "borrower": self.party.pk,
             "series": series.pk,
             "product_version": self.product_version.pk,

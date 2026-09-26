@@ -541,6 +541,7 @@ class LoanNumberSequence(WorkspaceOwnedModel):
 
 
 class PawnLoan(models.Model):
+    creation_submission_id = models.UUIDField(null=True, blank=True, editable=False)
     # Current operational evidence; earlier attempts remain on the history FKs.
     policy_snapshot = models.ForeignKey(
         "loans.LoanPolicySnapshot", null=True, blank=True,
@@ -613,6 +614,8 @@ class PawnLoan(models.Model):
     class Meta:
         ordering = ("loan_date", "loan_number")
         constraints = [
+            models.UniqueConstraint(fields=("workspace", "creation_submission_id"),
+                condition=Q(creation_submission_id__isnull=False), name="loans_draft_submission_uniq"),
             models.UniqueConstraint(
                 fields=("workspace", "loan_number"),
                 name="loans_pawn_workspace_number_uniq",

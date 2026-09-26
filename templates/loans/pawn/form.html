@@ -14,7 +14,10 @@
 </div><p class="small text-body-secondary mb-0 mt-2">{% translate "Keep this tab open while completing missing information. Return here and search for the customer again." %}</p>
 </section>
 <div class="loan-workflow-grid"><div class="loan-workflow-main">
-<form method="post" enctype="multipart/form-data" novalidate data-valuation-preflight="{% url 'workspace_loans:pawn_valuation_readiness' request.workspace.slug %}">{% csrf_token %}
+<form method="post" enctype="multipart/form-data" novalidate data-draft-save-form data-valuation-preflight="{% url 'workspace_loans:pawn_valuation_readiness' request.workspace.slug %}">{% csrf_token %}
+  {% if not loan %}<input type="hidden" name="submission_token" value="{{ submission_token|default:'' }}">{% endif %}
+  {% if submission_reference_error %}<p class="alert alert-warning">Check the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" target="_blank" rel="noopener">loan list</a> for a recent save first. If no loan was saved, <a href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}">open a fresh New loan form</a>.</p>{% endif %}
+  <div class="alert alert-info" role="status" aria-live="polite" data-draft-save-status hidden></div>
   <div class="alert alert-info" tabindex="-1" data-rate-readiness-panel>
     <h2 class="h6">{% translate "Metal prices for this loan" %}</h2>
     <div data-rate-readiness-content role="status" aria-live="polite">Select a series, loan date and collateral metal to check prices. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates in another tab</a>.</div>
@@ -96,6 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
 <script src="{% static 'js/pawn-number-preview.js' %}"></script>
 <script src="{% static 'js/pawn-appraisal-suggestion.js' %}"></script>
 <script src="{% static 'js/pawn-rate-readiness.js' %}"></script>
+<script src="{% static 'js/pawn-draft-submit.js' %}"></script>
 </div>
 <script src="{% static 'js/form-errors.js' %}"></script>
 {% endblock %}

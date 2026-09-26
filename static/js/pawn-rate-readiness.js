@@ -87,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   new MutationObserver(() => check()).observe(rows, {childList: true});
   form.addEventListener('submit', async event => {
+    if (form.dataset.draftSubmitting === 'true') { event.preventDefault(); return; }
     if (allowSubmit) { allowSubmit = false; return; }
     event.preventDefault();
     if (submitting) return;

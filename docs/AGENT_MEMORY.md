@@ -14,6 +14,13 @@ are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMO
 
 ## Product and tenant foundation
 
+New loan browser forms carry a signed workspace/actor-bound submission identity,
+stored immutably on PawnLoan (Loans 0027). Concurrent/repeated submissions recover
+one saved loan and never apply changed form values; use Correct draft to edit.
+Preview/errors retain the identity; invalid references fail closed. Fresh forms
+allow genuine identical loans. Never recycle cancelled numbers or auto-cancel
+suspected duplicates. See the [submission decision](adr/2026-09-26-new-loan-submission-identity.md).
+
 Ordinary market-valued origination requires today's loan/disbursal date and
 applicable same-day quotes. An authorized administrator can instead record an
 actual earlier native payout through a signed, reasoned review, preserving the

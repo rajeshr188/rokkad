@@ -95,9 +95,10 @@ def create_pawn_draft_with_photos(
     *,
     photos: tuple[DraftCollateralPhotoInput, ...] = (),
     actor=None,
+    submission_id=None,
 ) -> PawnLoan:
     return _save_draft_with_photos(
-        lambda: create_pawn_draft(command, actor=actor),
+        lambda: create_pawn_draft(command, actor=actor, submission_id=submission_id),
         photos=photos,
         actor=actor,
     )
@@ -170,13 +171,13 @@ def _save_draft_with_photos(save_draft, *, photos, actor):
 
 
 @transaction.atomic
-def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None) -> PawnLoan:
+def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None, submission_id=None) -> PawnLoan:
     workspace_id = _require_active_workspace(command.workspace_id)
     require_workspace_action(Company.objects.get(pk=workspace_id), actor, "data.create")
-    return _create_pawn_draft(command, actor=actor)
+    return _create_pawn_draft(command, actor=actor, submission_id=submission_id)
 
 
-def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor) -> PawnLoan:
+def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor, submission_id=None) -> PawnLoan:
     """Internal draft construction inside an authorized atomic command."""
     workspace_id = _require_active_workspace(command.workspace_id)
     borrower = _active_party(command.borrower_id)
@@ -201,6 +202,7 @@ def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor) -> PawnLoan:
     )
     principal_amount, monthly_interest_rate = _aggregate_terms(command, resolved)
     loan = PawnLoan(
+        creation_submission_id=submission_id,
         workspace_id=workspace_id,
         license=license,
         license_revision=license_revision,

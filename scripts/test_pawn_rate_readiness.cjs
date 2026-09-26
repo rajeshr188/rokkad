@@ -15,8 +15,8 @@ function harness() {
   const content = node(), panel = node(), button = node(), form = node(), rows = node();
   const series = {value: '1'}, date = {value: '2026-09-11'}, metal = {value: 'GOLD'};
   const photograph = {files: [{name: 'collateral.jpg'}]};
-  const row = {querySelector: selector => selector.endsWith('DELETE"]') ? {checked: false} : metal};
-  rows.querySelectorAll = () => [row];
+  const row = {querySelector: selector => selector.endsWith('DELETE"]') ? {checked: false} : selector.endsWith('metal"]') ? metal : null};
+  rows.querySelectorAll = selector => selector === '[data-collateral-form]' ? [row] : [];
   content.querySelector = () => content.result;
   panel.querySelector = selector => selector.includes('content') ? content : button;
   form.querySelector = selector => ({
@@ -105,4 +105,15 @@ test('a failed request keeps the form in place and permits a later retry', async
   await h.complete(h.pending.shift(), true);
   await retry;
   assert.equal(h.form.submitted.length, 1);
+});
+
+test('a save already in flight cannot start another price check or submit', async () => {
+  const h = harness();
+  await h.complete(h.pending.shift(), true);
+  h.form.dataset.draftSubmitting = 'true';
+  let prevented = false;
+  await h.form.events.submit({preventDefault() { prevented = true; }});
+  assert.equal(prevented, true);
+  assert.equal(h.pending.length, 0);
+  assert.equal(h.form.submitted.length, 0);
 });

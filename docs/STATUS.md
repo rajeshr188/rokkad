@@ -12,6 +12,21 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## New-loan submission protection implementation (2026-09-26)
+
+Implemented the [durable form-identity decision](adr/2026-09-26-new-loan-submission-identity.md):
+workspace/actor-bound signed identity, one saved loan/number/photo set under
+concurrent or repeated submissions, early recovery after lost responses, clear
+no-changes-applied replay message, immutable database identity and browser Saving
+state. Preview/error retries retain the reference; ordinary draft corrections
+remain repeatable. The workspace handbook explains save, retry and correction.
+Existing reported JSK records are not cancelled or renumbered by this work.
+Validation: 91 Python tests passed across draft UI, submission identity/concurrency/
+populated migration and price readiness; 9 browser-event checks passed. Migration
+drift check reports no changes. Existing UI fixtures now use independent IDs when
+cloning loans, current Indian-money output and a fixed date for ordinary disbursal
+UI assertions. Production deployment evidence will follow this checkpoint.
+
 ## Duplicate new-draft submission investigation (2026-09-26)
 
 Read-only production inspection of the reported six JSK records found identical

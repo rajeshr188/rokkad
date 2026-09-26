@@ -21,12 +21,15 @@ from apps.tenant_apps.loans.services import (
     CollateralDraftInput, CreatePawnDraftCommand, DraftCollateralPhotoInput,
     NumberAllocationError, PawnCollateralMediaError, PawnDraftError,
     PawnLifecycleError, UpdatePawnDraftCommand, append_collateral_photo,
-    approve_pawn_loan, cancel_pawn_loan, create_pawn_draft_with_photos,
+    approve_pawn_loan, cancel_pawn_loan,
     preview_number, reopen_pawn_loan, resolve_pawn_draft_economics,
     update_pawn_draft_with_photos,
 )
 from apps.tenant_apps.loans.services.pawn_draft_split import (
     PawnDraftSplitError, preview_pawn_draft_split, split_pawn_draft,
+)
+from apps.tenant_apps.loans.services.draft_submissions import (
+    new_draft_submission, saved_draft_submission, submit_new_draft,
 )
 
 
@@ -43,6 +46,16 @@ def _pawn_loan_for_workspace(request, pk):
 @loans_action_required("data.create")
 @never_cache
 def pawn_loan_create(request):
+    token = request.POST.get("submission_token", "") if request.method == "POST" else None
+    token_error = None
+    if request.method == "POST":
+        try:
+            saved = saved_draft_submission(workspace=request.loans_workspace, actor=request.user, token=token)
+        except ValueError as exc:
+            token_error = str(exc)
+        else:
+            if saved is not None:
+                return _draft_submission_redirect(request, saved, created=False)
     readiness = get_pawn_draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
         return render(request, "loans/pawn/blocked.html", {
@@ -53,7 +66,7 @@ def pawn_loan_create(request):
     if request.method == "GET" and request.GET.get("party"):
         initial["borrower"] = request.GET["party"]
     form = PawnDraftForm(
-        request.POST or None,
+        request.POST if request.method == "POST" else None,
         workspace=request.loans_workspace,
         initial=initial,
     )
@@ -62,6 +75,10 @@ def pawn_loan_create(request):
         form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")}
     )
     economics_preview = None
+    if request.method == "GET":
+        token = new_draft_submission(workspace=request.loans_workspace, actor=request.user)
+    if token_error:
+        form.add_error(None, token_error)
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         command = _create_command(request.loans_workspace.pk, form, formset)
         try:
@@ -75,17 +92,17 @@ def pawn_loan_create(request):
                 )
                 loan = None
             else:
-                loan = create_pawn_draft_with_photos(
+                loan, created = submit_new_draft(
                     command,
                     photos=_draft_photo_inputs(formset),
                     actor=request.user,
+                    token=token,
                 )
         except (PawnDraftError, ValidationError, ValueError) as exc:
             _add_pawn_draft_error(form, formset, exc)
         else:
             if loan is not None:
-                messages.success(request, f"Draft {loan.loan_number} created.")
-                return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+                return _draft_submission_redirect(request, loan, created=created)
     return render(
         request,
         "loans/pawn/form.html",
@@ -93,11 +110,22 @@ def pawn_loan_create(request):
             "form": form,
             "formset": formset,
             "economics_preview": economics_preview,
+            "submission_token": token,
+            "submission_reference_error": token_error,
             **_pawn_number_preview_context(form),
             "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
     )
+
+
+def _draft_submission_redirect(request, loan, *, created):
+    if created:
+        messages.success(request, f"Draft {loan.loan_number} created. Use Correct draft to update this same loan.")
+    else:
+        messages.info(request, f"This form already saved loan {loan.loan_number} ({loan.get_state_display()}). "
+            "No changes were applied and no additional loan was created. Use Correct draft with edit access to change a saved draft.")
+    return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
 
 
 @loans_action_required("data.edit")

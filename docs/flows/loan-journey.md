@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-09-26
 tags: [loans, journey, product, operators, developers]
 ---
 
@@ -46,6 +46,16 @@ are not additional loan states. Custody has its own state and evidence.
 Cancellation and reversal are explicit actions. Ordinary operational loan deletion
 is not offered. An archived historical source claim is not a `PawnLoan` with a
 live receivable.
+
+Saving a New loan form shows **Saving...** and prevents repeated clicks. Repeating
+that same form submission recovers its original saved loan, including after a
+lost response; it does not create another number or apply changed values. Once
+saved, open **Correct draft** to make further edits, as often as needed while it
+remains a draft. A new form represents a separate intended loan. If a save's
+outcome is unclear, check Loans before opening another New loan form. Preview
+does not create a loan; correct validation errors and retry on the same form.
+Missing/invalid save references require a fresh form after checking recent loans.
+Unused drafts can be cancelled with a reason; numbers remain in history.
 
 ## 2. Prepare a business, identify a borrower, describe the pledge
 
