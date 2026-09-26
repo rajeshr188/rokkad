@@ -12,6 +12,22 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Guided unpaid-loan valuation review deployed (2026-09-26)
+
+Production runs `rokkad:rc-20260926-0f582472`. Startup and post-deployment checks
+passed with restricted runtime access and forced RLS. No migration or static
+asset change was required. The review route and staff handbook passed in all
+three workspaces; the available JSK approved loan was checked through comparison,
+detail and applicable disbursal discovery. JCL and Lakshmi had no approved loans
+at this checkpoint, so their route checks exercised the guarded unavailable state.
+
+Business fingerprints covering loans, approval snapshots, events, issued-document
+records and number sequences were unchanged during the rollback-only GET checks.
+No actual loan was reapproved, redated or disbursed during deployment. Runtime
+settings/proxy configuration remained unchanged. Verified before/after backups
+and private release evidence remain on the server. Source is committed locally;
+this rollout did not publish a GitHub push.
+
 ## Guided unpaid-loan valuation review implementation (2026-09-26)
 
 Implemented [Review updated valuation](adr/2026-09-26-unpaid-loan-valuation-review.md)
