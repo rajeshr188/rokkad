@@ -42,8 +42,11 @@ release. Adding live keys alone does not establish paying-pilot readiness.
 Paused production deployment completed at **14:55 IST**: verified backup, six
 billing migrations, separate static volume and pinned web image are in place.
 Billing/lending fingerprints and existing access are unchanged. Payments, new
-authorizations and sending remain disabled. Next: align the existing mail worker
-images while keeping dispatch paused, then complete launch acceptance. See the
+authorizations and sending remain disabled. Mail workers were aligned with the
+deployed image at **15:03 IST**, with feedback/recovery/health passing and active;
+dispatch remains paused with invitation-only limit one. Restricted runtime and
+unchanged mail attempts were verified at **15:05 IST**. Next: complete the remaining
+provider/commercial and live configuration acceptance. See the
 [deployment record](../implementation/billing-paused-release-20260928.md#deployment-result).
 
 Latest billing continuation: shared recurring services now accept matching live

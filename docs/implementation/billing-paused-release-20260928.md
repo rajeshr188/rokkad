@@ -56,9 +56,14 @@ Compose/release manifests and command logs in the same release directory. Automa
 code/static rollback was prepared but not needed. The old image/static volume and
 fresh backup are retained; no reverse migration or restore was performed.
 
-Next: align the mail worker images with this verified application release while
-leaving dispatch paused, then complete provider/commercial and live configuration
-acceptance before authorizing a bounded paying pilot.
+Follow-up completed at **15:03 IST**: all mail worker image references and the
+watchdog/operator command now use this verified release. Feedback/recovery/health
+passed and remain active; dispatch remains disabled, marker absent and sending false,
+with invitation-only limit one preserved. At **15:05 IST**, restricted runtime,
+unchanged attempt counts, clear queue/health and public HTTPS checks passed.
+See the [worker evidence and rollback procedure](platform-mail.md#worker-image-alignment-2026-09-28).
+Next: complete provider/commercial and live configuration acceptance before
+authorizing a bounded paying pilot.
 
 ## Exact candidate and rollback baseline
 

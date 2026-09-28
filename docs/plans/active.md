@@ -16,8 +16,9 @@ and APIs are verified. Credentials are protected outside the repository/OneDrive
 The paused production release `rokkad:billing-paused-4a131587ee80` is deployed as
 of **14:55 IST**. Its six billing migrations are applied; billing/lending fingerprints
 and access remain unchanged. Runtime/RLS, owner/public pages, static and backup
-checks pass. Billing and sending stay disabled; existing mail workers/timers are
-unchanged. Next: align worker images while dispatch remains paused, then complete
+checks pass. Mail worker images were aligned at **15:03 IST**; feedback/recovery/
+health and restricted runtime checks passed. Dispatch stays disabled and sending
+false, with invitation-only limit one preserved. Next: complete
 provider/commercial and live configuration acceptance. See the
 [deployment record](../implementation/billing-paused-release-20260928.md#deployment-result).
 

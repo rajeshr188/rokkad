@@ -8,6 +8,39 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Worker image alignment (2026-09-28)
+
+At **15:03 IST**, all dispatch/feedback/recovery service image references and the
+watchdog/operator command were updated to `rokkad:billing-paused-4a131587ee80`,
+image ID `sha256:33ed455872008db4b70c92f9eff9ea5572b6b3b47ab4c28fefe3813f109b0d48`.
+This is the same source/image as the deployed web release and includes the billing
+provider-mode guards. The historical invitation overlay below is superseded.
+
+The update changed only three service image references and the image in
+`watchdog.json`. Timers were briefly paused while existing invocations finished;
+no in-flight consumer was killed. Unit validation and supervised feedback,
+stale-claim recovery and health runs passed. Feedback/recovery/health timers remain
+enabled and active. Dispatch's absent-marker condition was exercised and skipped
+its command; the timer stays disabled, shared sending false, and
+`--send --limit 1 --invitations-only` remains unchanged.
+
+At **15:05 IST**, worker checks confirmed `rokkad_prod_runtime` without superuser
+or BYPASSRLS, provider mode disabled, checkout/recurring/sending false, six historical
+attempts and zero receipts. Queue outcomes remain two delivered, one bounced and
+one complaint; no due messages, source problems, truncation or health flags.
+The operator command passed; production web has zero restarts and HTTPS login 200.
+Credentials, Compose, production settings and existing alerts are unchanged.
+No email or payment was sent, and no schema or application source changed.
+
+Private evidence and original configuration copies are under
+`/root/rokkad-billing-release-20260928/mail-workers`: `alignment.json`,
+`final-verification.json`, queue/readiness logs and `*.before` files. For an image
+rollback, keep dispatch paused, stop only the monitoring timers, allow current
+services to finish, restore the three saved units and watchdog configuration,
+reload systemd, then verify and resume feedback/recovery/health. Preserve credentials,
+alerts and delivery evidence; do not reverse database migrations. Old worker images
+remain available. Broader dispatch and live billing still need launch acceptance.
+
 ## Monitored single-invitation delivery (2026-09-28)
 
 The owner selected admin@rokkad.com for one Viewer invitation to **Rokkad Invitation
@@ -54,7 +87,7 @@ acceptance. Google Workspace account billing continuity remains an owner depende
 
 ## Paused invitation worker and IAM cleanup (2026-09-28)
 
-The current production dispatch unit is installed but **paused**, using
+At this earlier checkpoint the production dispatch unit was installed but **paused**, using
 `rokkad:invitation-worker-20260928-31f6aa88dd72` and
 `manage.py dispatch_platform_mail --send --limit 1 --invitations-only`.
 This supersedes the earlier limit-20 installation below. The flag filters out all
@@ -383,8 +416,8 @@ because old inline invitation handling does not produce durable intent.
 
 ## Operator checks and stop-mail requests
 
-The worker-only operations image is `rokkad:mail-ops-20260926-1b55551552cd`.
-Web retains the preceding image. Host scripts and a root-private `watchdog.json`
+The current worker image is `rokkad:billing-paused-4a131587ee80`, matching web.
+Host scripts and a root-private `watchdog.json`
 are installed in `/home/rokkad/deploy/cutover-20260924/platform-mail-ops-20260926`.
 The JSON contains the exact restricted Docker worker invocation, not credentials.
 Only existing privileged SSH/deployment operators can invoke these commands;

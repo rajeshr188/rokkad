@@ -52,7 +52,18 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest FW-019 deployment: at 14:55 IST on 28 September,
+Latest FW-019 operations: at 15:03 IST on 28 September, all mail worker image
+references and watchdog/operator checks were aligned with the deployed
+`rokkad:billing-paused-4a131587ee80`. Feedback/recovery/health passed and stay
+enabled/active. Dispatch stays disabled, marker absent, shared sending false,
+with invitation-only limit one preserved. At 15:05 IST, restricted role and paused
+billing flags passed; attempts remain six, receipts zero, queue/health clear and
+web running with HTTPS login 200. Credentials/configuration and alerts are unchanged.
+Private rollback/evidence: `/root/rokkad-billing-release-20260928/mail-workers`.
+Next: remaining provider/commercial and live configuration acceptance; no paying
+pilot or general mail activation yet. See [mail operations](implementation/platform-mail.md).
+
+Previous FW-019 deployment: at 14:55 IST on 28 September,
 `rokkad:billing-paused-4a131587ee80` became the production web image with static
 volume `rokkad_production_static_billing_4a131587ee80`. Six subscriptions migrations
 (0012–0017) are applied; restricted runtime/grants/RLS/startup and owner/public page

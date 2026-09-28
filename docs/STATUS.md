@@ -12,6 +12,29 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Mail workers aligned with paused billing release (2026-09-28)
+
+At **15:03 IST**, dispatch, feedback, recovery and the watchdog/operator command
+were aligned with `rokkad:billing-paused-4a131587ee80`, the verified production web
+image. Only three service image references and the watchdog command image changed.
+Existing invocations finished before replacement; feedback/recovery/health schedules
+resumed enabled and active. Their supervised runs passed. Dispatch was explicitly
+skipped by its absent marker and retains `--limit 1 --invitations-only`; its timer
+remains disabled. Shared sending is false.
+
+At **15:05 IST**, restricted worker role `rokkad_prod_runtime` had neither superuser
+nor BYPASSRLS privileges. Provider mode remains disabled; checkout, recurring and
+sending are false. Six historical attempts, zero receipts and four delivery outcomes
+are unchanged; there are no due rows, queue flags or health alerts. The operator
+check passes. Web has zero restarts and HTTPS login returns 200. No email or payment
+was sent. Credentials, production Compose/settings and sticky alerts are unchanged.
+
+Private rollback copies, hashes and execution evidence are in
+`/root/rokkad-billing-release-20260928/mail-workers`. No application code or schema
+changed. Worker alignment is complete; next is the remaining provider/commercial
+and live configuration acceptance before an explicitly authorized paying pilot.
+See the [worker record](implementation/platform-mail.md#worker-image-alignment-2026-09-28).
+
 ## Paused billing release deployed (2026-09-28)
 
 At **14:55 IST**, the approved release `rokkad:billing-paused-4a131587ee80` replaced

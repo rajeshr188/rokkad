@@ -13,8 +13,9 @@ The full billing source at `4a131587ee80` was deployed at **14:55 IST**, after a
 verified backup and all six subscriptions migrations. Production retains its three
 trials and unchanged billing/lending fingerprints; new recurring tables are empty.
 Runtime/RLS, grants, owner/public pages and static checks pass. Billing and sending
-remain explicitly disabled. The existing worker images/timers are unchanged; align
-those images next while dispatch stays paused. See the
+remain explicitly disabled. Mail worker images were aligned at **15:03 IST**;
+feedback/recovery/health passed and remain active, with dispatch paused. Restricted
+runtime, unchanged attempts and clear queue checks passed at **15:05 IST**. See the
 [deployment and rollback record](billing-paused-release-20260928.md#deployment-result).
 Live activation remains separately gated by provider/commercial acceptance.
 
@@ -48,7 +49,7 @@ two browser authorization-retry tests and documentation/whitespace checks pass.
 The live suite is included in CI; no schema change is required.
 
 The paused web deployment above completes the initial release/evidence review;
-worker alignment and bounded pilot acceptance remain. Actual
+worker alignment is also complete. Bounded pilot acceptance remains. Actual
 activation still depends on commercial terms, protected live credentials/catalog,
 HTTPS webhook and operations acceptance, receipt dispatch scope, and unresolved
 provider renewal/failure/held-period acceptance. Existing Test Mode uncertainties
