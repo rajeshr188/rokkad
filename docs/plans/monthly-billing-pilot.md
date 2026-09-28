@@ -64,7 +64,7 @@ references. The customer summary is an unpublished draft.
 
 ### Catalog review before saving
 
-The publication fix is now implemented locally, pending paused deployment. When
+The publication fix is deployed as `rokkad:billing-paused-99bda8c1cb27`. When
 checkout and trial signup are false, active plans are hidden from the generic
 catalog; owners use their prepared recurring agreement's frozen monthly terms.
 Live catalog review/binding requires trial signup paused too. Legacy feature and
@@ -81,7 +81,7 @@ accepted new product limits or claims about supported app functionality.
 Before this fix, the generic plan page advertised monthly operations and legacy feature
 flags, and shows an annual price when present. `Plan.save()` fills an empty annual
 price. Therefore saving an active pilot plan can expose unreviewed annual/feature
-copy even with purchases disabled. Deploy the fix before saving the pilot plan and
+copy even with purchases disabled. The deployed fix permits private preparation;
 keep both self-service switches false. A monthly binding alone does not restrict
 the generic self-service catalog when it is enabled. No plan or binding was saved.
 
@@ -190,7 +190,7 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 ## Remaining decisions and activation sequence
 
 1. Seller registration status/address, 12-cycle duration and JSK selection are
-   confirmed. Deploy the catalog presentation fix paused; review final feature terms and registration
+   confirmed, and the catalog fix is deployed paused. Review final feature terms and registration
    applicability independently. Retain the current trial and recheck JSK's eligibility
    when it naturally ends; do not shorten it or schedule an unsupported live start.
 2. Use `total_count=12`, quantity 1 after eligibility and activation approval. This

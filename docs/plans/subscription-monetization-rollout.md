@@ -32,14 +32,15 @@ with no GST collected. The preview yields
 Both pending payments remain Created at 15:16 IST; support has acknowledgements only.
 
 Explicit live seller/tax readiness and frozen seller details across HTML/PDF/receipts
-are now deployed to web and workers as `rokkad:billing-paused-60c7beeb8191`, with
+are now deployed to web and workers as `rokkad:billing-paused-99bda8c1cb27`, with
 all billing/sending gates paused. No implicit tax default; the unregistered pilot
 requires explicit zero tax and reviewed seller fields. Historical financial
 evidence and recovery are preserved; no migration was needed. JSK's existing trial
 through **8 October, 23:39 IST** blocks immediate recurring creation and must be
 preserved. Generic catalog publication and legacy feature copy are now corrected
-locally; deploy that change paused before saving the monthly pilot plan, then
-complete live configuration. Monthly scope does not waive failed collection,
+and deployed as `rokkad:billing-paused-99bda8c1cb27`, with all billing/sending gates
+paused. Next: reviewed live configuration and monthly plan preparation.
+Monthly scope does not waive failed collection,
 recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
 for the selected scope, document gaps and remaining mandate/Workspace decisions.
 

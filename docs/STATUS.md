@@ -12,6 +12,29 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Private catalog deployed with billing paused (2026-09-28)
+
+Web runs `rokkad:billing-paused-99bda8c1cb27` from **16:05 IST**; mail workers and
+watchdog/operator references were aligned at **16:06 IST**. A fresh verified
+server-local backup and retained image/static/configuration copies provide rollback.
+No migration was required. Compose changed image/static references and made the
+already-disabled trial flag explicit; other resolved configuration is unchanged.
+
+All three operational Workspaces passed private-catalog, dashboard, recurring,
+overdue and loan-detail checks. Catalog pages show prepared-agreement guidance,
+without plan cards or annual prices. Billing/Loans fingerprints across five
+Workspaces and access are unchanged, including JSK's trial. Stored ticket hashes,
+public pages and static checks passed. No new plan, binding or invoice was created.
+
+At **16:07 IST**, web is running with zero restarts and HTTPS login 200; restricted
+worker runtime and feedback/recovery/health pass, with monitoring timers active.
+Queue flags/due messages remain zero, attempts six and receipts zero. Dispatch is
+disabled/marker absent, invitation-only, limit one. Billing provider, purchases,
+trial signup and sending remain paused. Credentials, seller settings and alerts
+were preserved. Next: protected live seller/provider configuration and catalog
+preparation, with JSK's trial and outstanding acceptance preserved. See the
+[release record](implementation/billing-paused-release-20260928.md#private-catalog-update-deployed-2026-09-28).
+
 ## Private pilot catalog implementation (2026-09-28)
 
 When checkout and trial signup are both paused, the owner catalog now returns no

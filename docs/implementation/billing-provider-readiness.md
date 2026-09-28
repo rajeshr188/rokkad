@@ -9,7 +9,7 @@ tags: [billing, configuration, receipts, deployment]
 
 ## Frozen seller and explicit tax settings (2026-09-28)
 
-Deployed to production web and mail workers as `rokkad:billing-paused-60c7beeb8191`
+Deployed to production web and mail workers, now on `rokkad:billing-paused-99bda8c1cb27`
 with billing/sending paused. No schema, provider or financial-record changes.
 Seller fields remain unconfigured. New live offers/orders require all of:
 
@@ -114,11 +114,11 @@ must be preserved and never promoted to live.
 
 ## Live catalog preparation (2026-09-28)
 
-The latest local increment requires `BILLING_ALLOW_TRIAL_START=False` as well as
+The deployed catalog increment requires `BILLING_ALLOW_TRIAL_START=False` as well as
 checkout/recurring false during live preview/binding. With checkout and trial signup
 paused, the generic owner catalog hides active plans and links to prepared recurring
-terms. This publication fix is not yet deployed; production still uses
-`rokkad:billing-paused-60c7beeb8191`. Deploy it paused before saving the pilot plan.
+terms. Production web and workers now use `rokkad:billing-paused-99bda8c1cb27`,
+verified at 16:07 IST with billing/sending paused and unchanged records.
 Do not enable trial signup or one-off checkout for the operator-prepared pilot.
 See the [decision](../adr/2026-09-28-private-operator-billing-catalog.md).
 

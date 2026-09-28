@@ -8,12 +8,55 @@ related: [billing-provider-readiness.md, recurring-agreements.md, container-and-
 
 # Paused billing release
 
-The latest paused update was deployed to web at **15:44 IST** and mail workers at
-**15:45 IST on 28 September 2026**. Billing and sending remain disabled.
+The latest paused update was deployed to web at **16:05 IST** and mail workers at
+**16:06 IST on 28 September 2026**. Billing, trial signup and sending remain disabled.
 The earlier release below was deployed at **14:55 IST**. All six billing
 migrations are applied. Payments, new authorizations and mail dispatch remain
 disabled; this is not a paid launch. Preparation evidence below describes the
 earlier checkpoint. The deployment result supersedes its pending items.
+
+## Private catalog update deployed (2026-09-28)
+
+| Item | Verified value |
+| --- | --- |
+| Source | `99bda8c1cb2757fae88637a128f2e45daef54eae` |
+| Web/worker image | `rokkad:billing-paused-99bda8c1cb27` |
+| Image ID | `sha256:75339d8e531460a645d56285cb7c304b6b1ffd03a41451583bbb5daf85178551` |
+| Static volume | `rokkad_production_static_billing_99bda8c1cb27` |
+| Rollback image/static suffix | `60c7beeb8191` |
+| New migrations | None; zero pending |
+| Verified server-local backup | 16:04:28 IST, 55,861,393 bytes, archive catalog checked |
+| Backup SHA-256 | `50be41878b69d99c03b6359f63407cca1800504477d68c85cdb0fd42312c6265` |
+
+The committed-source package contains the reviewed catalog/guard/template changes
+and tests. Before switching, candidate checks passed as restricted runtime, sending
+was false, no messages were due, and the backup/catalog/hash checks passed. A new
+static volume preserves the prior assets for rollback. Compose changes are limited
+to image/static references and explicit `BILLING_ALLOW_TRIAL_START=False`, matching
+its pre-deployment effective value. Other resolved settings are unchanged.
+
+Post-switch read-only checks verified private catalog guidance without plan cards
+or annual offers for each of the three operational Workspace owners. Dashboard,
+recurring, loan detail and overdue pages also passed. Billing and all directly
+Workspace-owned Loans table fingerprints across five Workspaces are unchanged;
+three trials, existing access and JSK's dates are preserved. Stored ticket PDFs
+pass hash checks where present. Recurring tables remain empty, runtime grants
+intact, and public/legal pages plus the static JavaScript hash pass.
+
+Worker image alignment retained invitation-only limit one and absent dispatch
+marker. Monitoring timers paused only while existing invocations finished, then
+resumed. At **16:07:01 IST**, restricted runtime, supervised services, queue/health
+and HTTPS checks passed. Six attempts and zero receipts/due messages are unchanged;
+web has zero restarts. Credentials, seller configuration and alerts are preserved.
+No payment, email, plan or binding was created. All billing/sending gates remain off.
+
+Private evidence and rollback configuration are in
+`/root/rokkad-catalog-release-20260928`, with worker originals under `mail-workers/`.
+Restore these saved Compose/worker files with dispatch paused if code rollback is
+needed; keep records and monitoring intact. No migration reversal or database
+restore is needed. Old image/static volume remain retained. Next: protected live
+configuration and monthly catalog preparation, preserving the selected pilot's
+trial and remaining provider/operations acceptance.
 
 ## Seller invoice update deployed (2026-09-28)
 

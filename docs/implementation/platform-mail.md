@@ -8,6 +8,18 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Private catalog worker update (2026-09-28)
+
+At **16:06 IST**, worker service and watchdog/operator references were aligned
+with web on `rokkad:billing-paused-99bda8c1cb27`. Feedback/recovery/health passed
+and timers resumed active; dispatch remains disabled, marker absent, invitation-only
+and limit one. Final verification at **16:07 IST** confirmed restricted runtime,
+paused billing/sending, six unchanged attempts, zero receipts/due messages, no
+queue/health flags and HTTPS login 200 with zero web restarts. Credentials and
+existing alerts are unchanged. No email was sent. Latest rollback copies and
+evidence are under `/root/rokkad-catalog-release-20260928/mail-workers`.
+See the [release record](billing-paused-release-20260928.md#private-catalog-update-deployed-2026-09-28).
+
 ## Seller invoice worker update (2026-09-28)
 
 At **15:45 IST**, web and all worker image references use
@@ -434,7 +446,7 @@ because old inline invitation handling does not produce durable intent.
 
 ## Operator checks and stop-mail requests
 
-The current worker image is `rokkad:billing-paused-60c7beeb8191`, matching web.
+The current worker image is `rokkad:billing-paused-99bda8c1cb27`, matching web.
 Host scripts and a root-private `watchdog.json`
 are installed in `/home/rokkad/deploy/cutover-20260924/platform-mail-ops-20260926`.
 The JSON contains the exact restricted Docker worker invocation, not credentials.

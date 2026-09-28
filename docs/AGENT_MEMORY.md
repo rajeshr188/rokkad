@@ -66,10 +66,12 @@ status, the documented billing address, 12 monthly collections and JSK as pilot.
 JSK is Workspace 2, canonical owner 1, with three members and no pending invites.
 Its trial ends 8 October 2026 at 23:39 IST and blocks immediate recurring creation;
 preserve it. Scheduled live transition is unsupported. The catalog fix is now
-implemented locally: paused checkout and trial signup hide the generic plan list;
+deployed to web/workers as `rokkad:billing-paused-99bda8c1cb27`: paused checkout
+and trial signup hide the generic plan list;
 prepared agreements retain their frozen terms. Live binding requires trial signup
 paused too. Legacy feature and estimated overage claims are removed; stored terms
-are unchanged. Deploy this fix paused before saving a new pilot plan; never edit
+are unchanged. All billing/sending gates remain paused; next is reviewed live
+configuration and new monthly catalog preparation. Never edit
 the existing shared trial plan. No charge or activation was authorized. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
 

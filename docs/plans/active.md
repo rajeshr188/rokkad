@@ -20,15 +20,16 @@ documented billing address. Live
 seller/tax readiness and frozen issuer rendering across HTML/PDF/receipts are now
 deployed with billing/sending paused; base tax has no implicit default. Web and
 workers use `rokkad:billing-paused-60c7beeb8191` as of **15:45 IST**, with no new
-migrations or record changes. The catalog presentation fix is now implemented
-locally; next is its paused deployment before live configuration.
+migrations or record changes. The later catalog presentation fix is deployed to
+web/workers as `rokkad:billing-paused-99bda8c1cb27` and verified at **16:07 IST**;
+next is reviewed live configuration and monthly catalog preparation.
 See the [pilot preparation](monthly-billing-pilot.md)
 for the exact draft, provider checkpoint and decisions still required.
 
 Subsequent review confirmed the seller's unregistered status/address, **12 monthly
 collections** and **JSK** (Workspace 2) as pilot. Its three members fit the offer;
 the unexpired trial through **8 October, 23:39 IST** blocks immediate creation and
-must be preserved. The pending catalog update hides active plans when checkout
+must be preserved. The deployed catalog update hides active plans when checkout
 and trial signup are paused, keeps prepared recurring terms visible, and removes
 legacy feature/estimated overage claims. Live binding requires trial signup paused.
 No live configuration or activation occurred. See the
