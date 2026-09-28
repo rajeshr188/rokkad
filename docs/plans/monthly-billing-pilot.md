@@ -12,6 +12,83 @@ The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
 
+## Confirmed JSK pilot review (2026-09-28)
+
+The owner confirmed the invoice seller **Rajesh Rathod H**, no GST registration,
+and the billing address below. The owner selected **12 monthly collections** and
+**JSK** as the first pilot. These decisions prepare the offer; no charge or trial
+conversion is authorized. Registration applicability remains a separate business
+responsibility; the app records the owner's stated registration status.
+
+At **15:50 IST**, a restricted, repeatable-read, read-only production transaction
+resolved `jsk` to Workspace **2**, canonical active owner **1**, and subscription
+**2**. Its existing billing email matches the owner. The private owner email is in
+the local review evidence, not this published project record. JSK has **3 members**,
+**0 pending invitations**, Active lifecycle and full commercial access. There are
+no open agreements, outstanding invoices or legacy mandate IDs.
+
+JSK has an unexpired trial ending **8 October 2026 at 23:39:08 IST**
+(`2026-10-08T18:09:08.926934Z`). Immediate recurring creation rejects unexpired
+trials. Preserve that trial and its access; do not edit dates/status to pass the
+guard. Scheduled live conversion is unsupported. Recheck eligibility after the
+trial naturally ends and after other acceptance is complete; this is not a launch
+date. The separate `end_date` field on this trial is not evidence of paid access.
+Naturally due held-period acceptance still remains open, with the existing monthly
+fixture beginning on 28 October.
+
+An unsaved preview using the confirmed seller and the live offer-validation path
+produced **149900 paise**, zero GST, and six total members. It executed **zero
+database queries and zero provider requests**. The duration is 12 cycles with
+quantity 1: one Workspace subscription, not six separately charged seats. No
+upfront add-on or new trial is proposed. The preview's extra-user price is zero;
+additional seats require a separate reviewed offer, not automatic overage billing.
+
+The prepared customer summary is:
+
+> Rokkad Workspace subscription for JSK: INR 1,499 per month, including the owner
+> and up to five staff. GST is not charged because the supplier is not registered
+> under GST. Up to 12 monthly collections, beginning only after a separately
+> approved owner authorization when the Workspace is eligible. You may cancel
+> future renewals; already verified paid time remains available. Cancellation does
+> not itself request a refund. After the final collection, a replacement agreement
+> requires separate preparation and authorization.
+
+Rokkad sends immediate mandate cancellation (`cancel_at_cycle_end=false`) while
+preserving verified paid access. An uncertain cancellation stays pending until
+provider reconciliation; do not promise an already in-flight collection cannot
+settle. The existing refund policy's seven/five working-day review/initiation
+windows remain. Provider parameter meanings were rechecked against the official
+[creation](https://razorpay.com/docs/api/payments/subscriptions/create-subscription/)
+and [cancellation](https://razorpay.com/docs/api/payments/subscriptions/cancel-subscription/)
+references. The customer summary is an unpublished draft.
+
+### Catalog review before saving
+
+Do not edit the existing plan shared by the three trial Workspaces. Prepare a
+separate reviewed monthly plan. Nine non-seat entitlement defaults remain in the
+model: five disabled legacy feature flags, 100 products, one warehouse, 500 monthly
+transactions and 500 monthly invoices. These are internal inherited values, not
+accepted new product limits or claims about supported app functionality.
+
+The generic plan page currently advertises monthly operations and legacy feature
+flags, and shows an annual price when present. `Plan.save()` fills an empty annual
+price. Therefore saving an active pilot plan can expose unreviewed annual/feature
+copy even with purchases disabled. Resolve that catalog presentation before saving
+or publishing the pilot plan; a monthly binding alone restricts collections but
+does not hide the generic catalog. No plan or binding was saved in this review.
+
+The exact live-catalog preview command is already documented in the
+[configuration runbook](../implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
+It requires reviewed seller settings, protected live credentials, an existing live
+provider plan and an authorized platform actor, with checkout and recurring flags
+false. Do not execute agreement creation during catalog preparation: it requires
+the separate recurring activation gate and JSK transition eligibility.
+
+Private local evidence: `outputs/jsk-pilot-review-20260928.json`,
+`outputs/confirmed-pilot-preview-20260928.json` and
+`outputs/billing-pilot-review-pending-20260928.json`. Production configuration and
+all financial/access records were unchanged.
+
 ## Selected scope and seller details
 
 | Item | Preparation value / status |
@@ -19,10 +96,12 @@ Production billing and mail dispatch remain disabled.
 | Seller name | **Rajesh Rathod H**, supplied by the owner for invoices |
 | Brand | Rokkad |
 | Account basis | Owner says personal PAN; no PAN number requested or recorded |
-| GST position | Replies indicate no GST registration; no GSTIN supplied. Razorpay GST settings show addition unsupported for this business type and refer to a non-individual account for GST linking. Account configuration does not determine registration obligations. |
+| GST position | Owner explicitly confirmed not GST-registered on 28 September; no GSTIN supplied. Account configuration does not determine registration obligations. |
 | Billing unit | One Workspace |
 | Monthly working price | INR 1,499.00 |
-| Draft collection | INR 1,499.00, **149900 paise**, no GST collected, subject to confirming unregistered-supplier treatment before activation |
+| Draft collection | INR 1,499.00, **149900 paise**, no GST collected under the confirmed unregistered-supplier treatment |
+| Duration | Owner selected up to **12 monthly collections**, quantity 1 |
+| Pilot | JSK (`jsk`, Workspace 2); canonical owner verified; existing trial must be preserved |
 | Capacity | Owner plus five staff, six total members; existing invitation reservation rules apply |
 | Preparation | Operator prepares the agreement; the Workspace owner separately authorizes it |
 | Start | Immediate only; no scheduled live conversion |
@@ -30,14 +109,14 @@ Production billing and mail dispatch remain disabled.
 | Add-ons | No automatic overages, paid messaging, onboarding fees or extra support charges approved |
 | Existing customers | Preserve current plans, trials, access grants and financial history; no silent conversion |
 
-Use the approved public address as the **draft** seller address: 11, 9th Cross
-Street, Rajiv Gandhi Nagar, Vellore, Tamil Nadu, India. Confirm its suitability as
-the billing address before publication. Billing replies use `billing@rokkad.com`;
+The owner confirmed the seller billing address: 11, 9th Cross
+Street, Rajiv Gandhi Nagar, Vellore, Tamil Nadu, India.
+Billing replies use `billing@rokkad.com`;
 general support uses `support@rokkad.com`.
 
 For an unregistered supplier, prepare an ordinary commercial **Invoice** identifying
 Rajesh Rathod H / Rokkad, the monthly software subscription, period, buyer,
-reference/date and INR 1,499 total. Once that status is confirmed, use “GST not
+reference/date and INR 1,499 total. For the confirmed status, use “GST not
 charged — supplier not registered under GST.” Do not describe an exempt or
 zero-rated GST supply, invent a GSTIN, or print personal PAN. Section 32 prohibits
 GST collection by an unregistered person; registration applicability is separate.
@@ -53,9 +132,9 @@ and INR 0.00 tax. No plan was saved, provider called or production setting chang
 existing frozen bindings and invoice count were unchanged. Other model-default
 feature limits were not accepted as commercial terms.
 
-Source review identified the following gaps, now addressed locally by the
+Source review identified the following gaps, now addressed by the deployed
 [frozen-seller implementation](../implementation/billing-provider-readiness.md#frozen-seller-and-explicit-tax-settings-2026-09-28).
-Production deployment and final seller/tax review remain pending:
+Production deployment and owner confirmation of seller facts are complete:
 
 1. Base billing settings now have an empty tax default and require explicit
    reviewed live seller/tax configuration. Preserve rehearsal values and old frozen
@@ -79,6 +158,11 @@ unconfigured. See the [deployment evidence](../implementation/billing-paused-rel
 
 GET-only observations at **15:16 IST on 28 September**:
 
+Repeated at **15:49 IST** with the same provider statuses and unchanged local
+financial/mail record counts. The support inbox was not rechecked during this
+later API observation; its acknowledgement-only entry below remains the 15:16
+checkpoint.
+
 | Fixture | Observation | Consequence |
 | --- | --- | --- |
 | Annual `sub_ThBL2wVYJZadDN` | Active, one of two paid; final `pay_ThBR0fQ4nwVW3p` Created, invoice `inv_ThBQyvwJjIJcQ0` Issued | Preserve attempt; annual renewal remains unaccepted and outside pilot |
@@ -97,12 +181,13 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 
 ## Remaining decisions and activation sequence
 
-1. Confirm unregistered-supplier treatment and billing address; review registration
-   applicability. Confirm final feature limits and a named pilot Workspace/owner.
-2. Select mandate duration. Proposal for review: at most **12 monthly collections**,
-   cancellable for future collections, without collecting twelve months upfront.
-   This duration is unapproved. Rokkad requires explicit `total_count`; Razorpay
-   documents bounded [subscription creation](https://razorpay.com/docs/api/payments/subscriptions/create-subscription/).
+1. Seller registration status/address, 12-cycle duration and JSK selection are
+   confirmed. Resolve final feature/catalog presentation; review registration
+   applicability independently. Retain the current trial and recheck JSK's eligibility
+   when it naturally ends; do not shorten it or schedule an unsupported live start.
+2. Use `total_count=12`, quantity 1 after eligibility and activation approval. This
+   does not collect twelve months upfront. Rokkad requires explicit duration;
+   Razorpay documents bounded [subscription creation](https://razorpay.com/docs/api/payments/subscriptions/create-subscription/).
 3. Complete reviewed seller configuration and applicable provider acceptance. Retain
    published refund review/initiation windows of seven/five working days; review
    cancellation wording before activation.

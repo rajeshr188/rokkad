@@ -61,7 +61,13 @@ profile for historical invoices. Current profile changes block new authorization
 but preserve matching-mode payment recovery/cancellation. Registered-supplier
 treatment is unsupported. Deployed to web and mail workers on 28 September with
 billing/sending paused, no migration or evidence backfill. Seller fields remain
-unconfigured pending final business review and live setup. See the
+unconfigured pending live setup. The owner has now confirmed unregistered GST
+status, the documented billing address, 12 monthly collections and JSK as pilot.
+JSK is Workspace 2, canonical owner 1, with three members and no pending invites.
+Its trial ends 8 October 2026 at 23:39 IST and blocks immediate recurring creation;
+preserve it. Scheduled live transition is unsupported. Before saving a new pilot
+plan, resolve generic catalog annual/legacy feature copy; never edit the existing
+shared trial plan. No charge or activation was authorized. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
 
 Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,

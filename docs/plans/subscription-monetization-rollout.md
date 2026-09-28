@@ -24,9 +24,10 @@ paying pilot. Production checkout remains disabled pending acceptance.
 ## Selected initial pilot (2026-09-28)
 
 Owner selected monthly-only INR 1,499, owner plus five staff, with operator-prepared
-agreements; annual stays unpublished. Invoice name: **Rajesh Rathod H**. Replies
-indicate personal-PAN/no-GST registration, so prepare an ordinary commercial invoice
-with no GST collected, subject to final status/address review. The preview yields
+agreements; annual stays unpublished. Invoice name: **Rajesh Rathod H**. The owner
+confirmed no GST registration and the documented billing address, and selected
+**12 monthly collections** for **JSK**. Prepare an ordinary commercial invoice
+with no GST collected. The preview yields
 149900 paise with no writes. Existing 18% rehearsal evidence stays unchanged.
 Both pending payments remain Created at 15:16 IST; support has acknowledgements only.
 
@@ -34,8 +35,10 @@ Explicit live seller/tax readiness and frozen seller details across HTML/PDF/rec
 are now deployed to web and workers as `rokkad:billing-paused-60c7beeb8191`, with
 all billing/sending gates paused. No implicit tax default; the unregistered pilot
 requires explicit zero tax and reviewed seller fields. Historical financial
-evidence and recovery are preserved; no migration was needed. Next: complete
-seller review and live configuration. Monthly scope does not waive failed collection,
+evidence and recovery are preserved; no migration was needed. JSK's existing trial
+through **8 October, 23:39 IST** blocks immediate recurring creation and must be
+preserved. Next: resolve generic annual/legacy feature catalog copy before saving
+the monthly pilot plan, then complete live configuration. Monthly scope does not waive failed collection,
 recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
 for the selected scope, document gaps and remaining mandate/Workspace decisions.
 

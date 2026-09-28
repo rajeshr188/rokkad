@@ -20,7 +20,10 @@ Seller fields remain unconfigured. New live offers/orders require all of:
 | `BILLING_SELLER_ADDRESS` | Reviewed billing address |
 | `BILLING_SELLER_TAX_STATUS` | Explicit `unregistered`; other treatments currently rejected |
 
-Keep the seller fields empty until final business review. `check_billing_configuration`
+The owner subsequently confirmed the seller status/address in the
+[JSK pilot review](../plans/monthly-billing-pilot.md#confirmed-jsk-pilot-review-2026-09-28).
+The fields remain empty in production until the configuration step.
+`check_billing_configuration`
 reports configuration blockers without printing seller/address values; it never
 asserts launch readiness. Test/rehearsal settings explicitly retain 18% and existing
 financial records are not rewritten.

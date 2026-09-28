@@ -15,13 +15,20 @@ and APIs are verified. Credentials are protected outside the repository/OneDrive
 
 The owner now selected **monthly-only pilot preparation**, INR 1,499 and six total
 members, with operator-prepared agreements; annual remains unpublished. Invoice
-name is **Rajesh Rathod H**. Replies indicate personal-PAN/no-GST setup. Live
+name is **Rajesh Rathod H**; the owner confirmed no GST registration and the
+documented billing address. Live
 seller/tax readiness and frozen issuer rendering across HTML/PDF/receipts are now
 deployed with billing/sending paused; base tax has no implicit default. Web and
 workers use `rokkad:billing-paused-60c7beeb8191` as of **15:45 IST**, with no new
-migrations or record changes. Next is final seller review and live configuration.
+migrations or record changes. Next is monthly catalog presentation and live configuration.
 See the [pilot preparation](monthly-billing-pilot.md)
 for the exact draft, provider checkpoint and decisions still required.
+
+Subsequent review confirmed the seller's unregistered status/address, **12 monthly
+collections** and **JSK** (Workspace 2) as pilot. Its three members fit the offer;
+the unexpired trial through **8 October, 23:39 IST** blocks immediate creation and
+must be preserved. Before live catalog setup, resolve generic annual/legacy feature
+presentation for the monthly pilot. No live configuration or activation occurred.
 
 The earlier paused production release `rokkad:billing-paused-4a131587ee80` was deployed as
 of **14:55 IST**. Its six billing migrations are applied; billing/lending fingerprints

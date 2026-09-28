@@ -12,6 +12,29 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## JSK pilot facts and transition review (2026-09-28)
+
+Owner confirmed Rajesh Rathod H's no-GST registration status and documented billing
+address, selected 12 monthly collections, and named **JSK** as the first pilot.
+Read-only production review at **15:50 IST** verified Workspace 2, its canonical
+active owner and matching billing email, three members, no pending invitations,
+full access and no existing mandate/open agreement/outstanding invoice.
+
+JSK's trial ends **8 October at 23:39 IST**. Immediate recurring creation correctly
+blocks an unexpired trial; its dates and access are preserved. Scheduled live
+conversion remains unsupported. Other acceptance still applies; this date is not
+a launch commitment. The unsaved confirmed-seller preview produced 149900 paise,
+zero GST and six members with zero database queries/provider requests.
+
+Catalog review found generic plan cards still show legacy feature/operation labels
+and annual prices, with automatic annual-price population on save. Resolve that
+presentation before creating a new active monthly pilot plan; no shared plan was
+edited and no new plan/binding was saved. At **15:49 IST**, GET-only checks found
+both preserved Test Mode payments still Created with unchanged local record counts.
+Support inbox status was not refreshed. No production configuration, live key,
+payment, email or access changes. See the
+[confirmed pilot review](plans/monthly-billing-pilot.md#confirmed-jsk-pilot-review-2026-09-28).
+
 ## Seller invoice update deployed with billing paused (2026-09-28)
 
 Web now runs `rokkad:billing-paused-60c7beeb8191` as of **15:44 IST**; all mail
