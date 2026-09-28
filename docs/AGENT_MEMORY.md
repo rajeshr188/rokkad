@@ -52,6 +52,18 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
+Latest mail operations continuation: production dispatch now references the minimal
+`rokkad:invitation-worker-20260928-31f6aa88dd72` overlay with explicit
+`--limit 1 --invitations-only`. It is paused: sending false, dispatch marker absent,
+dispatch/feedback/recovery timers disabled; health monitoring remains enabled.
+The scope excludes every receipt before applying the batch limit. The deployed
+web/older worker still lack newer billing-mode guards; do not enable receipt
+dispatch based on local source acceptance. No full billing deployment or migration
+occurred. IAM default version 3 removes only the expired sandbox recipient statement,
+preserving the two existing active grants and older policy versions. Queue/DLQ
+and runtime preflight passed; 39 focused tests pass. See the
+[mail runbook](implementation/platform-mail.md#paused-invitation-worker-and-iam-cleanup-2026-09-28).
+
 Latest receipt continuation: the private single-receipt command validates isolated
 Test Mode runtime/role, current owner authority and exact immutable recipient;
 ordinary sending remains blocked for test data. A new paid fixture in Workspace 8

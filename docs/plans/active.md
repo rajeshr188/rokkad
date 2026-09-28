@@ -58,6 +58,13 @@ promised launch. A different acceptance method or pilot scope needs review. Pres
 code rejects live recurring keys; deployment alone cannot enable a paying pilot.
 No production activation, published prices or production-customer term changes.
 
+Latest mail preparation installed a minimal invitation-only dispatch overlay,
+bounded to one message per run and still paused. Runtime/queue/alert preflight and
+expired IAM exception cleanup passed; 39 focused tests pass. Sending remains off.
+Next is monitored invitation activation with an authorized recipient and active
+feedback/recovery; general receipts require deployment of the local billing guards.
+See the [mail runbook](../implementation/platform-mail.md#paused-invitation-worker-and-iam-cleanup-2026-09-28).
+
 The owner selected [platform email setup and reliability](platform-email-rollout.md)
 on 2026-09-26: Google Workspace for human inboxes, Amazon SES for automated
 platform messages. Both accounts and support/billing aliases exist; SES DKIM is

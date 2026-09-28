@@ -8,6 +8,54 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Paused invitation worker and IAM cleanup (2026-09-28)
+
+The current production dispatch unit is installed but **paused**, using
+`rokkad:invitation-worker-20260928-31f6aa88dd72` and
+`manage.py dispatch_platform_mail --send --limit 1 --invitations-only`.
+This supersedes the earlier limit-20 installation below. The flag filters out all
+invoice receipts before slicing the batch. An explicit queued receipt is refused
+for both sending and capture; invitation-only global stale recovery is refused.
+Normal dispatch authority, suppression, claims, attempts and feedback are unchanged.
+The three new regressions and existing mail/operations suites total **39 passing tests**.
+
+The image overlays only the dispatch command on
+`rokkad:mail-ops-20260926-1b55551552cd`; source command SHA-256 is
+`31f6aa88dd728d6e9e7e529a7f1d16b250ea2297a543e47bb2bfa241281d441e`.
+The original image ID is pinned in the private manifest. Production web and original
+worker lack newer billing provider-mode guards. This narrow installation does not
+deploy those guards, live recurring support, migrations or receipt sending.
+Web, feedback/recovery/health units and credentials remain unchanged.
+
+Private build, preflight, unit backup and installation evidence are under
+`/root/rokkad-invitation-worker-20260928`. The prior unit is
+`rokkad-platform-mail-dispatch.service.before`. Roll back by restoring that file to
+`/etc/systemd/system/rokkad-platform-mail-dispatch.service`, then running
+`systemctl daemon-reload`, with the marker absent and timers still disabled.
+Do not enable the older unscoped unit as part of rollback.
+
+Preflight confirms the restricted production database role, no pending migrations
+for this deployed image, zero due deliveries, zero invoice receipts and no queue
+flags. Existing historical evidence remains delivered/bounced/complaint: one each,
+with five attempts. Source SQS and DLQ each show zero available/in-flight. Health
+monitoring is enabled with no sticky alerts; dispatch/feedback/recovery remain
+disabled, `PLATFORM_EMAIL_ENABLED=False`, and the dispatch marker is absent.
+Readiness command output alone does not prove provider delivery or active workers.
+
+AWS IAM `RokkadPlatformMailRuntime` **version 3 is default**, saved at 14:00 IST
+on 28 September. Only `SandboxAcceptanceRecipientUntilSeptember28`, expired at
+00:00 UTC, was removed. `SendPlatformMessages` and `ConsumePlatformFeedback`
+retain their exact actions, resource ARNs, senders and region restriction. Versions
+1 and 2 are retained. Screenshot: `outputs/mail-policy-cleanup-saved-20260928.png`.
+
+Next activation must start with fresh queue/DLQ/alert review, functioning feedback
+and recovery supervision, and one specifically authorized invitation recipient.
+Keep the one-message invitation-only scope during observation and verify delivery
+and health before expanding it. Actual sending needs explicit message authorization;
+none was sent in this checkpoint. General receipts remain gated on reviewed billing
+deployment and live-mode acceptance. Google Workspace prepayment/trial continuity
+also remains an owner task.
+
 ## SES approval and billing-mode checkpoint (2026-09-28)
 
 AWS support case **179042575700203** approved production access at **11:20:42 IST**
@@ -59,7 +107,7 @@ the server. Never use migration DB, AWS administrator/root or R2 credentials.
 ```text
 python manage.py check_platform_mail --require-ready
 python manage.py dispatch_platform_mail --capture --delivery <uuid>
-python manage.py dispatch_platform_mail --send --limit 20
+python manage.py dispatch_platform_mail --send --limit 1 --invitations-only
 python manage.py receive_platform_mail_events
 python manage.py dispatch_platform_mail --recover-stale
 ```
@@ -72,8 +120,9 @@ It must be explicitly retried to become queued again. Do not capture the whole
 production queue as an incidental readiness check.
 
 Use one non-overlapping dispatch process, a separate feedback consumer, and a
-recovery run at least every few minutes. Initial dispatch is bounded to 20 per
-invocation with 1.1 seconds between sends. SES throttling backs off 2, 4, 8, 16
+recovery run at least every few minutes. Current initial dispatch is bounded to one
+invitation per invocation; the command default remains 20 and uses 1.1 seconds
+between sends. SES throttling backs off 2, 4, 8, 16
 minutes and stops after five attempts. A row claimed over ten minutes ago becomes
 uncertain. Provider events can subsequently resolve it. New claims must commit
 before network I/O; do not call dispatch inside another transaction.

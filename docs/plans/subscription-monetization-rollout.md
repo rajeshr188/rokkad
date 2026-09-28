@@ -35,9 +35,16 @@ Production activation requires a separate, reviewed implementation and release.
 | Due held access | Apply an eligible actual provider hold with fresh verification at its natural start | Existing monthly holds start **28 October 2026**; no altered clock or saved dates |
 | Refunds and replacement agreements | Full-refund review and narrow settled reservation release accepted; exact replacement periods locally tested; actual replacement payment, general settlement and prepaid transition policy remain | Remaining policy and provider acceptance |
 | Production billing boundary | Explicit mode/key checks, new invoice mode and diagnostics implemented; live recurring, legacy evidence migration, live plan binding, HTTPS callback and operations remain | Reviewed implementation, private live credentials and deployment acceptance |
-| Receipts and email | Monitored worker activation preflight, reviewed IAM cleanup and inbox account continuity | Paid Test Mode receipt passed Inbox/SPF/DKIM/DMARC and independently logged billing reply delivery; general sending remains disabled |
+| Receipts and email | Monitored invitation activation, reviewed billing deployment for general receipts and inbox continuity | Preflight and expired IAM cleanup passed; invitation-only worker installed paused, one per run; paid test receipt/reply accepted; general sending disabled |
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
+
+Latest mail preparation: the production dispatch unit now uses a minimal tested
+invitation-only overlay, one message per run, installed paused. Preflight and IAM
+cleanup are complete; 39 focused tests pass. Production web/older worker lack the
+local billing-mode safeguards, so general receipts require a separate deployment.
+No mail was sent, migration applied or live billing enabled. See the
+[mail checkpoint](../implementation/platform-mail.md#paused-invitation-worker-and-iam-cleanup-2026-09-28).
 
 Latest receipt milestone: one actual paid monthly Test Mode receipt was delivered
 to the owner-selected admin@rokkad.com mail server with exactly one audited attempt

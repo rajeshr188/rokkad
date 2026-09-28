@@ -15,6 +15,16 @@ now created Google Workspace and AWS accounts, confirmed on 2026-09-26.
 
 ## Current checkpoint
 
+- **Latest activation preparation, 28 September:** installed a command-only worker
+  overlay, still paused, with `--limit 1 --invitations-only`. It excludes receipts
+  before selecting the batch; 39 focused tests pass and CI includes the regression
+  suite. Runtime/schema readiness, empty due queue, SQS/DLQ and alerts passed.
+  IAM default version 3 removes only the expired sandbox recipient exception.
+  Sending and dispatch/feedback/recovery timers remain disabled; health is enabled.
+  Next: fresh queue review and monitored invitation activation with an explicitly
+  authorized recipient and feedback/recovery supervision. The production web/older
+  worker lack local billing-mode guards, so general receipts need a separate reviewed
+  deployment. See the [current runbook](../implementation/platform-mail.md#paused-invitation-worker-and-iam-cleanup-2026-09-28).
 - **Latest receipt acceptance, 28 September:** one actual paid Test Mode receipt
   reached the chosen admin Inbox, with correct content, SPF/DKIM/DMARC PASS and TLS.
   The separately approved reply to billing@rokkad.com was confirmed by Google Admin

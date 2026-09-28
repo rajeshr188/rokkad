@@ -12,6 +12,37 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Paused invitation worker and IAM cleanup (2026-09-28)
+
+Mail activation preflight found that the deployed web and original mail worker
+do not yet contain the newer billing-mode/receipt safeguards. To bound initial
+activation, `dispatch_platform_mail --invitations-only` excludes invoice receipts
+before the batch limit and rejects explicit receipt dispatch or global recovery
+with that scope. Existing invitation authority, suppression and delivery evidence
+remain in force. **39 dispatch/mail/operations tests pass**; CI includes the new
+regressions. No schema or billing behavior changed.
+
+The minimal command-only image `rokkad:invitation-worker-20260928-31f6aa88dd72`
+is installed in the production dispatch unit with `--limit 1 --invitations-only`,
+**paused**. The runtime is restricted, the deployed image has no pending migrations,
+the production mail queue has zero due rows and zero invoice receipts, and source
+SQS/DLQ each show zero available/in-flight messages. No sticky alerts were present.
+Sending remains false, the dispatch marker absent, and dispatch/feedback/recovery
+timers disabled; only health monitoring remains enabled. Web, other workers and
+the database schema are unchanged. This does not deploy the full billing branch.
+
+At **14:00 IST**, AWS saved `RokkadPlatformMailRuntime` **version 3 as default**,
+removing only the already-expired `SandboxAcceptanceRecipientUntilSeptember28`
+statement. The two existing SES-send/SQS-consume statements remain unchanged;
+versions 1 and 2 remain available. Evidence:
+`outputs/mail-policy-cleanup-saved-20260928.png`. No email was sent.
+
+Next is a separately scoped, monitored invitation activation with feedback/recovery
+running, fresh queue review and an authorized recipient. General receipt dispatch
+still requires the reviewed billing deployment and live-mode acceptance. Provider
+test outcomes and Google Workspace billing continuity remain open. See the
+[paused installation and rollback](implementation/platform-mail.md#paused-invitation-worker-and-iam-cleanup-2026-09-28).
+
 ## Receipt inbox/authentication/reply acceptance (2026-09-28)
 
 The paid Test Mode receipt is present in admin@rokkad.com's **Inbox**, with correct
