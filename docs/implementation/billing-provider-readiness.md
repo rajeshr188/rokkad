@@ -9,13 +9,14 @@ tags: [billing, configuration, receipts, deployment]
 
 ## Paused production candidate (2026-09-28)
 
-The full billing source at `4a131587ee80` is built and preflighted but not deployed.
-Production has three existing trial subscriptions and no payment evidence to
-reclassify. Six subscriptions migrations remain unapplied. A migration preservation
-regression, restricted read-only candidate checks, static build and worker readiness
-pass. No billing, sending or production changes occurred. Follow the
-[pinned release and rollback procedure](billing-paused-release-20260928.md) for the
-next paused deployment checkpoint; live activation remains separately gated.
+The full billing source at `4a131587ee80` was deployed at **14:55 IST**, after a fresh
+verified backup and all six subscriptions migrations. Production retains its three
+trials and unchanged billing/lending fingerprints; new recurring tables are empty.
+Runtime/RLS, grants, owner/public pages and static checks pass. Billing and sending
+remain explicitly disabled. The existing worker images/timers are unchanged; align
+those images next while dispatch stays paused. See the
+[deployment and rollback record](billing-paused-release-20260928.md#deployment-result).
+Live activation remains separately gated by provider/commercial acceptance.
 
 ## Live recurring workflow support (2026-09-28)
 
@@ -46,8 +47,8 @@ cases and 35 existing cycle cases). All provider and SES calls were mocked. The
 two browser authorization-retry tests and documentation/whitespace checks pass.
 The live suite is included in CI; no schema change is required.
 
-Next: prepare a reviewed production release with both purchase flags off, inventory
-legacy billing evidence, and define the bounded pilot/rollback procedure. Actual
+The paused web deployment above completes the initial release/evidence review;
+worker alignment and bounded pilot acceptance remain. Actual
 activation still depends on commercial terms, protected live credentials/catalog,
 HTTPS webhook and operations acceptance, receipt dispatch scope, and unresolved
 provider renewal/failure/held-period acceptance. Existing Test Mode uncertainties

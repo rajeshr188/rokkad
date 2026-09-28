@@ -39,11 +39,12 @@ release. Adding live keys alone does not establish paying-pilot readiness.
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
 
-Paused release preparation is complete: source/image and rollback baseline are
-pinned, production has no payment-mode ambiguity, six pending migrations have a
-preservation regression, and candidate runtime/static/worker preflight passes.
-Production is unchanged. Next is the fresh backup, owner migration and paused web
-deployment in the [release procedure](../implementation/billing-paused-release-20260928.md).
+Paused production deployment completed at **14:55 IST**: verified backup, six
+billing migrations, separate static volume and pinned web image are in place.
+Billing/lending fingerprints and existing access are unchanged. Payments, new
+authorizations and sending remain disabled. Next: align the existing mail worker
+images while keeping dispatch paused, then complete launch acceptance. See the
+[deployment record](../implementation/billing-paused-release-20260928.md#deployment-result).
 
 Latest billing continuation: shared recurring services now accept matching live
 bindings for immediate creation, owner authorization, verified payment/recovery,
@@ -51,9 +52,9 @@ cancellation and explicit held/refund review. New live authorization requires th
 default-off flag, webhook secret and clean mode evidence. Recovery stays available
 while creation is paused. Scheduled live starts and live reservation release remain
 excluded. All live-mode verification used fictional fixtures and mocked responses;
-no production activation or real provider action occurred. Next: prepare the paused
-production release and billing evidence review alongside provider/commercial
-acceptance. See the [workflow checkpoint](../implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
+no production activation or real provider action occurred in that implementation
+checkpoint. The paused deployment above now includes this code; provider/commercial
+acceptance remains. See the [workflow checkpoint](../implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
 
 Previous billing continuation: explicit live catalog preview/registration is locally
 implemented without enabling mandates or charges. It validates a known provider

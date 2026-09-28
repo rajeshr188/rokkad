@@ -12,6 +12,44 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Paused billing release deployed (2026-09-28)
+
+At **14:55 IST**, the approved release `rokkad:billing-paused-4a131587ee80` replaced
+the web image, using separate static volume
+`rokkad_production_static_billing_4a131587ee80`. Image ID remains the verified
+`sha256:33ed455872008db4b70c92f9eff9ea5572b6b3b47ab4c28fefe3813f109b0d48`.
+A fresh 55,820,977-byte server-local database backup at **14:51:58 IST** passed
+archive-catalog and checksum verification. The previous image/static volume remain
+available; no rollback or database restore was needed.
+
+Applied exactly subscriptions migrations 0012–0017 through the migration-owner
+role. Restricted startup, runtime grants and RLS checks pass; no pending migrations
+remain and all new recurring tables are empty. Fingerprints of existing billing
+records and every directly Workspace-owned Loans model across five Workspaces
+match before migration, after migration and after deployment. One plan and three
+trials are preserved; operational Workspaces 1–3 retain full access and test
+Workspaces 4–5 remain recovery-only.
+
+Owner dashboard/overdue/loan detail/billing/plans/recurring pages passed for the
+three operational Workspaces. Existing stored ticket PDFs were hash-verified where
+present. Public HTTPS login, developer/policy pages and the exact new recurring
+JavaScript asset passed. Web runs with zero restarts; ordinary lending writes
+remain enabled and no owner credential was passed to web.
+
+Compose changes are limited to image/static references and explicit paused flags:
+provider mode disabled, checkout false, recurring false and platform sending false.
+Other configuration and the production settings file are unchanged. At **14:56 IST**,
+billing inventory had no payment evidence or blockers; mail had zero due messages
+and no queue flags. Dispatch stays disabled/marker absent, with feedback, recovery
+and health active on existing images. No payment or email was sent.
+
+Private evidence: `/root/rokkad-billing-release-20260928`. The
+[release record](implementation/billing-paused-release-20260928.md#deployment-result)
+contains the backup digest, before/after evidence and rollback boundaries. No new
+application code was introduced; the pinned release tests and migration-preservation
+test remain applicable. Next is updating the mail worker images with sending still
+paused, followed by remaining provider/commercial and live configuration acceptance.
+
 ## Paused billing release prepared (2026-09-28)
 
 Built `rokkad:billing-paused-4a131587ee80` from committed application source,

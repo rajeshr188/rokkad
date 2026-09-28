@@ -13,13 +13,13 @@ INR 14,990/year per Workspace, with the owner plus five staff (six total members
 Razorpay account approval and Live/Test modes are owner-confirmed; Test Mode keys
 and APIs are verified. Credentials are protected outside the repository/OneDrive.
 
-The paused production candidate `rokkad:billing-paused-4a131587ee80` is now built
-and preflighted. Production has three trials and no invoices/payments/legacy
-mandates; all are preserved. Six subscriptions migrations are pending. The new
-migration preservation test and read-only runtime/RLS, static/dependency/worker
-checks pass. Next: fresh backup, separate static volume, owner migration and paused
-web deployment using the [release procedure](../implementation/billing-paused-release-20260928.md).
-The candidate has not replaced production and does not enable billing or mail.
+The paused production release `rokkad:billing-paused-4a131587ee80` is deployed as
+of **14:55 IST**. Its six billing migrations are applied; billing/lending fingerprints
+and access remain unchanged. Runtime/RLS, owner/public pages, static and backup
+checks pass. Billing and sending stay disabled; existing mail workers/timers are
+unchanged. Next: align worker images while dispatch remains paused, then complete
+provider/commercial and live configuration acceptance. See the
+[deployment record](../implementation/billing-paused-release-20260928.md#deployment-result).
 
 Recurring agreement preparation, owner authorization/cancellation, exact paid-cycle
 recording, recovery/replay and audited held-period application are implemented
@@ -73,8 +73,8 @@ authorization requires the default-off flag, webhook secret and clean mode evide
 existing matching-mode recovery stays available while paused. Scheduled live starts
 and live reservation release remain unavailable. Fictional/mocked regression tests
 cover these boundaries; no live provider action or production activation occurred.
-Next is preparing the paused production release and evidence inventory alongside
-outstanding provider/commercial acceptance. See the
+The paused deployment above now includes this code and its evidence review;
+provider/commercial acceptance remains outstanding. See the
 [workflow checkpoint](../implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
 
 Previous billing code adds platform-only live catalog preview and immutable local

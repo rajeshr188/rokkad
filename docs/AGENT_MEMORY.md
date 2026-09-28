@@ -52,7 +52,21 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest FW-019 release preparation: source `4a131587ee80` is built as
+Latest FW-019 deployment: at 14:55 IST on 28 September,
+`rokkad:billing-paused-4a131587ee80` became the production web image with static
+volume `rokkad_production_static_billing_4a131587ee80`. Six subscriptions migrations
+(0012–0017) are applied; restricted runtime/grants/RLS/startup and owner/public page
+checks pass. Billing/Loans fingerprints and Workspace access are unchanged; the
+three operational Workspaces remain full-access. Fresh server-local backup and
+previous image/static volume are retained. Compose explicitly sets provider mode
+disabled, checkout/recurring false and sending false. Ordinary lending writes stay
+available; no owner credential reached web. At 14:56 IST, billing evidence is empty
+and mail has no due rows/flags. Feedback/recovery/health remain active; dispatch is
+disabled with marker absent, on existing worker images. Next: align mail worker
+images while sending stays paused, then complete launch acceptance. See the
+[deployment record](implementation/billing-paused-release-20260928.md#deployment-result).
+
+Previous FW-019 release preparation: source `4a131587ee80` is built as
 `rokkad:billing-paused-4a131587ee80`, image
 `sha256:33ed455872008db4b70c92f9eff9ea5572b6b3b47ab4c28fefe3813f109b0d48`.
 It is not deployed. Production has one plan, three trial subscriptions and zero
