@@ -9,8 +9,9 @@ tags: [billing, configuration, receipts, deployment]
 
 ## Frozen seller and explicit tax settings (2026-09-28)
 
-Implemented locally; production still runs `rokkad:billing-paused-4a131587ee80`.
-No schema or provider changes. New live offers/orders require all of:
+Deployed to production web and mail workers as `rokkad:billing-paused-60c7beeb8191`
+with billing/sending paused. No schema, provider or financial-record changes.
+Seller fields remain unconfigured. New live offers/orders require all of:
 
 | Setting | Required preparation |
 | --- | --- |
@@ -35,11 +36,12 @@ frozen future-cycle terms. A legal seller or GST-status change therefore needs a
 explicit collection/transition review before further billing, rather than an env
 edit alone. Preserve already received payment evidence throughout that review.
 
-Next release: build/deploy this source with all purchase/sending gates paused,
-verify restricted runtime and unchanged evidence, then configure the reviewed live
-seller/catalog. No migration is needed. Invoice readiness does not resolve remaining
+The paused deployment passed restricted runtime and unchanged-evidence checks;
+no migration was needed. Next: review and configure the live seller/catalog.
+Invoice readiness does not resolve remaining
 provider outcomes, mandate duration, pilot Workspace or live activation approval.
-See the [decision](../adr/2026-09-28-frozen-billing-seller.md).
+See the [decision](../adr/2026-09-28-frozen-billing-seller.md) and
+[deployment evidence](billing-paused-release-20260928.md#seller-invoice-update-deployed-2026-09-28).
 
 Validation: 221 billing/mail regressions and four checkout retry tests pass, with
 mocked provider/mail transports. The unsaved one-page PDF preview was text-checked
@@ -56,8 +58,8 @@ draft with no GST collected, pending final status/address review. An unsaved
 read-only offer preview produced 149900 paise and zero tax at 15:19 IST.
 
 That preparation identified missing seller details and an implicit tax default.
-The implementation above addresses them locally; deployment/configuration still
-remain. See [pilot preparation](../plans/monthly-billing-pilot.md).
+The deployed implementation above addresses them; reviewed live configuration
+remains. See [pilot preparation](../plans/monthly-billing-pilot.md).
 
 ## Paused production candidate (2026-09-28)
 

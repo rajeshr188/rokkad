@@ -31,9 +31,10 @@ with no GST collected, subject to final status/address review. The preview yield
 Both pending payments remain Created at 15:16 IST; support has acknowledgements only.
 
 Explicit live seller/tax readiness and frozen seller details across HTML/PDF/receipts
-are now implemented locally. No implicit tax default; the unregistered pilot
+are now deployed to web and workers as `rokkad:billing-paused-60c7beeb8191`, with
+all billing/sending gates paused. No implicit tax default; the unregistered pilot
 requires explicit zero tax and reviewed seller fields. Historical financial
-evidence and recovery are preserved. Next: deploy the change paused, then complete
+evidence and recovery are preserved; no migration was needed. Next: complete
 seller review and live configuration. Monthly scope does not waive failed collection,
 recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
 for the selected scope, document gaps and remaining mandate/Workspace decisions.

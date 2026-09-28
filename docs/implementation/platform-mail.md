@@ -8,6 +8,24 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Seller invoice worker update (2026-09-28)
+
+At **15:45 IST**, web and all worker image references use
+`rokkad:billing-paused-60c7beeb8191`, including frozen invoice seller rendering.
+Three service image references and the watchdog/operator command changed. Existing
+invocations finished before replacement; supervised feedback/recovery/health runs
+passed and their timers remain active/enabled. Dispatch's absent-marker condition
+skipped its command; dispatch remains disabled, sending false, invitation-only,
+limit one. No provider or seller configuration was installed.
+
+Final verification found restricted runtime without superuser/BYPASSRLS, all billing
+gates disabled, six unchanged attempts, zero receipts/due messages and no queue or
+health flags. Credentials and alerts were preserved; no mail was sent. Private
+evidence and rollback copies are under
+`/root/rokkad-seller-release-20260928/mail-workers`. The rollback procedure below
+applies using these latest saved files. See the
+[deployment record](billing-paused-release-20260928.md#seller-invoice-update-deployed-2026-09-28).
+
 ## Worker image alignment (2026-09-28)
 
 At **15:03 IST**, all dispatch/feedback/recovery service image references and the
@@ -416,7 +434,7 @@ because old inline invitation handling does not produce durable intent.
 
 ## Operator checks and stop-mail requests
 
-The current worker image is `rokkad:billing-paused-4a131587ee80`, matching web.
+The current worker image is `rokkad:billing-paused-60c7beeb8191`, matching web.
 Host scripts and a root-private `watchdog.json`
 are installed in `/home/rokkad/deploy/cutover-20260924/platform-mail-ops-20260926`.
 The JSON contains the exact restricted Docker worker invocation, not credentials.

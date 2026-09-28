@@ -12,6 +12,33 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Seller invoice update deployed with billing paused (2026-09-28)
+
+Web now runs `rokkad:billing-paused-60c7beeb8191` as of **15:44 IST**; all mail
+worker references and the watchdog/operator command were aligned at **15:45 IST**.
+This deploys the frozen seller and explicit tax implementation below. No migration
+was required; no seller profile, live credentials or provider resources were set up.
+
+A fresh server-local backup passed archive/catalog and SHA-256 verification before
+the switch. Billing and every directly Workspace-owned Loans table retain matching
+before/after fingerprints across all five Workspaces. Existing plans, three trials
+and access are unchanged; invoices/payments/recurring evidence remain empty.
+Restricted runtime, owner pages, stored loan-ticket hashes, public pages and the
+static asset check passed. Unconfigured live seller settings are rejected.
+
+Final checks at **15:45 IST**: web running with zero restarts and HTTPS login 200;
+feedback/recovery/health successful and timers active; no mail queue/health flags,
+zero due messages, six unchanged historical attempts and zero receipts. Dispatch
+remains disabled/marker absent with invitation-only limit one. Provider mode is
+disabled; checkout, recurring authorization and sending remain false. Credentials,
+settings and existing alerts were preserved. No payment or email was sent.
+
+The previous image/static volume and worker configuration copies are retained for
+rollback. Next: finalize seller status/address, mandate duration and named pilot,
+then complete live configuration and outstanding provider acceptance before a
+separately approved first collection. See the
+[deployment record](implementation/billing-paused-release-20260928.md#seller-invoice-update-deployed-2026-09-28).
+
 ## Frozen seller and explicit live tax implementation (2026-09-28)
 
 New live offers/orders and recurring authorization now require a reviewed seller

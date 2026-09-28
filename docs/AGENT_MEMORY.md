@@ -59,8 +59,9 @@ retain explicit 18%. New live snapshots freeze the seller; recurring invoices
 inherit it. HTML/PDF/receipts render saved details and no-GST wording, never today's
 profile for historical invoices. Current profile changes block new authorization
 but preserve matching-mode payment recovery/cancellation. Registered-supplier
-treatment is unsupported. No migration, evidence backfill or production change.
-Next: paused deployment, final business review and live setup. See the
+treatment is unsupported. Deployed to web and mail workers on 28 September with
+billing/sending paused, no migration or evidence backfill. Seller fields remain
+unconfigured pending final business review and live setup. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
 
 Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,

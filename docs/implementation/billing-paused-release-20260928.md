@@ -8,10 +8,66 @@ related: [billing-provider-readiness.md, recurring-agreements.md, container-and-
 
 # Paused billing release
 
-The release was deployed at **14:55 IST on 28 September 2026**. All six billing
+The latest paused update was deployed to web at **15:44 IST** and mail workers at
+**15:45 IST on 28 September 2026**. Billing and sending remain disabled.
+The earlier release below was deployed at **14:55 IST**. All six billing
 migrations are applied. Payments, new authorizations and mail dispatch remain
 disabled; this is not a paid launch. Preparation evidence below describes the
 earlier checkpoint. The deployment result supersedes its pending items.
+
+## Seller invoice update deployed (2026-09-28)
+
+| Item | Verified value |
+| --- | --- |
+| Source | `60c7beeb81910bf358cf3995e6a22011c4546e5f` |
+| Web and worker image | `rokkad:billing-paused-60c7beeb8191` |
+| Image ID | `sha256:5bc1c472d508d06df1b38c30fa8ab726e34686f07c1d4181c00340406dd12db0` |
+| Static volume | `rokkad_production_static_billing_60c7beeb8191` |
+| Rollback image | `rokkad:billing-paused-4a131587ee80` |
+| Rollback static volume | `rokkad_production_static_billing_4a131587ee80` |
+| New migrations | None; zero pending |
+| Verified backup | 15:43:29 IST, 55,861,393 bytes, archive catalog checked |
+| Backup SHA-256 | `3018047596f1648f2d4c7e6dc8c02eeb93612cb9babc6cdf19e864c2c43f7a81` |
+
+The owner authorized deploying the tested invoice update with billing/sending
+paused. The package contains only allowlisted committed application files; private
+local files were excluded. Build revision and source hashes were verified. Candidate
+checks ran under `rokkad_prod_runtime`, without superuser or BYPASSRLS. No migration
+owner credentials were needed. The existing deployment warnings described below
+remain; they are not new errors or proof of launch readiness.
+
+Before/after fingerprints match for Plan, Subscription, SubscriptionEntitlement,
+WorkspaceAccessDecision, BillingAccount, Invoice, Payment and every directly
+Workspace-owned Loans table across five Workspaces. All recurring tables are empty
+with runtime grants intact. Workspaces 1–3 retain full access and pass dashboard,
+overdue, loan detail, billing/plans and recurring owner-page checks; Workspaces 4–5
+retain recovery-only access. Stored ticket PDFs pass hash checks where present.
+
+Compose changed only image and static-volume references. The four explicit paused
+flags remain unchanged. Seller fields remain unconfigured, and the deployed guard
+rejects an unconfigured live seller. Production settings and credentials were not
+edited. No catalog, provider resource or financial evidence was created or changed.
+Public login/legal/developer pages and the exact recurring JavaScript asset pass.
+
+Workers were aligned after web verification, with monitoring timers briefly paused
+while current invocations finished naturally. Three service image references and
+the watchdog command changed; invitation-only dispatch and limit one were retained.
+Dispatch's absent-marker condition skipped its command. Feedback/recovery/health
+passed and their timers resumed active/enabled. At **15:45:29 IST**, the final check
+confirmed six historical attempts, zero receipts/due messages, no queue/health
+flags, web running with zero restarts and HTTPS login 200. Alerts and credentials
+were preserved. No email or payment was sent.
+
+Private evidence is in `/root/rokkad-seller-release-20260928`: manifest/build,
+preflight, backup/staging, baseline, deployed read-only checks, deployment result,
+saved Compose/release metadata and `mail-workers/` alignment/final verification.
+Rollback restores this directory's saved Compose and worker configuration with
+dispatch paused, preserving current records. Old image/static assets are retained;
+no database restore or reverse migration is needed. Server-local backup scope does
+not establish off-server disaster recovery.
+
+Next: final seller/commercial review, live configuration and applicable provider
+acceptance; see the [monthly pilot](../plans/monthly-billing-pilot.md).
 
 ## Deployment result
 

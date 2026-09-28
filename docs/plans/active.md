@@ -17,11 +17,13 @@ The owner now selected **monthly-only pilot preparation**, INR 1,499 and six tot
 members, with operator-prepared agreements; annual remains unpublished. Invoice
 name is **Rajesh Rathod H**. Replies indicate personal-PAN/no-GST setup. Live
 seller/tax readiness and frozen issuer rendering across HTML/PDF/receipts are now
-implemented locally; base tax has no implicit default. Next is deploying this
-change paused before final seller review and live configuration. See the [pilot preparation](monthly-billing-pilot.md)
+deployed with billing/sending paused; base tax has no implicit default. Web and
+workers use `rokkad:billing-paused-60c7beeb8191` as of **15:45 IST**, with no new
+migrations or record changes. Next is final seller review and live configuration.
+See the [pilot preparation](monthly-billing-pilot.md)
 for the exact draft, provider checkpoint and decisions still required.
 
-The paused production release `rokkad:billing-paused-4a131587ee80` is deployed as
+The earlier paused production release `rokkad:billing-paused-4a131587ee80` was deployed as
 of **14:55 IST**. Its six billing migrations are applied; billing/lending fingerprints
 and access remain unchanged. Runtime/RLS, owner/public pages, static and backup
 checks pass. Mail worker images were aligned at **15:03 IST**; feedback/recovery/

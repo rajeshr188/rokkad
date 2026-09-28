@@ -70,8 +70,10 @@ Production deployment and final seller/tax review remain pending:
    `Plan.save()` currently auto-populates it. Do not expose annual purchases or
    silently alter existing catalogs.
 
-Zero-GST and historical-snapshot regressions are included. Deploy the
-invoice/configuration change paused before live setup; no schema migration needed.
+Zero-GST and historical-snapshot regressions are included. The invoice/configuration
+change is deployed to web and mail workers as `rokkad:billing-paused-60c7beeb8191`
+with billing/sending paused. No migration or record changes; seller fields remain
+unconfigured. See the [deployment evidence](../implementation/billing-paused-release-20260928.md#seller-invoice-update-deployed-2026-09-28).
 
 ## Provider checkpoint
 
@@ -101,7 +103,7 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
    cancellable for future collections, without collecting twelve months upfront.
    This duration is unapproved. Rokkad requires explicit `total_count`; Razorpay
    documents bounded [subscription creation](https://razorpay.com/docs/api/payments/subscriptions/create-subscription/).
-3. Complete invoice/configuration work and applicable provider acceptance. Retain
+3. Complete reviewed seller configuration and applicable provider acceptance. Retain
    published refund review/initiation windows of seven/five working days; review
    cancellation wording before activation.
 4. Verify live subscription methods/fees for this merchant. Protect live keys on
