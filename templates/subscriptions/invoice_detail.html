@@ -244,6 +244,7 @@
         {% endif %}
 
         <!-- Invoice Information -->
+        {% include 'subscriptions/_seller.html' with seller=invoice.billing_seller %}
         <div class="invoice-info">
             <div class="info-section">
                 <h5>Bill To</h5>
@@ -297,10 +298,10 @@
                     <td class="label">Subtotal:</td>
                     <td class="amount">₹{{ invoice.subtotal }}</td>
                 </tr>
-                <tr class="tax">
+                {% if not invoice.billing_seller %}<tr class="tax">
                     <td class="label">GST ({{ gst_percentage }}%):</td>
                     <td class="amount">₹{{ invoice.gst_amount }}</td>
-                </tr>
+                </tr>{% endif %}
                 {% if invoice.discount_amount > 0 %}
                 <tr class="discount">
                     <td class="label">Discount:</td>
@@ -314,6 +315,7 @@
             </tbody>
         </table>
         
+        {% if invoice.billing_tax_note %}<p>{{ invoice.billing_tax_note }}</p>{% endif %}
         {% if invoice.payment.refund_amount %}
         <div class="alert alert-warning">
             Processed refunds: INR {{ invoice.payment.refund_amount }}.

@@ -7,6 +7,8 @@
 <p>We received INR {{ invoice.total_amount }} for {{ invoice.billed_plan_name }}
 ({{ invoice.checkout_snapshot.billing_cycle }}).</p>
 <p>Invoice: {{ invoice.invoice_number }}</p>
+{% include 'subscriptions/_seller.html' with seller=invoice.billing_seller %}
+{% if invoice.billing_tax_note %}<p>{{ invoice.billing_tax_note }}</p>{% endif %}
 {% if invoice.checkout_snapshot.kind == 'recurring' %}
 <p>This receipt records one paid recurring billing period:
 {{ invoice.recurring_cycle.period_start|date:"d M Y, H:i T" }} to

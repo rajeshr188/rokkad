@@ -22,6 +22,7 @@ from .models import (Invoice, Plan, RecurringAgreement, RecurringAgreementEvent,
                      RecurringPlanBinding, Subscription)
 from .razorpay_service import BillingProviderError, RazorpayService
 from .services import build_entitlement_defaults, get_workspace_member_usage
+from .seller import billing_tax_rate, live_seller
 
 
 def _test_mode():
@@ -53,6 +54,7 @@ def _creation_mode():
         raise PermissionDenied("Recurring agreement preparation is disabled.")
     mode = recurring_provider_mode()
     if mode == "live":
+        live_seller()
         if not getattr(settings, "RAZORPAY_WEBHOOK_SECRET", "").strip():
             raise PermissionDenied("Configure the live webhook secret before recurring authorization.")
         from .readiness import billing_evidence_inventory
@@ -74,15 +76,18 @@ def _identity(value, prefix):
     return value
 
 
-def _offer(plan, cycle):
+def _offer(plan, cycle, *, mode="test"):
+    """Pure offer snapshot; live callers must explicitly request issuer validation."""
     if cycle not in ("monthly", "yearly"):
         raise ValidationError("Choose monthly or yearly billing.")
     amount = plan.price if cycle == "monthly" else plan.yearly_price
-    tax_rate = Decimal(str(getattr(settings, "BILLING_TAX_RATE", "18")))
-    if not plan.is_active or amount is None or amount <= 0 or not tax_rate.is_finite() or tax_rate < 0:
+    seller = {"seller": live_seller()} if mode == "live" else {}
+    tax_rate = billing_tax_rate()
+    if not plan.is_active or amount is None or amount <= 0:
         raise ValidationError("An active payable plan and valid tax rate are required.")
     tax = (amount * tax_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return {
+        **seller,
         "plan_id": plan.pk, "plan_name": plan.name, "billing_cycle": cycle,
         "base_amount": str(amount), "tax_rate": str(tax_rate), "tax_amount": str(tax),
         "amount": int((amount + tax) * 100), "currency": "INR",
@@ -134,10 +139,10 @@ def review_plan_binding(*, actor, plan_id, cycle, provider_plan_id, reason, mode
         raise ValidationError("A catalog binding reason is required.")
     provider_plan_id = _identity(provider_plan_id, "plan_")
     plan = Plan.objects.get(pk=plan_id)
-    snapshot = _offer(plan, cycle)
+    snapshot = _offer(plan, cycle, mode=mode)
     entity = RazorpayService.get_plan(provider_plan_id)
     _verify_plan(entity, provider_plan_id, snapshot)
-    if _offer(Plan.objects.get(pk=plan_id), cycle) != snapshot:
+    if _offer(Plan.objects.get(pk=plan_id), cycle, mode=mode) != snapshot:
         raise ValidationError("The local offer changed during provider verification.")
     existing = RecurringPlanBinding.objects.filter(mode=mode, provider_plan_id=provider_plan_id).first()
     if existing and (existing.plan_id != plan.pk or existing.snapshot != snapshot):
@@ -159,7 +164,7 @@ def bind_plan(*, actor, plan_id, cycle, provider_plan_id, reason, mode="test"):
     with transaction.atomic():
         plan = Plan.objects.select_for_update().get(pk=plan_id)
         _catalog_mode(mode)
-        if _offer(plan, cycle) != snapshot:
+        if _offer(plan, cycle, mode=mode) != snapshot:
             raise ValidationError("The local offer changed during provider verification.")
         existing = RecurringPlanBinding.objects.filter(mode=mode, provider_plan_id=provider_plan_id).first()
         if existing:
@@ -222,7 +227,7 @@ def create_agreement(*, workspace_id, actor, binding_id, total_count, request_ke
             raise ValidationError("Only an active Workspace can start a recurring agreement.")
         require_no_recurring_agreement(workspace)
         binding = RecurringPlanBinding.objects.select_related("plan").get(pk=binding_id)
-        if binding.mode != mode or binding.snapshot != _offer(binding.plan, binding.snapshot["billing_cycle"]):
+        if binding.mode != mode or binding.snapshot != _offer(binding.plan, binding.snapshot["billing_cycle"], mode=mode):
             raise ValidationError("The provider binding is stale or belongs to another mode.")
         seats = next(x for x in binding.snapshot["entitlements"] if x["feature_code"] == "workspace.max_members")
         if get_workspace_member_usage(workspace=workspace, include_pending_invitations=True) > int(seats["value"]):

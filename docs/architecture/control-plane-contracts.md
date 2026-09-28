@@ -420,6 +420,14 @@ durable attempts/audits and never enables general sending. See the
 [controlled receipt decision](../adr/2026-09-28-controlled-test-receipt-delivery.md) and the
 [mode decision](../adr/2026-09-28-explicit-billing-provider-mode.md).
 
+Billing document extension (2026-09-28): new live offers require reviewed seller
+identity/address and explicit unregistered/zero-tax configuration. Seller details
+freeze in the existing immutable checkout/binding snapshots and flow to recurring
+invoices. Historical evidence never falls back to today's issuer. New authorization
+requires matching seller terms; existing recovery is independent of current seller
+configuration. No new table or backfill. See the
+[seller decision](../adr/2026-09-28-frozen-billing-seller.md).
+
 ## 10. Entitlements
 
 The target public API is a single Workspace-scoped service:

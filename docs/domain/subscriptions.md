@@ -8,6 +8,15 @@ related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 
 # Subscriptions
 
+New live offers require an explicit reviewed seller name/address, unregistered
+tax status and zero tax rate for the selected pilot. The base rate has no default;
+Test Mode explicitly retains its illustrative rate. The issuer is frozen into new
+checkout/binding snapshots and inherited by recurring invoices. HTML/PDF/receipt
+rendering uses saved evidence only; old invoices do not acquire a new seller or
+no-GST claim. Current seller changes block new authorization but preserve existing
+payment recovery. Registered-supplier treatment is not implemented. See the
+[seller decision](../adr/2026-09-28-frozen-billing-seller.md).
+
 Platform operators can now preview or register a known live provider plan against
 the frozen local offer, with matching explicit live credentials, both purchase
 switches paused and no conflicting test/unclassified billing evidence. Preview is

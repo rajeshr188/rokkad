@@ -52,7 +52,18 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest FW-019 commercial preparation: owner selected monthly-only INR 1,499,
+Latest FW-019 invoice implementation: live catalog/order/recurring authorization
+requires explicit zero tax plus BILLING_SELLER_NAME, BILLING_SELLER_ADDRESS and
+BILLING_SELLER_TAX_STATUS=unregistered. Base tax default is empty; tests/rehearsal
+retain explicit 18%. New live snapshots freeze the seller; recurring invoices
+inherit it. HTML/PDF/receipts render saved details and no-GST wording, never today's
+profile for historical invoices. Current profile changes block new authorization
+but preserve matching-mode payment recovery/cancellation. Registered-supplier
+treatment is unsupported. No migration, evidence backfill or production change.
+Next: paused deployment, final business review and live setup. See the
+[seller decision](adr/2026-09-28-frozen-billing-seller.md).
+
+Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,
 owner plus five staff, operator-prepared agreements; invoice name **Rajesh Rathod H**.
 Replies indicate personal-PAN/no-GST registration; Razorpay GST linking is unsupported
 for this account type. Prepare a commercial invoice with no GST collected, pending

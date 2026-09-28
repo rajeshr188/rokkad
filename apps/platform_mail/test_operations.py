@@ -98,6 +98,8 @@ class OperationsTests(TestCase):
 
 @override_settings(**mail_tests.MAIL_SETTINGS, BILLING_CHECKOUT_ENABLED=True,
                    BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_mockfixture",
+                   BILLING_TAX_RATE="0", BILLING_SELLER_NAME="Fictional Seller",
+                   BILLING_SELLER_ADDRESS="1 Example Street", BILLING_SELLER_TAX_STATUS="unregistered",
                    RAZORPAY_KEY_SECRET="test-secret", RAZORPAY_WEBHOOK_SECRET="webhook-secret")
 class ReceiptAcceptanceTests(TestCase):
     setUp = checkout_tests.CheckoutTests.setUp
@@ -122,7 +124,8 @@ class ReceiptAcceptanceTests(TestCase):
             self.assertEqual(message["reply_to"], "billing@rokkad.com")
             self.assertEqual(message["recipient"], "owner@example.test")
             self.assertIn(invoice.invoice_number, message["text"])
-            self.assertIn("118.01", message["text"])
+            self.assertIn("100.01", message["text"])
+            self.assertIn("GST not charged", message["text"])
             event = self.envelope(attempt=Attempt.objects.get(delivery=self.row))
             self.assertTrue(reconcile_sqs_envelope(event))
             self.assertFalse(reconcile_sqs_envelope(event))

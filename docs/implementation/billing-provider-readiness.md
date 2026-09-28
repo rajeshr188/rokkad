@@ -7,6 +7,46 @@ tags: [billing, configuration, receipts, deployment]
 
 # Billing provider configuration and readiness
 
+## Frozen seller and explicit tax settings (2026-09-28)
+
+Implemented locally; production still runs `rokkad:billing-paused-4a131587ee80`.
+No schema or provider changes. New live offers/orders require all of:
+
+| Setting | Required preparation |
+| --- | --- |
+| `BILLING_TAX_RATE` | Explicit `0` for this unregistered-supplier pilot; base default is empty |
+| `BILLING_SELLER_NAME` | Reviewed legal seller name; not a credential or PAN |
+| `BILLING_SELLER_ADDRESS` | Reviewed billing address |
+| `BILLING_SELLER_TAX_STATUS` | Explicit `unregistered`; other treatments currently rejected |
+
+Keep the seller fields empty until final business review. `check_billing_configuration`
+reports configuration blockers without printing seller/address values; it never
+asserts launch readiness. Test/rehearsal settings explicitly retain 18% and existing
+financial records are not rewritten.
+
+New live checkout and recurring binding snapshots freeze seller details. Recurring
+invoices inherit that binding. HTML/PDF invoices and receipts show the saved issuer
+and no-GST wording; historical invoices retain recorded tax and never borrow current
+seller settings. New authorization rejects stale/missing seller terms; payment
+recovery and cancellation remain available with matching provider credentials.
+
+Changing current seller/tax settings does not update an existing mandate or its
+frozen future-cycle terms. A legal seller or GST-status change therefore needs an
+explicit collection/transition review before further billing, rather than an env
+edit alone. Preserve already received payment evidence throughout that review.
+
+Next release: build/deploy this source with all purchase/sending gates paused,
+verify restricted runtime and unchanged evidence, then configure the reviewed live
+seller/catalog. No migration is needed. Invoice readiness does not resolve remaining
+provider outcomes, mandate duration, pilot Workspace or live activation approval.
+See the [decision](../adr/2026-09-28-frozen-billing-seller.md).
+
+Validation: 221 billing/mail regressions and four checkout retry tests pass, with
+mocked provider/mail transports. The unsaved one-page PDF preview was text-checked
+and visually inspected; schema-drift, boundary and documentation checks pass.
+Private local evidence: `outputs/seller-billing-regressions.log` and
+`outputs/seller-invoice-20260928/`. The preview is not an issued invoice.
+
 ## Monthly pilot commercial preparation (2026-09-28)
 
 The owner selected monthly-only INR 1,499 with six total members and
@@ -15,11 +55,9 @@ replies and the account's unsupported GST-linking page inform a commercial-invoi
 draft with no GST collected, pending final status/address review. An unsaved
 read-only offer preview produced 149900 paise and zero tax at 15:19 IST.
 
-Before live setup, replace implicit illustrative tax for live offers with reviewed
-seller/tax readiness and freeze issuer details in new financial snapshots. Existing
-HTML/PDF invoices omit the seller and always show GST. Render consistent historical
-and new invoice/receipt documents without rewriting old financial evidence.
-The deployed code/configuration is unchanged. See [pilot preparation](../plans/monthly-billing-pilot.md).
+That preparation identified missing seller details and an implicit tax default.
+The implementation above addresses them locally; deployment/configuration still
+remain. See [pilot preparation](../plans/monthly-billing-pilot.md).
 
 ## Paused production candidate (2026-09-28)
 

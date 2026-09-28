@@ -118,6 +118,14 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
         if not settings.BILLING_CHECKOUT_ENABLED:
             messages.info(request, "Online subscription payment is not yet available. Contact platform support for an access extension.")
             return redirect("workspace_subscriptions:dashboard", workspace_slug=request.workspace.slug)
+        from .seller import billing_tax_rate, live_seller
+        try:
+            billing_tax_rate()
+            if settings.BILLING_PROVIDER_MODE == "live":
+                live_seller()
+        except ValidationError:
+            messages.info(request, "Subscription billing configuration needs review. Contact platform support.")
+            return redirect("workspace_subscriptions:dashboard", workspace_slug=request.workspace.slug)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -135,8 +143,9 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
             amount = plan.price
             billing_cycle = "monthly"
 
-        # Calculate GST
-        gst_rate = Decimal(str(getattr(settings, "BILLING_TAX_RATE", "18")))
+        from .seller import billing_tax_rate, live_seller, NO_GST_NOTE
+        seller = live_seller() if settings.BILLING_PROVIDER_MODE == "live" else None
+        gst_rate = billing_tax_rate()
         gst_amount = (amount * (gst_rate / Decimal("100"))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         total_amount = amount + gst_amount
 
@@ -149,6 +158,8 @@ class CheckoutView(LoginRequiredMixin, BillingPermissionMixin, TemplateView):
                 "gst_amount": gst_amount,
                 "total_amount": total_amount,
                 "razorpay_key_id": settings.RAZORPAY_KEY_ID,
+                "billing_seller": seller,
+                "billing_tax_note": NO_GST_NOTE if seller else "",
             }
         )
 
@@ -368,35 +379,8 @@ class InvoicePDFView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
         invoice = self.get_object()
 
         try:
-            from reportlab.lib.pagesizes import letter
-            from reportlab.pdfgen import canvas
-            from io import BytesIO
-
-            # Create PDF (simplified - use django-weasyprint or similar for better results)
-            buffer = BytesIO()
-            pdf = canvas.Canvas(buffer, pagesize=letter)
-
-            # Title
-            pdf.setFont("Helvetica-Bold", 16)
-            pdf.drawString(50, 750, "INVOICE")
-
-            # Invoice details
-            pdf.setFont("Helvetica", 10)
-            pdf.drawString(50, 720, f"Invoice #: {invoice.invoice_number}")
-            pdf.drawString(50, 705, f"Date: {invoice.invoice_date}")
-            pdf.drawString(
-                50, 690, f"Customer: {invoice.billing_contact_name}"
-            )
-
-            # Amount details
-            pdf.drawString(50, 650, f"Subtotal: INR {invoice.subtotal}")
-            pdf.drawString(50, 635, f"GST ({invoice.gst_rate}%): INR {invoice.gst_amount}")
-            pdf.drawString(50, 620, f"Total: INR {invoice.total_amount}")
-
-            pdf.save()
-
-            buffer.seek(0)
-            response = HttpResponse(buffer, content_type="application/pdf")
+            from .invoice_pdf import render_invoice_pdf
+            response = HttpResponse(render_invoice_pdf(invoice), content_type="application/pdf")
             response[
                 "Content-Disposition"
             ] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'

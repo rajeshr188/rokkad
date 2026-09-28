@@ -38,8 +38,11 @@ BILLING_AUTO_PAYMENT_DAYS = 30
 # Service suspension days (days after due date)
 BILLING_SUSPENSION_DAYS = 5
 
-# GST/Tax rate for India (in percentage)
-BILLING_TAX_RATE = Decimal("18.00")
+# Explicit reviewed configuration; no assumed GST registration or default tax.
+BILLING_TAX_RATE = os.environ.get("BILLING_TAX_RATE", "")
+BILLING_SELLER_NAME = os.environ.get("BILLING_SELLER_NAME", "")
+BILLING_SELLER_ADDRESS = os.environ.get("BILLING_SELLER_ADDRESS", "")
+BILLING_SELLER_TAX_STATUS = os.environ.get("BILLING_SELLER_TAX_STATUS", "")
 
 # Country for billing
 BILLING_COUNTRY = "IN"

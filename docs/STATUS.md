@@ -12,6 +12,35 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Frozen seller and explicit live tax implementation (2026-09-28)
+
+New live offers/orders and recurring authorization now require a reviewed seller
+name/address, explicit `unregistered` tax status and zero tax rate. Base tax has no
+implicit default; tests and the isolated rehearsal keep their explicit illustrative
+18%. Registered-supplier treatment is deliberately unsupported in this pilot.
+
+New live checkout and plan-binding snapshots freeze issuer details; recurring paid
+invoices inherit those details. HTML/PDF invoices, checkout/authorization and receipts
+show the seller and no-GST wording. Historical invoices retain saved tax and never
+inherit today's seller. Current profile changes block new authorization but do not
+block same-mode payment recovery, cancellation or existing-order identity retries.
+Existing database guards reject snapshot rewrites; no migration or backfill needed.
+
+Validation: **221 tests passed** in the final billing/mail regression run, including
+12 seller/configuration/document cases, zero-tax catalog guards, recurring cycles,
+recovery/refunds/replays and historical preservation. The preceding focused run
+also passed live-workflow and checkout coverage; its single old receipt-amount
+expectation was corrected and passes in the final run. **Four checkout JavaScript
+retry tests passed**, as did schema-drift, import-boundary, documentation-link and
+whitespace checks. The one-page unsaved invoice PDF was text-checked and visually
+reviewed with the existing PyMuPDF renderer; no clipping or overlap. No new dependency.
+
+All provider/mail calls in tests were mocked. No production configuration, seller
+profile, catalog or financial evidence changed; production remains on the earlier
+paused image. Next is a paused web/worker deployment, followed by final business
+review and live configuration. See the [seller decision](adr/2026-09-28-frozen-billing-seller.md)
+and [configuration runbook](implementation/billing-provider-readiness.md#frozen-seller-and-explicit-tax-settings-2026-09-28).
+
 ## Monthly pilot preparation and provider review (2026-09-28)
 
 The owner selected a monthly-only INR 1,499 pilot, owner plus five staff, with

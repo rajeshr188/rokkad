@@ -119,7 +119,9 @@ class CheckoutTests(TestCase):
         invoice.refresh_from_db()
         self.assertNotEqual(invoice.status, "paid")
 
-    @override_settings(BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_mockfixture")
+    @override_settings(BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_mockfixture",
+        BILLING_TAX_RATE="0", BILLING_SELLER_NAME="Fictional Seller",
+        BILLING_SELLER_ADDRESS="1 Example Street", BILLING_SELLER_TAX_STATUS="unregistered")
     def test_receipt_transport_failure_does_not_undo_payment(self):
         from apps.platform_mail.models import Delivery
         from apps.platform_mail.services import dispatch_one, retry_delivery

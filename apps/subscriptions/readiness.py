@@ -14,6 +14,15 @@ def assess_billing_configuration():
         provider_mode()
     except ValidationError as exc:
         blockers.extend(exc.messages)
+    if mode in {"test", "live"}:
+        from .seller import live_seller, billing_tax_rate
+        try:
+            if mode == "live":
+                live_seller()
+            else:
+                billing_tax_rate()
+        except ValidationError as exc:
+            blockers.extend(exc.messages)
     if not getattr(settings, "RAZORPAY_WEBHOOK_SECRET", ""):
         blockers.append("A mode-specific Razorpay webhook secret is missing.")
     from apps.platform_mail.readiness import assess_platform_mail

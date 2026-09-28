@@ -114,6 +114,7 @@ jobs:
           python manage.py test --settings django_project.settings.test --noinput
           apps.subscriptions.test_plan_pricing
           apps.subscriptions.test_provider_configuration
+          apps.subscriptions.test_seller
           apps.subscriptions.test_recurring
           apps.subscriptions.test_recurring_owner
           apps.subscriptions.test_recurring_cycles

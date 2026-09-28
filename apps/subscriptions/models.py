@@ -601,6 +601,16 @@ class Invoice(models.Model):
     def billed_plan_name(self):
         return self.checkout_snapshot.get("plan_name") or self.subscription.plan.name
 
+    @property
+    def billing_seller(self):
+        from .seller import invoice_seller
+        return invoice_seller(self)
+
+    @property
+    def billing_tax_note(self):
+        from .seller import NO_GST_NOTE
+        return NO_GST_NOTE if self.billing_seller else ""
+
 
 class Payment(models.Model):
     """

@@ -41,7 +41,15 @@ class RecurringDashboardView(LoginRequiredMixin, BillingPermissionMixin, Templat
             context["total_amount"] = Decimal(agreement.binding.snapshot["amount"]) / 100
             context["cancellation_requested"] = agreement.events.filter(event_type="cancel.requested").exists()
             context["ended"] = agreement.provider_status in recurring_owner.TERMINAL
+            seller_ready = True
+            if agreement.binding.mode == "live":
+                from .seller import require_live_offer
+                try:
+                    require_live_offer(agreement.binding.snapshot)
+                except ValidationError:
+                    seller_ready = False
             context["can_authorize"] = (settings.BILLING_RECURRING_ENABLED and
+                seller_ready and
                 matching_mode and not (start_at and agreement.binding.mode == "live") and
                 agreement.state == "verified" and agreement.provider_status == "created" and
                 not agreement.closed_at and not context["cancellation_requested"] and not context["schedule_expired"])

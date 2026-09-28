@@ -32,8 +32,11 @@ LIVE_SETTINGS = dict(BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_fix
               "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})
 
 
-@override_settings(**{**LIVE_SETTINGS, "BILLING_RECURRING_ENABLED": True})
+@override_settings(**{**LIVE_SETTINGS, "BILLING_RECURRING_ENABLED": True, "BILLING_TAX_RATE": "0",
+    "BILLING_SELLER_NAME": "Fictional Seller", "BILLING_SELLER_ADDRESS": "1 Example Street",
+    "BILLING_SELLER_TAX_STATUS": "unregistered"})
 class LiveCreationTests(TransactionTestCase):
+    expected_amount = 149900
     created_entity = creation_tests.RecurringAgreementTests.created_entity
     create = creation_tests.RecurringAgreementTests.create
     reconcile = creation_tests.RecurringAgreementTests.reconcile
@@ -51,7 +54,7 @@ class LiveCreationTests(TransactionTestCase):
                 yearly_price="14990.00", max_users=6, trial_days=0)
             self.plan.refresh_from_db()
         self.provider_plan = {"id": "plan_fixture", "entity": "plan", "period": "monthly", "interval": 1,
-                              "item": {"amount": 176882, "currency": "INR"}}
+                              "item": {"amount": 149900, "currency": "INR"}}
         self.plan_read = patch.object(RazorpayService, "get_plan", side_effect=lambda _: deepcopy(self.provider_plan)).start()
         self.provider_create = patch.object(RazorpayService, "create_subscription", side_effect=self.created_entity).start()
         self.addCleanup(patch.stopall)
@@ -143,18 +146,14 @@ class LiveOwnerAndCycleTests(owner_tests.OwnerFixture, TestCase):
         owner_tests.RecurringOwnerTests.test_future_recovery_displays_held_payment_without_promising_activation)
 
     @override_settings(BILLING_RECURRING_ENABLED=True)
-    def test_owner_authorization_and_page_use_live_identity_without_test_consent(self):
+    def test_historical_live_offer_without_seller_cannot_start_new_authorization(self):
         self.provider_agreement["status"] = "created"
-        with workspace_context(self.workspace.pk):
-            options = owner_actions.authorization_options(**self.args())
-        self.assertEqual(options["name"], "Rokkad")
-        self.assertEqual(options["key"], "rzp_live_fixture")
-        self.assertEqual(options["subscription_id"], "sub_cycle")
-        self.assertNotIn("amount", options)
+        with workspace_context(self.workspace.pk), self.assertRaises(ValidationError):
+            owner_actions.authorization_options(**self.args())
         self.client.force_login(self.owner)
         url = reverse("workspace_subscriptions:recurring", kwargs={"workspace_slug": self.workspace.slug})
         page = self.client.get(url)
-        self.assertContains(page, 'id="recurring-authorize"')
+        self.assertNotContains(page, 'id="recurring-authorize"')
         self.assertNotContains(page, "Test Mode")
         with override_settings(BILLING_RECURRING_ENABLED=False):
             self.assertNotContains(self.client.get(url), 'id="recurring-authorize"')

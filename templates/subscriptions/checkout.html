@@ -124,15 +124,17 @@
         <!-- Plan Summary -->
         <div class="plan-summary">
             <h5>{{ plan.name }}</h5>
-            <p class="text-muted mb-3">{{ plan.description }}</p>
+              <p class="text-muted mb-3">{{ plan.description }}</p>
+              {% include 'subscriptions/_seller.html' with seller=billing_seller %}
             
             <div class="summary-row">
                 <span>Base Amount:</span>
                 <strong>₹{{ base_amount }}</strong>
             </div>
             <div class="summary-row">
+                {% if billing_tax_note %}<span>{{ billing_tax_note }}</span>{% else %}
                 <span>GST ({{ gst_rate }}%):</span>
-                <strong>₹{{ gst_amount }}</strong>
+                <strong>₹{{ gst_amount }}</strong>{% endif %}
             </div>
             <div class="summary-row total">
                 <span>Total Amount:</span>
@@ -309,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    function openRazorpayCheckout(orderData) {
+      function openRazorpayCheckout(orderData) {
         const options = {
             key: '{{ razorpay_key_id }}',
             amount: orderData.amount,

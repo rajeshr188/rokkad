@@ -393,7 +393,10 @@ RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET", default="")
 BILLING_PROVIDER_MODE = env("BILLING_PROVIDER_MODE", default="disabled")
 
 # Billing Configuration
-BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="18")  # 18% GST for India
+BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="")  # Explicit commercial review required.
+BILLING_SELLER_NAME = env("BILLING_SELLER_NAME", default="")
+BILLING_SELLER_ADDRESS = env("BILLING_SELLER_ADDRESS", default="")
+BILLING_SELLER_TAX_STATUS = env("BILLING_SELLER_TAX_STATUS", default="")
 BILLING_ALLOW_TRIAL_START = env.bool("BILLING_ALLOW_TRIAL_START", default=DEBUG)
 SUBSCRIPTION_GRACE_DAYS = 7
 # Enable only after provider checkout/webhook acceptance on the deployment.

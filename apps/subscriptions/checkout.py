@@ -18,6 +18,7 @@ from .billing import effective_billing_state, transition_subscription
 from .models import BillingAccount, Invoice, Payment, Plan, Subscription, SubscriptionEvent
 from .razorpay_service import BillingProviderError, RazorpayService
 from .provider_configuration import provider_mode, require_invoice_mode
+from .seller import billing_tax_rate, live_seller
 from .services import build_billing_account_defaults, build_entitlement_defaults, ensure_entitlements_for_subscription
 
 
@@ -55,6 +56,7 @@ def create_checkout(*, workspace, actor, plan_id, billing_cycle, request_key):
             raise ValidationError("This checkout needs payment-provider reconciliation.")
         return existing
     from .recurring import require_no_recurring_agreement
+    seller = {"seller": live_seller()} if mode == "live" else {}
     require_no_recurring_agreement(workspace)
     plan = Plan.objects.filter(pk=plan_id, is_active=True).first()
     if plan is None:
@@ -73,9 +75,10 @@ def create_checkout(*, workspace, actor, plan_id, billing_cycle, request_key):
     defaults = build_billing_account_defaults(subscription)
     defaults.pop("company")
     account, _ = BillingAccount.objects.get_or_create(company=workspace, defaults=defaults)
-    tax_rate = Decimal(str(getattr(settings, "BILLING_TAX_RATE", "18")))
+    tax_rate = billing_tax_rate()
     tax = (amount * tax_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     snapshot = {
+        **seller,
         "provider_mode": mode,
         "workspace_id": workspace.pk, "plan_id": plan.pk, "plan_name": plan.name,
         "billing_cycle": billing_cycle, "currency": "INR", "amount": int((amount + tax) * 100),

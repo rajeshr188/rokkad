@@ -53,24 +53,25 @@ and INR 0.00 tax. No plan was saved, provider called or production setting chang
 existing frozen bindings and invoice count were unchanged. Other model-default
 feature limits were not accepted as commercial terms.
 
-Source review identified the next concrete implementation:
+Source review identified the following gaps, now addressed locally by the
+[frozen-seller implementation](../implementation/billing-provider-readiness.md#frozen-seller-and-explicit-tax-settings-2026-09-28).
+Production deployment and final seller/tax review remain pending:
 
-1. Base billing settings still default to illustrative **18%**. Require explicit
+1. Base billing settings now have an empty tax default and require explicit
    reviewed live seller/tax configuration. Preserve rehearsal values and old frozen
    invoices/bindings; never recalculate their history using new settings.
-2. HTML/PDF invoices lack seller identity/address and always show a GST row.
-   Freeze reviewed issuer/tax treatment in new financial evidence and render it
-   consistently. Later seller-profile changes must not rewrite issued invoices;
-   keep historical rendering compatible.
-3. Check checkout, authorization and receipts against the same frozen amount and
-   treatment. Arithmetic preview does not accept those documents.
+2. New live evidence freezes issuer/tax treatment. HTML/PDF invoices and receipts
+   render it consistently, preserving historical invoices without seller snapshots.
+   Configuration changes do not rewrite issued evidence.
+3. Checkout and authorization now show the same seller/no-GST treatment. New live
+   authorization requires a current reviewed seller; existing recovery is unaffected.
 4. Enforce monthly scope through a monthly binding and controlled agreement
    preparation with one-off checkout paused. Empty `yearly_price` is insufficient:
    `Plan.save()` currently auto-populates it. Do not expose annual purchases or
    silently alter existing catalogs.
 
-Add zero-GST and historical-snapshot regression coverage, then deploy the
-invoice/configuration change paused before live setup.
+Zero-GST and historical-snapshot regressions are included. Deploy the
+invoice/configuration change paused before live setup; no schema migration needed.
 
 ## Provider checkpoint
 

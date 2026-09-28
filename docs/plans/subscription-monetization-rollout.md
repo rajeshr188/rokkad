@@ -30,8 +30,11 @@ with no GST collected, subject to final status/address review. The preview yield
 149900 paise with no writes. Existing 18% rehearsal evidence stays unchanged.
 Both pending payments remain Created at 15:16 IST; support has acknowledgements only.
 
-Next concrete implementation: explicit live seller/tax readiness and frozen seller
-details across HTML/PDF/receipts. Monthly scope does not waive failed collection,
+Explicit live seller/tax readiness and frozen seller details across HTML/PDF/receipts
+are now implemented locally. No implicit tax default; the unregistered pilot
+requires explicit zero tax and reviewed seller fields. Historical financial
+evidence and recovery are preserved. Next: deploy the change paused, then complete
+seller review and live configuration. Monthly scope does not waive failed collection,
 recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
 for the selected scope, document gaps and remaining mandate/Workspace decisions.
 

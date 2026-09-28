@@ -1,0 +1,7 @@
+{% if seller %}
+<div class="info-section">
+  <h5>Seller</h5>
+  <p><strong>{{ seller.name }}</strong></p>
+  <p>{{ seller.address|linebreaksbr }}</p>
+</div>
+{% endif %}

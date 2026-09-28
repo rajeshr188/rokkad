@@ -78,7 +78,7 @@ class RecurringAgreementTests(TransactionTestCase):
         self.assertEqual(self.create().pk, agreement.pk)
         self.provider_create.assert_called_once()
         self.assertEqual(agreement.state, "verified")
-        self.assertEqual(self.binding.snapshot["amount"], 176882)
+        self.assertEqual(self.binding.snapshot["amount"], getattr(self, "expected_amount", 176882))
         seats = next(x for x in self.binding.snapshot["entitlements"] if x["feature_code"] == "workspace.max_members")
         self.assertEqual(seats["value"], "6")
         self.assert_no_access_granted()

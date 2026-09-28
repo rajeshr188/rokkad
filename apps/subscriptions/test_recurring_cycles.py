@@ -41,7 +41,7 @@ class CycleFixture:
                                            description="Test", max_users=6)
             self.plan.refresh_from_db()
             self.binding = RecurringPlanBinding.objects.create(plan=self.plan, mode=getattr(self, "provider_mode", "test"), provider_plan_id="plan_cycle",
-                snapshot=_offer(self.plan, "monthly"), actor=self.owner, reason="Verified fixture")
+                snapshot=_offer(self.plan, "monthly", mode=getattr(self, "offer_mode", "test")), actor=self.owner, reason="Verified fixture")
             self.now = timezone.now().replace(microsecond=0)
             self.agreement = RecurringAgreement.objects.create(workspace=self.workspace, binding=self.binding,
                 actor=self.owner, request_key=uuid4(), state="verified", provider_subscription_id="sub_cycle",
@@ -51,7 +51,7 @@ class CycleFixture:
         self.provider_agreement = {**self.agreement.request_snapshot, "id": "sub_cycle", "entity": "subscription",
                                    "status": "active", "has_scheduled_changes": False}
         self.provider_plan = {"id": "plan_cycle", "entity": "plan", "period": "monthly", "interval": 1,
-                              "item": {"amount": 176882, "currency": "INR"}}
+                              "item": {"amount": self.binding.snapshot["amount"], "currency": "INR"}}
         self.invoices, self.payments = {}, {}
         self.add_cycle("one", self.now-timedelta(days=45), self.now-timedelta(days=15))
         self.add_cycle("two", self.now-timedelta(days=15), self.now+timedelta(days=15))
@@ -64,7 +64,8 @@ class CycleFixture:
             patch.object(RazorpayService, method, side_effect=effect).start()
         self.addCleanup(patch.stopall)
 
-    def add_cycle(self, suffix, start, end, amount=176882):
+    def add_cycle(self, suffix, start, end, amount=None):
+        amount = self.binding.snapshot["amount"] if amount is None else amount
         self.invoices["inv_"+suffix] = {"id": "inv_"+suffix, "entity": "invoice", "subscription_id": "sub_cycle",
             "order_id": "order_"+suffix, "payment_id": "pay_"+suffix, "status": "paid", "amount": amount,
             "amount_paid": amount, "amount_due": 0, "currency": "INR", "billing_start": int(start.timestamp()),

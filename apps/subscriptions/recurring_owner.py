@@ -62,6 +62,9 @@ def authorization_options(*, workspace, actor, agreement_id):
         if (agreement.closed_at or agreement.provider_status != "created" or
                 agreement.events.filter(event_type="cancel.requested").exists()):
             raise ValidationError("This agreement cannot start another authorization. Refresh its status or contact support.")
+        if mode == "live":
+            from .seller import require_live_offer
+            require_live_offer(agreement.binding.snapshot)
         start_at = agreement.request_snapshot.get("start_at")
         if start_at is not None and mode == "live":
             raise ValidationError("Scheduled live starts require a separately reviewed transition workflow.")

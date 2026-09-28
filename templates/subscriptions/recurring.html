@@ -9,8 +9,12 @@
 <div class="card mb-4"><div class="card-body">
   <h2 class="h4">{{ agreement.binding.snapshot.plan_name }}</h2>
   <p><strong>{{ agreement.binding.mode|upper }} MODE</strong> &middot; {{ agreement.binding.snapshot.billing_cycle|capfirst }}</p>
-  <p>INR {{ total_amount|floatformat:2 }} per cycle, including INR {{ agreement.binding.snapshot.tax_amount }} tax.
-    Base price INR {{ agreement.binding.snapshot.base_amount }}.</p>
+  {% include 'subscriptions/_seller.html' with seller=agreement.binding.snapshot.seller %}
+  <p>INR {{ total_amount|floatformat:2 }} per cycle.
+    {% if agreement.binding.snapshot.seller.tax_status == 'unregistered' %}
+    GST not charged - supplier not registered under GST.
+    {% else %}Includes INR {{ agreement.binding.snapshot.tax_amount }} tax.
+    Base price INR {{ agreement.binding.snapshot.base_amount }}.{% endif %}</p>
   <p>{{ member_limit }} people total, including the owner.</p>
   <p>Up to {{ agreement.request_snapshot.total_count }} billing cycles.
     {% if scheduled_start %}Scheduled billing start: {{ scheduled_start|date:'d M Y H:i:s T' }}.
