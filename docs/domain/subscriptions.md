@@ -8,6 +8,15 @@ related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 
 # Subscriptions
 
+Operator catalog preparation is private while checkout and trial signup are both
+paused. The owner catalog then links to the Workspace's prepared recurring agreement,
+whose frozen terms remain visible independently. Live binding also requires trial
+signup paused. Re-enabling either self-service switch publishes the active-plan
+catalog and requires offer review; trial-only browsing omits annual purchases.
+Legacy feature claims and estimated overage charges are no longer presented as
+commercial terms. Stored limits and invoices are unchanged. See the
+[catalog publication decision](../adr/2026-09-28-private-operator-billing-catalog.md).
+
 New live offers require an explicit reviewed seller name/address, unregistered
 tax status and zero tax rate for the selected pilot. The base rate has no default;
 Test Mode explicitly retains its illustrative rate. The issuer is frozen into new

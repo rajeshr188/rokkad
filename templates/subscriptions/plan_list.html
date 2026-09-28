@@ -54,15 +54,6 @@
         margin-right: 0.5rem;
     }
     
-    .plan-features li.unavailable {
-        color: #ccc;
-    }
-    
-    .plan-features li.unavailable:before {
-        content: "✗ ";
-        color: #dc3545;
-    }
-    
     .current-badge {
         position: absolute;
         top: 1rem;
@@ -82,28 +73,27 @@
         margin-top: 1rem;
     }
     
-    .comparison-table {
-        margin-top: 3rem;
-    }
-    
-    .comparison-table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-    }
 </style>
 {% endblock %}
 
 {% block mgmt_content %}
 {% include "subscriptions/_navigation.html" %}
-{% if not billing_checkout_enabled %}<div class="alert alert-info">Online subscription payment is not yet available. Contact your Rokkad platform administrator to arrange access.</div>{% endif %}
+
 <div class="container py-5">
     <div class="row mb-5">
         <div class="col-12">
-            <h1 class="mb-2">Choose Your Plan</h1>
+            <h1 class="mb-2">Subscription plans</h1>
+            {% if billing_checkout_enabled or trial_start_enabled %}
             <p class="text-muted">One subscription per Workspace. Prices shown before applicable tax.</p>
+            {% else %}
+            <p>Subscriptions are arranged with Rokkad support. Review any agreement prepared for your Workspace in Recurring payments.</p>
+            <a class="btn btn-primary" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review recurring payments</a>
+            <a class="btn btn-outline-secondary" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}">View billing dashboard</a>
+            {% endif %}
         </div>
     </div>
     
+    {% if billing_checkout_enabled or trial_start_enabled %}
     <!-- Plans Display -->
     <div class="row">
         {% for plan in plans %}
@@ -114,13 +104,12 @@
                 {% endif %}
                 
                 <h3 class="plan-name">{{ plan.name }}</h3>
-                <p class="text-muted small">{{ plan.get_tier_display }}</p>
                 
                 <div class="plan-price">
                     ₹{{ plan.price }}<span class="plan-period">/month</span>
                 </div>
                 
-                {% if plan.yearly_price %}
+                {% if billing_checkout_enabled and plan.yearly_price %}
                 <p class="text-muted small">
                     or ₹{{ plan.yearly_price }}/year
                     {% if plan.annual_savings > 0 %}<span class="badge badge-success">Save ₹{{ plan.annual_savings|floatformat:2 }} compared with 12 monthly payments</span>{% endif %}
@@ -132,19 +121,6 @@
                 <h5 class="mt-4 mb-3">Features</h5>
                 <ul class="plan-features">
                     <li>{{ plan.max_users }} members including the owner</li>
-                    <li>{{ plan.max_transactions_per_month }} Monthly Operations</li>
-                    <li {% if not plan.has_advanced_reporting %}class="unavailable"{% endif %}>
-                        Advanced Reporting
-                    </li>
-                    <li {% if not plan.has_approvals_workflow %}class="unavailable"{% endif %}>
-                        Approval Workflow
-                    </li>
-                    <li {% if not plan.has_api_access %}class="unavailable"{% endif %}>
-                        API Access
-                    </li>
-                    <li {% if not plan.has_custom_fields %}class="unavailable"{% endif %}>
-                        Custom Fields
-                    </li>
                 </ul>
                 
                 {% if not current_subscription and trial_start_enabled and plan.trial_days > 0 %}
@@ -168,79 +144,17 @@
                 {% endif %}
             </div>
         </div>
+        {% empty %}
+        <p class="col-12">No plans are available for self-service signup. Contact Rokkad support.</p>
         {% endfor %}
     </div>
-    
-    <!-- Features Comparison Table -->
-    {% if plans.count > 1 %}
-    <div class="row mt-5">
-        <div class="col-12">
-            <h3 class="mb-4">Detailed Feature Comparison</h3>
-            <div class="table-responsive">
-                <table class="table app-table table-hover comparison-table">
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            {% for plan in plans %}
-                            <th class="text-center">{{ plan.name }}</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Members including the owner</strong></td>
-                            {% for plan in plans %}
-                            <td class="text-center">{{ plan.max_users }}</td>
-                            {% endfor %}
-                        </tr>
-                        <tr>
-                            <td><strong>Advanced Reporting</strong></td>
-                            {% for plan in plans %}
-                            <td class="text-center">
-                                {% if plan.has_advanced_reporting %}
-                                    <span class="text-success">✓</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                        </tr>
-                        <tr>
-                            <td><strong>API Access</strong></td>
-                            {% for plan in plans %}
-                            <td class="text-center">
-                                {% if plan.has_api_access %}
-                                    <span class="text-success">✓</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                        </tr>
-                        <tr>
-                            <td><strong>Priority Support</strong></td>
-                            {% for plan in plans %}
-                            <td class="text-center">
-                                {% if plan.tier == 'enterprise' %}
-                                    <span class="text-success">✓</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     
     <!-- Trial Info -->
     {% if trial_start_enabled and not current_subscription %}
     <div class="alert alert-info mt-5">
         Where available, start a trial using the plan's trial button. Trial length is shown on each eligible plan.
     </div>
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

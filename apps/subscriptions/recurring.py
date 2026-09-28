@@ -117,8 +117,9 @@ def _catalog_mode(mode, *, preview=False):
     if mode not in {"test", "live"} or provider_mode() != mode:
         raise ValidationError("Catalog mode must match the configured provider mode.")
     if mode == "live":
-        if settings.BILLING_CHECKOUT_ENABLED or settings.BILLING_RECURRING_ENABLED:
-            raise PermissionDenied("Pause checkout and recurring authorization before live catalog preparation.")
+        if (settings.BILLING_CHECKOUT_ENABLED or settings.BILLING_RECURRING_ENABLED or
+                settings.BILLING_ALLOW_TRIAL_START):
+            raise PermissionDenied("Pause checkout, trial signup and recurring authorization before live catalog preparation.")
         from .readiness import billing_evidence_inventory
         blockers = billing_evidence_inventory()["blockers"]
         if blockers:

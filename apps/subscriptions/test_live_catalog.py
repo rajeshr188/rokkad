@@ -23,7 +23,8 @@ from .razorpay_service import BillingProviderError, RazorpayService
                    RAZORPAY_KEY_SECRET="private-fixture", BILLING_TAX_RATE="0",
                    BILLING_SELLER_NAME="Fictional Seller", BILLING_SELLER_ADDRESS="1 Example Street",
                    BILLING_SELLER_TAX_STATUS="unregistered",
-                   BILLING_CHECKOUT_ENABLED=False, BILLING_RECURRING_ENABLED=False)
+                   BILLING_CHECKOUT_ENABLED=False, BILLING_RECURRING_ENABLED=False,
+                   BILLING_ALLOW_TRIAL_START=False)
 class LiveCatalogTests(TransactionTestCase):
     def setUp(self):
         self.actor = get_user_model().objects.create_user(username="catalog-admin", is_superuser=True)
@@ -50,6 +51,15 @@ class LiveCatalogTests(TransactionTestCase):
                     recurring.review_plan_binding(**self.args)
         self.fetch.assert_not_called()
         self.assertFalse(RecurringPlanBinding.objects.exists())
+
+    @override_settings(BILLING_ALLOW_TRIAL_START=True)
+    def test_trial_publication_must_be_paused_before_live_catalog_review_or_binding(self):
+        for action in (recurring.review_plan_binding, recurring.bind_plan):
+            with self.subTest(action=action.__name__), self.assertRaisesMessage(PermissionDenied, "trial signup"):
+                action(**self.args)
+        self.fetch.assert_not_called()
+        self.assertFalse(RecurringPlanBinding.objects.exists())
+        self.assert_no_financial_effect()
 
     def test_preview_reports_verified_terms_without_saving_or_exposing_provider_payload(self):
         output = StringIO()

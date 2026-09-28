@@ -430,6 +430,12 @@ configuration. No new table or backfill. See the
 
 ## 10. Entitlements
 
+Catalog presentation does not confer entitlement or paid access. Operator-prepared
+plans remain private while checkout and trial signup are paused; recurring agreement
+terms come from their immutable binding. Live catalog review requires all three
+creation switches paused, including trial signup. See the
+[publication boundary](../adr/2026-09-28-private-operator-billing-catalog.md).
+
 The target public API is a single Workspace-scoped service:
 
 ```python

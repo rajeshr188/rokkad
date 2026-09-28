@@ -65,9 +65,12 @@ unconfigured pending live setup. The owner has now confirmed unregistered GST
 status, the documented billing address, 12 monthly collections and JSK as pilot.
 JSK is Workspace 2, canonical owner 1, with three members and no pending invites.
 Its trial ends 8 October 2026 at 23:39 IST and blocks immediate recurring creation;
-preserve it. Scheduled live transition is unsupported. Before saving a new pilot
-plan, resolve generic catalog annual/legacy feature copy; never edit the existing
-shared trial plan. No charge or activation was authorized. See the
+preserve it. Scheduled live transition is unsupported. The catalog fix is now
+implemented locally: paused checkout and trial signup hide the generic plan list;
+prepared agreements retain their frozen terms. Live binding requires trial signup
+paused too. Legacy feature and estimated overage claims are removed; stored terms
+are unchanged. Deploy this fix paused before saving a new pilot plan; never edit
+the existing shared trial plan. No charge or activation was authorized. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
 
 Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,

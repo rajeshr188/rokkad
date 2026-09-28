@@ -12,6 +12,28 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Private pilot catalog implementation (2026-09-28)
+
+When checkout and trial signup are both paused, the owner catalog now returns no
+plans and guides owners to their prepared recurring agreement. That agreement
+continues to show frozen price/cycle/seats/duration even when the mutable Plan
+changes. Live catalog preview/binding also requires trial signup paused before
+provider access. Explicit self-service checkout retains annual offers; trial-only
+signup omits annual purchase copy. No new setting, model or migration.
+
+Generic catalog feature/operation/support claims and dashboard warehouse/legacy
+features/estimated overage charges are removed. Member-capacity guidance and real
+invoices remain; stored prices, annual defaults, entitlements and trial dates are
+unchanged. This is an operator-prepared monthly pilot, not a new public catalog.
+
+Validation covered **128 distinct tests** across pricing/publication, recurring
+owner pages, checkout, seller rendering, live catalog/recurring and access policy.
+The initial broader run found one old dashboard-copy assertion; it was updated and
+all 12 access-policy tests passed on rerun. Other checks: no schema drift, supported
+app boundaries, documentation links and whitespace. Provider calls were mocked.
+Production is unchanged at this implementation checkpoint; paused deployment is
+next. See the [decision](adr/2026-09-28-private-operator-billing-catalog.md).
+
 ## JSK pilot facts and transition review (2026-09-28)
 
 Owner confirmed Rajesh Rathod H's no-GST registration status and documented billing

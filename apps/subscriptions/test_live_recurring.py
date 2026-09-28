@@ -27,7 +27,8 @@ from .recurring_release import release_refunded_agreement
 
 LIVE_SETTINGS = dict(BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_fixture",
     RAZORPAY_KEY_SECRET="fixture", RAZORPAY_WEBHOOK_SECRET="webhook-fixture",
-    BILLING_RECURRING_ENABLED=False, BILLING_CHECKOUT_ENABLED=False, BILLING_TAX_RATE="18",
+    BILLING_RECURRING_ENABLED=False, BILLING_CHECKOUT_ENABLED=False,
+    BILLING_ALLOW_TRIAL_START=False, BILLING_TAX_RATE="18",
     STORAGES={"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
               "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})
 

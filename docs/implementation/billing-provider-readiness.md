@@ -114,8 +114,16 @@ must be preserved and never promoted to live.
 
 ## Live catalog preparation (2026-09-28)
 
+The latest local increment requires `BILLING_ALLOW_TRIAL_START=False` as well as
+checkout/recurring false during live preview/binding. With checkout and trial signup
+paused, the generic owner catalog hides active plans and links to prepared recurring
+terms. This publication fix is not yet deployed; production still uses
+`rokkad:billing-paused-60c7beeb8191`. Deploy it paused before saving the pilot plan.
+Do not enable trial signup or one-off checkout for the operator-prepared pilot.
+See the [decision](../adr/2026-09-28-private-operator-billing-catalog.md).
+
 The catalog command supports explicit live plan review/registration. Use matching private live settings,
-both checkout/recurring switches off, and a separately reviewed production database.
+checkout/trial/recurring switches off, and a separately reviewed production database.
 Never use the populated Test Mode rehearsal database for this step.
 
 ```text

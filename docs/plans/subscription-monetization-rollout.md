@@ -37,8 +37,9 @@ all billing/sending gates paused. No implicit tax default; the unregistered pilo
 requires explicit zero tax and reviewed seller fields. Historical financial
 evidence and recovery are preserved; no migration was needed. JSK's existing trial
 through **8 October, 23:39 IST** blocks immediate recurring creation and must be
-preserved. Next: resolve generic annual/legacy feature catalog copy before saving
-the monthly pilot plan, then complete live configuration. Monthly scope does not waive failed collection,
+preserved. Generic catalog publication and legacy feature copy are now corrected
+locally; deploy that change paused before saving the monthly pilot plan, then
+complete live configuration. Monthly scope does not waive failed collection,
 recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
 for the selected scope, document gaps and remaining mandate/Workspace decisions.
 

@@ -118,7 +118,7 @@
 {% block mgmt_content %}
 <a class="btn btn-outline-primary mb-3" href="{% url 'workspace_subscriptions:reviews' workspace_slug=request.workspace.slug %}">Billing reviews</a>
 {% include "subscriptions/_navigation.html" %}
-{% if not billing_checkout_enabled %}<div class="alert alert-info">Online subscription payment is not yet available. Contact your Rokkad platform administrator to request a dated access extension. Your records are retained.</div>{% endif %}
+{% if not billing_checkout_enabled %}<div class="alert alert-info">Self-service plan purchases are unavailable. Use Recurring payments to review a prepared agreement, or contact Rokkad support about access. Your records are retained.</div>{% endif %}
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">
@@ -202,70 +202,14 @@
                             </div>
                         </div>
                         
-                        <div class="feature-limit">
-                            <div class="feature-limit-label">Warehouses</div>
-                            <div class="feature-limit-value">
-                                {{ subscription.current_warehouse_count|default:0 }}/{{ plan.max_warehouses }}
-                            </div>
-                        </div>
+
                     </div>
                     
                     {% if user_overage > 0 %}
                     <div class="alert alert-warning mt-3">
-                        <strong>Usage Overage:</strong> You have {{ user_overage }} extra user(s)
-                        <br><span class="small">Current overage charge: ₹{{ overage_charge }}/month</span>
+                        <strong>Member capacity:</strong> Your Workspace has {{ user_overage }} member(s) above its plan allowance. Contact Rokkad support to review capacity.
                     </div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Plan Features -->
-        <div class="dashboard-card">
-            <h4 class="mb-3">Included Features</h4>
-            <div class="row">
-                <div class="col-md-6">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            {% if plan.has_advanced_reporting %}
-                                <i class="fas fa-check text-success"></i> Advanced Reporting
-                            {% else %}
-                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Advanced Reporting</span>
-                            {% endif %}
-                        </li>
-                        <li class="mb-2">
-                            {% if plan.has_multi_warehouse %}
-                                <i class="fas fa-check text-success"></i> Multi-Warehouse Support
-                            {% else %}
-                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Multi-Warehouse Support</span>
-                            {% endif %}
-                        </li>
-                        <li class="mb-2">
-                            {% if plan.has_approvals_workflow %}
-                                <i class="fas fa-check text-success"></i> Approval Workflow
-                            {% else %}
-                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Approval Workflow</span>
-                            {% endif %}
-                        </li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            {% if plan.has_api_access %}
-                                <i class="fas fa-check text-success"></i> API Access
-                            {% else %}
-                                <i class="fas fa-times text-muted"></i> <span class="text-muted">API Access</span>
-                            {% endif %}
-                        </li>
-                        <li class="mb-2">
-                            {% if plan.has_custom_fields %}
-                                <i class="fas fa-check text-success"></i> Custom Fields
-                            {% else %}
-                                <i class="fas fa-times text-muted"></i> <span class="text-muted">Custom Fields</span>
-                            {% endif %}
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>

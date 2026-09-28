@@ -42,6 +42,9 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
     context_object_name = "plans"
 
     def get_queryset(self):
+        # Operator catalog preparation must not publish an offer to every owner.
+        if not (settings.BILLING_CHECKOUT_ENABLED or settings.BILLING_ALLOW_TRIAL_START):
+            return Plan.objects.none()
         return Plan.objects.filter(is_active=True).order_by("price")
 
     def get_context_data(self, **kwargs):
@@ -60,14 +63,6 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
             context["current_subscription"] = None
             context["current_plan"] = None
 
-        # Calculate features comparison
-        all_features = {
-            "advanced_reporting": "Advanced Reporting",
-            "approvals_workflow": "Approval Workflow",
-            "api_access": "API Access",
-            "custom_fields": "Custom Fields",
-        }
-        context["features"] = all_features
         context["trial_start_enabled"] = settings.BILLING_ALLOW_TRIAL_START
 
         return context
@@ -257,14 +252,11 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
             except UsageMetrics.DoesNotExist:
                 context["current_usage"] = None
 
-            # Calculate overage
+            # Capacity guidance is not an invoice or an automatic overage charge.
             current_user_count = get_workspace_member_usage(workspace=workspace)
             context["current_user_count"] = current_user_count
             context["user_overage"] = max(
                 0, current_user_count - subscription.plan.max_users
-            )
-            context["overage_charge"] = (
-                context["user_overage"] * subscription.plan.extra_user_price
             )
             context["usage_percentage_users"] = (
                 min(100, round(current_user_count / subscription.plan.max_users * 100))

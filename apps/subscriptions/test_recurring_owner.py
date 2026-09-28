@@ -165,6 +165,20 @@ class RecurringOwnerTests(OwnerFixture, TestCase):
         self.client.force_login(self.other)
         self.assertNotEqual(self.client.get(url).status_code, 200)
 
+    @override_settings(BILLING_CHECKOUT_ENABLED=False, BILLING_ALLOW_TRIAL_START=False)
+    def test_prepared_monthly_offer_stays_visible_when_catalog_is_private(self):
+        from .models import Plan
+        Plan.objects.filter(pk=self.plan.pk).update(price=9999, yearly_price=119988, max_users=99)
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("workspace_subscriptions:recurring",
+            kwargs={"workspace_slug":self.workspace.slug}))
+        self.assertContains(response, "INR 1768.82")  # Frozen fixture includes illustrative tax.
+        self.assertContains(response, "Monthly")
+        self.assertContains(response, "6 people total, including the owner")
+        self.assertContains(response, "Up to 12 billing cycles")
+        self.assertNotContains(response, "119988")
+        self.assertNotContains(response, "99 people")
+
     def test_known_invoice_recovery_uses_existing_paid_cycle_path(self):
         self.client.force_login(self.owner)
         url = reverse("workspace_subscriptions:recurring-recover", kwargs={"workspace_slug": self.workspace.slug,

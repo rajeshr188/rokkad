@@ -64,23 +64,31 @@ references. The customer summary is an unpublished draft.
 
 ### Catalog review before saving
 
+The publication fix is now implemented locally, pending paused deployment. When
+checkout and trial signup are false, active plans are hidden from the generic
+catalog; owners use their prepared recurring agreement's frozen monthly terms.
+Live catalog review/binding requires trial signup paused too. Legacy feature and
+estimated overage claims are removed from the catalog/dashboard; stored terms and
+existing invoices are preserved. See the
+[decision](../adr/2026-09-28-private-operator-billing-catalog.md).
+
 Do not edit the existing plan shared by the three trial Workspaces. Prepare a
 separate reviewed monthly plan. Nine non-seat entitlement defaults remain in the
 model: five disabled legacy feature flags, 100 products, one warehouse, 500 monthly
 transactions and 500 monthly invoices. These are internal inherited values, not
 accepted new product limits or claims about supported app functionality.
 
-The generic plan page currently advertises monthly operations and legacy feature
+Before this fix, the generic plan page advertised monthly operations and legacy feature
 flags, and shows an annual price when present. `Plan.save()` fills an empty annual
 price. Therefore saving an active pilot plan can expose unreviewed annual/feature
-copy even with purchases disabled. Resolve that catalog presentation before saving
-or publishing the pilot plan; a monthly binding alone restricts collections but
-does not hide the generic catalog. No plan or binding was saved in this review.
+copy even with purchases disabled. Deploy the fix before saving the pilot plan and
+keep both self-service switches false. A monthly binding alone does not restrict
+the generic self-service catalog when it is enabled. No plan or binding was saved.
 
 The exact live-catalog preview command is already documented in the
 [configuration runbook](../implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
 It requires reviewed seller settings, protected live credentials, an existing live
-provider plan and an authorized platform actor, with checkout and recurring flags
+provider plan and an authorized platform actor, with checkout, trial and recurring flags
 false. Do not execute agreement creation during catalog preparation: it requires
 the separate recurring activation gate and JSK transition eligibility.
 
@@ -182,7 +190,7 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 ## Remaining decisions and activation sequence
 
 1. Seller registration status/address, 12-cycle duration and JSK selection are
-   confirmed. Resolve final feature/catalog presentation; review registration
+   confirmed. Deploy the catalog presentation fix paused; review final feature terms and registration
    applicability independently. Retain the current trial and recheck JSK's eligibility
    when it naturally ends; do not shorten it or schedule an unsupported live start.
 2. Use `total_count=12`, quantity 1 after eligibility and activation approval. This
