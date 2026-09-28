@@ -100,3 +100,73 @@ fixture nor proof of delivery to the chosen inbox. Local rehearsal settings stil
 contain no SES credentials; the server's readiness does not make this local
 runtime send-ready. Keep the existing annual/scheduled provider uncertainties
 and support tickets separate from this preparation.
+
+## Addressed receipt command and paid fixture (2026-09-28)
+
+The controlled path is implemented in `rehearse_billing_receipt`. Its default is a
+read-only preview. It accepts one UUID and exact saved inbox, with active billing
+owner authority and a short operator reference. The runtime must be explicitly
+isolated Test Mode, loopback PostgreSQL, and a verified restricted role. General
+mail settings still gate sending; this command does not enable or configure SES.
+Normal dispatch continues to refuse test receipts. Each explicit test send records
+an audit with its committed Attempt; uncertainty and even throttling never cause
+an automatic second test send. See the
+[decision](../adr/2026-09-28-controlled-test-receipt-delivery.md).
+
+```text
+python manage.py rehearse_billing_receipt --delivery <uuid> --actor-id <owner-id> --recipient <chosen-inbox> --reference RECEIPT-20260928-01 --preview-html <new-private-file.html>
+```
+
+Use the isolated worker settings. Add `--send` instead of `--preview-html` only for
+the reviewed single message after the worker is ready and sending is authorized.
+Never run the general dispatch queue as part of this rehearsal. Feedback must be
+correlated to this exact attempt before acknowledging its private SQS event.
+
+Actual fixture: Workspace 8 (`receipt_rehearsal`), agreement 7,
+`sub_ThNGXGUnXOsYKw`, invoice `inv_ThNGY1xgSjZrOd`, payment
+`pay_ThNJQMGDDN7b8u`. The ordinary test owner authorized the official domestic test
+card through Checkout; the app verified the signature and separately recovered the
+captured monthly payment. Invoice 10 / cycle 8 records INR 1,768.82, with illustrative
+18% tax and six total seats. Its contact was set to **admin@rokkad.com** in the new
+Workspace billing account before capture. Delivery is
+`eb388c08-b030-410a-8be5-6dadf747287c`, initially queued with zero attempts. Exact subject:
+`[TEST] Rokkad payment received: RCY-inv_ThNGY1xgSjZrOd`.
+`outputs/receipt-rehearsal-ready.html` is the reviewed receipt content.
+Reconciliation replay preserved all invoice/payment/cycle/delivery counts.
+
+Ten invoices/payments/receipts and eight cycles now exist. The older annual
+and scheduled attempts still report Created and were not retried/cancelled. New
+recurring authorization is off again on the review server; local mail remains off.
+The new agreement was Active before receipt-rehearsal cleanup. No live funds or
+real card were used. [Official test-card/OTP guidance](https://raw.githubusercontent.com/razorpay/markdown-docs/master/payments/payments/test-card-details.md)
+was checked before this new authorization.
+
+All 56 targeted receipt/configuration/mail tests passed, including ten new cases
+for runtime isolation, exact addressing, authority, audit rollback, paused sending,
+suppression, replay and uncertain/throttled attempts. The new suite is in CI.
+The server-worker archive contains application source only. Automatic approval
+review initially blocked setup and later credential transfer; the owner explicitly
+authorized both. The separate image is built. A temporary root-only environment
+contains the restricted local database credential and Razorpay Test Mode keys;
+its independent signing key was generated on the server. SES credentials remain
+server-private. An encrypted SSH connection listens only on `127.0.0.1:55419`.
+The server readiness check has no blockers, sending is disabled, and the exact
+receipt preview passed against the actual restricted rehearsal database.
+
+The owner then explicitly approved the single email. SES accepted one audited
+attempt; targeted SQS reconciliation recorded **Send** and **Delivery**, with no
+unrelated messages acknowledged. Delivery is **delivered**, attempt count **1**,
+with no error. The app visibly reports **Delivered to recipient mail server**;
+evidence is in `outputs/receipt-delivery-evidence-20260928.json` and
+`outputs/receipt-rehearsal-delivered.png`. This is recipient-server acceptance,
+not proof of inbox placement, authentication headers or a successful reply.
+Those checks remain open; do not send another receipt to establish them.
+
+The temporary credential file was removed and the SSH process/listener stopped.
+The dispatch marker is absent and only the existing health timer is active.
+Production containers/timers are unchanged; no general dispatch was enabled.
+Fresh provider invoice inspection found exactly this one paid invoice, then the
+ordinary owner cancellation workflow cancelled agreement 7 only. Paid period and
+all financial/receipt counts are unchanged. Nine older receipts remain queued;
+both older unsettled mandates remain untouched. Production activation and live
+recurring acceptance remain separate work.

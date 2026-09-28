@@ -52,6 +52,21 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
+Latest receipt continuation: the private single-receipt command validates isolated
+Test Mode runtime/role, current owner authority and exact immutable recipient;
+ordinary sending remains blocked for test data. A new paid fixture in Workspace 8
+(`receipt_rehearsal`), agreement 7, invoice 10 / cycle 8 has one delivered receipt for
+owner-selected admin@rokkad.com, with one attempt and correlated SES Send/Delivery.
+The settled test mandate is cancelled without changing paid time/history. Prior fictional contacts are
+unchanged. Actual capture/recovery/replay passed; new authorization is off again.
+Owner approved the isolated server worker and temporary database/Test Mode credential
+transfer after automatic approval review requested explicit authorization. The image
+is built; the owner approved the one final email after read-only readiness/receipt
+checks. Temporary credentials are removed and the SSH connection/listener stopped.
+SES credentials stayed server-private; general sending remains disabled. Inbox/header
+and reply acceptance remain distinct from the verified recipient-server delivery. See
+[billing readiness](implementation/billing-provider-readiness.md).
+
 Latest FW-019 continuation adds explicit `BILLING_PROVIDER_MODE` (disabled by
 default), matching-key/signature/webhook checks, frozen mode for new one-off
 invoices and a sanitized billing/read-only evidence report. Recurring remains

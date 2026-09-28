@@ -406,7 +406,10 @@ invoice snapshots freeze provider mode; recurring invoices derive it from their
 immutable binding. Mismatched modes cannot process payment/refund evidence and
 historical unclassified records cannot be interpreted as live. Receipt dispatch
 requires recorded live evidence and live process mode; test receipts remain local
-previews until a separate controlled delivery rehearsal. See the
+previews unless the explicit single-receipt rehearsal command verifies the isolated
+Test Mode runtime, current billing authority and matching saved inbox. It reuses
+durable attempts/audits and never enables general sending. See the
+[controlled receipt decision](../adr/2026-09-28-controlled-test-receipt-delivery.md) and the
 [mode decision](../adr/2026-09-28-explicit-billing-provider-mode.md).
 
 ## 10. Entitlements

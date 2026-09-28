@@ -12,6 +12,37 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Controlled receipt path and new paid Test Mode fixture (2026-09-28)
+
+Loan/UI source is committed and pushed as `7c875778` on the release branch.
+The next FW-019 increment adds the exact-recipient, default-preview receipt command,
+with restricted rehearsal-runtime checks, current owner authorization, atomic
+attempt/audit evidence and no automatic repeat after uncertainty or throttling.
+All 56 targeted receipt/configuration/mail tests pass. No general dispatch or live
+billing gate was loosened; no new migration is needed.
+
+The separate `receipt_rehearsal` Workspace (8) completed monthly Test Mode
+capture, verified recovery and replay. Invoice 10 / cycle 8 records INR 1,768.82
+for the owner-selected `admin@rokkad.com` contact, frozen from the new billing
+account. With explicit owner send approval, the TEST-labelled receipt was delivered
+to its recipient mail server with one attempt and correlated SES Send/Delivery events.
+The two older unsettled provider payments still report Created and are preserved.
+Recurring authorization is off again locally. The new settled Test Mode agreement
+is cancelled, with paid dates and invoice/payment/cycle/receipt counts unchanged.
+Inbox placement, received authentication headers and reply handling remain to check.
+
+A separate server worker now keeps SES credentials server-private, using a temporary
+encrypted connection bound only to server loopback. After explicit owner approval,
+the reviewed source image was built and a root-only temporary configuration was
+installed. A second approval specifically covered temporary transfer of the restricted
+database credential and Test Mode keys; the local signing secret stayed local.
+Server readiness and exact-receipt preview passed before the one-off send. The
+temporary credential file is now removed and its SSH process/listener stopped.
+General dispatch remains disabled; only the existing health timer is active.
+Production containers and mail timers remain unchanged. Browser acceptance shows
+**Delivered to recipient mail server** (`outputs/receipt-rehearsal-delivered.png`). See the
+[exact fixture and command](implementation/billing-provider-readiness.md#addressed-receipt-command-and-paid-fixture-2026-09-28).
+
 ## Loan and UI source checkpoint (2026-09-28)
 
 At the owner's request, the remaining loan/application-shell/public-page changes

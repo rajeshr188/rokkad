@@ -145,6 +145,10 @@ def retry_delivery(delivery_id, *, actor):
 
 
 def dispatch_one(delivery_id, *, capture=False):
+    return _dispatch_one(delivery_id, capture=capture)
+
+
+def _dispatch_one(delivery_id, *, capture=False, rehearsal=None):
     from .transport import send_ses, TransportFailure
     if not capture and not settings.PLATFORM_EMAIL_ENABLED:
         raise ValidationError("Platform email sending is disabled.")
@@ -154,9 +158,12 @@ def dispatch_one(delivery_id, *, capture=False):
             raise ValidationError("Platform email configuration is incomplete. Run check_platform_mail privately.")
     with transaction.atomic(durable=True):
         row = Delivery.objects.select_for_update().get(pk=delivery_id)
+        if rehearsal is not None:
+            from .rehearsal import validate_test_receipt
+            validate_test_receipt(row, **rehearsal)
         if row.status != Delivery.Status.QUEUED or row.available_at > timezone.now():
             return row.status
-        if row.invoice_id and not capture:
+        if row.invoice_id and not capture and rehearsal is None:
             from apps.subscriptions.provider_configuration import invoice_mode
             if getattr(settings, "BILLING_PROVIDER_MODE", "disabled") != "live" or invoice_mode(row.invoice) != "live":
                 raise ValidationError("Test or unclassified payment receipts require a separate controlled delivery rehearsal.")
@@ -179,6 +186,14 @@ def dispatch_one(delivery_id, *, capture=False):
                     row.status = Delivery.Status.SENDING
                     row.attempt_count += 1
                     attempt = Attempt.objects.create(delivery=row)
+                    if rehearsal is not None:
+                        from apps.orgs.audit import AuditLog
+                        AuditLog.log("EMAIL_TEST_SEND", user=rehearsal["actor"],
+                            company=row.invoice.subscription.company,
+                            description="Claimed one controlled Test Mode receipt",
+                            data={"delivery_id": str(row.pk), "attempt_id": str(attempt.pk),
+                                  "recipient_hash": recipient_hash(row.recipient),
+                                  "reference": rehearsal["reference"]}, success=True)
         row.save(update_fields=["status", "last_error", "attempt_count", "updated_at"])
         if row.status != Delivery.Status.SENDING:
             return row.status
@@ -198,7 +213,7 @@ def dispatch_one(delivery_id, *, capture=False):
         attempt.status, attempt.error_code = outcome, code
         attempt.provider_message_id, attempt.finished_at = message_id, timezone.now()
         attempt.save()
-        if retryable and row.attempt_count < MAX_ATTEMPTS:
+        if retryable and rehearsal is None and row.attempt_count < MAX_ATTEMPTS:
             row.status = Delivery.Status.QUEUED
             row.available_at = timezone.now() + timedelta(minutes=2 ** row.attempt_count)
         else:

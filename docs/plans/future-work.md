@@ -24,7 +24,7 @@ plans; shelving an idea must not hide a release blocker.
 | ID | Idea | State | Resume trigger | Where it stopped |
 | --- | --- | --- | --- | --- |
 | FW-001 | Optional owner-configurable license scope | Shelved; review and owner approval required | Owner chooses to revisit staff access across licenses | Direction documented; no license assignments or restrictions implemented |
-| FW-002 | Razorpay setup and provider test-mode acceptance | Active preparation under FW-019; required before paid onboarding | Prepare isolated rehearsal runtime and provider workflow acceptance | Owner reports account approval and Live/Test modes active; isolated monthly/annual wallet capture, webhooks, replay/recovery and refunds pass; remaining methods, receipt delivery and recurring acceptance open |
+| FW-002 | Razorpay setup and provider test-mode acceptance | Active preparation under FW-019; required before paid onboarding | Prepare isolated rehearsal runtime and provider workflow acceptance | Monthly/annual capture, webhooks, replay/recovery, refunds and one paid-test-receipt delivery pass; remaining methods and recurring acceptance open |
 | FW-003 | Formal lender-specific NPA classification | Unscheduled design review; no implementation approval | Intended lender type needs regulatory NPA reporting | Existing per-loan operational DPD and collateral-risk classifications documented |
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 | FW-005 | Broader historical loan admission and quote-age policy | Partial scope implemented; remaining work unscheduled | Missing historical evidence or a guided import contract is needed | Native earlier payouts and explicit daily confirmations are implemented; wider exceptions remain deferred |
@@ -46,7 +46,14 @@ plans; shelving an idea must not hide a release blocker.
 ## FW-019: Workspace subscription monetization and Razorpay automatic renewal
 
 **Captured:** 2026-09-26. **State:** Active: owner selected delivery on 2026-09-26.
-Latest continuation: the fully refunded annual test agreement is now explicitly
+Latest receipt continuation: the exact-recipient command and 56 targeted tests pass.
+One owner-approved receipt for the new monthly Test Mode payment reached
+admin@rokkad.com's mail server, with one attempt and correlated SES Send/Delivery.
+Temporary worker credentials/tunnel are removed; the settled test mandate is
+cancelled with paid time/history preserved. Inbox/header/reply checks and general
+activation remain open. See [receipt acceptance](../implementation/billing-provider-readiness.md#addressed-receipt-command-and-paid-fixture-2026-09-28).
+
+Earlier continuation: the fully refunded annual test agreement is now explicitly
 closed after settlement review, with dates/history and read-only access preserved.
 Replacement exact-period handling passes local tests; actual replacement payment
 and broader settlement policies remain. Both unresolved provider attempts are

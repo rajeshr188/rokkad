@@ -41,8 +41,11 @@ final 12 release tests pass. See the
 The [production critical path](subscription-monetization-rollout.md#production-critical-path-reviewed-2026-09-28)
 now has explicit provider-mode/key checks, frozen one-off mode, sanitized readiness
 diagnostics and test receipt sending safeguards implemented locally. Read-only
-rehearsal checks preserve all nine queued receipts. SES production access is now
-approved, but paid-receipt delivery and live recurring remain open. See the
+rehearsal checks originally preserved nine queued receipts. A new owner-addressed
+paid Test Mode receipt is now delivered, with one attempt and correlated SES
+Send/Delivery. Its temporary worker credentials/tunnel are removed, its settled
+mandate cancelled, and paid time/history preserved. Inbox/header/reply checks,
+monitored general sending and live recurring remain open. See the
 [readiness checkpoint](../implementation/billing-provider-readiness.md). The path
 now explicitly lists provider failure/recovery, due held access, refund/replacement
 workflows, live-mode implementation/configuration, receipt delivery and commercial
