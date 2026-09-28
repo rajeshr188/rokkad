@@ -35,7 +35,7 @@ Production activation requires a separate, reviewed implementation and release.
 | Due held access | Apply an eligible actual provider hold with fresh verification at its natural start | Existing monthly holds start **28 October 2026**; no altered clock or saved dates |
 | Refunds and replacement agreements | Full-refund review and narrow settled reservation release accepted; exact replacement periods locally tested; actual replacement payment, general settlement and prepaid transition policy remain | Remaining policy and provider acceptance |
 | Production billing boundary | Explicit mode/key checks, new invoice mode and diagnostics implemented; live recurring, legacy evidence migration, live plan binding, HTTPS callback and operations remain | Reviewed implementation, private live credentials and deployment acceptance |
-| Receipts and email | Inbox/header/reply inspection and monitored worker activation | One controlled paid Test Mode receipt delivered with correlated SES feedback; general sending remains disabled |
+| Receipts and email | Monitored worker activation preflight, reviewed IAM cleanup and inbox account continuity | Paid Test Mode receipt passed Inbox/SPF/DKIM/DMARC and independently logged billing reply delivery; general sending remains disabled |
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
 
@@ -44,8 +44,12 @@ to the owner-selected admin@rokkad.com mail server with exactly one audited atte
 and correlated SES Send/Delivery. The narrow command has 56 passing targeted tests.
 Temporary credentials and tunnel were removed; only its settled mandate was
 cancelled, preserving paid time and records. General dispatch and live billing
-remain disabled. Inspect the existing email's inbox placement, authentication
-headers and reply handling next; no resend is needed. See
+remain disabled. Gmail Inbox, SPF/DKIM/DMARC and receipt content now pass. One
+owner-approved reply was independently confirmed delivered to billing@rokkad.com
+by Google Admin. Next is a reviewed mail activation preflight; Workspace account
+prepayment remains pending with 12 trial days shown. At 13:43 IST the annual payment
+was still Created; the scheduled agreement was Expired with its INR 5 token still
+Created, reservation and records preserved. See
 [receipt evidence](../implementation/billing-provider-readiness.md#addressed-receipt-command-and-paid-fixture-2026-09-28).
 
 28 September continuation: both provider diagnostics are now submitted with owner

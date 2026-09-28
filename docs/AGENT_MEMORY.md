@@ -63,8 +63,13 @@ Owner approved the isolated server worker and temporary database/Test Mode crede
 transfer after automatic approval review requested explicit authorization. The image
 is built; the owner approved the one final email after read-only readiness/receipt
 checks. Temporary credentials are removed and the SSH connection/listener stopped.
-SES credentials stayed server-private; general sending remains disabled. Inbox/header
-and reply acceptance remain distinct from the verified recipient-server delivery. See
+SES credentials stayed server-private; general sending remains disabled. Subsequent
+Gmail inspection confirms Inbox placement, SPF/DKIM/DMARC PASS and correct content.
+The separately authorized reply reached billing@rokkad.com; Google Admin's exact
+message log independently confirms mailbox delivery despite the shared admin alias.
+Do not count a Sent copy alone as reply-path acceptance. Scheduled agreement 6 is
+now Expired with zero paid cycles, but its INR 5 token is still Created; preserve
+the reservation and unsettled token. Annual final payment remains Created. See
 [billing readiness](implementation/billing-provider-readiness.md).
 
 Latest FW-019 continuation adds explicit `BILLING_PROVIDER_MODE` (disabled by

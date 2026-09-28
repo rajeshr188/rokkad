@@ -15,6 +15,16 @@ now created Google Workspace and AWS accounts, confirmed on 2026-09-26.
 
 ## Current checkpoint
 
+- **Latest receipt acceptance, 28 September:** one actual paid Test Mode receipt
+  reached the chosen admin Inbox, with correct content, SPF/DKIM/DMARC PASS and TLS.
+  The separately approved reply to billing@rokkad.com was confirmed by Google Admin
+  Email Log Search as delivered to its Gmail mailbox at 13:40:50 IST. The shared
+  mailbox Sent copy was not used as delivery proof. Temporary worker credentials
+  and tunnel are removed; general dispatch remains disabled. Next: review current
+  worker/source versions, IAM cleanup, queue/DLQ and alerts for bounded activation.
+  Google Admin shows prepayment pending and 12 trial days left; owner account billing
+  completion is needed for human-inbox continuity. See
+  [received receipt acceptance](../implementation/billing-provider-readiness.md#received-receipt-and-billing-reply-acceptance-2026-09-28).
 - **28 September update:** AWS support case **179042575700203** confirms production
   access approved at **11:20:42 IST** in Mumbai (`ap-south-1`): **50,000/day**,
   **14/second**, immediate sandbox exit. Independently read after owner sign-in;

@@ -170,3 +170,31 @@ ordinary owner cancellation workflow cancelled agreement 7 only. Paid period and
 all financial/receipt counts are unchanged. Nine older receipts remain queued;
 both older unsettled mandates remain untouched. Production activation and live
 recurring acceptance remain separate work.
+
+## Received receipt and billing reply acceptance (2026-09-28)
+
+The exact receipt was found in admin@rokkad.com's Inbox. Sender, amount, invoice,
+paid period and explicit no-real-charge notice match the saved invoice and render.
+Gmail shows Reply-To billing@rokkad.com, mailed-by bounce.notify.rokkad.com,
+signing domain notify.rokkad.com and TLS. Its original message summary reports
+SPF/DKIM/DMARC **PASS** and delivery after three seconds. No receipt was resent.
+
+Owner-approved reply `RECEIPT-REPLY-20260928-01` was sent at 13:40 IST to the
+automatically selected billing address, with only a labelled test explanation.
+Admin and billing share the same Google mailbox, so the Sent copy and thread label
+were insufficient delivery evidence. Google Admin > Reporting > Email Log Search,
+filtered by the exact reply Message-ID and billing@rokkad.com, confirms one matching
+message and **1/1 delivered**, **Delivered to Gmail mailbox** at **13:40:50 IST**
+after **0.93 seconds**, with TLS-enabled receipt. No alias/routing settings changed.
+Private screenshot evidence:
+
+- `outputs/receipt-inbox-authentication-20260928.png`
+- `outputs/receipt-reply-sent-20260928.png`
+- `outputs/receipt-billing-reply-delivered-20260928.png`
+
+This closes controlled paid-test-receipt content, inbox, authentication and reply
+acceptance. Before monitored activation, review deployed source/worker versions,
+source/DLQ counts, IAM exception cleanup, alerts and exact send scope. Google Admin
+currently shows Workspace prepayment pending with 12 trial days remaining; owner
+account billing completion is needed for ongoing monitored-inbox continuity.
+General dispatch and live recurring remain disabled; no payment was initiated here.

@@ -44,8 +44,11 @@ diagnostics and test receipt sending safeguards implemented locally. Read-only
 rehearsal checks originally preserved nine queued receipts. A new owner-addressed
 paid Test Mode receipt is now delivered, with one attempt and correlated SES
 Send/Delivery. Its temporary worker credentials/tunnel are removed, its settled
-mandate cancelled, and paid time/history preserved. Inbox/header/reply checks,
-monitored general sending and live recurring remain open. See the
+mandate cancelled, and paid time/history preserved. Gmail Inbox, SPF/DKIM/DMARC and
+the independently logged billing reply delivery now pass. Monitored general sending,
+Workspace mailbox billing continuity and live recurring remain open. The scheduled
+agreement is now Expired but its INR 5 token remains Created; canonical owner
+refresh preserved the reservation and all financial/access records. See the
 [readiness checkpoint](../implementation/billing-provider-readiness.md). The path
 now explicitly lists provider failure/recovery, due held access, refund/replacement
 workflows, live-mode implementation/configuration, receipt delivery and commercial

@@ -8,6 +8,23 @@ related: [../adr/2026-09-27-recurring-agreement-evidence.md, billing-test-rehear
 
 # Recurring agreements and paid cycles
 
+## Scheduled expiry observation and receipt acceptance (2026-09-28)
+
+GET-only checks at **13:43 IST** found agreement 6 `sub_ThM7GiBY7yxoHg`
+**Expired**, paid_count 0. Its INR 5 token `pay_ThM8vfcR0fWZik` is still **Created**.
+The canonical owner refresh recorded the terminal provider status, preserving its
+open local reservation and all subscription/entitlement/financial/receipt records.
+Expiry does not settle the token or authorize release/replacement. Preserve the
+uncertainty; no retry, charge, refund or cancellation was made in this check.
+
+Agreement 5 remains Active, paid_count 1/2, with final payment
+`pay_ThBR0fQ4nwVW3p` Created and invoice `inv_ThBQyvwJjIJcQ0` Issued. Searches for
+tickets 21146138/21146171 find their acknowledgements but no substantive answer.
+The separate settled receipt agreement 7 is already cancelled; its one paid receipt
+passed Gmail Inbox, SPF/DKIM/DMARC and Google Admin-verified billing reply delivery.
+See [receipt acceptance](billing-provider-readiness.md#received-receipt-and-billing-reply-acceptance-2026-09-28).
+Private provider evidence: `outputs/billing-pending-current-20260928.json`.
+
 ## Refunded agreement release and replacement (2026-09-28)
 
 `release_recurring_agreement` closes a narrowly supported settled Test Mode

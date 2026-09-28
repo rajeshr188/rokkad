@@ -12,6 +12,37 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Receipt inbox/authentication/reply acceptance (2026-09-28)
+
+The paid Test Mode receipt is present in admin@rokkad.com's **Inbox**, with correct
+amount, exact period and simulated-payment notice. Gmail's original-message report
+confirms **SPF PASS, DKIM PASS (notify.rokkad.com), DMARC PASS**, TLS and delivery
+after three seconds. The received Reply-To is billing@rokkad.com.
+
+After explicit owner approval, one TEST-only reply was sent from admin to billing
+with reference `RECEIPT-REPLY-20260928-01`. Because these addresses share a mailbox,
+the Sent copy alone was not treated as delivery proof. After owner sign-in, Google
+Admin's exact-message/recipient log independently confirmed **1/1 delivered** to
+the billing Gmail mailbox at **13:40:50 IST**, taking **0.93 seconds**. Receipt
+content, inbox, authentication and this billing reply path are accepted. Evidence:
+`outputs/receipt-inbox-authentication-20260928.png` and
+`outputs/receipt-billing-reply-delivered-20260928.png`.
+
+At **13:43 IST**, GET-only Razorpay checks still found the annual final payment
+Created and invoice Issued. The short scheduled agreement is now **Expired**, with
+zero paid cycles; its INR 5 token remains Created. The canonical owner refresh
+recorded expiry, retaining its reservation and all access/financial records. No
+new charge, cancellation, refund or resend was made. Ticket-number email searches
+show only the two acknowledgements; no substantive provider answer was found.
+
+General mail dispatch and live billing remain disabled. Next is a reviewed mail
+activation preflight (deployed worker/source version, IAM, queues, alerts and
+bounded send scope), alongside unresolved recurring/provider and live-mode work.
+Google Admin also displays prepayment pending and 12 days left in the Workspace
+trial; owner billing completion is a human-inbox continuity dependency. No account
+or payment settings were changed. This increment changes evidence/docs only;
+documentation links and whitespace are checked, with no new application tests needed.
+
 ## Controlled receipt path and new paid Test Mode fixture (2026-09-28)
 
 Loan/UI source is committed and pushed as `7c875778` on the release branch.

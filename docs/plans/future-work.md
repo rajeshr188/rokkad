@@ -50,8 +50,10 @@ Latest receipt continuation: the exact-recipient command and 56 targeted tests p
 One owner-approved receipt for the new monthly Test Mode payment reached
 admin@rokkad.com's mail server, with one attempt and correlated SES Send/Delivery.
 Temporary worker credentials/tunnel are removed; the settled test mandate is
-cancelled with paid time/history preserved. Inbox/header/reply checks and general
-activation remain open. See [receipt acceptance](../implementation/billing-provider-readiness.md#addressed-receipt-command-and-paid-fixture-2026-09-28).
+cancelled with paid time/history preserved. Gmail Inbox, SPF/DKIM/DMARC and the
+independently logged billing reply now pass; general activation remains open.
+Scheduled agreement 6 is Expired while its INR 5 token remains Created; the
+reservation stays held. See [receipt acceptance](../implementation/billing-provider-readiness.md#received-receipt-and-billing-reply-acceptance-2026-09-28).
 
 Earlier continuation: the fully refunded annual test agreement is now explicitly
 closed after settlement review, with dates/history and read-only access preserved.
