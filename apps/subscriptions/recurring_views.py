@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -13,6 +13,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from . import recurring_owner
+from .recurring import recurring_provider_mode
 from .models import RecurringAgreement, RecurringCycle
 from .razorpay_service import BillingProviderError
 from .views import BillingPermissionMixin, _payment_json
@@ -27,6 +28,10 @@ class RecurringDashboardView(LoginRequiredMixin, BillingPermissionMixin, Templat
             "binding").order_by("-created_at", "-pk").first()
         context["agreement"] = agreement
         if agreement:
+            try:
+                matching_mode = recurring_provider_mode() == agreement.binding.mode
+            except PermissionDenied:
+                matching_mode = False
             start_at = agreement.request_snapshot.get("start_at")
             context["scheduled_start"] = datetime.fromtimestamp(start_at, tz=dt_timezone.utc) if start_at else None
             context["schedule_expired"] = bool(start_at and start_at <= timezone.now().timestamp() and
@@ -37,11 +42,10 @@ class RecurringDashboardView(LoginRequiredMixin, BillingPermissionMixin, Templat
             context["cancellation_requested"] = agreement.events.filter(event_type="cancel.requested").exists()
             context["ended"] = agreement.provider_status in recurring_owner.TERMINAL
             context["can_authorize"] = (settings.BILLING_RECURRING_ENABLED and
-                settings.RAZORPAY_KEY_ID.startswith("rzp_test_") and agreement.binding.mode == "test" and
+                matching_mode and not (start_at and agreement.binding.mode == "live") and
                 agreement.state == "verified" and agreement.provider_status == "created" and
                 not agreement.closed_at and not context["cancellation_requested"] and not context["schedule_expired"])
-            context["can_cancel"] = (agreement.state == "verified" and agreement.binding.mode == "test" and
-                settings.RAZORPAY_KEY_ID.startswith("rzp_test_") and
+            context["can_cancel"] = (agreement.state == "verified" and matching_mode and
                 not agreement.closed_at and not context["ended"] and not context["cancellation_requested"])
             context["cycles"] = agreement.cycles.exclude(access_action="review", access_resolution__isnull=True,
                 invoice__billing_resolution__isnull=True).select_related(

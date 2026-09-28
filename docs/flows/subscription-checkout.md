@@ -28,6 +28,19 @@ not introduce accounting or license-scoped access.
 
 ## Owner flow
 
+For an operator-prepared recurring agreement, Settings > Billing > Recurring
+shows the saved amount, interval and cycle count. The owner explicitly consents
+before opening Checkout. Test bindings say Test Mode; live bindings use ordinary
+payment consent. The signed authorization return grants no access: the verified
+paid invoice determines the exact paid period. Stopping future renewals preserves
+paid time. Pausing new authorizations leaves existing payment recovery and
+cancellation available in the configured matching mode. Scheduled live starts and
+replacement agreements remain unavailable pending further review. This local code
+has not been activated in production. See the
+[recurring runbook](../implementation/recurring-agreements.md).
+
+The separately gated one-off checkout flow is:
+
 1. Open the target Workspace's Settings > Billing and select a plan.
 2. Select monthly/yearly. The displayed price reloads for that cycle. Starting a
    trial is a separate explicit action; paid checkout charges immediately.

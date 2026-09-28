@@ -1,4 +1,4 @@
-"""Owner actions on prepared Test Mode agreements; mandate state is not access.
+"""Owner actions on mode-matched agreements; mandate state is not access.
 
 Cancellation intent is append-only and committed before its single provider POST.
 An on-commit callback attempts delivery; an explicit command recovers interrupted
@@ -17,15 +17,15 @@ from apps.orgs.models import Company
 from .models import RecurringAgreement, RecurringAgreementEvent, Subscription
 from .services import get_workspace_member_usage
 from .razorpay_service import BillingProviderError, RazorpayService
-from .recurring import (_identity, _locked_owner, _outside_transaction, _test_mode,
-                        _verify_plan, provider_test_mode, verify_agreement, verify_agreement_observation)
+from .recurring import (_identity, _locked_owner, _outside_transaction, _creation_mode,
+                        _verify_plan, recurring_provider_mode, verify_agreement, verify_agreement_observation)
 
 logger = logging.getLogger(__name__)
 TERMINAL = {"cancelled", "completed", "expired"}
 
 
 def owned_agreement(*, workspace, actor, agreement_id):
-    mode = provider_test_mode()
+    mode = recurring_provider_mode()
     _locked_owner(workspace.pk, actor)
     agreement = RecurringAgreement.objects.select_for_update().select_related("binding").filter(
         pk=agreement_id, workspace=workspace, binding__mode=mode).first()
@@ -55,7 +55,7 @@ def refresh_agreement(*, workspace, actor, agreement_id):
 
 
 def authorization_options(*, workspace, actor, agreement_id):
-    _test_mode()
+    mode = _creation_mode()
     agreement = refresh_agreement(workspace=workspace, actor=actor, agreement_id=agreement_id)
     with workspace_context(workspace.pk):
         agreement = owned_agreement(workspace=workspace, actor=actor, agreement_id=agreement_id)
@@ -63,6 +63,8 @@ def authorization_options(*, workspace, actor, agreement_id):
                 agreement.events.filter(event_type="cancel.requested").exists()):
             raise ValidationError("This agreement cannot start another authorization. Refresh its status or contact support.")
         start_at = agreement.request_snapshot.get("start_at")
+        if start_at is not None and mode == "live":
+            raise ValidationError("Scheduled live starts require a separately reviewed transition workflow.")
         if start_at is not None and start_at <= timezone.now().timestamp():
             raise ValidationError("The scheduled start has passed. Contact support to review this agreement before authorization.")
         workspace.refresh_from_db(fields=["lifecycle_state"])
@@ -78,7 +80,8 @@ def authorization_options(*, workspace, actor, agreement_id):
         _verify_plan(RazorpayService.get_plan(agreement.binding.provider_plan_id),
                      agreement.binding.provider_plan_id, agreement.binding.snapshot)
         return {"key": settings.RAZORPAY_KEY_ID, "subscription_id": agreement.provider_subscription_id,
-                "name": "Rokkad TEST", "description": agreement.binding.snapshot["plan_name"]}
+                "name": "Rokkad TEST" if mode == "test" else "Rokkad",
+                "description": agreement.binding.snapshot["plan_name"]}
 
 
 def confirm_authorization(*, workspace, actor, agreement_id, payment_id, signature):
@@ -123,7 +126,7 @@ def _deliver_cancellation(request_id):
 def process_cancellation(*, request_id):
     """Outside request transaction. At most one POST, even after crashes/timeouts."""
     _outside_transaction()
-    provider_test_mode()
+    recurring_provider_mode()
     request = RecurringAgreementEvent.objects.select_related("agreement__workspace").get(
         pk=request_id, event_type="cancel.requested")
     workspace = request.agreement.workspace

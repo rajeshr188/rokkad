@@ -46,7 +46,15 @@ plans; shelving an idea must not hide a release blocker.
 ## FW-019: Workspace subscription monetization and Razorpay automatic renewal
 
 **Captured:** 2026-09-26. **State:** Active: owner selected delivery on 2026-09-26.
-Latest receipt continuation: the exact-recipient command and 56 targeted tests pass.
+Latest implementation: immediate recurring creation, authorization, paid-cycle
+recovery, cancellation and explicit held/refund review now support matching live
+mode in local code. Fictional/mocked tests cover the boundaries; activation stays
+off. Scheduled live starts and live reservation release remain blocked. Next is a
+reviewed paused production release/evidence inventory, with outstanding provider
+and commercial acceptance preserved. See the
+[live workflow checkpoint](../implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
+
+Previous receipt continuation: the exact-recipient command and 56 targeted tests pass.
 One owner-approved receipt for the new monthly Test Mode payment reached
 admin@rokkad.com's mail server, with one attempt and correlated SES Send/Delivery.
 Temporary worker credentials/tunnel are removed; the settled test mandate is

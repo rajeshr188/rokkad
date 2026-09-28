@@ -7,10 +7,45 @@ tags: [billing, configuration, receipts, deployment]
 
 # Billing provider configuration and readiness
 
+## Live recurring workflow support (2026-09-28)
+
+The existing recurring services now support immediate-start live agreements with
+matching saved mode, explicit credentials and owner/Workspace authority. The new
+authorization flag remains default-off. Live creation/authorization also require a
+webhook secret and no test or unclassified billing evidence. Catalog registration
+continues to require both purchase flags paused; enablement is a separate launch
+action after all applicable release gates are accepted.
+
+Pausing `BILLING_RECURRING_ENABLED` blocks new creation and Checkout authorization,
+while configured same-mode confirmation, GET-only uncertain-creation reconciliation,
+verified paid-cycle recovery, cancellation and explicit held/refund access review
+remain available. Cancellation still commits a single dispatch claim; uncertain
+results are fetched, never blindly reposted. Live consent/receipts omit Test Mode
+wording. Scheduled live starts and live reservation release remain blocked.
+
+This checkpoint uses only fictional live-mode fixtures and mocked provider/SES
+responses. No live keys, live plan registration, provider writes, emails, production
+deployment or migration occurred. The working offer and illustrative tax remain
+unpublished. `live_recurring_supported=true` describes code capability;
+`launch_ready=false` remains deliberate. See the
+[decision](../adr/2026-09-28-mode-matched-live-recurring-workflows.md).
+
+Validation: 135 existing billing regressions passed; after completing the live
+receipt fixture settings, the final 63-test live/cycle run passed (28 live-mode
+cases and 35 existing cycle cases). All provider and SES calls were mocked. The
+two browser authorization-retry tests and documentation/whitespace checks pass.
+The live suite is included in CI; no schema change is required.
+
+Next: prepare a reviewed production release with both purchase flags off, inventory
+legacy billing evidence, and define the bounded pilot/rollback procedure. Actual
+activation still depends on commercial terms, protected live credentials/catalog,
+HTTPS webhook and operations acceptance, receipt dispatch scope, and unresolved
+provider renewal/failure/held-period acceptance. Existing Test Mode uncertainties
+must be preserved and never promoted to live.
+
 ## Live catalog preparation (2026-09-28)
 
-The catalog command now supports explicit live plan review/registration while
-live recurring agreements remain unsupported. Use matching private live settings,
+The catalog command supports explicit live plan review/registration. Use matching private live settings,
 both checkout/recurring switches off, and a separately reviewed production database.
 Never use the populated Test Mode rehearsal database for this step.
 
@@ -47,8 +82,8 @@ New billing configuration uses `BILLING_PROVIDER_MODE=disabled|test|live`, defau
 disabled, alongside the existing key pair, webhook secret and separate checkout/
 recurring activation switches. Keep web and worker mode consistent. Isolated
 `billing_rehearsal` selects test explicitly; automated tests use dummy credentials.
-Current recurring workflows still reject live mode. No live keys were loaded and
-no production configuration was changed in this increment.
+Recurring workflows now support the matching saved mode as described above.
+No live keys were loaded and no production configuration was changed.
 
 ```text
 python manage.py check_billing_configuration
@@ -59,13 +94,13 @@ Use the appropriate restricted runtime settings. The first command is offline;
 the second additionally reads aggregate local evidence. Neither contacts Razorpay,
 sends mail, changes records or prints credentials/contact details. `configuration_ready`
 means mode/key/webhook settings agree. `launch_ready` remains false; provider
-acceptance, live recurring implementation, callbacks/monitoring, receipt delivery,
+acceptance, reviewed live deployment, callbacks/monitoring, receipt delivery,
 commercial terms and approved activation must be checked separately. Dedicated SES
 readiness is reported separately from shared Django mail.
 
 Wrong or disabled mode prevents SDK construction/signature acceptance, and webhook
 processing returns 503 before persisting an event. Pausing only new recurring
-authorization preserves configured Test Mode recovery. New one-off invoice snapshots
+authorization preserves configured mode-matched recovery. New one-off invoice snapshots
 freeze mode; mismatched key replay/capture/refund is refused. Recurring invoices use
 the saved binding mode. Existing snapshots stay immutable: old unclassified one-off
 records remain recoverable in test but cannot be silently treated as live. Do not

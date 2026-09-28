@@ -16,7 +16,7 @@ from .models import (BillingAccount, Invoice, Payment, RecurringAgreement, Recur
                      RecurringCycle, Subscription, SubscriptionEvent)
 from .notifications import send_checkout_receipt
 from .razorpay_service import RazorpayService
-from .recurring import (_identity, _verify_plan, provider_test_mode, verify_agreement,
+from .recurring import (_identity, _verify_plan, recurring_provider_mode, verify_agreement,
                         verify_agreement_observation)
 from .services import build_billing_account_defaults, ensure_entitlements_for_subscription
 
@@ -31,7 +31,7 @@ def _timestamp(value):
 
 
 def _agreement(subscription_id):
-    mode = provider_test_mode()
+    mode = recurring_provider_mode()
     agreement = RecurringAgreement.objects.select_related("binding", "workspace").filter(
         provider_subscription_id=_identity(subscription_id, "sub_"), binding__mode=mode, state="verified").first()
     if not agreement:

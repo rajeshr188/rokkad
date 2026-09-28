@@ -1,4 +1,4 @@
-"""Explicit operator entry point while recurring Checkout remains unavailable."""
+"""Explicit operator preparation; owners authorize separately through Checkout."""
 import json
 
 from django.contrib.auth import get_user_model
@@ -10,7 +10,7 @@ from apps.subscriptions.razorpay_service import BillingProviderError
 
 
 class Command(BaseCommand):
-    help = "Review/bind a mode-specific catalog plan; agreement creation/recovery stays Test Mode only. Grants no access."
+    help = "Review/bind a mode-specific plan, create a durable agreement, or reconcile its identity. Grants no access."
 
     def add_arguments(self, parser):
         parser.add_argument("--actor-id", type=int, required=True)
@@ -27,7 +27,7 @@ class Command(BaseCommand):
         create.add_argument("--binding-id", type=int, required=True)
         create.add_argument("--total-count", type=int, required=True)
         create.add_argument("--request-key", required=True)
-        create.add_argument("--start-at", type=int, help="Optional future Unix timestamp; frozen before provider creation.")
+        create.add_argument("--start-at", type=int, help="Test Mode only: optional future Unix timestamp, frozen before provider creation.")
         reconcile = actions.add_parser("reconcile")
         reconcile.add_argument("--workspace-id", type=int, required=True)
         reconcile.add_argument("--agreement-id", type=int, required=True)
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                     provider_plan_id=options["provider_plan_id"], reason=options["reason"], mode=options["mode"])
                 if options["preview"]:
                     result = recurring.review_plan_binding(**args)
-                    result.update(preview=True, binding_saved=False, live_recurring_supported=False)
+                    result.update(preview=True, binding_saved=False, live_recurring_supported=True)
                 else:
                     binding = recurring.bind_plan(**args)
                     result = {"binding_id": binding.pk, "mode": binding.mode}

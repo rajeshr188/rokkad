@@ -40,7 +40,7 @@ class CycleFixture:
             self.plan = Plan.objects.create(name="Cycle TEST", tier="starter", price="1499.00", yearly_price="14990.00",
                                            description="Test", max_users=6)
             self.plan.refresh_from_db()
-            self.binding = RecurringPlanBinding.objects.create(plan=self.plan, mode="test", provider_plan_id="plan_cycle",
+            self.binding = RecurringPlanBinding.objects.create(plan=self.plan, mode=getattr(self, "provider_mode", "test"), provider_plan_id="plan_cycle",
                 snapshot=_offer(self.plan, "monthly"), actor=self.owner, reason="Verified fixture")
             self.now = timezone.now().replace(microsecond=0)
             self.agreement = RecurringAgreement.objects.create(workspace=self.workspace, binding=self.binding,
@@ -411,7 +411,7 @@ class RecurringCycleTests(CycleFixture, TestCase):
             self.assertEqual(model.objects.count(), 12)
 
     def annual_agreement(self, *, created_at=None):
-        binding = RecurringPlanBinding.objects.create(plan=self.plan, mode="test", provider_plan_id="plan_annual",
+        binding = RecurringPlanBinding.objects.create(plan=self.plan, mode=getattr(self, "provider_mode", "test"), provider_plan_id="plan_annual",
             snapshot=_offer(self.plan, "yearly"), actor=self.owner, reason="Annual fixture")
         RecurringAgreement.objects.filter(pk=self.agreement.pk).update(provider_status="cancelled", closed_at=self.now)
         agreement = RecurringAgreement.objects.create(workspace=self.workspace, binding=binding, actor=self.owner,

@@ -12,6 +12,44 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Mode-matched live recurring workflows (2026-09-28)
+
+FW-019 now supports immediate-start live recurring agreements through the existing
+creation, owner authorization, paid-cycle, cancellation and explicit held/refund
+review services. Matching configured keys and immutable binding mode are required.
+New live creation/authorization additionally require the default-off recurring
+flag, webhook secret and no test/unclassified billing evidence. Catalog registration
+still requires both purchase flags paused.
+
+Pausing new authorizations preserves existing financial recovery and cancellation,
+including GET-only reconciliation of an unknown creation attempt. Durable creation
+and cancellation claims still prevent repeat provider POSTs. Authorization alone
+grants no access; verified invoices determine exact paid periods, future payments
+stay held and replays cannot reactivate access. Live consent/receipt wording no
+longer calls the payment Test Mode. Scheduled live starts and live reservation
+release remain blocked pending separate policy/provider work.
+
+This is local implementation using fictional identities, dummy live-prefixed keys
+and mocked provider/SES responses. No live credentials, actual provider writes,
+email, production deployment or migration were used. Default flags and monitored
+mail operations are unchanged. Configuration diagnostics report live code support
+but continue to return `launch_ready=false`. See the
+[decision](adr/2026-09-28-mode-matched-live-recurring-workflows.md) and
+[release gates](implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
+
+Validation: all **135 existing billing regressions** passed. The new receipt fixture
+initially lacked canonical mail settings; after correcting that test setup and
+adding annual live coverage, the final **63-test live/cycle run passed**, comprising
+**28 live-mode cases** and 35 paid-cycle cases. Coverage includes committed attempts,
+uncertain recovery without reposting, cross-mode rejection, signed replay, exact
+monthly/annual periods, held/refund review, cancellation and mocked receipt dispatch.
+Both browser authorization-retry tests pass, as do 613 current documentation links
+and whitespace checks. CI includes the new live suite; no schema change is needed.
+
+Next: prepare the paused production release and review legacy billing evidence,
+alongside the remaining provider and commercial acceptance. Last external checks
+remain the 14:14 IST observations below; no new provider outcome is claimed.
+
 ## Live catalog preparation boundary (2026-09-28)
 
 FW-019 now supports platform-only review and local registration of a known live

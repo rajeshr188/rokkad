@@ -16,7 +16,7 @@ from .models import Invoice, ProviderWebhookEvent
 from .provider_configuration import provider_mode, require_invoice_mode
 from .razorpay_service import client, RazorpayService
 from .readiness import assess_billing_configuration, billing_evidence_inventory
-from .recurring import provider_test_mode
+from .recurring import provider_test_mode, recurring_provider_mode
 
 
 class ProviderConfigurationTests(SimpleTestCase):
@@ -31,10 +31,11 @@ class ProviderConfigurationTests(SimpleTestCase):
                 self.assertFalse(RazorpayService.verify_payment_signature("order_a", "pay_a", "bad"))
                 self.assertFalse(RazorpayService.verify_subscription_signature("sub_a", "pay_a", "bad"))
 
-    def test_explicit_matching_mode_required_and_live_recurring_still_refused(self):
+    def test_matching_live_mode_supported_but_test_only_operations_stay_restricted(self):
         self.assertEqual(provider_mode(), "test")
         with override_settings(BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_fixture"):
             self.assertEqual(provider_mode(), "live")
+            self.assertEqual(recurring_provider_mode(), "live")
             with self.assertRaises(PermissionDenied):
                 provider_test_mode()
         with override_settings(BILLING_RECURRING_ENABLED=False):
@@ -46,7 +47,7 @@ class ProviderConfigurationTests(SimpleTestCase):
         sdk.assert_not_called()
         self.assertTrue(report["configuration_ready"])
         self.assertFalse(report["launch_ready"])
-        self.assertFalse(report["live_recurring_supported"])
+        self.assertTrue(report["live_recurring_supported"])
         for value in ("DO-NOT-PRINT", "PRIVATE-WEBHOOK", "rzp_test_fixture"):
             self.assertNotIn(value, json.dumps(report))
 

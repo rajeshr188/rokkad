@@ -52,13 +52,24 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest FW-019 billing continuation: platform-only catalog review/registration now
+Latest FW-019 billing continuation: immediate-start recurring creation, owner
+authorization, paid-cycle verification/recovery, cancellation and explicit held/refund
+review support matching configured test/live mode through the same services. New
+live authorizations require the default-off flag, webhook secret and no conflicting
+test/unclassified evidence. Pausing creation preserves existing matching-mode
+recovery, including unknown creation. Scheduled live starts and live reservation
+release remain blocked. No live credentials/provider requests, production deployment
+or activation occurred. Next: prepare the paused production release and evidence
+review alongside outstanding provider/commercial acceptance. See the
+[workflow decision](adr/2026-09-28-mode-matched-live-recurring-workflows.md).
+
+Previous FW-019 continuation: platform-only catalog review/registration now
 supports explicit live mode through `prepare_recurring_agreement ... bind --mode
 live`; `--preview` fetches/validates one known provider plan without saving. Live
 preparation requires matching keys, checkout/recurring flags off and no conflicting
 test/unclassified invoice evidence. Bindings remain immutable and idempotent; no
-provider plan, mandate, payment or access is created. All live agreement workflows
-remain blocked. No live credentials/catalog mutation/deployment occurred. At
+provider plan, mandate, payment or access is created. Live workflows were blocked
+at that checkpoint, superseded by the implementation above. No live credentials/catalog mutation/deployment occurred. At
 14:14 IST on 28 September both pending test payments were still Created; annual
 invoice Issued, scheduled agreement Expired. Support search found acknowledgements
 only. Preserve the unresolved attempts. See
@@ -108,10 +119,10 @@ now Expired with zero paid cycles, but its INR 5 token is still Created; preserv
 the reservation and unsettled token. Annual final payment remains Created. See
 [billing readiness](implementation/billing-provider-readiness.md).
 
-Latest FW-019 continuation adds explicit `BILLING_PROVIDER_MODE` (disabled by
+Previous FW-019 continuation adds explicit `BILLING_PROVIDER_MODE` (disabled by
 default), matching-key/signature/webhook checks, frozen mode for new one-off
-invoices and a sanitized billing/read-only evidence report. Recurring remains
-Test Mode-only. Test receipt previews are labelled and normal SES sending refuses
+invoices and a sanitized billing/read-only evidence report. Recurring was still
+Test Mode-only at that checkpoint. Test receipt previews are labelled and normal SES sending refuses
 test/unclassified receipts; no payment or mail was sent. The isolated DB has two
 unclassified historical one-off invoices and nine queued receipts, unchanged.
 Seven recurring receipts rendered with explicit local preview sender settings.
@@ -224,13 +235,13 @@ See the [diagnostic continuation](implementation/recurring-agreements.md#renewal
 Evidence and the remaining acceptance boundary
 are in the [recurring runbook](implementation/recurring-agreements.md#actual-provider-rehearsal-2026-09-28).
 
-FW-019 now includes an owner page for operator-prepared Test Mode recurring
+FW-019 includes an owner page for operator-prepared mode-matched recurring
 agreements. Checkout authorization verifies a signature using the saved subscription
 ID and grants no access. Cancellation persists an append-only request and dispatch
 claim before one immediate provider cancellation, with GET-only uncertain recovery.
 It preserves paid dates and the Workspace reservation. The default-off flag blocks
 new authorizations but permits existing confirmation, refresh, cancellation and
-paid-invoice recovery with Test Mode keys. No Workspace middleware/RLS exception,
+paid-invoice recovery with keys matching the binding. No Workspace middleware/RLS exception,
 live activation or self-service agreement creation was introduced. See the
 [owner-action decision](adr/2026-09-27-recurring-owner-actions.md) and
 [runbook](implementation/recurring-agreements.md#owner-authorization-and-cancellation).

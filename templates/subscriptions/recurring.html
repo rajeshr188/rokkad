@@ -16,7 +16,7 @@
     {% if scheduled_start %}Scheduled billing start: {{ scheduled_start|date:'d M Y H:i:s T' }}.
     Authorization happens separately and may include a refundable token payment. It does not grant paid access.
     {% else %}Payments start on authorization.{% endif %}
-    This prepared Test Mode offer is unpublished; tax is illustrative.</p>
+    {% if agreement.binding.mode == 'test' %}This prepared Test Mode offer is unpublished; tax is illustrative.{% endif %}</p>
   <p>After the final cycle, this agreement stops collecting payments. Access follows the last verified paid period,
     then the normal grace and read-only policy. Contact support to arrange any replacement.</p>
   <p>Agreement status: <strong>{{ agreement.provider_status|default:agreement.state|capfirst }}</strong><br>
@@ -46,7 +46,7 @@
   {% else %}<p>Creation needs provider reconciliation. Contact support; another agreement cannot be started.</p>{% endif %}
   {% if can_authorize %}
   <div class="mt-3">
-    <label><input id="recurring-consent" type="checkbox"> I authorize the recurring Test Mode payments described above.</label><br>
+    <label><input id="recurring-consent" type="checkbox"> I authorize the recurring {% if agreement.binding.mode == 'test' %}Test Mode {% endif %}payments described above.</label><br>
     <button id="recurring-authorize" class="btn btn-primary" type="button" disabled
       data-start-url="{% url 'workspace_subscriptions:recurring-authorize' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}"
       data-confirm-url="{% url 'workspace_subscriptions:recurring-confirm' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}">Authorize recurring payments</button>
@@ -55,7 +55,7 @@
   {% elif schedule_expired and not cancellation_requested %}
     <p>The scheduled start has passed. Contact support to review this agreement before authorization.</p>
   {% elif agreement.provider_status == 'created' and not cancellation_requested %}
-    <p>New authorizations are paused. Contact support to enable the isolated Test Mode rehearsal.</p>
+    <p>New authorizations are unavailable. Contact support to review this agreement.</p>
   {% endif %}
   {% if can_cancel %}
   <form class="mt-4" method="post" action="{% url 'workspace_subscriptions:recurring-cancel' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}">
@@ -106,7 +106,7 @@
 {% endif %}
 {% else %}
 <div class="alert alert-info">No recurring payment agreement has been prepared for this Workspace.
-  Contact support to arrange the Test Mode rehearsal. Existing paid time remains unchanged.</div>
+  Contact support to arrange recurring payments. Existing paid time remains unchanged.</div>
 {% endif %}
 {% if can_authorize %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

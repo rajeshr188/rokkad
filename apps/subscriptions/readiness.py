@@ -16,13 +16,11 @@ def assess_billing_configuration():
         blockers.extend(exc.messages)
     if not getattr(settings, "RAZORPAY_WEBHOOK_SECRET", ""):
         blockers.append("A mode-specific Razorpay webhook secret is missing.")
-    if getattr(settings, "BILLING_RECURRING_ENABLED", False) and mode != "test":
-        blockers.append("Recurring authorization is currently supported only in Test Mode.")
     from apps.platform_mail.readiness import assess_platform_mail
     return {"provider_mode": mode, "configuration_ready": not blockers,
         "checkout_enabled": settings.BILLING_CHECKOUT_ENABLED,
         "recurring_authorization_enabled": settings.BILLING_RECURRING_ENABLED,
-        "live_recurring_supported": False, "launch_ready": False,
+        "live_recurring_supported": True, "launch_ready": False,
         "blockers": blockers, "receipts": assess_platform_mail(),
         "unverified": ["Provider acceptance and account/method eligibility",
             "Mode-isolated database and reviewed legacy evidence",

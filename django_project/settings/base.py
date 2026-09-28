@@ -398,7 +398,7 @@ BILLING_ALLOW_TRIAL_START = env.bool("BILLING_ALLOW_TRIAL_START", default=DEBUG)
 SUBSCRIPTION_GRACE_DAYS = 7
 # Enable only after provider checkout/webhook acceptance on the deployment.
 BILLING_CHECKOUT_ENABLED = env.bool("BILLING_CHECKOUT_ENABLED", default=False)
-# Operator-only Test Mode contract preparation; no recurring customer checkout yet.
+# Explicit new agreement/authorization gate; configured recovery remains available when paused.
 BILLING_RECURRING_ENABLED = env.bool("BILLING_RECURRING_ENABLED", default=False)
 
 THOUSAND_SEPARATOR = ","

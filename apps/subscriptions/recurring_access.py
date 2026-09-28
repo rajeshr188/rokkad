@@ -11,7 +11,7 @@ from .billing import transition_subscription
 from .checkout import require_billing_owner
 from .models import (BillingResolution, Invoice, Payment, RecurringAccessResolution, RecurringAgreement,
                      RecurringAgreementEvent, RecurringCycle, Subscription, SubscriptionEvent)
-from .recurring import provider_test_mode, verify_agreement_observation
+from .recurring import recurring_provider_mode, verify_agreement_observation
 from .recurring_cycles import _facts
 from .razorpay_service import RazorpayService
 from .recovery import _validate_refund
@@ -29,7 +29,7 @@ def _active_owner(workspace, actor):
 def apply_held_period(*, workspace, actor, cycle_id, revision, reason):
     """Caller supplies explicit Workspace context and the reviewed subscription revision."""
     actor = _active_owner(workspace, actor)
-    mode = provider_test_mode()
+    mode = recurring_provider_mode()
     if not isinstance(reason, str) or not reason.strip() or len(reason) > 1000:
         raise ValidationError("A review reason of up to 1000 characters is required.")
     cycle = RecurringCycle.objects.select_related("agreement__binding", "invoice").filter(
@@ -103,7 +103,7 @@ def apply_held_period(*, workspace, actor, cycle_id, revision, reason):
 def resolve_recurring_refund(*, workspace, actor, invoice_id, action, reason, revision):
     """Review a recorded full refund; never issue money or cancel/release a mandate."""
     actor = _active_owner(workspace, actor)
-    mode = provider_test_mode()
+    mode = recurring_provider_mode()
     if action not in {"retain_access", "end_access"}:
         raise ValidationError("Recurring refunds support retaining access or ending the current refunded term.")
     if not isinstance(reason, str) or not reason.strip() or len(reason) > 1000:

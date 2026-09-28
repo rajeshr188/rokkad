@@ -49,7 +49,7 @@ class LiveCatalogTests(TransactionTestCase):
         self.assertEqual(report["mode"], "live")
         self.assertTrue(report["preview"])
         self.assertFalse(report["binding_saved"])
-        self.assertFalse(report["live_recurring_supported"])
+        self.assertTrue(report["live_recurring_supported"])
         self.assertEqual(report["snapshot"]["amount"], 176882)
         self.assertEqual(next(x["value"] for x in report["snapshot"]["entitlements"]
                               if x["feature_code"] == "workspace.max_members"), "6")
@@ -58,12 +58,12 @@ class LiveCatalogTests(TransactionTestCase):
         self.assertFalse(RecurringPlanBinding.objects.exists())
         self.assert_no_financial_effect()
 
-    def test_live_registration_is_idempotent_and_cannot_create_mandate(self):
+    def test_live_registration_is_idempotent_and_does_not_enable_creation(self):
         binding = recurring.bind_plan(**self.args)
         self.assertEqual(binding.mode, "live")
         self.assertEqual(recurring.bind_plan(**self.args).pk, binding.pk)
         self.assertEqual(RecurringPlanBinding.objects.count(), 1)
-        with override_settings(BILLING_RECURRING_ENABLED=True), self.assertRaises(PermissionDenied):
+        with self.assertRaises(PermissionDenied):
             recurring.create_agreement(workspace_id=999, actor=self.actor, binding_id=binding.pk,
                                        total_count=12, request_key=uuid4())
         self.assert_no_financial_effect()

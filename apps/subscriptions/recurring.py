@@ -1,4 +1,4 @@
-"""Mode-specific catalog preparation; agreement workflows remain Test Mode only.
+"""Mode-specific recurring preparation; mandate state is separate from paid access.
 
 Public commands own their transactions: the attempt MUST commit before provider
 creation. Do not call these from middleware's atomic Workspace request context.
@@ -25,22 +25,41 @@ from .services import build_entitlement_defaults, get_workspace_member_usage
 
 
 def _test_mode():
-    # Live recurring activation is deliberately unavailable in this increment.
+    # Test catalog registration retains its explicit preparation switch.
     if not getattr(settings, "BILLING_RECURRING_ENABLED", False):
         raise PermissionDenied("Recurring agreement preparation is disabled.")
     return provider_test_mode()
 
 
 def provider_test_mode():
-    """Existing payment evidence remains recoverable when new creation is paused."""
+    """Keep rehearsal-only operations, such as reservation release, isolated."""
+    mode = recurring_provider_mode()
+    if mode != "test":
+        raise PermissionDenied("This operation requires Test Mode credentials.")
+    return mode
+
+
+def recurring_provider_mode():
+    """Recovery uses the configured mode even when new authorization is paused."""
     from .provider_configuration import provider_mode
     try:
-        mode = provider_mode()
+        return provider_mode()
     except ValidationError as exc:
-        raise PermissionDenied("Recurring preparation requires configured Test Mode credentials.") from exc
-    if mode != "test":
-        raise PermissionDenied("Recurring preparation requires Test Mode credentials.")
-    return "test"
+        raise PermissionDenied("Recurring billing requires matching configured provider credentials.") from exc
+
+
+def _creation_mode():
+    if not getattr(settings, "BILLING_RECURRING_ENABLED", False):
+        raise PermissionDenied("Recurring agreement preparation is disabled.")
+    mode = recurring_provider_mode()
+    if mode == "live":
+        if not getattr(settings, "RAZORPAY_WEBHOOK_SECRET", "").strip():
+            raise PermissionDenied("Configure the live webhook secret before recurring authorization.")
+        from .readiness import billing_evidence_inventory
+        blockers = billing_evidence_inventory()["blockers"]
+        if blockers:
+            raise ValidationError(blockers)
+    return mode
 
 
 def _outside_transaction():
@@ -170,7 +189,9 @@ def _locked_owner(workspace_id, actor):
 def create_agreement(*, workspace_id, actor, binding_id, total_count, request_key, start_at=None):
     """Commit exactly one attempt before one POST. Unknown outcomes never repost."""
     _outside_transaction()
-    mode = _test_mode()
+    mode = _creation_mode()
+    if start_at is not None and mode == "live":
+        raise ValidationError("Scheduled live starts require a separately reviewed transition workflow.")
     try:
         key = UUID(str(request_key))
     except (ValueError, TypeError, AttributeError) as exc:
@@ -297,7 +318,7 @@ def _record_provider(*, agreement_id, workspace_id, actor, entity, event_type, r
 def reconcile_agreement(*, workspace_id, actor, agreement_id, provider_subscription_id, reason):
     """Verify an operator-located ID against the durable identity, never re-POST."""
     _outside_transaction()
-    mode = _test_mode()
+    mode = recurring_provider_mode()
     reason = str(reason or "").strip()
     if not reason:
         raise ValidationError("A reconciliation reason is required.")

@@ -373,6 +373,14 @@ transaction. Provider mandate state never changes commercial access by itself;
 unknown attempts reserve the Workspace against another recurring/manual purchase.
 There are no generic model permissions or tenant-business RLS ownership changes.
 
+Immediate recurring workflows accept explicit test/live configuration only when
+it matches the immutable binding. New live creation/authorization additionally
+requires the activation flag, webhook secret and no conflicting/unclassified billing
+evidence. Existing mode-matched recovery and cancellation remain available while
+the flag is paused. Scheduled live starts and live reservation release are excluded.
+This is local code support, not production activation. See the
+[mode-matched workflow decision](../adr/2026-09-28-mode-matched-live-recurring-workflows.md).
+
 `RecurringCycle` adds immutable global evidence for one provider-paid invoice and
 its exact period, linked to the ordinary Invoice/Payment. Signed callbacks and
 owner recovery share verification and Company-row serialization. Paid cycles can
@@ -387,7 +395,7 @@ applies them; a separate authorized, audited resolution is required. See the
 [future-payment decision](../adr/2026-09-28-future-recurring-payment-evidence.md).
 
 `RecurringAccessResolution` now records one immutable application per held future
-cycle. The explicit Test Mode command requires a reviewed Subscription revision,
+cycle. The explicit mode-matched command requires a reviewed Subscription revision,
 reason, active owner/platform authority and fresh provider/local eligibility checks.
 It applies exact dates and frozen entitlements atomically with the resolution and
 audit. Resolved holds count as applied evidence; retries cannot reactivate access.

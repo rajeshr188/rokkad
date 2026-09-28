@@ -6,7 +6,7 @@ from apps.subscriptions.razorpay_service import BillingProviderError
 
 
 class Command(BaseCommand):
-    help = "Deliver a saved Test Mode cancellation once, or fetch an uncertain result. Never re-POST."
+    help = "Deliver a saved mode-matched cancellation once, or fetch an uncertain result. Never re-POST."
 
     def add_arguments(self, parser):
         parser.add_argument("--request-id", type=int, required=True)

@@ -11,7 +11,7 @@ from apps.subscriptions.razorpay_service import BillingProviderError
 
 
 class Command(BaseCommand):
-    help = "Apply one reviewed, started Test Mode recurring period; never charges or changes immutable payment evidence."
+    help = "Apply one reviewed, started mode-matched recurring period; never charges or changes immutable payment evidence."
 
     def add_arguments(self, parser):
         parser.add_argument("--workspace-id", type=int, required=True)

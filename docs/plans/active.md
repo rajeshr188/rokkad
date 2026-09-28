@@ -15,7 +15,8 @@ and APIs are verified. Credentials are protected outside the repository/OneDrive
 
 Recurring agreement preparation, owner authorization/cancellation, exact paid-cycle
 recording, recovery/replay and audited held-period application are implemented
-locally with Test Mode-only boundaries. Actual monthly/annual initial card captures,
+locally with matching test/live mode boundaries; actual acceptance so far uses
+Test Mode only. Actual monthly/annual initial card captures,
 owner recovery, cancellation and accelerated monthly renewal recording have passed.
 Future payments remain held without early access; actual naturally due application
 is still open. The annual midnight-IST invoice boundary found in provider acceptance
@@ -51,21 +52,31 @@ agreement is now Expired but its INR 5 token remains Created; canonical owner
 refresh preserved the reservation and all financial/access records. See the
 [readiness checkpoint](../implementation/billing-provider-readiness.md). The path
 now explicitly lists provider failure/recovery, due held access, refund/replacement
-workflows, live-mode implementation/configuration, receipt delivery and commercial
+workflows, reviewed live deployment/configuration, receipt delivery and commercial
 launch decisions. The existing monthly holds begin on 28 October 2026; using them
 for natural due-date acceptance makes that the earliest such checkpoint, not a
 promised launch. A different acceptance method or pilot scope needs review. Present
-code rejects live recurring keys; deployment alone cannot enable a paying pilot.
+code now supports matching live recurring keys; deployment alone does not establish pilot readiness.
 No production activation, published prices or production-customer term changes.
 
-Latest billing code adds platform-only live catalog preview and immutable local
+Latest billing code adds mode-matched immediate live creation, owner authorization,
+verified paid-cycle recovery, cancellation and explicit held/refund review. New live
+authorization requires the default-off flag, webhook secret and clean mode evidence;
+existing matching-mode recovery stays available while paused. Scheduled live starts
+and live reservation release remain unavailable. Fictional/mocked regression tests
+cover these boundaries; no live provider action or production activation occurred.
+Next is preparing the paused production release and evidence inventory alongside
+outstanding provider/commercial acceptance. See the
+[workflow checkpoint](../implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
+
+Previous billing code adds platform-only live catalog preview and immutable local
 registration of an already existing Razorpay plan. It requires explicit matching
 mode, paused purchase switches and no conflicting test/unclassified billing
-evidence; no mandate or charge is created. Live recurring workflows remain blocked.
+evidence; no mandate or charge is created. Live workflows were blocked at that checkpoint.
 No real live credentials, catalog registration or production deployment was used.
 At 14:14 IST both pending provider payments remained Created, with only support
-acknowledgements found. Next is live agreement/payment workflow implementation
-and mode-isolation coverage, alongside unresolved provider/commercial acceptance.
+acknowledgements found. The workflow implementation described above followed this
+checkpoint; unresolved provider/commercial acceptance remains.
 See [catalog preparation](../implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
 
 Latest mail continuation sent one authorized invitation to admin@rokkad.com using

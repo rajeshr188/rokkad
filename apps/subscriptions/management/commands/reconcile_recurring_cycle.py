@@ -11,7 +11,7 @@ from apps.subscriptions.razorpay_service import BillingProviderError
 
 
 class Command(BaseCommand):
-    help = "Verify and record one known Test Mode recurring paid invoice; never initiates a charge."
+    help = "Verify and record one known mode-matched recurring paid invoice; never initiates a charge."
 
     def add_arguments(self, parser):
         parser.add_argument("--workspace-id", type=int, required=True)

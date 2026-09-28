@@ -8,6 +8,19 @@ related: [../adr/2026-09-27-recurring-agreement-evidence.md, billing-test-rehear
 
 # Recurring agreements and paid cycles
 
+## Mode-matched live workflow implementation (2026-09-28)
+
+Immediate-start creation, owner authorization, paid-cycle verification, cancellation
+and explicit held/refund review now use the same mode-matched services for test and
+live bindings. The default-off new-authorization flag is separate from recovery;
+even uncertain creation can be reconciled while paused. Live new authorization
+also requires a webhook secret and clean billing-mode evidence. Scheduled live
+starts and reservation release remain unavailable. No production activation,
+deployment, live key or real provider operation is part of this code checkpoint.
+See [readiness and remaining gates](billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28)
+and the [decision](../adr/2026-09-28-mode-matched-live-recurring-workflows.md).
+Earlier dated provider observations below remain historical evidence.
+
 ## Scheduled expiry observation and receipt acceptance (2026-09-28)
 
 GET-only checks at **13:43 IST** found agreement 6 `sub_ThM7GiBY7yxoHg`
@@ -190,7 +203,7 @@ agreements, frozen terms, provider observations and the last twelve paid cycles.
 The operator still creates/binds agreements through the commands below. Owner
 self-service creation and a launch duration have not been introduced.
 
-With Test Mode keys and `BILLING_RECURRING_ENABLED=True`, a prepared `created`
+With matching configured keys and `BILLING_RECURRING_ENABLED=True`, a prepared `created`
 agreement can be authorized in Checkout after explicit consent. The server
 rechecks provider identity/plan, Workspace lifecycle, seats and existing paid/trial
 time. Confirmation verifies the signature against the saved subscription ID.
@@ -273,12 +286,12 @@ the isolated rehearsal database. Web/operator processes use the restricted runti
 role. Never point test preparation at the production database. All existing local
 and production feature flags remain unchanged by this implementation.
 
-`BILLING_RECURRING_ENABLED` defaults false. Even when enabled, the preparation
-services reject anything except configured `rzp_test_` credentials. The existing
+`BILLING_RECURRING_ENABLED` defaults false. Immediate-start workflows support
+matching configured test/live credentials, subject to the live gates above. The existing
 DPAPI-backed [rehearsal settings](billing-test-rehearsal.md) can be used by the
 Windows owner without copying keys into the repository or command line. Known
 agreement payment recovery remains available when new creation is disabled, with
-Test Mode credentials only. The temporary rehearsal webhook/tunnel are stopped
+credentials matching its binding. The temporary rehearsal webhook/tunnel are stopped
 after the September 28 initial-cycle/cancellation acceptance below.
 
 ## Operator commands

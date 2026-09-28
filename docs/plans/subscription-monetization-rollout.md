@@ -23,10 +23,10 @@ paying pilot. Production checkout remains disabled pending acceptance.
 
 ## Production critical path (reviewed 2026-09-28)
 
-There is no committed production date. Test acceptance is advancing, but the
-recurring services still explicitly reject live credentials. Deploying the present
-code and adding live keys would not enable a supported paying-pilot workflow.
-Production activation requires a separate, reviewed implementation and release.
+There is no committed production date. Mode-matched immediate live recurring
+workflows are now implemented locally with mocked-provider regression coverage.
+Production activation still requires provider/commercial acceptance and a reviewed
+release. Adding live keys alone does not establish paying-pilot readiness.
 
 | Gate | Remaining result needed | Dependency |
 | --- | --- | --- |
@@ -34,19 +34,29 @@ Production activation requires a separate, reviewed implementation and release.
 | Failed collection | Resolve the unexpected successful failure simulation; accept Pending/Halted/recovery | Razorpay ticket 21146171 or reproducible provider outcome |
 | Due held access | Apply an eligible actual provider hold with fresh verification at its natural start | Existing monthly holds start **28 October 2026**; no altered clock or saved dates |
 | Refunds and replacement agreements | Full-refund review and narrow settled reservation release accepted; exact replacement periods locally tested; actual replacement payment, general settlement and prepaid transition policy remain | Remaining policy and provider acceptance |
-| Production billing boundary | Live catalog preview/registration implemented locally; actual commercial catalog, live recurring workflows, legacy evidence review, HTTPS callback and operations remain | Reviewed commercial terms, private live credentials, mode-isolated database and deployment acceptance |
+| Production billing boundary | Live catalog and immediate recurring workflows implemented locally; actual commercial catalog, legacy evidence review, reviewed deployment, HTTPS callback and operations remain | Reviewed commercial terms, private live credentials, mode-isolated database and deployment acceptance |
 | Receipts and email | Reviewed billing deployment for general receipts, ongoing dispatch scope and inbox continuity | Monitored single invitation passed Inbox/authentication/feedback; feedback/recovery active; paid test receipt/reply accepted; general dispatch disabled |
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
 
-Latest billing continuation: explicit live catalog preview/registration is locally
+Latest billing continuation: shared recurring services now accept matching live
+bindings for immediate creation, owner authorization, verified payment/recovery,
+cancellation and explicit held/refund review. New live authorization requires the
+default-off flag, webhook secret and clean mode evidence. Recovery stays available
+while creation is paused. Scheduled live starts and live reservation release remain
+excluded. All live-mode verification used fictional fixtures and mocked responses;
+no production activation or real provider action occurred. Next: prepare the paused
+production release and billing evidence review alongside provider/commercial
+acceptance. See the [workflow checkpoint](../implementation/billing-provider-readiness.md#live-recurring-workflow-support-2026-09-28).
+
+Previous billing continuation: explicit live catalog preview/registration is locally
 implemented without enabling mandates or charges. It validates a known provider
 plan through GET, preserves immutable terms, and refuses conflicting test or
 unclassified billing evidence. No live credentials or real catalog changes were
 made. At 14:14 IST both unsettled Test Mode payments remained Created; annual invoice
 Issued, scheduled mandate Expired. Ticket searches still showed acknowledgements
-only. Next: complete live agreement/payment workflow support and its mode-isolation
-tests, alongside provider acceptance and commercial review. See
+only. The live agreement implementation planned at that checkpoint is now described
+above; provider acceptance and commercial review remain. See
 [catalog preparation](../implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
 
 Latest monitored mail check: one owner-selected admin invitation passed Inbox,
@@ -395,7 +405,8 @@ Use the current owner/platform authorization and immutable audit patterns.
 - [x] First increment's pricing display and frozen-checkout tests pass (28 focused tests).
 - [x] Merchant account approved and Live/Test modes active (owner-reported); all three test list APIs verified.
 - [ ] Account-specific fees and supported recurring payment methods confirmed for launch.
-- [x] Contract schema/ADR, durable attempt recovery and mode binding implemented locally; creation is Test Mode only.
+- [x] Contract schema/ADR, durable attempt recovery and mode binding implemented locally.
+- [x] Immediate live recurring workflows implemented with mode-isolation regression coverage; activation remains off, scheduled starts and live reservation release excluded.
 - [x] Actual Test Mode initial recurring cycle creates one invoice/payment/term; replay/recovery do not duplicate them.
 - [x] Actual provider accelerated renewal captured and recorded once locally, with exact future dates and access held for review.
 - [x] Authorized, audited application of eligible held periods implemented and tested, with fresh refund/current-access checks; actual future provider hold refuses early application.
