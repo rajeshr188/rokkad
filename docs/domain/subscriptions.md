@@ -8,6 +8,13 @@ related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 
 # Subscriptions
 
+Platform operators can now preview or register a known live provider plan against
+the frozen local offer, with matching explicit live credentials, both purchase
+switches paused and no conflicting test/unclassified billing evidence. Preview is
+read-only; registration saves only the catalog mapping. Live agreement creation,
+authorization and financial workflows remain unavailable. See the
+[catalog preparation decision](../adr/2026-09-28-live-recurring-catalog-preparation.md).
+
 Billing requires an explicit configured provider mode with matching keys. New
 one-off invoices freeze mode; recurring invoices inherit their saved plan binding.
 Historical unclassified records cannot be silently processed as live purchases.

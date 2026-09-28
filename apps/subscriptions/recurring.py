@@ -1,4 +1,4 @@
-"""Test-only recurring contract preparation. Paid cycles are a separate boundary.
+"""Mode-specific catalog preparation; agreement workflows remain Test Mode only.
 
 Public commands own their transactions: the attempt MUST commit before provider
 creation. Do not call these from middleware's atomic Workspace request context.
@@ -83,12 +83,33 @@ def _verify_plan(entity, provider_id, snapshot):
         raise ValidationError("Provider plan does not match the frozen price, currency and cycle.")
 
 
-def bind_plan(*, actor, plan_id, cycle, provider_plan_id, reason):
-    """Platform-only catalog registration; reads an explicitly known provider plan."""
+def _catalog_mode(mode, *, preview=False):
+    from .provider_configuration import provider_mode
+    if mode == "test":
+        if preview:
+            provider_test_mode()
+        else:
+            _test_mode()
+    if mode not in {"test", "live"} or provider_mode() != mode:
+        raise ValidationError("Catalog mode must match the configured provider mode.")
+    if mode == "live":
+        if settings.BILLING_CHECKOUT_ENABLED or settings.BILLING_RECURRING_ENABLED:
+            raise PermissionDenied("Pause checkout and recurring authorization before live catalog preparation.")
+        from .readiness import billing_evidence_inventory
+        blockers = billing_evidence_inventory()["blockers"]
+        if blockers:
+            raise ValidationError(blockers)
+    if RecurringPlanBinding.objects.exclude(mode=mode).exists():
+        raise ValidationError("Stored catalog bindings belong to another provider mode.")
+    return mode
+
+
+def review_plan_binding(*, actor, plan_id, cycle, provider_plan_id, reason, mode="test"):
+    """Read one provider plan and return local commercial terms; persist nothing."""
     _outside_transaction()
-    mode = _test_mode()
     if not actor.is_active or not is_platform_admin(actor):
         raise PermissionDenied("Only a platform administrator can bind provider plans.")
+    _catalog_mode(mode, preview=True)
     reason = str(reason or "").strip()
     if not reason:
         raise ValidationError("A catalog binding reason is required.")
@@ -97,8 +118,28 @@ def bind_plan(*, actor, plan_id, cycle, provider_plan_id, reason):
     snapshot = _offer(plan, cycle)
     entity = RazorpayService.get_plan(provider_plan_id)
     _verify_plan(entity, provider_plan_id, snapshot)
+    if _offer(Plan.objects.get(pk=plan_id), cycle) != snapshot:
+        raise ValidationError("The local offer changed during provider verification.")
+    existing = RecurringPlanBinding.objects.filter(mode=mode, provider_plan_id=provider_plan_id).first()
+    if existing and (existing.plan_id != plan.pk or existing.snapshot != snapshot):
+        raise ValidationError("This provider plan is already bound to different terms.")
+    _catalog_mode(mode, preview=True)
+    return {"mode": mode, "plan_id": plan.pk, "provider_plan_id": provider_plan_id,
+            "snapshot": snapshot, "reason": reason}
+
+
+def bind_plan(*, actor, plan_id, cycle, provider_plan_id, reason, mode="test"):
+    """Register verified catalog terms only; never create a provider plan or mandate."""
+    _outside_transaction()
+    if not actor.is_active or not is_platform_admin(actor):
+        raise PermissionDenied("Only a platform administrator can bind provider plans.")
+    _catalog_mode(mode)
+    review = review_plan_binding(actor=actor, plan_id=plan_id, cycle=cycle,
+        provider_plan_id=provider_plan_id, reason=reason, mode=mode)
+    snapshot = review["snapshot"]
     with transaction.atomic():
         plan = Plan.objects.select_for_update().get(pk=plan_id)
+        _catalog_mode(mode)
         if _offer(plan, cycle) != snapshot:
             raise ValidationError("The local offer changed during provider verification.")
         existing = RecurringPlanBinding.objects.filter(mode=mode, provider_plan_id=provider_plan_id).first()
@@ -108,7 +149,7 @@ def bind_plan(*, actor, plan_id, cycle, provider_plan_id, reason):
             return existing
         return RecurringPlanBinding.objects.create(
             plan=plan, mode=mode, provider_plan_id=provider_plan_id,
-            snapshot=snapshot, actor=actor, reason=reason,
+            snapshot=snapshot, actor=actor, reason=review["reason"],
         )
 
 

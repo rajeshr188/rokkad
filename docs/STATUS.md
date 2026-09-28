@@ -12,6 +12,42 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Live catalog preparation boundary (2026-09-28)
+
+FW-019 now supports platform-only review and local registration of a known live
+Razorpay plan. `prepare_recurring_agreement ... bind --mode live --preview` fetches
+the provider plan and reports verified local price/tax/cycle/seat terms without
+saving. Registration freezes those same terms in the existing immutable binding;
+repeated identical terms reuse the binding. It never creates a provider plan,
+mandate, charge, invoice, paid access or email.
+
+Live preparation requires explicit matching live credentials, both purchase flags
+paused, and no conflicting test bindings or test/unclassified invoices. Guards run
+before provider access and again before persistence; changed offers are refused.
+Test preview works while authorization is paused, while Test Mode registration
+retains its prior enable gate. Live agreement creation and all live recurring
+financial workflows remain unsupported. No live credentials or actual live catalog
+were used, no production deployment/migration occurred, and the working commercial
+offer remains unpublished. See the
+[decision](adr/2026-09-28-live-recurring-catalog-preparation.md) and
+[operator workflow](implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
+
+Validation: **39 tests passed** across recurring preparation, provider configuration
+and initial catalog coverage. After final guard additions, all **13 catalog tests
+passed**, covering mode/authority boundaries, paused flags, monthly/yearly amounts,
+idempotency, offer changes, provider failure, contaminated evidence before/during
+verification, preview side effects and continued live-mandate refusal. CI includes
+the new suite. Documentation links and whitespace checks pass.
+
+At **14:14 IST**, GET-only checks still found annual agreement 5 Active with one
+paid cycle, final payment Created and invoice Issued; scheduled agreement 6 Expired
+with zero paid cycles and its INR 5 token Created. Local records are unchanged.
+The ticket-number inbox search still showed only the 11:49/11:50 acknowledgements
+for 21146138/21146171. Preserve both unresolved attempts. Next is live recurring
+agreement/payment implementation and mode-isolation tests, alongside remaining
+provider acceptance and commercial review; catalog preparation alone is not launch
+readiness. Monitored mail state from the previous checkpoint remains unchanged.
+
 ## Monitored single-invitation delivery (2026-09-28)
 
 The owner approved the monitored invitation check and selected admin@rokkad.com.

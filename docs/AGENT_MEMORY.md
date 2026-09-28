@@ -52,6 +52,18 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
+Latest FW-019 billing continuation: platform-only catalog review/registration now
+supports explicit live mode through `prepare_recurring_agreement ... bind --mode
+live`; `--preview` fetches/validates one known provider plan without saving. Live
+preparation requires matching keys, checkout/recurring flags off and no conflicting
+test/unclassified invoice evidence. Bindings remain immutable and idempotent; no
+provider plan, mandate, payment or access is created. All live agreement workflows
+remain blocked. No live credentials/catalog mutation/deployment occurred. At
+14:14 IST on 28 September both pending test payments were still Created; annual
+invoice Issued, scheduled agreement Expired. Support search found acknowledgements
+only. Preserve the unresolved attempts. See
+[catalog preparation](implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
+
 Latest monitored invitation: owner-selected admin@rokkad.com received exactly one
 Viewer invitation to the empty production Workspace 5, **Rokkad Invitation
 Activation TEST**, at 14:09 IST on 28 September. Inbox, SPF/DKIM/DMARC and TLS passed;

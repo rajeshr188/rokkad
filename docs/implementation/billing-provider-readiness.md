@@ -7,6 +7,41 @@ tags: [billing, configuration, receipts, deployment]
 
 # Billing provider configuration and readiness
 
+## Live catalog preparation (2026-09-28)
+
+The catalog command now supports explicit live plan review/registration while
+live recurring agreements remain unsupported. Use matching private live settings,
+both checkout/recurring switches off, and a separately reviewed production database.
+Never use the populated Test Mode rehearsal database for this step.
+
+```text
+python manage.py prepare_recurring_agreement --actor-id <platform-admin> bind --mode live --plan-id <local-plan> --cycle monthly --provider-plan-id <existing-live-plan> --reason "Reviewed launch catalog" --preview
+```
+
+Preview performs a provider GET and prints verified local price/tax/seat terms,
+without saving. After reviewing those exact terms, the same command without
+`--preview` registers only the immutable local catalog mapping. It does not create
+a Razorpay plan or subscription, charge money, publish the offer or enable Checkout.
+Both operations require platform authority, explicit matching mode and a reason;
+Test Mode defaults remain compatible. Test previews may run while creation is paused.
+Live preparation rejects test bindings and test/unclassified one-off invoices before
+provider access. Both modes reject conflicting bindings; evidence and offer changes
+are rechecked before persistence. Provider amount, currency and interval must match.
+
+No live keys were loaded, live plan created/bound, production migration applied or
+provider-side write made in this increment. Commercial tax and launch terms remain
+unapproved. The [catalog decision](../adr/2026-09-28-live-recurring-catalog-preparation.md)
+separates this capability from supported live agreement/payment workflows.
+The 39-test regression run and final 13-test catalog run pass; CI includes the
+catalog suite. No schema change is needed.
+
+GET-only provider checks at **14:14 IST** still show annual agreement 5 Active,
+one of two cycles paid, final payment Created and invoice Issued. Scheduled
+agreement 6 is Expired with zero paid cycles and its INR 5 token still Created.
+Local records were unchanged. Ticket-number inbox search still found only the
+11:49/11:50 acknowledgements for 21146138/21146171. Preserve both uncertainties;
+do not retry, cancel, refund or release their reservations based on this check.
+
 Provider approval and a matching configuration do not constitute launch acceptance.
 New billing configuration uses `BILLING_PROVIDER_MODE=disabled|test|live`, default
 disabled, alongside the existing key pair, webhook secret and separate checkout/

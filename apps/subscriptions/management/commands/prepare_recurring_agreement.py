@@ -10,7 +10,7 @@ from apps.subscriptions.razorpay_service import BillingProviderError
 
 
 class Command(BaseCommand):
-    help = "Test-only recurring preparation: bind a plan, create one durable attempt, or reconcile a known provider ID. Grants no access."
+    help = "Review/bind a mode-specific catalog plan; agreement creation/recovery stays Test Mode only. Grants no access."
 
     def add_arguments(self, parser):
         parser.add_argument("--actor-id", type=int, required=True)
@@ -20,6 +20,8 @@ class Command(BaseCommand):
         bind.add_argument("--cycle", choices=["monthly", "yearly"], required=True)
         bind.add_argument("--provider-plan-id", required=True)
         bind.add_argument("--reason", required=True)
+        bind.add_argument("--mode", choices=["test", "live"], default="test")
+        bind.add_argument("--preview", action="store_true", help="Verify through provider GET and print local terms without saving a binding.")
         create = actions.add_parser("create")
         create.add_argument("--workspace-id", type=int, required=True)
         create.add_argument("--binding-id", type=int, required=True)
@@ -36,9 +38,14 @@ class Command(BaseCommand):
         try:
             actor = get_user_model().objects.get(pk=options["actor_id"], is_active=True)
             if options["action"] == "bind":
-                binding = recurring.bind_plan(actor=actor, plan_id=options["plan_id"], cycle=options["cycle"],
-                    provider_plan_id=options["provider_plan_id"], reason=options["reason"])
-                result = {"binding_id": binding.pk, "mode": binding.mode}
+                args = dict(actor=actor, plan_id=options["plan_id"], cycle=options["cycle"],
+                    provider_plan_id=options["provider_plan_id"], reason=options["reason"], mode=options["mode"])
+                if options["preview"]:
+                    result = recurring.review_plan_binding(**args)
+                    result.update(preview=True, binding_saved=False, live_recurring_supported=False)
+                else:
+                    binding = recurring.bind_plan(**args)
+                    result = {"binding_id": binding.pk, "mode": binding.mode}
             else:
                 if options["action"] == "create":
                     agreement = recurring.create_agreement(actor=actor, workspace_id=options["workspace_id"],

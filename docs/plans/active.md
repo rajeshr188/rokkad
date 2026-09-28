@@ -58,6 +58,16 @@ promised launch. A different acceptance method or pilot scope needs review. Pres
 code rejects live recurring keys; deployment alone cannot enable a paying pilot.
 No production activation, published prices or production-customer term changes.
 
+Latest billing code adds platform-only live catalog preview and immutable local
+registration of an already existing Razorpay plan. It requires explicit matching
+mode, paused purchase switches and no conflicting test/unclassified billing
+evidence; no mandate or charge is created. Live recurring workflows remain blocked.
+No real live credentials, catalog registration or production deployment was used.
+At 14:14 IST both pending provider payments remained Created, with only support
+acknowledgements found. Next is live agreement/payment workflow implementation
+and mode-isolation coverage, alongside unresolved provider/commercial acceptance.
+See [catalog preparation](../implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
+
 Latest mail continuation sent one authorized invitation to admin@rokkad.com using
 the minimal invitation-only worker and an exact delivery ID. Inbox/authentication,
 Send/Delivery feedback and health passed; the received link refused the current

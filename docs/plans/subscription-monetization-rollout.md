@@ -34,10 +34,20 @@ Production activation requires a separate, reviewed implementation and release.
 | Failed collection | Resolve the unexpected successful failure simulation; accept Pending/Halted/recovery | Razorpay ticket 21146171 or reproducible provider outcome |
 | Due held access | Apply an eligible actual provider hold with fresh verification at its natural start | Existing monthly holds start **28 October 2026**; no altered clock or saved dates |
 | Refunds and replacement agreements | Full-refund review and narrow settled reservation release accepted; exact replacement periods locally tested; actual replacement payment, general settlement and prepaid transition policy remain | Remaining policy and provider acceptance |
-| Production billing boundary | Explicit mode/key checks, new invoice mode and diagnostics implemented; live recurring, legacy evidence migration, live plan binding, HTTPS callback and operations remain | Reviewed implementation, private live credentials and deployment acceptance |
+| Production billing boundary | Live catalog preview/registration implemented locally; actual commercial catalog, live recurring workflows, legacy evidence review, HTTPS callback and operations remain | Reviewed commercial terms, private live credentials, mode-isolated database and deployment acceptance |
 | Receipts and email | Reviewed billing deployment for general receipts, ongoing dispatch scope and inbox continuity | Monitored single invitation passed Inbox/authentication/feedback; feedback/recovery active; paid test receipt/reply accepted; general dispatch disabled |
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
+
+Latest billing continuation: explicit live catalog preview/registration is locally
+implemented without enabling mandates or charges. It validates a known provider
+plan through GET, preserves immutable terms, and refuses conflicting test or
+unclassified billing evidence. No live credentials or real catalog changes were
+made. At 14:14 IST both unsettled Test Mode payments remained Created; annual invoice
+Issued, scheduled mandate Expired. Ticket searches still showed acknowledgements
+only. Next: complete live agreement/payment workflow support and its mode-isolation
+tests, alongside provider acceptance and commercial review. See
+[catalog preparation](../implementation/billing-provider-readiness.md#live-catalog-preparation-2026-09-28).
 
 Latest monitored mail check: one owner-selected admin invitation passed Inbox,
 SPF/DKIM/DMARC, TLS and canonical Send/Delivery evidence with one attempt. Feedback
