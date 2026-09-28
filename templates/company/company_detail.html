@@ -9,7 +9,7 @@
 <dl class="row"><dt class="col-sm-3">{% translate "Owner" %}</dt><dd class="col-sm-9 text-break">{{ company.owner }}</dd><dt class="col-sm-3">{% translate "Created" %}</dt><dd class="col-sm-9">{{ company.created_at|date:'d M Y' }}</dd></dl>
 <nav class="app-section-nav" aria-label="{% translate 'Workspace administration' %}">
 {% if 'team.view' in actions %}<a href="{% url 'workspace_slug_settings_team' company.slug %}">{% translate "Team members" %}</a>{% endif %}
-{% if 'team.invite' in actions %}<a href="{% url 'workspace_slug_settings_invitations' company.slug %}">{% translate "Sent invitations" %}</a>{% endif %}
+{% if 'team.invite' in actions %}<a href="{% url 'workspace_slug_settings_invitations' company.slug %}">{% translate "Outgoing invitations" %}</a>{% endif %}
 {% if 'billing.view' in actions %}<a href="{% url 'workspace_subscriptions:dashboard' company.slug %}">{% translate "Billing" %}</a>{% endif %}
 <a href="{% url 'workspace_slug_dashboard' company.slug %}">{% translate "Return to workspace" %}</a></nav>
 {% if can_archive_workspace %}<details class="card card-body mt-3"><summary>{% translate "Archive Workspace" %}</summary><p class="mt-2">{% translate "Archiving stops ordinary branch access while preserving its records. Review the archive page before making this change." %}</p><a href="{% url 'workspace_slug_settings_archive' company.slug %}">{% translate "Review archiving" %}</a></details>{% endif %}

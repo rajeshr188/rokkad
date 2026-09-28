@@ -1,0 +1,13 @@
+{% extends "base_tenant.html" %}
+{% block workspace_content %}
+<div class="app-heading"><div><h1>Loan entry</h1><p class="text-muted">Workspace rules for preparing and approving loans.</p></div></div>
+{% include "loans/setup/_navigation.html" %}
+<form method="post" class="card card-body mt-3">{% csrf_token %}
+<h2 class="h5">Collateral photographs</h2>
+<p>Photos are optional by default. Enable this rule to require a usable photograph for each item before approving a loan, including renewal collateral.</p>
+{{ form.non_field_errors }}
+<div class="form-check">{{ form.require_collateral_photos }}<label class="form-check-label" for="{{ form.require_collateral_photos.id_for_label }}">{{ form.require_collateral_photos.label }}</label></div>
+<p class="form-text">{{ form.require_collateral_photos.help_text }}</p>
+<div><button class="btn btn-primary" type="submit">Save photo rule</button></div>
+</form>
+{% endblock %}

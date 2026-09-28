@@ -190,6 +190,9 @@ def pawn_loan_detail(request, pk):
     context["can_edit_loan"] = request.loans_workspace_access.can("data.edit")
     context["can_split_draft"] = context["can_edit_loan"] and request.loans_workspace_access.can("data.create")
     context["can_delete_draft_photos"] = loan.state == "DRAFT" and request.loans_workspace_access.can("data.edit")
+    if loan.state == "DRAFT":
+        from apps.tenant_apps.loans.services.origination_settings import collateral_photos_required
+        context["photos_required"] = collateral_photos_required(loan.workspace_id)
     context["can_approve"] = request.loans_workspace_access.can("loan.approve")
     context["can_reappraise"] = loan.state == "ACTIVE" and context["can_approve"] and context["can_edit_loan"]
     current_appraisals = {}

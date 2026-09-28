@@ -76,14 +76,15 @@ def get_party_pawn_loan_history_summary(party, *, limit=20):
     }
     active = [loan for loan in loans if loan.state in active_states]
     closed = [loan for loan in loans if loan.state not in active_states]
-    active_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in active[:limit])
+    # The display limit must never truncate the borrower's outstanding balance.
+    active_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in active)
     closed_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in closed[:limit])
     outstanding = sum(
         (row.total_outstanding for row in active_rows if row.total_outstanding is not None),
         Decimal("0"),
     )
     return {
-        "active_loans": active_rows,
+        "active_loans": active_rows[:limit],
         "closed_loans": closed_rows,
         "counts": {
             "active_loans": len(active),

@@ -151,6 +151,8 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         )
 
     def test_approval_requires_photo_and_freezes_photo_hash(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_collateral_photo_requirement
+        set_collateral_photo_requirement(workspace=self.tenant, required=True, actor=self.owner)
         with self.assertRaisesRegex(PawnLifecycleError, "requires at least one photograph"):
             approve_pawn_loan(self.loan.pk, actor=self.owner)
 
@@ -176,6 +178,8 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             )
 
     def test_draft_photo_delete_is_post_only_and_blocks_approval_until_replaced(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_collateral_photo_requirement
+        set_collateral_photo_requirement(workspace=self.tenant, required=True, actor=self.owner)
         photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
         storage, name = photo.file.storage, photo.file.name
         url = reverse("loans:pawn_collateral_photo_delete", args=[self.loan.pk, self.item.pk, photo.pk])
@@ -190,6 +194,20 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             approve_pawn_loan(self.loan.pk, actor=self.owner)
         append_collateral_photo(self.item.pk, upload=self.photo("replacement.jpg"), actor=self.owner)
         approve_pawn_loan(self.loan.pk, actor=self.owner)
+
+    def test_optional_default_allows_approval_and_freezes_rule(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_collateral_photo_requirement
+        url = reverse("loans:pawn_loan_detail", args=[self.loan.pk])
+        self.assertNotContains(self.client.get(url), "Required before approval.")
+        set_collateral_photo_requirement(workspace=self.tenant, required=True, actor=self.owner)
+        self.assertContains(self.client.get(url), "Required before approval.")
+        set_collateral_photo_requirement(workspace=self.tenant, required=False, actor=self.owner)
+        snapshot = approve_pawn_loan(self.loan.pk, actor=self.owner)
+        self.assertEqual(snapshot.payload["collateral_photo_policy"], {"required": False})
+        self.assertEqual(snapshot.payload["collateral"][0]["photo_evidence"], [])
+        set_collateral_photo_requirement(workspace=self.tenant, required=True, actor=self.owner)
+        snapshot.refresh_from_db()
+        self.assertEqual(snapshot.payload["collateral_photo_policy"], {"required": False})
 
     def test_photo_delete_preserves_approved_evidence_and_rejects_wrong_item(self):
         from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo

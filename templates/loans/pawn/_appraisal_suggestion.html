@@ -4,4 +4,11 @@
   <span>Suggested appraisal: ₹{{ value|indian_money }}. Net weight × purity percentage × buying rate (₹{{ rate.buying_rate|indian_money }}/g; rate dated {{ rate.effective_at|date:"d/m/Y" }}).</span>
   <button type="button" class="btn btn-sm btn-link" data-apply-appraisal>Use suggestion</button>
 {% else %}{{ message }}{% endif %}
+{% if ltv_percent %}<div class="mt-2 border-start border-3 ps-2">
+  <strong>LTV limit: {{ ltv_percent|floatformat:"-2" }}%</strong>
+  {% if maximum_principal != None %}<div>Eligible value: ₹{{ selected_value|indian_money }} · Maximum loan for this item: <strong>₹{{ maximum_principal|indian_money }}</strong></div>
+  {% if above_limit %}<div class="text-danger">The entered item principal exceeds this limit.</div>{% endif %}
+  <div class="text-muted">Guidance only. Preview and approval recheck the applicable policy and prices.</div>
+  {% else %}<div class="text-warning">{{ ltv_message }}</div>{% endif %}
+</div>{% elif ltv_message %}<div class="text-warning">{{ ltv_message }}</div>{% endif %}
 </div>

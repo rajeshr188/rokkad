@@ -547,7 +547,7 @@ class ConfigurableDocumentRenderer:
                         canvas.drawString(x + 2, y + height / 2, "Photo " + media.status.lower())
                         canvas.restoreState()
                         return
-                    if media.status == "ABSENT" and block.optional_photo:
+                    if media.status == "ABSENT" and (block.optional_photo or media.optional):
                         return
                     raise DocumentAssetError("Bound photograph is unavailable for official printing.")
                 if media.asset_key not in assets:
@@ -869,6 +869,8 @@ class ConfigurableDocumentRenderer:
                  "sections": [(section.key, [[str(cell) for cell in row] for row in section.rows]) for section in payload.sections]}
         if payload.schema_version >= 2:
             value["media"] = [(item.binding, item.asset_key, item.status) for item in payload.media]
+            if any(item.optional for item in payload.media):
+                value["optional_media"] = sorted(item.binding for item in payload.media if item.optional)
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     @staticmethod

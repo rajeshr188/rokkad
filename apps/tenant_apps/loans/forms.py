@@ -198,7 +198,7 @@ class PawnCollateralDraftForm(forms.ModelForm):
     collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     photograph = forms.FileField(
         required=False,
-        help_text=_("JPEG or PNG, up to 10 MB. New collateral requires one photograph."),
+        help_text=_("JPEG or PNG, up to 10 MB. Optional for drafts; your workspace may require a photo before approval."),
     )
 
     class Meta:
@@ -254,12 +254,6 @@ class PawnCollateralDraftForm(forms.ModelForm):
             self.add_error("interest_override_reason", _("Explain why this item needs a different interest rate."))
         if override is None:
             cleaned["interest_override_reason"] = ""
-        if (
-            cleaned.get("description")
-            and not cleaned.get("collateral_item_id")
-            and not cleaned.get("photograph")
-        ):
-            self.add_error("photograph", "New collateral requires a JPEG or PNG photograph.")
         return cleaned
 
     def has_changed(self):

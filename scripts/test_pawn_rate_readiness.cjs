@@ -8,17 +8,24 @@ const source = readFileSync('static/js/pawn-rate-readiness.js', 'utf8');
 function harness() {
   const node = () => ({
     events: {}, dataset: {}, attrs: {},
+    classList: {values: new Set(), add(value) { this.values.add(value); },
+      toggle(value, enabled) { if (enabled) this.values.add(value); else this.values.delete(value); }},
     addEventListener(name, callback) { this.events[name] = callback; },
     setAttribute(name, value) { this.attrs[name] = value; },
     focus() {}, scrollIntoView() {},
   });
   const content = node(), panel = node(), button = node(), form = node(), rows = node();
+  const summary = node(), details = node(), toggle = node();
   const series = {value: '1'}, date = {value: '2026-09-11'}, metal = {value: 'GOLD'};
   const photograph = {files: [{name: 'collateral.jpg'}]};
   const row = {querySelector: selector => selector.endsWith('DELETE"]') ? {checked: false} : selector.endsWith('metal"]') ? metal : null};
   rows.querySelectorAll = selector => selector === '[data-collateral-form]' ? [row] : [];
   content.querySelector = () => content.result;
-  panel.querySelector = selector => selector.includes('content') ? content : button;
+  panel.querySelector = selector => ({
+    '[data-rate-readiness-content]': content, '[data-rate-readiness-summary]': summary,
+    '#rate-readiness-details': details, '[aria-controls="rate-readiness-details"]': toggle,
+    '[data-check-rates]': button,
+  })[selector];
   form.querySelector = selector => ({
     '[data-rate-readiness-panel]': panel, '#collateral-formset': rows,
     '[name="series"]': series, '[name="loan_date"]': date,
@@ -46,13 +53,14 @@ function harness() {
     MutationObserver: class { observe() {} },
   });
   document.ready();
-  const complete = async (call, ready) => {
-    content.result = {dataset: {requestKey: String(call.options.values.request_key), ready: String(ready)}};
+  const complete = async (call, ready, attention = !ready) => {
+    content.result = {dataset: {requestKey: String(call.options.values.request_key), ready: String(ready), attention: String(attention)},
+      querySelector: () => ({textContent: attention ? 'Check prices before approval' : 'Ready for this loan date'})};
     call.resolve();
-    await Promise.resolve();
+    await new Promise(resolve => setImmediate(resolve));
   };
   const submit = (submitter = {value: 'save'}) => form.events.submit({submitter, preventDefault() {}});
-  return {form, content, series, metal, photograph, pending, complete, submit};
+  return {form, content, panel, summary, details, toggle, series, metal, photograph, pending, complete, submit};
 }
 
 test('missing prices block submission and preflight sends no borrower data or files', async () => {
@@ -115,5 +123,29 @@ test('a save already in flight cannot start another price check or submit', asyn
   await h.form.events.submit({preventDefault() { prevented = true; }});
   assert.equal(prevented, true);
   assert.equal(h.pending.length, 0);
+  assert.equal(h.form.submitted.length, 0);
+});
+
+test('healthy prices stay compact, stale prices expand even when draft saving is permitted', async () => {
+  const h = harness();
+  await h.complete(h.pending.shift(), true);
+  assert.equal(h.summary.textContent, 'Ready for this loan date');
+  assert.equal(h.details.classList.values.has('show'), false);
+  const submitted = h.submit();
+  await h.complete(h.pending.shift(), true, true);
+  await submitted;
+  assert.equal(h.details.classList.values.has('show'), true);
+  assert.equal(h.toggle.attrs['aria-expanded'], 'true');
+  assert.equal(h.form.submitted.length, 1, 'presentation must not tighten draft rules');
+});
+
+test('network failure expands details and replaces the healthy summary', async () => {
+  const h = harness();
+  await h.complete(h.pending.shift(), true);
+  const submitted = h.submit();
+  h.pending.shift().reject(new Error('offline'));
+  await submitted;
+  assert.match(h.summary.textContent, /unavailable/);
+  assert.equal(h.details.classList.values.has('show'), true);
   assert.equal(h.form.submitted.length, 0);
 });

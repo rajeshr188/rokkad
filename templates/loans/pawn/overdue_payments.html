@@ -1,0 +1,23 @@
+{% extends 'base_tenant.html' %}
+{% load orgs_tags %}
+{% block title %}Overdue payments | {{ workspace.name }}{% endblock %}
+{% block breadcrumbs %}
+{% include "components/navigation/breadcrumbs.html" with show_home=True workspace_name=workspace.name current_page="Overdue payments" %}
+{% endblock %}
+{% block workspace_content %}
+{% navigation_actions as dashboard_actions %}
+<div class="app-heading mb-4">
+  <div>
+    <h1 class="h3">Overdue payments</h1>
+    <p class="text-muted mb-0">{{ selected_queue.count }} loan{{ selected_queue.count|pluralize }} with unpaid scheduled payments before {{ counter_work.as_of_date }}.</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_slug_dashboard' workspace_slug=workspace.slug %}{% if dashboard_query %}?{{ dashboard_query }}{% endif %}">Back to dashboard</a>
+</div>
+{% if counter_work.queues.review.count %}
+<div class="alert alert-warning" role="status">
+  Payment queues are incomplete: {{ counter_work.queues.review.count }} active loan{{ counter_work.queues.review.count|pluralize }} could not be included because their repayment schedules need review.
+  <a class="alert-link" href="{% url 'workspace_slug_dashboard' workspace_slug=workspace.slug %}?{% if dashboard_query %}{{ dashboard_query }}&amp;{% endif %}queue=review">Review affected loans</a> before relying on the payment counts and scheduled amounts.
+</div>
+{% endif %}
+{% include 'company/_counter_queue.html' with queue_heading="Loans to follow up" %}
+{% endblock %}

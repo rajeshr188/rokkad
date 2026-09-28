@@ -11,6 +11,53 @@ from apps.tenant_apps.loans.selectors.party_history import (
 
 
 class PartyPawnLoanHistorySelectorTests(SimpleTestCase):
+    @patch("apps.tenant_apps.loans.selectors.party_history.reverse", return_value="/loan/")
+    @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", autospec=True)
+    @patch("apps.tenant_apps.loans.selectors.party_history.PawnLoan.objects.filter")
+    def test_total_includes_every_active_loan_independently_of_display_limit(
+        self, filter_loans, get_balance, reverse
+    ):
+        loans = [SimpleNamespace(
+            pk=pk, workspace=SimpleNamespace(slug="alpha"),
+            loan_number=f"PL-{pk:03}", loan_date="2026-09-28",
+            state=PawnLoanState.ACTIVE.value, collateral_items_count=1,
+            get_state_display=lambda: "Active",
+        ) for pk in range(1, 26)]
+        filter_loans.return_value.select_related.return_value.annotate.return_value.order_by.return_value = loans
+        get_balance.side_effect = lambda pk, **kwargs: SimpleNamespace(
+            total_due=Decimal(pk) + Decimal("0.25"),
+            principal_outstanding=Decimal(pk), interest_outstanding=Decimal("0.25"),
+        )
+        for limit in (20, 1, 0, 30):
+            with self.subTest(limit=limit):
+                result = get_party_pawn_loan_history_summary(SimpleNamespace(pk=3), limit=limit)
+                self.assertEqual(result["counts"]["active_loans"], 25)
+                self.assertEqual(result["counts"]["active_outstanding"], Decimal("331.25"))
+                self.assertEqual([row.pk for row in result["active_loans"]], list(range(1, 26))[:limit])
+
+    @patch("apps.tenant_apps.loans.selectors.party_history.reverse", return_value="/loan/")
+    @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", autospec=True)
+    @patch("apps.tenant_apps.loans.selectors.party_history.PawnLoan.objects.filter")
+    def test_draft_approved_and_closed_do_not_add_principal_to_total(
+        self, filter_loans, get_balance, reverse
+    ):
+        states = ("DRAFT", "APPROVED", "ACTIVE", "CLOSED")
+        loans = [SimpleNamespace(
+            pk=pk, workspace=SimpleNamespace(slug="alpha"), loan_number=f"PL-{pk}",
+            loan_date="2026-09-28", state=state, collateral_items_count=1,
+            get_state_display=lambda: "Status",
+        ) for pk, state in enumerate(states, 1)]
+        filter_loans.return_value.select_related.return_value.annotate.return_value.order_by.return_value = loans
+        get_balance.return_value = SimpleNamespace(total_due=Decimal("42.50"))
+        result = get_party_pawn_loan_history_summary(SimpleNamespace(pk=3), limit=1)
+        self.assertEqual(result["counts"]["active_outstanding"], Decimal("42.50"))
+        self.assertEqual(result["counts"]["active_loans"], 3)
+        self.assertEqual(result["counts"]["closed_loans"], 1)
+        self.assertEqual(result["active_loans"][0].status, "Status")
+        self.assertIsNone(result["active_loans"][0].total_outstanding)
+        self.assertEqual(get_balance.call_args.args, (3,))
+        self.assertEqual(get_balance.call_count, 1)
+
     @patch("apps.tenant_apps.loans.selectors.party_history.reverse")
     @patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", autospec=True)
     @patch("apps.tenant_apps.loans.selectors.party_history.PawnLoan.objects.filter")

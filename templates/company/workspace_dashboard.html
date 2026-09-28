@@ -34,43 +34,17 @@ Payment queues are incomplete: {{ counter_work.queues.review.count }} active loa
 </div>
 {% endif %}
 <div class="row g-3 mb-4" aria-label="Loan work queues">{% for queue in work_queues %}<div class="col-6 col-lg">
-<a class="card h-100 text-decoration-none {% if selected_queue.key == queue.key %}border-primary{% endif %}" href="?{{ dashboard_query }}&amp;queue={{ queue.key }}" {% if selected_queue.key == queue.key %}aria-current="page"{% endif %}>
+<a class="card h-100 text-decoration-none {% if selected_queue.key == queue.key and queue.key != 'overdue' %}border-primary{% endif %}" href="{% if queue.key == 'overdue' %}{% url 'workspace_loans:overdue_payments' workspace.slug %}?{{ dashboard_query }}{% else %}?{{ dashboard_query }}&amp;queue={{ queue.key }}{% endif %}" {% if selected_queue.key == queue.key and queue.key != 'overdue' %}aria-current="page"{% endif %}>
 <div class="card-body">
 <div class="text-muted small">{{ queue.title }}</div>
 <div class="h3 mb-0">{{ queue.count }}</div>
+{% if queue.key == 'overdue' %}<div class="small mt-2">View overdue payments <i class="bi bi-arrow-right" aria-hidden="true"></i></div>{% endif %}
 </div>
 </a>
 </div>{% endfor %}</div>
-<section class="card mb-4" aria-labelledby="queue-title">
-<div class="card-body">
-<h2 class="h5" id="queue-title">{{ selected_queue.title }}</h2>
-<p class="small text-muted">{% if selected_queue.key == 'due' or selected_queue.key == 'overdue' %}Oldest unpaid dates first. Amounts are scheduled principal and interest; confirm collection on the repayment screen. A loan may appear in both payment queues.{% elif selected_queue.key == 'draft' %}Oldest loan dates first. Complete draft details and review the loan for approval.{% elif selected_queue.key == 'approved' %}Review each approved loan before recording its disbursal.{% else %}Review missing or inconsistent schedules before relying on payment queues.{% endif %}</p>
-</div>
-<div class="table-responsive">
-<table class="table app-table align-middle mb-0">
-<thead>
-<tr>
-<th>Loan / borrower</th>
-<th>{% if selected_queue.key == 'due' or selected_queue.key == 'overdue' %}Payment date{% else %}Loan date{% endif %}</th>
-{% if selected_queue.key == 'due' or selected_queue.key == 'overdue' %}<th>Scheduled amount (&#8377;)</th>{% endif %}
-<th>Next action</th>
-</tr>
-</thead>
-<tbody>{% for row in work_page %}<tr>
-<td>
-<a href="{% url 'workspace_slug_loan_detail' workspace_slug=workspace.slug pk=row.loan.pk %}">{{ row.loan.loan_number }}</a>
-<div>{{ row.loan.borrower.display_name }}</div>{% if row.note %}<div class="small text-warning">{{ row.note }}</div>{% endif %}</td>
-<td>{{ row.date }}</td>
-{% if selected_queue.key == 'due' or selected_queue.key == 'overdue' %}<td>{{ row.amount|floatformat:2|intcomma }}</td>{% endif %}
-<td>{% if selected_queue.key == 'due' and 'loan.repay' in dashboard_actions or selected_queue.key == 'overdue' and 'loan.repay' in dashboard_actions %}<a class="btn btn-sm btn-primary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}{{ row.loan.pk }}/repay/">Record repayment</a>{% elif selected_queue.key == 'approved' and 'loan.disburse' in dashboard_actions %}<a class="btn btn-sm btn-primary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}{{ row.loan.pk }}/disburse/">Review disbursal</a>{% else %}<a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_slug_loan_detail' workspace_slug=workspace.slug pk=row.loan.pk %}">{% if selected_queue.key == 'draft' %}Review draft{% else %}Review loan{% endif %}</a>{% endif %}</td>
-</tr>{% empty %}<tr>
-<td colspan="{% if selected_queue.key == 'due' or selected_queue.key == 'overdue' %}4{% else %}3{% endif %}" class="text-center text-muted py-4">No items in this queue.</td>
-</tr>{% endfor %}</tbody>
-</table>
-</div>
-<div class="card-body d-flex flex-wrap gap-3 align-items-center">{% if work_page.has_previous %}<a href="?{{ dashboard_query }}&amp;queue={{ selected_queue.key }}&amp;page={{ work_page.previous_page_number }}">Previous</a>{% endif %}<span class="small text-muted">Page {{ work_page.number }} of {{ work_page.paginator.num_pages }} &middot; {{ work_page.paginator.count }} loans</span>{% if work_page.has_next %}<a href="?{{ dashboard_query }}&amp;queue={{ selected_queue.key }}&amp;page={{ work_page.next_page_number }}">Next</a>{% endif %}<a class="ms-auto" href="{% url 'workspace_slug_loan_list' workspace_slug=workspace.slug %}">All loans</a>
-</div>
-</section>
+{% if selected_queue.key != 'overdue' %}
+{% include 'company/_counter_queue.html' %}
+{% endif %}
 {% include 'company/_business_overview.html' %}
 {% else %}<div class="alert alert-info">Your role does not include access to loan operations. Use the available Workspace navigation or ask your owner to review your access.</div>{% endif %}
 {% if setup_state.should_show_dashboard_card %}

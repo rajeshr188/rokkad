@@ -284,3 +284,26 @@ class OriginationRateTests(WorkspaceTestCase):
             request_key="quote-renewal-review", actor=self.actor,
             expected_preview_fingerprint=fresh.fingerprint)
         self.assertEqual(result.successor_loan.state, "ACTIVE")
+
+    def test_renewal_rechecks_current_photo_rule_and_rolls_back_missing_evidence(self):
+        from apps.tenant_apps.loans.models import PawnLoan, PawnLoanRenewal
+        from apps.tenant_apps.loans.services.origination_settings import set_collateral_photo_requirement
+        from apps.tenant_apps.loans.services.pawn_renewals import RetainedCollateralInput, renew_pawn_loan
+        self.item.photos.all().delete()
+        self.approve()
+        self.disburse()
+        values = dict(mode="PAY_AND_RENEW", principal_paid=Decimal("0"), top_up_amount=Decimal("0"),
+            successor_license_id=self.loan.license_id, successor_series_id=self.loan.series_id,
+            tenure_months=12, retained_collateral=(RetainedCollateralInput(self.item.pk, Decimal("1000")),),
+            renewal_date=self.today, request_key="photo-rule-renewal", actor=self.actor)
+        before = PawnLoan.objects.count()
+        set_collateral_photo_requirement(workspace=self.tenant, required=True, actor=self.actor)
+        with self.assertRaisesMessage(ValueError, "requires at least one photograph"):
+            renew_pawn_loan(self.loan.pk, **values)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.state, "ACTIVE")
+        self.assertEqual(PawnLoan.objects.count(), before)
+        self.assertFalse(PawnLoanRenewal.objects.filter(source_loan=self.loan).exists())
+        set_collateral_photo_requirement(workspace=self.tenant, required=False, actor=self.actor)
+        result = renew_pawn_loan(self.loan.pk, **values)
+        self.assertEqual(result.successor_loan.state, "ACTIVE")

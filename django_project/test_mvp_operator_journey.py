@@ -188,8 +188,9 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         party = self._party()
         photograph = BytesIO()
         Image.new("RGB", (12, 12), "gold").save(photograph, format="JPEG")
-        self._get(self._loan_url("pawn_loan_create"))
+        draft_form = self._get(self._loan_url("pawn_loan_create"))
         response = self._post(self._loan_url("pawn_loan_create"), {
+            "submission_token": draft_form.context["submission_token"],
             "borrower": party.pk, "series": self.series.pk,
             "product_version": self.product.pk, "loan_date": self.today.isoformat(),
             "tenure_months": "3", "collateral-TOTAL_FORMS": "1",
@@ -413,6 +414,74 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertNotContains(denied, "Financial health")
         self.assertNotContains(denied, "QUEUE-000")
         self.assertContains(denied, "does not include access to loan operations")
+
+    def test_overdue_page_keeps_details_off_dashboard_and_enforces_access(self):
+        self.workspace = self._workspace("Overdue Follow Up")
+        self._setup_loans()
+        party = self._party()
+        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
+        with workspace_context(self.workspace.pk):
+            for number in range(23):
+                PawnLoan.objects.create(
+                    workspace=self.workspace, product_version=self.product, license_id=self.series.license_id,
+                    series=self.series, borrower=party, loan_number=f"FOLLOW-UP-{number:03d}",
+                    state="DRAFT", principal_amount=1000, monthly_interest_rate=2,
+                    loan_date=self.today, created_by=self.owner,
+                )
+            work = get_workspace_counter_work(workspace=self.workspace)
+        # Schedule calculations have selector integration coverage; this fixture
+        # exercises the moved page, pagination and permission boundary.
+        rows = work["queues"]["draft"]["rows"]
+        work["queues"]["draft"].update(rows=[], count=0)
+        for row in rows:
+            row.update(date=self.today - timedelta(days=1), amount=Decimal("70.00"))
+        work["queues"]["overdue"].update(rows=rows, count=len(rows))
+        work["queues"]["review"].update(rows=[rows[0]], count=1)
+        dashboard_url = reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
+        overdue_url = self._loan_url("overdue_payments")
+        query = f"period=custom&start={self.today}&end={self.today}"
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work", return_value=work):
+            dashboard = self._get(dashboard_url + "?" + query)
+        self.assertContains(dashboard, overdue_url)
+        self.assertContains(dashboard, "View overdue payments")
+        self.assertContains(dashboard, "Business overview")
+        self.assertNotContains(dashboard, 'id="queue-title"')
+        self.assertNotContains(dashboard, "FOLLOW-UP-000")
+        with patch("apps.tenant_apps.loans.web.counter_work.get_workspace_counter_work", return_value=work) as selector:
+            page = self._get(overdue_url + "?" + query + "&page=2")
+        self.assertEqual(selector.call_args.kwargs["workspace"].pk, self.workspace.pk)
+        self.assertEqual(page.context["selected_queue"]["count"], 23)
+        self.assertEqual(len(page.context["work_page"]), 3)
+        self.assertContains(page, "FOLLOW-UP-022")
+        self.assertNotContains(page, "FOLLOW-UP-000")
+        self.assertContains(page, "Record repayment")
+        self.assertContains(page, "Payment queues are incomplete: 1 active loan")
+        self.assertContains(page, "queue=review")
+        self.assertContains(page, "period=custom&amp;start=")
+        self.assertNotContains(page, "Business overview")
+        self.assertIn("no-store", page["Cache-Control"])
+        legacy = self.client.get(dashboard_url + "?queue=overdue&page=2&" + query)
+        self.assertEqual(legacy.status_code, 302)
+        self.assertEqual(legacy.url, overdue_url + "?" + query + "&page=2")
+        self.assertEqual(self.client.post(overdue_url, HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value).status_code, 405)
+
+        other = self._workspace("Overdue Other Workspace")
+        other_url = self._loan_url("overdue_payments", workspace=other)
+        with patch("apps.tenant_apps.loans.web.counter_work.get_workspace_counter_work", wraps=get_workspace_counter_work) as selector:
+            empty = self._get(other_url)
+        self.assertEqual(selector.call_args.kwargs["workspace"].pk, other.pk)
+        self.assertContains(empty, "No items in this queue.")
+        self.assertNotContains(empty, "FOLLOW-UP-")
+        limited_role = Role.objects.create(name="Overdue no data access")
+        member = get_user_model().objects.create_user(username="overdue-limited")
+        Membership.objects.create(user=member, company=self.workspace, role=limited_role)
+        self.client.force_login(member)
+        with patch("apps.tenant_apps.loans.web.counter_work.get_workspace_counter_work") as selector:
+            self.assertEqual(self.client.get(overdue_url).status_code, 403)
+            self.assertEqual(self.client.get(other_url).status_code, 302)
+        selector.assert_not_called()
+        self.client.logout()
+        self.assertEqual(self.client.get(overdue_url).status_code, 302)
 
     def test_two_workspaces_and_member_permissions_remain_independent(self):
         self.workspace = self._workspace("MVP First")

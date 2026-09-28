@@ -1,32 +1,25 @@
-{% extends 'base_public.html' %}
+{% extends 'pages/_policy_base.html' %}
+{% block title %}Cancellation and Refund Policy | Rokkad{% endblock %}
+{% block policy_heading %}Cancellation and refund policy{% endblock %}
+{% block policy_intro %}How to stop future renewals, request a refund and plan workspace closure.{% endblock %}
+{% block policy_body %}
+<h2 class="h5">1. Cancelling a subscription</h2>
+<p>The workspace owner can email <a href="mailto:support@rokkad.com">support@rokkad.com</a> to stop future renewals. Please contact us before the next renewal so the request can be verified and processed. Paid access continues through the paid end date unless a separate lawful suspension or agreed refund changes that entitlement.</p>
+<p>Recurring charges apply only when separately offered and authorised. If a recurring mandate is enabled, it must also be cancelled through the supported payment-provider process. We will explain the applicable steps and confirm cancellation. Cancelling future renewals does not by itself create a refund or delete workspace records.</p>
 
-{% block title %}Cancellation and Refund Policy{% endblock %}
+<h2 class="h5 mt-4">2. When refunds are reviewed</h2>
+<ul>
+  <li><strong>Duplicate charges or overcharges:</strong> we correct verified billing errors.</li>
+  <li><strong>Service failures:</strong> we review refund requests case by case, considering the issue and its effect on service use.</li>
+  <li><strong>Unused time:</strong> there is no automatic prorated refund, subject to applicable legal rights and any expressly agreed offer.</li>
+</ul>
+<p>Nothing in this policy removes mandatory legal rights. Custom implementation, migration or other separately agreed services may have their own cancellation and refund terms.</p>
 
-{% block content %}
-<section class="public-section alt">
-    <div class="container">
-        <div class="public-section-header">
-            <div class="public-kicker">Policy</div>
-            <h1 class="public-section-title">Cancellation and refund policy</h1>
-            <p class="public-section-copy">
-                This page explains the current cancellation and refund posture for Rokkad subscriptions and implementation services. Final commercial terms may depend on the plan or agreement signed with a workspace owner.
-            </p>
-        </div>
+<h2 class="h5 mt-4">3. Making a request and expected timing</h2>
+<p>Email support with the workspace name, registered account email, invoice or payment reference, and a description of the issue. Do not send passwords, complete card details or card security codes. We may verify the requester's authority and ask for information needed to investigate.</p>
+<p>We review requests within <strong>7 working days</strong> after receiving the necessary information and explain the outcome. We initiate an approved refund within <strong>5 working days</strong> of approval, through the original payment channel where possible. Bank or payment-provider processing may add time before the refund appears in your account.</p>
 
-        <div class="public-card">
-            <h2 class="public-card-title">Subscription cancellation</h2>
-            <p class="public-card-copy">Workspace owners can request cancellation of paid services before the next billing cycle. Access may continue until the end of the paid period unless otherwise stated in the subscription agreement.</p>
-        </div>
-
-        <div class="public-card mt-3">
-            <h2 class="public-card-title">Refund review</h2>
-            <p class="public-card-copy">Refunds are reviewed case by case for duplicate payments, billing mistakes, or service issues that prevent normal use. Approved refunds are returned through the original payment channel where possible.</p>
-        </div>
-
-        <div class="public-card mt-3">
-            <h2 class="public-card-title">Implementation and migration work</h2>
-            <p class="public-card-copy">Custom setup, migration, or advisory work may have separate terms because effort begins before the workspace is fully live.</p>
-        </div>
-    </div>
-</section>
-{% endblock content %}
+<h2 class="h5 mt-4">4. Records and workspace closure</h2>
+<p>Subscription expiry alone does not delete records. Closure and data requests are support-assisted: we verify the owner's authority and explain available exports and legally required retention before closing access. Closure does not automatically erase records or backups, and this policy does not promise a fixed purge deadline.</p>
+<p>See our <a href="{% url 'privacy_policy' %}">privacy policy</a> and <a href="{% url 'terms_and_conditions' %}">terms and conditions</a> for more information.</p>
+{% endblock %}

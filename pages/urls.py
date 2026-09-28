@@ -5,6 +5,7 @@ from .views import (
     TenantPageView,
     PricingPageView,
     AboutPageView,
+    DevelopersPageView,
     PrivacyPolicy,
     CancellationAndRefund,
     TermsAndConditions,
@@ -22,6 +23,7 @@ urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
     path("pricing/", PricingPageView.as_view(), name="pricing"),
     path("about/", AboutPageView.as_view(), name="about"),
+    path("developers/", DevelopersPageView.as_view(), name="developers"),
     path("tenant/", TenantPageView.as_view(), name="tenant"),
     path("privacy-policy/", PrivacyPolicy.as_view(), name="privacy_policy"),
     path(

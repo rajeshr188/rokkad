@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="{% static 'css/brand.css' %}">
     {% include 'components/brand_head.html' %}
     <link rel="stylesheet" href="{% static 'css/accessible-ui.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app-shell.css' %}">
 </head>
 <body class="{% block body_class %}{% endblock %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <a class="skip-link" href="{% block skip_target %}#main-content{% endblock %}">{% translate "Skip to main content" %}</a>
@@ -38,6 +39,11 @@
     <div class="bg-warning text-dark text-center p-2" role="note">
         <strong>Ticket template sandbox</strong> &middot; Sample data only.
         Changes here do not affect your rehearsal or production workspaces.
+    </div>
+    {% elif billing_rehearsal %}
+    <div class="bg-warning text-dark text-center p-2" role="note">
+        <strong>Billing test rehearsal</strong> &middot; Fictional data and Razorpay Test Mode.
+        No real money is charged. Changes stay in this isolated workspace.
     </div>
     {% elif rehearsal_browser %}
     <div class="bg-warning text-dark text-center p-2" role="note">
@@ -62,25 +68,15 @@
     
     <!-- Footer -->
     {% block footer %}
-        <footer class="footer mt-auto py-4 bg-dark text-light">
-            <div class="container-lg">
-                <div class="row gy-3 align-items-center">
-                    <div class="col-12 col-md-4 text-center text-md-start">
-                        <a class="rk-footer-brand" href="{% url 'home' %}">{% include 'components/brand.html' %}</a>
-                        <span>&copy; {% now "Y" %} <a href="#" class="text-light-emphasis">Rokkad</a></span>
-                    </div>
-                    <div class="col-12 col-md-4 text-center">
-                        <div class="social-links">
-                            <a href="#" class="text-light-emphasis mx-2" aria-label="GitHub"><i class="bi bi-github"></i></a>
-                            <a href="#" class="text-light-emphasis mx-2" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-                            <a href="#" class="text-light-emphasis mx-2" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4 text-center text-md-end">
-                        <a href="{% url 'privacy_policy' %}" class="text-light-emphasis me-3">{% trans "Privacy Policy" %}</a>
-                        <a href="{% url 'terms_and_conditions' %}" class="text-light-emphasis">{% trans "Terms of Service" %}</a>
-                    </div>
-                </div>
+        <footer class="app-footer mt-auto">
+            <div class="app-footer-inner">
+                <span><a href="{% url 'home' %}" class="app-footer-name">Rokkad</a><span class="ms-2">&copy; {% now "Y" %}</span></span>
+                <nav aria-label="{% translate 'Footer' %}" class="app-footer-links">
+                    <a href="mailto:support@rokkad.com">{% translate "Help & support" %}</a>
+                    <a href="{% url 'developers' %}">{% translate "Developers" %}</a>
+                    <a href="{% url 'privacy_policy' %}">{% translate "Privacy" %}</a>
+                    <a href="{% url 'terms_and_conditions' %}">{% translate "Terms" %}</a>
+                </nav>
             </div>
         </footer>
     {% endblock %}

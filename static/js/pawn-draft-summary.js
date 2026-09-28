@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `${entered('metal')} · Purity ${entered('purity_percentage')}%`,
         `Gross ${entered('gross_weight')} g · Net ${entered('net_weight')} g`,
         `Allocated principal ${entered('allocated_principal')}`,
-        photo?.files.length ? 'Photo selected' : row.querySelector('img') ? 'Saved photo attached' : 'Photo needed',
+        photo?.files.length ? 'Photo selected' : row.querySelector('img') ? 'Saved photo attached' : container.dataset.photosRequired === 'true' ? 'Photo required before approval' : 'Photo optional',
       ];
       lines.forEach(text => { const line = document.createElement('small'); line.textContent = text; item.append(line); });
       list.append(item);

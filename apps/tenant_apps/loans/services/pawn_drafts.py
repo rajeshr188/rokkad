@@ -119,9 +119,10 @@ def update_pawn_draft_with_photos(
 
 
 def _save_draft_with_photos(save_draft, *, photos, actor):
-    photos = tuple(photo for photo in photos if photo.upload)
+    photos = tuple(photos)
     for photo in photos:
-        validate_collateral_photo(photo.upload)
+        if photo.upload:
+            validate_collateral_photo(photo.upload)
     stored_files = []
     try:
         with transaction.atomic():
@@ -149,6 +150,8 @@ def _save_draft_with_photos(save_draft, *, photos, actor):
                         raise PawnDraftError(
                             "Collateral photograph identity does not belong to this draft."
                         ) from exc
+                if not photo.upload:
+                    continue
                 persisted = _append_collateral_photo(
                     item.pk,
                     upload=photo.upload,

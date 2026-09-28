@@ -1,0 +1,34 @@
+{% extends 'base_public.html' %}
+{% block title %}The developers behind Rokkad{% endblock %}
+{% block content %}
+<section class="public-section">
+  <div class="container" style="max-width: 1080px;">
+    <div class="public-section-header">
+      <div class="public-kicker">The people behind Rokkad</div>
+      <h1 class="public-section-title">Built by two brothers.</h1>
+      <p class="public-section-copy">Rajesh Rathod H and Dilip Kumar H designed and developed Rokkad together.</p>
+    </div>
+    <div class="row g-4" aria-label="Rokkad developers">
+      <div class="col-md-6">
+        <article class="public-card h-100">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-4" style="width:64px;height:64px;background:#e7efea;color:#103f3a;font-size:1.25rem;font-weight:700" aria-hidden="true">RR</div>
+          <h2 class="public-card-title">Rajesh Rathod H</h2>
+          <p class="text-muted small mb-3">Co-developer of Rokkad</p>
+          <p class="public-card-copy mb-0"><strong>M.S.</strong><br>Software Engineering</p>
+        </article>
+      </div>
+      <div class="col-md-6">
+        <article class="public-card h-100">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-4" style="width:64px;height:64px;background:#e7efea;color:#103f3a;font-size:1.25rem;font-weight:700" aria-hidden="true">DK</div>
+          <h2 class="public-card-title">Dilip Kumar H</h2>
+          <p class="text-muted small mb-3">Co-developer of Rokkad</p>
+          <p class="public-card-copy mb-0"><strong>B.Tech</strong><br>Computer Science</p>
+        </article>
+      </div>
+    </div>
+    <div class="border-top mt-5 pt-4">
+      <a class="btn btn-outline-primary" href="{% url 'home' %}">Explore Rokkad</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

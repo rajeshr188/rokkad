@@ -326,12 +326,16 @@
         <div class="row g-3 mb-3">
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Closed Loans</div><div class="h4 mb-0">{{ loan_history.counts.closed_loans }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{{ loan_history.counts.active_outstanding }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{{ loan_history.counts.active_outstanding|indian_money }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Collateral Items</div><div class="h4 mb-0">{{ loan_history.counts.collateral_items }}</div></div></div>
         </div>
 
         <div class="card mb-3">
-            <div class="card-header"><h2 class="h6 mb-0">Active Loans</h2></div>
+            <div class="card-header"><h2 class="h6 mb-0">Active Loans</h2>
+                {% if loan_history.counts.active_loans > loan_history.active_loans|length %}
+                <div class="text-muted small">Showing the latest {{ loan_history.active_loans|length }} of {{ loan_history.counts.active_loans }} loans. Outstanding above includes all active loans.</div>
+                {% endif %}
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead><tr><th>Loan</th><th>Status</th><th>Outstanding</th><th>Payments</th><th>Notices</th><th>Collateral</th><th class="text-end">Actions</th></tr></thead>

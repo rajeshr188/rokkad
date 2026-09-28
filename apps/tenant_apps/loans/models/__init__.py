@@ -154,6 +154,7 @@ __all__.append("PawnLoanCommunicationConsent")
 __all__.append("PawnLoanCommunicationPolicy")
 
 from .release_batch import PawnReleaseBatch, PawnReleaseBatchLine, PaperClosureTransition
+from .origination import LoanOriginationSettings
 
 __all__ += ["PawnReleaseBatch", "PawnReleaseBatchLine"]
 

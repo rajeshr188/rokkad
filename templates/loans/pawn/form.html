@@ -3,26 +3,30 @@
 {% block title %}{% if loan %}Edit {{ loan.loan_number }}{% else %}{% translate "New loan draft" %}{% endif %}{% endblock %}
 {% block workspace_content %}
 <div class="loan-entry" hx-history="false">
-<div class="mb-4"><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; {% translate "Loan drafts" %}</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}{% translate "New loan draft" %}{% endif %}</h1><p class="text-muted">{% if loan %}{% translate "Saving updates this draft and keeps the same loan number. It does not approve or disburse the loan." %}{% else %}{% translate "Saving creates only an editable draft. It does not approve, disburse, or activate the loan." %}{% endif %}</p></div>
+<div class="mb-2"><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; {% translate "Loan drafts" %}</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}{% translate "New loan draft" %}{% endif %}</h1>
+<div class="d-flex flex-wrap align-items-center gap-2"><p class="text-muted mb-0">{% if loan %}{% translate "Update your draft, review, then approve and disburse." %}{% else %}{% translate "Save a draft, review, then approve and disburse." %}{% endif %}</p><button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#draft-guidance" aria-expanded="false" aria-controls="draft-guidance">{% translate "How this works" %}</button></div></div>
+<section class="collapse" id="draft-guidance" aria-label="{% translate 'How this works' %}"><div class="border rounded p-3 mt-3 small">
+<p>{% if loan %}{% translate "Saving updates this draft and keeps the same loan number. It does not approve or disburse the loan." %}{% else %}{% translate "Saving creates only an editable draft. It does not approve, disburse, or activate the loan." %}{% endif %}</p>
+<p>{% translate "Confirm the customer, choose the loan terms, then add each collateral item. Preview the amounts before saving the draft." %}</p>
+<p class="mb-0">{% translate "Customer and setup links open another tab. Keep this form open while completing missing information, then return here. After adding a customer, search for them again." %}</p>
+{% if can_manage_loan_setup %}<a class="d-inline-block mt-2" href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">{% translate "Review branch setup" %} <span aria-hidden="true">↗</span><span class="visually-hidden">{% translate "(opens in another tab)" %}</span></a>{% endif %}
+</div></section>
 <nav class="loan-workflow-nav" aria-label="Loan draft sections"><a href="#loan-details">1 &middot; Borrower &amp; terms</a><a href="#collateral-formset">2 &middot; Collateral</a><a href="#loan-review-actions">3 &middot; Review &amp; save</a></nav>
-<section class="alert alert-light border" aria-label="{% translate 'Before you start' %}">
-<p class="mb-2">{% translate "Confirm the customer, choose the loan terms, then add each collateral item and its photo. Preview the amounts before saving the draft." %}</p>
-<p class="small text-muted">Add the first photo here; you can add more photos from the saved loan. The loan ticket prints one approved collateral photo.</p>
-<div class="d-flex flex-wrap gap-3">
-{% if can_add_customer %}<a href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">{% translate "Add a customer in another tab" %}</a>{% endif %}
-{% if can_manage_loan_setup %}<a href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">{% translate "Review branch setup in another tab" %}</a>{% endif %}
-</div><p class="small text-body-secondary mb-0 mt-2">{% translate "Keep this tab open while completing missing information. Return here and search for the customer again." %}</p>
-</section>
 <div class="loan-workflow-grid"><div class="loan-workflow-main">
 <form method="post" action="{% if loan %}{% url 'workspace_loans:pawn_loan_update' request.workspace.slug loan.pk %}{% else %}{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}{% endif %}" enctype="multipart/form-data" novalidate data-draft-save-form data-valuation-preflight="{% url 'workspace_loans:pawn_valuation_readiness' request.workspace.slug %}">{% csrf_token %}
   {% if not loan %}<input type="hidden" name="submission_token" value="{{ submission_token|default:'' }}">{% endif %}
   {% if submission_reference_error %}<p class="alert alert-warning">Check the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" target="_blank" rel="noopener">loan list</a> for a recent save first. If no loan was saved, <a href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}">open a fresh New loan form</a>.</p>{% endif %}
   <div class="alert alert-info" role="status" aria-live="polite" data-draft-save-status hidden></div>
-  <div class="alert alert-info" tabindex="-1" data-rate-readiness-panel>
-    <h2 class="h6">{% translate "Metal prices for this loan" %}</h2>
-    <div data-rate-readiness-content role="status" aria-live="polite">Select a series, loan date and collateral metal to check prices. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates in another tab</a>.</div>
-    <p class="small mb-1">Prices are checked automatically against this workspace?s Rates records. After adding a price in another tab, recheck here. This does not fetch market prices from the internet.</p>
-    <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-check-rates>{% translate "Check prices again" %}</button>
+  <div class="border rounded p-3 mb-3 bg-body" tabindex="-1" data-rate-readiness-panel aria-label="{% translate 'Metal price check' %}">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <div class="small flex-grow-1"><strong>{% translate "Metal prices:" %}</strong> <span data-rate-readiness-summary role="status" aria-live="polite">{% translate "Select a series and loan date" %}</span></div>
+      <button type="button" class="btn btn-sm btn-link" data-bs-toggle="collapse" data-bs-target="#rate-readiness-details" aria-expanded="false" aria-controls="rate-readiness-details">{% translate "Details" %} <span aria-hidden="true">▾</span></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-check-rates aria-label="{% translate 'Check prices again' %}">{% translate "Recheck" %}</button>
+    </div>
+    <div class="collapse" id="rate-readiness-details"><div class="border-top pt-3 mt-3">
+      <div data-rate-readiness-content>{% translate "Select a series, loan date and collateral metal to check prices." %}</div>
+      <p class="small text-muted mb-0 mt-2">{% translate "Prices are checked automatically against this workspace’s Rates records. After adding a price in another tab, select Recheck. This does not fetch market prices from the internet." %}</p>
+    </div></div>
   </div>
   {% if form.errors or formset.errors or formset.non_form_errors %}<div class="alert alert-danger" role="alert" tabindex="-1" id="draft-errors" data-form-errors data-pawn-draft-error-summary>
 <h2 class="h5">{% translate "The draft was not saved." %}</h2><p>{% translate "Correct the loan or collateral details below and submit again." %}</p>
@@ -31,11 +35,11 @@
 {% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
 {% for item in formset %}{% for error in item.non_field_errors %}<li>{% translate "Collateral" %} {{ forloop.parentloop.counter }}: {{ error }}</li>{% endfor %}{% for field in item.visible_fields %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{% translate "Collateral" %} {{ forloop.parentloop.parentloop.counter }} &middot; {{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% endfor %}
 </ul></div>{% endif %}
-  {% if form.is_bound %}<div class="alert alert-warning" role="status">Your entered details are retained. For any new collateral, select its photograph again before submitting; uploaded files cannot be restored after a page reload. Photographs already saved with an existing item remain attached.</div>{% endif %}
+  {% if form.is_bound %}<div class="alert alert-warning" role="status">Your entered details are retained. If you want to attach a new photograph, select it again before submitting; uploaded files cannot be restored after a page reload. Photographs already saved with an existing item remain attached.</div>{% endif %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
   <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-3" id="loan-details">{% translate "Loan details" %}</h2><div class="row g-3">
-  {% for field in form %}<div class="col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}
-  </div></div></div>
+  {% for field in form %}<div class="col-md-6">{% include "components/forms/accessible.html#field" %}{% if field.name == 'borrower' and can_add_customer %}<a class="small d-inline-block mb-2" href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">{% translate "+ Add customer" %} <span aria-hidden="true">↗</span><span class="visually-hidden">{% translate "(opens in another tab)" %}</span></a>{% endif %}</div>{% endfor %}
+  </div><div id="borrower-outstanding" class="mt-3" data-url="{% url 'workspace_loans:borrower_outstanding' request.workspace.slug %}" role="status" aria-live="polite"></div></div></div>
   <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-2">{% translate "Loan number" %}</h2>
   {% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.license.license_number }} / {{ loan.series.pawn_display_name }} when this draft was first saved.</div>
   {% else %}
@@ -46,8 +50,9 @@
     <noscript><p class="small">{% translate "Enable JavaScript to update the preview when changing series. The official number is assigned on save." %}</p></noscript>
   {% endif %}</div></div>
   <div class="card mb-4"><div class="card-body"><h2 class="h5 mb-1">{% translate "Collateral and allocation" %}</h2><p class="small text-muted">Allocate the gross loan principal across the collateral items. Net weight excludes stones and non-metal material. Interest defaults to the selected series, licence and metal policy. Staff with loan approval permission can enter an item override with a reason. Quantity counts pieces; weights, appraisal and principal are totals for the row. Valuation and LTV are enforced when you preview or save.</p>
+    <p class="small text-muted">{% if photos_required %}<strong>Photos required before approval.</strong> Drafts can be saved without them.{% else %}<strong>Photos optional in this workspace.</strong>{% endif %}</p>
     {{ formset.management_form }}{% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors }}</div>{% endif %}
-    <div id="collateral-formset" data-appraisal-url="{% url 'workspace_loans:collateral_appraisal_suggestion' request.workspace.slug %}">
+    <div id="collateral-formset" data-photos-required="{{ photos_required|yesno:'true,false' }}" data-appraisal-url="{% url 'workspace_loans:collateral_appraisal_suggestion' request.workspace.slug %}">
     {% for item_form in formset %}{% with existing_item=item_form.existing_collateral_item %}<div class="border rounded p-3 mb-3" data-collateral-form><div class="d-flex justify-content-between align-items-center mb-3"><h3 class="h6 mb-0">{% if existing_item %}Existing collateral: {{ existing_item.description }}{% else %}New collateral{% endif %}</h3><button class="btn btn-sm btn-outline-danger" type="button" data-remove-collateral>Remove collateral</button></div>{% for field in item_form.hidden_fields %}{{ field }}{% endfor %}<div class="d-none">{{ item_form.DELETE }}</div><div class="row g-3">{% for field in item_form.visible_fields %}{% if field.name != 'DELETE' %}<div class="{% if field.name == 'description' %}col-md-6{% elif field.name == 'photograph' %}col-md-6{% else %}col-md-3{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.name == 'photograph' %}<div class="input-group">{{ field }}<button class="btn btn-outline-primary js-collateral-camera" type="button" data-photo-input="{{ field.id_for_label }}">Use camera/webcam</button></div>{% else %}{{ field }}{% endif %}{% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}</div>{% if existing_item %}<div class="mt-3"><div class="small fw-semibold mb-2">Existing photograph evidence</div><div class="d-flex flex-wrap gap-3">{% for photo in existing_item.photos.all %}<a class="text-decoration-none" href="{% url 'workspace_loans:pawn_collateral_photo_document' request.workspace.slug loan.pk existing_item.pk photo.pk %}" title="Download {{ photo.original_filename }}"><img class="img-thumbnail object-fit-cover" style="width: 9rem; height: 7rem;" src="{% url 'workspace_loans:pawn_collateral_photo_document' request.workspace.slug loan.pk existing_item.pk photo.pk %}?inline=1" alt="{{ existing_item.description }} photograph"><div class="small text-muted mt-1">{% if photo.is_blank_legacy_image %}Blank source image: no usable photograph<br>{% endif %}{{ photo.get_workflow_source_display }} &middot; {% if photo.workflow_source == "LEGACY_IMPORT" %}Imported {% endif %}{{ photo.captured_at|date:"SHORT_DATETIME_FORMAT" }}</div></a>{% empty %}<span class="small text-danger">No photograph recorded.</span>{% endfor %}</div></div>{% endif %}</div>{% endwith %}{% endfor %}
     </div>
     <button class="btn btn-outline-primary" id="add-collateral" type="button">+ Add collateral</button>
@@ -98,6 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {
 <script src="{% static 'js/pawn-draft-summary.js' %}"></script>
 <script src="{% static 'js/pawn-number-preview.js' %}"></script>
 <script src="{% static 'js/pawn-appraisal-suggestion.js' %}"></script>
+<script src="{% static 'js/pawn-borrower-outstanding.js' %}"></script>
 <script src="{% static 'js/pawn-rate-readiness.js' %}"></script>
 <script src="{% static 'js/pawn-draft-submit.js' %}"></script>
 </div>

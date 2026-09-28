@@ -1,20 +1,43 @@
-{% extends 'base_public.html' %}
-{%block content%}
-<div class="container mt-4 mb-4">
-    <h1>Terms and Conditions</h1>
-        <p>Last Updated: February 3, 2024</p>
-        <p>Please read these terms and conditions carefully before using our application.</p>
-        <h2>1. Acceptance of Terms</h2>
-        <p>By accessing or using our application, you agree to be bound by these terms and conditions, as well as any applicable laws and regulations. If you do not agree with any part of these terms, you may not use our application.</p>
-        <h2>2. Use License</h2>
-        <p>Permission is granted to temporarily download one copy of the application for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title.</p>
-        <h2>3. Limitations</h2>
-        <p>In no event shall we be liable for any damages arising out of the use or inability to use the application, even if we have been notified orally or in writing of the possibility of such damage.</p>
-        <!-- Other sections of the Terms and Conditions would follow here -->
-        <h2>10. Contact Us</h2>
-        <p>If you have any questions or concerns about these terms and conditions, please contact us at <a href="mailto:contact@email.com">contact@email.com</a>.</p>
-        <p>By using our application, you agree to be bound by these terms and conditions. If you do not agree with any aspect of these terms, please do not use our application.</p>
-        <p>Thank you for using our application.</p>
-        <p>[Rokkad]<br>[Address]<br>[City, State, Zip Code]<br>[Country]<br>[Phone Number]<br>[Email Address]</p>
-</div>
+{% extends 'pages/_policy_base.html' %}
+{% block title %}Terms and Conditions | Rokkad{% endblock %}
+{% block policy_heading %}Terms and conditions{% endblock %}
+{% block policy_intro %}The terms for using Rokkad's business software, subscriptions and workspace services.{% endblock %}
+{% block policy_body %}
+<h2 class="h5">1. The service and operator</h2>
+<p>Rokkad is operated by Rajesh Rathod under the business name Rokkad. It provides software for customer records, pawn-loan workflows, collateral, rates and communications. These terms apply to use of the service, subject to applicable law and any separate written agreement.</p>
+<p>You must be an adult with authority to act for the workspace or business you represent. A separate written service agreement prevails for the matters it expressly addresses, subject to mandatory law.</p>
+
+<h2 class="h5 mt-4">2. Permission to use Rokkad</h2>
+<p>Subject to these terms, your subscription and access permissions, you may use Rokkad for your business operations. This permission does not transfer ownership of the software. You retain your rights in information you supply and authorise its processing as needed to provide the service. Third-party software, content and integrations remain subject to their applicable licences and terms.</p>
+
+<h2 class="h5 mt-4">3. Accounts and acceptable use</h2>
+<p>Provide accurate account and business information, protect login credentials and report suspected compromise promptly. Workspace owners are responsible for granting appropriate permissions and removing staff access when it is no longer needed.</p>
+<p>Do not access another workspace without authority, bypass security controls, interfere with the service, upload malicious content, or use Rokkad for unlawful activities or communications. Only provide records you are authorised to process.</p>
+
+<h2 class="h5 mt-4">4. Lending decisions and records</h2>
+<p>The workspace's business is responsible for lending licences, borrower notices and consents, interest and fee rules, valuations, collections, collateral custody, taxes and applicable law. Rokkad provides software; it is not the lender, guarantor or custodian of pledged property.</p>
+<p>Review entered data, configured policies, calculations and documents before acting on them. Appraisal suggestions and loan-to-value guidance do not create a lending approval. Displayed outstanding amounts have the meaning shown in the application and are not necessarily a settlement quotation. Preserve and correct completed records through supported workflows.</p>
+
+<h2 class="h5 mt-4">5. Plans, payments and renewal</h2>
+<p>Prices, taxes, included access and paid periods are those shown in the accepted checkout or written agreement. Recurring payments apply only when separately offered and authorised. Buying a paid period does not itself authorise recurring charges. Payment providers process payments under their own terms.</p>
+<p>On expiry, access is governed by the applicable subscription status and displayed access policy. Subscription expiry, suspension, workspace closure and data deletion are separate actions. Continued operational access or indefinite storage after expiry is not guaranteed.</p>
+
+<h2 class="h5 mt-4">6. Cancellation and refunds</h2>
+<p>Workspace owners may request cancellation of future renewals. Access continues through the paid period unless a separate lawful suspension or agreed refund changes that entitlement. Any enabled recurring payment mandate must also be cancelled through the supported provider process.</p>
+<p>We correct verified duplicate charges and overcharges, and review service-failure refunds case by case. Unused time does not automatically qualify for a prorated refund, subject to legal rights and any expressly agreed offer. We review requests within <strong>7 working days</strong> after receiving the necessary information and initiate approved refunds within <strong>5 working days</strong> of approval. Banks and payment providers may take additional time.</p>
+<p>See the <a href="{% url 'cancellation_and_refund' %}">cancellation and refund policy</a> for request details. Separately agreed implementation and migration services may have their own terms.</p>
+
+<h2 class="h5 mt-4">7. Data, exports and closure</h2>
+<p>The <a href="{% url 'privacy_policy' %}">privacy policy</a> explains how personal information is handled. Keep necessary copies of available reports and documents. Contact support before closure to discuss available exports; these are not a promise of a complete restorable archive.</p>
+<p>Closure and data requests are support-assisted. We verify the workspace owner's authority and explain export options and required retention before closing access. Subscription expiry alone does not delete records. Closure does not automatically erase records or backups; legal duties, unresolved disputes or required transaction evidence may require retention.</p>
+
+<h2 class="h5 mt-4">8. Service availability and restrictions</h2>
+<p>Maintenance and interruptions may occur. A specific uptime or recovery guarantee applies only if separately agreed. We will give reasonable notice of material changes or planned restrictions where practical.</p>
+<p>Access may be restricted for non-payment, security incidents, unlawful activity or material breach, with an explanation and opportunity to resolve the issue where appropriate. Urgent protective action or legal requirements may require immediate restriction.</p>
+
+<h2 class="h5 mt-4">9. Legal rights and disputes</h2>
+<p>Nothing in these terms excludes or limits rights, remedies or liabilities that applicable law does not allow to be excluded or limited. Contact us first about a dispute so we can investigate and seek a resolution. These terms remain subject to applicable law and the jurisdiction of competent courts.</p>
+
+<h2 class="h5 mt-4">10. Changes to these terms</h2>
+<p>Material changes will be published with an updated effective date and communicated before they apply where required. We will seek acceptance where required. Publication alone does not retroactively change a separately agreed paid period or establish acceptance by every existing customer.</p>
 {% endblock %}

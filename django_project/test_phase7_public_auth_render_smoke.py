@@ -21,8 +21,8 @@ class Phase7PublicAuthRenderSmokeTests(TestCase):
         self.assertIn("css/public.css", html)
         self.assertIn("public-shell", html)
         self.assertIn("public-hero", html)
-        self.assertIn("Manage pawn loans from application to repayment and release.", html)
-        self.assertIn("public-product-preview", html)
+        self.assertIn("A clear journey.", html)
+        self.assertIn("story-illustration", html)
         self.assertIn("/accounts/signup/", html)
         self.assertNotIn("https://via.placeholder.com", html)
         self.assertNotIn("hero-section", html)
@@ -33,6 +33,7 @@ class Phase7PublicAuthRenderSmokeTests(TestCase):
         route_cases = {
             "/pricing/": "Start with the controls small teams need",
             "/about/": "About page",
+            "/developers/": "Built by two brothers.",
             "/tenant/": "Each business runs in its own workspace",
             "/privacy-policy/": "Privacy Policy",
             "/cancellation-and-refund/": "Cancellation and refund policy",

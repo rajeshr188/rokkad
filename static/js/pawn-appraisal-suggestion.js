@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('collateral-formset');
   const date = document.getElementById('id_loan_date');
+  const series = document.getElementById('id_series');
   if (!container || !date || !window.htmx) return;
   const states = new WeakMap();
   const field = (row, name) => row.querySelector(`[name$="-${name}"]`);
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.className = 'form-text';
     panel.setAttribute('role', 'status');
     panel.setAttribute('aria-live', 'polite');
-    panel.setAttribute('hx-params', 'metal,gross_weight,net_weight,purity,as_of,request_key');
+    panel.setAttribute('hx-params', 'metal,gross_weight,net_weight,purity,as_of,request_key,series,appraisal,principal');
     input.insertAdjacentElement('afterend', panel);
     const state = {input, panel, manual: input.value !== '', key: 0, timer: null};
     states.set(row, state);
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.addEventListener('click', event => {
       if (!event.target.closest('[data-apply-appraisal]')) return;
       const value = panel.querySelector('[data-appraisal-result]')?.dataset.value;
-      if (value) { state.manual = false; fill(state, value); }
+      if (value) { state.manual = false; fill(state, value); request(row, true); }
     });
     return state;
   }
@@ -37,16 +38,18 @@ document.addEventListener('DOMContentLoaded', () => {
     state.input.value = value;
     state.input.dispatchEvent(new CustomEvent('input', {bubbles: true, detail: {appraisalSuggestion: true}}));
   }
-  function request(row) {
+  function request(row, preserveAppraisal = false) {
     const state = initialise(row);
     clearTimeout(state.timer);
     state.key += 1;
     htmx.trigger(state.panel, 'htmx:abort');
-    if (!state.manual) fill(state, '');
+    if (!state.manual && !preserveAppraisal) fill(state, '');
     const values = {
       metal: field(row, 'metal').value, gross_weight: field(row, 'gross_weight').value,
       net_weight: field(row, 'net_weight').value, purity: field(row, 'purity_percentage').value,
       as_of: date.value, request_key: state.key,
+      series: series?.value || '', appraisal: state.input.value,
+      principal: field(row, 'allocated_principal').value,
     };
     if (row.hidden || field(row, 'DELETE')?.checked) { state.panel.replaceChildren(); return; }
     if (!values.as_of || !values.gross_weight || !values.net_weight || !values.purity) {
@@ -65,17 +68,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!row) return;
     const state = initialise(row);
     if (event.target === state.input) {
-      if (!event.detail?.appraisalSuggestion) state.manual = state.input.value !== '';
+      if (!event.detail?.appraisalSuggestion) {
+        state.manual = state.input.value !== '';
+        request(row, true);
+      }
       return;
     }
+    if (event.target.name.endsWith('-allocated_principal')) { request(row, true); return; }
     if (/-(metal|gross_weight|net_weight|purity_percentage)$/.test(event.target.name)) request(row);
   });
-  date.addEventListener('change', () => container.querySelectorAll('[data-collateral-form]').forEach(request));
+  date.addEventListener('change', () => container.querySelectorAll('[data-collateral-form]').forEach(row => request(row)));
+  const refreshSeries = () => container.querySelectorAll('[data-collateral-form]').forEach(row => request(row, true));
+  if (series && window.jQuery) window.jQuery(series).on('change', refreshSeries);
+  else series?.addEventListener('change', refreshSeries);
   new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
     if (node.nodeType === 1 && node.matches('[data-collateral-form]')) initialise(node);
   }))).observe(container, {childList: true});
   container.querySelectorAll('[data-collateral-form]').forEach(row => {
     const state = initialise(row);
-    if (!state.manual) request(row);
+    request(row, true);
   });
 });

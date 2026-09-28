@@ -1,0 +1,8 @@
+{% load loans_display %}
+<div class="border rounded p-3 bg-body-tertiary" data-borrower-result="{{ party.pk }}">
+<div class="d-flex flex-wrap justify-content-between gap-2"><strong>Existing loans in this workspace</strong><a href="{% url 'workspace_party:party_detail' request.workspace.slug party.pk %}?tab=loans" target="_blank" rel="noopener">View borrower loans</a></div>
+<div class="small text-muted">{{ count }} active loan{{ count|pluralize }} · Recorded balances as of {{ as_of|date:"d/m/Y" }}</div>
+{% if unavailable %}<p class="text-warning mb-0 mt-2">{{ unavailable }} loan balance{{ unavailable|pluralize }} unavailable. The complete total cannot be shown.</p>
+{% else %}<div class="row g-2 mt-1"><div class="col-6 col-lg-3"><div class="small text-muted">Principal</div><strong>₹{{ totals.principal|indian_money }}</strong></div><div class="col-6 col-lg-3"><div class="small text-muted">Recorded interest</div><strong>₹{{ totals.interest|indian_money }}</strong></div><div class="col-6 col-lg-3"><div class="small text-muted">Fees</div><strong>₹{{ totals.fees|indian_money }}</strong></div><div class="col-6 col-lg-3"><div class="small text-muted">Total outstanding</div><strong>₹{{ totals.total|indian_money }}</strong></div></div>{% endif %}
+<div class="small text-muted mt-2">Excludes this new loan and unposted interest. This is not a settlement quote.</div>
+</div>

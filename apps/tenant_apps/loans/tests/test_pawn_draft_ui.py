@@ -706,15 +706,26 @@ class PawnDraftUiTests(WorkspaceTestCase):
             self.assertNotContains(page, "#license-register")
         self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
 
-    def test_missing_photo_preserves_create_selections(self):
+    def test_missing_photo_allows_saving_draft(self):
         license, series = self._configured_setup()
         payload = self._payload(license, series)
         del payload["collateral-0-photograph"]
         response = self.client.post(reverse("loans:pawn_loan_create"), payload)
-        self.assertContains(response, "New collateral requires a JPEG or PNG photograph.")
-        for field in ("borrower", "series", "product_version", "loan_date", "tenure_months"):
-            self.assertEqual(str(response.context["form"][field].value()), str(payload[field]))
-        self.assertFalse(PawnLoan.objects.exists())
+        self.assertEqual(response.status_code, 302)
+        loan = PawnLoan.objects.get()
+        self.assertEqual(loan.state, "DRAFT")
+        self.assertFalse(loan.collateral_items.first().photos.exists())
+
+    def test_photo_for_second_row_does_not_attach_to_first_unphotographed_row(self):
+        license, series = self._configured_setup()
+        payload = self._mixed_metal_payload(license, series)
+        del payload["collateral-0-photograph"]
+        payload["collateral-1-photograph"] = SimpleUploadedFile("second.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg")
+        response = self.client.post(reverse("loans:pawn_loan_create"), payload)
+        self.assertEqual(response.status_code, 302)
+        items = list(PawnLoan.objects.get().collateral_items.order_by("pk"))
+        self.assertFalse(items[0].photos.exists())
+        self.assertEqual(items[1].photos.get().original_filename, "second.jpg")
 
     @override_settings(STORAGES={
         "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},

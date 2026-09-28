@@ -37,6 +37,7 @@ class DocumentMedia:
     binding: str
     asset_key: str
     status: str
+    optional: bool = False
 
 
 class DocumentProjectionError(ValueError):

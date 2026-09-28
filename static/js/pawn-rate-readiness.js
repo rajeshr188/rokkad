@@ -4,6 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!form || !window.htmx) return;
   const panel = form.querySelector('[data-rate-readiness-panel]');
   const content = panel.querySelector('[data-rate-readiness-content]');
+  const summary = panel.querySelector('[data-rate-readiness-summary]');
+  const details = panel.querySelector('#rate-readiness-details');
+  function showStatus(text, attention = false) {
+    summary.textContent = text;
+    panel.classList.toggle('border-warning', attention);
+    summary.classList.toggle('text-danger', attention);
+    if (attention) {
+      if (window.bootstrap?.Collapse) window.bootstrap.Collapse.getOrCreateInstance(details, {toggle: false}).show();
+      else {
+        details.classList.add('show');
+        panel.querySelector('[aria-controls="rate-readiness-details"]').setAttribute('aria-expanded', 'true');
+      }
+    }
+  }
   const rows = form.querySelector('#collateral-formset');
   const series = form.querySelector('[name="series"]');
   const date = form.querySelector('[name="loan_date"]');
@@ -39,9 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
     rows.querySelectorAll('[name$="-interest_rate_override"]').forEach(input => { input.placeholder = 'Use policy'; });
     if (!data.series || !data.as_of || !data.metals) {
       content.textContent = 'Select a series, loan date and at least one collateral metal to check prices.';
+      showStatus('Select a series, loan date and collateral metal');
       return false;
     }
     content.textContent = 'Checking metal prices…';
+    showStatus('Checking…');
     try {
       await htmx.ajax('GET', form.dataset.valuationPreflight, {
         source: content, target: content, swap: 'innerHTML',
@@ -49,6 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const result = content.querySelector('[data-rate-readiness-result]');
       if (requestKey === key) {
+        if (result?.dataset.requestKey === String(requestKey)) {
+          const label = result.querySelector('[data-rate-summary]')?.textContent.trim();
+          showStatus(label || 'Price check unavailable', !label || result.dataset.attention === 'true');
+        }
         rows.querySelectorAll('[data-collateral-form]').forEach(row => {
           const metal = row.querySelector('[name$="-metal"]')?.value;
           const input = row.querySelector('[name$="-interest_rate_override"]');
@@ -66,11 +86,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (!result && requestKey === key) {
         content.textContent = 'Price check unavailable. Your form and photos are retained. Check your access or connection and try again.';
+        showStatus('Price check unavailable — please retry', true);
       }
       return requestKey === key && JSON.stringify(data) === JSON.stringify(values()) &&
         result?.dataset.requestKey === String(requestKey) && result.dataset.ready === 'true';
     } catch (error) {
-      if (requestKey === key) content.textContent = 'Price check unavailable. Your form and photos are retained. Check your connection and try again.';
+      if (requestKey === key) {
+        content.textContent = 'Price check unavailable. Your form and photos are retained. Check your connection and try again.';
+        showStatus('Price check unavailable — please retry', true);
+      }
       return false;
     }
   }

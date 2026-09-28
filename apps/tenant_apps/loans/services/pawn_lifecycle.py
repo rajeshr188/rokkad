@@ -53,9 +53,11 @@ def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
     collateral = tuple(loan.collateral_items.all())
     if not collateral:
         raise PawnLifecycleError("A PawnLoan requires collateral before approval.")
+    from .origination_settings import collateral_photos_required
+    photos_required = collateral_photos_required(loan.workspace_id)
     for item in collateral:
         item.full_clean()
-        if not item.photos.exists():
+        if photos_required and not any(not photo.is_blank_legacy_image for photo in item.photos.all()):
             raise PawnLifecycleError(
                 f"Collateral {item.description} requires at least one photograph before approval."
             )
@@ -67,6 +69,7 @@ def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
         loan, collateral, resolved_economics, appraisals=appraisals
     )
     payload["origination_rates"] = quote_evidence
+    payload["collateral_photo_policy"] = {"required": photos_required}
     if valuation_review is not None:
         payload["valuation_review"] = valuation_review
     if historical is not None:

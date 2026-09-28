@@ -8,7 +8,7 @@ from django.test import TransactionTestCase
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context
 
-from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnMetalInterestRatePolicy
+from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnMetalInterestRatePolicy, LoanOriginationSettings
 
 
 class LoansRLSIsolationTests(TransactionTestCase):
@@ -19,7 +19,7 @@ class LoansRLSIsolationTests(TransactionTestCase):
         quoted_role = connection.ops.quote_name(cls.runtime_role)
         tables = ", ".join(
             connection.ops.quote_name(model._meta.db_table)
-            for model in (LoanLicense, LoanSeries, PawnMetalInterestRatePolicy)
+            for model in (LoanLicense, LoanSeries, PawnMetalInterestRatePolicy, LoanOriginationSettings)
         )
         with connection.cursor() as cursor:
             cursor.execute(
@@ -68,6 +68,20 @@ class LoansRLSIsolationTests(TransactionTestCase):
                 issued_on=date(2026, 1, 1),
                 expires_on=date(2027, 1, 1),
             )
+
+    def test_photo_settings_are_forced_workspace_scoped(self):
+        with workspace_context(self.first_workspace.pk):
+            self._assume_runtime_role()
+            row = LoanOriginationSettings.objects.create(workspace=self.first_workspace, require_collateral_photos=True)
+            with self.assertRaises(DatabaseError), transaction.atomic():
+                LoanOriginationSettings.objects.bulk_create([LoanOriginationSettings(workspace=self.second_workspace)])
+        with workspace_context(self.second_workspace.pk):
+            self._assume_runtime_role()
+            self.assertFalse(LoanOriginationSettings.objects.filter(pk=row.pk).exists())
+            self.assertEqual(LoanOriginationSettings.objects.filter(pk=row.pk).update(require_collateral_photos=False), 0)
+        with transaction.atomic():
+            self._assume_runtime_role()
+            self.assertEqual(LoanOriginationSettings.objects.count(), 0)
 
     def test_bulk_series_rate_scope_guard_and_rls(self):
         with transaction.atomic():

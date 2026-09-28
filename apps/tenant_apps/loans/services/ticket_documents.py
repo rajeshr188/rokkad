@@ -148,9 +148,12 @@ def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload
                 assets.append(asset)
                 photo_evidence.update(sha256=asset.sha256, file_name=file.name)
         optional = all(block.optional_photo for block in layout.all_blocks() if block.binding == binding)
+        policy_optional = (binding == "collateral.first_approved_photo"
+                           and source.get("collateral_photo_policy", {}).get("required") is False)
+        optional = optional or policy_optional
         if not preview and status != "AVAILABLE" and not (status == "ABSENT" and optional):
             raise DocumentAssetError(f"{binding}: selected photograph is {status.lower()}; review the photo before issuing.")
-        media.append(DocumentMedia(binding, key, status))
+        media.append(DocumentMedia(binding, key, status, optional=policy_optional))
         media_evidence[binding] = {**photo_evidence, "status": status, "optional": optional}
     payload = replace(payload, schema_version=2, fields=fields, media=tuple(media))
     snapshot = {

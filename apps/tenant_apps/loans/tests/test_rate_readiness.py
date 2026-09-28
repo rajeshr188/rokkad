@@ -131,6 +131,8 @@ class RateReadinessTests(WorkspaceTestCase):
         response = pawn_valuation_readiness(self.request())
         self.assertContains(response, 'data-ready="true"')
         self.assertContains(response, "approval needs today's loan date and quotes")
+        self.assertContains(response, 'data-attention="true"')
+        self.assertContains(response, "Update prices before approval")
 
     @patch("apps.tenant_apps.loans.web.rate_readiness.resolve_pawn_loan_economic_policy")
     def test_previous_day_draft_guidance_identifies_date_instead_of_requesting_more_quotes(self, policy):

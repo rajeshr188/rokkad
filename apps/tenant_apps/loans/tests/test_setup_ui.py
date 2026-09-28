@@ -115,6 +115,27 @@ class LoansSetupUiTests(WorkspaceTestCase):
     def tenant_post(self, url, data=None):
         return self.client.workspace_post(url, data or {})
 
+    def test_photo_policy_defaults_optional_and_changes_are_audited_and_authorized(self):
+        from apps.configuration.models import PreferenceAuditLog
+        from apps.tenant_apps.loans.models import LoanOriginationSettings
+        from apps.tenant_apps.loans.services.origination_settings import set_collateral_photo_requirement
+        url = reverse("loans:origination_settings")
+        self.assertContains(self.tenant_get(url), "Drafts can always be saved without photos")
+        self.assertFalse(LoanOriginationSettings.objects.filter(workspace=self.tenant).exists())
+        self.assertEqual(self.tenant_post(url, {"require_collateral_photos": "on"}).status_code, 302)
+        self.assertTrue(LoanOriginationSettings.objects.get(workspace=self.tenant).require_collateral_photos)
+        audit = PreferenceAuditLog.objects.get(key="loans.require_collateral_photos", workspace=self.tenant)
+        self.assertEqual((audit.old_value, audit.new_value, audit.changed_by), ("false", "true", self.owner))
+        viewer = get_user_model().objects.create_user(username="photo-policy-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        self.client.force_login(viewer)
+        self.assertEqual(self.tenant_get(url).status_code, 403)
+        self.assertEqual(self.tenant_post(url).status_code, 403)
+        with self.assertRaises(PermissionDenied):
+            set_collateral_photo_requirement(workspace=self.tenant, required=False, actor=viewer)
+        self.assertTrue(LoanOriginationSettings.objects.get(workspace=self.tenant).require_collateral_photos)
+
     def test_checklist_distinguishes_numbering_from_missing_economics(self):
         license, series = self._configured_setup()
         page = self.tenant_get(reverse("loans:license_list"))
@@ -1300,8 +1321,8 @@ class LoansSetupUiTests(WorkspaceTestCase):
         )
         self.assertContains(statement, "Funding statement")
         self.assertContains(statement, "RECORD_REPAYMENT")
-        self.assertContains(statement, "-1000.0000")
-        self.assertContains(statement, "6000.0000")
+        self.assertContains(statement, "-1,000")
+        self.assertContains(statement, "6,000")
         self.assertContains(statement, self.owner.username)
 
         correction_key = str(uuid.uuid4())
@@ -2510,6 +2531,22 @@ class LoansSetupUiTests(WorkspaceTestCase):
             file.write(b"broken")
         with self.assertRaisesMessage(DocumentAssetError, "unavailable"):
             prepare_ticket_document(loan=loan, layout=layout, actor=self.owner)
+
+    def test_frozen_optional_collateral_rule_allows_absent_photo_on_required_template(self):
+        import copy
+        loan, revision, photo, address = self._rich_ticket_fixture()
+        source = copy.deepcopy(loan.approval_snapshots.get().payload)
+        source["collateral_photo_policy"] = {"required": False}
+        source["collateral"][0]["photo_evidence"] = []
+        PawnLoanApprovalSnapshot.objects.create(loan=loan, version=2, payload=source,
+            fingerprint="optional-photo-policy", approved_by=self.owner)
+        response = self.tenant_get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
+        self.assertEqual(response.status_code, 200)
+        issue = LoanDocumentIssue.objects.get(pk=response["X-Rokkad-Document-Issue"])
+        media = issue.source_snapshot["media"]["collateral.first_approved_photo"]
+        self.assertEqual(media["status"], "ABSENT")
+        self.assertTrue(media["optional"])
+        self.assertEqual(self.tenant_get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk])).content, response.content)
 
     def test_approved_photo_reference_cannot_point_at_another_collateral_item(self):
         import copy

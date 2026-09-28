@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -167,6 +168,12 @@ def workspace_dashboard(request, workspace_id):
     # Check if user can view detailed metrics (Owner/Admin)
     context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
     access = access_context["access"]
+    if access.can("data.view") and request.GET.get("queue") == "overdue":
+        from urllib.parse import urlencode
+        query = urlencode({key: request.GET[key]
+            for key in ("period", "start", "end", "page") if key in request.GET})
+        destination = reverse("workspace_loans:overdue_payments", args=[workspace.slug])
+        return redirect(destination + ("?" + query if query else ""))
     context.update(get_workspace_dashboard_context(workspace=workspace, access=access))
     context["can_use_counter"] = access.can("data.view")
     context["can_create_loan"] = access.can("data.view") and access.can("data.create")

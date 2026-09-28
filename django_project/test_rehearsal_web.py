@@ -64,3 +64,42 @@ print(json.dumps({
             self.assertEqual(rehearsal_environment(None), {'rehearsal_browser':False, 'ticket_template_sandbox':False})
         with override_settings(REHEARSAL_BROWSER=True, TICKET_TEMPLATE_SANDBOX=False):
             self.assertEqual(rehearsal_environment(None), {'rehearsal_browser':True, 'ticket_template_sandbox':False})
+
+    def test_billing_settings_isolate_keys_database_cookies_and_delivery(self):
+        code = """
+import json
+from unittest.mock import patch
+with patch('scripts.billing_rehearsal_credentials.read_private_json', side_effect=[
+        {'key_id':'rzp_test_fixture', 'key_secret':'fixture'},
+        {'django_secret':'fixture-local', 'webhook_secret':'fixture-webhook'}]):
+    from django_project.settings import billing_rehearsal as web, dev
+print(json.dumps({
+ 'database':web.DATABASES['default']['NAME'], 'normal_database':dev.DATABASES['default']['NAME'],
+ 'checkout':web.BILLING_CHECKOUT_ENABLED, 'trials':web.BILLING_ALLOW_TRIAL_START,
+ 'debug':web.DEBUG, 'mail':web.PLATFORM_EMAIL_ENABLED,
+ 'ses_keys':[web.PLATFORM_SES_ACCESS_KEY_ID, web.PLATFORM_SES_SECRET_ACCESS_KEY],
+ 'key':web.RAZORPAY_KEY_ID, 'secret_is_local':web.SECRET_KEY == 'fixture-local',
+ 'cookies':[web.SESSION_COOKIE_NAME,web.CSRF_COOKIE_NAME],
+ 'banner':web.BILLING_REHEARSAL,
+}))
+"""
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+            env={**os.environ, 'ROKKAD_REHEARSAL_DB_NAME':'rokkad_baseline_rehearsal_billing_fixture',
+                 'DB_HOST':'127.0.0.1'}, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        values = json.loads(result.stdout)
+        self.assertEqual(values['database'], 'rokkad_baseline_rehearsal_billing_fixture')
+        self.assertEqual(values['normal_database'], 'rokkad_shared_dev')
+        self.assertTrue(values['checkout'])
+        self.assertFalse(values['trials'])
+        self.assertFalse(values['debug'])
+        self.assertFalse(values['mail'])
+        self.assertEqual(values['ses_keys'], ['', ''])
+        self.assertEqual(values['key'], 'rzp_test_fixture')
+        self.assertTrue(values['secret_is_local'])
+        self.assertEqual(values['cookies'], ['rokkad_billing_rehearsal_session','rokkad_billing_rehearsal_csrf'])
+        self.assertTrue(values['banner'])
+
+    @override_settings(BILLING_REHEARSAL=True, REHEARSAL_BROWSER=True)
+    def test_billing_banner_identifies_fictional_test_data(self):
+        self.assertTrue(rehearsal_environment(None)['billing_rehearsal'])

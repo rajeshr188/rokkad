@@ -2,12 +2,17 @@
 from decimal import Decimal, ROUND_DOWN
 
 from django import forms
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET
 
 from apps.tenant_apps.loans.access import loans_workspace_required
 from apps.tenant_apps.rates.facade import RATE_FOUND, get_latest_commodity_valuation_rate
 from apps.tenant_apps.loans.selectors.origination_rates import origination_quote_cutoff
+from apps.tenant_apps.loans.models import LoanSeries
+from apps.tenant_apps.loans.domain import ValuationMethod
+from apps.tenant_apps.loans.domain.collateral_economics import _selected_value
+from apps.tenant_apps.loans.services.economic_policies import resolve_pawn_loan_economic_policy
+from django.utils import timezone
 
 
 class AppraisalSuggestionForm(forms.Form):
@@ -17,6 +22,9 @@ class AppraisalSuggestionForm(forms.Form):
     purity = forms.DecimalField(max_digits=7, decimal_places=4, min_value=Decimal("0.0001"), max_value=100)
     as_of = forms.DateField()
     request_key = forms.IntegerField(min_value=0)
+    series = forms.IntegerField(min_value=1, required=False)
+    appraisal = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0, required=False)
+    principal = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0, required=False)
 
     def clean(self):
         data = super().clean()
@@ -43,6 +51,29 @@ def collateral_appraisal_suggestion(request):
                 context["message"] = "The calculated amount is too large. Check weights and rate."
         else:
             context["message"] = "No usable INR pure-metal buying price per gram on or before the loan date. Check Metal prices for this loan above. A manual appraisal alone does not satisfy a policy requiring a metal price."
+        if data.get("series"):
+            series = get_object_or_404(LoanSeries, pk=data["series"], workspace=request.loans_workspace)
+            try:
+                policy = resolve_pawn_loan_economic_policy(workspace_id=request.loans_workspace.pk,
+                    license_id=series.license_id, as_of_date=data["as_of"])
+                context["ltv_percent"] = policy.maximum_ltv_ratio * 100
+                method = ValuationMethod(policy.valuation_method)
+                calculated = None
+                if lookup.status == RATE_FOUND and lookup.rate.buying_rate > 0:
+                    calculated = (lookup.rate.buying_rate * data["net_weight"] * data["purity"] / 100).quantize(policy.currency_quantum, rounding=ROUND_DOWN)
+                if method != ValuationMethod.LATEST_APPRAISAL and (
+                    calculated is None or timezone.localdate(lookup.rate.effective_at) != data["as_of"]
+                ):
+                    raise ValueError("A same-day metal price is needed to suggest the maximum loan.")
+                appraisal = data.get("appraisal")
+                if appraisal is None and context.get("value"):
+                    appraisal = Decimal(context["value"])
+                selected = _selected_value("item", method=method, calculated=calculated, appraisal=appraisal)
+                maximum = (selected * policy.maximum_ltv_ratio).quantize(policy.currency_quantum, rounding=ROUND_DOWN)
+                context.update(maximum_principal=maximum, selected_value=selected,
+                    above_limit=data.get("principal") is not None and data["principal"] > maximum)
+            except ValueError as exc:
+                context["ltv_message"] = str(exc)
     response = render(request, "loans/pawn/_appraisal_suggestion.html", context)
     response["Cache-Control"] = "no-store"
     return response

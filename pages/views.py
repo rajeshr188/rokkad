@@ -76,6 +76,10 @@ class AboutPageView(TemplateView):
     template_name = "pages/about.html"
 
 
+class DevelopersPageView(TemplateView):
+    template_name = "pages/developers.html"
+
+
 class PrivacyPolicy(TemplateView):
     template_name = "pages/privacy_policy.html"
 

@@ -1,0 +1,28 @@
+{% extends 'base_public.html' %}
+{% block content %}
+<section class="public-section">
+  <div class="container" style="max-width: 900px;">
+    <header class="public-section-header">
+      <div class="public-kicker">Rokkad policies</div>
+      <h1 class="public-section-title">{% block policy_heading %}{% endblock %}</h1>
+      <p class="public-section-copy">{% block policy_intro %}{% endblock %}</p>
+      <p class="small text-muted mt-3 mb-0">Effective date: 28 September 2026</p>
+    </header>
+    <nav class="d-flex flex-wrap gap-3 border-top border-bottom py-3 mb-4" aria-label="Related policies">
+      <a href="{% url 'privacy_policy' %}">Privacy</a>
+      <a href="{% url 'terms_and_conditions' %}">Terms and conditions</a>
+      <a href="{% url 'cancellation_and_refund' %}">Cancellation and refunds</a>
+      <a href="#policy-contact">Contact</a>
+    </nav>
+    <article class="public-card" style="line-height: 1.75;">
+      {% block policy_body %}{% endblock %}
+      <section id="policy-contact" class="border-top mt-4 pt-4" aria-labelledby="policy-contact-heading">
+        <h2 id="policy-contact-heading" class="h5">Contact and correspondence</h2>
+        <p>For support, legal queries and privacy grievances, contact <strong>Rajesh Rathod</strong>, Rokkad's operator and designated privacy/grievance contact.</p>
+        <p><a href="mailto:support@rokkad.com">support@rokkad.com</a></p>
+        <address class="mb-0">Rokkad, care of Rajesh Rathod<br>11, 9th Cross Street, Rajiv Gandhi Nagar<br>Vellore, Tamil Nadu, India</address>
+      </section>
+    </article>
+  </div>
+</section>
+{% endblock %}

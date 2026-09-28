@@ -12,6 +12,25 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Loan and UI source checkpoint (2026-09-28)
+
+At the owner's request, the remaining loan/application-shell/public-page changes
+are now selected for their own source commit after the FW-019 checkpoint. This
+includes the Workspace collateral-photo rule and forced-RLS migration 0028,
+borrower totals across all active loans, per-item LTV guidance, the dedicated
+overdue page, compact loan-entry help, shared navigation/footer and previously
+approved legal/developer content. Existing deployment evidence below remains
+historical; this source checkpoint does not deploy or migrate production.
+
+The 234-test loan/UI run passed 232 cases, including lifecycle/media/economics,
+RLS enforcement, borrower totals, approval, document evidence, overdue permissions
+and public/rehearsal pages. Its two failures were stale registry counts after
+adding the photo-policy model. Counts now expect 117 and explicitly include that
+model; all four registry tests pass on rerun. Eight JavaScript checks passed,
+and Django detects no missing migrations. The borrower race/failure checks are
+now included in GitHub Actions. Existing accounting and approved evidence remain
+unchanged by the display work.
+
 ## FW-019 source checkpoint and receipt rehearsal preparation (2026-09-28)
 
 The owner requested a commit/push of progress and continuation of FW-019. The

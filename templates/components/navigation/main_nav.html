@@ -44,7 +44,7 @@
 }
 </style>
 
-<nav class="navbar navbar-expand-lg navbar-dark modern-nav">
+<nav class="navbar navbar-expand-lg navbar-dark modern-nav" aria-label="{% translate 'Main navigation' %}">
     <div class="container-fluid px-3 px-lg-4">
         <a class="navbar-brand" href="{% if request.workspace %}{% url 'workspace_slug_dashboard' workspace_slug=request.workspace.slug %}{% elif user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'home' %}{% endif %}">
             {% include 'components/brand.html' %}
@@ -81,7 +81,7 @@
                 {% endif %}
             </ul>
 
-            <form class="d-flex ms-lg-3 mt-2 mt-lg-0" method="post" action="{% url 'set_language' %}">
+            <form class="app-language d-flex ms-lg-3 mt-2 mt-lg-0" method="post" action="{% url 'set_language' %}">
                 {% csrf_token %}
                 {% get_available_languages as LANGUAGES %}
                 {% get_current_language as LANGUAGE_CODE %}
@@ -95,7 +95,7 @@
                     </option>
                     {% endfor %}
                 </select>
-                <button class="btn btn-outline-secondary ms-2" type="submit">{% translate "Apply language" %}</button>
+                <button class="btn btn-sm btn-outline-secondary ms-2" type="submit" aria-label="{% translate 'Apply language' %}">{% translate "Apply" %}</button>
             </form>
         </div>
     </div>

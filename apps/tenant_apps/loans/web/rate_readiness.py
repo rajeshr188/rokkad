@@ -35,6 +35,7 @@ def pawn_valuation_readiness(request):
     context = {
         "request_key": request.GET.get("request_key", ""), "ready": False,
         "message": "Select a series, loan date and collateral metal to check prices.",
+        "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
     }
     if form.is_valid():
         values = form.cleaned_data

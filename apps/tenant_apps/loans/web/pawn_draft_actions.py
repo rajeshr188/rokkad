@@ -17,6 +17,7 @@ from apps.tenant_apps.loans.forms import (
     PawnDraftSplitForm, PawnTransitionReasonForm,
 )
 from apps.tenant_apps.loans.models import PawnCollateralItem, PawnLoan
+from apps.tenant_apps.loans.services.origination_settings import collateral_photos_required
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput, CreatePawnDraftCommand, DraftCollateralPhotoInput,
     NumberAllocationError, PawnCollateralMediaError, PawnDraftError,
@@ -111,6 +112,7 @@ def pawn_loan_create(request):
             "formset": formset,
             "economics_preview": economics_preview,
             "submission_token": token,
+            "photos_required": collateral_photos_required(request.loans_workspace.pk),
             "submission_reference_error": token_error,
             **_pawn_number_preview_context(form),
             "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
@@ -194,6 +196,7 @@ def pawn_loan_update(request, pk):
             "formset": formset,
             "loan": loan,
             "economics_preview": economics_preview,
+            "photos_required": collateral_photos_required(request.loans_workspace.pk),
             "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
@@ -261,7 +264,7 @@ def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
     except (PawnCollateralMediaError, ValidationError) as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, "Draft photograph deleted. Each collateral item needs a photograph before approval.")
+        messages.success(request, "Draft photograph deleted. Your workspace photo rule applies at approval.")
     return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}")
 
 
@@ -401,7 +404,7 @@ def _draft_photo_inputs(formset):
             upload=row.get("photograph"),
         )
         for row in formset.cleaned_data
-        if row and not row.get("DELETE") and row.get("photograph")
+        if row and not row.get("DELETE")
     )
 
 

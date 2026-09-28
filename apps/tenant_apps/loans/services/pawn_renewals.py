@@ -587,11 +587,15 @@ def renew_pawn_loan(
             source_by_id[source_item_id], new_item, actor=actor
         )
     additional_items = successor_items[len(retained_ids_in_order):]
+    if not additional_photo_uploads:
+        additional_photo_uploads = (None,) * len(additional_items)
     if len(additional_items) != len(additional_photo_uploads):
         raise PawnRenewalError(
-            "Every additional renewal collateral item requires one photograph."
+            "Supply one photo slot per additional renewal collateral item."
         )
     for item, upload in zip(additional_items, additional_photo_uploads, strict=True):
+        if not upload:
+            continue
         _append_collateral_photo(
             item.pk,
             upload=upload,
