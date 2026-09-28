@@ -1,0 +1,10 @@
+Rokkad — invitation to {{ invitation.company.name }}
+
+{{ invitation.inviter.get_full_name|default:invitation.inviter.username }} invited you as {{ invitation.role.name }}.
+Sign in with {{ invitation.email }} and verify that email to accept.
+Access is granted only after you accept the invitation.
+
+Review invitation: {{ invite_url }}
+
+Valid until {{ expires_at|date:'d/m/Y H:i T' }}.
+If this invitation was unexpected, you can ignore it. Reply to this email for help.

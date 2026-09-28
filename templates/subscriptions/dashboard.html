@@ -179,11 +179,7 @@
                         <a href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.slug %}" class="btn btn-outline-primary btn-sm">
                             Renew or View Plans
                         </a>
-                        {% if billing_decision.status == 'active' %}
-                        <button class="btn btn-outline-danger btn-sm" onclick="confirmCancel()">
-                            Cancel Subscription
-                        </button>
-                        {% endif %}
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Recurring payments</a>
                     </div>
                 </div>
             </div>
@@ -296,8 +292,8 @@
                                 <td>{{ invoice.invoice_date|date:"M d, Y" }}</td>
                                 <td>₹{{ invoice.total_amount }}</td>
                                 <td>
-                                    <span class="badge badge-{% if invoice.is_paid %}success{% else %}warning{% endif %}">
-                                        {% if invoice.is_paid %}Paid{% else %}Pending{% endif %}
+                                    <span class="badge badge-{% if invoice.status == 'paid' %}success{% else %}warning{% endif %}">
+                                        {{ invoice.get_status_display }}
                                     </span>
                                 </td>
                                 <td>
@@ -349,12 +345,4 @@
     {% endif %}
 </div>
 
-<script>
-function confirmCancel() {
-    if (confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
-        // Implement cancellation logic
-        alert('Cancellation feature coming soon');
-    }
-}
-</script>
 {% endblock %}

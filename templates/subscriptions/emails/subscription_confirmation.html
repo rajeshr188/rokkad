@@ -2,10 +2,27 @@
 <html><body>
 <p style="color:#103f3a;font-size:24px;font-weight:bold">Rokkad <span lang="hi">रोक्कड़</span></p>
 <h1>Payment received</h1>
+{% if billing_provider_mode == 'test' %}<p><strong>TEST MODE: This is a simulated payment. No real money was charged.</strong></p>{% endif %}
 <p>Hello {{ invoice.billing_contact_name }},</p>
 <p>We received INR {{ invoice.total_amount }} for {{ invoice.billed_plan_name }}
 ({{ invoice.checkout_snapshot.billing_cycle }}).</p>
 <p>Invoice: {{ invoice.invoice_number }}</p>
+{% if invoice.checkout_snapshot.kind == 'recurring' %}
+<p>This receipt records one paid recurring billing period:
+{{ invoice.recurring_cycle.period_start|date:"d M Y, H:i T" }} to
+{{ invoice.recurring_cycle.period_end|date:"d M Y, H:i T" }}.</p>
+{% if invoice.recurring_cycle.access_resolution %}
+<p>This paid period was applied after billing review. Your Billing dashboard shows current access.</p>
+{% elif invoice.recurring_cycle.access_action == 'review' %}
+<p>Your payment is recorded. Workspace access needs a billing review.</p>
+{% if invoice.checkout_snapshot.access_review_reason == 'future_period' %}
+<p>Payment was received before this period started. Existing access is unchanged.
+The period will not activate automatically; contact support for a separate billing review.</p>
+{% endif %}
+{% endif %}
+<p>This receipt does not confirm a change to future renewal.</p>
+{% else %}
 <p>This is a one-off purchase. Automatic renewal has not been enabled.</p>
+{% endif %}
 <p>Open your Workspace's Billing page in Rokkad to view or download the invoice.</p>
 </body></html>

@@ -1,3 +1,4 @@
+from django.db import transaction
 from django import forms
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
@@ -182,6 +183,7 @@ class CompanyInvitationForm(forms.ModelForm):
 
         return cleaned_data
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         email = self.cleaned_data.get("email")
         # company = self.cleaned_data.get("company")
@@ -212,6 +214,7 @@ class InvitationAdminAddForm(forms.ModelForm, CleanEmailMixin):
         widget=Select2Widget,
     )
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         cleaned_data = super().clean()
         email = cleaned_data.get("email")

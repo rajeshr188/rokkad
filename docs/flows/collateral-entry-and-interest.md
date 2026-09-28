@@ -1,13 +1,28 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-09-28
 tags: [loans, staff, collateral]
 ---
 
 # Enter collateral and review interest
 
 On **New loan**, select the customer, series and loan date, then add collateral.
+
+**How this works** opens the draft-process explanation and branch setup link.
+It starts collapsed. **+ Add customer** sits beside the Customer field and opens
+another tab so the entered draft stays in place. The photo rule appears in the
+Collateral section.
+
+The compact **Metal prices** row shows the current check status. **Details**
+opens quote dates and policy information; **Recheck** refreshes the check after
+editing Rates in another tab. Missing policies/prices, approval freshness/date
+warnings and failed requests expand the details automatically. A ready price
+check is not approval of the loan. Draft-saving and approval rules are unchanged.
+
+The selected borrower's card shows recorded outstanding across all active loans
+in this Workspace. Principal, interest and fees are separate; the total excludes
+this new loan and unposted interest. Open **View borrower loans** for details.
 
 - **Quantity** counts the pieces in that row. It starts at 1. Enter combined gross
   weight, net weight, appraisal and principal for those pieces. For example, two
@@ -20,12 +35,19 @@ On **New loan**, select the customer, series and loan date, then add collateral.
   An operator with loan approval permission may enter a different percentage and
   a short reason. Zero means an explicit interest-free agreement; blank means
   policy. The override affects this item, not the branch policy or other loans.
-- **Check prices again** refreshes the saved buying-price and policy-rate checks.
+- **Recheck** refreshes the saved buying-price and policy-rate checks.
   They also run automatically. If a buying price is missing, add it in Rates in
   another tab and recheck. This button does not fetch an internet market price.
 - **Preview economics** shows each actual rate, monthly interest, valuation and
   maximum permitted amount. Review before saving/approving. Approval fixes these
   terms; later policy changes do not rewrite the loan.
+- **LTV limit** appears beside the appraisal after valid weights and purity.
+  It shows the policy percentage and maximum for that item's eligible valuation,
+  refreshes when appraisal or principal changes, and never fills your principal.
+  Missing required same-day prices leave the maximum unavailable.
+- **Photographs** are optional by default. Setup administrators can require them
+  under **Loan setup → Loan entry**. Drafts can still be saved without photos;
+  approval, including a renewal's successor, then requires a usable photo per item.
 
 Loan detail shows the effective monthly interest rate prominently near the loan
 amount. For mixed rates this is the weighted rate across allocated principal;

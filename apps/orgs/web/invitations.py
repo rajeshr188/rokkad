@@ -1,5 +1,6 @@
 """Invitations views; existing services enforce membership policy."""
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -43,7 +44,7 @@ def companyinvitations_list(request, workspace_id=None):
         seat_capacity = get_workspace_seat_capacity_snapshot(workspace=workspace)
 
     invitations = CompanyInvitation.objects.select_related(
-        "company", "role", "inviter"
+        "company", "role", "inviter", "email_delivery"
     ).order_by("-created")
 
     if workspace is not None:
@@ -68,6 +69,7 @@ def companyinvitations_list(request, workspace_id=None):
             "current_workspace": workspace,
             "workspace": workspace,
             "seat_capacity": seat_capacity,
+            "platform_email_enabled": settings.PLATFORM_EMAIL_ENABLED,
         },
     )
 
@@ -106,7 +108,7 @@ def team_invite(request, workspace_id=None, company_id=None):
                     company=company,
                     request=request,
                 )
-                messages.success(request, "Invitation sent successfully")
+                messages.success(request, "Invitation saved. Email is queued; check its delivery status in Invitations.")
                 return redirect(
                     "workspace_slug_settings_invitations",
                     workspace_slug=company.slug,
@@ -126,6 +128,7 @@ def team_invite(request, workspace_id=None, company_id=None):
             "company": company,
             "workspace": company,
             "seat_capacity": seat_capacity,
+            "platform_email_enabled": settings.PLATFORM_EMAIL_ENABLED,
             "url": reverse("team_invite", kwargs={"workspace_id": workspace_id}),
         },
     )

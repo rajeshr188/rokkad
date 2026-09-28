@@ -242,7 +242,7 @@ def onboarding_team(request):
                     )
 
                 messages.success(
-                    request, f"Invitations sent to {invited_count} team members!"
+                    request, f"Invitations saved for {invited_count} team members. Check Invitations for email delivery status."
                 )
 
                 # Log invitations

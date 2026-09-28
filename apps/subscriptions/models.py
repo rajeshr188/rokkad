@@ -14,18 +14,17 @@ from apps.orgs.models import Company
 
 class Plan(models.Model):
     """
-    Subscription plans for India SaaS market.
-    Tier: Starter (₹999), Professional (₹3,999), Enterprise (Custom)
+    Workspace subscription catalog. Prices belong to each plan, not its tier.
     """
 
     class PlanTierChoices(models.TextChoices):
-        STARTER = "starter", "Starter - ₹999/month"
-        PROFESSIONAL = "professional", "Professional - ₹3,999/month"
-        ENTERPRISE = "enterprise", "Enterprise - Custom"
+        STARTER = "starter", "Starter"
+        PROFESSIONAL = "professional", "Professional"
+        ENTERPRISE = "enterprise", "Enterprise"
 
     class BillingCycleChoices(models.TextChoices):
         MONTHLY = "monthly", "Monthly"
-        YEARLY = "yearly", "Yearly (20% discount)"
+        YEARLY = "yearly", "Yearly"
 
     name = models.CharField(max_length=255)
     tier = models.CharField(max_length=20, choices=PlanTierChoices.choices)
@@ -35,7 +34,7 @@ class Plan(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Annual price with 20% discount applied",
+        help_text="Annual price in INR. Set explicitly for the agreed offer.",
     )
     description = models.TextField()
     billing_cycle = models.CharField(
@@ -73,11 +72,87 @@ class Plan(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_tier_display()})"
 
+    @property
+    def annual_savings(self):
+        """Savings against twelve monthly purchases, before tax; never a surcharge."""
+        if self.price is None or self.price <= 0 or self.yearly_price is None or self.yearly_price <= 0:
+            return Decimal("0.00")
+        return max(Decimal("0.00"), self.price * 12 - self.yearly_price)
+
     def save(self, *args, **kwargs):
         # Auto-calculate yearly price with 20% discount
         if not self.yearly_price:
             self.yearly_price = self.price * Decimal("9.6")  # 20% off
         super().save(*args, **kwargs)
+
+
+class RecurringPlanBinding(models.Model):
+    """Frozen provider catalog mapping; global billing control-plane evidence."""
+
+    plan = models.ForeignKey(Plan, on_delete=models.PROTECT)
+    mode = models.CharField(max_length=4, choices=[("test", "Test"), ("live", "Live")])
+    provider_plan_id = models.CharField(max_length=255)
+    snapshot = models.JSONField(editable=False)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    reason = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [
+            models.UniqueConstraint(fields=["mode", "provider_plan_id"], name="recurring_provider_plan_identity"),
+            models.CheckConstraint(condition=models.Q(mode__in=["test", "live"]), name="recurring_plan_mode"),
+            models.CheckConstraint(condition=~models.Q(reason=""), name="recurring_plan_reason"),
+        ]
+
+
+class RecurringAgreement(models.Model):
+    """A durable creation attempt/mandate, never itself evidence of paid access."""
+
+    class State(models.TextChoices):
+        CREATING = "creating", "Creation requested"
+        UNKNOWN = "unknown", "Provider outcome needs reconciliation"
+        VERIFIED = "verified", "Provider agreement verified"
+
+    workspace = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="recurring_agreements")
+    binding = models.ForeignKey(RecurringPlanBinding, on_delete=models.PROTECT)
+    request_key = models.UUIDField(unique=True)
+    request_snapshot = models.JSONField(editable=False)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    state = models.CharField(max_length=12, choices=State.choices, default=State.CREATING)
+    provider_subscription_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    provider_status = models.CharField(max_length=20, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [
+            models.UniqueConstraint(fields=["workspace"], condition=models.Q(closed_at__isnull=True),
+                                    name="recurring_one_open_workspace"),
+            models.CheckConstraint(condition=models.Q(state__in=["creating", "unknown", "verified"]),
+                                   name="recurring_creation_state"),
+            models.CheckConstraint(
+                condition=(models.Q(state="verified", provider_subscription_id__isnull=False, verified_at__isnull=False)
+                           | models.Q(state__in=["creating", "unknown"], provider_subscription_id__isnull=True,
+                                      verified_at__isnull=True, closed_at__isnull=True)),
+                name="recurring_verified_identity",
+            ),
+        ]
+
+
+class RecurringAgreementEvent(models.Model):
+    """Append-only attempt/recovery audit, with no raw provider or credential dump."""
+
+    agreement = models.ForeignKey(RecurringAgreement, on_delete=models.PROTECT, related_name="events")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    event_type = models.CharField(max_length=40)
+    detail = models.JSONField(default=dict)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        default_permissions = ()
 
 
 class WorkspaceAccessDecision(models.Model):
@@ -632,6 +707,41 @@ class BillingResolution(models.Model):
     reason = models.TextField()
     evidence = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class RecurringCycle(models.Model):
+    """Immutable provider-paid period linked to the ordinary invoice/payment ledger."""
+
+    agreement = models.ForeignKey(RecurringAgreement, on_delete=models.PROTECT, related_name="cycles")
+    invoice = models.OneToOneField(Invoice, on_delete=models.PROTECT, related_name="recurring_cycle")
+    provider_invoice_id = models.CharField(max_length=255, unique=True)
+    period_start = models.DateTimeField()
+    period_end = models.DateTimeField()
+    evidence = models.JSONField(editable=False)
+    access_action = models.CharField(max_length=10, choices=[
+        ("applied", "Paid-through advanced"), ("retained", "Paid-through retained"), ("review", "Access review required")])
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [
+            models.UniqueConstraint(fields=["agreement", "period_start", "period_end"], name="recurring_cycle_period_unique"),
+            models.CheckConstraint(condition=models.Q(period_end__gt=models.F("period_start")), name="recurring_cycle_period_order"),
+            models.CheckConstraint(condition=models.Q(access_action__in=["applied", "retained", "review"]), name="recurring_cycle_access_action"),
+        ]
+
+
+class RecurringAccessResolution(models.Model):
+    """One immutable, explicit application of a previously held paid period."""
+
+    cycle = models.OneToOneField(RecurringCycle, on_delete=models.PROTECT, related_name="access_resolution")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    reason = models.TextField()
+    evidence = models.JSONField(editable=False)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        default_permissions = ()
 
 
 class UsageMetrics(models.Model):

@@ -1,14 +1,16 @@
 {% extends 'base_workspace_settings.html' %}
 {% load i18n orgs_tags %}
-{% block title %}{% translate "Sent invitations" %}{% endblock %}
+{% block title %}{% translate "Outgoing invitations" %}{% endblock %}
 {% block mgmt_content %}<section hx-history="false">
 {% include 'company/_team_navigation.html' %}
-<header class="app-heading"><div><h1 class="h3">{% translate "Sent invitations" %}</h1><p>{% translate "An invitation is pending access. Accepted invitations become team memberships." %}</p></div>
+<header class="app-heading"><div><h1 class="h3">{% translate "Outgoing invitations" %}</h1><p>{% translate "An invitation is pending access. Accepted invitations become team memberships." %}</p></div>
 {% if current_workspace %}<a class="btn btn-primary" href="{% url 'workspace_slug_settings_invite' current_workspace.slug %}">{% translate "Invite member" %}</a>{% endif %}</header>
 {% include 'company/_seat_capacity.html' %}
+{% if not platform_email_enabled %}<p class="alert alert-info">Application email sending is currently paused. Queued invitations have not been sent.</p>{% endif %}
 <ul class="list-unstyled">{% for item in invitations %}<li class="card card-body mb-3">
 <h2 class="h5 text-break">{{ item.invitation.email }}</h2>
 <dl class="row"><dt class="col-sm-3">{% translate "Workspace" %}</dt><dd class="col-sm-9 text-break">{{ item.invitation.company.name }}</dd><dt class="col-sm-3">{% translate "Role" %}</dt><dd class="col-sm-9">{{ item.invitation.role.name }}</dd><dt class="col-sm-3">{% translate "Status" %}</dt><dd class="col-sm-9">{% translate item.state|capfirst %}</dd><dt class="col-sm-3">{% translate "Invited by" %}</dt><dd class="col-sm-9 text-break">{{ item.invitation.inviter.get_full_name|default:item.invitation.inviter.username }}</dd><dt class="col-sm-3">{% translate "Created" %}</dt><dd class="col-sm-9">{{ item.invitation.created|date:'d M Y' }}</dd></dl>
+{% include 'platform_mail/status.html' with delivery=item.invitation.email_delivery mail_workspace=item.invitation.company %}
 {% if item.state == 'pending' %}<details><summary>{% translate "Cancel invitation" %}</summary><p class="mt-2">{% translate "Cancel this invitation if the person should no longer join using it." %}</p><form method="post" action="{% url 'team_delete_invitation' item.invitation.id %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">{% translate "Revoke invitation" %}</button></form></details>{% endif %}
-</li>{% empty %}<li class="card card-body">{% translate "No invitations sent yet. You can continue working alone." %}</li>{% endfor %}</ul>
+</li>{% empty %}<li class="card card-body">{% translate "No invitations yet. You can continue working alone." %}</li>{% endfor %}</ul>
 </section>{% endblock %}

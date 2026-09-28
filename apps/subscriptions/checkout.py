@@ -17,6 +17,7 @@ from apps.tenancy.context import current_workspace_id
 from .billing import effective_billing_state, transition_subscription
 from .models import BillingAccount, Invoice, Payment, Plan, Subscription, SubscriptionEvent
 from .razorpay_service import BillingProviderError, RazorpayService
+from .provider_configuration import provider_mode, require_invoice_mode
 from .services import build_billing_account_defaults, build_entitlement_defaults, ensure_entitlements_for_subscription
 
 
@@ -30,6 +31,7 @@ def require_billing_owner(*, workspace, actor):
 
 @transaction.atomic
 def create_checkout(*, workspace, actor, plan_id, billing_cycle, request_key):
+    mode = provider_mode()
     require_billing_owner(workspace=workspace, actor=actor)
     workspace = Company.all_objects.select_for_update().get(pk=workspace.pk)
     require_billing_owner(workspace=workspace, actor=actor)
@@ -44,6 +46,7 @@ def create_checkout(*, workspace, actor, plan_id, billing_cycle, request_key):
         raise ValidationError("Choose monthly or yearly billing.")
     existing = Invoice.objects.filter(checkout_key=key).first()
     if existing:
+        require_invoice_mode(existing)
         snapshot = existing.checkout_snapshot
         if (existing.subscription.company_id != workspace.pk or
                 snapshot.get("plan_id") != plan_id or snapshot.get("billing_cycle") != billing_cycle):
@@ -51,6 +54,8 @@ def create_checkout(*, workspace, actor, plan_id, billing_cycle, request_key):
         if not existing.razorpay_order_id:
             raise ValidationError("This checkout needs payment-provider reconciliation.")
         return existing
+    from .recurring import require_no_recurring_agreement
+    require_no_recurring_agreement(workspace)
     plan = Plan.objects.filter(pk=plan_id, is_active=True).first()
     if plan is None:
         raise ValidationError("Choose an available plan.")
@@ -71,6 +76,7 @@ def create_checkout(*, workspace, actor, plan_id, billing_cycle, request_key):
     tax_rate = Decimal(str(getattr(settings, "BILLING_TAX_RATE", "18")))
     tax = (amount * tax_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     snapshot = {
+        "provider_mode": mode,
         "workspace_id": workspace.pk, "plan_id": plan.pk, "plan_name": plan.name,
         "billing_cycle": billing_cycle, "currency": "INR", "amount": int((amount + tax) * 100),
         "subscription_revision": subscription.updated_at.isoformat(),
@@ -119,7 +125,10 @@ def _apply_capture(*, invoice_id, payment, actor=None, workspace=None):
         if workspace.pk != company.pk:
             raise PermissionDenied("Checkout Workspace mismatch.")
     invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
+    require_invoice_mode(invoice)
     snapshot = invoice.checkout_snapshot
+    if snapshot.get("kind") == "recurring":
+        raise ValidationError("Use recurring cycle reconciliation for this invoice.")
     if (not snapshot or snapshot.get("workspace_id") != company.pk or
             payment.get("order_id") != invoice.razorpay_order_id or
             type(payment.get("amount")) is not int or payment["amount"] != snapshot["amount"] or
@@ -133,6 +142,8 @@ def _apply_capture(*, invoice_id, payment, actor=None, workspace=None):
         return invoice
     if invoice.status != Invoice.StatusChoices.ISSUED:
         raise ValidationError("This invoice cannot be paid automatically.")
+    from .recurring import require_no_recurring_agreement
+    require_no_recurring_agreement(company)
     subscription = Subscription.objects.select_for_update().get(pk=invoice.subscription_id)
     if subscription.updated_at.isoformat() != snapshot["subscription_revision"]:
         raise ValidationError("Subscription changed after checkout; payment needs reconciliation.")
@@ -163,12 +174,15 @@ def _apply_capture(*, invoice_id, payment, actor=None, workspace=None):
         "actor_id": getattr(actor, "pk", None),
     })
     from .notifications import send_checkout_receipt
-    transaction.on_commit(lambda: send_checkout_receipt(invoice.pk), robust=True)
+    send_checkout_receipt(invoice.pk)
     return invoice
 
 
 def handle_provider_event(event_data):
     event_type = event_data.get("event")
+    if isinstance(event_type, str) and event_type.startswith("subscription."):
+        from .recurring_cycles import handle_subscription_event
+        return handle_subscription_event(event_data)
     if event_type == "refund.processed":
         from .recovery import process_refund_webhook
         return process_refund_webhook(event_data)
@@ -182,6 +196,9 @@ def handle_provider_event(event_data):
     if not isinstance(payment, dict) or not payment.get("order_id"):
         raise ValidationError("Payment entity is missing.")
     invoice = Invoice.objects.filter(razorpay_order_id=payment["order_id"]).first()
+    if (invoice and invoice.checkout_snapshot.get("kind") == "recurring") or (not invoice and payment.get("invoice_id")):
+        from .recurring_cycles import handle_recurring_capture
+        return handle_recurring_capture(payment)
     if not invoice:
         raise ValidationError("Payment order needs reconciliation.")
     _apply_capture(invoice_id=invoice.pk, payment=payment)

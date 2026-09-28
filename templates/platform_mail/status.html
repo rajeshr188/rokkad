@@ -1,0 +1,14 @@
+<div class="border rounded p-3 mb-3">
+  <strong>Email delivery:</strong>
+  {% if delivery %}
+    <span>{{ delivery.get_status_display }}</span>
+    {% if delivery.status == 'accepted' %}<p class="small text-muted mb-0">The provider accepted this message. Delivery has not yet been confirmed.</p>{% endif %}
+    {% if delivery.status == 'delivered' %}<p class="small text-muted mb-0">The recipient's mail server accepted it. This does not confirm that it was read.</p>{% endif %}
+    {% if delivery.status == 'unknown' %}<p class="small text-muted mb-0">Sending may have succeeded. Contact support to reconcile provider evidence before retrying.</p>{% endif %}
+    {% if delivery.status == 'failed' or delivery.status == 'captured' %}
+      <form method="post" action="{% url 'retry_platform_mail' workspace_id=mail_workspace.pk delivery_id=delivery.pk %}" class="mt-2">
+        {% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Retry email</button>
+      </form>
+    {% endif %}
+  {% else %}<span class="text-muted">No tracked delivery. Earlier sent flags do not confirm delivery.</span>{% endif %}
+</div>

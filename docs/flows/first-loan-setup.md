@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-28
 tags: [loans, onboarding, workspace, ux]
 related: [../domain/loans-regulatory-setup-and-policy.md, ../plans/workspace-navigation-simplification.md]
 ---
@@ -46,8 +46,10 @@ availability uses active product/version state and its availability dates.
 The license register separately reports evidence warnings. Buying rates and
 documents are review tasks, not green status inferred from row counts.
 
-Counter staff then select or add a borrower and enter the loan and photographed
-collateral. The loan list and create page explain the first missing prerequisite.
+Counter staff then select or add a borrower and enter the loan and collateral.
+Photos are optional by default; **Loan setup → Loan entry** can require them
+before approval while still permitting drafts. The loan list and create page
+explain the first missing prerequisite.
 Staff without `workspace.settings.manage` receive an owner/admin handoff instead
 of a link to a forbidden setup page. Existing servicing remains available subject
 to its existing permissions. Setup status does not override the loan command's

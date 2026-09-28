@@ -21,6 +21,8 @@ def _identifier(value):
 
 
 def _validate_payment(invoice, payment, payment_id):
+    from .provider_configuration import require_invoice_mode
+    require_invoice_mode(invoice)
     snapshot = invoice.checkout_snapshot
     if (not snapshot or not isinstance(payment, dict) or payment.get("id") != payment_id
             or payment.get("order_id") != invoice.razorpay_order_id

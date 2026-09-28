@@ -165,6 +165,10 @@
             </button>
             
             <!-- Hidden inputs for Razorpay -->
+            <p id="confirmation-note" class="text-muted mt-2" hidden>
+                Your payment was submitted. Retrying checks the same payment and does not charge again.
+                If you leave this page, check Billing before starting another purchase.
+            </p>
             <input type="hidden" id="razorpay_payment_id" name="razorpay_payment_id">
             <input type="hidden" id="razorpay_order_id" name="razorpay_order_id">
             <input type="hidden" id="razorpay_signature" name="razorpay_signature">
@@ -248,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMsg = document.getElementById('error-message');
     const errorText = document.getElementById('error-text');
     const loadingSpinner = document.getElementById('loading-spinner');
+    let paymentReturned = false;
     
     const checkoutKey = crypto.randomUUID();
     // Billing Cycle Selection
@@ -263,6 +268,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle Razorpay Payment
     razorpayBtn.addEventListener('click', function(e) {
         e.preventDefault();
+        if (razorpayBtn.disabled) return;
+        if (paymentReturned) {
+            submitPayment();
+            return;
+        }
         
         // Show loading spinner
         loadingSpinner.classList.add('show');
@@ -313,6 +323,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
                 document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
                 document.getElementById('razorpay_signature').value = response.razorpay_signature;
+                paymentReturned = true;
+                razorpayBtn.textContent = 'Retry payment confirmation';
+                document.getElementById('confirmation-note').hidden = false;
+                document.querySelectorAll('.billing-cycle-btn').forEach(btn => { btn.disabled = true; });
                 
                 // Submit form
                 submitPayment();
@@ -338,6 +352,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function submitPayment() {
         loadingSpinner.classList.add('show');
+        razorpayBtn.disabled = true;
+        errorMsg.classList.remove('show');
         
         fetch('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.slug %}', {
             method: 'POST',

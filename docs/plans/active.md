@@ -1,11 +1,78 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-09-28
 tags: [plans, active]
 ---
 
 # Active work
+
+The owner selected [Workspace subscription monetization](subscription-monetization-rollout.md)
+(FW-019) on 2026-09-26. The unpublished working offer is INR 1,499/month or
+INR 14,990/year per Workspace, with the owner plus five staff (six total members).
+Razorpay account approval and Live/Test modes are owner-confirmed; Test Mode keys
+and APIs are verified. Credentials are protected outside the repository/OneDrive.
+
+Recurring agreement preparation, owner authorization/cancellation, exact paid-cycle
+recording, recovery/replay and audited held-period application are implemented
+locally with Test Mode-only boundaries. Actual monthly/annual initial card captures,
+owner recovery, cancellation and accelerated monthly renewal recording have passed.
+Future payments remain held without early access; actual naturally due application
+is still open. The annual midnight-IST invoice boundary found in provider acceptance
+is fixed. See the [current recurring runbook](../implementation/recurring-agreements.md)
+and [Status](../STATUS.md) for the latest fixture state and acceptance evidence.
+Annual final-cycle acceptance is the current provider task: the fifth fixture has
+one Created payment awaiting provider settlement; preserve it and resume with
+GET-only reconciliation. Four prior mandates are cancelled. See the latest runbook
+checkpoint before creating another fixture or cancelling the pending mandate.
+
+The 28 September continuation submitted both provider support reports (21146138 /
+21146171), implemented frozen scheduled Test Mode starts, and passed actual full
+recurring refund/access-review acceptance on the earlier annual fixture. All 127
+focused recurring/review/recovery tests pass. A sixth, short scheduled fixture now
+has an unresolved INR 5 authorization token; no invoice/access or naturally due
+acceptance. Preserve that attempt too. A subsequent release increment closed the
+fully refunded annual agreement after fresh settlement review, preserving read-only
+access and original history. Exact replacement periods and replay safety pass local
+tests; no replacement provider mandate was created. The broad 137-test suite and
+final 12 release tests pass. See the
+[latest checkpoint](../implementation/recurring-agreements.md#refunded-agreement-release-and-replacement-2026-09-28).
+
+The [production critical path](subscription-monetization-rollout.md#production-critical-path-reviewed-2026-09-28)
+now has explicit provider-mode/key checks, frozen one-off mode, sanitized readiness
+diagnostics and test receipt sending safeguards implemented locally. Read-only
+rehearsal checks preserve all nine queued receipts. SES production access is now
+approved, but paid-receipt delivery and live recurring remain open. See the
+[readiness checkpoint](../implementation/billing-provider-readiness.md). The path
+now explicitly lists provider failure/recovery, due held access, refund/replacement
+workflows, live-mode implementation/configuration, receipt delivery and commercial
+launch decisions. The existing monthly holds begin on 28 October 2026; using them
+for natural due-date acceptance makes that the earliest such checkpoint, not a
+promised launch. A different acceptance method or pilot scope needs review. Present
+code rejects live recurring keys; deployment alone cannot enable a paying pilot.
+No production activation, published prices or production-customer term changes.
+
+The owner selected [platform email setup and reliability](platform-email-rollout.md)
+on 2026-09-26: Google Workspace for human inboxes, Amazon SES for automated
+platform messages. Both accounts and support/billing aliases exist; SES DKIM is
+verified in Mumbai, and custom MAIL FROM is successful. The durable invitation/
+paid-receipt queue, SES transport, private feedback consumer and status/retry UI are
+deployed with sending disabled. Private AWS topic/queues and scoped service grants
+are connected. Dedicated credentials are installed privately and verified; the web
+container has none. Owner migration, restricted runtime and SQS checks pass. Worker
+units validate with dispatch/feedback/recovery timers disabled; the separate health
+timer is enabled. Controlled invitation/billing-sender inbox,
+SPF/DKIM/DMARC, provider delivery, bounce/complaint and suppression checks passed.
+Invitation acceptance as the Google-verified invitee passed with only isolated
+Viewer membership. SES case 179042575700203 is approved as of 28 September
+11:20:42 IST: Mumbai production access, 50,000 messages/day and 14/second.
+The authorized combined external alias test reached the admin inbox. Actual
+paid-receipt delivery and supervised activation remain gates. Private operator suppression,
+paused dispatch and sticky failure alerts passed live acceptance; 61 focused tests
+include an isolated paid-receipt workflow with mocked provider boundaries. SQS/DLQ
+counts are clear. Local monitoring requires operator review; no external pager.
+Account-security mail needs its own
+expiry-aware integration. General production sending remains disabled.
 
 The owner selected the first business-dashboard increment: customer/active-loan
 counts, lending activity, principal outstanding and recorded unpaid interest.
@@ -84,11 +151,11 @@ Verify publication CI; intake/lifecycle forms remain together pending a concrete
 [form-family review](project-hardening.md#remaining-form-families-reviewed-after-16be7149).
 Model and renewal-service moves remain deferred.
 
-Razorpay setup/provider testing is shelved as
+Razorpay test-mode preparation resumes under FW-019 through
 [FW-002](future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).
 License scoping is shelved as
 [FW-001](future-work.md#fw-001-optional-owner-configurable-license-scope).
-Neither resumes from proceeding with unrelated cleanup. Physical phone/camera and
+License scoping does not resume from unrelated work. Physical phone/camera and
 printer checks remain deferred; production acceptance is separate.
 
 Prior delivery plans and contradictory old "next" steps are preserved in the

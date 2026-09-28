@@ -403,18 +403,19 @@ def send_onboarding_team_invitations(
 
         for email in email_addresses:
             try:
-                ensure_workspace_has_member_capacity(
-                    workspace=company,
-                    include_pending_invitations=True,
-                    extra_slots=1,
-                )
-                invitation = CompanyInvitation.create(
-                    email=email,
-                    company=company,
-                    inviter=actor,
-                    role=role,
-                )
-                invitation.send_invitation(request)
+                with transaction.atomic():
+                    ensure_workspace_has_member_capacity(
+                        workspace=company,
+                        include_pending_invitations=True,
+                        extra_slots=1,
+                    )
+                    invitation = CompanyInvitation.create(
+                        email=email,
+                        company=company,
+                        inviter=actor,
+                        role=role,
+                    )
+                    invitation.send_invitation(request)
                 invited_invitations.append(invitation)
             except Exception as exc:
                 failed_invitations.append({"email": email, "error": exc})

@@ -1,0 +1,115 @@
+{% extends 'base_workspace_settings.html' %}
+{% load static %}
+{% block title %}Recurring payments - Rokkad{% endblock %}
+{% block mgmt_content %}
+{% include 'subscriptions/_navigation.html' %}
+<h1>Recurring payments</h1>
+<p class="text-muted">Manage permission for future payments separately from time already paid for.</p>
+{% if agreement %}
+<div class="card mb-4"><div class="card-body">
+  <h2 class="h4">{{ agreement.binding.snapshot.plan_name }}</h2>
+  <p><strong>{{ agreement.binding.mode|upper }} MODE</strong> &middot; {{ agreement.binding.snapshot.billing_cycle|capfirst }}</p>
+  <p>INR {{ total_amount|floatformat:2 }} per cycle, including INR {{ agreement.binding.snapshot.tax_amount }} tax.
+    Base price INR {{ agreement.binding.snapshot.base_amount }}.</p>
+  <p>{{ member_limit }} people total, including the owner.</p>
+  <p>Up to {{ agreement.request_snapshot.total_count }} billing cycles.
+    {% if scheduled_start %}Scheduled billing start: {{ scheduled_start|date:'d M Y H:i:s T' }}.
+    Authorization happens separately and may include a refundable token payment. It does not grant paid access.
+    {% else %}Payments start on authorization.{% endif %}
+    This prepared Test Mode offer is unpublished; tax is illustrative.</p>
+  <p>After the final cycle, this agreement stops collecting payments. Access follows the last verified paid period,
+    then the normal grace and read-only policy. Contact support to arrange any replacement.</p>
+  <p>Agreement status: <strong>{{ agreement.provider_status|default:agreement.state|capfirst }}</strong><br>
+     Last verified: {{ agreement.verified_at|date:'d M Y H:i T'|default:'Awaiting verification' }}</p>
+  {% if agreement.closed_at %}
+    <div class="alert alert-info">This agreement is closed after refund review. Contact support to prepare a new agreement.
+      Your billing dashboard shows current access; this historical agreement cannot be restarted.</div>
+  {% elif ended %}
+    <div class="alert alert-success">This agreement has ended. Already-paid time is preserved.
+      Any payment already in progress still needs reconciliation. Contact support before starting a replacement agreement.</div>
+  {% elif cancellation_requested %}
+    <div class="alert alert-warning">Cancellation requested. Until Razorpay confirms the agreement has ended,
+      future charges may still occur. Refresh status or contact support; do not create another agreement.</div>
+  {% elif agreement.provider_status == 'pending' %}
+    <div class="alert alert-warning">A recurring collection needs attention. Razorpay may retry the payment.
+      Already-paid time is preserved; an unpaid invoice does not extend it. Refresh status or contact support
+      to review the existing agreement before making another payment.</div>
+  {% elif agreement.provider_status == 'halted' %}
+    <div class="alert alert-warning">Automatic collection has stopped after unsuccessful attempts.
+      Already-paid time is preserved; an unpaid invoice does not extend it. Contact support to review
+      the existing invoice and payment method before starting a replacement agreement.</div>
+  {% endif %}
+  {% if agreement.state == 'verified' %}
+  <form method="post" action="{% url 'workspace_subscriptions:recurring-refresh' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}">
+    {% csrf_token %}<button class="btn btn-outline-secondary" type="submit">Refresh agreement status</button>
+  </form>
+  {% else %}<p>Creation needs provider reconciliation. Contact support; another agreement cannot be started.</p>{% endif %}
+  {% if can_authorize %}
+  <div class="mt-3">
+    <label><input id="recurring-consent" type="checkbox"> I authorize the recurring Test Mode payments described above.</label><br>
+    <button id="recurring-authorize" class="btn btn-primary" type="button" disabled
+      data-start-url="{% url 'workspace_subscriptions:recurring-authorize' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}"
+      data-confirm-url="{% url 'workspace_subscriptions:recurring-confirm' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}">Authorize recurring payments</button>
+    <p id="recurring-result" class="mt-2" role="status" aria-live="polite"></p>
+  </div>
+  {% elif schedule_expired and not cancellation_requested %}
+    <p>The scheduled start has passed. Contact support to review this agreement before authorization.</p>
+  {% elif agreement.provider_status == 'created' and not cancellation_requested %}
+    <p>New authorizations are paused. Contact support to enable the isolated Test Mode rehearsal.</p>
+  {% endif %}
+  {% if can_cancel %}
+  <form class="mt-4" method="post" action="{% url 'workspace_subscriptions:recurring-cancel' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}">
+    {% csrf_token %}
+    <p>Stop future renewals by cancelling this payment agreement now. Your paid end date stays unchanged.
+      This does not request a refund. The cancelled agreement cannot be restarted.</p>
+    <label><input type="checkbox" name="confirm_cancel" value="yes" required> I want to stop future renewals.</label><br>
+    <button class="btn btn-outline-danger mt-2" type="submit">Stop future renewals</button>
+  </form>
+  {% endif %}
+</div></div>
+<h2 class="h4">Verified paid periods</h2>
+<p>Authorizing a payment agreement does not by itself confirm a paid period. Your billing dashboard shows purchased access.</p>
+{% if review_cycles %}
+<h3 class="h5">Payments awaiting access review</h3>
+<p class="alert alert-warning">Some recorded payments need a separate billing review before their periods can be applied.
+  Contact support. Rechecking an invoice or reaching its start date will not activate held access automatically.</p>
+<ul>{% for cycle in review_cycles %}
+  <li><a href="{% url 'workspace_subscriptions:invoice-detail' workspace_slug=request.workspace.slug pk=cycle.invoice_id %}">{{ cycle.invoice.invoice_number }}</a>:
+    {{ cycle.period_start|date:'d M Y H:i T' }} &ndash; {{ cycle.period_end|date:'d M Y H:i T' }} (Access review required)
+    {% if cycle.invoice.checkout_snapshot.access_review_reason == 'future_period' %}
+      <p>Payment received before this period started. Access is unchanged; a separate billing review is required.</p>
+    {% endif %}</li>
+{% endfor %}</ul>
+{% if review_cycles.has_other_pages %}
+<nav aria-label="Payments awaiting access review">
+  {% if review_cycles.has_previous %}<a href="?review_page={{ review_cycles.previous_page_number }}">Previous reviews</a>{% endif %}
+  <span>Page {{ review_cycles.number }} of {{ review_cycles.paginator.num_pages }}</span>
+  {% if review_cycles.has_next %}<a href="?review_page={{ review_cycles.next_page_number }}">More reviews</a>{% endif %}
+</nav>
+{% endif %}
+{% endif %}
+<ul>{% for cycle in cycles %}
+  <li><a href="{% url 'workspace_subscriptions:invoice-detail' workspace_slug=request.workspace.slug pk=cycle.invoice_id %}">{{ cycle.invoice.invoice_number }}</a>:
+    {{ cycle.period_start|date:'d M Y H:i T' }} &ndash; {{ cycle.period_end|date:'d M Y H:i T' }}
+    ({% if cycle.invoice.billing_resolution %}Refund reviewed: {{ cycle.invoice.billing_resolution.get_action_display }}
+    {% elif cycle.access_resolution %}Applied after billing review{% else %}{{ cycle.get_access_action_display }}{% endif %})</li>
+{% empty %}<li>No recurring periods applied to access yet.</li>{% endfor %}</ul>
+{% if agreement.state == 'verified' %}
+<details class="mt-4"><summary>Recover a missing paid invoice</summary>
+  <p>Use the invoice ID supplied by Razorpay or support. This checks an existing payment and does not charge again.</p>
+  <form method="post" action="{% url 'workspace_subscriptions:recurring-recover' workspace_slug=request.workspace.slug agreement_id=agreement.pk %}">
+    {% csrf_token %}<label for="provider-invoice">Razorpay invoice ID</label>
+    <input id="provider-invoice" name="provider_invoice_id" class="form-control" required maxlength="255" pattern="inv_[A-Za-z0-9]+">
+    <button class="btn btn-outline-primary mt-2" type="submit">Verify paid invoice</button>
+  </form>
+</details>
+{% endif %}
+{% else %}
+<div class="alert alert-info">No recurring payment agreement has been prepared for this Workspace.
+  Contact support to arrange the Test Mode rehearsal. Existing paid time remains unchanged.</div>
+{% endif %}
+{% if can_authorize %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="{% static 'js/recurring-checkout.js' %}"></script>
+{% endif %}
+{% endblock %}

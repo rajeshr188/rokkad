@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-09
+updated: 2026-09-28
 tags: [loans, collateral, interest, ltv, disbursal]
 related:
   - ../adr/2026-08-05-pawn-loan-collateral-tranche-economics.md
@@ -19,7 +19,7 @@ related:
 | Each item raises an allocated part of the loan principal | PORT | `allocated_principal` is required per item; the loan principal is their exact sum. |
 | Interest depends on both metal and that item's principal | REPLACE | An effective-dated workspace/license metal-rate policy is resolved for each item. Monthly interest is the sum of each `allocated_principal * metal_rate`. The aggregate rate is derived display evidence, never an editable authority. |
 | An item cannot raise more than its safe value | REPLACE | The configured valuation method selects calculated metal value, latest appraisal, or lower-of-both; `allocated_principal <= selected value * maximum LTV` is service-enforced before number allocation. |
-| Collateral must have visual evidence | PORT | Every new draft item requires a JPEG/PNG photograph. Approval independently fails closed without media and freezes the exact photo identity/hash. |
+| Collateral visual evidence follows Workspace policy | REPLACE | Photos are optional by default and always optional for draft saving. When configured as mandatory, approval requires a usable photograph per item and freezes the applied rule and exact photo identity/hash. |
 | One month's interest is normally deducted upfront | REPLACE | Effective policy owns zero to twelve advance-interest periods. Fees separately declare whether they are deducted at disbursal. |
 | Cash handed to the customer must be explainable | REPLACE | `gross item principal - advance interest - deducted fees = net cash`; approval and disbursal preserve the component and tranche evidence. |
 | Staff may type an arbitrary loan-level interest rate | RETIRE | The loan-level value is derived from frozen tranches for compatibility/display and cannot override item policy. |
@@ -37,12 +37,30 @@ not overwritten; Use suggestion explicitly adopts the estimate. Missing rates or
 invalid inputs never become a zero valuation. Only normal draft saving persists
 the entered appraisal, and approval still validates/freezes the required evidence.
 
+The adjacent LTV hint resolves the selected series' license and loan-date policy.
+It shows the configured percentage, eligible value and per-item maximum, using
+the current entered appraisal. Market-dependent methods require a same-day quote
+for a maximum. Changing appraisal, principal, series or date refreshes the hint;
+it never fills the principal. Preview and approval remain authoritative.
+
+Selecting a borrower shows all active-loan recorded principal, interest, fees and
+total within the Workspace, with a count and link to the borrower's loans. It
+excludes the draft and unposted interest. Failed balance reads are shown as
+unavailable, not a partial or zero total. Late responses cannot replace the
+currently selected borrower's results.
+
+Setup administrators manage the photograph requirement under **Loan setup → Loan
+entry**. The default is optional. Drafts remain saveable without images even when
+mandatory; approval and renewal successors enforce the current rule. See the
+[photo-policy decision](../adr/2026-09-28-collateral-photo-workspace-policy.md).
+
 1. Select Party, license, series, loan date, and tenure. Before saving, the
    page shows the non-consuming next expected PawnLoan number for every
    available series. After saving, the edit page shows the permanently
    allocated official number.
 2. Add every collateral item with metal, net weight, purity, appraisal value,
-   allocated principal, and at least one photograph.
+   allocated principal, and any available photographs. Mandatory-photo Workspaces
+   require a usable photograph for each item at approval.
 3. Preview economics. The page shows each item's rate, selected value, maximum
    principal at LTV, and monthly interest, plus gross principal, deductions,
    and estimated net cash.

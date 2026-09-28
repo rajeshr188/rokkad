@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from apps.platform_mail.views import retry_platform_mail
 
 # Workspace manager routes are global authenticated surfaces. They manage the
 # user's available workspaces and selected workspace, not tenant ERP data.
@@ -79,6 +80,7 @@ ACCOUNT_INVITATION_URLPATTERNS = [
 # list/revoke/success paths remain unscoped for compatibility until canonical
 # workspace-scoped aliases are introduced and tested.
 WORKSPACE_INVITATION_URLPATTERNS = [
+    path("workspace/<int:workspace_id>/team/email/<uuid:delivery_id>/retry/", retry_platform_mail, name="retry_platform_mail"),
     path(
         "workspace/<int:workspace_id>/team/invite/",
         views.team_invite,

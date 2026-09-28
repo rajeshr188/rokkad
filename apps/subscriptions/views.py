@@ -418,6 +418,12 @@ def razorpay_webhook(request):
     import hmac
     import logging
 
+    from .provider_configuration import provider_mode
+    try:
+        provider_mode()
+    except ValidationError:
+        return HttpResponse("Billing provider configuration needs review", status=503)
+
     secret = settings.RAZORPAY_WEBHOOK_SECRET
     signature = request.headers.get("X-Razorpay-Signature", "")
     expected = hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()

@@ -6,10 +6,15 @@ Handles plans, checkout, payments, and invoices.
 from django.urls import path
 from . import views
 from .access_views import WorkspaceAccessControlsView
+from .recurring_views import RecurringActionView, RecurringDashboardView
 
 app_name = "subscriptions"
 
 urlpatterns = [
+    path("recurring/", RecurringDashboardView.as_view(), name="recurring"),
+    *[path("recurring/<int:agreement_id>/" + action + "/", RecurringActionView.as_view(),
+           {"action": action}, name="recurring-" + action)
+      for action in ("authorize", "confirm", "cancel", "refresh", "recover")],
     path("access/", WorkspaceAccessControlsView.as_view(), name="access-controls"),
     # Plans and Subscriptions
     path("plans/", views.SubscriptionPlanListView.as_view(), name="plan-list"),

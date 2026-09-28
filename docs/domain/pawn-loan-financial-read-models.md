@@ -142,6 +142,12 @@ limits do not become origination or settlement rules implicitly.
 
 ## Workflow use
 
+Party and borrower-portal outstanding summaries sum canonical recorded balances
+across all of the borrower's active loans before limiting displayed history rows.
+The default 20-row display is not a monetary aggregation limit. Draft/approved
+records remain visible in the open-loan group without inventing posted balances.
+Party shows a truncation notice when more open loans exist than are displayed.
+
 Licence/series active totals aggregate the canonical recorded balance fold, including
 repayments and reversals. Membership in these reports uses current ACTIVE state;
 the selected date applies to recorded balances, not historical lifecycle membership.

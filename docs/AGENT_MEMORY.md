@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-26
+updated: 2026-09-28
 tags: [agents, context, architecture]
 ---
 
@@ -13,6 +13,222 @@ in [Future work](plans/future-work.md). Prior notes, including superseded decisi
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
 ## Product and tenant foundation
+
+Rokkad is operated by Rajesh Rathod under an as-yet unregistered business name.
+The owner-approved public privacy/grievance contact is Rajesh Rathod at
+support@rokkad.com, 11, 9th Cross Street, Rajiv Gandhi Nagar, Vellore, Tamil Nadu,
+India. Equal developer credits: Rajesh Rathod H (M.S., Software Engineering) and
+Dilip Kumar H (B.Tech, Computer Science). The approved refund review/initiation
+windows are seven/five working days. Workspace closure/data requests are
+support-assisted; expiry does not delete records. See the
+[legal pages decision record](plans/public-legal-pages-review.md).
+
+Collateral photographs are optional by default per Workspace. Loans setup's
+Loan entry setting can require a usable photo per item at approval, including
+renewal successors; drafts always allow missing photos. Approval freezes the
+rule. Explicit optional approvals allow an absent collateral ticket image;
+unavailable/corrupt selected images and older approval/template semantics remain
+strict. Preserve empty draft upload slots so photographs stay with their items.
+The new-loan borrower panel totals every active loan's recorded balances and
+excludes unposted interest. LTV guidance uses the current appraisal and actual
+license/date valuation policy and never auto-fills principal. See the
+[origination contract](domain/loans-mixed-metal-origination.md).
+
+Loan entry keeps process guidance behind **How this works**, customer creation
+beside the Customer field, and the photo rule beside collateral. The compact
+metal-price row retains an always-visible status with **Details** and **Recheck**;
+missing prices/policies, stale/date warnings and request failures expand details.
+Do not hide actionable problems with optional help or equate price readiness
+with loan approval. Existing preflight submission rules remain authoritative.
+
+The dashboard's overdue card links to `/w/<slug>/loans/overdue-payments/`;
+the overdue table is not rendered on the dashboard. The dedicated page reuses
+the canonical counter-work selector, 20-row pagination, permission-aware actions
+and incomplete-schedule warning. Other work queues stay on the dashboard.
+Legacy dashboard `?queue=overdue` links redirect with their date/page parameters.
+
+Party/borrower-portal loan summary totals must include every active loan regardless
+of the history display limit (normally 20). Use canonical recorded balances;
+draft/approved loans do not acquire posted debt. Regression coverage includes
+more than 20 loans and zero-row display limits. The Party list explains truncation.
+
+Latest FW-019 continuation adds explicit `BILLING_PROVIDER_MODE` (disabled by
+default), matching-key/signature/webhook checks, frozen mode for new one-off
+invoices and a sanitized billing/read-only evidence report. Recurring remains
+Test Mode-only. Test receipt previews are labelled and normal SES sending refuses
+test/unclassified receipts; no payment or mail was sent. The isolated DB has two
+unclassified historical one-off invoices and nine queued receipts, unchanged.
+Seven recurring receipts rendered with explicit local preview sender settings.
+AWS case 179042575700203 is now APPROVED: 28 September 11:20:42 IST, Mumbai,
+50,000/day and 14/second, sandbox exit immediate. Console correspondence was read
+after owner sign-in. This clears the provider approval gate only; dispatch remains
+disabled and actual paid-receipt delivery, operations and live recurring acceptance
+remain open. See [billing readiness](implementation/billing-provider-readiness.md).
+
+Previous FW-019 continuation: explicit release of cancelled, fully refunded/reviewed
+immediate Test Mode agreements is implemented and accepted on `annual_rehearsal`
+(Workspace 5, agreement 4, release event 64, closed 28 September 12:20 IST).
+It remains read-only with original dates, entitlements and financial counts intact.
+Old release/payment replays cannot reopen it. Replacement creation/payment is locally
+tested, including a shorter new period; no replacement provider mandate was created.
+137 broad tests plus a final 12 release tests pass. Scheduled/unknown/unpaid attempts
+and unreturned periods are excluded from release. Both pending provider attempts
+remain Created after the short scheduled start passed; preserve and GET-reconcile.
+New authorization/mail/callbacks are off, catalog actor inactive. See the
+[latest checkpoint](implementation/recurring-agreements.md#refunded-agreement-release-and-replacement-2026-09-28).
+
+Previous FW-019 continuation: optional frozen Test Mode scheduled starts and explicit
+cycle-aware full-refund reviews are implemented; 127 focused recurring/review/recovery
+tests pass. Actual full refund + owner end-access review passed for the cancelled
+`annual_rehearsal` mandate (Workspace 5, agreement 4, invoice 8, cycle 6,
+refund `rfnd_ThMJ3PKV1YHev4`, BillingResolution 1). It is now read-only; original
+paid dates/entitlements and replay safety are preserved. Reservation remains held.
+Support reports are **submitted**, annual ticket 21146138 and failure ticket 21146171.
+The separate short scheduled fixture `scheduled_start` (Workspace 7, agreement 6,
+`sub_ThM7GiBY7yxoHg`, start 1790578221 / 12:20:21 IST on 28 September) has an
+unsettled INR 5 token `pay_ThM8vfcR0fWZik`: Checkout reported failure, API still Created.
+No invoice/access exists. Preserve both this attempt and the older pending annual
+renewal; GET-only reconciliation before any retry/cancel. No shorter due-access
+acceptance yet. New authorization/mail/callbacks are off; catalog actor inactive.
+See the [latest checkpoint](implementation/recurring-agreements.md#scheduled-start-support-and-refund-continuation-2026-09-28).
+
+Previous FW-019 continuation: `annual_completion` (Workspace 6, agreement 5,
+`sub_ThBL2wVYJZadDN`) passed initial annual capture/recovery. One accelerated final
+charge (`pay_ThBR0fQ4nwVW3p`, `inv_ThBQyvwJjIJcQ0`) remained Created/Issued at
+01:34:08 IST with agreement Active. Preserve it; resume with GET-only reconciliation
+before any retry/cancel/new fixture. Four older mandates are cancelled, but this
+fifth is still active. Authorization/mail/callbacks/catalog actor are off; watcher
+exited. Nine invoices/payments/queued receipts, seven cycles, zero resolutions.
+Unpaid recovery preserved all paid access and 56 cycle/owner tests pass. Annual
+renewal/completion remains open. See [resumption steps](implementation/recurring-agreements.md#annual-final-charge-attempt-and-production-critical-path-2026-09-28).
+Production timing is now tracked by the [critical path](plans/subscription-monetization-rollout.md#production-critical-path-reviewed-2026-09-28).
+There is no committed date; existing held monthly fixtures start 28 October and a
+shorter scheduled fixture is only a candidate. Live recurring is not implemented.
+The annual illustrative total exceeds the documented domestic-card no-AFA threshold;
+verify customer approval/method eligibility before launch, without asserting this
+caused the current pending test. Both provider diagnostic drafts remain unsent.
+
+Previous FW-019 acceptance: actual annual Test Mode capture/recovery/replay and
+cancellation passed in `annual_rehearsal`. The provider's initial year ends at
+midnight IST and is slightly shorter than 365 elapsed days. Accept that exact
+next-calendar-anniversary boundary only for annual periods strictly between 364
+and 365 days; preserve original timestamps and all other checks. See the
+[annual boundary decision](adr/2026-09-28-annual-invoice-calendar-boundary.md).
+All four test mandates are cancelled; eight invoices/payments/queued receipts,
+six cycles, zero held-access resolutions. Test authorization/mail/callbacks are
+off and the approved temporary catalog actor is disabled again. Annual renewal/
+completion, actual failure recovery and naturally due held access remain open.
+See [annual acceptance](implementation/recurring-agreements.md#annual-provider-acceptance-2026-09-28).
+
+Previous FW-019 rehearsal: a third fictional agreement in `failure_recovery` passed
+initial capture/recovery. One Dashboard **Charge as failure** request unexpectedly
+progressed Created -> Authorized -> Captured after several minutes while the mandate
+stayed Active. Actual Pending/Halted/failure recovery is therefore still unaccepted;
+the cause is unknown, and the local diagnostic draft has not been sent. Unpaid
+recovery preserved access; the eventual October-November capture was recorded once
+with access held. Cancellation happened only after settlement and was independently
+verified. All three test mandates are now cancelled; authorization, mail and
+webhook/tunnel remain off. Pending/Halted owner guidance and 50 cycle/owner tests
+pass, including delayed status hints and recovery without invented paid time.
+Next: provider failure-simulator clarification/reproduction, then remaining
+failure/recovery, annual and naturally due acceptance. See the
+[latest rehearsal](implementation/recurring-agreements.md#failure-simulation-continuation-2026-09-28).
+
+Actual recurring Test Mode initial authorization/payment, signed webhook replay,
+invoice recovery and cancellation passed in a separate fictional Workspace on
+September 28. Cancellation preserves the verified paid period and held reservation.
+The accelerated renewal-failure control produced an unpaid future invoice with a
+Created attempt, so renewal/failure recovery acceptance remains incomplete. Never
+grant time from provider current-period dates or relax future-period verification
+to satisfy the simulator. The test webhook/tunnel are stopped, recurring flag is
+false and mail remains disabled. A fresh diagnostic agreement in `renewal_followup`
+has since proved actual missing-webhook initial-cycle recovery and provider renewal
+capture. The simulator took about six minutes; interim token Failed/recurring
+Confirmed was not the final payment outcome. The future paid invoice is now
+recorded locally as immutable financial evidence with `access_action=review` and
+`access_review_reason=future_period`; existing Subscription fields and entitlements
+stay unchanged. Replay, including after the start date or refund, never applies
+held access. Review cycles do not count as previously applied access when evaluating
+later payments. Owner/invoice/receipt wording explains the hold; the paginated
+Workspace review list includes old agreements. Both test mandates are cancelled
+after settled capture. Held periods now have the explicit `apply_recurring_period`
+command: active owner/platform authority, reason and current Subscription revision,
+fresh matching unrefunded provider/local evidence, started/unexpired period and
+current Workspace/agreement/plan/capacity checks. Migration 0017 stores one immutable
+access resolution per cycle; replay returns history without reactivation. Resolved
+holds count as applied access for subsequent cycles and appear as resolved in owner
+and invoice views. Original cycle/invoice evidence is unchanged. Only the isolated
+rehearsal is migrated; its actual future renewal correctly remains unapplied.
+Next: provider failure/recovery and naturally due held-period acceptance. See the
+[held-access decision](adr/2026-09-28-held-recurring-access-resolution.md) and
+[future-payment decision](adr/2026-09-28-future-recurring-payment-evidence.md).
+Never retry/cancel an uncertain simulated charge early.
+Unpaid recovery now explicitly explains its status and preserves existing access.
+See the [diagnostic continuation](implementation/recurring-agreements.md#renewal-diagnostic-continuation-2026-09-28).
+Evidence and the remaining acceptance boundary
+are in the [recurring runbook](implementation/recurring-agreements.md#actual-provider-rehearsal-2026-09-28).
+
+FW-019 now includes an owner page for operator-prepared Test Mode recurring
+agreements. Checkout authorization verifies a signature using the saved subscription
+ID and grants no access. Cancellation persists an append-only request and dispatch
+claim before one immediate provider cancellation, with GET-only uncertain recovery.
+It preserves paid dates and the Workspace reservation. The default-off flag blocks
+new authorizations but permits existing confirmation, refresh, cancellation and
+paid-invoice recovery with Test Mode keys. No Workspace middleware/RLS exception,
+live activation or self-service agreement creation was introduced. See the
+[owner-action decision](adr/2026-09-27-recurring-owner-actions.md) and
+[runbook](implementation/recurring-agreements.md#owner-authorization-and-cancellation).
+
+FW-014 is active: the owner selected Amazon SES for automated platform mail and
+Google Workspace for human inboxes, and approved focused delivery improvements.
+Both accounts have now been created. Google Admin shows the owner's active
+`admin@rokkad.com` user with Business Starter; support/billing aliases now route
+there. AWS SES `notify.rokkad.com` is verified with RSA 2048 DKIM in Mumbai;
+custom MAIL FROM is Successful. Google DKIM signing is active, root DMARC monitors.
+SES production access is approved in Mumbai as of 28 September (50,000/day,
+14/second); private SNS/SQS feedback resources are connected with scoped
+service grants. Dedicated mail credentials are installed root-private on the new
+Linode, verified as the scoped programmatic IAM user; web has no mail credentials.
+The durable queue is deployed with its owner migration. Dispatch remains disabled;
+dispatch/feedback/recovery timers are installed but disabled. A separate five-minute
+health timer is enabled with private sticky worker-failure alerts; no external pager.
+Controlled invitation/billing-sender
+inbox tests passed SPF/DKIM/DMARC; private SES feedback proved delivery, hard bounce,
+complaint and suppression. The time-limited single-recipient IAM exception expired
+at 2026-09-28 00:00 UTC; do not assume it still authorizes sandbox tests. Google-verified invitation
+acceptance passed with Viewer membership only in the empty test Workspace.
+SES production-access case 179042575700203 was submitted with explicit terms
+approval; its factual follow-up was accepted and AWS approved production access
+on 28 September at 11:20:42 IST, independently read in the console.
+Reply-To selection passed. The authorized single external message addressed to
+both aliases reached the admin inbox; headers identify support as Delivered-To.
+This combined test does not independently isolate billing's envelope path.
+These checks do not activate general sending or prove a real paid-receipt
+workflow. Isolated checkout/receipt tests with mocked provider boundaries now pass.
+Operator suppression and pause/failure acceptance passed: root-private SSH command,
+operator/reference audit, no new app superuser or Workspace access. Manual SQS/DLQ
+review remains part of activation/operations; no automatic DLQ monitor. See runbook
+for exact command and alert acknowledgement. Recheck health before bounded activation.
+`platform_mail` durably queues new invitations/paid receipts in source
+transactions; explicit commands dispatch through dedicated SES v2 settings and
+consume private SNS -> SQS feedback. The queue is control-plane evidence, never
+borrower content. Unknown acceptance is not automatically retried; permanent
+bounce/complaint suppresses recipients. Shared Django/Notify capture is independent.
+Account-security messages remain a separate pending expiry-aware integration.
+See the [delivery decision](adr/2026-09-26-durable-platform-mail.md),
+[runbook](implementation/platform-mail.md) and [rollout](plans/platform-email-rollout.md).
+No historical sent-flag replay; no production activation before scoped credentials,
+restricted workers, migration and controlled real-provider acceptance.
+
+FW-009's potential promise is "Verify customer identity and reduce manual entry."
+The owner approved feasibility review, not implementation. The
+[desk review](plans/borrower-identity-feasibility.md) is complete; lender/platform
+eligibility, permitted hosting and all-in cost still need written confirmation.
+The owner shelved the legal-entity clarification and written-enquiry next step on
+2026-09-26. Resume FW-009 only on explicit owner instruction; preserve the review
+and unsent enquiry, and recheck current requirements/pricing when resumed.
+Do not treat existing Party verification flags as integrated Aadhaar verification
+or automatically reuse identity evidence in the photo gallery/loan tickets.
 
 Approved itemized native loans with stale quotes and no financial events have
 Review updated valuation for cash not yet paid. Compare historical approval to
@@ -210,6 +426,12 @@ V4 overlay text frames have opt-in bold; default canonical layout hashes remain
 stable. Retain the current optional-photo and words-fit settings when updating
 JCL geometry. Release `e5822c02` includes migration 0020 and a real bundled bold
 Unicode font. Detailed activation/backup evidence is in Status.
+
+JCL's production template revision 4 corrects mixed-metal weight overflow in the
+existing (25,130) mm frame: 10 pt text, zero padding, automatic leading and SHRINK.
+Both metal totals retain full precision and clear the printed border. Preserve
+this setting when revising/exporting the template; single-metal previews alone
+do not cover it. Published history and existing issued PDF bytes stay immutable.
 
 Native first-ticket issuance with photo fields requires preserving approval ID and
 fingerprint separately from per-photo metadata. Release `a5a38bb9` fixes variable
@@ -1014,6 +1236,58 @@ there and would overwrite a token set before rendering. See
 
 ## Billing and operations
 
+The owner selected subscription monetization delivery as
+[FW-019](plans/future-work.md#fw-019-workspace-subscription-monetization-and-razorpay-automatic-renewal),
+on 2026-09-26: per-Workspace pricing, included staff seats, separate onboarding and
+messaging, and Razorpay automatic renewal. The owner confirmed working INR
+1,499/month or INR 14,990/year prices, still unpublished, and owner plus five staff:
+six total members using the existing member limit. The owner subsequently started
+Razorpay onboarding. Following the NBFC document request, the owner reports
+successful software/SaaS reclassification, application submission and completed
+KYC. The owner confirms test-key generation is offered and Subscriptions opens;
+the regenerated CSV pair is verified through the Payments API (HTTP 200) and saved
+with Windows DPAPI at `%LOCALAPPDATA%\Rokkad\private\razorpay-test.dpapi`.
+On 2026-09-27 the owner reported account approval and both Live/Test modes active.
+Read-only Payments, Plans and Subscriptions calls all returned HTTP 200 using the
+saved test pair. The earlier 401 obstacle is resolved; no further rotation or
+support escalation is needed on that evidence. Live-key generation is unknown;
+no live credentials were requested. Source CSVs are unchanged; browser entry is
+stopped. The [isolated billing rehearsal](implementation/billing-test-rehearsal.md)
+now has an empty dedicated local database, restricted runtime and an owner-approved
+Cloudflare callback-only tunnel. Provider monthly/annual wallet capture, signed
+webhook/replay, recovery and partial/full simulated refund checks passed. Two
+receipts remain queued with dispatch off; card/netbanking and real receipt delivery
+are not accepted. Browser confirmation retries must reuse the captured payment
+identity and never reopen checkout after provider success. Never tunnel the full local web app
+or dispatch receipts to fictional contacts. Applicant legal entity remains
+unrecorded. The category-review obstacle is resolved for
+submission; do not ask for that review again. Do not infer regulatory exemption.
+Existing Razorpay Orders checkout buys individual terms. Recurring preparation
+now has immutable provider-plan bindings and durable Workspace agreement attempts,
+behind default-off BILLING_RECURRING_ENABLED and Test Mode credentials only.
+The operator command owns its transactions: persist the attempt before provider
+creation; an unknown outcome cannot retry creation or start another purchase.
+Reconcile an explicitly located provider ID against frozen plan and UUID/Workspace
+notes. Agreement status never grants/shortens purchased access. Manual purchases
+share the open-agreement guard; terminal observations retain their reservation
+until financial-cycle reconciliation is implemented. See the
+[agreement decision](adr/2026-09-27-recurring-agreement-evidence.md).
+Recurring paid-cycle processing now verifies provider invoice/payment/agreement/
+plan identity and exact frozen price/period before an atomic Cycle/Invoice/Payment,
+entitlement and receipt-intent write. Replays never renew twice or reactivate access;
+older periods cannot shorten newer paid time. Lifecycle observations have no human
+actor and never change purchased access. Existing creation gates do not block
+known Test Mode recovery. Closed/replaced/archived/conflicting-term captures can
+record financial evidence with access held for review. Recurring refunds reuse
+verified evidence but cannot use the manual end-access action. See the
+[paid-cycle decision](adr/2026-09-27-recurring-paid-cycles.md).
+Prepared owner authorization/cancellation is implemented locally; real recurring
+provider acceptance and self-service creation remain outstanding. See the
+[active rollout](plans/subscription-monetization-rollout.md). Production checkout
+remains disabled pending acceptance; no existing plans or purchased terms are
+automatically repriced. Annual savings must derive from the actual monthly/annual
+prices; this offer saves INR 2,998, not 20%. Set its annual price explicitly.
+
 Billing is global control-plane data linked to Workspace subscriptions; browser
 billing actions require canonical owner/Membership or the existing platform override.
 Frozen checkout/order/amount/currency evidence precedes verified captured-payment
@@ -1381,10 +1655,11 @@ was published with the access/media checkpoint. Historical Git cleanup is separa
 
 FW-001 optional owner-configurable license scope remains shelved pending fresh
 review and explicit approval. Do not infer assigned-license or creator-only access.
-FW-002 Razorpay setup/test-mode acceptance is shelved because setup has not started.
-Do not request provider keys or run provider setup during other work. Acceptance is
-still required before real paid onboarding. Neither item resumes from "proceed" on
-unrelated cleanup.
+FW-002 test-mode preparation resumes under the owner's selected FW-019 following
+reported SaaS reclassification, application submission and KYC completion. Verify
+test access, select an isolated rehearsal runtime and handle secrets privately;
+no live charges or production checkout activation. Provider acceptance is still
+required before paid onboarding. FW-001 remains shelved independently.
 
 R08/R09/R10 cleanup is complete: current docs are separated from history, tour
 choices use current product names and preserve old saved answers, and six unused

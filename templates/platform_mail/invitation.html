@@ -1,0 +1,9 @@
+<!doctype html><html><body style="font-family:Arial,sans-serif;color:#173c38;max-width:600px;margin:24px auto;padding:20px">
+<p style="font-size:26px;font-weight:bold">Rokkad</p>
+<h1 style="font-size:22px">Join {{ invitation.company.name }}</h1>
+<p>{{ invitation.inviter.get_full_name|default:invitation.inviter.username }} invited you to this Workspace as <strong>{{ invitation.role.name }}</strong>.</p>
+<p>Sign in with <strong>{{ invitation.email }}</strong> and verify that email address to accept. This invitation does not grant access until you accept it.</p>
+<p><a href="{{ invite_url }}" style="display:inline-block;background:#173c38;color:white;padding:12px 20px;border-radius:6px">Review invitation</a></p>
+<p>Valid until {{ expires_at|date:'d/m/Y H:i T' }}. If you were not expecting this invitation, you can ignore it.</p>
+<p>Need help? Reply to this email.</p>
+</body></html>

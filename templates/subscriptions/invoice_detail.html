@@ -192,6 +192,7 @@
 {% endblock %}
 
 {% block mgmt_content %}
+{% if invoice.status == 'paid' %}{% include 'platform_mail/status.html' with delivery=invoice.email_delivery mail_workspace=invoice.subscription.company %}{% endif %}
 {% include "subscriptions/_navigation.html" %}
 <div class="container py-5">
     <div class="invoice-container">
@@ -203,20 +204,20 @@
             </div>
             <div class="invoice-status">
                 <div class="invoice-number">Invoice #{{ invoice.invoice_number }}</div>
-                <span class="status-badge {% if invoice.is_paid %}status-paid{% else %}status-pending{% endif %}">
-                    {% if invoice.is_paid %}Paid{% else %}Pending Payment{% endif %}
+                <span class="status-badge {% if invoice.status == 'paid' %}status-paid{% else %}status-pending{% endif %}">
+                    {{ invoice.get_status_display }}
                 </span>
             </div>
         </div>
         
         <!-- Payment Status Info -->
-        {% if invoice.is_paid %}
+        {% if invoice.status == 'paid' %}
         <div class="payment-status-info paid">
             <strong>✓ Payment Received</strong>
             <br>
-            <small>Paid on {{ invoice.paid_date|date:"M d, Y" }}</small>
+            <small>Paid on {{ invoice.paid_at|date:"M d, Y" }}</small>
         </div>
-        {% else %}
+        {% elif invoice.status == 'issued' or invoice.status == 'overdue' %}
         <div class="payment-status-info pending">
             <strong>Payment Pending</strong>
             <br>
@@ -224,6 +225,24 @@
         </div>
         {% endif %}
         
+        {% if invoice.recurring_cycle.access_resolution %}
+        <div class="alert alert-info">
+            <strong>Paid period applied after billing review.</strong>
+            <p>{{ invoice.recurring_cycle.period_start|date:"d M Y H:i T" }}
+                &ndash; {{ invoice.recurring_cycle.period_end|date:"d M Y H:i T" }}.
+                Reviewed on {{ invoice.recurring_cycle.access_resolution.created_at|date:"d M Y H:i T" }}.</p>
+            <p>This records the review outcome. Your Billing dashboard shows current access.</p>
+        </div>
+        {% elif invoice.checkout_snapshot.access_review_reason == 'future_period' %}
+        <div class="alert alert-warning">
+            <strong>Payment recorded; access review required.</strong>
+            <p>Paid period: {{ invoice.recurring_cycle.period_start|date:"d M Y H:i T" }}
+                &ndash; {{ invoice.recurring_cycle.period_end|date:"d M Y H:i T" }}.</p>
+            <p>This payment was received before its period started. Existing access is unchanged.
+                The period will not activate automatically; contact support for a separate billing review.</p>
+        </div>
+        {% endif %}
+
         <!-- Invoice Information -->
         <div class="invoice-info">
             <div class="info-section">
@@ -242,10 +261,12 @@
                     <strong>Due Date:</strong><br>
                     {{ invoice.due_date|date:"M d, Y" }}
                 </p>
+                {% if invoice.checkout_snapshot.billing_cycle %}
                 <p>
-                    <strong>Invoice Period:</strong><br>
-                    {{ invoice.period_start|date:"M d, Y" }} - {{ invoice.period_end|date:"M d, Y" }}
+                    <strong>Billing Cycle:</strong><br>
+                    {% if invoice.checkout_snapshot.billing_cycle == 'yearly' %}Yearly{% else %}Monthly{% endif %}
                 </p>
+                {% endif %}
             </div>
         </div>
         
@@ -262,7 +283,7 @@
                     <td>
                         <strong>{{ invoice.billed_plan_name }}</strong>
                         <br>
-                        <small class="text-muted">Monthly subscription for {{ invoice.period_start|date:"M Y" }}</small>
+                        <small class="text-muted">{% if invoice.checkout_snapshot.billing_cycle == 'yearly' %}One-year subscription term{% elif invoice.checkout_snapshot.billing_cycle == 'monthly' %}One-month subscription term{% else %}Subscription{% endif %}</small>
                     </td>
                     <td class="text-right">₹{{ invoice.subtotal }}</td>
                 </tr>
@@ -287,7 +308,7 @@
                 </tr>
                 {% endif %}
                 <tr class="total">
-                    <td class="label">Total Amount Due:</td>
+                    <td class="label">{% if invoice.status == 'paid' %}Total Paid:{% else %}Total Amount Due:{% endif %}</td>
                     <td class="amount">₹{{ invoice.total_amount }}</td>
                 </tr>
             </tbody>
@@ -334,6 +355,11 @@
             <p>Retaining access leaves the existing term unchanged, including its expiry.
             Ending access cancels only the current, started, fully refunded term. A newer
             or future paid term cannot be ended through this review.</p>
+            {% if invoice.checkout_snapshot.kind == 'recurring' %}
+            <p>Recurring refunds are checked against Razorpay before this decision is saved.
+            To end access, first stop future renewals and verify that the agreement has ended.
+            Other paid periods must be reviewed separately. This decision does not cancel a payment agreement.</p>
+            {% endif %}
             <p>For a stale unpaid checkout, first arrange any refund with the provider.
             Record a full return here using all processed refund IDs. This action never
             issues a refund, grants access or rewrites the current subscription.</p>

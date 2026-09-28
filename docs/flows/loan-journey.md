@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-26
+updated: 2026-09-28
 tags: [loans, journey, product, operators, developers]
 ---
 
@@ -75,7 +75,9 @@ Collateral rows capture metal, description, quantity, gross/net weight, purity,
 appraisal, allocated principal and photographs. Quantity means pieces; weights
 and allocations are row totals, never multiplied by quantity again. New rows
 default to quantity 1 and purity 75%; historic unknown quantity remains unknown.
-Each native loan item needs a photo for approval. Missing borrower photos can
+Collateral photos are optional by default. Loan setup's **Loan entry** rule can
+require a usable photo per item at approval; drafts always allow missing photos.
+The same rule applies to renewal successors. Missing borrower photos can
 use blank/default presentation. Multiple photos and available camera selection
 support capture; ticket space is conserved with selected/default photographs.
 
@@ -152,6 +154,17 @@ requires settlement and item-return readiness. Do not present funding movements
 as ordinary borrower repayments.
 
 ## 5. Coverage, overdue status and reporting
+
+The dashboard keeps **Overdue payments** as a compact count card. Select
+**View overdue payments** to open the dedicated follow-up page at
+`/w/<workspace-slug>/loans/overdue-payments/`, with 20 loans per page, oldest
+unpaid scheduled dates first and the existing repayment/review actions. The
+displayed amount is scheduled principal and interest, not a settlement quote.
+Loans with missing or inconsistent schedules remain visibly excluded with a
+link to **Schedule needs review**. **Back to dashboard** preserves the lending
+activity date selection; that selection does not change today's overdue queue.
+Draft, approved and due-today queues remain on the dashboard. Older dashboard
+`?queue=overdue` links redirect to the new page.
 
 **Collateral coverage** compares eligible collateral value with relevant debt
 exposure. The exposure basis depends on product family: maturity payoff for

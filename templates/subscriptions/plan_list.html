@@ -100,7 +100,7 @@
     <div class="row mb-5">
         <div class="col-12">
             <h1 class="mb-2">Choose Your Plan</h1>
-            <p class="text-muted">Flexible pricing for businesses of all sizes</p>
+            <p class="text-muted">One subscription per Workspace. Prices shown before applicable tax.</p>
         </div>
     </div>
     
@@ -122,7 +122,8 @@
                 
                 {% if plan.yearly_price %}
                 <p class="text-muted small">
-                    or ₹{{ plan.yearly_price }}/year <span class="badge badge-success">Save 20%</span>
+                    or ₹{{ plan.yearly_price }}/year
+                    {% if plan.annual_savings > 0 %}<span class="badge badge-success">Save ₹{{ plan.annual_savings|floatformat:2 }} compared with 12 monthly payments</span>{% endif %}
                 </p>
                 {% endif %}
                 
@@ -130,7 +131,7 @@
                 
                 <h5 class="mt-4 mb-3">Features</h5>
                 <ul class="plan-features">
-                    <li>{{ plan.max_users }} Users</li>
+                    <li>{{ plan.max_users }} members including the owner</li>
                     <li>{{ plan.max_transactions_per_month }} Monthly Operations</li>
                     <li {% if not plan.has_advanced_reporting %}class="unavailable"{% endif %}>
                         Advanced Reporting
@@ -187,7 +188,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>Max Users</strong></td>
+                            <td><strong>Members including the owner</strong></td>
                             {% for plan in plans %}
                             <td class="text-center">{{ plan.max_users }}</td>
                             {% endfor %}
@@ -236,8 +237,10 @@
     {% endif %}
     
     <!-- Trial Info -->
+    {% if trial_start_enabled and not current_subscription %}
     <div class="alert alert-info mt-5">
-        <strong>Free Trial:</strong> All plans come with a 14-day free trial. No credit card required.
+        Where available, start a trial using the plan's trial button. Trial length is shown on each eligible plan.
     </div>
+    {% endif %}
 </div>
 {% endblock %}

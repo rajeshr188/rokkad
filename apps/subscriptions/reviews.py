@@ -24,6 +24,10 @@ def resolve_billing_review(*, workspace, actor, invoice_id, action, reason, revi
     invoice = Invoice.objects.select_related("subscription").filter(pk=invoice_id, subscription__company=workspace).first()
     if not invoice or not invoice.checkout_snapshot:
         raise ValidationError("A known Workspace checkout is required.")
+    if invoice.checkout_snapshot.get("kind") == "recurring":
+        from .recurring_access import resolve_recurring_refund
+        return resolve_recurring_refund(workspace=workspace, actor=actor, invoice_id=invoice.pk,
+                                        action=action, reason=reason, revision=revision)
     payment, refunds = None, []
     if action == "returned_payment":
         _identifier(payment_id)

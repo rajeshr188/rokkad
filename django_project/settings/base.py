@@ -63,6 +63,7 @@ SHARED_APPS = [
     # Local
     "accounts",
     "apps.configuration",
+    "apps.platform_mail.apps.PlatformMailConfig",
     "apps.tenancy.apps.TenancyConfig",
     "apps.onboarding",  # User onboarding flow
     "apps.subscriptions",
@@ -220,15 +221,24 @@ STATICFILES_FINDERS = [
 # https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_PORT = env("EMAIL_PORT")
-EMAIL_USE_TLS = env("EMAIL_USE_TLS")
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+# Capture by default. Activating external mail requires a deliberate deployment
+# change and acceptance; never infer permission to send from stored credentials.
+from django_project.email_configuration import email_settings
+
+globals().update(email_settings(env))
+
+# Platform queue uses a dedicated SES API transport. The shared Django backend
+# remains capture-only unless separately configured; borrower mail is not enabled.
+PLATFORM_EMAIL_ENABLED = env.bool("PLATFORM_EMAIL_ENABLED", default=False)
+PLATFORM_EMAIL_BASE_URL = env("PLATFORM_EMAIL_BASE_URL", default="")
+PLATFORM_EMAIL_SENDER_DOMAIN = env("PLATFORM_EMAIL_SENDER_DOMAIN", default="notify.rokkad.com")
+PLATFORM_SES_REGION = env("PLATFORM_SES_REGION", default="ap-south-1")
+PLATFORM_SES_ACCESS_KEY_ID = env("PLATFORM_SES_ACCESS_KEY_ID", default="")
+PLATFORM_SES_SECRET_ACCESS_KEY = env("PLATFORM_SES_SECRET_ACCESS_KEY", default="")
+PLATFORM_SES_CONFIGURATION_SET = env("PLATFORM_SES_CONFIGURATION_SET", default="")
+PLATFORM_SES_ACCOUNT_ID = env("PLATFORM_SES_ACCOUNT_ID", default="")
+PLATFORM_SES_TOPIC_ARN = env("PLATFORM_SES_TOPIC_ARN", default="")
+PLATFORM_SES_EVENTS_QUEUE_URL = env("PLATFORM_SES_EVENTS_QUEUE_URL", default="")
 
 # Notify v2 WhatsApp delivery uses Meta's Cloud API exclusively. SMS remains
 # fail-closed until a separate provider is deliberately selected.
@@ -380,6 +390,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 RAZORPAY_KEY_ID = env("RAZORPAY_KEY_ID", default="test_key_id")
 RAZORPAY_KEY_SECRET = env("RAZORPAY_KEY_SECRET", default="test_key_secret")
 RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET", default="")
+BILLING_PROVIDER_MODE = env("BILLING_PROVIDER_MODE", default="disabled")
 
 # Billing Configuration
 BILLING_TAX_RATE = env("BILLING_TAX_RATE", default="18")  # 18% GST for India
@@ -387,6 +398,8 @@ BILLING_ALLOW_TRIAL_START = env.bool("BILLING_ALLOW_TRIAL_START", default=DEBUG)
 SUBSCRIPTION_GRACE_DAYS = 7
 # Enable only after provider checkout/webhook acceptance on the deployment.
 BILLING_CHECKOUT_ENABLED = env.bool("BILLING_CHECKOUT_ENABLED", default=False)
+# Operator-only Test Mode contract preparation; no recurring customer checkout yet.
+BILLING_RECURRING_ENABLED = env.bool("BILLING_RECURRING_ENABLED", default=False)
 
 THOUSAND_SEPARATOR = ","
 DECIMAL_SEPARATOR = "."

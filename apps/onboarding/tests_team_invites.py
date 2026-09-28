@@ -56,7 +56,7 @@ class OnboardingTeamInviteTests(SimpleTestCase):
         logger_error.assert_called_once()
         success_message.assert_called_once_with(
             request,
-            "Invitations sent to 1 team members!",
+            "Invitations saved for 1 team members. Check Invitations for email delivery status.",
         )
         audit_log.assert_called_once()
         self.assertEqual(audit_log.call_args.kwargs["data"]["count"], 1)

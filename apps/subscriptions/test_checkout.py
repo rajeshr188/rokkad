@@ -62,6 +62,21 @@ class CheckoutTests(TestCase):
         self.assertIsNone(invoice.subscription.trial_end_date)
         self.assertFalse(invoice.subscription.entitlements.exists())
 
+    @override_settings(BILLING_TAX_RATE="18")
+    def test_working_launch_offer_freezes_explicit_annual_price_and_six_members(self):
+        self.plan.price = Decimal("1499.00")
+        self.plan.yearly_price = Decimal("14990.00")
+        self.plan.max_users = 6
+        self.plan.save()
+        for cycle, expected_paise in (("monthly", 176882), ("yearly", 1768820)):
+            with self.subTest(cycle=cycle):
+                invoice = self.order(billing_cycle=cycle)
+                self.assertEqual(invoice.checkout_snapshot["amount"], expected_paise)
+                members = next(row for row in invoice.checkout_snapshot["entitlements"]
+                               if row["feature_code"] == "workspace.max_members")
+                self.assertEqual(members["value"], "6")
+                self.assertFalse(invoice.subscription.auto_renew)
+
     def test_same_checkout_reuses_order(self):
         key = uuid4()
         first, second = self.order(request_key=key), self.order(request_key=key)
@@ -82,12 +97,45 @@ class CheckoutTests(TestCase):
 
     def test_receipt_scheduled_once_after_success_and_not_after_rollback(self):
         invoice = self.order()
-        with patch("apps.subscriptions.notifications.send_mail") as mail:
-            with self.captureOnCommitCallbacks(execute=True):
+        from apps.platform_mail.models import Delivery
+        with patch("apps.platform_mail.transport.send_ses") as transport:
+            self.confirm(invoice)
+            self.confirm(invoice)
+        transport.assert_not_called()
+        delivery = Delivery.objects.get(invoice=invoice)
+        self.assertEqual(delivery.recipient, "owner@example.test")
+        self.assertEqual(delivery.status, Delivery.Status.QUEUED)
+
+    def test_receipt_and_payment_roll_back_together_without_external_io(self):
+        from apps.platform_mail.models import Delivery
+        invoice = self.order()
+        with patch("apps.platform_mail.transport.send_ses") as transport:
+            with self.assertRaises(RuntimeError), transaction.atomic():
                 self.confirm(invoice)
-                self.confirm(invoice)
-            mail.assert_called_once()
-            self.assertEqual(mail.call_args.args[3], ["owner@example.test"])
+                raise RuntimeError("Abort outer transaction")
+        transport.assert_not_called()
+        self.assertFalse(Delivery.objects.filter(invoice=invoice).exists())
+        self.assertFalse(Payment.objects.exists())
+        invoice.refresh_from_db()
+        self.assertNotEqual(invoice.status, "paid")
+
+    @override_settings(BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_mockfixture")
+    def test_receipt_transport_failure_does_not_undo_payment(self):
+        from apps.platform_mail.models import Delivery
+        from apps.platform_mail.services import dispatch_one, retry_delivery
+        from apps.platform_mail.transport import TransportFailure
+        from apps.platform_mail.tests import MAIL_SETTINGS
+        invoice = self.order()
+        self.confirm(invoice)
+        row = Delivery.objects.get(invoice=invoice)
+        with override_settings(**MAIL_SETTINGS), patch("apps.platform_mail.transport.send_ses", side_effect=TransportFailure("ses_rejected")):
+            self.assertEqual(dispatch_one(row.pk), Delivery.Status.FAILED)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, "paid")
+        self.assertEqual(Payment.objects.count(), 1)
+        with workspace_context(self.workspace.pk):
+            retry_delivery(row.pk, actor=self.owner)
+        self.assertEqual(Payment.objects.count(), 1)
 
     def test_real_http_order_and_confirmation(self):
         self.client.force_login(self.owner)

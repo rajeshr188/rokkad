@@ -1267,7 +1267,7 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			 patch("apps.orgs.web.invitations.control_plane.send_team_invitation"):
 			self._team_invite_view()(request, workspace_id=9)
 
-		mock_messages.success.assert_called_once_with(request, "Invitation sent successfully")
+		mock_messages.success.assert_called_once_with(request, "Invitation saved. Email is queued; check its delivery status in Invitations.")
 		mock_redirect.assert_called_once_with(
 			"workspace_slug_settings_invitations",
 			workspace_slug="acme",
@@ -1721,6 +1721,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		failure = ValidationError("duplicate")
 
 		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch("apps.orgs.services.control_plane.transaction.atomic", return_value=contextlib.nullcontext()), \
 			 patch.object(control_plane.Role.objects, "get", return_value=member_role) as mock_role_get, \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as assert_can_invite, \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity, \

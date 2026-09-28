@@ -11,6 +11,13 @@ related:
 
 # Workspace WhatsApp Cloud integration acceptance
 
+The broader platform/Workspace messaging product scope is tracked in
+[FW-011](future-work.md#fw-011-platform-and-workspace-whatsapp-messaging-and-phone-verification)
+(2026-09-26). This plan remains the narrower integration-acceptance dependency;
+its historical tenant-routing descriptions must be reconciled with current
+shared-schema Workspace/RLS contracts before implementation. Recording FW-011
+does not start this work or authorize sending test messages.
+
 ## Goal
 
 Give each Workspace Owner/Admin a controlled way to prove that the workspace's

@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-09-24
+updated: 2026-09-28
 tags: [architecture, saas, control-plane, workspace, rls, rbac, billing]
 related:
   - saas-control-plane-architecture-audit.md
@@ -364,6 +364,51 @@ Suspension/archive and ordinary RBAC/RLS remain stronger boundaries. Grants do n
 change billing records. See the
 [accepted decision](../adr/2026-09-24-subscription-access-continuity.md).
 
+Recurring preparation adds global billing evidence (`RecurringPlanBinding`,
+`RecurringAgreement`, `RecurringAgreementEvent`) under the
+[agreement decision](../adr/2026-09-27-recurring-agreement-evidence.md).
+The command owns short explicit Workspace transactions and commits a unique
+creation attempt before provider I/O. It must not run inside the HTTP middleware
+transaction. Provider mandate state never changes commercial access by itself;
+unknown attempts reserve the Workspace against another recurring/manual purchase.
+There are no generic model permissions or tenant-business RLS ownership changes.
+
+`RecurringCycle` adds immutable global evidence for one provider-paid invoice and
+its exact period, linked to the ordinary Invoice/Payment. Signed callbacks and
+owner recovery share verification and Company-row serialization. Paid cycles can
+advance commercial access; mandate lifecycle observations cannot. Replays never
+reactivate access and older periods cannot shorten newer paid time. See the
+[paid-cycle decision](../adr/2026-09-27-recurring-paid-cycles.md).
+
+Verified future periods record financial evidence with `access_action=review`,
+without changing existing Subscription fields or entitlements. They are not
+previously applied access evidence. Neither reaching the start date nor replay
+applies them; a separate authorized, audited resolution is required. See the
+[future-payment decision](../adr/2026-09-28-future-recurring-payment-evidence.md).
+
+`RecurringAccessResolution` now records one immutable application per held future
+cycle. The explicit Test Mode command requires a reviewed Subscription revision,
+reason, active owner/platform authority and fresh provider/local eligibility checks.
+It applies exact dates and frozen entitlements atomically with the resolution and
+audit. Resolved holds count as applied evidence; retries cannot reactivate access.
+This global control-plane record follows the cycle's immutable Workspace linkage.
+See the [held-access decision](../adr/2026-09-28-held-recurring-access-resolution.md).
+
+A cancelled, fully refunded Test Mode agreement can now release its reservation
+through an explicit owner/platform-authorized command with fresh provider settlement
+checks, completed refund reviews and the current Subscription revision. Closing and
+audit are atomic; access and payment history are unchanged. Only a verified payment
+for a separately prepared replacement can activate its own exact period. See the
+[release decision](../adr/2026-09-28-refunded-recurring-reservation-release.md).
+
+Provider configuration is explicit and separate from activation. New one-off
+invoice snapshots freeze provider mode; recurring invoices derive it from their
+immutable binding. Mismatched modes cannot process payment/refund evidence and
+historical unclassified records cannot be interpreted as live. Receipt dispatch
+requires recorded live evidence and live process mode; test receipts remain local
+previews until a separate controlled delivery rehearsal. See the
+[mode decision](../adr/2026-09-28-explicit-billing-provider-mode.md).
+
 ## 10. Entitlements
 
 The target public API is a single Workspace-scoped service:
@@ -611,3 +656,17 @@ clearly named and cannot grant access.
 No architectural decision remains open for Phase 1. HTTP status/redirect copy
 and the final resolver result type are implementation details constrained by
 these contracts.
+
+
+## 16. Platform email delivery evidence
+
+New invitations and paid billing receipts commit durable delivery intent in their
+source transaction. Delivery references exactly one global invitation or invoice;
+Attempts and provider events are control-plane operational evidence. These tables
+are not generic Workspace-owned notification storage. Borrower content stays in
+Notify v2 under forced RLS. Global suppression is deliberately platform-wide.
+Workspace display/retry resolves the explicit Workspace and source relation;
+retry requires role-grant authority or canonical billing ownership. No general
+mail CRUD/list API or default model permissions are granted. Workers use the
+restricted role, including when evaluating Workspace-owned role grants. See the
+[decision](../adr/2026-09-26-durable-platform-mail.md).

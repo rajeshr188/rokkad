@@ -7,7 +7,7 @@ tags: [domain, notifications]
 
 # Notifications
 
-Notify v2 is the supported delivery app. Loans owns notice intent and the financial
+Notify v2 is the supported borrower-notification delivery app. Loans owns notice intent and the financial
 facts behind it; delivery attempts and provider outcomes do not determine loan
 state. Customer notice creation/retry and internal scheduled delivery have separate
 authorization boundaries. Keep batching, retries and delivery evidence testable.
@@ -28,3 +28,9 @@ exports or attachments. Provider acceptance must not be inferred from mocked tes
 Legacy Notify is retired. Prior redesign notes and integration investigations remain
 in the [historical snapshot](../archive/context/2026-09-09/domain/notifications.md)
 and [notification archive](../archive/notifications/).
+
+Platform invitations and paid subscription receipts use the separate control-plane
+[platform mail queue](../implementation/platform-mail.md). Its source transaction
+records intent; delivery never determines membership acceptance or payment truth.
+Shared Django account-security mail is a separate, still-captured path. Keep these
+purposes distinct from Workspace-owned borrower notices.

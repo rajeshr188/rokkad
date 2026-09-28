@@ -1,12 +1,41 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-09-28
 tags: [domain, subscriptions, monetization]
 related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 ---
 
 # Subscriptions
+
+Billing requires an explicit configured provider mode with matching keys. New
+one-off invoices freeze mode; recurring invoices inherit their saved plan binding.
+Historical unclassified records cannot be silently processed as live purchases.
+Test receipt previews are labelled and normal SES dispatch refuses test/unclassified
+payments. Configuration checks never certify launch readiness. See the
+[mode decision](../adr/2026-09-28-explicit-billing-provider-mode.md).
+
+Operator Test Mode preparation supports an optional immutable scheduled start.
+The owner sees the exact time; authorization/token payment grants no access.
+Every provider observation must match the schedule and no paid period may precede
+it. A passed start blocks new authorization of a still-Created agreement, while
+recovery and cancellation remain available. This is not prepaid/trial conversion.
+See the [scheduled-start decision](../adr/2026-09-28-scheduled-recurring-test-start.md).
+
+Fully refunded recurring invoices now use the existing explicit owner billing
+review with fresh provider and local refund evidence. Retaining access changes
+no dates; ending access requires a verified ended mandate and the exact current
+refunded cycle, with no other unreturned future/current paid periods. Neither
+decision issues a refund or releases the agreement reservation. See the
+[refund-review decision](../adr/2026-09-28-recurring-refund-access-review.md).
+
+A separate operator command can release the reservation after a cancelled
+immediate-start Test Mode agreement is fully refunded and reviewed, with access
+ended and no unresolved payments. It preserves history and grants no access. A new
+agreement still requires a new durable attempt and verified payment; its exact
+period can replace a longer refunded historical term after matching release review.
+Scheduled tokens and unreturned paid periods remain blocked. See the
+[release decision](../adr/2026-09-28-refunded-recurring-reservation-release.md).
 
 The subscriptions domain manages company subscription plans, access checks, monetization flows, and navigation visibility.
 
@@ -21,6 +50,43 @@ Archived subscription sources are preserved in [archive/subscriptions](../archiv
 Current paid flow: [Workspace checkout](../flows/subscription-checkout.md). This
 records one-off paid terms; remaining recovery/provider acceptance is tracked
 in [project hardening](../plans/project-hardening.md).
+
+The owner selected [FW-019's active rollout](../plans/subscription-monetization-rollout.md)
+on 2026-09-26. The unpublished working offer is INR 1,499/month or INR 14,990/year
+per Workspace, owner plus five staff (six total members). Display actual annual
+savings against twelve monthly payments and show trial offers only when enabled
+and eligible. Operator-only Test Mode agreement preparation now records frozen
+provider plans and durable creation/recovery attempts. It grants no access.
+Verified recurring paid cycles now record exact provider-invoice periods once,
+with atomic invoices, payments, applicable access changes and receipt intent.
+Future periods record the received money with access held for separate review;
+existing subscription fields and entitlements stay unchanged. Neither reaching
+the start date nor rechecking the invoice automatically applies held access.
+The owner page, invoice and receipt explain this, and older agreement review
+payments remain visible. Operators can now apply eligible started/unexpired holds
+through an explicit owner/platform-authorized review command with reason, current
+subscription revision and fresh payment/refund checks. It records an immutable
+resolution; original payment evidence stays unchanged. Conflicting/newer terms,
+closed agreements, inactive Workspaces and expired holds remain blocked. Owner
+pages show the historical resolution and direct users to Billing for current access.
+Naturally due provider acceptance remains open. Failures and
+mandate cancellation do not revoke already-paid time; expired periods follow the
+same grace/read-only policy. Pending/Halted owner notices explain collection trouble
+separately from paid access and direct recovery through the existing agreement.
+Status recovery alone does not establish payment; only verified paid invoice
+evidence records a recovered cycle. Owners can now authorize prepared Test Mode agreements,
+refresh status, recover a known paid invoice and request cancellation of future
+renewal. The cancellation request commits before delivery; uncertain outcomes
+remain pending, and paid dates stay unchanged. Preparation remains operator-only,
+new authorization is default-off and real recurring provider acceptance remains
+before publication/activation. See the
+[agreement runbook](../implementation/recurring-agreements.md).
+
+Annual recurring invoice validation also accepts the exact next-calendar-anniversary
+midnight IST boundary for elapsed durations strictly between 364 and 365 days,
+as observed in actual Test Mode. Provider start/end timestamps are retained; this
+never invents extra access or bypasses the future-period hold. See the
+[boundary decision](../adr/2026-09-28-annual-invoice-calendar-boundary.md).
 
 ## Access after expiry
 

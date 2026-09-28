@@ -586,6 +586,10 @@ product requirement or treat all historical event graphs as one MVP increment.
 
 ## M7 — Complete Workspace archive and binary portability
 
+The owner clarified the customer-held snapshot and fresh-Workspace continuation
+scenario on 2026-09-26. Track it in [FW-012](future-work.md#fw-012-complete-workspace-export-and-guided-restore-into-a-fresh-workspace).
+This milestone remains future work; partial exports are not a complete backup.
+
 - Scope: complete reviewed export inventory for Party/Loans/Rates/Notify plus scoped
   control-plane business metadata; attachment paths/hashes and exact issued bytes;
   repeatable-read worker snapshot, consistency/completeness checks, private expiring

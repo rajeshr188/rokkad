@@ -1,17 +1,21 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-09-28
 tags: [flow, billing, payments, operations]
 related: [../adr/2026-09-09-workspace-checkout-evidence.md, ../plans/project-hardening.md]
 ---
 
 # Workspace subscription checkout
 
-Provider setup/test-mode acceptance is currently shelved at the owner's request as
+Provider setup/test-mode preparation resumes under selected FW-019 through
 [FW-002](../plans/future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).
-The steps below are a future acceptance guide, not a current request to configure
-Razorpay. They remain required before real paid onboarding.
+The owner reports SaaS reclassification, application submission and completed KYC;
+account approval and Live/Test activation were reported on September 27. Saved
+test keys now verify Payments/Plans/Subscriptions access; workflow acceptance remains open. Use the
+[active rollout](../plans/subscription-monetization-rollout.md#test-mode-preparation)
+to select an isolated rehearsal runtime before installing private test credentials.
+The acceptance below remains required before real paid onboarding.
 
 New checkout/order routes now require `BILLING_CHECKOUT_ENABLED=True`; the default
 is false. Use dated, audited platform administrator access decisions while provider
@@ -34,6 +38,10 @@ not introduce accounting or license-scoped access.
    The server checks owner/context, invoice scope, saved-order HMAC, fetched payment
    identity, captured state, amount and currency. Browser plan/price fields cannot
    choose the activated contract.
+   After Razorpay returns payment evidence, the button becomes Retry payment
+   confirmation if verification fails. It sends the same payment IDs/signature
+   without reopening Checkout; cycle changes are disabled. After leaving/reloading
+   the page, inspect Billing before starting another purchase.
 5. Activation writes payment, paid invoice, commercial dates, plan entitlements and
    audit evidence atomically. A receipt goes to the saved billing contact after
    commit. Open Billing to view/download the Workspace invoice.
@@ -54,8 +62,9 @@ Configure matching `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and a separate nonem
 `RAZORPAY_WEBHOOK_SECRET` in the selected deployment's private runtime environment.
 Do not copy live keys to examples. Configure the global callback
 `/subscriptions/webhook/razorpay/` on the deployed HTTPS origin. A Workspace-specific
-callback is not the provider entry point. No real payment/provider rehearsal has
-been performed for this increment.
+callback is not the provider entry point. The [isolated Test Mode rehearsal](../implementation/billing-test-rehearsal.md)
+verified wallet captures, signed events, recovery and refunds; live/provider-method
+and receipt-delivery acceptance remain separate.
 
 Verified raw-body HMAC and provider event ID bind the stored event. The event row is
 locked before replay checks; reuse of an event ID with a different body is rejected.
@@ -73,6 +82,35 @@ References: [create order](https://razorpay.com/docs/api/orders/create/),
 [refund entity](https://razorpay.com/docs/api/refunds/entity/).
 
 ## Recovery and acceptance still required
+
+Known Test Mode recurring agreements now have a separate
+[paid-cycle path](../implementation/recurring-agreements.md#paid-cycle-processing-and-recovery)
+behind the same signed webhook. `subscription.charged` and recurring captured
+payments require provider-fetched invoice/payment/agreement/plan evidence. Exact
+provider invoice periods drive access, never callback arrival time. Lifecycle
+observations alone grant or revoke nothing. The existing owner checkout above
+remains one-off. The separate **Recurring payments** page supports owner
+authorization of operator-prepared Test Mode agreements, status refresh, known
+paid-invoice recovery and cancellation of future renewals. Cancellation preserves
+paid access and reports uncertainty until verified; creation remains operator-only.
+See the [owner-flow runbook](../implementation/recurring-agreements.md#owner-authorization-and-cancellation).
+
+If recurring collection is **Pending**, the owner page explains that Razorpay may
+retry. If it is **Halted**, the page explains that automatic collection has stopped.
+Already-paid access follows its original end/grace policy; an unpaid invoice adds
+no time. Refresh status or contact support to review the existing agreement and
+invoice before making another payment or creating a replacement.
+
+A verified payment for a future recurring period appears under **Payments awaiting
+access review** and in invoice history. Its exact period and payment are saved;
+existing access stays unchanged. The invoice and receipt explain the hold. Contact
+support for billing review: rechecking the invoice or reaching its start date does
+not activate it. Review payments remain visible even after agreement replacement.
+An operator can now run the [authorized review command](../implementation/recurring-agreements.md#applying-a-held-period)
+once the period starts and before it expires, after reviewing the current
+subscription. Successful application appears as **Applied after billing review**;
+the invoice shows when it was reviewed. The Billing dashboard remains the source
+for current access. Command retries do not reactivate access after later changes.
 
 - Provider success plus local rollback/timeout can leave an orphan provider order.
   PostgreSQL and Razorpay are not one transaction. Reconcile using the CHK receipt,

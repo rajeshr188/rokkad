@@ -91,7 +91,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
         )
         self.assertEqual(
             [pattern.name for pattern in org_urls.WORKSPACE_INVITATION_URLPATTERNS],
-            ["team_invite", "team_delete_invitation", "team_invitations_list", "team_invite_success"],
+            ["retry_platform_mail", "team_invite", "team_delete_invitation", "team_invitations_list", "team_invite_success"],
         )
         self.assertEqual(
             [pattern.name for pattern in org_urls.TEAM_MEMBER_URLPATTERNS],
@@ -127,6 +127,7 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
                 "workspace_preferences",
                 "team_invitations",
                 "team_accept_invitation",
+                "retry_platform_mail",
                 "team_invite",
                 "team_delete_invitation",
                 "team_invitations_list",
@@ -180,11 +181,11 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
 
         self.assertIn("Invitations for You", global_incoming)
         self.assertIn("sent to your email", global_incoming)
-        self.assertIn("Sent invitations", sent_invitations)
+        self.assertIn("Outgoing invitations", sent_invitations)
         self.assertIn("Accepted invitations become team memberships.", sent_invitations)
         self.assertIn("Invite member", invite_form)
         self.assertIn("Send invitation email", invite_form)
-        self.assertIn("Workspace Invitation Sent", invite_success)
+        self.assertIn("Workspace Invitation Saved", invite_success)
 
     def test_invitation_and_team_templates_do_not_contain_known_mojibake(self):
         template_paths = (

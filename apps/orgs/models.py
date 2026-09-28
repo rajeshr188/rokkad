@@ -5,7 +5,6 @@ from colorfield.fields import ColorField
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.contrib.sites.shortcuts import get_current_site
 from django.db import IntegrityError, models, transaction
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -13,8 +12,6 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
-from invitations import signals
-from invitations.adapters import get_invitations_adapter
 from invitations.app_settings import app_settings
 from invitations.base_invitation import AbstractBaseInvitation
 
@@ -312,32 +309,8 @@ class CompanyInvitation(AbstractBaseInvitation):
         return self
 
     def send_invitation(self, request, **kwargs):
-        current_site = get_current_site(request)
-        invite_url = reverse(app_settings.CONFIRMATION_URL_NAME, args=[self.key])
-        invite_url = request.build_absolute_uri(invite_url)
-        ctx = kwargs
-        ctx.update(
-            {
-                "invite_url": invite_url,
-                "site_name": current_site.name,
-                "email": self.email,
-                "key": self.key,
-                "inviter": self.inviter,
-            },
-        )
-
-        email_template = "invitations/email/email_invite"
-
-        get_invitations_adapter().send_mail(email_template, self.email, ctx)
-        self.sent = timezone.now()
-        self.save()
-
-        signals.invite_url_sent.send(
-            sender=self.__class__,
-            instance=self,
-            invite_url_sent=invite_url,
-            inviter=self.inviter,
-        )
+        from apps.platform_mail.services import enqueue_invitation
+        return enqueue_invitation(self)
 
     def __str__(self):
         return f"Invited: {self.email} Status: {self.lifecycle_state()} "
