@@ -12,6 +12,40 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Monitored single-invitation delivery (2026-09-28)
+
+The owner approved the monitored invitation check and selected admin@rokkad.com.
+Canonical Workspace/form/invitation services prepared the empty **Rokkad Invitation
+Activation TEST** (production Workspace 5), with a Viewer invitation (5), while
+sending stayed disabled. Delivery `89479b30-f62b-470b-bb43-f368b3f47483` was sent
+once through the reviewed invitation-only image in a bounded transient systemd
+job using `--delivery`, `--limit 1` and `--invitations-only`. Sending was enabled
+only inside that process; shared configuration, dispatch marker and general
+dispatch timer stayed paused throughout.
+
+At **14:09 IST**, the invitation reached the selected Gmail **Inbox** in three
+seconds. **SPF/DKIM/DMARC PASS**, TLS, notification sender and support@rokkad.com
+Reply-To were verified. The received HTTPS invitation link correctly rejected the
+current owner's different email. This fresh invitation remains pending, with only
+the owner membership in the empty test Workspace; no new acceptance is claimed.
+Evidence: `outputs/invitation-activation-inbox-20260928.png`,
+`outputs/invitation-activation-auth-20260928.png` and
+`outputs/invitation-activation-identity-20260928.png`.
+
+Feedback and recovery timers are now **enabled and active**, alongside health
+monitoring. Canonical feedback recorded **Send and Delivery**, with exactly one
+attempt for this invitation (six total historical attempts). At **14:11 IST**, the
+due queue was empty, health had no flags, and source SQS/DLQ showed zero available
+and in-flight messages. General dispatch remains disabled and marker absent;
+receipt/live billing activation is unchanged. Private evidence is under
+`/root/rokkad-invitation-activation-20260928`.
+
+This operations checkpoint changes no application source or schema. Existing
+39-test dispatch acceptance remains applicable; documentation links/whitespace
+are checked. The bounded delivery check is complete. Ongoing invitation dispatch
+would be a separate scope expansion; FW-019 next returns to provider acceptance
+and reviewed live billing implementation, with mailbox billing continuity still open.
+
 ## Paused invitation worker and IAM cleanup (2026-09-28)
 
 Mail activation preflight found that the deployed web and original mail worker

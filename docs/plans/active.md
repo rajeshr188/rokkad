@@ -58,12 +58,15 @@ promised launch. A different acceptance method or pilot scope needs review. Pres
 code rejects live recurring keys; deployment alone cannot enable a paying pilot.
 No production activation, published prices or production-customer term changes.
 
-Latest mail preparation installed a minimal invitation-only dispatch overlay,
-bounded to one message per run and still paused. Runtime/queue/alert preflight and
-expired IAM exception cleanup passed; 39 focused tests pass. Sending remains off.
-Next is monitored invitation activation with an authorized recipient and active
-feedback/recovery; general receipts require deployment of the local billing guards.
-See the [mail runbook](../implementation/platform-mail.md#paused-invitation-worker-and-iam-cleanup-2026-09-28).
+Latest mail continuation sent one authorized invitation to admin@rokkad.com using
+the minimal invitation-only worker and an exact delivery ID. Inbox/authentication,
+Send/Delivery feedback and health passed; the received link refused the current
+owner's mismatched email. Invitation acceptance remains pending, with no new
+membership. Feedback/recovery monitoring is now active; general dispatch remains
+paused. The bounded delivery check is complete. Next FW-019 work returns to provider
+acceptance and reviewed live billing implementation; general receipts require the
+local billing guards to be deployed. See the
+[mail runbook](../implementation/platform-mail.md#monitored-single-invitation-delivery-2026-09-28).
 
 The owner selected [platform email setup and reliability](platform-email-rollout.md)
 on 2026-09-26: Google Workspace for human inboxes, Amazon SES for automated

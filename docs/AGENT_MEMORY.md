@@ -52,7 +52,19 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest mail operations continuation: production dispatch now references the minimal
+Latest monitored invitation: owner-selected admin@rokkad.com received exactly one
+Viewer invitation to the empty production Workspace 5, **Rokkad Invitation
+Activation TEST**, at 14:09 IST on 28 September. Inbox, SPF/DKIM/DMARC and TLS passed;
+Send/Delivery events correlate with one attempt. Its link rejected the current
+owner's different email; invitation 5 remains pending with no new membership.
+Feedback and recovery timers are now enabled/active, alongside health monitoring.
+General dispatch stays disabled, shared sending false and dispatch marker absent.
+The exact delivery was sent by a transient job with process-only sending enablement
+and `--delivery --limit 1 --invitations-only`; no ongoing sending was activated.
+Private evidence: `/root/rokkad-invitation-activation-20260928`. See the
+[monitored checkpoint](implementation/platform-mail.md#monitored-single-invitation-delivery-2026-09-28).
+
+Previous mail operations continuation: production dispatch now references the minimal
 `rokkad:invitation-worker-20260928-31f6aa88dd72` overlay with explicit
 `--limit 1 --invitations-only`. It is paused: sending false, dispatch marker absent,
 dispatch/feedback/recovery timers disabled; health monitoring remains enabled.

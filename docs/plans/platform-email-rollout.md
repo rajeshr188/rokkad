@@ -15,6 +15,15 @@ now created Google Workspace and AWS accounts, confirmed on 2026-09-26.
 
 ## Current checkpoint
 
+- **Latest monitored check, 28 September:** the owner-selected admin inbox received
+  one Viewer invitation to the empty **Rokkad Invitation Activation TEST** Workspace.
+  Inbox, SPF/DKIM/DMARC, TLS and Send/Delivery correlation passed with one attempt.
+  The link refused the current owner's different email; fresh acceptance remains
+  pending with no new membership. Feedback/recovery/health timers are active;
+  general dispatch stays disabled. The exact send used a transient process-only
+  enable override and delivery ID, not general timer activation. Queues and health
+  are clear. The bounded check is complete; ongoing dispatch is a separate scope
+  expansion. See the [monitored checkpoint](../implementation/platform-mail.md#monitored-single-invitation-delivery-2026-09-28).
 - **Latest activation preparation, 28 September:** installed a command-only worker
   overlay, still paused, with `--limit 1 --invitations-only`. It excludes receipts
   before selecting the batch; 39 focused tests pass and CI includes the regression

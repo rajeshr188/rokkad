@@ -8,6 +8,50 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Monitored single-invitation delivery (2026-09-28)
+
+The owner selected admin@rokkad.com for one Viewer invitation to **Rokkad Invitation
+Activation TEST**, an empty new production Workspace (5), invitation 5, delivery
+`89479b30-f62b-470b-bb43-f368b3f47483`. Ordinary Workspace creation and invitation
+form/services enforce owner authority, saved role policy and capacity. No business
+data, subscription payment or recipient membership was created for this check.
+
+The existing **feedback and recovery timers are now enabled and active**. Their
+first supervised runs succeeded before dispatch; health monitoring stays enabled.
+The installed general dispatch timer remains **disabled**, marker absent and shared
+`PLATFORM_EMAIL_ENABLED=False`. A transient oneshot systemd job used the reviewed
+invitation image with process-only `PLATFORM_EMAIL_ENABLED=True` and exact arguments
+`dispatch_platform_mail --send --limit 1 --invitations-only --delivery
+89479b30-f62b-470b-bb43-f368b3f47483`. A private send-started marker prevents automatic
+reruns after uncertainty. No shared configuration or persistent sending gate changed.
+This accepts a bounded supervised command, not ongoing scheduled dispatch.
+
+At 14:09 IST the invitation arrived in the Gmail Inbox in three seconds, with
+SPF/DKIM/DMARC PASS, TLS, `notifications@notify.rokkad.com` sender and
+`support@rokkad.com` Reply-To. The actual received HTTPS link correctly rejected
+the current owner session's mismatched email. The fresh invitation stays pending
+until 1 October 14:08 IST; no recipient membership has been granted. Earlier
+successful recipient acceptance remains separate historical evidence.
+
+Canonical feedback recorded Send and Delivery with exactly one attempt. At
+14:11 IST, health was clear, due queue empty, six total historical attempts and
+zero invoice receipts. Source SQS/DLQ each showed zero available/in-flight messages.
+No additional bounce/complaint simulator messages were sent; prior suppression
+acceptance remains applicable. No receipt or live billing gate changed.
+
+Private fixture, before-send, result and final-verification reports are under
+`/root/rokkad-invitation-activation-20260928`; never rerun preparation/send blindly.
+Screenshots: `outputs/invitation-activation-inbox-20260928.png`,
+`outputs/invitation-activation-auth-20260928.png`, and
+`outputs/invitation-activation-identity-20260928.png`. Keep feedback/recovery running
+to reconcile any late events. To return those monitors to the previous paused state,
+disable/stop their timers and allow active consumers to finish before stopping services;
+do not purge messages or clear delivery evidence. General dispatch already remains off.
+
+Next is reviewed ongoing invitation scope if desired, or continued FW-019 provider
+acceptance/live billing work. Receipt sending requires its separate deployment and
+acceptance. Google Workspace account billing continuity remains an owner dependency.
+
 ## Paused invitation worker and IAM cleanup (2026-09-28)
 
 The current production dispatch unit is installed but **paused**, using

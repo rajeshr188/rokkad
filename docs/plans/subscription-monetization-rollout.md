@@ -35,11 +35,20 @@ Production activation requires a separate, reviewed implementation and release.
 | Due held access | Apply an eligible actual provider hold with fresh verification at its natural start | Existing monthly holds start **28 October 2026**; no altered clock or saved dates |
 | Refunds and replacement agreements | Full-refund review and narrow settled reservation release accepted; exact replacement periods locally tested; actual replacement payment, general settlement and prepaid transition policy remain | Remaining policy and provider acceptance |
 | Production billing boundary | Explicit mode/key checks, new invoice mode and diagnostics implemented; live recurring, legacy evidence migration, live plan binding, HTTPS callback and operations remain | Reviewed implementation, private live credentials and deployment acceptance |
-| Receipts and email | Monitored invitation activation, reviewed billing deployment for general receipts and inbox continuity | Preflight and expired IAM cleanup passed; invitation-only worker installed paused, one per run; paid test receipt/reply accepted; general sending disabled |
+| Receipts and email | Reviewed billing deployment for general receipts, ongoing dispatch scope and inbox continuity | Monitored single invitation passed Inbox/authentication/feedback; feedback/recovery active; paid test receipt/reply accepted; general dispatch disabled |
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
 
-Latest mail preparation: the production dispatch unit now uses a minimal tested
+Latest monitored mail check: one owner-selected admin invitation passed Inbox,
+SPF/DKIM/DMARC, TLS and canonical Send/Delivery evidence with one attempt. Feedback
+and recovery are active alongside health; general dispatch stays paused. The link
+rejects the current owner's mismatched email, and the fresh invitation remains
+pending without a new membership. This completes bounded invitation delivery, not
+ongoing sending or live billing activation. Return next to unresolved provider
+acceptance and live billing implementation. See the
+[monitored checkpoint](../implementation/platform-mail.md#monitored-single-invitation-delivery-2026-09-28).
+
+Previous mail preparation: the production dispatch unit now uses a minimal tested
 invitation-only overlay, one message per run, installed paused. Preflight and IAM
 cleanup are complete; 39 focused tests pass. Production web/older worker lack the
 local billing-mode safeguards, so general receipts require a separate deployment.
