@@ -7,6 +7,20 @@ tags: [billing, configuration, receipts, deployment]
 
 # Billing provider configuration and readiness
 
+## Monthly pilot commercial preparation (2026-09-28)
+
+The owner selected monthly-only INR 1,499 with six total members and
+operator-prepared agreements; seller name **Rajesh Rathod H**. Personal-PAN/no-GST
+replies and the account's unsupported GST-linking page inform a commercial-invoice
+draft with no GST collected, pending final status/address review. An unsaved
+read-only offer preview produced 149900 paise and zero tax at 15:19 IST.
+
+Before live setup, replace implicit illustrative tax for live offers with reviewed
+seller/tax readiness and freeze issuer details in new financial snapshots. Existing
+HTML/PDF invoices omit the seller and always show GST. Render consistent historical
+and new invoice/receipt documents without rewriting old financial evidence.
+The deployed code/configuration is unchanged. See [pilot preparation](../plans/monthly-billing-pilot.md).
+
 ## Paused production candidate (2026-09-28)
 
 The full billing source at `4a131587ee80` was deployed at **14:55 IST**, after a fresh

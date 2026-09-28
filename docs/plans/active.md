@@ -13,6 +13,14 @@ INR 14,990/year per Workspace, with the owner plus five staff (six total members
 Razorpay account approval and Live/Test modes are owner-confirmed; Test Mode keys
 and APIs are verified. Credentials are protected outside the repository/OneDrive.
 
+The owner now selected **monthly-only pilot preparation**, INR 1,499 and six total
+members, with operator-prepared agreements; annual remains unpublished. Invoice
+name is **Rajesh Rathod H**. Replies indicate personal-PAN/no-GST setup; commercial
+invoice preparation must remove illustrative tax and add frozen seller details.
+Next implementation is live seller/tax readiness and consistent invoice/receipt
+rendering before live configuration. See the [pilot preparation](monthly-billing-pilot.md)
+for the exact draft, provider checkpoint and decisions still required.
+
 The paused production release `rokkad:billing-paused-4a131587ee80` is deployed as
 of **14:55 IST**. Its six billing migrations are applied; billing/lending fingerprints
 and access remain unchanged. Runtime/RLS, owner/public pages, static and backup

@@ -12,6 +12,33 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Monthly pilot preparation and provider review (2026-09-28)
+
+The owner selected a monthly-only INR 1,499 pilot, owner plus five staff, with
+operator-prepared agreements, and supplied **Rajesh Rathod H** as the invoice name.
+Replies indicate personal-PAN/no-GST registration; Razorpay GST settings show
+addition unsupported for this business type. The draft collects no GST, pending
+final seller/tax review. No PAN number was requested or recorded.
+
+At **15:16 IST**, GET-only provider checks found both preserved payments still
+Created: annual agreement Active (one of two paid), invoice Issued; scheduled
+agreement Expired (zero paid). Refreshed support-email search still contains only
+acknowledgements. No retry/refund/cancellation or new support message. At **15:19
+IST**, an unsaved six-member monthly offer under a read-only isolated transaction
+produced 149900 paise with zero tax; bindings/invoice count were unchanged.
+
+The [pilot preparation](plans/monthly-billing-pilot.md) records selected scope,
+invoice draft and remaining decisions. Source review identifies the next change:
+explicit live seller/tax readiness and frozen issuer details across HTML/PDF and
+receipts. Base tax still defaults to 18%; invoices omit seller details and always
+show GST. Automatic annual price population also means a missing annual price
+alone cannot enforce monthly scope.
+
+No production configuration, code, catalog or payment state changed. Billing/mail
+stay paused. Annual launch is deferred; monthly scope does not waive other
+applicable acceptance. The focused read-only offer preview and documentation
+whitespace checks pass; no application test suite rerun was needed.
+
 ## Mail workers aligned with paused billing release (2026-09-28)
 
 At **15:03 IST**, dispatch, feedback, recovery and the watchdog/operator command

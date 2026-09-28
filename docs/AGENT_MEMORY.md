@@ -52,7 +52,19 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest FW-019 operations: at 15:03 IST on 28 September, all mail worker image
+Latest FW-019 commercial preparation: owner selected monthly-only INR 1,499,
+owner plus five staff, operator-prepared agreements; invoice name **Rajesh Rathod H**.
+Replies indicate personal-PAN/no-GST registration; Razorpay GST linking is unsupported
+for this account type. Prepare a commercial invoice with no GST collected, pending
+final status/address review; never store/display personal PAN. No live activation
+or mandate duration approved; annual stays unpublished. At 15:16 IST both preserved
+test payments remained Created, support acknowledgements only. Unsaved zero-tax
+offer preview passed at 15:19 IST, changing no records. Next: explicit live
+seller/tax readiness and frozen issuer/treatment across HTML/PDF/receipts; base tax
+still defaults to 18% and invoices lack seller details. Monthly scope does not waive
+other applicable acceptance. See [pilot preparation](plans/monthly-billing-pilot.md).
+
+Previous FW-019 operations: at 15:03 IST on 28 September, all mail worker image
 references and watchdog/operator checks were aligned with the deployed
 `rokkad:billing-paused-4a131587ee80`. Feedback/recovery/health passed and stay
 enabled/active. Dispatch stays disabled, marker absent, shared sending false,

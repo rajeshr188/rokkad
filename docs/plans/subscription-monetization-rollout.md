@@ -21,6 +21,20 @@ is unknown and no live keys are needed for test acceptance. Local implementation
 proceed; account setup and FW-002 provider acceptance are prerequisites for a
 paying pilot. Production checkout remains disabled pending acceptance.
 
+## Selected initial pilot (2026-09-28)
+
+Owner selected monthly-only INR 1,499, owner plus five staff, with operator-prepared
+agreements; annual stays unpublished. Invoice name: **Rajesh Rathod H**. Replies
+indicate personal-PAN/no-GST registration, so prepare an ordinary commercial invoice
+with no GST collected, subject to final status/address review. The preview yields
+149900 paise with no writes. Existing 18% rehearsal evidence stays unchanged.
+Both pending payments remain Created at 15:16 IST; support has acknowledgements only.
+
+Next concrete implementation: explicit live seller/tax readiness and frozen seller
+details across HTML/PDF/receipts. Monthly scope does not waive failed collection,
+recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
+for the selected scope, document gaps and remaining mandate/Workspace decisions.
+
 ## Production critical path (reviewed 2026-09-28)
 
 There is no committed production date. Mode-matched immediate live recurring
