@@ -52,7 +52,21 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
-Latest FW-019 billing continuation: immediate-start recurring creation, owner
+Latest FW-019 release preparation: source `4a131587ee80` is built as
+`rokkad:billing-paused-4a131587ee80`, image
+`sha256:33ed455872008db4b70c92f9eff9ea5572b6b3b47ab4c28fefe3813f109b0d48`.
+It is not deployed. Production has one plan, three trial subscriptions and zero
+invoices/payments/legacy mandates/receipts; preserve them. Six subscriptions
+migrations (0012–0017) are pending. A disposable-database upgrade regression
+preserves trials/entitlements/access with no financial backfill. Candidate read-only
+runtime/RLS, static, dependency and existing-worker readiness checks pass. At
+14:44 IST mail had zero due rows/flags; dispatch remains paused and feedback,
+recovery/health active. Next is a fresh backup, separate static volume, owner
+migration and paused web deployment. Do not reverse billing schema or restore
+production data for code rollback. Exact procedure/evidence:
+[paused release](implementation/billing-paused-release-20260928.md).
+
+Previous FW-019 billing continuation: immediate-start recurring creation, owner
 authorization, paid-cycle verification/recovery, cancellation and explicit held/refund
 review support matching configured test/live mode through the same services. New
 live authorizations require the default-off flag, webhook secret and no conflicting

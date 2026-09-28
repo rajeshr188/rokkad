@@ -39,6 +39,12 @@ release. Adding live keys alone does not establish paying-pilot readiness.
 | Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
 | Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
 
+Paused release preparation is complete: source/image and rollback baseline are
+pinned, production has no payment-mode ambiguity, six pending migrations have a
+preservation regression, and candidate runtime/static/worker preflight passes.
+Production is unchanged. Next is the fresh backup, owner migration and paused web
+deployment in the [release procedure](../implementation/billing-paused-release-20260928.md).
+
 Latest billing continuation: shared recurring services now accept matching live
 bindings for immediate creation, owner authorization, verified payment/recovery,
 cancellation and explicit held/refund review. New live authorization requires the

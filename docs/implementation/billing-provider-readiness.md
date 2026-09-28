@@ -7,6 +7,16 @@ tags: [billing, configuration, receipts, deployment]
 
 # Billing provider configuration and readiness
 
+## Paused production candidate (2026-09-28)
+
+The full billing source at `4a131587ee80` is built and preflighted but not deployed.
+Production has three existing trial subscriptions and no payment evidence to
+reclassify. Six subscriptions migrations remain unapplied. A migration preservation
+regression, restricted read-only candidate checks, static build and worker readiness
+pass. No billing, sending or production changes occurred. Follow the
+[pinned release and rollback procedure](billing-paused-release-20260928.md) for the
+next paused deployment checkpoint; live activation remains separately gated.
+
 ## Live recurring workflow support (2026-09-28)
 
 The existing recurring services now support immediate-start live agreements with

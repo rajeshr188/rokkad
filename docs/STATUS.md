@@ -12,6 +12,44 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Paused billing release prepared (2026-09-28)
+
+Built `rokkad:billing-paused-4a131587ee80` from committed application source,
+recording image ID `sha256:33ed455872008db4b70c92f9eff9ea5572b6b3b47ab4c28fefe3813f109b0d48`.
+The private source-only package excludes credentials/data; no production service
+was replaced. Read-only inventory found one plan, three existing trial subscriptions
+and zero invoices, payments, legacy mandates or invoice receipts. Preserve the
+plan/trials; there is no payment-mode ambiguity to resolve in production.
+
+Exactly six subscriptions migrations (0012–0017) are pending for the candidate.
+Already-applied migration files match after line-ending normalization. One new
+disposable-database upgrade test passed, preserving three fictional trials,
+plan pricing, entitlements and operator access with zero financial/recurring
+backfill; CI includes it. No production migration occurred.
+
+Candidate checks against production passed with restricted credentials and a
+read-only transaction: runtime/RLS, migration planning, dependency integrity and
+static collection (865 files in a disposable container). Owner default grants
+cover new runtime tables/sequences. Readiness reports disabled billing, no live
+configuration and `launch_ready=false`. Shared email/debug-toolbar and HSTS policy
+warnings are recorded in the release notes.
+
+Candidate mail readiness passes with the existing worker configuration. At
+**14:44 IST**, no deliveries were due and no queue flags existed. Sending stayed
+false, dispatch disabled/marker absent; feedback/recovery/health timers remain
+active. Web, settings, static volume, schema and records are unchanged. Private
+evidence is in `/root/rokkad-billing-release-20260928`.
+
+Final verification matched all 1,254 runtime source-file hashes and reconfirmed the
+unchanged web image and timer states. Documentation links (616) and whitespace
+checks pass.
+
+The [release record](implementation/billing-paused-release-20260928.md) pins the
+candidate, previous image/static volume, migration order and rollback procedure.
+Next: fresh backup, separate static assets, owner migration and web deployment
+with all billing/sending flags still paused. Live activation and unresolved
+provider/commercial acceptance remain separate.
+
 ## Mode-matched live recurring workflows (2026-09-28)
 
 FW-019 now supports immediate-start live recurring agreements through the existing

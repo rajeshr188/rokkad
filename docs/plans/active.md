@@ -13,6 +13,14 @@ INR 14,990/year per Workspace, with the owner plus five staff (six total members
 Razorpay account approval and Live/Test modes are owner-confirmed; Test Mode keys
 and APIs are verified. Credentials are protected outside the repository/OneDrive.
 
+The paused production candidate `rokkad:billing-paused-4a131587ee80` is now built
+and preflighted. Production has three trials and no invoices/payments/legacy
+mandates; all are preserved. Six subscriptions migrations are pending. The new
+migration preservation test and read-only runtime/RLS, static/dependency/worker
+checks pass. Next: fresh backup, separate static volume, owner migration and paused
+web deployment using the [release procedure](../implementation/billing-paused-release-20260928.md).
+The candidate has not replaced production and does not enable billing or mail.
+
 Recurring agreement preparation, owner authorization/cancellation, exact paid-cycle
 recording, recovery/replay and audited held-period application are implemented
 locally with matching test/live mode boundaries; actual acceptance so far uses
