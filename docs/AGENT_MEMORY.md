@@ -52,6 +52,15 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
+FW-019 merchant review on 29 September confirms recurring Card/UPI/eMandate enabled
+and Rokkad bearing fees. Public promotional rates are not the merchant fee schedule;
+exact fees remain unconfirmed. The owner's INR 500 Google payment is verified
+credited on 29 September, no balance due and payment warning cleared. Business
+Starter and storage add-on are Active; India tax information is still requested.
+Paid service starts 10 October; maintain ongoing billing funding. Initial payment
+is complete, and another test email is not needed to prove it.
+See the [review](plans/monthly-billing-pilot.md#merchant-methods-fees-and-inbox-review-2026-09-29).
+
 FW-019 support acceptance: a provider ticket marked Resolved is not payment
 settlement or failure/recovery acceptance. On 29 September, ticket 21146138's
 Active-subscription/Live-Mode reply did not match a settled final renewal; fresh

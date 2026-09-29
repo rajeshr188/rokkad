@@ -1,66 +1,71 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [plans, billing, subscriptions, razorpay]
 related: [future-work.md, ../domain/subscriptions.md, ../flows/subscription-checkout.md, ../architecture/control-plane-contracts.md]
 ---
 
 # Workspace subscription monetization rollout
 
-The owner selected FW-019 for delivery on 2026-09-26 and confirmed the working
-offer below. The owner reports Razorpay successfully reclassified Rokkad as a
-software (SaaS) provider, allowed application submission, and KYC is complete.
-The earlier NBFC-document obstacle is resolved for submission. The owner confirms
-Test Mode offers key generation and Payment Products -> Subscriptions opens.
-The regenerated test pair is verified through Payments (HTTP 200) and saved with
-Windows DPAPI outside OneDrive. On 2026-09-27 the owner reported account approval
-and Live/Test modes activated. Payments, Plans and Subscriptions now all return
-HTTP 200 using the saved test pair; the earlier 401 is resolved. Live-key generation
-is unknown and no live keys are needed for test acceptance. Local implementation can
-proceed; account setup and FW-002 provider acceptance are prerequisites for a
-paying pilot. Production checkout remains disabled pending acceptance.
+FW-019 is **in launch validation, not complete**. The monthly pilot implementation,
+live catalog, credentials, webhook registration and receipt worker are deployed
+with charging and sending paused. Account activation is not payment acceptance.
+The following snapshot supersedes the dated preparation history below.
 
-## Selected initial pilot (2026-09-28)
+## Current monthly pilot (reviewed 2026-09-29)
 
-Owner selected monthly-only INR 1,499, owner plus five staff, with operator-prepared
-agreements; annual stays unpublished. Invoice name: **Rajesh Rathod H**. The owner
-confirmed no GST registration and the documented billing address, and selected
-**12 monthly collections** for **JSK**. Prepare an ordinary commercial invoice
-with no GST collected. The preview yields
-149900 paise with no writes. Existing 18% rehearsal evidence stays unchanged.
-Both pending payments remain Created at 15:16 IST; support has acknowledgements only.
+- **Offer:** INR 1,499/month, owner plus five staff (six members), quantity one,
+  up to 12 monthly collections. Operator-prepared; annual remains unpublished.
+- **Seller:** Rajesh Rathod H, confirmed address, not GST-registered; explicit zero
+  GST and immutable seller details on customer invoices. Processor fees/tax are separate.
+- **Pilot:** JSK, Workspace 2, existing trial preserved through **8 October,
+  23:39 IST**. Its current access is unchanged; no early trial termination.
+- **Production preparation complete:** reviewed paused deployment/migrations,
+  restricted runtime/RLS checks, protected live keys, separate monthly Plan 2/live
+  binding 1 to `plan_ThkgxD2zC0o8FL`, permanent admin@rokkad.com platform admin,
+  and enabled live webhook `ThlAT5rGIawXNH` with the 14 supported events.
+- **Mail preparation complete:** SES production access, controlled Test Mode receipt
+  and reply delivery, invitation acceptance, and deployed receipt-only worker
+  selection (55 focused tests passed). Scheduled dispatch remains disabled;
+  feedback/recovery/health monitoring is active.
+- **Merchant review complete:** recurring Card, UPI and eMandate enabled; Rokkad
+  bears fees. Exact account-specific subscription fees remain unconfirmed.
+- **No live agreement, invoice, payment or receipt exists.** Webhook registration
+  and HTTPS/HMAC diagnostics do not prove actual Razorpay event delivery.
 
-Explicit live seller/tax readiness and frozen seller details across HTML/PDF/receipts
-are now deployed to web and workers as `rokkad:billing-paused-99bda8c1cb27`, with
-all billing/sending gates paused. No implicit tax default; the unregistered pilot
-requires explicit zero tax and reviewed seller fields. Historical financial
-evidence and recovery are preserved; no migration was needed. JSK's existing trial
-through **8 October, 23:39 IST** blocks immediate recurring creation and must be
-preserved. Generic catalog publication and legacy feature copy are now corrected
-and deployed as `rokkad:billing-paused-99bda8c1cb27`, with all billing/sending gates
-paused. Next: reviewed live configuration and monthly plan preparation.
-Monthly scope does not waive failed collection,
-recovery or held-period acceptance. See [pilot preparation](monthly-billing-pilot.md)
-for the selected scope, document gaps and remaining mandate/Workspace decisions.
+## Production critical path (reviewed 2026-09-29)
 
-## Production critical path (reviewed 2026-09-28)
+| Gate | Current result and remaining work |
+| --- | --- |
+| Failure/recovery | Local regression coverage exists; actual failure simulation captured successfully. Ticket 21146171 has not supplied the required failure/Pending/Halted/recovery acceptance. Preserve evidence. |
+| Naturally due held access | Existing monthly fixtures begin **28 October 2026**. Apply and verify at the real eligible time; no earlier alternative acceptance path has passed. |
+| Annual completion | Deferred from launch and still unresolved: final payment Created/invoice Issued despite ticket 21146138 marked Resolved. Owner-approved follow-up sent 29 September; annual remains unpublished. |
+| Merchant fees and terms | Methods verified; obtain account-specific add-on/method/tax/promotion rates, and finish cancellation/refund wording review. |
+| Inbox continuity | Owner's INR 500 payment verified credited, no balance due and payment warning cleared. Business Starter and storage add-on Active. India tax info remains requested; maintain funding as paid service begins **10 October**. |
+| Named pilot activation | Preserve JSK's trial, verify eligibility and obtain bounded activation/first-collection approval after applicable gates pass. Scheduled live starts remain unsupported. |
+| Actual live acceptance | Observe provider callback, exact payment/invoice/access, one approved receipt and settlement during the bounded pilot before broader onboarding. |
+| Remaining broader scope | Actual replacement payment, general settlement/prepaid transition acceptance and ongoing mail scope remain separate; live reservation release and annual launch are excluded. |
 
-There is no committed production date. Mode-matched immediate live recurring
-workflows are now implemented locally with mocked-provider regression coverage.
-Production activation still requires provider/commercial acceptance and a reviewed
-release. Adding live keys alone does not establish paying-pilot readiness.
+There is **no committed production date**. Under the current acceptance plan, the
+28 October held-period observation remains on the path to activation; the 8 October
+trial expiry is not a launch promise. An earlier date requires a reviewed alternative
+acceptance path, not merely live keys or an enabled merchant account. A bounded
+pilot is also not completion of the full annual/renewal acceptance scope.
 
-| Gate | Remaining result needed | Dependency |
-| --- | --- | --- |
-| Provider renewal and completion | Annual subsequent capture and final-cycle observations; preserve exact paid/held dates | Fifth fixture remains Active with one Created final-payment attempt; reconcile it before further mutations |
-| Failed collection | Resolve the unexpected successful failure simulation; accept Pending/Halted/recovery | Razorpay ticket 21146171 or reproducible provider outcome |
-| Due held access | Apply an eligible actual provider hold with fresh verification at its natural start | Existing monthly holds start **28 October 2026**; no altered clock or saved dates |
-| Refunds and replacement agreements | Full-refund review and narrow settled reservation release accepted; exact replacement periods locally tested; actual replacement payment, general settlement and prepaid transition policy remain | Remaining policy and provider acceptance |
-| Production billing boundary | Live catalog and immediate recurring workflows implemented locally; actual commercial catalog, legacy evidence review, reviewed deployment, HTTPS callback and operations remain | Reviewed commercial terms, private live credentials, mode-isolated database and deployment acceptance |
-| Receipts and email | Reviewed billing deployment for general receipts, ongoing dispatch scope and inbox continuity | Monitored single invitation passed Inbox/authentication/feedback; feedback/recovery active; paid test receipt/reply accepted; general dispatch disabled |
-| Commercial launch | Confirm published prices, tax/invoice identity, cancellation/refund terms, mandate duration, supported methods/fees and pilot scope | Owner decisions and account-specific verification |
-| Bounded pilot | Migrations under owner role, restricted runtime checks, approved activation, monitored first transactions and settlements | All applicable launch gates accepted |
+See [monthly pilot evidence and next actions](monthly-billing-pilot.md),
+[live runtime evidence](../implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29),
+and the [first-receipt procedure](../implementation/platform-mail.md#receipt-only-preparation-2026-09-29).
+
+## Historical delivery checkpoints (superseded by the current snapshot)
+
+The following narrative records earlier states. References to unknown live keys,
+local-only changes, pending configuration or earlier mail images apply only to
+their dated checkpoints; they are not current production blockers.
+
+### Production critical path (reviewed 2026-09-28)
+
+This historical checkpoint is superseded by the 29 September critical path above.
 
 Paused production deployment completed at **14:55 IST**: verified backup, six
 billing migrations, separate static volume and pinned web image are in place.
@@ -437,7 +442,8 @@ Use the current owner/platform authorization and immutable audit patterns.
 - [x] Working monthly/annual offer confirmed; owner plus five staff clarified.
 - [x] First increment's pricing display and frozen-checkout tests pass (28 focused tests).
 - [x] Merchant account approved and Live/Test modes active (owner-reported); all three test list APIs verified.
-- [ ] Account-specific fees and supported recurring payment methods confirmed for launch.
+- [x] Merchant recurring Card/UPI/eMandate enabled, verified in account settings (29 September).
+- [ ] Account-specific subscription/method fees, GST and promotion coverage confirmed for launch.
 - [x] Contract schema/ADR, durable attempt recovery and mode binding implemented locally.
 - [x] Immediate live recurring workflows implemented with mode-isolation regression coverage; activation remains off, scheduled starts and live reservation release excluded.
 - [x] Actual Test Mode initial recurring cycle creates one invoice/payment/term; replay/recovery do not duplicate them.

@@ -64,8 +64,12 @@ not a general queue/timer activation:
 
 The one-off enable override is not an activation now; no such command was run.
 Original Test Mode receipt/reply acceptance remains valid historical evidence, not
-proof of a future live invoice's delivery. Google Workspace inbox continuity and
-actual live webhook delivery still need confirmation before the pilot.
+proof of a future live invoice's delivery. Google Business Starter is Active on
+29 September. The owner's INR 500 payment is now verified credited with no balance
+due and the payment warning cleared; the storage add-on is also Active. Paid
+service starts 10 October. India tax information is still requested; maintain
+ongoing billing funding. Actual live webhook delivery remains open. See the
+[inbox review](../plans/monthly-billing-pilot.md#merchant-methods-fees-and-inbox-review-2026-09-29).
 
 Private rollback copies, exact one-file build context, unit candidates, preflight
 and verification logs are under `receipt-worker-20260929/` in the deployment folder.

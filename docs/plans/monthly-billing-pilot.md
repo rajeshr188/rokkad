@@ -12,6 +12,59 @@ The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
 
+## Merchant methods, fees and inbox review (2026-09-29)
+
+Read-only authenticated merchant review confirms **Cards Recurring** and **UPI
+Autopay** Activated, and Netbanking mandate methods (eNACH, eSign and Paper NACH)
+Activated. Subscriptions settings separately show **Card, UPI and eMandate Enabled**.
+This establishes account configuration, not a successful collection or acceptance
+of failure/recovery behavior. Fee Bearer is **You pay the fee**; the customer-pays
+option is disabled and identified as incompatible with Subscriptions.
+
+The dashboard displays 88 days and INR 5,00,000 of promotional credits remaining,
+with zero used. This does not establish free recurring collections. The official
+[Subscriptions page](https://razorpay.com/subscriptions/) advertises a limited-time
+0.5% subscription add-on plus underlying platform fees and GST, while Razorpay's
+[pricing article](https://razorpay.com/blog/?p=26027) lists 0.99% plus underlying
+method fees and GST. [Offer terms](https://razorpay.com/terms/90-day-free-pg-offer/)
+do not waive tax on platform fees. No account-specific recurring rate was found in
+the inspected settings. **Exact merchant fees remain unconfirmed**; do not select
+a public rate as the contracted rate or confuse processor GST with the seller's
+confirmed zero-GST customer invoice.
+
+After owner sign-in, Google Admin shows **Business Starter Active**, one assigned
+license and a Flexible Plan. Paid service starts **10 October 2026** (11 days shown).
+The initial review displayed a minimum INR 500 payment pending. The owner then
+reported paying, and explicitly requested re-verification. Fresh read-only review
+confirms **INR 500 credit, no balance due**, with the last manual payment dated
+**29 September for INR 500**. The payment-pending notification has cleared, and both
+Business Starter and the separate 100 GB storage add-on now show **Active**.
+The initial payment requirement is complete. **India tax information is still
+requested**; ongoing billing must remain funded, and the credit is not indefinite
+mailbox coverage. No payment, tax submission, mail send or account-setting change
+was performed by the agent. Automatic approval review had blocked an additional
+Admin screenshot before the owner's new, explicit read-only re-verification request;
+the subsequent payment-account and subscription status review succeeded.
+
+Prepared fee question for an owner-approved support message (not sent):
+
+> Please confirm the fees applicable to our activated Rokkad SaaS Subscriptions
+> account for an INR 1,499 monthly plan: subscription add-on, underlying card/UPI/
+> eMandate charges, applicable GST, mandate setup charges, and whether the displayed
+> 90-day/INR 5 lakh promotion covers each component. Please include the rates after
+> the promotion and any minimum charges. We need our merchant-specific schedule;
+> public product and pricing pages show different subscription add-on rates.
+
+Next: complete the outstanding Google India tax information and maintain billing
+continuity after the credited payment; obtain the exact merchant fee schedule and
+resolve provider failure/recovery/held-period acceptance,
+preserving pending attempts. JSK's trial ends **8 October at 23:39 IST** and must not
+be shortened. Existing naturally due held fixtures start **28 October**; an earlier
+acceptance path has not passed or been approved. No launch date is committed.
+Actual live callback, first payment/invoice/receipt and settlement require the
+separately approved named pilot. Annual remains unpublished; all charging/sending
+gates remain paused. See the [current rollout](subscription-monetization-rollout.md).
+
 ## Receipt worker prepared without sending (2026-09-29)
 
 At **12:30 IST**, the worker command gained tested receipt-only selection while the
@@ -306,7 +359,8 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 3. Seller configuration is complete; applicable provider acceptance remains open. Retain
    published refund review/initiation windows of seven/five working days; review
    cancellation wording before activation.
-4. Verify live subscription methods/fees for this merchant. Live keys and the
+4. Live Card/UPI/eMandate are enabled; confirm the exact merchant fees described
+   in the review above. Live keys and the
    separate webhook secret are protected on the server; provider registration and
    HTTPS/HMAC diagnostics are complete. Actual provider event delivery/recovery
    acceptance remains open, with purchases paused.
@@ -316,7 +370,8 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 6. Receipt-only command preparation is complete; the persistent worker remains
    invitation-only and paused. Use one reviewed delivery ID/limit one for the first
    separately approved receipt. Keep feedback/recovery/health and confirm monitored
-   inbox continuity. Never enable the queue indiscriminately.
+   inbox continuity: INR 500 is credited with no balance due; India tax info remains
+   requested, and paid service starts 10 October. Never enable the queue indiscriminately.
 7. Authorize the named pilot and first collection; observe invoice, payment, access
    and receipt, then verify settlement and later renewal/recovery.
 

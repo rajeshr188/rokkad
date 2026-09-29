@@ -12,6 +12,35 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 merchant and inbox launch review (2026-09-29)
+
+Read-only Razorpay review confirms recurring cards/UPI AutoPay and mandate methods
+Activated, with Card/UPI/eMandate Enabled in Subscriptions settings. Fee Bearer is
+**You pay the fee**. The displayed promotion and conflicting public subscription
+rates do not establish the merchant's contracted fees; that gate remains open.
+
+After owner sign-in, Google Business Starter is **Active**, with one license and
+paid service beginning **10 October**. The owner paid the initially pending INR 500
+and requested re-verification: Google now shows **INR 500 credit, no balance due**,
+last manual payment **29 September**, and the payment-pending warning has cleared.
+Both Business Starter and the 100 GB storage add-on are now Active. The initial
+payment requirement is complete; India tax information remains requested and
+ongoing account funding remains necessary. No payment, message, settings change
+or billing activation was performed by the agent. An earlier additional screenshot
+was blocked by automatic approval review; the owner's subsequent explicit
+read-only payment re-verification succeeded without an alternative access method.
+
+The rollout now consolidates the current deployed state and remaining gates,
+replacing stale top-level live-key/local-only statements. FW-019 remains in launch
+validation: provider failure/recovery and naturally due holds, exact fees, mailbox
+continuity, JSK eligibility and bounded approval precede activation. Actual callback,
+first payment/invoice/receipt and settlement still require pilot observation.
+Existing held fixtures begin **28 October**; JSK's **8 October 23:39 IST** trial end
+is not a launch date. Annual stays unpublished and charging/sending stay paused.
+This checkpoint changes documentation only. See the
+[current rollout](plans/subscription-monetization-rollout.md) and
+[merchant/inbox evidence](plans/monthly-billing-pilot.md#merchant-methods-fees-and-inbox-review-2026-09-29).
+
 ## Receipt dispatch scope deployed with sending paused (2026-09-29)
 
 `dispatch_platform_mail --receipts-only` now excludes invitations before the batch
