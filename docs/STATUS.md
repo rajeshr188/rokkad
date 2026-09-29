@@ -12,6 +12,31 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 cancellation wording reviewed and onboarding health refreshed (2026-09-29)
+
+At **20:48 IST**, a restricted READ ONLY production check still shows one observed
+new owner account: verified email, accepted public trial with full access, two
+members and one accepted invitation delivered on its first attempt. Whether this
+is a genuine customer and teammate browser activity remain unverified. Queue due is zero,
+health flags are empty, and all four mail timers are enabled/active. The natural
+scheduled health run at **20:46:49 IST** sent the external heartbeat successfully.
+Free trials and account/invitation mail remain enabled; paid billing stays disabled.
+
+Dashboard review finds pricing **21174094 Active** with no reply yet and target
+1 October 13:43; technical **21146138 In Progress** still ends with the prior
+owner-approved follow-up, and **21146171 Closed** has no technical answer. No new
+message, transaction or simulation was submitted. The previous provider payment
+observations remain the latest; this check did not repeat those API calls.
+
+Cancellation/refund wording was compared with the existing service, owner-approved
+policy and provider cancellation reference. The local recurring page now explains
+before confirmation that Razorpay must confirm cancellation and a payment already
+in progress may still settle; it links the existing refund policy. Paid-time,
+refund, authorization and cancellation behavior are unchanged. Two existing focused
+owner-page/CSRF and completed-agreement tests passed. This template clarification
+is prepared for the next billing release, **not deployed**. See the
+[wording review](plans/monthly-billing-pilot.md#cancellation-wording-review-2026-09-29).
+
 ## FW-019 Razorpay pricing reply and attachment reviewed; recurring fee gaps remain (2026-09-29)
 
 The owner-requested review read the **19:55 IST** email for ticket **21170392**.

@@ -66,6 +66,10 @@
     {% csrf_token %}
     <p>Stop future renewals by cancelling this payment agreement now. Your paid end date stays unchanged.
       This does not request a refund. The cancelled agreement cannot be restarted.</p>
+    <p>Cancellation is complete only after Razorpay confirms it. A payment already in progress may still settle.
+      If confirmation is delayed, refresh the agreement status or contact support before making another payment.</p>
+    <p>For refund requests and review timelines, see our
+      <a href="{% url 'cancellation_and_refund' %}">cancellation and refund policy</a>.</p>
     <label><input type="checkbox" name="confirm_cancel" value="yes" required> I want to stop future renewals.</label><br>
     <button class="btn btn-outline-danger mt-2" type="submit">Stop future renewals</button>
   </form>

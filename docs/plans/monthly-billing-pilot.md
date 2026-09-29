@@ -14,6 +14,41 @@ Production paid billing remains disabled. Public free trials and invitation/acco
 mail are enabled; receipt dispatch remains separately controlled. See the
 [free-trial release](../implementation/public-trial-release-20260929.md).
 
+## Cancellation wording review (2026-09-29)
+
+The recurring owner page, `request_cancellation`/`process_cancellation`, published
+cancellation/refund policy and approved customer summary agree on immediate mandate
+cancellation, preserved verified paid time, no automatic refund and no restart of
+the cancelled agreement. Provider confirmation, uncertain outcomes and payments
+already in progress must remain explicit. The official
+[cancellation reference](https://razorpay.com/docs/api/payments/subscriptions/cancel-subscription/)
+was rechecked: immediate versus cycle-end cancellation are distinct, and a
+cancelled agreement cannot be reactivated.
+
+The local page now presents the existing uncertainty caveat **before** the owner
+confirms cancellation and links the approved refund policy, whose seven/five
+working-day review/initiation windows are unchanged. Previously those caveats
+appeared only after requesting cancellation or ending the agreement. No service,
+provider request, access policy, legal policy or refund entitlement changed.
+Two existing focused tests passed: owner page/POST-only/CSRF boundaries and
+completed-agreement paid-access/final-invoice behavior. Deploy this template in
+the next reviewed billing release; it is not live yet. This completes the local
+wording review, not provider failure/recovery or live cancellation acceptance.
+
+At 20:48 IST the production onboarding/mail read-only check remains healthy:
+one observed verified owner, one public trial, accepted invitation and two members;
+queue due zero, no flags, four active/enabled timers and a successful natural
+external heartbeat at 20:46:49 IST. Whether this is a genuine customer and the
+teammate's actual browser/role workflow remain unconfirmed. Sanitized local proof:
+`outputs/launch-operations-check-20260929.json`.
+
+Support has no new answer: pricing 21174094 Active, annual 21146138 In Progress
+with the prior follow-up still last, failure 21146171 Closed with no technical
+reply. Do not submit duplicate tickets or retry the preserved payment attempts
+just because the same checks have not changed. Next substantive billing step is
+to assess written provider guidance/fees, then perform the applicable acceptance;
+the naturally due monthly fixture is still scheduled for 28 October.
+
 ## Pricing support reply (2026-09-29, 19:55 IST)
 
 The latest authenticated email is a pricing response to **21170392**. It confirms
