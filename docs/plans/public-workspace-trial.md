@@ -10,8 +10,8 @@ related: [monthly-billing-pilot.md, ../flows/workspace-onboarding.md, ../archite
 
 The owner selected preparation of a public free-trial offer on 29 September and
 confirmed **30 days**, owner plus five staff, no card and no automatic charge.
-The selection and consent implementation is prepared locally; public trial activation
-is not deployed or enabled.
+Production Plan 3 is prepared and the local browser journey passed. The selection
+and consent implementation is not deployed; public trial activation remains off.
 Invitation-only email sending is now enabled independently of subscription billing.
 
 ## Selected offer and customer copy
@@ -54,6 +54,45 @@ serialize on Company; direct additions count pending reservations. Existing
 members are retained, even if their Workspace already exceeds its limit.
 See the [decision](../adr/2026-09-29-selected-public-trial.md).
 
+## Catalog and browser acceptance checkpoint (2026-09-29)
+
+Production **Plan 3** has the approved name, 30 days, six members and zero monthly,
+annual and extra-member prices. Unsupported commercial flags are false; retired
+inventory/transaction quota fields are zero and confer no extra capability. Core
+Party/Loans/Notify v2/Rates remain governed by their existing module, role and
+business-setup requirements; no unsupported reporting/API/warehouse promises are
+published. The currently supported business services do not consume those retired
+quota fields. Reassess the projection before introducing new quota enforcement.
+
+Use `prepare_public_trial --actor-id 9 --reason "<reviewed reason>"` to preview;
+`--apply` saves the separate Plan plus a BILLING_UPDATE audit. All creation flags
+must be paused. It refuses different stored terms and reuses an identical Plan
+without updating it. Production preparation used the reviewed command body against
+the existing runtime image (only the terms-version import was supplied inline);
+no application image or setting was replaced. Existing plans, memberships,
+Workspaces and non-Plan billing tables were fingerprinted before/after unchanged.
+Server-private evidence: `public-trial-preparation-20260929` under the cutover folder.
+
+A fresh local database, `rokkad_baseline_rehearsal_public_trial_20260929`, used the
+restricted runtime role for the browser. The actual password signup and ordinary
+New Workspace screens led to the trial offer through commercial recovery. Owner
+verification, explicit acceptance, six-seat display, queued invitation, refusal of
+unverified teammate acceptance, then verified link acceptance all passed. Final
+state is two members, one active trial/event, six-seat limit and no financial or
+provider evidence. Account email used a local file backend; invitation rendering
+used capture mode. **No real email was sent.** The generic rehearsal banner says
+legacy copy, but this database was empty/migrated with fictional fixtures only.
+The browser and server have been closed. Ignored local evidence includes
+`outputs/public-trial-rehearsal-20260929/verified.json`, `plan.json`,
+`production-applied.json`, `production-account-mail.json` and `teammate-accepted.png`.
+**23 focused tests passed** for preparation and trial/catalog regressions.
+
+Production account mail inventory found **locmem**, with verification optional.
+That backend does not send account-verification or password-reset email. Team
+invitations use their separate enabled SES worker. The local journey establishes
+application behavior, not production account-mail delivery. Implement and accept
+that transport before advertising general password-based trial signup.
+
 ## Remaining publication work
 
 The previously deployed trial flag exposes every active plan in the generic catalog. Plan 1
@@ -62,8 +101,8 @@ is the private monthly offer, six members and zero trial days. Neither is the
 public 30-day offer. Do not change either plan to implement this draft, or simply
 turn on `BILLING_ALLOW_TRIAL_START` with the existing catalog query.
 
-Save a separate six-member, 30-day trial plan with zero prices after reviewing
-its supported feature projection; select its ID in the deployment settings. Only the selected eligible trial can appear or be accepted
+Plan 3 is prepared. Deploy the selection/consent code and select Plan 3 in the
+deployment settings after account-mail acceptance. Only the selected eligible trial can appear or be accepted
 by its start endpoint. A hidden/private plan ID must not activate a trial through
 direct POST. Reuse the existing locked `start_trial` service and durable subscription,
 account, entitlement and event records; Workspace creation itself grants no trial.
@@ -103,7 +142,7 @@ It is not a browser signup test or a new real-mail delivery rehearsal.
 **82 focused tests passed.** Automated acceptance covers the restricted-role HTTP onboarding/consent flow,
 private/stale offer rejection, verified canonical ownership, existing-history
 preservation, frozen seats and dates, expiry/grace/read-only, six-seat enforcement,
-and simultaneous trial/last-seat requests. Production plan creation, browser signup
-acceptance and public activation remain outstanding; no new real email was sent.
+and simultaneous trial/last-seat requests. Production plan creation and the local browser journey are now complete; deployment,
+production account-mail acceptance and public activation remain outstanding.
 Before publication, review owner-created Workspace abuse controls (the current
 limit is one trial per Workspace, not one trial per person) and support capacity.

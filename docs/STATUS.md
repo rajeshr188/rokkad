@@ -12,6 +12,46 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 trial catalog saved and browser journey rehearsed (2026-09-29)
+
+Production now has **Plan 3: Rokkad 30-day public trial**, INR 0 monthly/annual,
+30 days and six total members. The reviewed `prepare_public_trial` command defaults
+to preview, requires active platform administration and paused trial/payment flags,
+and refuses to overwrite changed terms. Apply saves the separate Plan and audit;
+repeating it preserves the same plan. Preparation ran under permanent administrator
+**admin@rokkad.com / user 9**, without changing privileges or credentials. Existing
+Plans 1/2, Company/Membership rows and every non-Plan billing table have unchanged
+fingerprints. No Workspace assignment, provider binding, subscription or payment
+was created. Invitation sending remains enabled; trial/checkout/recurring flags
+remain false. No web/worker image was replaced.
+
+A fresh isolated PostgreSQL database and restricted `rokkad_runtime` browser server
+completed signup, local email verification, ordinary New Workspace creation,
+30-day trial consent, invitation creation/capture, teammate signup and verified
+acceptance. Unverified acceptance was rejected first. Final evidence: two members,
+capacity six, one accepted invitation, one trial event, auto-renew false, full
+access, and zero invoices/payments/agreements/provider events or sending attempts.
+Email was captured locally, not delivered through SES. The browser/server were
+closed afterward; fictional fixtures and proof remain in ignored outputs.
+
+**23 focused tests passed**, including three new catalog preparation cases and the
+trial/catalog boundary suite. Signup/login copy now describes supported customer,
+loan, reminder and rate workflows; obsolete accounting/ERP promises were removed.
+The trial success message no longer repeats the word trial. These source changes
+still need deployment with the already tested trial implementation.
+
+**New verified launch gap:** production `EMAIL_BACKEND` is Django's **locmem**
+backend. Account verification/password-reset mail therefore stays in process memory;
+it is not sent by the invitation-only SES worker. Verification is optional at sign-in,
+but trial acceptance and invitation acceptance require a verified email. Google
+SocialApp is configured and its established verified path is separate. No backend,
+credential or authentication setting changed during this read-only check.
+
+Next: implement and accept account-verification/reset delivery, then deploy the
+selected trial with `BILLING_PUBLIC_TRIAL_PLAN_ID=3`, review public eligibility/support
+controls, and activate only the free-trial gate. Payment acceptance stays separate.
+See [trial preparation](plans/public-workspace-trial.md).
+
 ## FW-019 public trial consent and seat enforcement implemented locally (2026-09-29)
 
 The approved **30-day trial for owner plus five staff** now has a separate selected

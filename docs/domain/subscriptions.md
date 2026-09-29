@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [domain, subscriptions, monetization]
 related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 ---
@@ -11,8 +11,9 @@ related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 Operator catalog preparation is private while checkout and trial signup are both
 paused. The owner catalog then links to the Workspace's prepared recurring agreement,
 whose frozen terms remain visible independently. Live binding also requires trial
-signup paused. Re-enabling either self-service switch publishes the active-plan
-catalog and requires offer review; trial-only browsing omits annual purchases.
+signup paused. The deployed older trial switch must stay paused until the selected-trial code
+is deployed. That code publishes only the explicitly selected eligible free Plan;
+paid catalog publication still requires the separate checkout switch.
 Legacy feature claims and estimated overage charges are no longer presented as
 commercial terms. Stored limits and invoices are unchanged. See the
 [catalog publication decision](../adr/2026-09-28-private-operator-billing-catalog.md).

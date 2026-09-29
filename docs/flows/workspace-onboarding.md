@@ -19,7 +19,11 @@ the owner-selected [30-day offer](../plans/public-workspace-trial.md) is prepare
 separately from the private billing catalog. New Workspaces currently need an
 administrator access decision before ordinary business use. Existing Workspaces
 retain their current access. Verified Google sign-in is the established invitation
-acceptance path; other account-verification email is a separate transport.
+acceptance path. A 29 September production check confirms account-verification/
+password-reset mail uses an in-memory backend and does not reach inboxes. Its
+delivery setup must be completed before general password-based trial signup.
+The local browser journey passed with captured mail; production trial Plan 3 is
+prepared but unassigned, unpublished and not activated.
 
 ## New owner
 

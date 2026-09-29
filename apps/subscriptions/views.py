@@ -98,7 +98,7 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
 
         messages.success(
             request,
-            f"Your {subscription.plan.name} trial is active until "
+            "Your free trial is active until "
             f"{subscription.trial_end_date:%d %b %Y}.",
         )
         from apps.onboarding.models import OnboardingProgress

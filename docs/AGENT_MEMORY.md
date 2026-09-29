@@ -71,10 +71,22 @@ members, no card or automatic charge. Public trial/catalog isolation and version
 verified-owner consent are now implemented locally: `BILLING_PUBLIC_TRIAL_PLAN_ID`
 selects a separate zero-price, unbound, 30-day/six-member Plan and defaults to zero.
 Existing billing/access history is ineligible. Production remains paused pending
-plan preparation, browser acceptance and deployment. Do not enable the old image's
+account-mail acceptance and deployment; Plan 3 and the local browser journey are ready. Do not enable the old image's
 trial flag. Capacity now resolves through Django's app registry; Company locks
 serialize seat reservations, member creation and acceptance. See [trial preparation](plans/public-workspace-trial.md) and
 [mail activation](implementation/platform-mail.md#ongoing-invitation-dispatch-enabled-2026-09-29).
+
+Public trial catalog preparation completed on 29 September: production Plan 3 is
+INR 0, 30 days and six members, saved with audit under permanent admin user 9.
+Plans 1/2 and existing Workspace/billing evidence are unchanged. Trial and payments
+remain off; no image was deployed. The fresh restricted-role local browser journey
+passed signup, email verification, trial consent and verified teammate acceptance,
+with account/invitation mail captured locally and no provider calls. Production
+account mail is now verified to use `django.core.mail.backends.locmem.EmailBackend`:
+verification/password-reset messages do not leave process memory. Do not equate
+working SES invitations with working password-based signup mail. Configure and
+accept account-mail delivery before general public trial activation; Google sign-in
+remains the established verified-identity path. See [trial readiness](plans/public-workspace-trial.md).
 
 Razorpay pricing correspondence must use Dashboard support: the previous email
 address returned an unmonitored-mailbox notice. The authorized fee inquiry is now
