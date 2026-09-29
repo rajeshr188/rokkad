@@ -10,7 +10,8 @@ related: [future-work.md, ../domain/subscriptions.md, ../flows/subscription-chec
 
 FW-019 is **in launch validation, not complete**. The monthly pilot implementation,
 live catalog, credentials, webhook registration and receipt worker are deployed
-with charging and sending paused. Account activation is not payment acceptance.
+with charging paused. Invitation-only sending is enabled; receipts remain separately
+controlled. Account activation is not payment acceptance.
 The following snapshot supersedes the dated preparation history below.
 
 ## Current monthly pilot (reviewed 2026-09-29)
@@ -27,12 +28,15 @@ The following snapshot supersedes the dated preparation history below.
   and enabled live webhook `ThlAT5rGIawXNH` with the 14 supported events.
 - **Mail preparation complete:** SES production access, controlled Test Mode receipt
   and reply delivery, invitation acceptance, and deployed receipt-only worker
-  selection (55 focused tests passed). Scheduled dispatch remains disabled;
-  feedback/recovery/health monitoring is active.
+  selection (55 focused tests passed). Scheduled invitation-only dispatch is now
+  enabled at one per run; feedback/recovery/health monitoring is active.
 - **Merchant review complete:** recurring Card, UPI and eMandate enabled; Rokkad
   bears fees. Exact account-specific subscription fees remain unconfirmed.
 - **No live agreement, invoice, payment or receipt exists.** Webhook registration
   and HTTPS/HMAC diagnostics do not prove actual Razorpay event delivery.
+- **Public trial draft:** owner selected 30 days and six members, no card or automatic
+  charge. [Separate catalog/consent preparation](public-workspace-trial.md) is required;
+  self-service trials remain disabled and existing trials unchanged.
 
 ## Production critical path (reviewed 2026-09-29)
 

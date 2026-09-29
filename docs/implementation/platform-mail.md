@@ -8,6 +8,50 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Ongoing invitation dispatch enabled (2026-09-29)
+
+Owner authorized ongoing invitation email activation independently of charging.
+At **17:12 IST**, `PLATFORM_EMAIL_ENABLED=True` was aligned in Compose's explicit
+web environment, `platform-mail-20260926/public.env` and the root-only worker mail
+environment. The existing image was preserved and web recreated with the new
+setting. Dispatch marker is present; the existing dispatch timer is enabled/active
+and runs **`--send --limit 1 --invitations-only`**, 60 seconds after each run ends.
+Feedback, recovery and health timers remain active. Receipts are excluded before
+batch selection; generic/receipt dispatch is not authorized by this activation.
+
+Read-only restricted checks at **17:14 IST** confirm a later scheduled dispatch
+succeeded, zero due messages, no queue/source/health flags, and unchanged billing
+and mail fingerprints. All checkout, trial-start and recurring flags remain false.
+The queue was empty at activation: no old invitation was replayed, no new test
+message sent, and no subscription, invoice or payment created. Prior SES invitation
+delivery/authentication/acceptance evidence remains valid; this verifies ongoing
+scheduling rather than a new recipient delivery.
+
+Two earlier enablement attempts caught independent disabled worker/Compose
+overrides and rolled back before dispatch. The final candidate verified all
+effective settings first. Private backup/candidate/preflight/activation evidence
+is in `invitation-ongoing-20260929-v3/` under the deployment directory; local sanitized
+reports are `outputs/invitation-ongoing-{prepare,apply,verify}-20260929.json`.
+Credential values, billing flags, worker image and source/schema were unchanged.
+
+To pause invitations, disable/stop `rokkad-platform-mail-dispatch.timer` and remove
+`/root/rokkad-platform-mail-dispatch.enabled`; let any in-flight send finish and
+inspect its recorded outcome. Keep feedback/recovery/health active. A full setting
+rollback restores the three saved files and recreates web with the same image;
+never rewind delivery attempts or replay uncertain sends. Future deployments must
+preserve all three enablement values and the invitation-only worker arguments.
+
+**35 tests passed** across the 34 existing focused cases and a new restricted-role
+fresh-owner journey: create Workspace, queue invitation, dispatch once despite a
+second worker pass, accept with verified identity, create no subscription/payment.
+The provider send is mocked in that integration test. Public 30-day trial preparation
+is separate: see the [selected offer](../plans/public-workspace-trial.md).
+
+The dated paused checkpoints below remain historical. The first live receipt
+procedure must now pause the ongoing invitation dispatcher for any separately
+approved receipt rehearsal and restore its previously active state afterward;
+there is still no authorization for scheduled receipt delivery.
+
 ## Receipt-only preparation (2026-09-29)
 
 The command now accepts `--receipts-only`, mutually exclusive with
@@ -47,10 +91,11 @@ not a general queue/timer activation:
    contact, sender/reply address and rendered receipt. Confirm the intended monitored
    recipient, suppression status, attempt history and queue/DLQ/alert health. Capture
    changes status to preview-only and is not a read-only receipt preview.
-3. Obtain approval for that exact email/recipient. Keep scheduled dispatch disabled,
-   its marker absent and shared sending false. Use the existing restricted worker
-   command with only this invocation's mail-enable override, after all normal
-   readiness checks. Its final command arguments must be:
+3. Obtain approval for that exact email/recipient. Record and pause the currently
+   active invitation dispatcher and remove its marker, allowing any in-flight send
+   to finish. Shared sending is enabled for invitations; do not start a general
+   queue command. Use the existing restricted worker after normal readiness checks.
+   Its final command arguments must be:
 
    ```text
    manage.py dispatch_platform_mail --send --receipts-only --delivery <reviewed-uuid> --limit 1
@@ -59,10 +104,11 @@ not a general queue/timer activation:
 4. Preserve ordinary Attempt/SES identifiers and verify feedback, recipient delivery
    and reply-path continuity. Unknown acceptance requires provider/operator review;
    never requeue it merely because feedback is absent. Keep feedback/recovery/health
-   active, inspect queue and flags after the run, and confirm the persistent gates
-   remain paused. Broader receipt scheduling needs a later explicit scope review.
+   active and inspect queue and flags after the run. Restore the previous healthy
+   invitation-only timer/marker state; all billing flags remain paused. Broader
+   receipt scheduling needs a later explicit scope review.
 
-The one-off enable override is not an activation now; no such command was run.
+This is a future receipt procedure; no such command was run during invitation activation.
 Original Test Mode receipt/reply acceptance remains valid historical evidence, not
 proof of a future live invoice's delivery. Google Business Starter is Active on
 29 September. The owner's INR 500 payment is now verified credited with no balance

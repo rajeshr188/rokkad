@@ -12,6 +12,38 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Ongoing invitations enabled; public trial prepared; pricing ticket routed (2026-09-29)
+
+At **17:12 IST**, owner-authorized invitation-only email activation completed.
+Compose, public and private worker settings now agree on sending enabled; dispatch
+timer/marker are active with **one invitation per run**, 60 seconds after completion.
+The current web/worker images, billing flags and credential values were preserved.
+Two earlier attempts caught disabled overrides and rolled back before dispatch.
+At **17:14 IST**, a subsequent scheduled run succeeded; restricted read-only checks
+show zero due messages, clear queue/health and unchanged billing/mail records.
+Feedback/recovery/health remain active. No new email or test fixture was created;
+existing invitation delivery/acceptance evidence is retained. Receipts are excluded
+from the scheduled worker. See [operations](implementation/platform-mail.md#ongoing-invitation-dispatch-enabled-2026-09-29).
+
+**35 tests passed**: 34 existing invitation/mail/onboarding cases and a new
+restricted-role database journey covering fresh Workspace creation, queued invite,
+one provider submission despite two worker runs, verified membership acceptance,
+and no subscription/invoice/payment. Provider sending is mocked; this is not a
+fresh browser signup or mailbox-delivery rehearsal.
+
+Owner selected preparation of a public trial and confirmed **30 days**, owner plus
+five staff, no card and no automatic charge. The [offer and acceptance plan](plans/public-workspace-trial.md)
+is prepared. Public trials remain off because the current flag exposes both active
+internal/private plans; separate trial selection and consent need implementation.
+Existing five-member/14-day trial Plan 1 and six-member/monthly Plan 2 are unchanged.
+
+Razorpay's fee-email reply was an unmonitored-mailbox notice. The authorized inquiry
+was submitted through Dashboard with separately approved phone confirmation:
+**21170392 Active**, target **1 October 11:14 AM** displayed. Annual **21146138**
+is now **In Progress**, target **29 September 5:48 PM** displayed. Failure
+**21146171 Closed** has no technical answer in its conversation; acceptance stays
+open and no provider charge was retried. See [support evidence](plans/monthly-billing-pilot.md#dashboard-support-routing-and-trial-preparation-2026-09-29).
+
 ## FW-019 fee inquiry sent and future seller transition recorded (2026-09-29)
 
 Owner reconfirmed the current personal-PAN merchant setup and possible future

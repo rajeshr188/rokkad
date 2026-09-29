@@ -61,6 +61,23 @@ repository data, and is not a substitute GSTIN. Future seller changes must prese
 historical snapshots and review active mandate migration; registered invoicing
 is currently unsupported. This decision does not determine registration obligations.
 
+Current invitation operations (29 September, 17:14 IST): sending is enabled in
+Compose, public settings and the private worker environment. The invitation-only
+dispatch timer/marker are active, one per run approximately 60 seconds apart;
+feedback/recovery/health are active and healthy. Billing/trial flags remain false,
+and scheduled receipts remain excluded. Do not carry forward earlier paused-mail
+flags in deployments. Owner selected a public **30-day** trial draft for six total
+members, no card or automatic charge. Public trial/catalog isolation is still to
+be implemented; do not expose the two private/internal plans by flipping the current
+trial flag. See [trial preparation](plans/public-workspace-trial.md) and
+[mail activation](implementation/platform-mail.md#ongoing-invitation-dispatch-enabled-2026-09-29).
+
+Razorpay pricing correspondence must use Dashboard support: the previous email
+address returned an unmonitored-mailbox notice. The authorized fee inquiry is now
+ticket **21170392 Active**, response target 1 October 11:14 AM displayed. Annual
+21146138 is In Progress; failure 21146171 is Closed without a technical answer.
+Neither a closed ticket nor an active mandate establishes provider acceptance.
+
 FW-019 merchant review on 29 September confirms recurring Card/UPI/eMandate enabled
 and Rokkad bearing fees. Public promotional rates are not the merchant fee schedule;
 exact fees remain unconfirmed. The owner's INR 500 Google payment is verified
@@ -132,7 +149,8 @@ command overlay on `rokkad:billing-paused-99bda8c1cb27`. Dispatch/feedback/recov
 and watchdog references are aligned; production web is unchanged. At deployment,
 billing/mail fingerprints were unchanged, six historical attempts and zero receipts
 remained, monitoring was healthy and all purchase/sending gates stayed false.
-Scheduled dispatch remains invitation-only, disabled and without its marker. See
+At that deployment, dispatch was disabled; the later ongoing invitation activation
+above supersedes that state. Scheduled dispatch remains invitation-only. See
 the [receipt procedure](implementation/platform-mail.md#receipt-only-preparation-2026-09-29).
 
 Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,

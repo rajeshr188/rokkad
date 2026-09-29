@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [email, ses, rollout, invitations, billing]
 related: [email-communication-review.md, future-work.md, ../adr/2026-09-26-platform-email-separation.md]
 ---
@@ -14,6 +14,15 @@ authentication. Human inboxes are separate from automated mail. The owner has
 now created Google Workspace and AWS accounts, confirmed on 2026-09-26.
 
 ## Current checkpoint
+
+- **29 September, 17:14 IST:** ongoing invitation-only dispatch is now enabled,
+  one per run approximately a minute apart, with healthy feedback/recovery/monitoring.
+  Restricted checks confirm an empty queue, subsequent scheduled success and
+  unchanged billing/mail records. Billing and public trials remain paused; receipts
+  are excluded from scheduled dispatch. Thirty-five focused tests passed, including
+  a fresh-owner database invitation journey with mocked provider sending. See
+  [activation](../implementation/platform-mail.md#ongoing-invitation-dispatch-enabled-2026-09-29).
+  Earlier paused checkpoints below are historical.
 
 - **Latest monitored check, 28 September:** the owner-selected admin inbox received
   one Viewer invitation to the empty **Rokkad Invitation Activation TEST** Workspace.

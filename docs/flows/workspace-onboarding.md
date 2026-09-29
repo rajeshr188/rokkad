@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-29
 tags: [flows, workspace, onboarding, invitations]
 related: [../architecture/control-plane-contracts.md, business-setup.md]
 ---
@@ -11,6 +11,15 @@ related: [../architecture/control-plane-contracts.md, business-setup.md]
 Account introduction and branch readiness are separate. Rokkad uses a shared
 PostgreSQL schema with forced Workspace RLS; onboarding does not create a tenant
 schema or seed retired accounting/DEA modules.
+
+On 29 September, automatic invitation-only dispatch was enabled, one message per
+run approximately a minute apart. Invitation creation/acceptance does not start a
+subscription or grant commercial access. Public trial signup remains disabled;
+the owner-selected [30-day offer](../plans/public-workspace-trial.md) is prepared
+separately from the private billing catalog. New Workspaces currently need an
+administrator access decision before ordinary business use. Existing Workspaces
+retain their current access. Verified Google sign-in is the established invitation
+acceptance path; other account-verification email is a separate transport.
 
 ## New owner
 

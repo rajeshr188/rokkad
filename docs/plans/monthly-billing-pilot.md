@@ -10,7 +10,31 @@ related: [subscription-monetization-rollout.md, ../implementation/billing-provid
 
 The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
-Production billing and mail dispatch remain disabled.
+Production billing remains disabled. Invitation-only mail dispatch is enabled;
+receipt dispatch remains separately controlled.
+
+## Dashboard support routing and trial preparation (2026-09-29)
+
+The 12:54 reply to the fee email is an automated **unmonitored mailbox** notice,
+not pricing guidance. With the existing fee-message authorization and separately
+approved contact confirmation, the same inquiry was submitted through Dashboard
+Account related assistance / Pricing Enquiry. **Ticket 21170392** is Active; the
+Dashboard displays a response target of **1 October, 11:14 AM**. No fee is confirmed.
+Sent email alone must not be treated as a monitored support request.
+
+Dashboard support history now confirms annual **21146138 In Progress**, with a
+displayed response target of **29 September, 5:48 PM**. Failure **21146171 is Closed**;
+its conversation shows the original report and closure notice but no technical
+answer. The 10:21 annual follow-up already references that unresolved failure.
+Do not mark either provider acceptance passed or repeat an uncertain charge.
+Local screenshot: `outputs/razorpay-pricing-ticket-21170392-20260929.png`.
+
+Invitation-only delivery is now enabled independently of billing. The owner selected
+a **30-day public trial draft**, six total members, no card or automatic collection,
+followed by INR 1,499/month only after explicit consent. Preparation and required
+private-catalog isolation are recorded in [the trial plan](public-workspace-trial.md).
+Trial activation, recurring authorization and checkout stay false; existing JSK
+dates and subscriptions remain unchanged.
 
 ## Individual seller continuation and fee inquiry sent (2026-09-29)
 
