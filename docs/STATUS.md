@@ -12,6 +12,44 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Permanent platform admin and paused live webhook runtime (2026-09-29)
+
+The owner explicitly designated **admin@rokkad.com** as permanent platform admin.
+Existing active, verified user **9** now has staff/superuser flags; audit **58801**
+records the grant. Existing sign-in is unchanged, as are Workspace memberships,
+canonical ownership and subscriptions. Temporary catalog operator **10** remains
+disabled with no usable password and no admin flags.
+
+At **12:15 IST**, persistent web and workers received the root-only live key file
+and a distinct webhook secret, with **BILLING_PROVIDER_MODE=live**. Checkout, new
+trials, recurring authorization and platform sending remain false. Compose,
+dispatch/feedback/recovery service definitions and watchdog now use the same live
+configuration. Application images and database schema are unchanged.
+
+Read-only preflight and final checks passed in both runtimes under the restricted
+database role. All billing-table fingerprints are unchanged; all three Workspaces
+retain full trial access and private catalogs. JSK's 8 October trial is preserved.
+Configuration/evidence checks pass; `launch_ready` remains false. HTTPS login is
+200, web has zero restarts, mail queue flags/due messages zero. Feedback/recovery/
+health timers were restored; dispatch stays disabled and its marker absent.
+
+The public callback rejects an invalid signature with HTTP 400. A correctly signed
+malformed body reaches payload validation and returns HTTP 400 without inserting a
+webhook event. This verifies HTTPS routing and HMAC handling, **not a provider event
+delivery**. No subscription, invoice, payment, receipt or charge was created.
+
+The Razorpay Live Mode form is prepared with the verified callback URL, failure
+alerts to admin@rokkad.com and 14 supported events. Registration remains pending
+the owner's secret-entry/submission handoff required by browser credential policy.
+The handoff secret is in a current-user-only local folder outside the repository;
+it was not printed or committed. Configuration backups and sanitized verification
+are retained server-private under `live-webhook-20260929/`.
+
+Next: verify the saved provider webhook, review receipt dispatch scope and preserve
+the unresolved provider acceptance/trial eligibility gates. See the
+[runtime checkpoint](implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29).
+
+
 ## Live credentials verified and monthly catalog bound (2026-09-29)
 
 The owner generated the live keys and provided the downloaded CSV. At **11:51 IST**,

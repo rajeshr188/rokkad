@@ -71,14 +71,18 @@ treatment is unsupported. Deployed to web and mail workers on 28 September with
 billing/sending paused, no migration or evidence backfill. On 29 September the
 confirmed seller fields and explicit zero tax were configured in the shared
 web/worker environment; restricted checks preserve all billing records and JSK's
-trial/access. Live credentials are now verified, DPAPI-protected locally and staged
-in a root-only server file, outside persistent process configuration. Live provider
+trial/access. Live credentials are verified, DPAPI-protected locally and stored
+in a root-only server file. On 29 September, persistent web and worker configuration
+was moved to live provider mode with a distinct webhook secret; checkout, trial
+signup, recurring authorization and sending remain false. Signed malformed-body
+HTTPS diagnostics pass without inserting events; Razorpay webhook registration is
+awaiting the owner's credential-entry handoff. Configuration readiness is not
+provider delivery or launch acceptance. Live provider
 plan plan_ThkgxD2zC0o8FL is bound to separate local Plan 2 / binding 1 at INR 1499,
 zero GST and six members. Owner-approved temporary operator 10 has no usable
 password and is disabled with staff/superuser flags removed. No agreement/payment
-exists; all billing/sending gates and persistent provider mode remain paused.
-The disabled-mode inventory warning reflects the staged live binding; in-memory
-live-mode evidence review is clean. Never replace Test Mode evidence. The owner has confirmed unregistered GST
+exists; all billing/sending gates remain paused. Persistent live-mode evidence
+review is clean. Never replace Test Mode evidence. The owner has confirmed unregistered GST
 status, the documented billing address, 12 monthly collections and JSK as pilot.
 JSK is Workspace 2, canonical owner 1, with three members and no pending invites.
 Its trial ends 8 October 2026 at 23:39 IST and blocks immediate recurring creation;
@@ -87,10 +91,18 @@ deployed to web/workers as `rokkad:billing-paused-99bda8c1cb27`: paused checkout
 and trial signup hide the generic plan list;
 prepared agreements retain their frozen terms. Live binding requires trial signup
 paused too. Legacy feature and estimated overage claims are removed; stored terms
-are unchanged. All billing/sending gates remain paused; next is reviewed live
-configuration and new monthly catalog preparation. Never edit
+are unchanged. All billing/sending gates remain paused; next is confirming the
+provider webhook and reviewing receipt-worker scope. Never edit
 the existing shared trial plan. No charge or activation was authorized. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
+
+The owner designated **admin@rokkad.com** as the permanent platform administrator
+on 29 September 2026. Existing verified user **9** is active with staff/superuser
+flags, following the established superuser-only platform-admin contract. Preserve
+its existing sign-in; no new local password was set. Audit **58801** records the
+explicit owner instruction. This does not change Workspace memberships or canonical
+ownership. Temporary catalog operator 10 remains disabled and must not be reused
+as the permanent administrator.
 
 Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,
 owner plus five staff, operator-prepared agreements; invoice name **Rajesh Rathod H**.

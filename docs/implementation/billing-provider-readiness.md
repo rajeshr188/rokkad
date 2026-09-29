@@ -95,6 +95,75 @@ and test evidence stay isolated; key availability is not launch approval.
 Local sanitized results: `outputs/live-seller-20260929/prepare.json` and
 `outputs/live-seller-20260929/apply.json`.
 
+## Permanent admin and live webhook runtime (2026-09-29)
+
+The owner explicitly appointed **admin@rokkad.com** permanently. The exact unique,
+active and email-verified production account is **user 9**. Staff/superuser flags
+were granted under the established platform-admin contract, with global
+`PERMISSION_GRANT` audit **58801** recording the owner instruction. No password was
+set and existing sign-in remains unchanged. Workspace membership/ownership and
+subscription fingerprints are unchanged. Temporary catalog operator **10** stays
+inactive, without staff/superuser flags or a usable password. Future authorized
+platform operations use the permanent administrator rather than resurrecting it.
+
+At **12:15 IST**, provider mode became **live** consistently in persistent web and
+workers. Checkout, trial signup, recurring authorization and platform sending all
+remain false. The root-owned 0600 `/root/rokkad-billing-live.env` now contains the
+previously verified live key pair and a separate random webhook secret. It is
+referenced by Compose, the dispatch/feedback/recovery service definitions and the
+watchdog command. Only non-secret mode is in shared `public.env`; credentials never
+enter that file or the repository. Images, runtime role, database and schema are
+unchanged. Worker dispatch retains `--invitations-only --limit 1`, but remains
+disabled with no dispatch marker.
+
+Preparation saved private configuration baselines and candidate files, then ran
+read-only web and worker preflight under `rokkad_prod_runtime` (not superuser or
+BYPASSRLS). Installation briefly paused the feedback/recovery/health timers,
+waited for in-flight service work to finish, reloaded definitions and recreated web.
+Automatic restoration of prior configuration was prepared for verification failure;
+no rollback was needed. Timers are again enabled/active; dispatch remains
+disabled/inactive. Private worker SES settings, production settings, runtime DB
+credentials and image identity hashes are unchanged.
+
+Verification: configuration ready, clean live-mode evidence inventory and
+`launch_ready=false`; every subscription-table fingerprint unchanged, all three
+operating Workspaces on their original full-access trials and private catalogs.
+JSK still ends 8 October at 23:39 IST. HTTPS login 200, web zero restarts, mail queue
+due/flags zero. The callback resolves to
+`https://rokkad.com/subscriptions/webhook/razorpay/`. Over public HTTPS:
+
+- Invalid HMAC with a malformed body returns 400, `Signature verification failed`.
+- Correct HMAC over the same malformed body returns 400, `Invalid payload`.
+- Billing-table hashes remain unchanged; neither diagnostic inserts an event.
+
+This proves routing/signature validation, **not successful provider event delivery**.
+No financial event fixture was posted to production. No agreement, invoice,
+payment, receipt, charge or outgoing email was created by this step.
+
+The Live Mode Dashboard form is prepared, not yet submitted. URL is the canonical
+callback above; alert email **admin@rokkad.com**; events are `payment.authorized`,
+`payment.failed`, `payment.captured`, `refund.processed`, and the ten supported
+subscription events: `authenticated`, `activated`, `charged`, `pending`, `halted`,
+`cancelled`, `completed`, `paused`, `resumed`, `updated` (all prefixed
+`subscription.`). Do not select invoice/order/dispute events the handler does not
+support. Razorpay's [webhook setup documentation](https://razorpay.com/docs/webhooks/setup-edit-payments/)
+recommends a distinct secret and provides failure alert configuration.
+
+Browser credential policy requires the owner to enter the new secret and submit.
+It is available at `%LOCALAPPDATA%/Rokkad/private/live/razorpay-live-webhook-secret.txt`
+in the existing inheritance-protected current-user-only folder, outside OneDrive.
+Do not print it or paste it in chat. The provider webhook remains **unregistered
+until the owner's completion is verified**; signed diagnostic success alone is not
+enough. After registration, verify URL/enabled status/event set and review receipt
+worker scope/monitoring, without enabling collections or shortening the JSK trial.
+
+Sanitized evidence: `outputs/permanent-admin-applied-20260929.json`,
+`outputs/live-webhook-prepare-20260929.json`,
+`outputs/live-webhook-apply-20260929.json`. Server-private backups, preflight and
+verification logs are under `live-webhook-20260929/` in the deployment folder;
+admin evidence remains in `billing-seller-20260929/permanent-admin.json`.
+Unresolved provider failure/recovery/held-period acceptance remains a launch gate.
+
 ## Live keys and bound monthly catalog (2026-09-29)
 
 Owner-generated live keys authenticated successfully at **11:51 IST** against the
