@@ -296,8 +296,9 @@ INVITATIONS_INVITATION_MODEL = "orgs.CompanyInvitation"
 # INVITATIONS_INVITE_FORM = "apps.orgs.forms.InviteForm"
 INVITATIONS_INVITE_FORM = "apps.orgs.forms.CompanyInvitationForm"
 INVITATIONS_ADMIN_ADD_FORM = "apps.orgs.forms.InvitationAdminAddForm"
-ACCOUNT_ADAPTER = "invitations.models.InvitationsAdapter"
-INVITATIONS_ADAPTER = "invitations.models.InvitationsAdapter"
+ACCOUNT_ADAPTER = "apps.platform_mail.adapter.AccountAdapter"
+ACCOUNT_EMAIL_ENABLED = env.bool("ACCOUNT_EMAIL_ENABLED", default=False)
+INVITATIONS_ADAPTER = ACCOUNT_ADAPTER
 
 PHONENUMBER_DEFAULT_REGION = "IN"
 PHONENUMBER_DEFAULT_FORMAT = "NATIONAL"

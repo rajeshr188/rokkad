@@ -88,6 +88,17 @@ working SES invitations with working password-based signup mail. Configure and
 accept account-mail delivery before general public trial activation; Google sign-in
 remains the established verified-identity path. See [trial readiness](plans/public-workspace-trial.md).
 
+Account verification/reset intents are now implemented locally through the
+existing platform-mail queue and an explicit allauth/invitation adapter.
+`ACCOUNT_EMAIL_ENABLED=False` preserves legacy mail hooks; no production settings
+or images changed. New migration `platform_mail.0002` adds global identity intent
+evidence, with no stored tokens/passwords/bodies. All mail workers must be updated
+before any account row is queued; privately verify web/worker signing settings
+match. Account-only and invitation/account command scopes are available, but the
+live timer is still invitation-only. 72 mail tests passed with mocked sends;
+real account delivery acceptance and public activation remain pending. See the
+[account-mail rollout](implementation/platform-mail.md#account-mail-prepared-not-deployed-2026-09-29).
+
 Razorpay pricing correspondence must use Dashboard support: the previous email
 address returned an unmonitored-mailbox notice. The authorized fee inquiry is now
 ticket **21170392 Active**, response target 1 October 11:14 AM displayed. Annual

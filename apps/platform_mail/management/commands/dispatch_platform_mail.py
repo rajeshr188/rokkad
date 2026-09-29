@@ -2,6 +2,7 @@ import time
 
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.platform_mail.models import Delivery
@@ -20,17 +21,27 @@ class Command(BaseCommand):
         parser.add_argument("--delivery", type=str)
         scope = parser.add_mutually_exclusive_group()
         scope.add_argument("--invitations-only", action="store_true",
-                           help="Exclude every invoice receipt before selecting the bounded batch.")
+                           help="Select invitations only before selecting the bounded batch.")
         scope.add_argument("--receipts-only", action="store_true",
-                           help="Exclude every invitation before selecting the bounded batch.")
+                           help="Select receipts only before selecting the bounded batch.")
+        scope.add_argument("--accounts-only", action="store_true")
+        scope.add_argument("--invitations-and-accounts", action="store_true",
+                           help="Select invitations and account emails, excluding every receipt.")
 
     def handle(self, *args, **options):
         if not 1 <= options["limit"] <= 100:
             raise CommandError("Limit must be between 1 and 100.")
-        if options["invitations_only"] and options["receipts_only"]:
-            raise CommandError("Choose either invitation-only or receipt-only scope.")
+        scopes = {
+            "invitations_only": (Q(invitation__isnull=False), "invitation-only"),
+            "receipts_only": (Q(invoice__isnull=False), "receipt-only"),
+            "accounts_only": (Q(account_email__isnull=False), "account-only"),
+            "invitations_and_accounts": (Q(invoice__isnull=True), "invitation-and-account"),
+        }
+        selected = [value for key, value in scopes.items() if options[key]]
+        if len(selected) > 1:
+            raise CommandError("Choose only one source scope.")
         if options["recover_stale"]:
-            if options["invitations_only"] or options["receipts_only"]:
+            if selected:
                 raise CommandError("Source scope applies to dispatch, not stale-claim recovery.")
             self.stdout.write(f"Marked uncertain: {recover_stale_sends()}")
             return
@@ -40,14 +51,10 @@ class Command(BaseCommand):
                 rows = rows.filter(pk=options["delivery"])
             except ValidationError:
                 raise CommandError("Invalid delivery ID.") from None
-            if options["invitations_only"] and rows.filter(invoice__isnull=False).exists():
-                raise CommandError("The selected delivery is a receipt, outside invitation-only scope.")
-            if options["receipts_only"] and rows.filter(invitation__isnull=False).exists():
-                raise CommandError("The selected delivery is an invitation, outside receipt-only scope.")
-        if options["invitations_only"]:
-            rows = rows.filter(invitation__isnull=False, invoice__isnull=True)
-        elif options["receipts_only"]:
-            rows = rows.filter(invoice__isnull=False, invitation__isnull=True)
+            if selected and rows.exclude(selected[0][0]).exists():
+                raise CommandError(f"The selected delivery is outside {selected[0][1]} scope.")
+        if selected:
+            rows = rows.filter(selected[0][0])
         for pk in list(rows.values_list("pk", flat=True)[:options["limit"]]):
             try:
                 outcome = dispatch_one(pk, capture=options["capture"])

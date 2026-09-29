@@ -1000,7 +1000,10 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 		company = SimpleNamespace(id=9, slug="acme")
 
 		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role", side_effect=ValidationError("denied")) as mock_policy, \
-			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx:
+			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx, \
+			 patch("apps.orgs.services.control_plane.Company.all_objects.select_for_update") as mock_lock, \
+			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity:
+			mock_lock.return_value.get.return_value = company
 			with self.assertRaises(ValidationError):
 				control_plane.send_team_invitation(
 					form=form,
@@ -1014,7 +1017,9 @@ class InvitationTeamAuthorizationTests(SimpleTestCase):
 			workspace=company,
 			role=form.cleaned_data["role"],
 		)
-		mock_ctx.assert_not_called()
+		mock_ctx.assert_called_once_with()
+		mock_lock.return_value.get.assert_called_once_with(pk=company.id)
+		mock_capacity.assert_not_called()
 
 	@patch("apps.orgs.web.invitations.redirect")
 	@patch("apps.orgs.web.invitations.messages")

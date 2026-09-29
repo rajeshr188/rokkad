@@ -1,0 +1,9 @@
+{{ subject }}
+
+{{ purpose }}
+
+{{ action }}: {{ action_url }}
+
+If you did not request this email, you can ignore it. Your account will not change.
+
+Rokkad

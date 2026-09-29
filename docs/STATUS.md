@@ -12,6 +12,35 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 account verification/reset mail implemented locally (2026-09-29)
+
+Added a durable global account-email source to the existing monitored SES outbox,
+with an allauth adapter for verification/password-reset hooks. No token-bearing
+bodies or passwords are persisted. Restricted-role tests cover real signup and
+reset HTTP flows, valid native links, single-use resets, state/expiry/suppression
+checks, rollback and concurrent-request deduplication. Signup policy and ordinary
+allauth rate limits remain in place. Both invitation/account adapter settings now
+use the explicit adapter, preserving the old invitation-only signup policy.
+
+**72 focused mail tests passed**, including 15 new cases. Provider calls were
+mocked; no real account email was sent. The trial suites also passed their 25
+tests; an initial package-discovery invocation could not import four mail modules,
+so the mail suite was rerun successfully using explicit module labels.
+An additional **18 invitation authorization/acceptance checks passed**. One older
+mock-based test still assumed authorization preceded the Workspace seat lock;
+its fixture now reflects the existing lock and asserts denial occurs before
+capacity evaluation or invitation creation. No invitation service behavior changed.
+
+`ACCOUNT_EMAIL_ENABLED` defaults to false. New account-only and combined
+invitation/account scopes exclude receipts as appropriate before batch limits.
+Migration `platform_mail.0002`, web/worker release, runtime grants, matched signing
+configuration and authorized real verification/reset acceptance remain pending.
+Production was not changed: invitations remain enabled, account mail remains on
+locmem, public trials and payments remain paused. Next deploy the coordinated
+account-mail release while paused, then perform controlled delivery acceptance
+before publishing the public trial. See the [runbook](implementation/platform-mail.md#account-mail-prepared-not-deployed-2026-09-29)
+and [decision](adr/2026-09-29-durable-account-email.md).
+
 ## FW-019 trial catalog saved and browser journey rehearsed (2026-09-29)
 
 Production now has **Plan 3: Rokkad 30-day public trial**, INR 0 monthly/annual,

@@ -8,6 +8,58 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Account mail prepared, not deployed (2026-09-29)
+
+The new allauth adapter queues verification/reset intents when
+`ACCOUNT_EMAIL_ENABLED=True`. Its default is false, preserving the existing
+backend until rollout. No SES credentials are needed by the web process.
+Production still uses locmem for account mail; enabled invitation sending does
+not establish account delivery. See the [decision](../adr/2026-09-29-durable-account-email.md).
+
+The outbox stores source references and a keyed state fingerprint, never links,
+passwords or email bodies. Queue intent lifetime is at most 30 minutes. Native
+link expiry starts at rendering and uses the existing allauth/Django settings.
+Inactive/changed accounts, verified/deleted addresses, stale reset requests and
+suppression are rechecked before sending. Uncertain sends are not automatically
+replayed; fresh requests must use the ordinary rate-limited account flow.
+
+Rollout sequence:
+
+1. Back up schema/configuration and pause dispatch during the coordinated release.
+   Apply migration `platform_mail.0002` with the owner-only migration settings;
+   verify DML/sequence grants for the restricted runtime role.
+2. Deploy the same reviewed account-mail code to web and every mail worker,
+   including feedback/recovery/health. Keep `ACCOUNT_EMAIL_ENABLED=False` initially.
+   Old workers cannot interpret account-source rows, so do not enqueue until all
+   workers have been replaced.
+3. Privately compare web/worker signing-secret and token-setting fingerprints;
+   align their canonical HTTPS origin and confirm HMAC/link flows. Never print
+   secrets or transfer the signing secret into a local receipt-rehearsal setup.
+   `check_platform_mail` reports the account flag and rejects code-based flows
+   when enabled; it cannot establish cross-process secret equality.
+4. Enable account queuing/sending consistently and run specifically authorized
+   verification/reset acceptance messages with `--accounts-only --limit 1` and
+   an explicit delivery ID. Verify SES feedback and consume the links through
+   the actual site. This checkpoint has no authorization for those new emails.
+5. After acceptance, schedule `--invitations-and-accounts` with reviewed capacity
+   and monitoring. It filters receipts before selecting the bounded batch.
+   Retaining `--invitations-only` deliberately leaves account requests queued.
+   The current live timer remains invitation-only; no timer or flag changed here.
+
+To pause account delivery, turn off its flag in both web/worker settings and use
+invitation-only dispatch; preserve attempts and feedback processing. Disabling
+the flag restores the legacy backend for new account requests, so account email
+delivery is unavailable if that backend remains locmem. Drain or expire pending
+account rows before rolling back to pre-account worker code. Do not reverse the
+schema migration while account evidence exists.
+
+**72 focused mail tests passed**, including 15 new account/concurrency/combined
+scope cases. Provider sends are mocked. Restricted-role HTTP tests consume real
+allauth verification/reset links and verify single-use password reset, signup
+login compatibility, generic unknown-account responses, queue atomicity,
+stale-state cancellation, suppression and source isolation. Real delivery and
+production activation remain outstanding.
+
 ## Ongoing invitation dispatch enabled (2026-09-29)
 
 Owner authorized ongoing invitation email activation independently of charging.

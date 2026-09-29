@@ -63,6 +63,27 @@ class InvitationDispatchTests(TestCase):
                 call_command("dispatch_platform_mail", recover_stale=True, invitations_only=True)
             recover.assert_not_called()
 
+    @override_settings(ACCOUNT_EMAIL_ENABLED=True)
+    def test_combined_scope_sends_invitation_and_account_but_excludes_older_receipt(self):
+        from allauth.account.models import EmailAddress
+        from .account_mail import enqueue_account_email
+        from .models import AccountEmail
+        address = EmailAddress.objects.create(user=self.owner, email="owner@example.test")
+        account = enqueue_account_email(user=self.owner, email=address.email, email_address=address,
+                                        kind=AccountEmail.Kind.VERIFICATION)
+        with patch("apps.platform_mail.transport.send_ses", side_effect=["ses-invite", "ses-account"]) as send, \
+                patch("apps.platform_mail.management.commands.dispatch_platform_mail.time.sleep"):
+            call_command("dispatch_platform_mail", send=True, invitations_and_accounts=True,
+                         limit=2, stdout=StringIO())
+            self.assertEqual(send.call_count, 2)
+        self.receipt.refresh_from_db()
+        account.refresh_from_db()
+        self.invitation.refresh_from_db()
+        self.assertEqual(self.receipt.status, "queued")
+        self.assertEqual(account.status, "accepted")
+        self.assertEqual(self.invitation.status, "accepted")
+        self.assertFalse(Attempt.objects.filter(delivery=self.receipt).exists())
+
 
 @override_settings(**mail_tests.MAIL_SETTINGS, BILLING_CHECKOUT_ENABLED=True,
                    BILLING_PROVIDER_MODE="live", RAZORPAY_KEY_ID="rzp_live_mockfixture",

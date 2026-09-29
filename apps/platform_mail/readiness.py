@@ -4,11 +4,18 @@ from email.utils import parseaddr
 from urllib.parse import urlsplit
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from apps.configuration.email_readiness import _address_valid
 
 
 def assess_platform_mail():
     blockers = []
+    if settings.ACCOUNT_EMAIL_ENABLED:
+        from .account_mail import check_link_configuration
+        try:
+            check_link_configuration()
+        except ValidationError as exc:
+            blockers.extend(exc.messages)
     region, account = settings.PLATFORM_SES_REGION, settings.PLATFORM_SES_ACCOUNT_ID
     domain = settings.PLATFORM_EMAIL_SENDER_DOMAIN
     origin = urlsplit(settings.PLATFORM_EMAIL_BASE_URL)
@@ -36,6 +43,7 @@ def assess_platform_mail():
             not re.fullmatch(rf"/{re.escape(account)}/[A-Za-z0-9_-]+", queue.path) or queue.query or queue.fragment):
         blockers.append("Configure the exact private regional SQS queue URL.")
     return {"sending_enabled": settings.PLATFORM_EMAIL_ENABLED,
+            "account_email_enabled": settings.ACCOUNT_EMAIL_ENABLED,
             "configuration_ready": not blockers, "delivery_verified": False, "blockers": blockers,
             "unverified": ["IAM/topic/queue policies and redrive", "SES domain, production access and quota",
                            "Active worker and feedback consumer", "Controlled delivery, bounce and reply tests"]}

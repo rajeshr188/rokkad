@@ -78,6 +78,9 @@ def source_problem(row):
                 role_policy.assert_can_invite_role(actor=inv.inviter, workspace=inv.company, role=inv.role)
             except (ValidationError, PermissionDenied):
                 return "inviter_no_longer_authorized"
+    elif row.account_email_id:
+        from .account_mail import account_source_problem
+        return account_source_problem(row)
     elif row.invoice.status != "paid":
         return "invoice_not_paid"
     return ""
@@ -97,6 +100,10 @@ def render_delivery(row):
         subject = f"Invitation to {inv.company.name} on Rokkad"
         html = render_to_string("platform_mail/invitation.html", context)
         text = render_to_string("platform_mail/invitation.txt", context)
+        sender, reply = settings.DEFAULT_FROM_EMAIL, settings.PLATFORM_EMAIL_REPLY_TO
+    elif row.account_email_id:
+        from .account_mail import render_account_email
+        subject, html, text = render_account_email(row, origin)
         sender, reply = settings.DEFAULT_FROM_EMAIL, settings.PLATFORM_EMAIL_REPLY_TO
     else:
         from apps.subscriptions.provider_configuration import invoice_mode
@@ -124,6 +131,8 @@ def retry_delivery(delivery_id, *, actor):
     from apps.orgs.services import role_policy
     from apps.subscriptions.checkout import require_billing_owner
     row = Delivery.objects.select_for_update().get(pk=delivery_id)
+    if row.account_email_id:
+        raise PermissionDenied("Request a fresh account email through the account sign-in flow.")
     if row.invitation_id:
         inv = row.invitation
         role_policy.assert_can_invite_role(actor=actor, workspace=inv.company, role=inv.role)
@@ -163,6 +172,8 @@ def _dispatch_one(delivery_id, *, capture=False, rehearsal=None):
             validate_test_receipt(row, **rehearsal)
         if row.status != Delivery.Status.QUEUED or row.available_at > timezone.now():
             return row.status
+        if row.account_email_id and not capture and not settings.ACCOUNT_EMAIL_ENABLED:
+            raise ValidationError("Account email sending is disabled.")
         if row.invoice_id and not capture and rehearsal is None:
             from apps.subscriptions.provider_configuration import invoice_mode
             if getattr(settings, "BILLING_PROVIDER_MODE", "disabled") != "live" or invoice_mode(row.invoice) != "live":

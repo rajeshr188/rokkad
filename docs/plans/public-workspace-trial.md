@@ -93,6 +93,19 @@ invitations use their separate enabled SES worker. The local journey establishes
 application behavior, not production account-mail delivery. Implement and accept
 that transport before advertising general password-based trial signup.
 
+Account verification/reset queuing is now implemented and tested locally in the
+existing monitored mail worker. `ACCOUNT_EMAIL_ENABLED` defaults to false; the
+schema, matched web/worker deployment and real delivery acceptance are still
+pending. See the [rollout procedure](../implementation/platform-mail.md#account-mail-prepared-not-deployed-2026-09-29).
+
+The free offer and paid offer describe different consent and lifecycle terms,
+not separate products or permanent customer classes. The trial is INR 0 for
+30 days with no card or automatic charge. The private paid offer is INR 1,499
+per month with six total members and separately accepted recurring terms. Both
+can eventually be presented publicly after their respective acceptance gates;
+publication does not automatically convert a trial to a paid subscription or
+rewrite existing accepted terms. Annual billing remains separate and pending.
+
 ## Remaining publication work
 
 The previously deployed trial flag exposes every active plan in the generic catalog. Plan 1

@@ -1,8 +1,25 @@
 """Control-plane delivery evidence; never stores borrower notification content."""
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
+
+
+class AccountEmail(models.Model):
+    """Global identity intent, with no token, message body or Workspace data."""
+    class Kind(models.TextChoices):
+        VERIFICATION = "verification", "Email verification"
+        PASSWORD_RESET = "password_reset", "Password reset"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    email_address = models.ForeignKey("account.EmailAddress", null=True, blank=True,
+                                      on_delete=models.SET_NULL)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        default_permissions = ()
 
 
 class Delivery(models.Model):
@@ -25,6 +42,8 @@ class Delivery(models.Model):
                                      on_delete=models.PROTECT, related_name="email_delivery")
     invoice = models.OneToOneField("subscriptions.Invoice", null=True, blank=True,
                                   on_delete=models.PROTECT, related_name="email_delivery")
+    account_email = models.OneToOneField(AccountEmail, null=True, blank=True,
+                                        on_delete=models.PROTECT, related_name="delivery")
     recipient = models.EmailField(blank=True)
     source_fingerprint = models.CharField(max_length=64, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
@@ -37,8 +56,9 @@ class Delivery(models.Model):
 
     class Meta:
         constraints = [models.CheckConstraint(
-            condition=(models.Q(invitation__isnull=False, invoice__isnull=True) |
-                       models.Q(invitation__isnull=True, invoice__isnull=False)),
+            condition=(models.Q(invitation__isnull=False, invoice__isnull=True, account_email__isnull=True) |
+                       models.Q(invitation__isnull=True, invoice__isnull=False, account_email__isnull=True) |
+                       models.Q(invitation__isnull=True, invoice__isnull=True, account_email__isnull=False)),
             name="platform_mail_one_source",
         )]
         indexes = [models.Index(fields=["status", "available_at"])]

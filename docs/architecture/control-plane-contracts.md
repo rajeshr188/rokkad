@@ -693,7 +693,8 @@ these contracts.
 ## 16. Platform email delivery evidence
 
 New invitations and paid billing receipts commit durable delivery intent in their
-source transaction. Delivery references exactly one global invitation or invoice;
+source transaction. Delivery references exactly one global invitation, invoice
+or account verification/reset intent;
 Attempts and provider events are control-plane operational evidence. These tables
 are not generic Workspace-owned notification storage. Borrower content stays in
 Notify v2 under forced RLS. Global suppression is deliberately platform-wide.
@@ -702,3 +703,10 @@ retry requires role-grant authority or canonical billing ownership. No general
 mail CRUD/list API or default model permissions are granted. Workers use the
 restricted role, including when evaluating Workspace-owned role grants. See the
 [decision](../adr/2026-09-26-durable-platform-mail.md).
+
+Account intents are global identity evidence, contain no saved tokens or message
+bodies, and are excluded from Workspace display/retry routes. Their worker checks
+account state and generates native allauth links against the canonical origin at
+dispatch. A separate disabled-by-default flag controls this extension; existing
+invitation-only scheduling stays scoped. See the
+[account-email decision](../adr/2026-09-29-durable-account-email.md).
