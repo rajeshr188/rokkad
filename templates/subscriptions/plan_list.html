@@ -83,7 +83,7 @@
     <div class="row mb-5">
         <div class="col-12">
             <h1 class="mb-2">Subscription plans</h1>
-            {% if billing_checkout_enabled or trial_start_enabled %}
+            {% if billing_checkout_enabled %}
             <p class="text-muted">One subscription per Workspace. Prices shown before applicable tax.</p>
             {% else %}
             <p>Subscriptions are arranged with Rokkad support. Review any agreement prepared for your Workspace in Recurring payments.</p>
@@ -93,7 +93,9 @@
         </div>
     </div>
     
-    {% if billing_checkout_enabled or trial_start_enabled %}
+    {% include "subscriptions/_public_trial.html" %}
+
+    {% if billing_checkout_enabled %}
     <!-- Plans Display -->
     <div class="row">
         {% for plan in plans %}
@@ -123,17 +125,7 @@
                     <li>{{ plan.max_users }} members including the owner</li>
                 </ul>
                 
-                {% if not current_subscription and trial_start_enabled and plan.trial_days > 0 %}
-                <form method="post" action="{% url 'workspace_subscriptions:start-trial' workspace_slug=request.workspace.slug plan_id=plan.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success btn-action">
-                        Start {{ plan.trial_days }}-day free trial
-                    </button>
-                </form>
-                {% if billing_checkout_enabled %}<a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.slug plan_id=plan.id %}" class="btn btn-outline-primary btn-action">
-                    Subscribe now
-                </a>{% endif %}
-                {% elif current_plan.id != plan.id and billing_checkout_enabled %}
+                {% if current_plan.id != plan.id %}
                 <a href="{% url 'workspace_subscriptions:checkout' workspace_slug=request.workspace.slug plan_id=plan.id %}" class="btn btn-primary btn-action">
                     Upgrade to {{ plan.name }}
                 </a>
@@ -149,12 +141,6 @@
         {% endfor %}
     </div>
     
-    <!-- Trial Info -->
-    {% if trial_start_enabled and not current_subscription %}
-    <div class="alert alert-info mt-5">
-        Where available, start a trial using the plan's trial button. Trial length is shown on each eligible plan.
-    </div>
-    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

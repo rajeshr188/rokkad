@@ -169,7 +169,11 @@
                     {% if billing_decision.recovery_only %}
                     <p class="text-danger">{{ billing_decision.message }}</p>
                     {% endif %}
-                    {% if subscription.end_date %}
+                    {% if subscription.status == 'trial' %}
+                    <p class="text-muted small">Trial ends: <strong>{{ subscription.trial_end_date|date:"M d, Y H:i T" }}</strong>.<br>
+                        Read-only access begins: <strong>{{ trial_read_only_at|date:"M d, Y H:i T" }}</strong>.
+                        No automatic charge occurs when your trial ends.</p>
+                    {% elif subscription.end_date %}
                     <p class="text-muted small">
                         Period ends: <strong>{{ subscription.end_date|date:"M d, Y H:i T" }}</strong>
                     </p>

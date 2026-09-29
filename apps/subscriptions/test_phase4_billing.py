@@ -334,44 +334,43 @@ class BillingMiddlewareAcceptanceTests(TestCase):
         self.workspace.refresh_from_db()
         self.assertEqual(self.workspace.lifecycle_state, Company.LifecycleState.ACTIVE)
 
-    @override_settings(BILLING_ALLOW_TRIAL_START=True)
+    def public_trial(self):
+        from allauth.account.models import EmailAddress
+        self.owner.email = "trial-owner@example.com"
+        self.owner.save(update_fields=["email"])
+        EmailAddress.objects.create(user=self.owner, email=self.owner.email, verified=True)
+        plan = Plan.objects.create(name="Public trial", tier="starter", price=0,
+                                   max_users=6, trial_days=30)
+        self.enable = override_settings(BILLING_ALLOW_TRIAL_START=True,
+                                       BILLING_PUBLIC_TRIAL_PLAN_ID=plan.pk)
+        self.enable.enable()
+        self.addCleanup(self.enable.disable)
+        return plan
+
     def test_owner_can_explicitly_start_trial_with_projected_entitlements(self):
-        plan = Plan.objects.create(
-            name="Trial Starter",
-            tier=Plan.PlanTierChoices.STARTER,
-            price=Decimal("100.00"),
-            description="Trial plan",
-            max_users=4,
-            trial_days=14,
-        )
-
+        from .public_trial import PUBLIC_TRIAL_TERMS
+        plan = self.public_trial()
         response = self.client.post(
-            f"/w/no-billing-workspace/settings/billing/plans/{plan.pk}/start-trial/"
+            f"/w/no-billing-workspace/settings/billing/plans/{plan.pk}/start-trial/",
+            {"accepted_terms": PUBLIC_TRIAL_TERMS},
         )
-
         self.assertEqual(response.status_code, 302)
         subscription = Subscription.objects.get(company=self.workspace)
         self.assertEqual(subscription.status, Subscription.StatusChoices.TRIAL)
         self.assertGreater(subscription.trial_end_date, timezone.now())
+        self.assertFalse(subscription.auto_renew)
         self.assertTrue(subscription.events.filter(event_type="trial.started").exists())
-        self.assertEqual(
-            entitlements.limit(self.workspace, "workspace.max_members"), 4
-        )
+        self.assertEqual(entitlements.limit(self.workspace, "workspace.max_members"), 6)
 
-    @override_settings(BILLING_ALLOW_TRIAL_START=True)
     def test_trial_start_is_post_only_and_duplicate_safe(self):
-        plan = Plan.objects.create(
-            name="Trial Starter",
-            tier=Plan.PlanTierChoices.STARTER,
-            price=Decimal("100.00"),
-            description="Trial plan",
-        )
+        from .public_trial import PUBLIC_TRIAL_TERMS
+        plan = self.public_trial()
         url = f"/w/no-billing-workspace/settings/billing/plans/{plan.pk}/start-trial/"
-
         self.assertEqual(self.client.get(url).status_code, 405)
-        self.assertEqual(self.client.post(url).status_code, 302)
-        self.assertEqual(self.client.post(url).status_code, 302)
-        self.assertEqual(Subscription.objects.filter(company=self.workspace).count(), 1)
+        self.assertEqual(self.client.post(url, {"accepted_terms": PUBLIC_TRIAL_TERMS}).status_code, 302)
+        before = Subscription.objects.values().get(company=self.workspace)
+        self.assertEqual(self.client.post(url, {"accepted_terms": PUBLIC_TRIAL_TERMS}).status_code, 302)
+        self.assertEqual(Subscription.objects.values().get(company=self.workspace), before)
 
     @override_settings(BILLING_ALLOW_TRIAL_START=True)
     def test_non_owner_cannot_start_trial(self):

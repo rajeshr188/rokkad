@@ -12,6 +12,36 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 public trial consent and seat enforcement implemented locally (2026-09-29)
+
+The approved **30-day trial for owner plus five staff** now has a separate selected
+Plan boundary and explicit versioned consent. A verified canonical owner must
+accept in the matching Workspace context. Private/changed/unselected plans,
+existing billing/access history and over-capacity Workspaces are rejected. Trial
+creation records terms and exact end, projects six seats, and sets auto-renew false.
+No provider mandate, invoice or payment is created. New-owner onboarding routes
+from Workspace creation to consent, then team setup; billing displays trial end
+and the seven-day grace/read-only boundary.
+
+A real seat test exposed the old installed-app short-name check that bypassed the
+limit. The resolver now uses Django's app registry. Company locks serialize trial
+start, invitation reservation/acceptance and member creation; direct member adds
+respect pending reservations. Existing members are not removed or changed.
+
+**82 focused tests passed**, including restricted-role HTTP and service journeys,
+simultaneous trial acceptance and competing last-seat invitations, no-charge
+expiry/grace behavior, private catalog isolation and existing access preservation.
+Documentation link validation passed. No production configuration, Plan, customer
+subscription or sending operation changed in this increment; public trial and
+both payment creation switches remain off in production. Invitation dispatch
+continues with the previously verified enabled configuration.
+
+Next: prepare the separate zero-price Plan with reviewed supported features,
+rehearse browser signup/consent/invitation acceptance, review one-trial-per-Workspace
+abuse/support controls, then deploy and activate the public trial while keeping
+payments paused. See [trial preparation](plans/public-workspace-trial.md) and the
+[selected-offer decision](adr/2026-09-29-selected-public-trial.md).
+
 ## Ongoing invitations enabled; public trial prepared; pricing ticket routed (2026-09-29)
 
 At **17:12 IST**, owner-authorized invitation-only email activation completed.

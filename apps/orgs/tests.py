@@ -1721,6 +1721,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		failure = ValidationError("duplicate")
 
 		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch.object(control_plane.Company.all_objects, "select_for_update") as locked_companies, \
 			 patch("apps.orgs.services.control_plane.transaction.atomic", return_value=contextlib.nullcontext()), \
 			 patch.object(control_plane.Role.objects, "get", return_value=member_role) as mock_role_get, \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as assert_can_invite, \
@@ -1730,6 +1731,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 				"create",
 				side_effect=[invitation, failure],
 			 ) as create_invitation:
+			locked_companies.return_value.get.return_value = company
 			result = control_plane.send_onboarding_team_invitations(
 				email_addresses=["a@example.com", "b@example.com"],
 				actor=actor,
@@ -1766,12 +1768,16 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		old_role = membership.role
 
 		with patch("apps.orgs.services.control_plane._control_plane_transaction", return_value=contextlib.nullcontext()) as mock_ctx, \
+			 patch.object(control_plane.Company.all_objects, "select_for_update") as locked_companies, \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity") as mock_capacity, \
 			 patch("apps.orgs.services.control_plane.ensure_role_change_within_capacity") as mock_role_capacity, \
 			 patch.object(control_plane.Membership.objects, "get_or_create", return_value=(membership, True)), \
+			 patch.object(control_plane.Membership.objects, "filter") as member_query, \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_change_role"), \
 			 patch("apps.orgs.services.control_plane.role_policy.assert_can_remove_membership"), \
 			 patch("apps.orgs.services.control_plane.AuditLog.log"):
+			locked_companies.return_value.get.return_value = membership.company
+			member_query.return_value.exists.return_value = False
 			control_plane.create_membership(
 				user=membership.user,
 				company=membership.company,
@@ -1794,7 +1800,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 		self.assertEqual(mock_ctx.call_count, 3)
 		mock_capacity.assert_called_once_with(
 			workspace=membership.company,
-			include_pending_invitations=False,
+			include_pending_invitations=True,
 			extra_slots=1,
 		)
 		mock_role_capacity.assert_called_once_with(
@@ -1810,7 +1816,9 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 
 		with patch("apps.orgs.services.control_plane.role_policy.assert_can_invite_role") as mock_policy, \
 			 patch("apps.orgs.services.control_plane.ensure_workspace_has_member_capacity", side_effect=ValidationError("limit reached")), \
-			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx:
+			 patch("apps.orgs.services.control_plane._control_plane_transaction") as mock_ctx, \
+			 patch.object(control_plane.Company.all_objects, "select_for_update") as locked_companies:
+			locked_companies.return_value.get.return_value = company
 			with self.assertRaises(ValidationError):
 				control_plane.send_team_invitation(
 					form=form,
@@ -1824,7 +1832,7 @@ class ControlPlaneIntegrityTests(SimpleTestCase):
 			workspace=company,
 			role=form.cleaned_data["role"],
 		)
-		mock_ctx.assert_not_called()
+		mock_ctx.assert_called_once()
 
 	def test_audit_actions_match_declared_choices(self):
 		from apps.orgs.audit import AuditLog

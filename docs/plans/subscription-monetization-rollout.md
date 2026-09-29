@@ -35,7 +35,8 @@ The following snapshot supersedes the dated preparation history below.
 - **No live agreement, invoice, payment or receipt exists.** Webhook registration
   and HTTPS/HMAC diagnostics do not prove actual Razorpay event delivery.
 - **Public trial draft:** owner selected 30 days and six members, no card or automatic
-  charge. [Separate catalog/consent preparation](public-workspace-trial.md) is required;
+  charge. [Separate catalog/consent code](public-workspace-trial.md) is prepared locally;
+  deployment and browser acceptance remain pending;
   self-service trials remain disabled and existing trials unchanged.
 
 ## Production critical path (reviewed 2026-09-29)

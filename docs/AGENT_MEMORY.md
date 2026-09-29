@@ -67,9 +67,13 @@ dispatch timer/marker are active, one per run approximately 60 seconds apart;
 feedback/recovery/health are active and healthy. Billing/trial flags remain false,
 and scheduled receipts remain excluded. Do not carry forward earlier paused-mail
 flags in deployments. Owner selected a public **30-day** trial draft for six total
-members, no card or automatic charge. Public trial/catalog isolation is still to
-be implemented; do not expose the two private/internal plans by flipping the current
-trial flag. See [trial preparation](plans/public-workspace-trial.md) and
+members, no card or automatic charge. Public trial/catalog isolation and versioned
+verified-owner consent are now implemented locally: `BILLING_PUBLIC_TRIAL_PLAN_ID`
+selects a separate zero-price, unbound, 30-day/six-member Plan and defaults to zero.
+Existing billing/access history is ineligible. Production remains paused pending
+plan preparation, browser acceptance and deployment. Do not enable the old image's
+trial flag. Capacity now resolves through Django's app registry; Company locks
+serialize seat reservations, member creation and acceptance. See [trial preparation](plans/public-workspace-trial.md) and
 [mail activation](implementation/platform-mail.md#ongoing-invitation-dispatch-enabled-2026-09-29).
 
 Razorpay pricing correspondence must use Dashboard support: the previous email

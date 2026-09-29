@@ -436,6 +436,13 @@ terms come from their immutable binding. Live catalog review requires all three
 creation switches paused, including trial signup. See the
 [publication boundary](../adr/2026-09-28-private-operator-billing-catalog.md).
 
+Public trial preparation now adds a selected-plan setting and versioned owner
+consent, separate from paid catalog publication. Matching Workspace context, active
+verified canonical ownership and no existing billing/access history are required.
+Trial and invitation/member capacity changes share a Company row lock; trials
+create no financial evidence. Production publication remains pending. See the
+[selected-trial decision](../adr/2026-09-29-selected-public-trial.md).
+
 The target public API is a single Workspace-scoped service:
 
 ```python

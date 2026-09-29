@@ -26,7 +26,12 @@ acceptance path; other account-verification email is a separate transport.
 1. Sign in and complete the profile step.
 2. Create a Workspace through the existing control-plane service. It creates the
    owner relationship and Membership; a profile preference is navigation only.
-3. Optionally invite staff. Existing service authorization and role rules apply.
+3. When the reviewed public trial is configured and enabled, a newly created
+   Workspace routes to the 30-day/six-member offer. The verified owner explicitly
+   accepts; creation alone starts no trial. Successful acceptance returns to team
+   setup. This routing is implemented locally and not yet enabled in production.
+   Optionally invite staff. Pending invitations reserve seats; concurrent changes
+   cannot exceed capacity. Existing service authorization and role rules apply.
 4. Read the quick customer-visit guide. Optional role/feature preferences are
    onboarding answers, not permissions. Skip remains available.
 5. Completion resolves the preferred accessible Workspace and redirects to its

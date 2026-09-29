@@ -10,7 +10,8 @@ related: [monthly-billing-pilot.md, ../flows/workspace-onboarding.md, ../archite
 
 The owner selected preparation of a public free-trial offer on 29 September and
 confirmed **30 days**, owner plus five staff, no card and no automatic charge.
-These are approved draft terms; public trial activation is not deployed or enabled.
+The selection and consent implementation is prepared locally; public trial activation
+is not deployed or enabled.
 Invitation-only email sending is now enabled independently of subscription billing.
 
 ## Selected offer and customer copy
@@ -36,16 +37,33 @@ that continuation is subject to availability and contact support for access revi
 Show the actual trial end and grace dates in billing; no deletion or implied charge.
 Seller remains Rajesh Rathod H under the confirmed unregistered GST treatment.
 
-## Required implementation before publication
+## Implemented selection and consent (2026-09-29)
 
-The current trial flag exposes every active plan in the generic catalog. Plan 1
+`BILLING_PUBLIC_TRIAL_PLAN_ID` defaults to zero. Together with the trial switch, it
+selects exactly one active, unbound, zero-price, 30-day, six-member Plan. Both the
+page and direct start endpoint use this boundary. The owner must verify their
+sign-in email and accept the versioned terms. Company locking prevents repeated
+or concurrent starts; existing billing/access history is refused. New trials have
+`auto_renew=False`, frozen entitlement rows and accepted terms in `trial.started`.
+No payment provider is called. New-owner onboarding routes to consent, then team
+invitations; billing shows trial end and read-only start timestamps.
+
+The real seat test found and fixed the old installed-app short-name check that
+bypassed capacity. Member creation and invitation reservation/acceptance now
+serialize on Company; direct additions count pending reservations. Existing
+members are retained, even if their Workspace already exceeds its limit.
+See the [decision](../adr/2026-09-29-selected-public-trial.md).
+
+## Remaining publication work
+
+The previously deployed trial flag exposes every active plan in the generic catalog. Plan 1
 is the **Production transition trial**, 14 days and five total members; Plan 2
 is the private monthly offer, six members and zero trial days. Neither is the
 public 30-day offer. Do not change either plan to implement this draft, or simply
 turn on `BILLING_ALLOW_TRIAL_START` with the existing catalog query.
 
-Prepare a separate six-member, 30-day trial plan and an explicit public-trial
-selection boundary. Only the selected eligible trial should appear or be accepted
+Save a separate six-member, 30-day trial plan with zero prices after reviewing
+its supported feature projection; select its ID in the deployment settings. Only the selected eligible trial can appear or be accepted
 by its start endpoint. A hidden/private plan ID must not activate a trial through
 direct POST. Reuse the existing locked `start_trial` service and durable subscription,
 account, entitlement and event records; Workspace creation itself grants no trial.
@@ -81,3 +99,11 @@ restricted-role database journey test passed. The latter uses real Workspace,
 invitation, queue, attempt and membership services, mocks only provider sending and
 the dispatch sleep, and confirms no subscription/payment is created by inviting.
 It is not a browser signup test or a new real-mail delivery rehearsal.
+
+**82 focused tests passed.** Automated acceptance covers the restricted-role HTTP onboarding/consent flow,
+private/stale offer rejection, verified canonical ownership, existing-history
+preservation, frozen seats and dates, expiry/grace/read-only, six-seat enforcement,
+and simultaneous trial/last-seat requests. Production plan creation, browser signup
+acceptance and public activation remain outstanding; no new real email was sent.
+Before publication, review owner-created Workspace abuse controls (the current
+limit is one trial per Workspace, not one trial per person) and support capacity.

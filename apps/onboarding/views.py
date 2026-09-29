@@ -184,6 +184,9 @@ def onboarding_company(request):
             messages.success(
                 request, f'Workspace "{company.name}" created successfully!'
             )
+            from apps.subscriptions.public_trial import public_trial_plans
+            if public_trial_plans().exists():
+                return redirect("workspace_subscriptions:plan-list", workspace_slug=company.slug)
             return redirect(progress.next_step_url)
     else:
         form = CompanySetupForm()

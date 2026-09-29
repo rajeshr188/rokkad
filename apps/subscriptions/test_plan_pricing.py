@@ -59,9 +59,9 @@ class PlanPricingTests(SimpleTestCase):
         self.assertNotIn("All plans come with", html)
         self.assertNotIn("/checkout/", html)
 
-    def test_enabled_trial_uses_its_own_duration(self):
+    def test_unselected_trial_is_not_published(self):
         html = self.render_plans(self.plan(trial_days=7), trial_start_enabled=True)
-        self.assertIn("Start 7-day free trial", html)
+        self.assertNotIn("Start 7-day free trial", html)
         self.assertNotIn("14-day", html)
         self.assertNotIn("/year", html)
 
@@ -116,9 +116,9 @@ class CatalogPublicationTests(TestCase):
         self.assertContains(response, "/year")
 
     @override_settings(BILLING_ALLOW_TRIAL_START=True)
-    def test_trial_only_catalog_does_not_advertise_annual_purchase(self):
+    def test_trial_flag_alone_cannot_publish_private_catalog(self):
         response = self.client.get(self.url("plan-list"))
-        self.assertContains(response, "Unpublished monthly pilot")
+        self.assertNotContains(response, "Unpublished monthly pilot")
         self.assertNotContains(response, "/year")
         self.assertNotContains(response, "/checkout/")
 

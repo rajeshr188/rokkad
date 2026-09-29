@@ -72,6 +72,16 @@ Scheduled tokens and unreturned paid periods remain blocked. See the
 
 The subscriptions domain manages company subscription plans, access checks, monetization flows, and navigation visibility.
 
+## Selected public trial (implementation prepared 2026-09-29)
+
+The public offer is 30 days, owner plus five staff, no card and no automatic
+charge. An explicitly selected zero-price Plan and the trial switch are both
+required. A verified canonical owner accepts versioned terms; private plan IDs,
+existing billing/access history and over-capacity Workspaces are refused. Existing
+trials remain unchanged. See [the trial decision](../adr/2026-09-29-selected-public-trial.md)
+and [publication work](../plans/public-workspace-trial.md). Production activation
+remains pending. The planned INR 1,499 monthly continuation needs separate consent.
+
 ## Direction
 
 - Subscription access should be company/workspace aware.

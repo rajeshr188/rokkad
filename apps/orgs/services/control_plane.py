@@ -268,13 +268,12 @@ def transfer_workspace_ownership(
 
 def create_membership(*, user, company, role, request, actor=None, invite_reason=""):
     """Create membership in public schema."""
-    ensure_workspace_has_member_capacity(
-        workspace=company,
-        include_pending_invitations=False,
-        extra_slots=1,
-    )
-
     with _control_plane_transaction():
+        company = Company.all_objects.select_for_update().get(pk=company.id)
+        if not Membership.objects.filter(user=user, company=company).exists():
+            ensure_workspace_has_member_capacity(
+                workspace=company, include_pending_invitations=True, extra_slots=1,
+            )
         membership, created = Membership.objects.get_or_create(
             user=user,
             company=company,
@@ -355,18 +354,14 @@ def change_membership_role(*, membership, new_role, actor, request):
 
 def send_team_invitation(*, form, actor, company, request):
     """Create and send invitation in public schema."""
-    role_policy.assert_can_invite_role(
-        actor=actor,
-        workspace=company,
-        role=form.cleaned_data["role"],
-    )
-    ensure_workspace_has_member_capacity(
-        workspace=company,
-        include_pending_invitations=True,
-        extra_slots=1,
-    )
-
     with _control_plane_transaction():
+        company = Company.all_objects.select_for_update().get(pk=company.id)
+        role_policy.assert_can_invite_role(
+            actor=actor, workspace=company, role=form.cleaned_data["role"],
+        )
+        ensure_workspace_has_member_capacity(
+            workspace=company, include_pending_invitations=True, extra_slots=1,
+        )
         invitation = form.save()
 
     AuditLog.log(
@@ -394,6 +389,7 @@ def send_onboarding_team_invitations(
     failed_invitations = []
 
     with _control_plane_transaction():
+        company = Company.all_objects.select_for_update().get(pk=company.id)
         role = Role.objects.get(name=role_name)
         role_policy.assert_can_invite_role(
             actor=actor,
@@ -431,6 +427,8 @@ def send_onboarding_team_invitations(
 def accept_invitation(*, invitation, user, request):
     """Accept one verified invitation under lock, idempotently."""
     with _control_plane_transaction():
+        # Same lock order as trial start and seat reservation: Workspace first.
+        Company.all_objects.select_for_update().get(pk=invitation.company_id)
         locked = (
             CompanyInvitation.objects.select_for_update()
             .select_related("company", "role")

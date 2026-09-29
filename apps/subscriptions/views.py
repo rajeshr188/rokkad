@@ -4,6 +4,7 @@ Includes checkout, payment confirmation, and invoice management.
 """
 
 import json
+from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views import View
@@ -43,9 +44,9 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
 
     def get_queryset(self):
         # Operator catalog preparation must not publish an offer to every owner.
-        if not (settings.BILLING_CHECKOUT_ENABLED or settings.BILLING_ALLOW_TRIAL_START):
+        if not settings.BILLING_CHECKOUT_ENABLED:
             return Plan.objects.none()
-        return Plan.objects.filter(is_active=True).order_by("price")
+        return Plan.objects.filter(is_active=True, price__gt=0).order_by("price")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -64,6 +65,9 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
             context["current_plan"] = None
 
         context["trial_start_enabled"] = settings.BILLING_ALLOW_TRIAL_START
+        from .public_trial import PUBLIC_TRIAL_TERMS, public_trial_plans
+        context["public_trial_plan"] = public_trial_plans().first()
+        context["public_trial_terms"] = PUBLIC_TRIAL_TERMS
 
         return context
 
@@ -76,15 +80,14 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
             raise PermissionDenied("Trial activation is disabled.")
 
         workspace = resolve_request_workspace(request)
-        plan = get_object_or_404(Plan, pk=kwargs["plan_id"], is_active=True)
-
-        from apps.subscriptions.billing import start_trial
+        from .public_trial import start_public_trial
 
         try:
-            subscription = start_trial(
+            subscription = start_public_trial(
                 workspace=workspace,
-                plan=plan,
+                plan_id=kwargs["plan_id"],
                 actor=request.user,
+                accepted_terms=request.POST.get("accepted_terms"),
             )
         except ValidationError as exc:
             messages.error(request, exc.messages[0])
@@ -98,6 +101,14 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
             f"Your {subscription.plan.name} trial is active until "
             f"{subscription.trial_end_date:%d %b %Y}.",
         )
+        from apps.onboarding.models import OnboardingProgress
+        from apps.orgs.tenant_context import resolve_preferred_workspace
+        preferred = resolve_preferred_workspace(request.user)
+        if preferred is not None and preferred.pk == workspace.pk and OnboardingProgress.objects.filter(
+            user=request.user, company_created=True, team_setup_completed=False,
+            skipped_team=False, is_complete=False,
+        ).exists():
+            return redirect("onboarding_team")
         return redirect(
             "workspace_slug_dashboard",
             workspace_slug=workspace.slug,
@@ -234,8 +245,14 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
             context["billing_status_label"] = Subscription.StatusChoices(
                 context["billing_decision"].status
             ).label
-            if subscription.status == "trial" and not context["billing_decision"].commercially_available:
-                context["billing_status_label"] = "Trial ended"
+            if subscription.status == "trial":
+                context["billing_status_label"] = (
+                    "Trial" if context["billing_decision"].commercially_available else "Trial ended"
+                )
+                if subscription.trial_end_date:
+                    context["trial_read_only_at"] = subscription.trial_end_date + timedelta(
+                        days=settings.SUBSCRIPTION_GRACE_DAYS,
+                    )
 
             # Get recent invoices
             context["recent_invoices"] = Invoice.objects.filter(

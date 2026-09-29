@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from django.conf import settings
+from django.apps import apps
 from django.core.exceptions import ValidationError
 
 
@@ -157,7 +158,7 @@ def _parse_positive_int(value: Any) -> Optional[int]:
 
 def resolve_workspace_max_users_limit(*, workspace: Any, subscription: Optional[Any] = None) -> Optional[int]:
     """Resolve the effective member limit through the canonical entitlement API."""
-    if workspace is None or "subscriptions" not in settings.INSTALLED_APPS:
+    if workspace is None or not apps.is_installed("apps.subscriptions"):
         return None
 
     from apps.subscriptions.entitlements import limit

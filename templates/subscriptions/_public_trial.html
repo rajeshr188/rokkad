@@ -1,0 +1,23 @@
+{% if public_trial_plan and not current_subscription %}
+<section class="card mb-4" aria-labelledby="public-trial-heading">
+    <div class="card-body">
+        <h2 id="public-trial-heading">Try Rokkad free for 30 days</h2>
+        <p>One Workspace for you and up to five staff. Pending invitations reserve a seat.</p>
+        <p><strong>No card required. No automatic charge.</strong> Your trial starts when you accept below.</p>
+        <p>After the trial, there is a seven-day grace period, followed by read-only access to your records.</p>
+        <p>The planned monthly offer is ₹1,499/month. Paid continuation is subject to availability and
+            requires your separate subscription consent. Contact Rokkad support for an access review while payments are unavailable.</p>
+        <form method="post" action="{% url 'workspace_subscriptions:start-trial' workspace_slug=request.workspace.slug plan_id=public_trial_plan.pk %}">
+            {% csrf_token %}
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="accepted_terms"
+                    id="accept-public-trial" value="{{ public_trial_terms }}" required>
+                <label class="form-check-label" for="accept-public-trial">
+                    I accept the 30-day trial for this Workspace, including the six-member limit and the access policy above.
+                </label>
+            </div>
+            <button class="btn btn-success" type="submit">Start 30-day free trial</button>
+        </form>
+    </div>
+</section>
+{% endif %}

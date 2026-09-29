@@ -92,7 +92,7 @@ def transition_subscription(*, subscription, target_status, event_type, payload=
     return locked, True
 
 
-def start_trial(*, workspace, plan, actor):
+def start_trial(*, workspace, plan, actor, accepted_terms=None):
     """Start one explicit trial for a Workspace under a row lock."""
     from apps.orgs.models import Company
     from .services import (
@@ -111,6 +111,7 @@ def start_trial(*, workspace, plan, actor):
         subscription = Subscription.objects.create(
             company=locked_workspace,
             plan=Plan.objects.get(pk=plan.pk, is_active=True),
+            auto_renew=False,
         )
         ensure_billing_account_for_subscription(subscription)
         ensure_entitlements_for_subscription(subscription)
@@ -121,6 +122,7 @@ def start_trial(*, workspace, plan, actor):
                 "plan_id": plan.pk,
                 "actor_id": getattr(actor, "pk", None),
                 "trial_end_date": subscription.trial_end_date.isoformat(),
+                **({"accepted_terms": accepted_terms} if accepted_terms is not None else {}),
             },
         )
     return subscription
