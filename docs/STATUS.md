@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [status, architecture]
 ---
 
@@ -11,6 +11,31 @@ Entries are dated delivery checkpoints, newest first. Earlier images, counters,
 access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
+
+## Razorpay resolution verified against payment evidence (2026-09-29)
+
+Read the verified-sender support thread: at **17:37 IST on 28 September**, Razorpay
+marked ticket **21146138** Resolved because the annual subscription is Active and
+recommended Live Mode validation. The 17:43 notice says it will close after four
+days without a reply. The response does not resolve the unpaid final invoice or
+answer the failure-simulation question in **21146171**; that ticket's acknowledgement
+is grouped in the same Gmail thread.
+
+Fresh GET-only checks at **10:18:37 IST on 29 September** show annual payment
+`pay_ThBR0fQ4nwVW3p` still Created, invoice Issued, subscription Active with one of
+two cycles paid. The failure simulation remains Captured/Paid, with its previously
+cancelled subscription at two paid cycles. The scheduled authorization is still
+Created and subscription Expired with zero paid. Local financial/mail counts are
+unchanged. Ticket resolution therefore does not satisfy these acceptance gates.
+
+A focused follow-up was owner-authorized and sent from admin@rokkad.com at
+**10:21 IST** to the verified support thread, requesting renewed investigation of
+21146138 and specific guidance for 21146171. Gmail confirms Message sent and shows
+the exact reply; provider-side reopened status is not yet verified. Preserve the
+uncertain attempts and continue paused live preparation separately; do not use a
+real collection to bypass outstanding acceptance. No provider write, production
+change, live credential action or payment occurred. See the
+[provider checkpoint](plans/monthly-billing-pilot.md#support-resolution-verification-2026-09-29).
 
 ## Private catalog deployed with billing paused (2026-09-28)
 

@@ -1,7 +1,7 @@
 ---
 status: preparation
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [billing, pilot, commercial, razorpay]
 related: [subscription-monetization-rollout.md, ../implementation/billing-provider-readiness.md]
 ---
@@ -11,6 +11,42 @@ related: [subscription-monetization-rollout.md, ../implementation/billing-provid
 The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
+
+## Support resolution verification (2026-09-29)
+
+Razorpay's 28 September 17:37 IST response marks **21146138** Resolved, cites the
+annual subscription's Active state and recommends Live Mode validation. Its 17:43
+notice provides four days to reply before closure. Neither final-payment settlement,
+Test Mode AFA nor Completed transition is explained. The same Gmail thread contains
+the **21146171** acknowledgement, but no specific failed-renewal simulation answer.
+
+GET-only verification at **29 September 10:18:37 IST**:
+
+| Evidence | Fresh result |
+| --- | --- |
+| Annual `sub_ThBL2wVYJZadDN` | Active; paid_count 1 / total_count 2 |
+| Annual `pay_ThBR0fQ4nwVW3p` / `inv_ThBQyvwJjIJcQ0` | Created, INR 17,688.20 / Issued |
+| Failure simulation `pay_ThAr4L7xHUiRqA` / `inv_ThAr2YPIv75AY9` | Captured, INR 1,768.82 / Paid |
+| Failure fixture `sub_ThAoDxk8SOoSIP` | Previously Cancelled; paid_count 2 / total_count 3 |
+| Scheduled `sub_ThM7GiBY7yxoHg` / `pay_ThM8vfcR0fWZik` | Expired, zero paid / Created, INR 5 |
+
+All six checked local financial/mail record counts remain unchanged. No charge,
+refund, cancellation, release or reconciliation write was performed. Annual stays
+outside the monthly pilot, but applicable failure/recovery and held-period
+acceptance remain open. Support's Live Mode recommendation is not payment consent
+or evidence that these outcomes passed.
+
+The owner explicitly authorized the exact-ID follow-up. It was sent from
+admin@rokkad.com to the verified support address in the existing thread at
+**10:21 IST**; Gmail confirms Message sent and displays the complete reply. It
+requests renewed investigation, specific guidance or written confirmation of Test
+Mode limitations. Provider-side reopening is not independently verified yet.
+Next: assess the technical reply against exact provider evidence. Keep paused
+live seller/catalog preparation separate from activation; preserve JSK's trial.
+Private evidence: `outputs/billing-support-verification-20260929.json`;
+sent text: `outputs/razorpay-followup-20260929.txt`; screenshot:
+`outputs/razorpay-followup-sent-20260929.png`. No live key, production configuration
+or payment changed at this checkpoint.
 
 ## Confirmed JSK pilot review (2026-09-28)
 

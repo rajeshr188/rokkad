@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -44,6 +44,13 @@ plans; shelving an idea must not hide a release blocker.
 | FW-019 | Workspace subscription monetization and Razorpay automatic renewal | Active: owner selected delivery | Local implementation and provider acceptance | Held-access review and collection-attention guidance implemented; provider failure simulation unexpectedly captured, so actual failure/recovery and naturally due acceptance remain open |
 
 ## FW-019: Workspace subscription monetization and Razorpay automatic renewal
+
+**29 September provider check:** ticket 21146138 was marked Resolved after an
+Active-state check and Live Mode recommendation, but fresh API evidence still has
+the final annual payment Created and invoice Issued. The failure simulation remains
+Captured/Paid; applicable acceptance remains open. The owner-authorized follow-up
+was sent at 10:21 IST; provider-side reopening is not yet verified. See the
+[verification](monthly-billing-pilot.md#support-resolution-verification-2026-09-29).
 
 **Captured:** 2026-09-26. **State:** Active: owner selected delivery on 2026-09-26.
 Latest implementation: immediate recurring creation, authorization, paid-cycle

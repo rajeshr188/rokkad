@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [agents, context, architecture]
 ---
 
@@ -51,6 +51,14 @@ Party/borrower-portal loan summary totals must include every active loan regardl
 of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
+
+FW-019 support acceptance: a provider ticket marked Resolved is not payment
+settlement or failure/recovery acceptance. On 29 September, ticket 21146138's
+Active-subscription/Live-Mode reply did not match a settled final renewal; fresh
+GET evidence still shows Created/Issued. Ticket 21146171's failure simulation
+still shows Captured/Paid. Keep these gates open and preserve attempts; a provider
+recommendation to test live does not authorize a real collection. See the
+[verification](plans/monthly-billing-pilot.md#support-resolution-verification-2026-09-29).
 
 Latest FW-019 invoice implementation: live catalog/order/recurring authorization
 requires explicit zero tax plus BILLING_SELLER_NAME, BILLING_SELLER_ADDRESS and
