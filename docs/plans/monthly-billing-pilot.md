@@ -12,6 +12,42 @@ The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
 
+## Individual seller continuation and fee inquiry sent (2026-09-29)
+
+The owner reconfirmed continuing under the existing personal-PAN merchant setup,
+with possible future company and GST registration. Current invoice seller remains
+**Rajesh Rathod H**, with the confirmed address and unregistered/no-GST treatment.
+This already matches deployed configuration; no code or production changes are
+needed. PAN is provider KYC information, not a replacement GSTIN or a new public
+invoice field. Do not copy it into chat, source, logs or customer documents.
+Future registered-seller support and transition are recorded as
+[FW-020](future-work.md#fw-020-company-registration-and-gst-ready-seller-transition).
+
+At **12:53 IST**, after explicit owner approval, the prepared fee inquiry below
+was sent from **admin@rokkad.com** to the verified Razorpay support address
+**rzr06py08emsp@razorpay.com**, with subject
+**Rokkad — merchant-specific Subscription fees and promotion coverage**.
+Gmail confirmed Message sent and displayed the sent recipient/content. The message
+asks for subscription/method/setup fees, GST, promotion coverage and subsequent
+rates, requesting routing to merchant pricing support if needed. It includes no
+PAN, credentials or customer details. This confirms sending, not provider receipt,
+ticket creation or agreed pricing. Screenshot evidence is local in
+`outputs/razorpay-fee-inquiry-sent-20260929.png`.
+
+The technical support thread was refreshed immediately before sending; it still
+ends with the owner's authorized **10:21** follow-up, with no later technical reply.
+No new charge, retry, refund or provider-state mutation was attempted. Evaluate
+the eventual response before choosing any new acceptance procedure.
+
+Google's remaining India tax-info request is separate from the credited INR 500.
+Use the correct actual individual/unregistered profile where supported; do not
+enter PAN into a GSTIN field or choose registered status to dismiss the notice.
+If the existing profile requires a GSTIN, resolve its account classification with
+Google rather than inventing one. No tax declaration was submitted. Google's
+[payments guidance](https://support.google.com/paymentscenter/answer/7398224?hl=en)
+distinguishes individual/business profiles and GSTIN requirements; it does not
+establish this account's suitability without reviewing its actual form.
+
 ## Merchant methods, fees and inbox review (2026-09-29)
 
 Read-only authenticated merchant review confirms **Cards Recurring** and **UPI
@@ -46,7 +82,7 @@ was performed by the agent. Automatic approval review had blocked an additional
 Admin screenshot before the owner's new, explicit read-only re-verification request;
 the subsequent payment-account and subscription status review succeeded.
 
-Prepared fee question for an owner-approved support message (not sent):
+Fee question sent with owner approval at 12:53 IST (see checkpoint above):
 
 > Please confirm the fees applicable to our activated Rokkad SaaS Subscriptions
 > account for an INR 1,499 monthly plan: subscription add-on, underlying card/UPI/

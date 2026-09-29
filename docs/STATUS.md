@@ -12,6 +12,27 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 fee inquiry sent and future seller transition recorded (2026-09-29)
+
+Owner reconfirmed the current personal-PAN merchant setup and possible future
+company/GST registration. Deployed individual seller Rajesh Rathod H and explicit
+unregistered/no-GST invoice treatment already match; no production changes needed.
+[FW-020](plans/future-work.md#fw-020-company-registration-and-gst-ready-seller-transition)
+records the future provider/entity/GST invoice transition, with original seller
+snapshots and active mandate continuity preserved. No PAN number was collected.
+
+At **12:53 IST**, the separately owner-authorized merchant fee inquiry was sent
+from admin@rokkad.com to the verified Razorpay support recipient. Gmail confirms
+Message sent and the sent message content. Subscription/method/setup fees, GST,
+promotion coverage and post-promotion rates remain pending provider confirmation.
+The technical ticket thread still ends with our 10:21 follow-up; no later technical
+reply was visible. No uncertain payment was retried or other provider state changed.
+
+Google's INR 500 payment remains the last verified credited result; its remaining
+tax-profile request is separate. No PAN/GSTIN submission or account classification
+change was made. All charging/sending gates remain paused. See the
+[pilot checkpoint](plans/monthly-billing-pilot.md#individual-seller-continuation-and-fee-inquiry-sent-2026-09-29).
+
 ## FW-019 merchant and inbox launch review (2026-09-29)
 
 Read-only Razorpay review confirms recurring cards/UPI AutoPay and mandate methods

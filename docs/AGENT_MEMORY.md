@@ -52,6 +52,15 @@ of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
 more than 20 loans and zero-row display limits. The Party list explains truncation.
 
+The owner reconfirmed the existing individual/personal-PAN seller setup on
+29 September, with possible future incorporation and GST registration recorded
+as [FW-020](plans/future-work.md#fw-020-company-registration-and-gst-ready-seller-transition).
+Keep Rajesh Rathod H and the confirmed unregistered seller treatment until a
+reviewed transition. PAN belongs in required provider KYC, not public invoices or
+repository data, and is not a substitute GSTIN. Future seller changes must preserve
+historical snapshots and review active mandate migration; registered invoicing
+is currently unsupported. This decision does not determine registration obligations.
+
 FW-019 merchant review on 29 September confirms recurring Card/UPI/eMandate enabled
 and Rokkad bearing fees. Public promotional rates are not the merchant fee schedule;
 exact fees remain unconfirmed. The owner's INR 500 Google payment is verified

@@ -42,8 +42,44 @@ plans; shelving an idea must not hide a release blocker.
 | FW-017 | Community forum | Recorded at owner request; unscheduled | Owner selects community scope and moderation responsibilities | Questions, discussions and feature suggestions captured; access and moderation need design |
 | FW-018 | Support ticket system | Recorded at owner request; unscheduled | Owner selects support workflow and operator responsibilities | Private customer support, tracking and resolution captured; integration approach undecided |
 | FW-019 | Workspace subscription monetization and Razorpay automatic renewal | Active: owner selected delivery | Local implementation and provider acceptance | Held-access review and collection-attention guidance implemented; provider failure simulation unexpectedly captured, so actual failure/recovery and naturally due acceptance remain open |
+| FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
+
+## FW-020: Company registration and GST-ready seller transition
+
+**Captured:** 2026-09-29. **State:** Future work, unscheduled. The owner may later
+register Rokkad as a company and obtain GST registration. Until then, retain the
+confirmed individual seller **Rajesh Rathod H**, personal-PAN merchant KYC and
+unregistered GST treatment used by FW-019. No PAN number is requested, recorded in
+the repository or printed on customer invoices. This product decision does not
+determine registration obligations; company incorporation and GST registration
+must each be reviewed when applicable.
+
+Resume with the actual legal entity, effective date, registered address and GSTIN,
+plus professional confirmation of required tax/invoice treatment. Review Razorpay
+merchant/KYC and settlement-bank changes, existing mandate portability or fresh
+customer authorization, and other vendor billing profiles before switching.
+Do not assume an individual merchant's mandates transfer to a new company.
+
+Registered-supplier invoicing is currently unsupported and fails closed. Implement
+and test the necessary GST invoice fields, applicable tax calculations, numbering,
+credit/refund documents and display/consent terms before enabling that treatment.
+Review new catalog bindings and agreement terms at the effective cutover; preserve
+every historical seller snapshot, invoice, payment and refund under its original
+issuer. Do not rewrite old records or silently move active mandates. Include
+reconciliation, rollback and customer communication in the selected delivery plan.
+No corporate registration, GST submission, tax switch or customer communication
+is authorized by this future-work entry. See the
+[frozen-seller contract](../adr/2026-09-28-frozen-billing-seller.md) and
+[current pilot](monthly-billing-pilot.md).
 
 ## FW-019: Workspace subscription monetization and Razorpay automatic renewal
+
+**Current snapshot:** paused production implementation, live keys/monthly binding,
+webhook registration and receipt worker are prepared. Merchant methods are enabled;
+the owner-authorized fee inquiry was sent on 29 September at 12:53 IST. The Google
+INR 500 payment is credited. Remaining provider acceptance and named pilot approval
+are described in the [current rollout](subscription-monetization-rollout.md).
+Earlier chronological notes below describe their checkpoint, not today's state.
 
 **29 September provider check:** ticket 21146138 was marked Resolved after an
 Active-state check and Live Mode recommendation, but fresh API evidence still has
