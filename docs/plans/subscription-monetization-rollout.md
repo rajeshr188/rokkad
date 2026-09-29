@@ -33,7 +33,10 @@ The following snapshot supersedes the dated preparation history below.
   enabled in batches of ten; verification/reset delivery/link acceptance passed
   and feedback/recovery/health monitoring is active.
 - **Merchant review complete:** recurring Card, UPI and eMandate enabled; Rokkad
-  bears fees. Exact account-specific subscription fees remain unconfirmed.
+  bears fees. The 19:55 support reply confirms promotion method eligibility; its
+  pricing PDF is reviewed, but duplicate card rows and unspecified add-on/tax
+  treatment leave all-in recurring fees and promotion coverage unconfirmed.
+  Approved clarification **21174094** is submitted, referencing resolved 21170392.
 - **No live agreement, invoice, payment or receipt exists.** Webhook registration
   and HTTPS/HMAC diagnostics do not prove actual Razorpay event delivery.
 - **Public trial live:** 30 days and six members, one trial Workspace per owner
@@ -58,7 +61,7 @@ the paid-billing gates below.
 | Failure/recovery | Local regression coverage exists; actual failure simulation captured successfully. Ticket 21146171 has not supplied the required failure/Pending/Halted/recovery acceptance. Preserve evidence. |
 | Naturally due held access | Existing monthly fixtures begin **28 October 2026**. Apply and verify at the real eligible time; no earlier alternative acceptance path has passed. |
 | Annual completion | Deferred from launch and still unresolved: final payment Created/invoice Issued with ticket 21146138 now In Progress after the owner-approved 29 September follow-up; annual remains unpublished. |
-| Merchant fees and terms | Methods verified; obtain account-specific add-on/method/tax/promotion rates, and finish cancellation/refund wording review. |
+| Merchant fees and terms | Promotion method eligibility confirmed by the 19:55 reply. Pricing PDF reviewed; clarify duplicate card rows and recurring add-on/method/setup/tax coverage and finish cancellation/refund wording review. |
 | Inbox continuity | Owner's INR 500 payment verified credited, no balance due and payment warning cleared. Business Starter and storage add-on Active. India tax info remains requested; maintain funding as paid service begins **10 October**. |
 | Named pilot activation | Preserve JSK's trial, verify eligibility and obtain bounded activation/first-collection approval after applicable gates pass. Scheduled live starts remain unsupported. |
 | Actual live acceptance | Observe provider callback, exact payment/invoice/access, one approved receipt and settlement during the bounded pilot before broader onboarding. |

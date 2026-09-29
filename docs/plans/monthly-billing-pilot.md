@@ -14,6 +14,109 @@ Production paid billing remains disabled. Public free trials and invitation/acco
 mail are enabled; receipt dispatch remains separately controlled. See the
 [free-trial release](../implementation/public-trial-release-20260929.md).
 
+## Pricing support reply (2026-09-29, 19:55 IST)
+
+The latest authenticated email is a pricing response to **21170392**. It confirms
+that amount credits are valid for 90 days from credit assignment on UPI, credit
+cards on UPI, domestic debit cards, domestic Visa/Mastercard/RuPay credit cards,
+netbanking, wallets, Pay Later/BNPL and cardless EMI. Excluded methods are AMEX,
+Diners, card EMI, prepaid cards, corporate/business cards and other international
+cards. This confirms method-level promotion eligibility, not every recurring fee.
+
+Support attached **Pricing Paln - Sheet1.pdf**, said the pricing ticket would be
+resolved, and stated that technical issues in 21146138 and 21146171 are still being
+investigated. It also asked for a suitable callback time after an unsuccessful
+call; no time, alternate number or callback commitment was supplied by the agent.
+The owner subsequently approved the focused clarification below. It was submitted
+through Dashboard as **21174094**, referencing the original 21170392. The original
+ticket is Resolved with no reply field, and its email Reply-To is the previously
+unmonitored address. A new dashboard query was therefore used for the same approved
+message, prefixed with the original ticket reference. The existing approved phone
+was retained without editing. No email reply or callback commitment was sent.
+Creation confirmation gives a **4-8 business-hour** status-update expectation and
+says confirmation was mailed to admin@rokkad.com; that confirmation email was not
+independently inspected. Local screenshot:
+`outputs/razorpay-pricing-followup-created-20260929.png`. Refreshed support history
+shows **21174094 Active**, the full submitted text and response target **1 October,
+13:43**. [Open the follow-up](https://dashboard.razorpay.com/app/business-settings/ticket-support/rzpind/ThtjAzl9Tw4JyQ/merchant/conversation).
+
+The owner saved the PDF locally after Chrome's extension UI blocked attachment
+automation, including after dismissal. Its entire single page was text-extracted
+and visually inspected. The table has no footnotes, effective date, merchant ID,
+tax statement or explanation of duplicated labels. Its association with this
+account comes from the support email, not a merchant identifier printed in the PDF.
+
+Relevant entries, reproduced as listed components rather than all-in charges:
+
+| PDF label | Listed rate | Interpretation still needed |
+| --- | --- | --- |
+| initial upi, INR 1,000 to INR 10,000,000 | INR 7 | What event triggers it and whether it includes the first debit/setup |
+| auto upi, same band | INR 17 | Whether this replaces generic UPI 2% and whether a subscription add-on applies |
+| upi / upi (credit) | 2% / 2.05% | Applicability to UPI Autopay versus ordinary UPI |
+| card (two separate rows) | 2% and 0.90% | Conditions, recurring applicability, and whether these add or replace each other |
+| nach initial / nach auto | INR 30 / INR 10 | Mapping to the enabled Subscriptions mandate method |
+| aadhaar emandate initial / auto | INR 30 / INR 5 | Eligibility and whether additional fees apply |
+| emandate initial / auto | INR 22 / INR 20 | Which mandate route and how these combine with add-on/tax |
+
+INR 1,499 is unambiguously inside the quoted UPI band. The INR 17 component is
+about 1.13% of that price; this is arithmetic only, not an established effective
+processing rate. No row is explicitly labelled Subscriptions, no GST percentage
+or tax inclusion is stated, and credit coverage of recurring setup/collections
+is not explained. Do not set a subscription add-on to 0.90% merely because that
+number appears on a second card row, or treat INR 1,482 as confirmed net proceeds.
+The unregistered seller's no-GST customer invoice remains separate from tax that
+the processor may apply to its fees.
+
+Private original: owner's Downloads folder, `Pricing Paln - Sheet1.pdf`, 81,407
+bytes; SHA-256 `5fa874a3f63817ee46b005bf90423981b635c82d885126ea7c5af1c710d99091`. Local visual proof:
+`outputs/razorpay-pricing-page-1.png`. No private attachment is committed.
+
+The linked official [Amount Credits guide](https://razorpay.com/docs/payments/dashboard/account-settings/credits#amount-credits)
+describes credits as eligible payment volume rather than cash or a fee balance;
+transactions exceeding the remaining credit incur fees on the entire payment.
+Its broad EMI exclusion and the email's explicit cardless-EMI inclusion should not
+be generalized into an unreviewed payment-method promise. The monthly pilot only
+needs its actually enabled recurring methods confirmed.
+
+GET-only verification at **20:36:48 IST** preserves earlier evidence: annual
+Active/paid_count 1 of 2 with last payment Created/invoice Issued; failed-simulation
+payment Captured/invoice Paid and cleaned-up agreement Cancelled/paid_count 2 of 3;
+short scheduled fixture Expired/paid_count 0 and authorization payment Created.
+Local billing/mail counts did not change. The reply supplies no new failure,
+Pending/Halted, recovery or held-period procedure; those launch gates stay open.
+
+Next: review the answer to 21174094 and update the launch fee assumptions only
+from clarified written terms. Keep the INR 1,499 commercial offer and disabled
+paid-billing gates unchanged. Technical acceptance remains separately pending.
+
+### Approved clarification submitted as 21174094
+
+Thank you for the 29 September response and Pricing Paln - Sheet1.pdf. We reviewed
+the table and eligible payment methods. Please keep the pricing enquiry open until
+these recurring-billing details are confirmed in writing for our INR 1,499/month
+Rokkad Subscriptions offer:
+
+1. For UPI Autopay, does the INR 7 "initial upi" row mean mandate setup, first
+   collection, or both? Is each later INR 1,499 collection INR 17 "auto upi", and
+   does that replace the generic 2% UPI fee or apply in addition to it?
+2. What is the exact Subscriptions add-on? The PDF has separate "card" rows at
+   2% and 0.90%; please explain their conditions and whether they are cumulative,
+   alternative or unrelated to recurring billing.
+3. For the enabled eMandate option, which initial/automatic pair applies: NACH
+   INR 30/10, Aadhaar eMandate INR 30/5, or eMandate INR 22/20? Please confirm any
+   minimum, setup, failed-debit or retry charges and when they are billed.
+4. Are these prices inclusive or exclusive of GST, and what tax applies to each
+   component? Does our 90-day/INR 5 lakh amount-credit promotion cover recurring
+   Card/UPI Autopay/eMandate collections, the Subscriptions add-on, mandate setup
+   and tax? Please confirm each component and its post-promotion rate.
+5. Please provide a worked INR 1,499 first-payment and renewal example for each
+   supported recurring method, showing total deductions and net settlement both
+   during and after the promotion, and the schedule's effective date.
+
+Please reply in this ticket so the commercial terms remain documented. Technical
+Test Mode acceptance remains tracked separately under 21146138 and 21146171.
+No callback time or alternate phone number is being requested in this follow-up.
+
 ## Read-only launch-gate refresh (2026-09-29, 19:25 IST)
 
 Dashboard review found no new substantive answer: annual **21146138 In Progress**

@@ -12,6 +12,38 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 Razorpay pricing reply and attachment reviewed; recurring fee gaps remain (2026-09-29)
+
+The owner-requested review read the **19:55 IST** email for ticket **21170392**.
+Support confirms 90-day amount-credit eligibility for UPI, credit cards on UPI,
+domestic debit cards, domestic Visa/Mastercard/RuPay credit cards, netbanking,
+wallets, BNPL and cardless EMI. It excludes AMEX, Diners, card EMI, prepaid,
+corporate/business and other international cards. Support says the pricing ticket
+will be resolved and that technical tickets 21146138/21146171 remain under
+investigation; this is not technical acceptance or a fresh payment result.
+
+The owner saved the pricing PDF after Chrome's attachment automation was blocked.
+Its complete single-page table was extracted and visually reviewed. For the band
+covering INR 1,499 it lists initial UPI INR 7 and auto UPI INR 17; generic UPI is
+separately 2%. Card appears at both 2% and 0.90%, with no condition explaining the
+duplicate rates. NACH initial/auto is INR 30/10, Aadhaar eMandate INR 30/5 and
+eMandate INR 22/20. There is no explicitly labelled subscription add-on, GST note
+or definition of initial versus automatic charges. These are listed fee components,
+not confirmed all-in recurring costs. The owner-approved clarification was submitted
+through Dashboard as ticket **21174094**, referencing resolved 21170392, which has
+no reply box. Its email Reply-To matches the previously unmonitored address, so no
+email was sent. Confirmation gives a 4-8 business-hour status-update expectation; the refreshed
+Dashboard shows Active with a target of **1 October, 13:43**.
+The existing approved phone was retained; no new contact or callback commitment
+was supplied. Local proof: `outputs/razorpay-pricing-followup-created-20260929.png`.
+
+Fresh provider GETs at **20:36:48 IST** still show annual Active, paid_count 1/2,
+last payment Created/invoice Issued; the attempted failure remains Captured/Paid,
+with its cleaned-up agreement Cancelled, paid_count 2/3. The short scheduled
+fixture remains Expired, paid_count 0, authorization Created. Local billing/mail
+record counts are unchanged. No charge, retry or provider mutation was made.
+See [reply review and next work](plans/monthly-billing-pilot.md#pricing-support-reply-2026-09-29-1955-ist).
+
 ## FW-019 external mail alerts activated and delivery verified (2026-09-29)
 
 Better Stack heartbeat 499750 is connected to the production mail-health watchdog.

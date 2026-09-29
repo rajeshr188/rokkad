@@ -137,10 +137,19 @@ the first genuine trial/team journey. Never enable trials on an older generic
 catalog image. Paid continuation still needs separate consent and launch acceptance.
 
 Razorpay pricing correspondence must use Dashboard support: the previous email
-address returned an unmonitored-mailbox notice. The authorized fee inquiry is now
-ticket **21170392 Active**, response target 1 October 11:14 AM displayed. Annual
-21146138 is In Progress; failure 21146171 is Closed without a technical answer.
-Neither a closed ticket nor an active mandate establishes provider acceptance.
+address returned an unmonitored-mailbox notice. Ticket 21170392 received a
+29 September 19:55 IST response confirming eligible/excluded payment methods for
+90-day amount credits and attaching a pricing PDF. Support says it will resolve
+the pricing ticket while technical 21146138/21146171 remain under investigation.
+The owner-saved PDF has been fully reviewed: INR 1,499 falls in its initial UPI
+INR 7 / auto UPI INR 17 band; card appears at both 2% and 0.90% without conditions.
+No subscription add-on or GST treatment is labelled. Recurring fee composition
+and promotional coverage need written clarification; listed components are not
+a confirmed total price. The approved clarification is submitted as 21174094,
+referencing resolved 21170392; Dashboard required a new query and the email
+Reply-To is the previously unmonitored address. Await the written fee answer.
+Fresh 20:36 IST GETs still show annual Created/Issued and failure Captured/Paid.
+Neither ticket closure nor an active mandate establishes provider acceptance.
 
 FW-019 merchant review on 29 September confirms recurring Card/UPI/eMandate enabled
 and Rokkad bearing fees. Public promotional rates are not the merchant fee schedule;
