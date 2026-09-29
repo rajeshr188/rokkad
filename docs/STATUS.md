@@ -12,6 +12,38 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Confirmed billing seller configured with activation paused (2026-09-29)
+
+At **11:45 IST**, the shared web/worker environment received only the four
+confirmed seller settings: Rajesh Rathod H, the approved Vellore billing address,
+unregistered GST status and explicit tax rate zero. Web retains
+`rokkad:party-loan-pages-20260929-5143b3441f2b`; mail workers retain
+`rokkad:billing-paused-99bda8c1cb27`. No application or schema deployment occurred.
+
+Restricted read-only preflight and post-configuration checks passed in both
+runtimes. All subscription-table fingerprints are unchanged; JSK remains full
+access with its original 8 October trial end. The owner catalog remains private.
+An unsaved monthly offer validates 149900 paise, zero GST and six members, with
+12 collections/quantity one prepared. No plan, binding or agreement was saved.
+HTTPS login returns 200 and web has zero restarts. Mail queue flags/due messages
+are zero; feedback/recovery/health timers remain active, dispatch disabled.
+
+Provider mode, checkout, trial signup, recurring authorization and sending remain
+paused. No credential was added and no provider request, payment or email sent.
+The owner confirmed live keys have not been generated. Razorpay's approved website
+and Generate Key page are open for the required owner credential-generation
+handoff; download to the named local CSV, never paste keys in chat.
+
+The four-field candidate, prior environment, preflight and verification logs are
+retained server-private under `billing-seller-20260929/` in the deployment folder;
+automatic configuration rollback was prepared. Initial validation-harness issues
+(placeholder defaults, CSS versus rendered cards, worker entrypoint/static assets)
+were corrected before applying settings; they caused no persistent change.
+Next: protected live credentials and exact monthly catalog preview/binding,
+with provider acceptance and JSK's trial preserved. See the
+[configuration checkpoint](implementation/billing-provider-readiness.md#confirmed-seller-configuration-2026-09-29).
+
+
 ## Razorpay resolution verified against payment evidence (2026-09-29)
 
 Read the verified-sender support thread: at **17:37 IST on 28 September**, Razorpay

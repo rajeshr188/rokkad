@@ -68,8 +68,11 @@ inherit it. HTML/PDF/receipts render saved details and no-GST wording, never tod
 profile for historical invoices. Current profile changes block new authorization
 but preserve matching-mode payment recovery/cancellation. Registered-supplier
 treatment is unsupported. Deployed to web and mail workers on 28 September with
-billing/sending paused, no migration or evidence backfill. Seller fields remain
-unconfigured pending live setup. The owner has now confirmed unregistered GST
+billing/sending paused, no migration or evidence backfill. On 29 September the
+confirmed seller fields and explicit zero tax were configured in the shared
+web/worker environment; restricted checks preserve all billing records and JSK's
+trial/access. Live credentials are still absent, pending owner generation; all
+billing/sending gates remain paused. The owner has confirmed unregistered GST
 status, the documented billing address, 12 monthly collections and JSK as pilot.
 JSK is Workspace 2, canonical owner 1, with three members and no pending invites.
 Its trial ends 8 October 2026 at 23:39 IST and blocks immediate recurring creation;

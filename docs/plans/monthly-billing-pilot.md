@@ -12,6 +12,21 @@ The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
 
+## Seller configuration checkpoint (2026-09-29)
+
+Confirmed seller name/address, unregistered status and zero tax are now configured
+in the shared production web/worker environment. Restricted preflight and final
+checks at **11:45 IST** preserve all billing records, JSK's trial/full access and
+the private catalog. Unsaved monthly terms validate 149900 paise, zero GST and six
+members; 12 collections/quantity one remain prepared. No plan/binding/agreement
+was saved. All provider/purchase/trial/recurring/sending gates stay paused.
+
+The owner confirmed live keys are not generated. The Live Mode Generate Key page
+is ready for owner handoff. Complete protected key setup before provider plan
+verification/binding; do not put secrets in the repository or chat. No real
+collection is authorized. See the
+[configuration evidence](../implementation/billing-provider-readiness.md#confirmed-seller-configuration-2026-09-29).
+
 ## Support resolution verification (2026-09-29)
 
 Razorpay's 28 September 17:37 IST response marks **21146138** Resolved, cites the

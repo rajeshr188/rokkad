@@ -1,13 +1,16 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [billing, configuration, receipts, deployment]
 ---
 
 # Billing provider configuration and readiness
 
 ## Frozen seller and explicit tax settings (2026-09-28)
+
+Superseded configuration status: the 29 September checkpoint below records the
+confirmed seller now installed. Earlier deployment checkpoints remain historical.
 
 Deployed to production web and mail workers, now on `rokkad:billing-paused-99bda8c1cb27`
 with billing/sending paused. No schema, provider or financial-record changes.
@@ -51,6 +54,46 @@ mocked provider/mail transports. The unsaved one-page PDF preview was text-check
 and visually inspected; schema-drift, boundary and documentation checks pass.
 Private local evidence: `outputs/seller-billing-regressions.log` and
 `outputs/seller-invoice-20260928/`. The preview is not an issued invoice.
+
+## Confirmed seller configuration (2026-09-29)
+
+Applied at **11:45 IST** to the existing shared environment consumed by web and
+mail workers. The only changes are:
+
+```dotenv
+BILLING_TAX_RATE=0
+BILLING_SELLER_NAME=Rajesh Rathod H
+BILLING_SELLER_ADDRESS=11, 9th Cross Street, Rajiv Gandhi Nagar, Vellore, Tamil Nadu, India
+BILLING_SELLER_TAX_STATUS=unregistered
+```
+
+Web was recreated on its current Party/Loans image
+`rokkad:party-loan-pages-20260929-5143b3441f2b`; workers keep the billing-compatible
+`rokkad:billing-paused-99bda8c1cb27`. Compose, settings modules, credential files,
+watchdog command, timers and images were preserved. No schema or database mutation.
+The server-private `billing-seller-20260929/` folder holds the previous environment,
+candidate, bounded apply/rollback evidence and sanitized final report.
+
+Both runtimes validate the exact seller through `live_seller()` and an unsaved
+monthly offer through `_offer(..., mode="live")`: INR 1,499 total, zero GST, six
+members. Prepared duration remains 12 monthly collections, quantity one. Restricted
+read-only fingerprints of every subscriptions table match before/after; JSK's
+trial and full access are unchanged. Web catalog remains private, HTTPS login is
+200, zero restarts; worker queue flags/due messages are zero. Dispatch remains
+disabled and monitoring timers active.
+
+Provider mode remains disabled, all purchase/trial/recurring/sending gates false.
+No live key or webhook secret is present, no provider request or charge occurred,
+and no plan/binding was saved. The owner confirmed keys are not generated yet.
+The approved-website Live Mode Generate Key page is handed to the owner; credential
+generation must be completed by the owner under the browser tool policy. Save the
+CSV outside the repository/OneDrive; never paste credentials into chat or logs.
+Subsequent protected import, authenticated GET-only plan verification, explicit
+server credential placement and live catalog binding remain pending. Test keys
+and test evidence stay isolated; key availability is not launch approval.
+
+Local sanitized results: `outputs/live-seller-20260929/prepare.json` and
+`outputs/live-seller-20260929/apply.json`.
 
 ## Monthly pilot commercial preparation (2026-09-28)
 
