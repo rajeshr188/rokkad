@@ -12,6 +12,23 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 WhatsApp fee reply recorded; method totals still need clarification (2026-09-29)
+
+The owner supplied a WhatsApp response citing 21174094. It quotes a 0.9%
+subscription add-on plus 2% payment-method fee, 18% GST on fees, INR 7 one-time
+UPI mandate setup, INR 22 eMandate setup and INR 20 automatic payments. The
+INR 5 lakh credit covers eligible payment-method charges only; subscription
+fees remain payable. No independent Dashboard/sender verification is claimed.
+
+For the quoted percentage-only scenario, INR 1,499 x 2.9% x 1.18 gives about
+INR 51.30 fees / INR 1,447.70 remaining, before setup or other deductions.
+The promotional INR 15.92 estimate assumes only the 0.9% add-on plus its GST
+remains; tax waiver treatment is not established. The PDF's INR 17 UPI recurring
+fee and method-specific stacking still need itemized examples. Decimal arithmetic
+was checked; no code/runtime or customer pricing changed. A written clarification
+is prepared but not sent, and no callback/alternate number was supplied.
+See [fee interpretation](plans/monthly-billing-pilot.md#owner-supplied-whatsapp-pricing-reply-2026-09-29).
+
 ## FW-019 public landing, pricing and FAQ aligned with live trial (2026-09-29)
 
 Published at **20:58 IST** after desktop and 390px mobile review. The homepage

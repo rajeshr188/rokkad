@@ -14,6 +14,65 @@ Production paid billing remains disabled. Public free trials and invitation/acco
 mail are enabled; receipt dispatch remains separately controlled. See the
 [free-trial release](../implementation/public-trial-release-20260929.md).
 
+## Owner-supplied WhatsApp pricing reply (2026-09-29)
+
+The owner pasted a response identifying ticket **21174094**. This is supplied
+correspondence, not an independently inspected Dashboard response or verified
+settlement. It requests a callback time/alternate number and a "Hi" reply. No
+message, phone confirmation or callback commitment was sent by the agent.
+
+The response clarifies the quoted components:
+
+- Subscription add-on: **0.9%**, in addition to a quoted **2% payment-method fee**.
+- **18% GST on all fees**, separate from the merchant's customer invoice tax.
+- UPI AutoPay mandate: **INR 7 one-time**; UPI and recurring charges are separate.
+- eMandate: **INR 22 setup**, **INR 20 automatic payment**, plus GST.
+- The **INR 5 lakh amount-credit promotion covers only eligible payment-method
+  charges**. Subscription charges still follow the pricing plan; some methods
+  are excluded. This is not free subscription processing.
+
+Working estimates for an INR 1,499 collection, calculated with Decimal and
+rounding only at the final two-decimal result:
+
+| Scenario | Formula | Estimated processor fees | Amount remaining after those fees |
+| --- | --- | --- | --- |
+| A collection subject only to the quoted 2% method fee + 0.9% add-on + GST | 1499 x (0.02 + 0.009) x 1.18 | INR 51.30 | INR 1,447.70 |
+| Eligible promotional collection, **if** the 2% fee and associated tax are fully waived and only add-on plus its GST remains | 1499 x 0.009 x 1.18 | INR 15.92 | INR 1,483.08 |
+
+The first scenario has a 3.422% combined cost. These are estimates before setup,
+other method-specific fees or adjustments, not guaranteed bank settlements or
+profit. Component-level provider rounding may differ by a paisa. The promotional
+tax treatment remains an explicit assumption pending a worked settlement example.
+Standalone GST-inclusive components are INR 8.26 for UPI mandate setup, INR 25.96
+for eMandate setup and INR 23.60 for an eMandate automatic payment. Do not treat
+these as all-in collection costs or apply the 2% scenario to every mandate route.
+
+Remaining clarification: how the PDF's **INR 17 auto UPI** combines with the quoted
+2% method fee and 0.9% add-on; which percentage fees apply to eMandate alongside
+its fixed charges; first-payment versus renewal timing; promotion coverage of
+setup charges and related GST; minimum/failed-debit/retry fees; applicable method
+exceptions/effective date; and itemized first/renewal examples during/after credits.
+The official [credits guide](https://razorpay.com/docs/payments/dashboard/account-settings/credits/)
+supports treating amount credits as eligible payment volume, not cash or a fee
+balance; account-specific subscription coverage comes from this support reply.
+
+Prepared follow-up (not sent):
+
+> Thank you. Please record these terms in ticket 21174094 and provide itemized
+> INR 1,499 first-payment and renewal examples for card, UPI AutoPay and eMandate,
+> during and after the promotion. Does the PDF's INR 17 auto-UPI fee replace or add
+> to the 2% method fee and 0.9% subscription add-on? Which percentage fees apply
+> alongside eMandate's INR 22 setup/INR 20 collection charges? Please show setup,
+> GST, credit coverage and net settlement, and confirm any minimum, failed-debit
+> or retry charges and the effective date.
+
+The customer offer remains INR 1,499 with the confirmed unregistered seller/no-GST
+invoice treatment. GST on Razorpay's services is a separate merchant cost; this
+reply does not change the seller's registration status or customer invoice tax.
+The public trial/landing copy and disabled paid-billing gates need no change.
+Technical failure/recovery, naturally due held access and live pilot acceptance
+remain separate. Fee clarity has improved; the fee gate is only partially closed.
+
 ## Cancellation wording review (2026-09-29)
 
 The recurring owner page, `request_cancellation`/`process_cancellation`, published

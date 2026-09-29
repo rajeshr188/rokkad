@@ -152,13 +152,21 @@ No subscription add-on or GST treatment is labelled. Recurring fee composition
 and promotional coverage need written clarification; listed components are not
 a confirmed total price. The approved clarification is submitted as 21174094,
 referencing resolved 21170392; Dashboard required a new query and the email
-Reply-To is the previously unmonitored address. Await the written fee answer.
+Reply-To is the previously unmonitored address. The owner subsequently pasted a
+WhatsApp reply citing 21174094: 0.9% add-on plus quoted 2% method fee, 18% GST on
+fees, INR 7 one-time UPI setup and INR 22/20 eMandate setup/collection. Credits
+cover eligible payment-method charges only, not the subscription add-on. Treat
+these as owner-supplied terms pending itemized method examples: the PDF's INR 17
+UPI recurring fee, percentage/fixed-fee combinations and promotional GST/setup
+coverage remain ambiguous. Do not treat the percentage-only INR 51.30 estimate
+as every method's total fee or a verified settlement. No callback/message sent.
 Fresh 20:36 IST GETs still show annual Created/Issued and failure Captured/Paid.
 Neither ticket closure nor an active mandate establishes provider acceptance.
 
 FW-019 merchant review on 29 September confirms recurring Card/UPI/eMandate enabled
 and Rokkad bearing fees. Public promotional rates are not the merchant fee schedule;
-exact fees remain unconfirmed. The owner's INR 500 Google payment is verified
+fee components are partially clarified; all-in method totals remain open.
+The owner's INR 500 Google payment is verified
 credited on 29 September, no balance due and payment warning cleared. Business
 Starter and storage add-on are Active; India tax information is still requested.
 Paid service starts 10 October; maintain ongoing billing funding. Initial payment
