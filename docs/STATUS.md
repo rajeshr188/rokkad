@@ -12,6 +12,53 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 onboarding report deployed; external alert route pending (2026-09-29)
+
+The read-only platform report is live, available from Django administration /
+Onboarding Progress / Onboarding report to the permanent platform administrator.
+It shows signup and verification, saved onboarding milestones, owned Workspaces,
+public-trial acceptance and effective access, invitation/mail outcomes and current
+membership. GET-only access, a shared active-superuser/global-context guard and
+bounded pagination keep it separate from customer Workspace permissions. It reads
+existing records and exposes no invitation tokens or borrower data.
+
+At **19:33 IST**, deployed source hashes, PostgreSQL READ ONLY report/template
+acceptance, restricted runtime and the next scheduled mail run passed. Web and mail
+consumers use `rokkad:onboarding-monitor-20260929-df4b82f62000`, image
+`sha256:71d5844da938e29aa9efd603696c47bb0383522cdc7d8e00daa3915234f6a6d2`.
+The five-file overlay and optional host watchdog hook required no migration/static
+rebuild. Release checks preserved existing access and billing/mail records; the
+public 30-day trial and account/invitation sending remain enabled, while checkout,
+recurring and scheduled receipt sending remain disabled. Eight focused tests passed.
+
+There were no new accounts at preparation. A signup appeared naturally during
+post-release verification, then created a Workspace. At **19:35 IST**, its verification email was delivered
+on the first attempt, email verification was complete, and explicit public-trial
+acceptance granted full access for 30 days through 29 October. There were no team
+invitations yet. This is observed activity, not an agent-created fixture or proof
+of a completed real-customer team journey. Customer identity stays out of this
+repository. See the latest checkpoint in the monitoring runbook.
+
+The owner chose **admin@rokkad.com** for failure alerts. The watchdog's tested
+optional Better Stack heartbeat sends no customer payload, withholds success when
+unhealthy/paused and refuses redirects. It is **disabled**: the external account,
+recipient, actual free allowance and a bounded failure/recovery delivery test remain
+to be resolved. Existing local health is clear; no external alert was sent and no
+monitoring upgrade or access change was made.
+
+Razorpay review at **19:25 IST** still shows annual renewal Created/Issued unpaid
+and the failure simulation Captured/Paid. Annual ticket **21146138 In Progress**
+has no newer substantive answer after the authorized follow-up; failure **21146171
+Closed** has no technical response. Pricing **21170392 Active**, with no fee answer
+and response target 1 October 11:14 AM. There are zero live agreements and the
+private monthly binding remains present. Do not convert a resolved/closed ticket
+into payment acceptance or enable charging. The 28 October held-period check,
+failure/recovery, fee confirmation and bounded live pilot remain outstanding.
+
+See [monitoring and rollback](implementation/onboarding-monitoring.md) and the
+[monthly pilot](plans/monthly-billing-pilot.md). Next observe the new account's
+remaining steps and finish the independent external alert route.
+
 ## FW-019 public 30-day trial deployed and enabled (2026-09-29)
 
 Verified at **19:07 IST**: the approved free offer is live, using production Plan 3

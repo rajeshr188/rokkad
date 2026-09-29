@@ -41,13 +41,19 @@ The following snapshot supersedes the dated preparation history below.
   are deployed and enabled; local browser, production rollback acceptance and
   scheduled mail checks passed. Existing trials/access remain unchanged.
 
+The [read-only onboarding report](../implementation/onboarding-monitoring.md) is now deployed.
+A new signup appeared during monitoring; verification delivery and explicit
+30-day trial acceptance passed. No team invitation had been created at the last
+check. External failure alerts to the selected admin inbox remain
+unconfigured pending provider/account routing and delivery acceptance.
+
 ## Production critical path (reviewed 2026-09-29)
 
 | Gate | Current result and remaining work |
 | --- | --- |
 | Failure/recovery | Local regression coverage exists; actual failure simulation captured successfully. Ticket 21146171 has not supplied the required failure/Pending/Halted/recovery acceptance. Preserve evidence. |
 | Naturally due held access | Existing monthly fixtures begin **28 October 2026**. Apply and verify at the real eligible time; no earlier alternative acceptance path has passed. |
-| Annual completion | Deferred from launch and still unresolved: final payment Created/invoice Issued despite ticket 21146138 marked Resolved. Owner-approved follow-up sent 29 September; annual remains unpublished. |
+| Annual completion | Deferred from launch and still unresolved: final payment Created/invoice Issued with ticket 21146138 now In Progress after the owner-approved 29 September follow-up; annual remains unpublished. |
 | Merchant fees and terms | Methods verified; obtain account-specific add-on/method/tax/promotion rates, and finish cancellation/refund wording review. |
 | Inbox continuity | Owner's INR 500 payment verified credited, no balance due and payment warning cleared. Business Starter and storage add-on Active. India tax info remains requested; maintain funding as paid service begins **10 October**. |
 | Named pilot activation | Preserve JSK's trial, verify eligibility and obtain bounded activation/first-collection approval after applicable gates pass. Scheduled live starts remain unsupported. |

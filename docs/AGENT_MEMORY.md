@@ -61,6 +61,18 @@ repository data, and is not a substitute GSTIN. Future seller changes must prese
 historical snapshots and review active mandate migration; registered invoicing
 is currently unsupported. This decision does not determine registration obligations.
 
+The platform onboarding report (`admin:onboarding_progress_report`, also
+`report_onboarding`) is read-only and restricted to an active platform superuser
+in global context. It reads existing identity, ownership, trial/access and mail
+evidence; milestone labels are not a clickstream, and mail delivery, invitation
+acceptance and current membership are distinct. Default signup cutoff is 30 days;
+disabled/platform-admin accounts are excluded, but active tests cannot be
+classified automatically. Customer details stay in private operator output.
+The selected external failure-alert inbox is admin@rokkad.com. The optional
+Better Stack watchdog heartbeat is tested but remains unconfigured; do not claim
+external alerting until recipient/account allowance and delivery are verified.
+See [onboarding monitoring](implementation/onboarding-monitoring.md).
+
 Current platform mail operations (29 September, 18:49 IST): invitations and
 account verification/reset sending are enabled consistently in web and worker.
 Dispatch uses `--send --limit 10 --invitations-and-accounts`, approximately 60

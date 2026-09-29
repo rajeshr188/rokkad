@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Read-only account, trial and team evidence. Active non-platform-admin accounts only.
+Rehearsal accounts are excluded when disabled; this report cannot identify real customers automatically.</p>
+<form method="get">{{ filters.as_p }}<input type="submit" value="Refresh report"></form>
+{% if report %}
+<p>{{ report.account_count }} accounts signed up since {{ report.since }}. Checked {{ report.checked_at }}.
+Page {{ report.page }} of {{ report.pages }}.</p>
+<p>Steps describe saved evidence, not a complete click history. Wizard completion may include skipped team setup.
+Delivery means the recipient mail server accepted the email, not that someone opened it.
+Stored pending counts may include expired invitations; recent invitation details show expiry.</p>
+{% for account in report.accounts %}
+<div class="module">
+<h2>{{ account.email }} — {{ account.relationship }}</h2>
+<p>Signed up {{ account.signed_up_at }}. {{ account.account_step }}.
+Email verified: {{ account.email_verified|yesno:"yes,no" }}.
+Wizard complete: {{ account.wizard_complete|yesno:"yes,no" }}.
+Team step skipped: {{ account.team_step_skipped|yesno:"yes,no" }}.
+Progress updated: {{ account.progress_updated_at|default:"No progress record" }}.</p>
+{% for workspace in account.workspaces %}
+<h3>{{ workspace.name }} ({{ workspace.slug }}) — {{ workspace.step }}</h3>
+<p>{{ workspace.trial_kind }}; subscription: {{ workspace.subscription_status }};
+trial ends: {{ workspace.trial_end|default:"—" }}; current access: {{ workspace.access }};
+lifecycle: {{ workspace.lifecycle }}. Members: {{ workspace.members }} (includes owner).
+{% if workspace.trial_accepted_at %}Trial accepted {{ workspace.trial_accepted_at }} by account {{ workspace.trial_original_actor_id }}.{% endif %}</p>
+<p>{{ workspace.invitation_count }} invitations. Stored outcomes:
+{% for status, count in workspace.invitation_status_counts.items %}{{ status }}: {{ count }}{% if not forloop.last %}, {% endif %}{% empty %}none{% endfor %}.</p>
+{% if workspace.recent_invitations %}
+<table><caption>Latest 10 invitations</caption><thead><tr><th>Recipient</th><th>Invitation</th><th>Email</th><th>Attempts</th><th>Current member</th><th>Responded</th></tr></thead>
+<tbody>{% for invitation in workspace.recent_invitations %}<tr>
+<td>{{ invitation.email }}</td><td>{{ invitation.state }}</td><td>{{ invitation.mail }}</td><td>{{ invitation.attempts }}</td>
+<td>{{ invitation.current_member|yesno:"yes,no" }}</td><td>{{ invitation.responded_at|default:"—" }}</td>
+</tr>{% endfor %}</tbody></table>
+{% endif %}
+{% empty %}<p>No owned Workspace. This may be a team member or an account awaiting Workspace creation.</p>{% endfor %}
+{% if account.workspace_count > 10 %}<p>Showing latest 10 of {{ account.workspace_count }} owned Workspaces.</p>{% endif %}
+</div>
+{% empty %}<p>No matching active accounts have signed up in this period.</p>{% endfor %}
+<p>{% if report.has_previous %}<a href="?since={{ report.since|date:'c'|urlencode }}&amp;query={{ report.query|urlencode }}&amp;page={{ report.page|add:'-1' }}">Previous</a>{% endif %}
+{% if report.has_next %}<a href="?since={{ report.since|date:'c'|urlencode }}&amp;query={{ report.query|urlencode }}&amp;page={{ report.page|add:'1' }}">Next</a>{% endif %}</p>
+{% endif %}
+{% endblock %}

@@ -5,10 +5,26 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase
-from scripts.platform_mail_watchdog import inspect
+from scripts.platform_mail_watchdog import heartbeat, inspect, NoRedirect
 
 
 class WatchdogTests(SimpleTestCase):
+    def test_heartbeat_only_pings_healthy_running_mail_and_never_exposes_errors(self):
+        config = {"heartbeat_url": "https://uptime.betterstack.com/api/v1/heartbeat/private-token"}
+        healthy = {"flags": [], "dispatch_marker": True}
+        with patch("scripts.platform_mail_watchdog.urllib.request.build_opener") as opener:
+            self.assertEqual(heartbeat({}, healthy), "disabled")
+            self.assertEqual(heartbeat(config, {"flags": ["failure"], "dispatch_marker": True}), "withheld")
+            self.assertEqual(heartbeat(config, {"flags": [], "dispatch_marker": False}), "withheld")
+            self.assertEqual(heartbeat({"heartbeat_url": "https://example.com/private-token"}, healthy), "failed")
+            opener.assert_not_called()
+            opener.return_value.open.return_value.__enter__.return_value.status = 204
+            self.assertEqual(heartbeat(config, healthy), "sent")
+            opener.return_value.open.assert_called_once_with(config["heartbeat_url"], timeout=10)
+            opener.return_value.open.side_effect = OSError(config["heartbeat_url"])
+            self.assertEqual(heartbeat(config, healthy), "failed")
+        self.assertIsNone(NoRedirect().redirect_request(None, None, 302, None, None, "https://example.com"))
+
     def test_paused_health_and_latched_failure_without_network(self):
         with TemporaryDirectory() as path:
             directory = Path(path)

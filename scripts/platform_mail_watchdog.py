@@ -4,10 +4,41 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import re
+import urllib.request
 from datetime import datetime, timezone
 
 
 JOBS = ("dispatch", "feedback", "recovery")
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def heartbeat(config, result):
+    """Optional external dead-man check. Never send queue data or error output.
+
+    The root-only config holds the capability URL. An unhealthy/paused worker
+    withholds success; the external monitor detects missing pings/server loss.
+    """
+    url = config.get("heartbeat_url")
+    if not url:
+        return "disabled"
+    if result["flags"] or not result["dispatch_marker"]:
+        return "withheld"
+    if not isinstance(url, str) or not re.fullmatch(
+        r"https://uptime\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9_-]+", url
+    ):
+        return "failed"
+    try:
+        # Do not forward the capability URL to another host or include a body.
+        with urllib.request.build_opener(NoRedirect).open(url, timeout=10) as response:
+            return "sent" if 200 <= response.status < 300 else "failed"
+    except Exception:
+        # Exception strings can contain the secret URL. Keep them private.
+        return "failed"
 
 
 def run(argv, **kwargs):
@@ -73,6 +104,9 @@ def main():
         print("PLATFORM_MAIL_ALERT: worker failed; inspect private mail health.")
         return
     result = inspect(config, directory)
+    result["external_heartbeat"] = heartbeat(config, result)
+    if result["external_heartbeat"] == "failed":
+        result["flags"].append("external_heartbeat_failed")
     atomic_json(directory/"health.json", result)
     print("PLATFORM_MAIL_" + ("ALERT: " + ",".join(result["flags"]) if result["flags"] else "OK (sending " + ("enabled" if result["dispatch_marker"] else "paused") + ")"))
     raise SystemExit(1 if result["flags"] else 0)

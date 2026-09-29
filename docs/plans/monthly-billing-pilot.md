@@ -14,6 +14,27 @@ Production paid billing remains disabled. Public free trials and invitation/acco
 mail are enabled; receipt dispatch remains separately controlled. See the
 [free-trial release](../implementation/public-trial-release-20260929.md).
 
+## Read-only launch-gate refresh (2026-09-29, 19:25 IST)
+
+Dashboard review found no new substantive answer: annual **21146138 In Progress**
+still ends with the authorized 10:21 follow-up; failure **21146171 Closed** contains
+no technical response; pricing **21170392 Active** has no fee answer and still
+displays 1 October 11:14 AM as the target. No additional support message was sent.
+
+Fresh Test Mode GETs at 13:55:53 UTC confirm the annual agreement remains Active,
+paid_count 1/2, with its final payment Created and invoice Issued. The attempted
+failure fixture is still Captured/Paid; its cleaned-up agreement is Cancelled,
+paid_count 2/3. The earlier short scheduled fixture is Expired, paid_count 0, and
+its INR 5 authorization payment remains Created. No local billing/mail records
+changed during these reads. Do not retry a charge or substitute ticket closure
+for failure/recovery or renewal acceptance.
+
+Production read-only checks confirm zero live agreements, private Plan 2 at
+INR 1,499 with six members and one live provider binding, and public Plan 3 at
+zero price with 30 days/six members. Checkout and recurring remain disabled.
+The [onboarding report](../implementation/onboarding-monitoring.md) is now deployed
+to observe public signup/team progress independently of the paid pilot gates.
+
 ## Dashboard support routing and trial preparation (2026-09-29)
 
 The 12:54 reply to the fee email is an automated **unmonitored mailbox** notice,

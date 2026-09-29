@@ -800,3 +800,15 @@ and payment truth. Broader unattended traffic needs an agreed external alert rou
 References: [SES event contents](https://docs.aws.amazon.com/ses/latest/dg/event-publishing-retrieving-sns-contents.html),
 [SNS-to-SQS permissions](https://docs.aws.amazon.com/sns/latest/dg/subscribe-sqs-queue-to-sns-topic.html),
 [SES SendEmail API](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_SendEmail.html).
+
+## External health heartbeat preparation (2026-09-29)
+
+The host watchdog now accepts an optional root-private Better Stack heartbeat URL.
+It pings only on healthy, enabled dispatch; failures or pauses withhold success,
+allowing an external timeout to detect worker or host loss. It sends no customer
+payload, refuses redirects and redacts URL-bearing errors. Eight focused combined
+report/watchdog tests passed. The hook is deployed but **unconfigured/disabled**;
+local health remains the only activated alert evidence. The owner selected
+admin@rokkad.com, but external recipient/account allowance and a bounded failure/
+recovery email rehearsal still need acceptance. No external alert was sent.
+See [configuration, semantics and next steps](onboarding-monitoring.md#external-alerts-prepared-not-activated).
