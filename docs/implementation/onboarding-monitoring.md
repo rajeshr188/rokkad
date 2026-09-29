@@ -163,3 +163,30 @@ journey or confirmation that the account is a real customer. No agent-created
 fixture, resend, charge or account mutation was used. Private account details were
 not added to this record. Observe invitations/joined membership when the owner
 chooses to continue; no automatic follow-up email is authorized by this report.
+
+## Team acceptance checkpoint (2026-09-29, 19:38 IST)
+
+The observed Workspace's invitation reached the recipient mail server at
+19:37:23 IST on its first attempt and was accepted five seconds later. Current
+Memberships are Owner and Admin; the joined role matches the invitation's Admin
+role. The frozen member entitlement is enabled with value six and automatic
+renewal is false. The stored dates span 30 days (sub-millisecond timestamp-setting
+difference). Queue due is zero and health flags are empty. This completes the
+recorded signup ? verification ? trial ? invitation ? joined-member observation.
+The teammate's subsequent browser entry and role-specific work were not observed;
+do not equate saved membership with full application acceptance. Whether this is
+a real customer or an owner-run test was not established. Account identifiers,
+recipient addresses and Workspace identity remain out of repository evidence.
+
+## External account signup handoff (2026-09-29)
+
+The owner confirmed there was no separate Better Stack account for admin@rokkad.com,
+then explicitly approved the free signup, its Terms/Privacy acceptance and sending
+the registration link. The submitted form confirms that the magic link was sent
+to that inbox. Verification is awaiting the owner clicking it; no heartbeat or
+external alert route is activated yet. The unrelated monitoring account was signed
+out to expose the signup form; its monitors/configuration were not changed.
+No paid upgrade or payment method was added. Automatic approval review rejected
+opening Gmail because signup approval did not include mailbox access; the user
+was asked to complete the link directly. No alternate mailbox access was attempted.
+Local proof: `outputs/betterstack-rokkad-link-sent-20260929.png`.

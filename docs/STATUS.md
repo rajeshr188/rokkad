@@ -12,6 +12,24 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 first observed signup/trial/team join passed (2026-09-29)
+
+At **19:38 IST**, the newly observed Workspace has a verified owner and an accepted
+30-day public trial through 29 October 19:34 IST, a six-member entitlement and
+`auto_renew=False`. Its team invitation was delivered on the first attempt at
+19:37:23 IST and accepted at 19:37:28. Two Memberships now exist: Owner and the
+invited Admin, matching the invitation role. The verification email was also
+delivered on its first attempt. Queue due is zero with no health flags.
+
+These are read-only production observations of activity initiated outside this
+agent's work. They prove recorded signup, verification, trial and team acceptance;
+they do not establish that this is a real customer rather than an owner-run test,
+or prove the teammate's subsequent browser work and role-specific operations.
+No account, invitation, resend or charge was created by the monitoring commands.
+The [report and runbook](implementation/onboarding-monitoring.md) capture the
+remaining checks. External alert routing is still unconfigured; paid launch gates
+remain as recorded below.
+
 ## FW-019 onboarding report deployed; external alert route pending (2026-09-29)
 
 The read-only platform report is live, available from Django administration /

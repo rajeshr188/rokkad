@@ -42,10 +42,12 @@ The following snapshot supersedes the dated preparation history below.
   scheduled mail checks passed. Existing trials/access remain unchanged.
 
 The [read-only onboarding report](../implementation/onboarding-monitoring.md) is now deployed.
-A new signup appeared during monitoring; verification delivery and explicit
-30-day trial acceptance passed. No team invitation had been created at the last
-check. External failure alerts to the selected admin inbox remain
-unconfigured pending provider/account routing and delivery acceptance.
+A new signup appeared during monitoring; verification delivery, explicit
+30-day trial acceptance, invitation delivery and joined membership passed. The
+teammate joined with the invited Admin role; later browser/role behavior remains
+unobserved, and real-customer versus owner-test status is unconfirmed. External
+failure alerts to the selected admin inbox remain unconfigured pending provider/
+account routing and delivery acceptance.
 
 ## Production critical path (reviewed 2026-09-29)
 
