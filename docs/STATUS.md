@@ -12,6 +12,41 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 public 30-day trial deployed and enabled (2026-09-29)
+
+Verified at **19:07 IST**: the approved free offer is live, using production Plan 3
+and `BILLING_ALLOW_TRIAL_START=True` in web and worker. Terms are 30 days, owner
+plus five staff, one trial Workspace per owner account, no card and no automatic
+charge. Verified-owner consent is required. Checkout and recurring remain false;
+private Plan 2 and annual billing are not published. Existing Workspace access,
+trial dates and all observed billing/mail/Company/Membership records are unchanged.
+
+Web and all mail consumers use `rokkad:public-trial-20260929-e06bb85c285c`, image
+`sha256:bdc850b3f6fcac64ec39216d09b2b7ce2e694e3f4d05a9fe7c38634caa370afe`.
+The 13-file overlay contains reviewed trial selection, consent, owner allowance,
+seat serialization and corrected account-page copy. Existing UI outside those
+files, static assets, credentials and 117 forced-RLS tables are preserved. No
+migration was required. A fresh operational backup and deployed source hashes passed.
+
+Restricted-runtime acceptance used fictional non-admin records in a transaction
+that was fully rolled back. It passed verified-owner enforcement, private/stale
+terms rejection, 30 days, six seats, repeat/second-Workspace refusal, customer copy,
+grace/read-only and no financial/mail side effects. No persistent account, trial,
+invitation or email was created. This complements the earlier local browser and
+real account/invitation delivery acceptance; it is not a new live signup/email test.
+
+The first enable attempt rolled back because inherited production settings force
+the trial flag false. The shared deployment settings now explicitly read the
+reviewed environment flag, defaulting false. Candidate web/worker checks passed
+before retry. HTTPS login/signup, supervised mail workers, the subsequent scheduled
+run and health all passed; queue due is zero with no monitoring flags. Invitation
+and account mail remain enabled in batches of ten; receipts remain excluded.
+
+See the [release/rollback record](implementation/public-trial-release-20260929.md).
+Next monitor the first genuine owner signup/trial/team journey and continue the
+separate Razorpay monthly pilot gates. FW-019 remains in launch validation for
+paid subscriptions; no collection or paid conversion is enabled by this release.
+
 ## FW-019 ongoing account mail enabled and owner trial allowance implemented (2026-09-29)
 
 At **18:49 IST**, production web and worker now both have

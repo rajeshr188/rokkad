@@ -70,14 +70,15 @@ scheduled runs passed, with no due queue or health flags. Activation sent no new
 test messages and preserved existing billing/mail/Workspace records and access.
 See [mail activation](implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
 
-Web and all mail consumers use `rokkad:account-mail-20260929-702d1c64ba50`, with
+Web and all mail consumers now use `rokkad:public-trial-20260929-e06bb85c285c`, with
 the additive `platform_mail.0002` migration, restricted grants and 117 forced-RLS
 tables. Web has no SES credentials; matched signing/token configuration stays
 server-side. The explicit allauth/invitation adapter queues verification/reset
 intents without stored tokens, passwords or bodies. The shared default backend
 is still locmem, but these enabled hooks use the SES outbox. Preserve both enabled
 mail flags and combined scheduling in future releases. Existing UI and static
-assets are unchanged; the image does not include the public-trial implementation.
+assets outside the reviewed trial/account templates are unchanged; the public-trial
+implementation is deployed and enabled. See the [release record](implementation/public-trial-release-20260929.md).
 
 The owner-approved two-email acceptance is complete. Both messages to
 `admin+account-test-20260929@rokkad.com` were delivered with one attempt. Live
@@ -90,9 +91,9 @@ sanitized local reports use that same prefix in `outputs/`.
 
 The owner selected a public **30-day** trial, owner plus five staff, no card and
 no automatic charge, limited to **one public trial Workspace per owner account**.
-Production Plan 3 is prepared: zero price, 30 days, six members and no provider
+Production Plan 3 is published: zero price, 30 days, six members and no provider
 binding. Plans 1/2 and current Workspace access remain unchanged. Selected-offer
-code and versioned verified-owner consent are implemented locally; the local
+code and versioned verified-owner consent are deployed; the local
 signup/verification/trial/team browser journey passed with captured mail.
 `BILLING_PUBLIC_TRIAL_PLAN_ID` selects only this eligible free Plan and defaults
 to zero. Existing Workspace billing/access history is ineligible.
@@ -107,12 +108,14 @@ Django's app registry, with Company locks serializing member/invitation changes.
 See [trial preparation](plans/public-workspace-trial.md) and
 [owner allowance](adr/2026-09-29-owner-public-trial-allowance.md).
 
-Trial, checkout and recurring production flags remain false. Account-mail
-activation is complete; the selected-trial release and publication remain next.
-Do not enable the current image's older trial switch, which publishes private
-plans. Deploy the reviewed selection/consent/allowance code before selecting Plan 3
-and activating public trials. Paid continuation still needs separate consent and
-its own launch acceptance.
+Public trials are enabled, verified at 19:07 IST on 29 September. Plan 3 is selected
+in web and worker, with the trial environment flag true and an explicit env-based
+override in shared deployment settings (the inherited production default is hard
+false). Checkout/recurring remain false. The rolled-back production rehearsal
+passed without persistent accounts, trials or mail; HTTPS signup/login and the
+next scheduled mail run passed. Existing records/access are unchanged. Monitor
+the first genuine trial/team journey. Never enable trials on an older generic
+catalog image. Paid continuation still needs separate consent and launch acceptance.
 
 Razorpay pricing correspondence must use Dashboard support: the previous email
 address returned an unmonitored-mailbox notice. The authorized fee inquiry is now

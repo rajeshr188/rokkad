@@ -15,6 +15,12 @@ now created Google Workspace and AWS accounts, confirmed on 2026-09-26.
 
 ## Current checkpoint
 
+- **29 September, 19:07 IST:** web and every mail consumer now use the reviewed
+  public-trial image. Combined account/invitation sending remains enabled, with
+  the next scheduled run passing, an empty due queue and no health flags. The
+  public free trial is now enabled; paid checkout/recurring and receipt scheduling
+  remain paused. See the [trial release](../implementation/public-trial-release-20260929.md).
+
 - **29 September, 18:49 IST:** ongoing verification/reset mail is enabled alongside
   invitations. The combined worker handles up to ten messages per scheduled run,
   with receipts excluded. Both mail flags are true in web/worker, matched signing

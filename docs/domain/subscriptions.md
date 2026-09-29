@@ -11,8 +11,8 @@ related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 Operator catalog preparation is private while checkout and trial signup are both
 paused. The owner catalog then links to the Workspace's prepared recurring agreement,
 whose frozen terms remain visible independently. Live binding also requires trial
-signup paused. The deployed older trial switch must stay paused until the selected-trial code
-is deployed. That code publishes only the explicitly selected eligible free Plan;
+signup paused. The deployed selected-trial code publishes only Plan 3, the
+explicitly selected eligible free offer;
 paid catalog publication still requires the separate checkout switch.
 Legacy feature claims and estimated overage charges are no longer presented as
 commercial terms. Stored limits and invoices are unchanged. See the
@@ -73,7 +73,7 @@ Scheduled tokens and unreturned paid periods remain blocked. See the
 
 The subscriptions domain manages company subscription plans, access checks, monetization flows, and navigation visibility.
 
-## Selected public trial (implementation prepared 2026-09-29)
+## Selected public trial (enabled 2026-09-29)
 
 The public offer is 30 days, owner plus five staff, no card and no automatic
 charge. An explicitly selected zero-price Plan and the trial switch are both
@@ -83,8 +83,9 @@ account may accept one public trial Workspace. The original acceptance event kee
 that allowance consumed after expiry, ownership transfer or catalog replacement;
 an internal transition trial does not consume it. Existing
 trials remain unchanged. See [the trial decision](../adr/2026-09-29-selected-public-trial.md)
-and [publication work](../plans/public-workspace-trial.md). Production activation
-remains pending. The planned INR 1,499 monthly continuation needs separate consent.
+and [trial operations](../plans/public-workspace-trial.md). Production free trials
+are enabled. The planned INR 1,499 monthly continuation needs separate consent
+and paid-billing launch acceptance.
 
 ## Direction
 

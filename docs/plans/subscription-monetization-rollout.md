@@ -10,8 +10,9 @@ related: [future-work.md, ../domain/subscriptions.md, ../flows/subscription-chec
 
 FW-019 is **in launch validation, not complete**. The monthly pilot implementation,
 live catalog, credentials, webhook registration and receipt worker are deployed
-with charging paused. Invitation-only sending is enabled; receipts remain separately
-controlled. Account activation is not payment acceptance.
+with charging paused. Invitation and account mail are enabled; receipts remain
+separately controlled. The 30-day public free trial is now enabled. Free access
+and account activation are not payment acceptance.
 The following snapshot supersedes the dated preparation history below.
 
 ## Current monthly pilot (reviewed 2026-09-29)
@@ -28,16 +29,17 @@ The following snapshot supersedes the dated preparation history below.
   and enabled live webhook `ThlAT5rGIawXNH` with the 14 supported events.
 - **Mail preparation complete:** SES production access, controlled Test Mode receipt
   and reply delivery, invitation acceptance, and deployed receipt-only worker
-  selection (55 focused tests passed). Scheduled invitation-only dispatch is now
-  enabled at one per run; feedback/recovery/health monitoring is active.
+  selection (55 focused tests passed). Scheduled invitation/account dispatch is now
+  enabled in batches of ten; verification/reset delivery/link acceptance passed
+  and feedback/recovery/health monitoring is active.
 - **Merchant review complete:** recurring Card, UPI and eMandate enabled; Rokkad
   bears fees. Exact account-specific subscription fees remain unconfirmed.
 - **No live agreement, invoice, payment or receipt exists.** Webhook registration
   and HTTPS/HMAC diagnostics do not prove actual Razorpay event delivery.
-- **Public trial draft:** owner selected 30 days and six members, no card or automatic
-  charge. [Separate catalog/consent code](public-workspace-trial.md) is prepared locally;
-  deployment and browser acceptance remain pending;
-  self-service trials remain disabled and existing trials unchanged.
+- **Public trial live:** 30 days and six members, one trial Workspace per owner
+  account, no card or automatic charge. [Plan 3 and consent](public-workspace-trial.md)
+  are deployed and enabled; local browser, production rollback acceptance and
+  scheduled mail checks passed. Existing trials/access remain unchanged.
 
 ## Production critical path (reviewed 2026-09-29)
 
@@ -52,7 +54,7 @@ The following snapshot supersedes the dated preparation history below.
 | Actual live acceptance | Observe provider callback, exact payment/invoice/access, one approved receipt and settlement during the bounded pilot before broader onboarding. |
 | Remaining broader scope | Actual replacement payment, general settlement/prepaid transition acceptance and ongoing mail scope remain separate; live reservation release and annual launch are excluded. |
 
-There is **no committed production date**. Under the current acceptance plan, the
+There is **no committed paid-billing launch date**. Under the current acceptance plan, the
 28 October held-period observation remains on the path to activation; the 8 October
 trial expiry is not a launch promise. An earlier date requires a reviewed alternative
 acceptance path, not merely live keys or an enabled merchant account. A bounded

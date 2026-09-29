@@ -444,7 +444,8 @@ then lock the accepting owner account before the Plan. One public trial Workspac
 per owner is enforced using the original actor in retained public `trial.started`
 events, including after expiry or ownership transfer. Internal trials do not
 consume this allowance. See the [owner allowance decision](../adr/2026-09-29-owner-public-trial-allowance.md).
-Trials create no financial evidence. Production publication remains pending. See the
+Trials create no financial evidence. Production Plan 3 is published with paid
+checkout/recurring gates still off. See the
 [selected-trial decision](../adr/2026-09-29-selected-public-trial.md).
 
 The target public API is a single Workspace-scoped service:

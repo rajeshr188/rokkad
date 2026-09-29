@@ -34,5 +34,6 @@ different people. Ordinary Workspace deletion is disabled; retained billing even
 must not be removed to restore eligibility. A future physical-retention workflow
 must preserve the consumed allowance before erasing its source evidence.
 
-Publication still requires the selected-trial release and activation review.
-This decision does not enable production trials or payments.
+The selected-trial release and activation review completed later on 29 September;
+the [free offer is enabled](../implementation/public-trial-release-20260929.md).
+Paid billing remains paused and requires its separate acceptance.

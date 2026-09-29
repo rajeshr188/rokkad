@@ -10,8 +10,9 @@ related: [subscription-monetization-rollout.md, ../implementation/billing-provid
 
 The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
-Production billing remains disabled. Invitation-only mail dispatch is enabled;
-receipt dispatch remains separately controlled.
+Production paid billing remains disabled. Public free trials and invitation/account
+mail are enabled; receipt dispatch remains separately controlled. See the
+[free-trial release](../implementation/public-trial-release-20260929.md).
 
 ## Dashboard support routing and trial preparation (2026-09-29)
 

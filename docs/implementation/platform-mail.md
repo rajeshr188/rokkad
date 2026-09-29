@@ -8,6 +8,15 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Current image after public-trial release (2026-09-29)
+
+Web and all mail consumers now use `rokkad:public-trial-20260929-e06bb85c285c`. Both mail flags
+and combined batches of ten remain enabled; receipts remain excluded. The selected
+free trial is enabled, while checkout/recurring remain false. The later scheduled
+run and health passed with an empty due queue. Source and shared deployment
+settings changes are documented in the [trial release](public-trial-release-20260929.md).
+The earlier image/paused-trial checkpoints below are historical.
+
 ## Ongoing account and invitation mail enabled (2026-09-29)
 
 At **18:49 IST**, `ACCOUNT_EMAIL_ENABLED=True` was enabled consistently in

@@ -43,6 +43,7 @@ membership creation and acceptance serialize on Company before checking capacity
 Direct member additions count reserved invitations; an existing member retry adds
 no seat. The trial and invitation paths share Company-first lock ordering.
 
-This implementation is prepared locally. Publication still needs a separate Plan,
-deployment and browser acceptance with both payment switches off. Existing plans,
-customers and production activation flags are not changed by this decision.
+Production publication completed on 29 September after separate Plan preparation,
+the local browser journey, account-mail acceptance and production runtime checks.
+See the [release record](../implementation/public-trial-release-20260929.md).
+Existing plans/customer access are unchanged; both payment switches remain off.
