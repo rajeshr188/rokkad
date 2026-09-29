@@ -12,7 +12,9 @@ from django.utils import timezone
 
 from apps.onboarding.models import OnboardingProgress
 from apps.orgs.models import Company, CompanyInvitation, Membership, Role
-from apps.orgs.services.control_plane import create_membership, send_onboarding_team_invitations
+from apps.orgs.services.control_plane import (
+    create_membership, send_onboarding_team_invitations, transfer_workspace_ownership,
+)
 from apps.orgs.services.workspace_roles import seed_workspace_roles
 from apps.tenancy.context import workspace_context
 from .access_policy import workspace_activity
@@ -69,13 +71,15 @@ class PublicTrialTests(TestCase):
 
     def test_offer_and_post_hide_private_plans_and_require_current_consent(self):
         page = self.client.get(self.url("plan-list"))
-        for text in ("30 days", "No automatic charge", "five staff", "1,499/month"):
+        for text in ("30 days", "No automatic charge", "five staff", "1,499/month",
+                     "One free trial Workspace per owner account"):
             self.assertContains(page, text)
         for text in (self.private.name, "/year", "/checkout/"):
             self.assertNotContains(page, text)
         self.assertEqual(list(page.context["plans"]), [])
         for plan_id, consent in ((self.private.pk, PUBLIC_TRIAL_TERMS), (self.plan.pk, ""),
-                                 (self.plan.pk, "old-terms")):
+                                 (self.plan.pk, "old-terms"),
+                                 (self.plan.pk, "public-trial-30d-6members-20260929")):
             response = self.client.post(self.url("start-trial", plan_id=plan_id), {"accepted_terms": consent})
             self.assertEqual(response.status_code, 302)
             self.assertFalse(Subscription.objects.exists())
@@ -126,6 +130,7 @@ class PublicTrialTests(TestCase):
         self.assertIsNone(sub.razorpay_subscription_id)
         event = SubscriptionEvent.objects.get(subscription=sub)
         self.assertEqual(event.payload["accepted_terms"]["version"], PUBLIC_TRIAL_TERMS)
+        self.assertEqual(event.payload["accepted_terms"]["max_trial_workspaces_per_owner"], 1)
         self.assertEqual(event.payload["actor_id"], self.owner.pk)
         self.assertEqual(event.payload["trial_end_date"], sub.trial_end_date.isoformat())
         with self.assertRaises(ValidationError):
@@ -151,6 +156,76 @@ class PublicTrialTests(TestCase):
         self.assertEqual(result["invited_count"], 5, result["failed"])
         self.assertEqual(result["failed_count"], 1)
         self.assertEqual(CompanyInvitation.pending_queryset().filter(company=self.workspace).count(), 5)
+
+    def extra_workspace(self, name, owner=None):
+        owner = owner or self.owner
+        workspace = Company.all_objects.create(name=name, schema_name=name, owner=owner, creator=owner)
+        Membership.objects.create(company=workspace, user=owner, role=Role.objects.get(name="Owner"))
+        seed_workspace_roles(workspace.pk)
+        return workspace
+
+    def test_second_workspace_rejects_direct_post_and_hides_start_action(self):
+        first = self.start()
+        before = Subscription.objects.values().get(pk=first.pk)
+        second = self.extra_workspace("second-trial")
+        url = lambda name, **kw: reverse("workspace_subscriptions:" + name,
+            kwargs={"workspace_slug": second.slug, **kw})
+        page = self.client.get(url("plan-list"))
+        self.assertContains(page, "already used its public trial")
+        self.assertNotContains(page, "Start 30-day free trial")
+        response = self.client.post(url("start-trial", plan_id=self.plan.pk),
+            {"accepted_terms": PUBLIC_TRIAL_TERMS})
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Subscription.objects.filter(company=second).exists())
+        self.assertEqual(Subscription.objects.values().get(pk=first.pk), before)
+        self.assertEqual(SubscriptionEvent.objects.count(), 1)
+
+    def test_expiry_transfer_and_new_catalog_do_not_restore_original_owner_trial(self):
+        sub = self.start()
+        new_owner = get_user_model().objects.create_user(username="successor", email="successor@example.com")
+        EmailAddress.objects.create(user=new_owner, email=new_owner.email, verified=True)
+        Membership.objects.create(company=self.workspace, user=new_owner, role=Role.objects.get(name="Member"))
+        transfer_workspace_ownership(workspace=self.workspace, new_owner=new_owner, actor=self.owner,
+            previous_owner_role=Role.objects.get(name="Member"), reason="Trial ownership regression")
+        Subscription.objects.filter(pk=sub.pk).update(status=Subscription.StatusChoices.EXPIRED,
+            trial_end_date=timezone.now() - timedelta(days=8))
+        replacement = Plan.objects.create(name="Replacement public offer", tier="starter", price=0,
+            trial_days=30, max_users=6)
+        second = self.extra_workspace("after-transfer")
+        with override_settings(BILLING_PUBLIC_TRIAL_PLAN_ID=replacement.pk), workspace_context(second.pk):
+            with self.assertRaisesMessage(ValidationError, "already used"):
+                start_public_trial(workspace=second, actor=self.owner, plan_id=replacement.pk,
+                    accepted_terms=PUBLIC_TRIAL_TERMS)
+        # Receiving ownership does not consume the recipient's own trial allowance.
+        third = self.extra_workspace("successor-trial", new_owner)
+        with workspace_context(third.pk):
+            start_public_trial(workspace=third, actor=new_owner, plan_id=self.plan.pk,
+                accepted_terms=PUBLIC_TRIAL_TERMS)
+        self.assertEqual(Subscription.objects.count(), 2)
+
+    def test_earlier_public_terms_count_but_internal_trials_do_not(self):
+        from .billing import start_trial
+        other = self.extra_workspace("internal-history")
+        with workspace_context(other.pk):
+            internal = start_trial(workspace=other, plan=self.private, actor=self.owner)
+        public = self.start()
+        self.assertNotIn("accepted_terms", SubscriptionEvent.objects.get(subscription=internal).payload)
+        event = SubscriptionEvent.objects.get(subscription=public)
+        event.payload["accepted_terms"] = {"version": "public-trial-30d-6members-20260929"}
+        event.save(update_fields=["payload"])  # Simulate retained pre-limit public evidence.
+        second = self.extra_workspace("legacy-public-history")
+        with workspace_context(second.pk), self.assertRaisesMessage(ValidationError, "already used"):
+            start_public_trial(workspace=second, actor=self.owner, plan_id=self.plan.pk,
+                accepted_terms=PUBLIC_TRIAL_TERMS)
+
+    def test_rolled_back_start_does_not_consume_owner_allowance(self):
+        with self.assertRaisesMessage(RuntimeError, "abort"):
+            with transaction.atomic():
+                self.start()
+                raise RuntimeError("abort")
+        self.assertFalse(SubscriptionEvent.objects.exists())
+        self.start()
+        self.assertEqual(SubscriptionEvent.objects.count(), 1)
 
     def test_existing_trial_or_access_history_is_unchanged(self):
         old = Subscription.objects.create(company=self.workspace, plan=self.private)
@@ -236,7 +311,7 @@ class ConcurrentPublicTrialTests(TransactionTestCase):
             cursor.execute(f"DROP OWNED BY {self.role}")
             cursor.execute(f"DROP ROLE {self.role}")
 
-    def race(self, action):
+    def race(self, action, *, workspaces=None):
         from concurrent.futures import ThreadPoolExecutor
         from threading import Barrier
         from django.db import close_old_connections, connections
@@ -249,7 +324,8 @@ class ConcurrentPublicTrialTests(TransactionTestCase):
                 with transaction.atomic():
                     with connection.cursor() as cursor:
                         cursor.execute(f"SET LOCAL ROLE {self.role}")
-                    with workspace_context(self.workspace.pk):
+                    workspace = workspaces[index] if workspaces else self.workspace
+                    with workspace_context(workspace.pk):
                         return action(index)
             finally:
                 connections.close_all()
@@ -280,3 +356,26 @@ class ConcurrentPublicTrialTests(TransactionTestCase):
 
         self.assertCountEqual(self.race(invite), [1, 0])
         self.assertEqual(CompanyInvitation.pending_queryset().filter(company=self.workspace).count(), 5)
+
+    def test_concurrent_different_workspaces_consume_one_owner_trial(self):
+        second = Company.all_objects.create(name="Competing trial", schema_name="competing-trial",
+            owner=self.owner, creator=self.owner)
+        Membership.objects.create(company=second, user=self.owner, role=Role.objects.get(name="Owner"))
+        seed_workspace_roles(second.pk)
+        workspaces = (self.workspace, second)
+
+        def accept(index):
+            workspace = workspaces[index]
+            try:
+                start_public_trial(workspace=workspace, actor=self.owner,
+                    plan_id=self.plan.pk, accepted_terms=PUBLIC_TRIAL_TERMS)
+                return "started"
+            except ValidationError as exc:
+                self.assertIn("already used", exc.messages[0])
+                return "rejected"
+
+        self.assertCountEqual(self.race(accept, workspaces=workspaces), ["started", "rejected"])
+        self.assertEqual(Subscription.objects.count(), 1)
+        self.assertEqual(SubscriptionEvent.objects.filter(event_type="trial.started").count(), 1)
+        for model in (Invoice, Payment, RecurringAgreement):
+            self.assertFalse(model.objects.exists())

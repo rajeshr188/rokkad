@@ -26,6 +26,9 @@ ownership, including after locking the Company row. Platform authority cannot
 accept another owner's trial. Existing subscription, recurring-agreement or access
 decision history excludes the Workspace; a trial is not an access-reset mechanism.
 Existing members and pending invitations must fit six seats before acceptance.
+The subsequent [owner allowance decision](2026-09-29-owner-public-trial-allowance.md)
+limits public acceptance to one Workspace per owner account, with an additional
+owner-row lock after Company and before Plan.
 
 Reuse the locked `start_trial` service, BillingAccount, entitlement projection and
 SubscriptionEvent. New trials set `auto_renew=False`. The event records the actor,

@@ -12,6 +12,43 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 ongoing account mail enabled and owner trial allowance implemented (2026-09-29)
+
+At **18:49 IST**, production web and worker now both have
+`ACCOUNT_EMAIL_ENABLED=True`, alongside enabled invitation mail. Dispatch uses
+`--send --limit 10 --invitations-and-accounts`, approximately 60 seconds after
+each completed run, with a 300-second service timeout for the bounded batch.
+Receipts remain outside its scope. The image, signing configuration, static
+assets and scoped SES credentials are unchanged; the web has no SES credentials.
+
+Candidate checks, supervised dispatch/feedback/recovery, health and the next
+natural scheduled run passed. All four timers are active/enabled, the due queue
+is empty and monitoring reports no flags. Activation sent no new test messages;
+billing/mail records, Company/Membership/invitation rows and existing Workspace
+access fingerprints are unchanged. Runtime remains restricted with 117 forced-RLS
+tables. Trial, checkout and recurring activation flags remain false.
+Private configuration backups/evidence are in `account-mail-activation-20260929/`;
+sanitized local reports are `outputs/account-mail-activation-*-20260929.json`.
+See the [mail runbook](implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
+
+The owner selected **one public trial Workspace per owner account**. Local code
+now serializes starts across Workspaces using the owner row after the Company
+lock, and checks the original actor in retained public trial acceptance events.
+Expiry, ownership transfer and plan replacement cannot restore the allowance;
+internal transition trials do not consume it. Consent and customer copy include
+the limit, and the UI replaces a used trial's start action with a support message.
+The service independently refuses direct POSTs. No schema change is required.
+See the [decision](adr/2026-09-29-owner-public-trial-allowance.md).
+
+**51 focused tests passed**, covering trial/catalog, billing and access policy,
+including five new allowance regressions and different-Workspace concurrent starts
+under a restricted role. The first race fixture incorrectly nested different
+Workspace contexts; it was corrected to give each thread its own context and the
+full focused run passed. Production still lacks the selected-public-trial source.
+Next deploy and verify that reviewed release with Plan 3 selected while creation
+is paused, then activate the free trial after launch acceptance. Paid checkout,
+recurring charges and annual billing remain separate pending work.
+
 ## FW-019 account-email delivery rehearsal (2026-09-29)
 
 Owner authorized exactly two emails to `admin+account-test-20260929@rokkad.com`

@@ -15,6 +15,15 @@ now created Google Workspace and AWS accounts, confirmed on 2026-09-26.
 
 ## Current checkpoint
 
+- **29 September, 18:49 IST:** ongoing verification/reset mail is enabled alongside
+  invitations. The combined worker handles up to ten messages per scheduled run,
+  with receipts excluded. Both mail flags are true in web/worker, matched signing
+  settings remain intact, and supervised plus subsequent scheduled runs passed
+  with an empty queue and no health flags. No new acceptance email was sent.
+  The earlier two-email delivery/link rehearsal is complete. Public trial and
+  payment gates remain paused. See the
+  [current activation](../implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
+
 - **29 September, 17:14 IST:** ongoing invitation-only dispatch is now enabled,
   one per run approximately a minute apart, with healthy feedback/recovery/monitoring.
   Restricted checks confirm an empty queue, subsequent scheduled success and

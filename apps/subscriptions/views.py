@@ -65,9 +65,12 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
             context["current_plan"] = None
 
         context["trial_start_enabled"] = settings.BILLING_ALLOW_TRIAL_START
-        from .public_trial import PUBLIC_TRIAL_TERMS, public_trial_plans
+        from .public_trial import PUBLIC_TRIAL_TERMS, owner_has_public_trial, public_trial_plans
         context["public_trial_plan"] = public_trial_plans().first()
         context["public_trial_terms"] = PUBLIC_TRIAL_TERMS
+        context["public_trial_used"] = bool(
+            context["public_trial_plan"] and owner_has_public_trial(self.request.user)
+        )
 
         return context
 

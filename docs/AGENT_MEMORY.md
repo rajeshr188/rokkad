@@ -61,60 +61,58 @@ repository data, and is not a substitute GSTIN. Future seller changes must prese
 historical snapshots and review active mandate migration; registered invoicing
 is currently unsupported. This decision does not determine registration obligations.
 
-Current invitation operations (29 September, 17:14 IST): sending is enabled in
-Compose, public settings and the private worker environment. The invitation-only
-dispatch timer/marker are active, one per run approximately 60 seconds apart;
-feedback/recovery/health are active and healthy. Billing/trial flags remain false,
-and scheduled receipts remain excluded. Do not carry forward earlier paused-mail
-flags in deployments. Owner selected a public **30-day** trial draft for six total
-members, no card or automatic charge. Public trial/catalog isolation and versioned
-verified-owner consent are now implemented locally: `BILLING_PUBLIC_TRIAL_PLAN_ID`
-selects a separate zero-price, unbound, 30-day/six-member Plan and defaults to zero.
-Existing billing/access history is ineligible. Production remains paused pending
-account-mail activation and public-trial deployment; Plan 3 and the local browser journey are ready. Do not enable the old image's
-trial flag. Capacity now resolves through Django's app registry; Company locks
-serialize seat reservations, member creation and acceptance. See [trial preparation](plans/public-workspace-trial.md) and
-[mail activation](implementation/platform-mail.md#ongoing-invitation-dispatch-enabled-2026-09-29).
+Current platform mail operations (29 September, 18:49 IST): invitations and
+account verification/reset sending are enabled consistently in web and worker.
+Dispatch uses `--send --limit 10 --invitations-and-accounts`, approximately 60
+seconds after each completed batch, with a 300-second timeout. Receipts remain
+excluded. All four timers are active/enabled; supervised and subsequent natural
+scheduled runs passed, with no due queue or health flags. Activation sent no new
+test messages and preserved existing billing/mail/Workspace records and access.
+See [mail activation](implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
 
-Public trial catalog preparation completed on 29 September: production Plan 3 is
-INR 0, 30 days and six members, saved with audit under permanent admin user 9.
-Plans 1/2 and existing Workspace/billing evidence are unchanged. Trial and payments
-remain off; no image was deployed. The fresh restricted-role local browser journey
-passed signup, email verification, trial consent and verified teammate acceptance,
-with account/invitation mail captured locally and no provider calls. Production
-account mail is now verified to use `django.core.mail.backends.locmem.EmailBackend`:
-verification/password-reset messages do not leave process memory. Do not equate
-working SES invitations with working password-based signup mail. The subsequent
-account-mail rehearsal passed, but ongoing sending still needs activation before
-general public trials; Google sign-in
-remains the established verified-identity path. See [trial readiness](plans/public-workspace-trial.md).
+Web and all mail consumers use `rokkad:account-mail-20260929-702d1c64ba50`, with
+the additive `platform_mail.0002` migration, restricted grants and 117 forced-RLS
+tables. Web has no SES credentials; matched signing/token configuration stays
+server-side. The explicit allauth/invitation adapter queues verification/reset
+intents without stored tokens, passwords or bodies. The shared default backend
+is still locmem, but these enabled hooks use the SES outbox. Preserve both enabled
+mail flags and combined scheduling in future releases. Existing UI and static
+assets are unchanged; the image does not include the public-trial implementation.
 
-Account verification/reset intents are deployed through the existing platform-mail
-queue and an explicit allauth/invitation adapter. At 18:22 IST on 29 September,
-web and all mail workers moved to `rokkad:account-mail-20260929-702d1c64ba50` with
-the additive `platform_mail.0002` migration and restricted runtime grants.
-Web/worker signing and token settings match; secrets stayed server-side. Account
-source records contain no stored tokens/passwords/bodies. `ACCOUNT_EMAIL_ENABLED=False`
-still preserves legacy locmem mail hooks until controlled acceptance and activation.
-Account-only and invitation/account scopes are available, but live scheduling
-remains invitation-only. All timers and monitoring are healthy. Existing UI,
-static assets, Workspace access and billing/mail evidence are unchanged; the
-public-trial code is not included in this overlay. 72 mail tests passed with
-mocked sends; real account delivery acceptance subsequently passed as recorded
-below. Ongoing account-mail and public-trial activation remain pending. See the
-[deployed account-mail checkpoint](implementation/platform-mail.md#account-mail-deployed-with-sending-paused-2026-09-29).
+The owner-approved two-email acceptance is complete. Both messages to
+`admin+account-test-20260929@rokkad.com` were delivered with one attempt. Live
+verification succeeded, the user completed password reset, and the actual received
+reset link was rejected on reuse before cleanup. Test user 11 is disabled with an
+unusable password, no memberships and no platform flags. Do not send more test
+emails or alter permanent administrator user 9 on this exhausted authorization.
+Private activation backup/evidence is under `account-mail-activation-20260929/`;
+sanitized local reports use that same prefix in `outputs/`.
 
-The owner approved two real account emails to
-`admin+account-test-20260929@rokkad.com`. Non-admin user 11 has no memberships;
-both emails are delivered with one attempt each. Verification succeeded in the
-live browser. The user completed the password handoff, the password became usable,
-and the actual received reset link was rejected on reuse before cleanup. User 11
-is now disabled with an unusable password, no memberships and no platform flags.
-The bounded delivery/link rehearsal is complete. Do not send more test emails or
-alter admin user 9 based on this exhausted two-email authorization.
-The browser confirmation signed the previous Rokkad session out. Global account
-mail and trial/payment gates remain paused. The bounded helper and nonsecret
-evidence are in `outputs/account_mail_acceptance_20260929.py` and its JSON reports.
+The owner selected a public **30-day** trial, owner plus five staff, no card and
+no automatic charge, limited to **one public trial Workspace per owner account**.
+Production Plan 3 is prepared: zero price, 30 days, six members and no provider
+binding. Plans 1/2 and current Workspace access remain unchanged. Selected-offer
+code and versioned verified-owner consent are implemented locally; the local
+signup/verification/trial/team browser journey passed with captured mail.
+`BILLING_PUBLIC_TRIAL_PLAN_ID` selects only this eligible free Plan and defaults
+to zero. Existing Workspace billing/access history is ineligible.
+
+Public acceptance locks Company, then the accepting owner, then Plan. The saved
+public `trial.started` actor identifies a used allowance across Workspaces even
+after expiry, ownership transfer or catalog replacement. Internal transition
+trials do not consume it. Rolled-back starts consume nothing. This is an account
+limit, not identity deduplication; retain allowance evidence in future retention
+workflows. New consent records `max_trial_workspaces_per_owner=1`. Capacity uses
+Django's app registry, with Company locks serializing member/invitation changes.
+See [trial preparation](plans/public-workspace-trial.md) and
+[owner allowance](adr/2026-09-29-owner-public-trial-allowance.md).
+
+Trial, checkout and recurring production flags remain false. Account-mail
+activation is complete; the selected-trial release and publication remain next.
+Do not enable the current image's older trial switch, which publishes private
+plans. Deploy the reviewed selection/consent/allowance code before selecting Plan 3
+and activating public trials. Paid continuation still needs separate consent and
+its own launch acceptance.
 
 Razorpay pricing correspondence must use Dashboard support: the previous email
 address returned an unmonitored-mailbox notice. The authorized fee inquiry is now

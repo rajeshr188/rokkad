@@ -12,7 +12,8 @@ The owner selected preparation of a public free-trial offer on 29 September and
 confirmed **30 days**, owner plus five staff, no card and no automatic charge.
 Production Plan 3 is prepared and the local browser journey passed. The selection
 and consent implementation is not deployed; public trial activation remains off.
-Invitation-only email sending is now enabled independently of subscription billing.
+Invitation and account verification/reset sending are now enabled independently
+of subscription billing, with the combined scheduled worker verified healthy.
 
 ## Selected offer and customer copy
 
@@ -20,6 +21,7 @@ Invitation-only email sending is now enabled independently of subscription billi
 | --- | --- |
 | Duration | 30 days from the owner's explicit trial-start action |
 | Capacity | One Workspace, owner plus five staff (six members total) |
+| Eligibility | One public trial Workspace per owner account; verified sign-in email required |
 | Payment details | No card or Razorpay mandate required |
 | Automatic conversion | None; trial expiry cannot initiate a payment |
 | Following offer | INR 1,499/month, only after explicit subscription consent and billing launch acceptance |
@@ -29,7 +31,8 @@ Invitation-only email sending is now enabled independently of subscription billi
 Proposed public copy:
 
 > Try Rokkad free for 30 days with your team. Includes one Workspace for you and
-> up to five staff. No card required and no automatic charge. Continuing on the
+> up to five staff. One free trial Workspace per owner account. No card required
+> and no automatic charge. Continuing on the
 > monthly plan is INR 1,499/month and requires your explicit subscription consent.
 
 Until paid subscriptions launch, do not present a working purchase promise: explain
@@ -47,6 +50,14 @@ or concurrent starts; existing billing/access history is refused. New trials hav
 `auto_renew=False`, frozen entitlement rows and accepted terms in `trial.started`.
 No payment provider is called. New-owner onboarding routes to consent, then team
 invitations; billing shows trial end and read-only start timestamps.
+
+The owner subsequently selected one public trial Workspace per owner account.
+The new consent version includes that limit. Company-then-owner locking serializes
+starts across Workspaces; retained public acceptance events identify the original
+actor even after expiry, ownership transfer or catalog replacement. The UI removes
+the start action after use and direct POSTs are independently refused. Internal
+transition trials remain unchanged and do not consume the public allowance.
+See the [allowance decision](../adr/2026-09-29-owner-public-trial-allowance.md).
 
 The real seat test found and fixed the old installed-app short-name check that
 bypassed capacity. Member creation and invitation reservation/acceptance now
@@ -87,20 +98,19 @@ The browser and server have been closed. Ignored local evidence includes
 `production-applied.json`, `production-account-mail.json` and `teammate-accepted.png`.
 **23 focused tests passed** for preparation and trial/catalog regressions.
 
-Production account mail inventory found **locmem**, with verification optional.
-That backend does not send account-verification or password-reset email. Team
-invitations use their separate enabled SES worker. The local journey establishes
-application behavior, not production account-mail delivery. Implement and accept
-that transport before advertising general password-based trial signup.
+The initial production inventory found **locmem**, with verification optional.
+That transport gap is now resolved for verification/reset through the explicit
+allauth adapter and monitored SES worker; the shared default backend stays locmem.
 
 Account verification/reset queuing is now deployed in the existing monitored mail
 worker, with its schema, restricted grants and matched web/worker signing settings
 verified. The two approved real emails were delivered, verification succeeded,
 and the user completed a password reset whose original link was rejected on reuse.
-The non-admin test account is disabled. `ACCOUNT_EMAIL_ENABLED` remains false;
-ongoing account-mail scheduling/activation is pending. The targeted overlay preserves existing UI and does not
+The non-admin test account is disabled. `ACCOUNT_EMAIL_ENABLED=True` in web and
+worker; scheduled invitation/account batches of up to ten are enabled and their
+natural scheduled run passed. The targeted overlay preserves existing UI and does not
 include the public-trial implementation. See the
-[deployed checkpoint](../implementation/platform-mail.md#account-mail-deployed-with-sending-paused-2026-09-29).
+[activation checkpoint](../implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
 
 The free offer and paid offer describe different consent and lifecycle terms,
 not separate products or permanent customer classes. The trial is INR 0 for
@@ -131,14 +141,15 @@ Workspace, review/start the trial, invite staff, then complete business setup.
 Invitation acceptance requires the invited email's verified identity and ordinary
 role/seat/lifecycle checks. A pending invite reserves a seat. Workspace membership
 does not grant commercial access without the trial or an administrator decision.
-Google sign-in and platform SES invitations are established paths; account
-verification/password-reset mail has a separate transport and needs its own review
-before promising every email/password signup path is ready.
+Google sign-in, platform SES invitations and account verification/password-reset
+delivery are established paths. The public-trial selection and consent release
+still needs deployment and verification before the trial switch is enabled.
 
 ## Acceptance before activation
 
-- New owner starts exactly one 30-day trial, with six-member capacity and frozen
-  entitlements; a repeat/concurrent request cannot restart or extend it.
+- New owner starts exactly one 30-day trial Workspace, with six-member capacity
+  and frozen entitlements; repeat/concurrent requests across Workspaces cannot
+  create another trial, restart it or extend it.
 - Private plan IDs and another Workspace's owner are rejected at the trial endpoint.
 - Existing trial dates, private monthly/annual catalogs and billing evidence stay
   unchanged. Starting/expiring a trial creates no provider mandate or charge.
@@ -159,7 +170,8 @@ It is not a browser signup test or a new real-mail delivery rehearsal.
 **82 focused tests passed.** Automated acceptance covers the restricted-role HTTP onboarding/consent flow,
 private/stale offer rejection, verified canonical ownership, existing-history
 preservation, frozen seats and dates, expiry/grace/read-only, six-seat enforcement,
-and simultaneous trial/last-seat requests. Production plan creation and the local browser journey are now complete; deployment,
-ongoing account-mail activation and public activation remain outstanding.
-Before publication, review owner-created Workspace abuse controls (the current
-limit is one trial per Workspace, not one trial per person) and support capacity.
+and simultaneous trial/last-seat requests. Production plan creation, the local
+browser journey and ongoing account-mail activation are complete; trial deployment
+and public activation remain outstanding. The selected account-level allowance
+is implemented locally, including different-Workspace races. Review support
+capacity before publication; this limit does not identify duplicate human accounts.

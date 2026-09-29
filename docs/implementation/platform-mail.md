@@ -8,6 +8,39 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Ongoing account and invitation mail enabled (2026-09-29)
+
+At **18:49 IST**, `ACCOUNT_EMAIL_ENABLED=True` was enabled consistently in
+production Compose, the public worker environment and the root-only worker
+environment. `PLATFORM_EMAIL_ENABLED=True` remains set. Web and all mail consumers
+still use `rokkad:account-mail-20260929-702d1c64ba50`; there is no new image,
+migration, static release or credential change. Web has no SES credentials.
+Verification/reset hooks now enqueue into the monitored outbox even though the
+shared default mail backend remains locmem.
+
+Dispatch now uses `--send --limit 10 --invitations-and-accounts`. Scope filtering
+happens before the limit and excludes receipts. The timer remains approximately
+60 seconds after a completed run; messages are serial with their existing delay,
+so delivery is queued rather than instant. `TimeoutStartSec=300` accommodates the
+bounded ten-message batch and existing SES request timeouts. Feedback, recovery
+and health remain enabled.
+
+Before activation, root-only backups/candidates were checked for matched flags,
+signing/token configuration, unchanged runtime identity and an empty queue. The
+four timers were paused only for the configuration switch and restored before
+supervised health. Supervised workers and the next natural scheduled dispatch
+passed; all four timers are active/enabled, queue due is zero and health has no
+flags. Existing mail/billing/Workspace records and access fingerprints are
+unchanged; activation created no new message or attempt. The two delivered account
+rehearsal records remain; user 11 is disabled. Permanent admin user 9 is unchanged.
+
+Trial, checkout and recurring gates remain false. Public-trial code is not in the
+current image. Private backup/candidate/evidence files live in
+`account-mail-activation-20260929/` under the existing deployment directory, with
+sanitized local `outputs/account-mail-activation-{prepare,apply,verify}-20260929.json`.
+These settings supersede the paused/invitation-only checkpoints below. Preserve
+both enabled mail flags and this worker scope in subsequent releases.
+
 ## Account mail deployed with sending paused (2026-09-29)
 
 Subsequent owner-approved acceptance sent exactly two messages to

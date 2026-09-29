@@ -1,16 +1,25 @@
 """The single reviewed public trial; private billing plans are not trial offers."""
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 from apps.orgs.models import Company
 from .billing import start_trial
 from .checkout import require_billing_owner
-from .models import Plan, RecurringAgreement, Subscription, WorkspaceAccessDecision
+from .models import Plan, RecurringAgreement, Subscription, SubscriptionEvent, WorkspaceAccessDecision
 from .services import get_workspace_member_usage
 
 
-PUBLIC_TRIAL_TERMS = "public-trial-30d-6members-20260929"
+PUBLIC_TRIAL_TERMS = "public-trial-30d-6members-one-owner-20260929"
+
+
+def owner_has_public_trial(owner):
+    """Accepted public-trial history follows the actor, not current ownership."""
+    return SubscriptionEvent.objects.filter(
+        event_type="trial.started", payload__actor_id=owner.pk,
+        payload__accepted_terms__version__startswith="public-trial-",
+    ).exists()
 
 
 def public_trial_plans():
@@ -31,6 +40,9 @@ def start_public_trial(*, workspace, actor, plan_id, accepted_terms):
     require_billing_owner(workspace=workspace, actor=actor)
     if workspace.owner_id != actor.pk:
         raise PermissionDenied("Only the Workspace owner can accept the trial terms.")
+    # Keep Company first, then serialize starts across this owner's Workspaces.
+    # The event and subscription commit together; failed starts consume nothing.
+    actor = get_user_model().objects.select_for_update().get(pk=actor.pk)
     if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
         raise ValidationError("This Workspace cannot start a trial.")
     from allauth.account.models import EmailAddress
@@ -44,6 +56,8 @@ def start_public_trial(*, workspace, actor, plan_id, accepted_terms):
     plan = Plan.objects.select_for_update().filter(pk=plan_id).first()
     if plan is None or not public_trial_plans().filter(pk=plan.pk).exists():
         raise ValidationError("This plan is not available for public trial signup.")
+    if owner_has_public_trial(actor):
+        raise ValidationError("Your account has already used its public trial. Contact support for another Workspace.")
     if (Subscription.objects.filter(company=workspace).exists()
             or RecurringAgreement.objects.filter(workspace=workspace).exists()
             or WorkspaceAccessDecision.objects.filter(workspace=workspace).exists()):
@@ -52,6 +66,7 @@ def start_public_trial(*, workspace, actor, plan_id, accepted_terms):
         raise ValidationError("The trial includes the owner and up to five staff, including pending invitations.")
     return start_trial(workspace=workspace, plan=plan, actor=actor, accepted_terms={
         "version": PUBLIC_TRIAL_TERMS,
+        "max_trial_workspaces_per_owner": 1,
         "trial_days": 30, "max_members": 6, "card_required": False,
         "automatic_charge": False, "following_monthly_offer_inr": "1499.00",
         "paid_continuation_requires_separate_consent": True,

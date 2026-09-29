@@ -440,7 +440,11 @@ Public trial preparation now adds a selected-plan setting and versioned owner
 consent, separate from paid catalog publication. Matching Workspace context, active
 verified canonical ownership and no existing billing/access history are required.
 Trial and invitation/member capacity changes share a Company row lock; trials
-create no financial evidence. Production publication remains pending. See the
+then lock the accepting owner account before the Plan. One public trial Workspace
+per owner is enforced using the original actor in retained public `trial.started`
+events, including after expiry or ownership transfer. Internal trials do not
+consume this allowance. See the [owner allowance decision](../adr/2026-09-29-owner-public-trial-allowance.md).
+Trials create no financial evidence. Production publication remains pending. See the
 [selected-trial decision](../adr/2026-09-29-selected-public-trial.md).
 
 The target public API is a single Workspace-scoped service:
