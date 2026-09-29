@@ -12,6 +12,27 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 external monitor created; activation approval pending (2026-09-29)
+
+The owner completed Better Stack sign-in for admin@rokkad.com. Its separate Rokkad
+team has one member and remains on the Free plan. The existing rokkad.com website
+monitor is Up. Heartbeat 499750, **Rokkad platform mail health**, was created with
+five-minute checks plus five-minute grace and email-only alerts. No upgrade,
+payment method, extra team member or test alert was added.
+
+The dashboard now supplies an incidents.betterstack.com heartbeat URL. Local
+watchdog code accepts that exact HTTPS host alongside the documented uptime host;
+redirect refusal, fixed path and secret-redaction remain enforced. Four focused
+watchdog tests passed. Scheduled production heartbeat publication remains disabled.
+
+The secret is staged privately. Automatic approval review rejected granting the
+normal Windows task operator full control over the staging directory; the pending
+request is limited to temporary read-only access to its single URL file, encrypted
+SSH transfer and local deletion. Separate requests cover one missed-heartbeat/
+recovery email test and reading only those test messages in the admin inbox.
+No mailbox access or alternative transfer bypass was attempted after rejection.
+See [monitor setup and acceptance](implementation/onboarding-monitoring.md#rokkad-heartbeat-created-acceptance-pending-2026-09-29).
+
 ## FW-019 first observed signup/trial/team join passed (2026-09-29)
 
 At **19:38 IST**, the newly observed Workspace has a verified owner and an accepted

@@ -68,9 +68,12 @@ evidence; milestone labels are not a clickstream, and mail delivery, invitation
 acceptance and current membership are distinct. Default signup cutoff is 30 days;
 disabled/platform-admin accounts are excluded, but active tests cannot be
 classified automatically. Customer details stay in private operator output.
-The selected external failure-alert inbox is admin@rokkad.com. The optional
-Better Stack watchdog heartbeat is tested but remains unconfigured; do not claim
-external alerting until recipient/account allowance and delivery are verified.
+The external failure-alert inbox is admin@rokkad.com, sole member of the separate
+Better Stack Rokkad team t606354. Its free-plan mail-health heartbeat 499750 uses
+five-minute checks plus five-minute grace and email only. Free routing notifies
+all team members, so review recipients if that team grows. The heartbeat exists,
+but scheduled publication and alert delivery acceptance remain pending. Do not
+claim external alerting until activation and delivery are verified.
 See [onboarding monitoring](implementation/onboarding-monitoring.md).
 
 Current platform mail operations (29 September, 18:49 IST): invitations and
@@ -82,7 +85,7 @@ scheduled runs passed, with no due queue or health flags. Activation sent no new
 test messages and preserved existing billing/mail/Workspace records and access.
 See [mail activation](implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
 
-Web and all mail consumers now use `rokkad:public-trial-20260929-e06bb85c285c`, with
+Web and all mail consumers now use `rokkad:onboarding-monitor-20260929-df4b82f62000`, with
 the additive `platform_mail.0002` migration, restricted grants and 117 forced-RLS
 tables. Web has no SES credentials; matched signing/token configuration stays
 server-side. The explicit allauth/invitation adapter queues verification/reset

@@ -79,7 +79,7 @@ it to external alerts, paste it into public tickets or commit snapshots.
 5. Record only a sanitized outcome and any actionable defect. Avoid fake signups
    or additional test emails as a substitute for the real journey.
 
-## External alerts: prepared, not activated
+## External alerts: preparation checkpoint
 
 The existing host watchdog now supports an optional **Better Stack heartbeat**.
 It sends an empty HTTPS request only when the existing queue/service inspection
@@ -172,7 +172,7 @@ Memberships are Owner and Admin; the joined role matches the invitation's Admin
 role. The frozen member entitlement is enabled with value six and automatic
 renewal is false. The stored dates span 30 days (sub-millisecond timestamp-setting
 difference). Queue due is zero and health flags are empty. This completes the
-recorded signup ? verification ? trial ? invitation ? joined-member observation.
+recorded signup, verification, trial, invitation and joined-member observation.
 The teammate's subsequent browser entry and role-specific work were not observed;
 do not equate saved membership with full application acceptance. Whether this is
 a real customer or an owner-run test was not established. Account identifiers,
@@ -190,3 +190,38 @@ No paid upgrade or payment method was added. Automatic approval review rejected
 opening Gmail because signup approval did not include mailbox access; the user
 was asked to complete the link directly. No alternate mailbox access was attempted.
 Local proof: `outputs/betterstack-rokkad-link-sent-20260929.png`.
+
+## Rokkad heartbeat created; acceptance pending (2026-09-29)
+
+The owner completed account sign-in. Better Stack now shows the separate Rokkad
+team `t606354`, with admin@rokkad.com as its only member. Billing shows **Free**;
+no upgrade or payment method was added. The owner's existing rokkad.com website
+monitor is Up at a three-minute interval. This is separate from mail-worker health.
+
+Heartbeat **499750**, `Rokkad platform mail health`, was created successfully.
+Saved settings are five minutes expected interval, five minutes grace, email
+enabled and no phone/SMS/push or escalation to other team members. Free accounts
+notify everyone in the team rather than use a configurable on-call schedule;
+currently that is only admin@rokkad.com. Revisit this routing if members are added.
+
+The dashboard supplies an `incidents.betterstack.com` endpoint, while the guide
+still illustrates `uptime.betterstack.com`. The watchdog now accepts exactly those
+two official HTTPS hosts, with its existing fixed heartbeat path and redirect
+refusal. Four watchdog tests passed, including the new host, lookalike-domain,
+HTTP, query-string and failure-path refusals. No global URL allowance was added.
+
+The URL is staged in an ignored, access-restricted local file and has not been
+loaded into scheduled production configuration. Automatic review rejected granting
+the normal Windows task operator full control over the staging directory. Existing
+sandbox access can read it but cannot complete SSH; the normal operator can use SSH
+but cannot read the file. The pending request is narrower: temporary read-only
+access to that one file, encrypted transfer to root-only configuration, then local
+file deletion. No secret is stored in repository documentation or source.
+
+A controlled missed-heartbeat/recovery test is prepared, temporarily using one
+minute plus one minute of grace, then restoring five plus five for ongoing health.
+The workers continue running throughout; only heartbeat publication is withheld
+during the test. The owner is asked to approve those test notifications and,
+separately, reading only the resulting Better Stack messages in the admin inbox.
+No test alert or health ping has been sent yet. Screenshot:
+`outputs/betterstack-mail-heartbeat-config-20260929.png`.

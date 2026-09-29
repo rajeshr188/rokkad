@@ -811,4 +811,4 @@ report/watchdog tests passed. The hook is deployed but **unconfigured/disabled**
 local health remains the only activated alert evidence. The owner selected
 admin@rokkad.com, but external recipient/account allowance and a bounded failure/
 recovery email rehearsal still need acceptance. No external alert was sent.
-See [configuration, semantics and next steps](onboarding-monitoring.md#external-alerts-prepared-not-activated).
+See [configuration, semantics and next steps](onboarding-monitoring.md#external-alerts-preparation-checkpoint).

@@ -25,6 +25,20 @@ class WatchdogTests(SimpleTestCase):
             self.assertEqual(heartbeat(config, healthy), "failed")
         self.assertIsNone(NoRedirect().redirect_request(None, None, 302, None, None, "https://example.com"))
 
+    def test_dashboard_incidents_host_is_allowed_but_lookalikes_and_redirect_paths_are_not(self):
+        healthy = {"flags": [], "dispatch_marker": True}
+        with patch("scripts.platform_mail_watchdog.urllib.request.build_opener") as opener:
+            for url in ("http://incidents.betterstack.com/api/v1/heartbeat/token",
+                        "https://incidents.betterstack.com.evil.example/api/v1/heartbeat/token",
+                        "https://incidents.betterstack.com/api/v1/heartbeat/token/fail",
+                        "https://incidents.betterstack.com/api/v1/heartbeat/token?redirect=1"):
+                self.assertEqual(heartbeat({"heartbeat_url": url}, healthy), "failed")
+            opener.assert_not_called()
+            url = "https://incidents.betterstack.com/api/v1/heartbeat/dashboard-token"
+            opener.return_value.open.return_value.__enter__.return_value.status = 200
+            self.assertEqual(heartbeat({"heartbeat_url": url}, healthy), "sent")
+            opener.return_value.open.assert_called_once_with(url, timeout=10)
+
     def test_paused_health_and_latched_failure_without_network(self):
         with TemporaryDirectory() as path:
             directory = Path(path)

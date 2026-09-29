@@ -29,7 +29,7 @@ def heartbeat(config, result):
     if result["flags"] or not result["dispatch_marker"]:
         return "withheld"
     if not isinstance(url, str) or not re.fullmatch(
-        r"https://uptime\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9_-]+", url
+        r"https://(?:uptime|incidents)\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9_-]+", url
     ):
         return "failed"
     try:
