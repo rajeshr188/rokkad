@@ -12,6 +12,45 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Live credentials verified and monthly catalog bound (2026-09-29)
+
+The owner generated the live keys and provided the downloaded CSV. At **11:51 IST**,
+GET-only Payments, Plans and Subscriptions authentication returned HTTP 200 with
+empty live collections. Keys were encrypted with current-user Windows DPAPI in a
+dedicated restricted folder outside OneDrive, then staged over SSH in root-only
+`/root/rokkad-billing-live.env` (0600). The source CSV remains in Downloads. No key
+was printed, committed or loaded into persistent web/worker environments.
+
+At **11:52 IST**, exactly one live provider catalog plan was created and GET-verified:
+`plan_ThkgxD2zC0o8FL`, monthly interval one, **149900 paise INR**. It contains no
+customer mandate or collection. The provider still returned zero live subscriptions
+and payments. A server-side GET independently verified the same plan.
+
+Production had no platform administrator. After explicit owner approval, a dedicated
+operator with no usable password (user **10**) briefly prepared local Plan **2**
+and immutable live binding **1** through the canonical service, with an audit reason.
+At **11:57 IST**, the operator was disabled and staff/superuser flags removed;
+independent cleanup verified this. Its identity remains solely for audit linkage.
+No existing user received new authority.
+
+The frozen monthly offer has six members and zero GST with the confirmed seller.
+Twelve collections/quantity one remain prepared agreement terms, not an existing
+subscription. Non-seat internal values retain the original plan's values; annual
+14990 is an unpublished working value with no annual binding. The shared trial
+Plan 1, all subscription/financial table fingerprints, trial dates and access are
+unchanged. Only the separate Plan/binding and operator/profile were added.
+
+Final restricted checks at **11:58 IST**: all three operating Workspaces retain
+full trial access and private catalogs; zero agreements/invoices/payments/receipts,
+HTTPS login 200, queue flags/due messages zero. Persistent provider mode remains
+disabled and all checkout/trial/recurring/sending gates false. The disabled-mode
+inventory flags the staged live binding; an in-memory live-mode inventory confirms
+no mixed-mode/unclassified evidence. This is expected staged configuration, not
+permission to promote Test Mode data. Next: live webhook/runtime configuration and
+receipt-worker review, while unresolved provider acceptance and JSK's trial remain.
+See [live catalog evidence](implementation/billing-provider-readiness.md#live-keys-and-bound-monthly-catalog-2026-09-29).
+
+
 ## Confirmed billing seller configured with activation paused (2026-09-29)
 
 At **11:45 IST**, the shared web/worker environment received only the four

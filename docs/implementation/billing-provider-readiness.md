@@ -9,8 +9,8 @@ tags: [billing, configuration, receipts, deployment]
 
 ## Frozen seller and explicit tax settings (2026-09-28)
 
-Superseded configuration status: the 29 September checkpoint below records the
-confirmed seller now installed. Earlier deployment checkpoints remain historical.
+Superseded configuration status: the 29 September checkpoints below record the
+confirmed seller installed and live catalog bound. Earlier entries are historical.
 
 Deployed to production web and mail workers, now on `rokkad:billing-paused-99bda8c1cb27`
 with billing/sending paused. No schema, provider or financial-record changes.
@@ -94,6 +94,66 @@ and test evidence stay isolated; key availability is not launch approval.
 
 Local sanitized results: `outputs/live-seller-20260929/prepare.json` and
 `outputs/live-seller-20260929/apply.json`.
+
+## Live keys and bound monthly catalog (2026-09-29)
+
+Owner-generated live keys authenticated successfully at **11:51 IST** against the
+official Payments, Plans and Subscriptions GET APIs; all initially returned empty
+collections. Current-user DPAPI encryption and round-trip verification passed in
+`%LOCALAPPDATA%/Rokkad/private/live/razorpay-live.dpapi`, with inheritance disabled
+and access limited to that Windows user. The original CSV remains in Downloads;
+it was not copied into the repository or deleted. No secret values are in evidence.
+
+Keys are staged at `/root/rokkad-billing-live.env`, root-owned mode 0600, transferred
+only over encrypted SSH. This file is **not** referenced by persistent Compose,
+systemd workers or watchdog. It was used only by bounded preparation processes with
+explicit live mode and all checkout/trial/recurring/sending gates false. Persistent
+web and workers remain provider-disabled; images and environment are unchanged.
+
+One durable local dispatch record preceded a single POST creating only a provider
+plan. GET verification confirmed `plan_ThkgxD2zC0o8FL`: **monthly, interval 1,
+INR 149900 paise**, Rokkad Workspace Monthly. Subsequent provider Payments and
+Subscriptions listings were empty. An uncertain plan attempt must be reviewed by
+GET/reference, never automatically reposted. See the official
+[plan creation contract](https://razorpay.com/docs/api/payments/subscriptions/create-plan/).
+
+An unsaved restricted production preview verified that provider plan against the
+confirmed zero-tax seller and six-member monthly offer. No existing superuser was
+available. The owner explicitly approved a dedicated temporary operator for this
+catalog operation. User **10**, `fw019_catalog_operator_20260929`, has no usable
+password or email; it created separate Plan **2** and live binding **1** through
+`review_plan_binding`/`bind_plan`. Binding records its actor and reason. The operator
+is now inactive with staff/superuser flags false, verified by an independent cleanup
+pass and final read-only review. No existing owner or staff account was elevated.
+
+Only the separate plan/binding and operator/profile were added. Shared Plan 1 and
+every other subscription-table fingerprint remain unchanged. The new plan preserves
+the existing non-seat internal values, sets six members, zero extra-user price and
+zero new-trial days. Annual 14990 is a working unpublished value; no annual binding
+or purchase path exists. It does not accept legacy feature/limit values as product
+claims or authorize overages. Twelve collections with quantity one belong to future
+agreement preparation; no agreement was created or assigned to JSK.
+
+At **11:58 IST**, all three operating Workspaces pass private-catalog checks and
+retain full access on their original trials. Agreement/invoice/payment/receipt
+counts remain zero. HTTPS login is 200; mail queue flags/due messages are zero,
+dispatch marker absent, sending paused. The operator is disabled. Because persistent
+provider mode is disabled, its inventory reports the live binding as another mode;
+a read-only in-memory live-mode inventory is clean. Keep that expected diagnostic
+distinct from test/live mixing; no Test Mode data was promoted or rewritten.
+
+Next: prepare the mode-specific signed HTTPS webhook, load reviewed credentials
+consistently into web/workers while keeping purchase gates false, and review the
+receipt worker's sending scope before collections. Existing Test Mode uncertainties,
+failure/recovery/held-period acceptance and JSK's unexpired trial are still open.
+No real collection or activation was authorized.
+
+Sanitized local evidence: `outputs/live-key-verification-20260929.json`,
+`outputs/live-monthly-plan-20260929.json`, `outputs/live-credential-placement-20260929.json`,
+`outputs/live-catalog-prepared-20260929.json`, `outputs/live-catalog-applied-20260929.json`
+and `outputs/live-catalog-verified-20260929.json`. Server-private records remain in
+`billing-seller-20260929/` under the deployment folder. Older seller preflight helpers
+asserted one plan; do not rerun them unchanged after this intentional catalog addition.
 
 ## Monthly pilot commercial preparation (2026-09-28)
 

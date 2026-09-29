@@ -71,8 +71,14 @@ treatment is unsupported. Deployed to web and mail workers on 28 September with
 billing/sending paused, no migration or evidence backfill. On 29 September the
 confirmed seller fields and explicit zero tax were configured in the shared
 web/worker environment; restricted checks preserve all billing records and JSK's
-trial/access. Live credentials are still absent, pending owner generation; all
-billing/sending gates remain paused. The owner has confirmed unregistered GST
+trial/access. Live credentials are now verified, DPAPI-protected locally and staged
+in a root-only server file, outside persistent process configuration. Live provider
+plan plan_ThkgxD2zC0o8FL is bound to separate local Plan 2 / binding 1 at INR 1499,
+zero GST and six members. Owner-approved temporary operator 10 has no usable
+password and is disabled with staff/superuser flags removed. No agreement/payment
+exists; all billing/sending gates and persistent provider mode remain paused.
+The disabled-mode inventory warning reflects the staged live binding; in-memory
+live-mode evidence review is clean. Never replace Test Mode evidence. The owner has confirmed unregistered GST
 status, the documented billing address, 12 monthly collections and JSK as pilot.
 JSK is Workspace 2, canonical owner 1, with three members and no pending invites.
 Its trial ends 8 October 2026 at 23:39 IST and blocks immediate recurring creation;
