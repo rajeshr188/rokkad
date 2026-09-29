@@ -75,9 +75,10 @@ trial/access. Live credentials are verified, DPAPI-protected locally and stored
 in a root-only server file. On 29 September, persistent web and worker configuration
 was moved to live provider mode with a distinct webhook secret; checkout, trial
 signup, recurring authorization and sending remain false. Signed malformed-body
-HTTPS diagnostics pass without inserting events; Razorpay webhook registration is
-awaiting the owner's credential-entry handoff. Configuration readiness is not
-provider delivery or launch acceptance. Live provider
+HTTPS diagnostics pass without inserting events. The owner submitted the secret;
+live webhook ThlAT5rGIawXNH is Enabled with the canonical callback, 14 supported
+events and admin@rokkad.com failure alerts. No provider event has arrived yet;
+registration/configuration readiness is not delivery or launch acceptance. Live provider
 plan plan_ThkgxD2zC0o8FL is bound to separate local Plan 2 / binding 1 at INR 1499,
 zero GST and six members. Owner-approved temporary operator 10 has no usable
 password and is disabled with staff/superuser flags removed. No agreement/payment
@@ -91,8 +92,8 @@ deployed to web/workers as `rokkad:billing-paused-99bda8c1cb27`: paused checkout
 and trial signup hide the generic plan list;
 prepared agreements retain their frozen terms. Live binding requires trial signup
 paused too. Legacy feature and estimated overage claims are removed; stored terms
-are unchanged. All billing/sending gates remain paused; next is confirming the
-provider webhook and reviewing receipt-worker scope. Never edit
+are unchanged. All billing/sending gates remain paused; next is reviewing
+receipt-worker scope and remaining provider delivery/acceptance. Never edit
 the existing shared trial plan. No charge or activation was authorized. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
 

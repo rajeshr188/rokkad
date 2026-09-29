@@ -12,6 +12,30 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Live webhook registration verified (2026-09-29)
+
+The owner entered the webhook secret and submitted Razorpay's Live Mode form.
+Dashboard reference **ThlAT5rGIawXNH**, created **12:20:44 IST**, is **Enabled** at
+`https://rokkad.com/subscriptions/webhook/razorpay/`. Details confirm a secret was
+provided, the exact 14 supported events, and admin@rokkad.com for creation/failure
+alerts. The secret was not displayed or exported from the Dashboard.
+
+At **12:22 IST**, restricted read-only production checks confirm unchanged billing
+table fingerprints, zero webhook events/agreements/invoices/payments, private
+catalogs and full access on all three original trials. The permanent admin remains
+user 9; temporary operator 10 remains disabled. Configuration/evidence checks pass;
+`launch_ready=false`. Checkout, new trials, recurring authorization and sending
+remain false. HTTPS login is 200; mail queue due/flags zero, latest watchdog clear,
+feedback/recovery/health timers active and dispatch disabled with no marker.
+
+Registration is complete; **actual provider event delivery remains unverified**.
+Earlier signed malformed-body diagnostics prove routing/HMAC handling only. Next:
+review receipt-worker dispatch scope and remaining provider delivery/failure/recovery
+acceptance, preserving JSK's trial and the separate activation decision. No charge
+or email was sent. See the
+[updated runtime evidence](implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29).
+
+
 ## Permanent platform admin and paused live webhook runtime (2026-09-29)
 
 The owner explicitly designated **admin@rokkad.com** as permanent platform admin.

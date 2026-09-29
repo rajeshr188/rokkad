@@ -140,8 +140,10 @@ This proves routing/signature validation, **not successful provider event delive
 No financial event fixture was posted to production. No agreement, invoice,
 payment, receipt, charge or outgoing email was created by this step.
 
-The Live Mode Dashboard form is prepared, not yet submitted. URL is the canonical
-callback above; alert email **admin@rokkad.com**; events are `payment.authorized`,
+The owner submitted the Live Mode Dashboard form with the prepared secret.
+Webhook reference **ThlAT5rGIawXNH**, created **12:20:44 IST**, is **Enabled**.
+Details confirm a secret was provided. URL is the canonical callback above;
+alert email **admin@rokkad.com**; events are `payment.authorized`,
 `payment.failed`, `payment.captured`, `refund.processed`, and the ten supported
 subscription events: `authenticated`, `activated`, `charged`, `pending`, `halted`,
 `cancelled`, `completed`, `paused`, `resumed`, `updated` (all prefixed
@@ -149,19 +151,31 @@ subscription events: `authenticated`, `activated`, `charged`, `pending`, `halted
 support. Razorpay's [webhook setup documentation](https://razorpay.com/docs/webhooks/setup-edit-payments/)
 recommends a distinct secret and provides failure alert configuration.
 
-Browser credential policy requires the owner to enter the new secret and submit.
-It is available at `%LOCALAPPDATA%/Rokkad/private/live/razorpay-live-webhook-secret.txt`
-in the existing inheritance-protected current-user-only folder, outside OneDrive.
-Do not print it or paste it in chat. The provider webhook remains **unregistered
-until the owner's completion is verified**; signed diagnostic success alone is not
-enough. After registration, verify URL/enabled status/event set and review receipt
-worker scope/monitoring, without enabling collections or shortening the JSK trial.
+The owner performed credential entry/submission as required by browser policy.
+The handoff file remains at
+`%LOCALAPPDATA%/Rokkad/private/live/razorpay-live-webhook-secret.txt` in the existing
+inheritance-protected current-user-only folder, outside OneDrive. It has not been
+deleted; do not print it or paste it in chat. Dashboard verification read only
+the presence of a secret, not its value.
+
+At **12:22 IST**, a restricted read-only follow-up confirms all billing-table hashes
+unchanged and **zero stored webhook events**. All original trials/private catalogs,
+permanent admin and disabled temporary operator remain correct. Configuration is
+ready but launch readiness remains false; all purchase/sending gates remain false.
+HTTPS login is 200, queue flags/due zero, watchdog clear and monitoring timers active;
+dispatch remains disabled with no marker. **Actual provider delivery remains
+unverified**: registration and the earlier signed diagnostics do not prove it.
+Next: receipt-worker scope/monitoring and remaining provider delivery/acceptance,
+without enabling collections or shortening JSK's trial.
 
 Sanitized evidence: `outputs/permanent-admin-applied-20260929.json`,
 `outputs/live-webhook-prepare-20260929.json`,
-`outputs/live-webhook-apply-20260929.json`. Server-private backups, preflight and
+`outputs/live-webhook-apply-20260929.json`,
+`outputs/live-webhook-registered-20260929.json` and the Dashboard screenshot
+`outputs/live-webhook-registered-20260929.png`. Server-private backups, preflight and
 verification logs are under `live-webhook-20260929/` in the deployment folder;
 admin evidence remains in `billing-seller-20260929/permanent-admin.json`.
+Registration verification is `live-webhook-20260929/registration-verified.json`.
 Unresolved provider failure/recovery/held-period acceptance remains a launch gate.
 
 ## Live keys and bound monthly catalog (2026-09-29)

@@ -12,7 +12,7 @@ The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
 
-## Live runtime prepared; webhook registration pending (2026-09-29)
+## Live runtime and webhook registration verified (2026-09-29)
 
 The owner appointed **admin@rokkad.com**, verified existing user **9**, as permanent
 platform administrator. Its audited staff/superuser grant preserves sign-in,
@@ -24,10 +24,12 @@ configuration/evidence checks pass, no billing record changed, and all existing
 trials/private catalogs are preserved. Signed malformed-body HTTPS diagnostics
 verify the callback's HMAC boundary without creating fake billing evidence.
 
-Razorpay's Live Mode webhook form has the callback URL, admin failure alerts and
-14 supported events selected. The owner must enter the prepared secret and submit
-the form; provider registration/delivery is not yet verified. After that, review
-receipt dispatch scope and monitoring. Provider failure/recovery/held-period
+The owner submitted the secret. Live webhook **ThlAT5rGIawXNH**, created at
+12:20:44 IST, is Enabled with the canonical callback, admin failure alerts and
+the exact 14 supported events. At 12:22 IST, unchanged billing fingerprints and
+zero stored webhook events confirm registration has not yet demonstrated actual
+provider delivery. Next: review receipt dispatch scope/monitoring and remaining
+provider delivery acceptance. Provider failure/recovery/held-period
 acceptance, JSK's unexpired trial and final activation approval remain outstanding.
 No live collection is authorized. See the
 [runtime evidence](../implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29).
