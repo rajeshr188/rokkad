@@ -812,3 +812,13 @@ local health remains the only activated alert evidence. The owner selected
 admin@rokkad.com, but external recipient/account allowance and a bounded failure/
 recovery email rehearsal still need acceptance. No external alert was sent.
 See [configuration, semantics and next steps](onboarding-monitoring.md#external-alerts-preparation-checkpoint).
+
+## External health heartbeat active (2026-09-29)
+
+The preparation state above is superseded: heartbeat 499750 now receives healthy
+scheduled pings from root-private configuration. A controlled missed ping triggered
+an actual failure email at 20:14 IST; restored healthy publication automatically
+resolved it and delivered recovery at 20:16 IST. Both arrived in admin@rokkad.com.
+Normal five-minute interval plus five-minute grace and email-only routing are
+restored. Workers stayed enabled; no customer message was created by the test.
+See [acceptance, incident response and rollback](onboarding-monitoring.md#external-alerts-active-2026-09-29).

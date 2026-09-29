@@ -12,6 +12,28 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 external mail alerts activated and delivery verified (2026-09-29)
+
+Better Stack heartbeat 499750 is connected to the production mail-health watchdog.
+The owner approved temporary read-only access to the single staged URL file,
+encrypted SSH transfer, one missed-heartbeat/recovery test and reading only those
+test emails. The URL is now in root-only server configuration (0600); the local
+secret file and its temporary access were removed by deleting that file.
+
+The controlled one-minute interval plus one-minute grace test opened incident
+1024376789 at **20:14 IST**. Its failure email arrived in admin@rokkad.com. Resuming
+healthy pings at **20:16 IST** automatically resolved the incident and delivered
+the recovery email to the same inbox. Both received messages were inspected.
+The normal name, five-minute interval, five-minute grace and email-only routing
+are restored. Mail workers stayed enabled throughout; no customer email was
+created by this rehearsal. Configuration/image preservation checks passed.
+
+The next natural scheduled heartbeat passed at **20:21:21 IST**. Current health
+has no flags, queue due is zero and all four mail timers remain enabled/active.
+No paid monitoring upgrade was added. See the
+[acceptance and response runbook](implementation/onboarding-monitoring.md#external-alerts-active-2026-09-29).
+Paid subscription launch still needs its separate Razorpay acceptance gates.
+
 ## FW-019 external monitor created; activation approval pending (2026-09-29)
 
 The owner completed Better Stack sign-in for admin@rokkad.com. Its separate Rokkad

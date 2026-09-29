@@ -71,9 +71,13 @@ classified automatically. Customer details stay in private operator output.
 The external failure-alert inbox is admin@rokkad.com, sole member of the separate
 Better Stack Rokkad team t606354. Its free-plan mail-health heartbeat 499750 uses
 five-minute checks plus five-minute grace and email only. Free routing notifies
-all team members, so review recipients if that team grows. The heartbeat exists,
-but scheduled publication and alert delivery acceptance remain pending. Do not
-claim external alerting until activation and delivery are verified.
+all team members, so review recipients if that team grows. Scheduled publication
+is enabled with the URL held only in root-private server configuration. The
+owner-approved missed-heartbeat test delivered failure and automatic recovery
+emails to that inbox on 29 September at 20:14/20:16 IST; normal five-plus-five-minute
+timing is restored. Healthy pings contain no customer payload; failure or planned
+dispatch pause withholds them. Coordinate maintenance with the external monitor.
+The temporary local secret file was deleted after approved encrypted transfer.
 See [onboarding monitoring](implementation/onboarding-monitoring.md).
 
 Current platform mail operations (29 September, 18:49 IST): invitations and

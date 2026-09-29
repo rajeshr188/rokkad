@@ -12,6 +12,10 @@ The owner confirmed no real customer signup yet and selected **admin@rokkad.com*
 for operational failure alerts. The report observes saved control-plane evidence;
 it does not create an account, send mail, grant access, start a trial or charge.
 
+Current external alert status: **active**, with failure and recovery email delivery
+verified. See [acceptance and operation](#external-alerts-active-2026-09-29).
+Earlier dated checkpoints below retain their historical state.
+
 ## Read-only report
 
 Sign into Rokkad as the permanent platform administrator using Google, then open
@@ -225,3 +229,60 @@ during the test. The owner is asked to approve those test notifications and,
 separately, reading only the resulting Better Stack messages in the admin inbox.
 No test alert or health ping has been sent yet. Screenshot:
 `outputs/betterstack-mail-heartbeat-config-20260929.png`.
+
+## External alerts active (2026-09-29)
+
+This checkpoint supersedes the preparation and approval-pending states above.
+The owner explicitly approved temporary Read access for the normal Windows task
+operator to only the staged heartbeat URL file, SSH transfer to the Rokkad server,
+the bounded failure/recovery test and inspection of only its notification emails.
+No directory-wide permission was granted. Transfer succeeded into root-owned
+configuration with mode 0600; the local file was deleted immediately afterward.
+
+The new hostname-compatible host watchdog was installed with the previous script
+and configuration backed up under `mail-heartbeat-20260929/` in the deployment
+directory. Preparation first passed local health with publication disabled. One
+healthy ping at **20:12 IST** started the test clock; scheduled publication stayed
+disabled while the one-minute interval plus one-minute grace expired. The live
+email workers continued running throughout.
+
+Better Stack incident **1024376789** reported Missed heartbeat at **20:14 IST**.
+Its timeline records email notification to admin@rokkad.com, and the actual inbox
+message from `alerts@alerts.betterstack.com` was inspected. At **20:16:14 IST**,
+the root-only candidate became the scheduled configuration and the health service
+sent a healthy ping. The incident resolved automatically before the timing change;
+the received recovery email confirms automatic resolution at **20:16 IST**.
+This proves the external missed-ping and recovery path, not merely a manual test
+notification or provider send acknowledgement. No customer messages were created.
+
+The temporary `[TEST]` name is removed. Saved settings are again **Rokkad platform
+mail health**, five-minute interval, five-minute grace, email only and no additional
+escalation. The separate free Rokkad team still routes to its sole member,
+admin@rokkad.com; no upgrade/payment method/member was added. The existing sample
+website incident is unrelated and was not changed. The next natural scheduled
+heartbeat passed at **20:21:21 IST**, with publication reported as sent.
+Application/mail configuration hashes, web
+image and all four enabled/active mail timers are preserved; queue due is zero and
+health flags are empty.
+
+On an alert, inspect the root-private health report, service/timer status and
+sticky failure evidence first. A missing ping can indicate a mail health failure,
+stopped host or lost network; it does not identify the cause by itself. Do not
+blindly resend mail or clear sticky evidence before reviewing delivery truth.
+Restore healthy operation and verify the next real ping and automatic recovery.
+Normal timeout is five minutes expected interval plus five minutes grace after
+the last successful ping, with provider evaluation and email delivery latency.
+
+For planned dispatch pauses, coordinate a matching external maintenance/pause
+window; never publish fake healthy pings. If this integration must be rolled back,
+pause this heartbeat first to prevent a misleading outage, then restore the
+root-private `watchdog.before.json` and `watchdog.before.py` from the acceptance
+backup and verify local mail health. This removes external protection: record that
+state and re-enable the route after repair. Do not roll back the database or alter
+mail sending gates merely to remove this monitor.
+
+Sanitized local evidence: `outputs/mail-heartbeat-*-20260929.json` and the
+`betterstack-mail-test-failure`, `betterstack-mail-active-config` and
+`betterstack-mail-recovery-email` screenshots dated 20260929. Server acceptance
+files are root-private. Never include the heartbeat capability URL in source,
+screenshots, support tickets or operator output.

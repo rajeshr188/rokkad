@@ -46,8 +46,10 @@ A new signup appeared during monitoring; verification delivery, explicit
 30-day trial acceptance, invitation delivery and joined membership passed. The
 teammate joined with the invited Admin role; later browser/role behavior remains
 unobserved, and real-customer versus owner-test status is unconfirmed. External
-failure alerts to the selected admin inbox remain unconfigured pending provider/
-account routing and delivery acceptance.
+mail-health alerts are now active: the controlled missed-heartbeat and automatic
+recovery emails both reached admin@rokkad.com. Normal timing is five minutes plus
+five minutes grace. This completes the external mail alert route, separately from
+the paid-billing gates below.
 
 ## Production critical path (reviewed 2026-09-29)
 
