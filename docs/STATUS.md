@@ -12,6 +12,68 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 account-email delivery rehearsal (2026-09-29)
+
+Owner authorized exactly two emails to `admin+account-test-20260929@rokkad.com`
+using a separate non-admin test account. User **11** has no staff/superuser flags
+and no Workspace membership. A bounded worker invocation enabled account mail
+only within that process; global web/worker flags and invitation-only scheduling
+were unchanged. The permanent administrator was not modified.
+
+Both messages reached the admin inbox and have reconciled **delivered** evidence,
+one attempt each: verification `ac09c13c-1de3-4eb6-b459-399f5bdba4db` and reset
+`efb9e159-5ef6-4d7c-9dd5-1b5d2680debb`. The verification link was consumed through
+the live site and confirmed the exact test address. The reset was requested through
+the ordinary allauth HTTP handler in the bounded worker and its received link
+opened the live Change Password form. The user completed the required password
+handoff; the account acquired a usable password, and reopening the actual received
+link produced **Bad Token**, proving reuse rejection before cleanup. User 11 was
+then disabled and its password made unusable. It retains no membership or platform
+privileges. No third email was sent or authorized. Ongoing account sending remains
+paused pending a reviewed scheduling/activation step; this completes the bounded
+delivery and link-acceptance rehearsal, not public-trial activation.
+
+Private reports are in `account-mail-20260929/acceptance-*.json`; sanitized local
+copies are `outputs/account-mail-acceptance-*-20260929.json`. Browser proof is in
+`outputs/account-email-confirmed-20260929.png` and
+`outputs/account-reset-replay-rejected-20260929.png`. Do not copy reset tokens into docs.
+
+## FW-019 account-mail release deployed with account sending paused (2026-09-29)
+
+At **18:22 IST**, web and all mail consumers moved to
+`rokkad:account-mail-20260929-702d1c64ba50`, image
+`sha256:a5c71b750eb6eca2e5ffb44e0dda9aa5d44624b51c3a41a773af8e3e48a0d4ea`.
+The ten-file overlay contains the reviewed account-mail source and a targeted
+adapter/flag change to production base settings; it preserves current UI source
+and static assets. The public-trial implementation is not part of this overlay.
+A fresh operational backup was verified before the single owner-only migration
+`platform_mail.0002`; restricted runtime DML/sequence grants and the exactly-one
+source constraint were verified afterward.
+
+Web/worker signing secrets match (compared privately), token configuration and
+canonical origin match, and the web still has no SES credentials. Existing
+configuration/credential files and container environment are unchanged. Production
+uses restricted `rokkad_prod_runtime`, with **117 forced-RLS tables** unchanged.
+Existing billing, mail, Company/Membership/invitation fingerprints and Workspace
+access/trial dates are unchanged; no account intent, attempt or message was created.
+
+The first service switch rolled back because supervised health ran before paused
+timers were restored. Its only flags were the deliberately inactive timers. The
+additive migration remained applied safely; the retry reused it, restored timers
+before health, and passed. All four timers are active/enabled, supervised workers
+passed, HTTPS login returns 200, and mail health has no flags. Dispatch remains
+**invitation-only, limit one**. `ACCOUNT_EMAIL_ENABLED=False`; trial, checkout and
+recurring gates remain false, with provider configuration still live.
+
+Next: specifically authorized verification/reset delivery using a separate
+non-admin test account, then account-mail activation and public-trial deployment.
+The rehearsal inbox is `admin+account-test-20260929@rokkad.com`; the owner later
+approved the two-message check described above. No permanent administrator
+credentials or privileges are changed.
+Private release evidence/backups are under `account-mail-20260929/` in the existing
+deployment directory; sanitized local evidence is in
+`outputs/account-mail-{inventory,prepare,apply,verify}-20260929.json`.
+
 ## FW-019 account verification/reset mail implemented locally (2026-09-29)
 
 Added a durable global account-email source to the existing monitored SES outbox,

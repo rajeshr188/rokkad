@@ -93,10 +93,14 @@ invitations use their separate enabled SES worker. The local journey establishes
 application behavior, not production account-mail delivery. Implement and accept
 that transport before advertising general password-based trial signup.
 
-Account verification/reset queuing is now implemented and tested locally in the
-existing monitored mail worker. `ACCOUNT_EMAIL_ENABLED` defaults to false; the
-schema, matched web/worker deployment and real delivery acceptance are still
-pending. See the [rollout procedure](../implementation/platform-mail.md#account-mail-prepared-not-deployed-2026-09-29).
+Account verification/reset queuing is now deployed in the existing monitored mail
+worker, with its schema, restricted grants and matched web/worker signing settings
+verified. The two approved real emails were delivered, verification succeeded,
+and the user completed a password reset whose original link was rejected on reuse.
+The non-admin test account is disabled. `ACCOUNT_EMAIL_ENABLED` remains false;
+ongoing account-mail scheduling/activation is pending. The targeted overlay preserves existing UI and does not
+include the public-trial implementation. See the
+[deployed checkpoint](../implementation/platform-mail.md#account-mail-deployed-with-sending-paused-2026-09-29).
 
 The free offer and paid offer describe different consent and lifecycle terms,
 not separate products or permanent customer classes. The trial is INR 0 for
@@ -156,6 +160,6 @@ It is not a browser signup test or a new real-mail delivery rehearsal.
 private/stale offer rejection, verified canonical ownership, existing-history
 preservation, frozen seats and dates, expiry/grace/read-only, six-seat enforcement,
 and simultaneous trial/last-seat requests. Production plan creation and the local browser journey are now complete; deployment,
-production account-mail acceptance and public activation remain outstanding.
+ongoing account-mail activation and public activation remain outstanding.
 Before publication, review owner-created Workspace abuse controls (the current
 limit is one trial per Workspace, not one trial per person) and support capacity.

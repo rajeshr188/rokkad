@@ -8,6 +8,58 @@ related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-ro
 
 # Platform mail operations
 
+## Account mail deployed with sending paused (2026-09-29)
+
+Subsequent owner-approved acceptance sent exactly two messages to
+`admin+account-test-20260929@rokkad.com`: verification and password reset, each
+delivered with one attempt. A separate non-admin account (user 11, no memberships)
+was used. Only the bounded worker process enabled the account flag; persistent
+settings and scheduling stayed paused/invitation-only. Verification succeeded
+through the received live-site link. The user submitted the reset password; the
+account acquired a usable password and the original received link then returned
+Bad Token before cleanup. User 11 is disabled with an unusable password and no
+memberships or platform privileges. This bounded rehearsal is complete; ongoing
+account-mail activation is still pending. No additional test message is authorized.
+These two retained account
+intents supersede the zero-account-row evidence at deployment below.
+
+Web, dispatch, feedback, recovery and the watchdog's inspection command now use
+`rokkad:account-mail-20260929-702d1c64ba50` (image
+`sha256:a5c71b750eb6eca2e5ffb44e0dda9aa5d44624b51c3a41a773af8e3e48a0d4ea`).
+Deployment completed at 18:22 IST. The overlay copies only the nine account-mail
+files plus a targeted base-settings adapter/flag edit; previous production UI and
+the existing static volume are preserved. It does not deploy public-trial source.
+
+An operational backup was verified, `platform_mail.0002` applied under the owner
+role, and `rokkad_prod_runtime` table/sequence grants and source constraint checked.
+All runtime processes remain restricted. Web/worker signing secrets and token
+settings match; comparisons stayed private. The web has no SES credentials.
+Configuration files, existing container environment, billing/mail records,
+Workspace access and 117 forced-RLS tables remain unchanged. No account row or
+real message was created by deployment.
+
+The initial switch rolled back after the watchdog reported the deliberately paused
+timers. The retry reused the additive migration and restored scheduling before
+supervised health. All timers are active/enabled; workers, HTTPS login and health
+checks passed. For future enabled-mail deployments, restore the dispatch/feedback/
+recovery timers before running the watchdog: inactive timers are correctly treated
+as failures when the dispatch marker is present.
+
+`ACCOUNT_EMAIL_ENABLED=False` in both web and worker; invitation sending remains
+enabled with `--send --limit 1 --invitations-only`. Trial/checkout/recurring remain
+paused. The real verification/reset rehearsal is complete; reviewed account
+scheduling and activation remain. Until activation, new
+account requests still use locmem. Historical preparation instructions below must
+be read with this deployed checkpoint; schema/build work is already complete.
+
+Private evidence and previous/candidate configs are in the deployment directory's
+`account-mail-20260929/`. Preserve the additive schema during any image rollback;
+account source rows were empty at deployment, but now include the two rehearsal
+records. Do not reverse the schema or restore workers unaware of account sources
+without reviewing this retained evidence and the queue. Previous web image was
+`rokkad:party-loan-pages-20260929-5143b3441f2b`; previous worker image was
+`rokkad:receipt-worker-20260929-e4bee6e23a41`.
+
 ## Account mail prepared, not deployed (2026-09-29)
 
 The new allauth adapter queues verification/reset intents when
