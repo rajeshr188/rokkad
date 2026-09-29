@@ -12,6 +12,38 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## Receipt dispatch scope deployed with sending paused (2026-09-29)
+
+`dispatch_platform_mail --receipts-only` now excludes invitations before the batch
+limit, rejects an explicit invitation for sending/capture, and cannot combine with
+invitation-only scope or global stale recovery. It reuses the ordinary dispatch
+service: live payment classification, paid source, enablement, suppression, attempts
+and uncertain-outcome handling are unchanged. The reviewed first-receipt procedure
+requires one explicit delivery ID and limit one after separate send approval.
+
+All **55 focused mail tests passed**, including receipt/invitation selection,
+disabled sending/mode boundaries, replay, feedback and controlled Test Mode receipt
+coverage. At **12:30 IST**, the command-only overlay
+`rokkad:receipt-worker-20260929-e4bee6e23a41` was deployed to worker service and
+watchdog references. Restricted read-only preflight and post-deployment checks pass;
+all billing/mail fingerprints are unchanged, with six historical attempts and zero
+receipts. Web image, schema, credentials and shared runtime settings are unchanged.
+
+Scheduled dispatch remains **invitation-only, disabled, marker absent**; its
+supervised start was skipped before Docker invocation. Feedback/recovery/health
+runs succeeded and timers resumed; queue due/flags and health flags are zero.
+HTTPS login is 200. Checkout, new trials, recurring authorization and sending remain
+false. No email, invoice, payment, agreement or live collection was created.
+
+The refreshed support thread still ends with our **10:21 IST** follow-up; no later
+technical reply was present. Existing provider failures/held-period acceptance and
+actual live callback delivery remain open. Next: review merchant subscription
+methods/fees and inbox continuity, then resolve provider acceptance and JSK trial
+eligibility before any named pilot activation. Private deployment evidence and
+rollback are in `receipt-worker-20260929/` on the deployment host. See the
+[receipt runbook](implementation/platform-mail.md#receipt-only-preparation-2026-09-29).
+
+
 ## Live webhook registration verified (2026-09-29)
 
 The owner entered the webhook secret and submitted Razorpay's Live Mode form.

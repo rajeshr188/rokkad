@@ -92,8 +92,12 @@ deployed to web/workers as `rokkad:billing-paused-99bda8c1cb27`: paused checkout
 and trial signup hide the generic plan list;
 prepared agreements retain their frozen terms. Live binding requires trial signup
 paused too. Legacy feature and estimated overage claims are removed; stored terms
-are unchanged. All billing/sending gates remain paused; next is reviewing
-receipt-worker scope and remaining provider delivery/acceptance. Never edit
+are unchanged. All billing/sending gates remain paused. Receipt-only dispatch is
+available in the 29 September worker image, filtering invitations before the batch
+limit and preserving ordinary live-mode/source/suppression/retry checks. For the
+first approved pilot receipt, use an explicit reviewed delivery ID and limit one;
+this does not enable the scheduled invitation-only dispatcher. Next: remaining
+merchant/provider delivery/acceptance and pilot activation review. Never edit
 the existing shared trial plan. No charge or activation was authorized. See the
 [seller decision](adr/2026-09-28-frozen-billing-seller.md).
 
@@ -104,6 +108,14 @@ its existing sign-in; no new local password was set. Audit **58801** records the
 explicit owner instruction. This does not change Workspace memberships or canonical
 ownership. Temporary catalog operator 10 remains disabled and must not be reused
 as the permanent administrator.
+
+Current mail worker image is `rokkad:receipt-worker-20260929-e4bee6e23a41`, a one-file
+command overlay on `rokkad:billing-paused-99bda8c1cb27`. Dispatch/feedback/recovery
+and watchdog references are aligned; production web is unchanged. At deployment,
+billing/mail fingerprints were unchanged, six historical attempts and zero receipts
+remained, monitoring was healthy and all purchase/sending gates stayed false.
+Scheduled dispatch remains invitation-only, disabled and without its marker. See
+the [receipt procedure](implementation/platform-mail.md#receipt-only-preparation-2026-09-29).
 
 Previous FW-019 commercial preparation: owner selected monthly-only INR 1,499,
 owner plus five staff, operator-prepared agreements; invoice name **Rajesh Rathod H**.

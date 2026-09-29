@@ -12,6 +12,21 @@ The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.
 Production billing and mail dispatch remain disabled.
 
+## Receipt worker prepared without sending (2026-09-29)
+
+At **12:30 IST**, the worker command gained tested receipt-only selection while the
+persistent dispatcher stayed invitation-only and disabled. All 55 focused tests,
+restricted preflight, record-preservation and supervised monitoring checks passed.
+The first approved live receipt will use one explicit reviewed delivery ID and limit
+one; no receipt exists yet, no email was sent, and no general queue is enabled.
+See the [procedure](../implementation/platform-mail.md#receipt-only-preparation-2026-09-29).
+
+The refreshed Razorpay support thread still ends with our 10:21 follow-up. This step
+does not close actual live callback delivery or failure/recovery/held-period
+acceptance. Next independent review: merchant subscription methods/fees and monitored
+inbox continuity. Preserve JSK's 8 October trial, annual exclusion and the separate
+named pilot/first collection approval.
+
 ## Live runtime and webhook registration verified (2026-09-29)
 
 The owner appointed **admin@rokkad.com**, verified existing user **9**, as permanent
@@ -288,19 +303,20 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 2. Use `total_count=12`, quantity 1 after eligibility and activation approval. This
    does not collect twelve months upfront. Rokkad requires explicit duration;
    Razorpay documents bounded [subscription creation](https://razorpay.com/docs/api/payments/subscriptions/create-subscription/).
-3. Complete reviewed seller configuration and applicable provider acceptance. Retain
+3. Seller configuration is complete; applicable provider acceptance remains open. Retain
    published refund review/initiation windows of seven/five working days; review
    cancellation wording before activation.
-4. Verify live subscription methods/fees for this merchant. Protect live keys on
-   the server; prepare a mode-specific webhook secret and accept signed HTTPS
-   callback/recovery with purchases paused. No live keys were generated/read/moved
-   during this checkpoint.
-5. Prepare only the reviewed monthly live plan, preview its exact terms, then bind.
-   Keep one-off checkout false; never reuse test plan IDs. Recurring authorization
-   remains false until bounded activation is approved.
-6. Review receipt dispatch separately: the persistent worker is invitation-only.
-   Keep feedback/recovery/health, agree monitored receipt scope and confirm inbox
-   continuity. Never enable the queue indiscriminately.
+4. Verify live subscription methods/fees for this merchant. Live keys and the
+   separate webhook secret are protected on the server; provider registration and
+   HTTPS/HMAC diagnostics are complete. Actual provider event delivery/recovery
+   acceptance remains open, with purchases paused.
+5. The reviewed monthly provider plan is bound to separate Plan 2 / live binding 1.
+   Keep one-off checkout false and annual unpublished; never reuse test plan IDs.
+   Recurring authorization remains false until bounded activation is approved.
+6. Receipt-only command preparation is complete; the persistent worker remains
+   invitation-only and paused. Use one reviewed delivery ID/limit one for the first
+   separately approved receipt. Keep feedback/recovery/health and confirm monitored
+   inbox continuity. Never enable the queue indiscriminately.
 7. Authorize the named pilot and first collection; observe invoice, payment, access
    and receipt, then verify settlement and later renewal/recovery.
 

@@ -7,6 +7,20 @@ tags: [billing, configuration, receipts, deployment]
 
 # Billing provider configuration and readiness
 
+## Receipt scope preparation complete (2026-09-29)
+
+At **12:30 IST**, a command-only worker update added `--receipts-only`, with mutually
+exclusive source scopes and explicit delivery selection for the first approved
+receipt. All 55 focused tests and restricted production preservation/monitoring
+checks passed. Scheduled dispatch stays invitation-only and disabled; no receipt
+or live collection was created and sending remains false. Worker image is
+`rokkad:receipt-worker-20260929-e4bee6e23a41`; web is unchanged. Follow the
+[receipt procedure](platform-mail.md#receipt-only-preparation-2026-09-29), including
+exact-recipient approval after a real verified paid invoice exists. Actual live
+callback delivery, provider acceptance, inbox continuity and trial eligibility
+remain separate gates. The refreshed support thread contains no response after
+our 10:21 follow-up; no new message was sent.
+
 ## Frozen seller and explicit tax settings (2026-09-28)
 
 Superseded configuration status: the 29 September checkpoints below record the

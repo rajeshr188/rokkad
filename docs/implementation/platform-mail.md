@@ -1,12 +1,80 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-09-29
 tags: [email, ses, operations, delivery]
 related: [../adr/2026-09-26-durable-platform-mail.md, ../plans/platform-email-rollout.md]
 ---
 
 # Platform mail operations
+
+## Receipt-only preparation (2026-09-29)
+
+The command now accepts `--receipts-only`, mutually exclusive with
+`--invitations-only`. Both scopes filter before the batch limit and refuse an
+explicit queued delivery of the other source type for sending or capture. Neither
+scope can apply to global stale-claim recovery. With neither flag, the existing
+general command behavior remains unchanged. These are selection boundaries, not
+permission to send: ordinary enablement, live invoice classification, paid-source,
+suppression, attempt and uncertain-outcome rules remain in `dispatch_one`.
+
+All **55 focused tests** passed across dispatch, operations, controlled receipt
+rehearsal and mail delivery. At **12:30 IST**, worker service/watchdog references
+were updated to `rokkad:receipt-worker-20260929-e4bee6e23a41`, image
+`sha256:49b1dd5f3ce888e2a5d71ca44506db9d1b85fea07097bd3e95ba7f4a031beb9d`.
+It overlays only `dispatch_platform_mail.py` on the previous worker image;
+application web and schema are unchanged. Command SHA-256:
+`e4bee6e23a416b7a0e3510fe6d17729a156fd3b6c3e4ab65a7de153864baff83`.
+
+Read-only restricted preflight and verification preserve every billing/mail table
+fingerprint: four historic deliveries, six attempts and zero invoice receipts.
+SES configuration is ready in the worker; web deliberately has no SES credential.
+Provider mode is live consistently, but checkout/trial/recurring/sending remain
+false. Monitoring timers were paused only during replacement, current invocations
+finished, and supervised feedback/recovery/health runs passed before resumption.
+Scheduled dispatch remains **invitation-only, limit one, disabled**, with its marker
+absent; its supervised start was skipped by the systemd condition. Queue due/flags
+and watchdog flags are zero. Protected credential/settings hashes and sticky alerts
+are unchanged; HTTPS login is 200. No external email was sent.
+
+For the **first approved pilot receipt**, use one supervised worker invocation,
+not a general queue/timer activation:
+
+1. Complete the named pilot/payment approval and actual verified live payment first.
+   There is currently no production invoice or receipt to send. Preserve JSK's
+   existing trial and do not fabricate a paid source for a production rehearsal.
+2. Read-only review the resulting delivery ID, paid live invoice, immutable billing
+   contact, sender/reply address and rendered receipt. Confirm the intended monitored
+   recipient, suppression status, attempt history and queue/DLQ/alert health. Capture
+   changes status to preview-only and is not a read-only receipt preview.
+3. Obtain approval for that exact email/recipient. Keep scheduled dispatch disabled,
+   its marker absent and shared sending false. Use the existing restricted worker
+   command with only this invocation's mail-enable override, after all normal
+   readiness checks. Its final command arguments must be:
+
+   ```text
+   manage.py dispatch_platform_mail --send --receipts-only --delivery <reviewed-uuid> --limit 1
+   ```
+
+4. Preserve ordinary Attempt/SES identifiers and verify feedback, recipient delivery
+   and reply-path continuity. Unknown acceptance requires provider/operator review;
+   never requeue it merely because feedback is absent. Keep feedback/recovery/health
+   active, inspect queue and flags after the run, and confirm the persistent gates
+   remain paused. Broader receipt scheduling needs a later explicit scope review.
+
+The one-off enable override is not an activation now; no such command was run.
+Original Test Mode receipt/reply acceptance remains valid historical evidence, not
+proof of a future live invoice's delivery. Google Workspace inbox continuity and
+actual live webhook delivery still need confirmation before the pilot.
+
+Private rollback copies, exact one-file build context, unit candidates, preflight
+and verification logs are under `receipt-worker-20260929/` in the deployment folder.
+To roll back only this command release, keep dispatch paused, pause monitoring
+timers and let active work finish, restore its saved service/watchdog files, reload
+systemd, verify and resume monitoring. Preserve current live credentials, shared
+configuration and all delivery evidence; do not restore older pre-live environments.
+Sanitized local evidence: `outputs/receipt-worker-prepare-20260929.json` and
+`outputs/receipt-worker-apply-20260929.json`.
 
 ## Private catalog worker update (2026-09-28)
 
@@ -215,6 +283,7 @@ the server. Never use migration DB, AWS administrator/root or R2 credentials.
 python manage.py check_platform_mail --require-ready
 python manage.py dispatch_platform_mail --capture --delivery <uuid>
 python manage.py dispatch_platform_mail --send --limit 1 --invitations-only
+python manage.py dispatch_platform_mail --send --receipts-only --delivery <reviewed-uuid> --limit 1
 python manage.py receive_platform_mail_events
 python manage.py dispatch_platform_mail --recover-stale
 ```
