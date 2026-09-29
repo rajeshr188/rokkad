@@ -13,6 +13,44 @@ plus five staff, one trial Workspace per owner account, verified-owner consent,
 no card and no automatic charge. Existing Workspaces retain their accepted dates
 and access. Paid continuation requires a separate launch and explicit consent.
 
+## Public pages release (2026-09-29)
+
+The owner approved updating homepage, pricing and FAQ together after reviewing
+their mismatch with the live offer. The 20:58 IST release changes only:
+
+- `templates/pages/home.html`: trial CTA and concise terms, preserving product story.
+- `templates/pages/pricing.html`: free trial plus unavailable planned monthly offer.
+- `templates/pages/faq.html`: current onboarding/team/trial questions and expiry.
+- `templates/components/navigation/main_nav.html`: anonymous pricing and FAQ links.
+- `templates/layouts/base.html`: footer links for pricing, FAQ and refunds.
+
+Web image: `rokkad:trial-landing-20260929-044f48f88473`, based on
+`rokkad:onboarding-monitor-20260929-df4b82f62000`. It contains no application-code,
+CSS, migration, catalog, billing flag, credential or worker change. Mail workers
+intentionally retain the preceding image; preserve that configuration in later
+releases. The separately committed recurring cancellation copy is not included.
+
+Validation: 12 existing page/route tests; desktop and 390px mobile visual review
+of all three pages; no horizontal overflow and working collapsed navigation;
+restricted READ ONLY candidate/live renders, public HTTPS/signup checks and all
+five deployed template hashes. The shared footer rendered in the live signed-in
+pricing session as well as anonymous previews. The last observed scheduled mail
+heartbeat (20:57:01 IST) was healthy; mail config/timers and secret-file hashes
+were unchanged. Signup destinations were checked without creating an account.
+
+Private server evidence: `trial-landing-20260929/` under the cutover deployment
+directory, including build, operational backup, prepared/applied/verified reports,
+prior compose and release metadata. Roll back only this web template release by
+restoring `compose.before.yml`, recreating the web service and restoring matching
+release metadata from `release.before.json`; verify HTTPS and mail health. No
+database restore, static rebuild or worker configuration change is required.
+Sanitized local reports: `outputs/trial-landing-{prepare,apply,verify}-20260929.json`;
+visual proof: `outputs/trial-pricing-live-20260929.png`.
+
+Commercial copy is deliberately static reviewed publication: when trial terms,
+availability or paid launch change, review home/pricing/FAQ with the catalog and
+consent pages together. It does not enable purchases or change trial eligibility.
+
 ## Deployed source and configuration
 
 Web, dispatch, feedback, recovery and health use `rokkad:public-trial-20260929-e06bb85c285c`

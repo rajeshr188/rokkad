@@ -1,30 +1,52 @@
 {% extends 'base_public.html' %}
-
-{% block title %}FAQ{% endblock %}
-
+{% block title %}Trial and team questions | Rokkad{% endblock %}
 {% block content %}
-<section class="public-section alt">
-    <div class="container">
-        <div class="public-section-header">
-            <div class="public-kicker">FAQ</div>
-            <h1 class="public-section-title">Frequently asked questions</h1>
-            <p class="public-section-copy">Answers to common questions about Rokkad's SaaS ERP direction.</p>
-        </div>
-
-        <div class="public-card">
-            <h2 class="public-card-title">Is Rokkad only for jewellery and gold loan businesses?</h2>
-            <p class="public-card-copy">The product is especially shaped around jewellery, gold loan, commodity, inventory, sales, purchase, and accounting workflows, but the workspace model can support other small businesses with similar controls.</p>
-        </div>
-
-        <div class="public-card mt-3">
-            <h2 class="public-card-title">Can one user access multiple businesses?</h2>
-            <p class="public-card-copy">Yes. Users can belong to multiple workspaces, and the product direction makes workspace switching explicit.</p>
-        </div>
-
-        <div class="public-card mt-3">
-            <h2 class="public-card-title">Does accounting run separately from operations?</h2>
-            <p class="public-card-copy">Accounting is the core. Business documents should connect to vouchers, ledgers, inventory, commodity impact, and audit trails.</p>
-        </div>
+<section class="public-section">
+  <div class="container-lg" style="max-width: 900px;">
+    <div class="public-section-header">
+      <div class="public-kicker">Getting started</div>
+      <h1 class="public-section-title">Trial and team questions</h1>
+      <p class="public-section-copy">What to expect when you start using Rokkad for your pawn-lending business.</p>
     </div>
+    <div class="d-grid gap-3">
+      <article class="public-card">
+        <h2 class="h5">What can I use Rokkad for?</h2>
+        <p class="public-card-copy">Manage borrower records, gold and silver loans, collections, pledged items and their return. Your Workspace connects the loan's history with your team's roles and decisions.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">How do I start the free trial?</h2>
+        <p class="public-card-copy"><a href="{% url 'account_signup' %}">Create your account</a>, verify your sign-in email and create a Workspace. Review and accept the trial terms to begin your 30 days, then continue with business setup and team invitations. Creating an account alone does not start the trial.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">Do I need a card? Will I be charged automatically?</h2>
+        <p class="public-card-copy">No card is required and there is no automatic charge. The free trial does not create a payment mandate or automatically convert to a paid subscription.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">How many people can join?</h2>
+        <p class="public-card-copy">Your trial includes you, the owner, plus up to five staff: six people total. Pending invitations reserve seats. Invite teammates from your Workspace's team settings and assign the appropriate roles. Each person follows their invitation email, signs in and verifies their email before joining.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">What if an invitation email does not arrive?</h2>
+        <p class="public-card-copy">Check the recipient address, spam folder and invitation status in team settings. Email can take a few minutes. If it is still missing, contact <a href="mailto:support@rokkad.com">support@rokkad.com</a> so we can check delivery.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">Can I start a trial for every Workspace?</h2>
+        <p class="public-card-copy">Each owner account can start one free trial Workspace. You can belong to multiple Workspaces, but creating another does not give you another free trial. Existing Workspaces keep their current plans and access.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">What happens when my 30 days end?</h2>
+        <p class="public-card-copy">Your billing page shows the exact trial end and read-only start dates. The current policy provides a seven-day grace period, then read-only access unless continued access is arranged. Expiry alone does not delete your records, and no payment is taken automatically. Contact support before expiry to review your next steps.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">Can I subscribe after the trial?</h2>
+        <p class="public-card-copy">The planned offer is &#8377;1,499 per Workspace per month for the owner plus five staff. <strong>Paid subscriptions are not available yet.</strong> Continuation depends on availability and your explicit subscription consent. See <a href="{% url 'pricing' %}">trial details and pricing</a> for the current offer.</p>
+      </article>
+      <article class="public-card">
+        <h2 class="h5">Where can I find cancellation and refund terms?</h2>
+        <p class="public-card-copy">Our <a href="{% url 'cancellation_and_refund' %}">cancellation and refund policy</a> explains stopping future renewals, requesting a refund and review timelines. Cancelling renewals does not itself request a refund or delete Workspace records.</p>
+      </article>
+    </div>
+    <div class="public-actions mt-4"><a href="{% url 'account_signup' %}" class="btn btn-success btn-lg">Start your 30-day free trial</a><a href="{% url 'contact' %}" class="btn btn-outline-dark btn-lg">Talk to us</a></div>
+  </div>
 </section>
-{% endblock content %}
+{% endblock %}

@@ -89,7 +89,12 @@ scheduled runs passed, with no due queue or health flags. Activation sent no new
 test messages and preserved existing billing/mail/Workspace records and access.
 See [mail activation](implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
 
-Web and all mail consumers now use `rokkad:onboarding-monitor-20260929-df4b82f62000`, with
+Web uses the five-template `rokkad:trial-landing-20260929-044f48f88473` overlay.
+Public home/pricing/FAQ now describe the live 30-day trial and label the planned
+INR 1,499 monthly continuation unavailable. Preserve the no-card/no-auto-charge,
+six-member and one-trial-per-owner terms; update availability copy when paid
+subscriptions actually launch. Shared footer links include pricing, FAQ and refunds.
+Mail consumers retain `rokkad:onboarding-monitor-20260929-df4b82f62000`, with
 the additive `platform_mail.0002` migration, restricted grants and 117 forced-RLS
 tables. Web has no SES credentials; matched signing/token configuration stays
 server-side. The explicit allauth/invitation adapter queues verification/reset

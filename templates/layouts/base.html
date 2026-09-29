@@ -72,10 +72,13 @@
             <div class="app-footer-inner">
                 <span><a href="{% url 'home' %}" class="app-footer-name">Rokkad</a><span class="ms-2">&copy; {% now "Y" %}</span></span>
                 <nav aria-label="{% translate 'Footer' %}" class="app-footer-links">
+                    <a href="{% url 'pricing' %}">Trial &amp; pricing</a>
+                    <a href="{% url 'faq' %}">FAQ</a>
                     <a href="mailto:support@rokkad.com">{% translate "Help & support" %}</a>
                     <a href="{% url 'developers' %}">{% translate "Developers" %}</a>
                     <a href="{% url 'privacy_policy' %}">{% translate "Privacy" %}</a>
                     <a href="{% url 'terms_and_conditions' %}">{% translate "Terms" %}</a>
+                    <a href="{% url 'cancellation_and_refund' %}">Cancellation &amp; refunds</a>
                 </nav>
             </div>
         </footer>

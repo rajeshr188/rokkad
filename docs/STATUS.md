@@ -12,6 +12,31 @@ access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
 
+## FW-019 public landing, pricing and FAQ aligned with live trial (2026-09-29)
+
+Published at **20:58 IST** after desktop and 390px mobile review. The homepage
+retains the pawn-lending story and now offers a 30-day trial: owner plus five staff,
+no card, no automatic charge and one trial Workspace per owner account. Pricing
+replaces the obsolete Starter/Operations/Scale tiers with the available free trial
+and a clearly unavailable planned INR 1,499/month continuation. FAQ covers account
+verification, explicit trial start, invitations/reserved seats, expiry and refunds;
+retired ERP/inventory/accounting claims were removed from those pages. Anonymous
+navigation and the shared footer expose pricing/FAQ, with refund-policy access.
+
+Twelve existing page/route checks passed. Restricted READ ONLY candidate and live
+render checks passed for all three pages, with live HTTPS/signup and five source
+hashes verified. All three mobile pages had no horizontal overflow; the collapsed
+navigation opened correctly. No new account, invitation, message or charge was
+created. The paid-billing switches remain false and public trials/mail remain true.
+
+Web now uses `rokkad:trial-landing-20260929-044f48f88473`, a five-template overlay on
+the exact previous image. Mail workers, timers, signing/settings, secret files,
+static volume and watchdog configuration were preserved. The last observed natural
+heartbeat at 20:57:01 IST was sent with no health flags. Production backup and
+rollback evidence are private under `trial-landing-20260929/`. The prior recurring
+cancellation-template clarification is still pending its separate billing release.
+See [release details](implementation/public-trial-release-20260929.md#public-pages-release-2026-09-29).
+
 ## FW-019 cancellation wording reviewed and onboarding health refreshed (2026-09-29)
 
 At **20:48 IST**, a restricted READ ONLY production check still shows one observed
