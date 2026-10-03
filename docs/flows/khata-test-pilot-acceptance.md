@@ -22,7 +22,11 @@ reachable from that phone; its own localhost address does not reach this laptop.
 The [document-navigation checkpoint](../implementation/khata-document-navigation.md)
 records the current composed Khata-only image, including combined receiving/photos,
 searchable collateral/exchange groups and later verified improvements. A combined
-Khata/paper-first release still requires the [joint candidate procedure](khata-and-paper-first-release.md).
+Khata/paper-first release now has a separate
+[verified combined local candidate](../implementation/joint-loan-candidate-20261003.md)
+at http://127.0.0.1:8078/w/khata-2777349a/loans/khata/, built from commit `22db74f8`.
+Its private logins are in `.tmp/joint-loan-pilot-20261003-v1/pilot-login.txt`.
+Use the [joint candidate procedure](khata-and-paper-first-release.md) for rollout.
 KH00001/KH00002 remain the original monthly/annual demos;
 additional KH00003/KH00004 preserve fictional browser checks. Automated checks do
 not mark the pending owner/operator or physical acceptance rows below complete.
@@ -32,8 +36,10 @@ not mark the pending owner/operator or physical acceptance rows below complete.
 Use fictional borrowers, an independent KH series, a INR 1 crore agreed limit,
 1% **per month**, 75% LTV, and separate monthly/annual agreements. These are test
 inputs, not recommended customer terms. Payment frequency never changes rate units.
-The local drill fixes time to 10 October/10 November 2026; dates in its evidence
+The original local drill fixes time to 10 October/10 November 2026; dates in its evidence
 are simulated and are not real opening or payment dates.
+The combined 8078 examples use actual fixture creation date 3 October 2026, with
+fictional paper origins on 25 September; they still contain no customer records.
 
 Keep exchange/overdue policies at their warning defaults for one pass, then repeat
 relevant refusal scenarios using the owner's blocking choices. Required photos

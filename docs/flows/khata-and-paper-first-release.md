@@ -29,6 +29,14 @@ contains paper-first recording or that its earlier native archives match this tr
 
 ## Local and staff acceptance
 
+The [combined local candidate](../implementation/joint-loan-candidate-20261003.md)
+from `22db74f8` is verified at
+http://127.0.0.1:8078/w/khata-2777349a/loans/khata/. Its migrations, fictional
+canonical examples, desktop/mobile/no-JS browser checks, shared summaries,
+immutable PDFs and full/Khata/ordinary recovery pass locally. Private credentials
+are in `.tmp/joint-loan-pilot-20261003-v1/pilot-login.txt`. Named operator and
+physical/hosted acceptance below remain pending.
+
 1. Build a fresh isolated candidate from the exact commit, with PostgreSQL and a
    separate fictional database/media volume. Exercise the complete migration graph;
    both `0041` and both `0042` branches are intentional. Merges `0046` and `0050`
@@ -48,6 +56,8 @@ contains paper-first recording or that its earlier native archives match this tr
    a known renewal, closing deductions and unknown/later-confirmed handover.
    Verify expected cash, principal, interest, custody and transaction completeness
    against the actual book. Additional unsupported arrangements need explicit facts.
+   Actual customer facts need not be sent in chat or supplied for the fictional
+   build/test candidate; reconcile a book locally before relying on real entries.
 4. Check existing JCL/JSK ordinary flexible origination, repayment, renewal and
    ticket/label printing against the same candidate. Keep original issued PDFs and
    compare balances; acceptance is about behavior, not automatic data conversion.
@@ -60,6 +70,16 @@ in an isolated destination. Both native formats require matching schema/guards a
 external prerequisites. An archive from an earlier image may require that matching
 image followed by forward migration; never relax a mismatch check. Full recovery
 also preserves Party, Rates, actors, control-plane and original media prerequisites.
+
+The combined rehearsal found that logical PostgreSQL restore rewrites two CHECK
+cast expressions and ordinary native recovery correctly refuses their changed
+guard fingerprint. Full logical row/sequence/media recovery passes, but it is not
+an exact-guard destination for that saved ordinary native archive. Physical backup
+verification and both native restores pass on a separate fictional server with
+original definitions. Retain this distinction when choosing the rollout backup
+method; never bypass the fingerprint check. Owner-only native recovery must also
+explicitly select the actual private-media destination, rather than migration
+settings' developer media default. See the candidate record for tested details.
 
 Run the complete reviewed migration graph during a quiet window:
 
@@ -94,5 +114,7 @@ broad modules are not repeated. The complete migration graph has one Loans leaf,
 pass. Fresh test databases are destroyed after each run. Source extraction needed
 QA-only packaging fixes and existing storage-schema/media-reference prerequisites;
 no financial or servicing behavior changes were needed for this joint verification.
-Separate browser/PDF evidence remains as recorded; this run does not claim another
-combined browser or physical-device trial. Production and remote CI remain untouched.
+Separate browser/PDF evidence remains as recorded. Commit verification itself did
+not repeat browser or physical-device trials; the subsequent combined candidate
+adds the actual browser/recovery evidence linked above. Physical-device acceptance,
+production and remote CI remain untouched.

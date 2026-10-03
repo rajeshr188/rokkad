@@ -166,6 +166,18 @@ commit of Khata together with paper-first ordinary recording, including their me
 migrations and shared dependencies; unrelated billing/storage/console changes stay
 pending. Follow the [joint release guide](flows/khata-and-paper-first-release.md).
 
+The committed combined source has its own fictional local candidate on 8078;
+the older composed Khata-only pilot stays on 8077. See the
+[candidate record](implementation/joint-loan-candidate-20261003.md) for exact
+source/runtime/recovery evidence and private login location. Ordinary native
+guard fingerprints can differ after logical PostgreSQL restoration because CHECK
+expressions are deparsed differently. Preserve the safeguard: use the verified
+matching physical recovery path, or separately review the target recovery method;
+never waive a mismatch. Offline owner recovery must explicitly select the actual
+private-media destination, since migration settings default to a developer path.
+Real-book reconciliation belongs to operational adoption; actual customer facts
+are not a prerequisite for a fictional build/test candidate.
+
 Pending-return selection uses the active typed OUT reservation and excludes actual
 returns. Contextual handover GET resolves the source itself, ignoring a supplied
 parent; review/confirmation still validate exact item/source and recipient/reference.

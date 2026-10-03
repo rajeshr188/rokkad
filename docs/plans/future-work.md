@@ -1263,6 +1263,15 @@ new rules from unexplained totals. Real-book and rollout acceptance remain pendi
 The owner requested a combined repository commit with Khata; use the
 [joint release guide](../flows/khata-and-paper-first-release.md).
 
+**Combined recovery finding, 3 October:** the local combined candidate passes
+physical full recovery and both native formats. Logical `pg_dump`/`pg_restore`
+deparses two ordinary CHECK cast expressions differently, so its exact native
+guard check correctly refuses the destination. A separately selected improvement
+may investigate a safe stable representation with adversarial guard tests; do not
+relax fingerprint validation or start that code change implicitly. Until then,
+select/rehearse a matching recovery method for rollout. Evidence is in the
+[combined candidate record](../implementation/joint-loan-candidate-20261003.md).
+
 **2 October selected direction:** manual paper entry is now selected as an extension
 of the ordinary Loans workflow, including mixed later payments, renewals and
 closures, total-only receipts and conditional admission of reconciled archive

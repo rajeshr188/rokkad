@@ -7,11 +7,35 @@ tags: [status, architecture]
 
 # Status
 
-## Joint loan checkpoint verified for commit (2026-10-03)
+## Combined loan candidate and recovery verified locally (2026-10-03)
+
+Commit `22db74f8` is now built as `rokkad:joint-loans-20261003-22db74f8`
+in a separate persistent fictional database/media environment at
+http://127.0.0.1:8078. All 1,515 runtime application/settings/template/static files
+match the committed archive. The complete merged graph through Loans 0055,
+model-drift/dependency checks, restricted production startup and owner refusal
+pass. Canonical Khata opening/exchange/reduction/settlement examples and paper
+receipt/closure/deduction/renewal examples pass actual desktop/mobile/no-JS
+browser checks, shared borrower totals, saved-PDF hashes and role/tenant/CSRF
+boundaries. The original 8077 pilot and production remain unchanged.
+
+Full logical recovery preserves rows, sequences and media, but ordinary native
+recovery correctly refuses two deparsed CHECK-expression fingerprint differences.
+No guard is relaxed. A separate physical recovery server passes source/copy
+`pg_verifybackup`, exact full rows/sequences/roles/media and both native
+preview/commit reconciliations with restricted startup. The operating candidate
+stays unchanged. Private evidence and login details are in the
+[combined candidate record](implementation/joint-loan-candidate-20261003.md).
+Staff/book, physical camera/printer/QR, off-device backup, hosted and production
+acceptance remain pending. Actual customer facts are not needed for this fictional
+candidate; representative real-book reconciliation belongs to adoption acceptance.
+Further Khata enhancements stay deferred.
+
+## Joint loan checkpoint committed (2026-10-03)
 
 The owner stopped further Khata enhancements and asked to defer the remainder in
 Future work, commit the implemented Khata and paper-first work, and explain their
-joint release. The scoped commit preparation includes shared loan dependencies and
+joint release. The scoped local commit `22db74f8` includes shared loan dependencies and
 the complete merged migration graph; unrelated billing/storage/console application
 changes remain pending; the required storage schema/model prerequisite is included.
 **1,081 broad cases pass** in the initial 1,103-test run (632.856 seconds). Its 22 errors all came from an omitted private-media reference dependency, now included. **486 affected/integration tests pass in 295.000 seconds** across 33 modules on the corrected staged tree. Counts overlap. All 2,263 frozen source files
