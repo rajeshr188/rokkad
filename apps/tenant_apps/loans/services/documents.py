@@ -132,6 +132,7 @@ class PawnLoanDocumentService:
             title=title,
         )
         styles = getSampleStyleSheet()
+        styles["Heading2"].keepWithNext = True
         story = []
         for copy_index, copy_label in enumerate(copy_labels or (None,)):
             if copy_index:

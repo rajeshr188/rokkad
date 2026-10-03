@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
-from apps.tenant_apps.loans.services.history_contract import HistoryError, MAX_BYTES, dump, SCHEMA
+from apps.tenant_apps.loans.services.history_contract import HistoryError, MAX_BYTES, dump, SCHEMA, SCHEMA_V2
 from apps.tenant_apps.loans.services.opening_export import export_loan_data
 from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
 from . import loan_history
@@ -28,6 +28,11 @@ class UploadForm(forms.Form):
 class MappingForm(HistorySetupForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from apps.tenant_apps.loans.models import LoanProductVersion
+        self.fields["product_version_id"].queryset = LoanProductVersion.objects.filter(
+            workspace_id=kwargs["workspace_id"], status__in=["ACTIVE", "RETIRED"],
+            repayment_structure__in=["FLEXIBLE_PARTIAL_PAYMENT", "SINGLE_PAYMENT_BULLET"],
+            amortisation_method="NONE").select_related("product").order_by("product_id", "version")
         for name in tuple(self.fields):
             if name not in {"revision_id", "series_id", "product_version_id"}:
                 del self.fields[name]
@@ -46,7 +51,7 @@ def upload(request):
             return redirect("workspace_portability:loan_batch", workspace_slug=request.workspace.slug, batch_id=batch.public_id)
         except HistoryError as exc:
             form.add_error(None, exc.user_message)
-    batches = LoanHistoryBatch.objects.filter(workspace_id=request.workspace.pk, profile="loan-history/1").order_by("-created_at", "-pk")[:20]
+    batches = LoanHistoryBatch.objects.filter(workspace_id=request.workspace.pk, profile__in=("loan-history/1", "loan-history/2")).order_by("-created_at", "-pk")[:20]
     return render(request, "data_portability/loan_history_upload.html", dict(form=form, batches=batches))
 
 
@@ -98,6 +103,8 @@ def export(request, loan_id):
 @require_http_methods(["GET"])
 def schema(request):
     require_history_setup_access(request.workspace.pk, request.user)
-    response = HttpResponse(dump(SCHEMA), content_type="application/schema+json")
-    response["Content-Disposition"] = 'attachment; filename="loan-history-v1.schema.json"'
+    version = request.GET.get("version", "2")
+    if version not in {"1", "2"}: raise Http404("Unknown history schema.")
+    response = HttpResponse(dump(SCHEMA if version == "1" else SCHEMA_V2), content_type="application/schema+json")
+    response["Content-Disposition"] = f'attachment; filename="loan-history-v{version}.schema.json"'
     return response

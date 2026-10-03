@@ -60,6 +60,9 @@ def _render_action(request, loan, form, title, description, extra_context=None):
 
 @loans_workspace_required
 def pawn_loan_renew(request, pk):
+    if request.POST.get("entry_mode") == "paper" or request.GET.get("entry_mode") == "paper":
+        from .recorded_servicing import renewal
+        return renewal(request, pk)
     # Renewal releases the source and approves/activates its successor.
     request.loans_workspace_access.require("loan.release")
     request.loans_workspace_access.require("loan.approve")
@@ -104,6 +107,7 @@ def pawn_loan_renew(request, pk):
     form = PawnRenewalForm(
         form_data,
         workspace=request.loans_workspace,
+        opening=loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists(),
         initial=initial,
     )
     retained_formset = PawnRenewalRetainedItemFormSet(
@@ -158,6 +162,7 @@ def pawn_loan_renew(request, pk):
                 tenure_months=form.cleaned_data["tenure_months"],
                 retained_collateral=retained,
                 additional_collateral=additional,
+                successor_product_version_id=getattr(form.cleaned_data.get("successor_product_version"), "pk", None),
             )
         except (PawnRenewalError, ValidationError, ValueError) as exc:
             if is_exact_preview:
@@ -228,6 +233,7 @@ def pawn_loan_renew(request, pk):
                         if row and not row.get("DELETE")
                     ),
                     expected_preview_fingerprint=exact_preview.fingerprint,
+                    successor_product_version_id=getattr(form.cleaned_data.get("successor_product_version"), "pk", None),
                     actor=request.user,
                 )
             except (PawnRenewalError, ValidationError, ValueError) as exc:

@@ -78,7 +78,7 @@ class ConfigurableDocumentRenderer:
         )
         return LayoutRenderResult(
             pdf, layout.content_hash, cls._payload_hash(payload),
-            "layout-reportlab-profile-v4" if layout.schema_version >= 4 else "layout-reportlab-profile-v1", output_page_size,
+            "layout-reportlab-profile-v4-fit2" if layout.schema_version >= 4 else "layout-reportlab-profile-v1", output_page_size,
             print_profile.composition,
             tuple(sorted((key, asset.sha256) for key, asset in asset_map.items())),
         )
@@ -575,7 +575,7 @@ class ConfigurableDocumentRenderer:
             text = escape(block.text or payload.title)
         elif block.type == "field":
             field = fields[block.binding]
-            value, style = cls._display_value(field.value, block, style)
+            value, style = cls._display_value(field.value, block, style, fit_to_rectangle=layout.schema_version >= 4)
             text = escape(value)
             if block.show_label:
                 text = f"<b>{escape(block.field_label or field.label)}</b>: {text}"
@@ -606,11 +606,22 @@ class ConfigurableDocumentRenderer:
             identity = block.binding or block.text or block.type
             raise ValueError(
                 f"Overlay block '{identity}' exceeds its configured rectangle "
-                f"at ({block.x_mm}, {block.y_mm}) mm."
+                f"at ({block.x_mm}, {block.y_mm}) mm. "
+                "Enlarge the frame or use a roomier ticket layout; complete text is never clipped."
             ) from exc
 
     @staticmethod
     def _draw_overlay_paragraph(canvas, text, style, x, y, width, height, overflow_policy, *, fixed_leading=False, enforce_minimum=False):
+        if enforce_minimum and overflow_policy == "SHRINK":
+            original_size, original_leading = style.fontSize, style.leading
+            def build(size):
+                fitted = style.clone(f"{style.name}-fit-{size}")
+                fitted.fontSize = size
+                fitted.leading = original_leading * size / original_size if fixed_leading else size + 2
+                return Paragraph(text, fitted)
+            paragraph, required_height = ConfigurableDocumentRenderer._fit_overlay_flowable(build, original_size, width, height)
+            paragraph.drawOn(canvas, x, y + height - required_height)
+            return
         paragraph = Paragraph(text, style)
         _, required_height = paragraph.wrap(width, height)
         if required_height > height and overflow_policy == "SHRINK":
@@ -624,6 +635,45 @@ class ConfigurableDocumentRenderer:
             raise ValueError("Absolute overlay content exceeds its configured rectangle.")
         paragraph.drawOn(canvas, x, y + height - required_height)
 
+    @staticmethod
+    def _fit_overlay_flowable(build, initial_size, width, height):
+        """Keep fitting text unchanged; otherwise choose the largest fitting tenth-point size."""
+        if width <= 0 or height <= 0:
+            raise ValueError("The text frame has no available area.")
+        def measure(size):
+            flowable = build(size)
+            used_width, used_height = flowable.wrap(width, height)
+            if isinstance(flowable, Paragraph):
+                used_width = max(flowable.getActualLineWidths0(), default=0)
+            fits = used_width <= width + .001 and used_height <= height + .001
+            if isinstance(flowable, Table):
+                # Table.wrap checks its outer rectangle; also check each cell's
+                # text against its actual column width after fixed cell padding.
+                for row, cell_styles in zip(flowable._cellvalues, flowable._cellStyles):
+                    for cell, cell_style, column_width in zip(row, cell_styles, flowable._colWidths):
+                        available = column_width - cell_style.leftPadding - cell_style.rightPadding
+                        for item in cell if isinstance(cell, (tuple, list)) else (cell,):
+                            if isinstance(item, Paragraph):
+                                fits = fits and available > 0 and max(item.getActualLineWidths0(), default=0) <= available + .001
+            return flowable, used_height, fits
+        original, used_height, fits = measure(initial_size)
+        if fits:
+            return original, used_height
+        smallest, used_height, fits = measure(6)
+        if not fits:
+            raise ValueError("Complete text cannot fit at the 6 pt minimum.")
+        best = (smallest, used_height)
+        low, high = 61, int(initial_size * 10)
+        while low <= high:
+            middle = (low + high) // 2
+            candidate, used_height, fits = measure(middle / 10)
+            if fits:
+                best = (candidate, used_height)
+                low = middle + 1
+            else:
+                high = middle - 1
+        return best
+
     @classmethod
     def _draw_overlay_table(cls, canvas, block, section, styles, layout, x, y, width, height):
         if block.table_columns:
@@ -636,22 +686,34 @@ class ConfigurableDocumentRenderer:
             rows, widths = section.rows, None
         base_style = styles["BodyText"].clone(f"overlay-table-{block.x_mm}-{block.y_mm}")
         base_style.fontSize = block.font_size_pt; base_style.leading = block.font_size_pt + 2
-        rendered = []
-        for row_index, row in enumerate(rows):
-            rendered_row = []
-            for column_index, cell in enumerate(row):
-                config = block.table_columns[column_index] if block.table_columns and row_index else block
-                value, cell_style = cls._display_value(cell, config, base_style)
-                rendered_row.append(Paragraph(escape(value), cell_style))
-            rendered.append(rendered_row)
-        table = Table(rendered, colWidths=widths, repeatRows=1 if block.repeat_header else 0)
-        commands = list(cls._table_style(True).getCommands())
-        for column_index, column in enumerate(block.table_columns):
-            commands.append(("ALIGN", (column_index, 0), (column_index, -1), column.align))
-        table.setStyle(TableStyle(commands))
-        required_width, required_height = table.wrap(width, height)
-        if required_width > width or required_height > height:
-            raise ValueError("Absolute overlay table exceeds its configured rectangle.")
+        def build(size):
+            candidate = base_style.clone(f"{base_style.name}-fit-{size}")
+            candidate.fontSize = size; candidate.leading = size + 2
+            rendered = []
+            for row_index, row in enumerate(rows):
+                rendered_row = []
+                for column_index, cell in enumerate(row):
+                    config = block.table_columns[column_index] if block.table_columns and row_index else block
+                    value, cell_style = cls._display_value(cell, config, candidate, fit_to_rectangle=layout.schema_version >= 4)
+                    rendered_row.append(Paragraph(escape(value), cell_style))
+                rendered.append(rendered_row)
+            table = Table(rendered, colWidths=widths, repeatRows=1 if block.repeat_header else 0)
+            commands = list(cls._table_style(True).getCommands())
+            for column_index, column in enumerate(block.table_columns):
+                commands.append(("ALIGN", (column_index, 0), (column_index, -1), column.align))
+            table.setStyle(TableStyle(commands))
+            return table
+        try:
+            if layout.schema_version >= 4 and block.overflow_policy == "SHRINK":
+                table, required_height = cls._fit_overlay_flowable(build, block.font_size_pt, width, height)
+            else:
+                table = build(block.font_size_pt)
+                required_width, required_height = table.wrap(width, height)
+                if required_width > width or required_height > height:
+                    raise ValueError("Absolute overlay table exceeds its configured rectangle.")
+        except ValueError as exc:
+            raise ValueError(f"Overlay block '{block.binding}' exceeds its configured rectangle at "
+                f"({block.x_mm}, {block.y_mm}) mm. Enlarge the table frame; complete rows are never omitted.") from exc
         table.drawOn(canvas, x, y + height - required_height)
 
     @classmethod
@@ -780,7 +842,7 @@ class ConfigurableDocumentRenderer:
         return value != condition.value
 
     @staticmethod
-    def _display_value(raw_value, config, base_style):
+    def _display_value(raw_value, config, base_style, *, fit_to_rectangle=False):
         value = str(raw_value)
         value_format = config.value_format
         if value_format == "DEFAULT":
@@ -821,7 +883,7 @@ class ConfigurableDocumentRenderer:
         if config.overflow_policy == "ERROR" and len(value) > maximum:
             raise ValueError(f"Formatted value exceeds the {maximum}-character overflow limit.")
         style = base_style
-        if config.overflow_policy == "SHRINK" and len(value) > maximum:
+        if config.overflow_policy == "SHRINK" and len(value) > maximum and not fit_to_rectangle:
             style = base_style.clone(f"{base_style.name}-shrink-{maximum}")
             style.fontSize = max(6, base_style.fontSize * maximum / len(value))
             style.leading = style.fontSize + 2

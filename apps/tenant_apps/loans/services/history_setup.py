@@ -88,8 +88,13 @@ def preview_history_setup(*, workspace_id, actor, revision_id, series_id, produc
                           source_namespace, source_loan_id, source_loan_number, source_license_number,
                           disbursed_on, tenure_months, calculation_contract_version, operational_grace_days,
                           source_release_id="", source_release_number="", legacy_license_evidence=None,
-                          local_loan_number=None):
+                          local_loan_number=None, source_product=None):
     require_history_setup_access(workspace_id, actor)
+    from .recorded_numbers import identity
+    recorded_numbers = PawnLoan.objects.filter(workspace_id=workspace_id,
+        policy_snapshot__basis="RECORDED_CONTRACT").values_list("loan_number", flat=True)
+    if identity(source_loan_number) in {identity(value) for value in recorded_numbers}:
+        raise HistorySetupError("This original number already belongs to admitted paper history. Reconcile source identity before import.")
     try:
         namespace = uuid.UUID(str(source_namespace))
     except (ValueError, TypeError, AttributeError) as exc:
@@ -156,10 +161,15 @@ def preview_history_setup(*, workspace_id, actor, revision_id, series_id, produc
             code="LICENCE_MAPPING",
         )
     expected = ("FLEXIBLE_PARTIAL_PAYMENT", "NONE", "FLEXIBLE", "REDUCE_PRINCIPAL")
+    if source_product is not None:
+        from .history_contract import PRODUCT_FIELDS, SUPPORTED_PRODUCTS
+        expected = tuple(source_product.get(key) for key in PRODUCT_FIELDS)
+        if expected not in SUPPORTED_PRODUCTS:
+            raise HistorySetupError("This source product is outside the supported history profile.")
     actual = (product.repayment_structure, product.amortisation_method, product.payment_frequency, product.extra_payment_rule)
     if actual != expected or product.status not in {"ACTIVE", "RETIRED"}:
         raise HistorySetupError(
-            "Select an active or retired flexible partial-payment product version with no amortisation and principal reduction.",
+            "Select an active or retired product version matching the source repayment contract.",
             category=OPERATIONAL_READINESS,
             code="PRODUCT_SUPPORT",
         )

@@ -304,7 +304,7 @@ class PrecisionOverlayTests(SimpleTestCase):
             for page in pdf:
                 self.assertIn("TEST-00019", page.get_text())
         self.assertEqual(result.asset_hashes, ())
-        self.assertEqual(result.renderer_version, "layout-reportlab-profile-v4")
+        self.assertEqual(result.renderer_version, "layout-reportlab-profile-v4-fit2")
 
     def test_value_only_and_literal_custom_label(self):
         block = next(b for b in self.definition["blocks"] if b["binding"] == "loan.number")

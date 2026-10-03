@@ -1,11 +1,16 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-26
+updated: 2026-10-02
 tags: [staff-guide, loans, rates]
 ---
 
 # Earlier payouts and daily prices
+
+The [accepted unified-recording design](unified-loan-recording.md) will extend
+ordinary Loans to supported mixed paper histories without requiring original
+digital pricing/policy evidence. Implementation is pending; this guide describes
+the existing, narrower earlier-payout workflow and its current checks.
 
 ## Money was paid yesterday but the loan is a draft
 

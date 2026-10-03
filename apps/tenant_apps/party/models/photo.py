@@ -2,10 +2,12 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django_cleanup import cleanup
 from apps.tenancy.models import WorkspaceOwnedModel
 from .party import party_profile_photo_upload_to
 
 
+@cleanup.ignore
 class PartyPhoto(WorkspaceOwnedModel):
     party = models.ForeignKey("party.Party", on_delete=models.CASCADE, related_name="photos")
     file = models.ImageField(upload_to=party_profile_photo_upload_to)

@@ -1,0 +1,10 @@
+{% extends "base_tenant.html" %}
+{% block title %}Review paper transactions together{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1000px"><h1 class="h3">Review paper transactions together</h1>
+<p>Check each selected loan against the paper book through the chosen date. Rokkad retains a separate confirmation for each loan. This does not certify unentered paper loans.</p>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.field.widget.input_type == 'checkbox' %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
+<button class="btn btn-primary" name="action" value="preview">Review selected loans</button>
+{% if review %}<section class="mt-4"><h2 class="h5">Selected loan activity</h2>{% for loan in review %}<div class="border rounded p-3 mb-3"><h3 class="h6">{{ loan.number }} · {{ loan.state }}</h3><p>Checked through {{ loan.through_date }}. {% if loan.confirmed_complete %}All transactions entered{% else %}Missing or unresolved activity{% endif %}. Reference {{ loan.source_reference }}.</p><ul>{% for event in loan.events %}<li>{{ event.effective_date }}: {{ event.event_kind }}; principal {{ event.values.principal|default:"0" }}, interest {{ event.values.interest|default:"0" }}, fees {{ event.values.fees|default:"0" }}{% if event.reference %}; {{ event.reference }}{% endif %} <span class="small text-muted">Entered {{ event.recorded_at }}</span></li>{% endfor %}</ul></div>{% endfor %}<button class="btn btn-success" name="action" value="confirm">Confirm all selected reviews</button></section>{% endif %}
+</form></div>
+{% endblock %}

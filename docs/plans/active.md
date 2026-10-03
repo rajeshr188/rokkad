@@ -1,11 +1,158 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-10-03
 tags: [plans, active]
 ---
 
 # Active work
+
+**Unified loan recording (owner decision, 2 October):** the owner selected one
+ordinary Loans workflow for actions performed now and recorded afterward, including
+Lakshmi's mixed backlog and total-only receipts. The
+[accepted workflow](../flows/unified-loan-recording.md) and
+[delivery plan](unified-loan-recording.md) cover supported history admission,
+conditional archive-to-closed-loan admission and current monitoring. Implementation
+is authorized. Bounded never-entered history admission, corrections, single-closed-loan
+archive admission, transaction completeness and monitoring/reminder integration are
+verified locally. The owner's 3 October clarification makes independent paper loans
+the primary entry workflow; UR-07 adds separate closure, deductions, recorded copies
+and routine subsequent renewal. See the [local checkpoint](../implementation/unified-loan-recording.md).
+UR-08/09/10 locally add backlog usability, supported original/successor/closing
+corrections and imported-opening renewal. UR-11/12 add original-identity native
+recovery and current recorded-origin auction, with 125 integration checks passed.
+Actual additional business profiles, real-record acceptance and the selected
+deployment target remain pending; cross-Workspace recorded-origin remapping is
+outside the native recovery profile. See the [remaining programme](unified-loan-recording.md).
+It does not replace the separately tracked Khata work below.
+
+**Khata improvements (owner instruction, 2 October):** deliver the
+[review recommendations in sequence](future-work.md#improvement-delivery-sequence).
+The owner stopped further enhancement work on 3 October and asked to retain the
+remaining recommendations in Future work. The local scope below is delivered;
+real-use acceptance remains pending. Do not start the deferred correction/reminder
+or further usability work without a new selection. The owner requested one proper
+commit of Khata and paper-first recording; use the
+[joint release guide](../flows/khata-and-paper-first-release.md).
+The first slice is implemented/verified locally: correction scope/support guidance,
+exact-source review entry and linked blockers, retaining existing compensating commands.
+Additional financial correction kinds remain design work within that phase.
+Pending-return/reduction/photo selection is also verified locally (406 regressions
+and read-only browser checks). Measured read pruning/custody pagination is
+delivered and verified locally (412 regressions and browser checks); collection /
+event follow-up is delivered/verified locally (424 regressions and browser checks).
+Cash/custody operational reports are delivered/verified locally (435 regressions,
+23 existing archive checks and actual browser checks); see the
+[report checkpoint](../implementation/khata-operational-reports.md). Action prerequisites
+and draft experience are delivered/verified locally (469 regressions and browser
+checks); see the [guidance checkpoint](../implementation/khata-action-guidance.md).
+Series pause/resume and permanent retirement are delivered/verified locally
+(480 regressions and browser checks); see the [series checkpoint](../implementation/khata-series-status.md).
+Bounded selected label batches are also delivered/verified locally (489 regressions
+and browser/PDF checks); see the [label checkpoint](../implementation/khata-label-batches.md).
+Presentation and saved-document navigation are delivered/verified locally (498
+regressions and desktop/mobile/no-JavaScript checks); see the
+[current navigation checkpoint](../implementation/khata-document-navigation.md).
+The nine ordered phases have their local delivery checkpoints; broader correction
+outcomes remain design work and real operator/release acceptance remains open.
+Optional reminders retain a separate
+intent/delivery design gate. Production/operator acceptance
+remains separate; no new first-version economics are implied.
+
+**Khata local delivery (owner instruction, 1 October):** foundation/calculator,
+opening/custody, interest receipts, formal revisions/reductions, exchanges/returns,
+settlement and bounded corrections are implemented. Borrower/dashboard/portal
+summary integration, read-only register/detail and preserved private documents are
+also delivered; see the [integration checkpoint](../implementation/khata-integration.md)
+and [delivery sequence](khata-delivery-design.md). Supported command forms, private
+photos and exact-identity native recovery are also delivered locally; see the
+[operator/recovery checkpoint](../implementation/khata-operator-and-recovery.md).
+Collateral labels and the read-only software assessment are delivered locally
+(2 October). See the [release review](../implementation/khata-release-review-20261002.md).
+Statutory/default operations remain explicitly unsupported; bounded-correction
+acceptance, remote CI, hardware printing/scanning, hosted candidate recovery
+and pilot deployment remain pending. Production is not enabled.
+The owner selected a new test workspace and retained 100 x 60 mm labels.
+The [test candidate checkpoint](../implementation/khata-test-candidate-20261002.md)
+adds local source freezing and disposable full database/media recovery rehearsal;
+[operator acceptance](../flows/khata-test-pilot-acceptance.md), remote CI
+and hosted pilot deployment remain separate gates. The subsequent
+[image/local pilot checkpoint](../implementation/khata-image-pilot-20261002.md)
+verifies the frozen Linux image, 372 regressions, actual owner/viewer HTTP and
+persistent local test storage. The localhost review is ready; production is unchanged.
+The owner's requested [user/developer workflow](../flows/khata-account-workflow.md)
+is documented. [Combined receiving/photos and searchable collateral selection](khata-collateral-usability.md)
+are implemented locally following the owner's next instruction; see the
+[usability checkpoint](../implementation/khata-collateral-usability.md) for verification and runtime identity.
+The owner-requested camera capture, detail thumbnails and separate agreed-limit /
+actual-principal columns are also implemented and verified in the local pilot;
+physical camera/phone acceptance remains open. Source-history pagination, date
+sorting, type/date/item/reference filters and cross-page audit links are also
+verified locally; see the same current checkpoint.
+
+**Current priority — import confidence and portability (owner decision, 30 September):**
+pause further statutory-form work and first verify the final legacy import across
+JCL, JSK and Lakshmi. Follow the single
+[audit-first delivery plan](portability-confidence-and-completion.md). The immediate
+deliverable, the [read-only confidence report](../implementation/import-confidence-audit-20260930.md),
+is complete and accounts for subsequent real transactions. The bounded repairs are
+now deployed: JCL numeric continuation, 6,411 retained quantities, source-reader
+corrections and future Party-change attribution. Eight older mutable changes remain
+preserved with incomplete attribution. The first bounded guided outstanding-register
+workflow is implemented; see [its guide](../flows/guided-outstanding-register-import.md)
+and Status for the release checkpoint. Next obtain owner acceptance of this profile
+and prioritize additional source/rule coverage before completing export/restore. No blanket source attestation,
+live re-import, or new Form E batch is authorized merely to clear review warnings.
+
+**FW-009 discovery resumed on 30 September:** compare Digio, Surepass and Cashfree
+for an optional-guidance identity/name-address pilot at J Champalal Pawn Brokers.
+See the [comparison and enquiry](borrower-identity-feasibility.md). Provider selection,
+registration, paid commitments and implementation remain pending written eligibility,
+hosting/retention terms and quotes. Following explicit approval of the exact messages,
+all three enquiries were sent separately from admin@rokkad.com on 30 September,
+requesting replies at support@rokkad.com. Provider answers remain pending.
+
+**FW-013 further work paused on 30 September pending import confidence:** the owner wants scenario-based statutory
+forms and a complete notice-service workflow, prioritising auction readiness.
+The deployed first increment implements manual auction postal evidence and readiness
+independently of email/WhatsApp reminders. Follow the
+[delivery plan and remaining form inventory](statutory-forms-and-notices.md).
+The owner accepted catalogue deployment with cosmetic refinements deferred; no
+notice has been sent by this work. The deployed Form E increment now includes both A4
+layouts, source review, immutable series books, permanent full/partial print batches,
+exact reprints and the daily annotation aid. JCL C's landscape book E-1 is opened
+from 01/01/2026 at page 1 after owner sample acceptance; its first permanent batch
+still needs source review. Other branch openings, reviewed Tamil headings and unsupported historical/renewal coverage
+remain outstanding. See [Form E evidence mapping](../implementation/form-e-pledge-book.md)
+and [staff guide](../flows/form-e-pledge-book.md).
+The selected follow-up adds [auctioneer handover lists](../flows/auctioneer-handover.md):
+fixed licence/cohort, saved reviewed versions, release/repayment/custody reconciliation,
+print/CSV and unchanged per-loan statutory gates. See Status for rollout evidence.
+
+**FW-015 core delivery is complete:** deployed inventory/Workspace usage, retention
+protection and a tested offline operator cleanup/recovery command. Follow the
+[rollout](storage-inventory-rollout.md) and [cleanup runbook](../implementation/reviewed-media-cleanup.md).
+The command is available in a separate operator image; production web is unchanged.
+No real production orphan batch has been selected: the latest candidate list is empty.
+Storage pricing, quotas and billing are explicitly deferred in FW-015, alongside
+online cleanup, a web approval queue, scheduled deletion and archive expiry.
+The follow-up scope/removal review found a committed-file retention gap. Its
+correction and the bounded diagnostic cleanup/rehearsal retirement sequence are
+tracked in the [recovery plan](recoverable-media-cleanup.md). Both historical
+rehearsals are now retired after verified database/media/configuration recovery and
+fresh source checks. Their five private recovery archives remain with no automatic
+expiry. This was whole-environment retirement; actual production cleanup requires
+its own reviewed batch and maintenance window. See [retirement evidence](../implementation/rehearsal-retirement-20260930.md)
+and [recovery limits](../implementation/rehearsal-recovery-20260930.md).
+
+The owner selected **FW-010's platform console and guided suspend/restore** on
+29 September. The console provides oversight, directory/detail, invitation evidence,
+existing management links and reasoned lifecycle confirmation with canonical
+restoration access previews. The increment is deployed;
+current validation/deployment evidence is recorded in [Status](../STATUS.md).
+The [operator guide](../flows/platform-console.md) documents daily use and scope.
+Broader delegated roles, ownership recovery and deletion require separate selection.
+Preserve current admin identity, RLS, public trials and account/invitation mail.
 
 The owner selected [Workspace subscription monetization](subscription-monetization-rollout.md)
 (FW-019) on 2026-09-26. The unpublished working offer is INR 1,499/month or

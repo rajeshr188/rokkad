@@ -13,6 +13,8 @@ from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.selectors.balances import calculate_pawn_loan_balance
 from .history_contract import encode, validate, decimal, money, HistoryError, MANIFEST, POLICY, digest
 from .history_setup import require_history_setup_access
+from .history_contract import PRODUCT_FIELDS, SUPPORTED_PRODUCTS
+from .history_accrual import stored_accrual
 
 
 def _amounts(balance):
@@ -35,9 +37,11 @@ def _export_history(*, workspace_id, actor, loan_id):
     resolve_workspace_access(actor=actor,workspace=workspace).require("data.export")
     loan=m.PawnLoan.objects.select_for_update(of=("self",)).select_related("product_version","license_revision","policy_snapshot","disbursal_snapshot__approval_snapshot").get(workspace_id=workspace_id,pk=loan_id)
     if loan.state not in {"ACTIVE","CLOSED"}: raise HistoryError("Only active or fully released histories are supported.")
+    if loan.policy_snapshot is not None and loan.policy_snapshot.basis == "RECORDED_CONTRACT":
+        raise HistoryError("Paper-origin contract export requires a recorded-origination profile; the approval-based history export cannot represent it. Use Loans recovery backup for the original-identity archive, with matching database/media backups for its prerequisites.")
     product=loan.product_version
-    if product.repayment_structure!="FLEXIBLE_PARTIAL_PAYMENT" or product.amortisation_method!="NONE" or product.payment_frequency!="FLEXIBLE" or product.extra_payment_rule!="REDUCE_PRINCIPAL":
-        raise HistoryError("This product structure is outside loan-history/1.")
+    if tuple(getattr(product, key) for key in PRODUCT_FIELDS) not in SUPPORTED_PRODUCTS:
+        raise HistoryError("This product structure is outside the supported loan-history profiles.")
     # Lock existing mutable collateral and the aggregate before taking its materialized snapshot.
     items=list(loan.collateral_items.select_for_update().order_by("pk"))
     events=list(loan.loan_events.select_for_update().order_by("effective_date","pk"))
@@ -104,7 +108,8 @@ def _export_history(*, workspace_id, actor, loan_id):
                 deducted_fees=decimal(snapshot.deducted_fees),net_cash=decimal(snapshot.net_disbursed)),
             schedule=dict(maturity=schedule.maturity_date.isoformat(),principal=decimal(schedule.principal),interest=decimal(schedule.contractual_interest),
                 obligations=[dict(sequence=o.sequence,due=o.due_date.isoformat(),principal=decimal(o.principal_due),interest=decimal(o.interest_due)) for o in schedule.obligations.order_by("sequence")]),events=[],cutover={})
-        document=dict(manifest=dict(profile="loan-history/1",namespace=str(namespace.public_id),as_of=timezone.localdate().isoformat(),coverage="PARTIAL",
+        source["product"] = {key: getattr(product, key) for key in PRODUCT_FIELDS}
+        document=dict(manifest=dict(profile="loan-history/2",namespace=str(namespace.public_id),as_of=timezone.localdate().isoformat(),coverage="PARTIAL",
             exclusions=MANIFEST["properties"]["exclusions"]["const"]),loan=source)
     if loan.loan_date.isoformat()!=source["disbursed_on"] or loan.tenure_months!=source["tenure_months"] or money(source["disbursal"]["principal"])!=loan.principal_amount:
         raise HistoryError("Loan terms changed from frozen source evidence.")
@@ -114,7 +119,12 @@ def _export_history(*, workspace_id, actor, loan_id):
         if item.description!=row["description"] or item.metal!=row["metal"] or any(money(row[k])!=getattr(item,f) for k,f in (("gross_weight","gross_weight"),("net_weight","net_weight"),("purity","purity_percentage"),("principal","allocated_principal"),("monthly_rate","monthly_interest_rate"))):
             raise HistoryError("Collateral changed from frozen history.")
     accruals=list(loan.interest_accruals.order_by("period_number"))
-    if any(a.loan_event_id is None for a in accruals): raise HistoryError("This history contains accrual evidence without a source event; it needs a wider export profile.")
+    v2 = document["manifest"]["profile"] == "loan-history/2"
+    if not v2 and any(a.loan_event_id is None for a in accruals):
+        document["manifest"]["profile"] = "loan-history/2"
+        source["product"] = {key: getattr(product, key) for key in PRODUCT_FIELDS}
+        source["policy"].setdefault("minimum_first_month", False)
+        v2 = True
     accrual_map={a.loan_event_id:a for a in accruals}
     prefix=[]; output=[]
     for event in events:
@@ -124,6 +134,7 @@ def _export_history(*, workspace_id, actor, loan_id):
         balance=calculate_pawn_loan_balance(loan,events=prefix,collateral_items=items,policy_snapshot=loan.policy_snapshot,as_of_date=event.effective_date,pending_delivery_blocks=False)
         row=dict(id=key,kind=event.event_kind,date=event.effective_date.isoformat(),actor=event.payload.get("historical_source",{}).get("actor") or source_actor(event.created_by_id),
             principal=decimal(values.get("principal",0)),interest=decimal(values.get("interest",0)),fees=decimal(values.get("fees",0)),balance=_amounts(balance),allocations=[],accrual=None,release=None)
+        if v2: row["event_recorded"] = True
         if event.event_kind in {"REPAYMENT","RELEASE_RECEIPT"}:
             lines=(event.repayment_allocation_lines if hasattr(event,"repayment_allocation_lines") else m.PawnLoanRepaymentAllocationLine.objects.filter(loan_event=event)) if event.event_kind=="REPAYMENT" else m.PawnLoanPrincipalClosingLine.objects.filter(loan_event=event)
             row["allocations"]=[dict(item=item_ids[line.collateral_item_id],before=decimal(line.balance_before),principal=decimal(line.principal_applied if event.event_kind=="REPAYMENT" else line.principal_settled),after=decimal(line.balance_after)) for line in lines.order_by("allocation_order")]
@@ -131,6 +142,7 @@ def _export_history(*, workspace_id, actor, loan_id):
             a=accrual_map.get(event.pk)
             if a is None: raise HistoryError("Accrual event has no period evidence.")
             row["accrual"]=dict(period=a.period_number,start=a.period_start.isoformat(),end=a.period_end.isoformat(),fraction=decimal(a.period_fraction),base=decimal(a.calculation_base),unrounded=decimal(a.unrounded_interest),recognized=decimal(a.recognized_interest))
+            if v2: row["accrual"] = stored_accrual(a, loan.policy_snapshot, item_ids)
         if event.event_kind=="RELEASE_RECEIPT":
             release=m.PawnLoanRelease.objects.get(loan_event=event)
             release_items=list(release.items.order_by("collateral_item_id"))
@@ -146,9 +158,34 @@ def _export_history(*, workspace_id, actor, loan_id):
                     valuations.append(dict(item=item_ids[item.collateral_item_id],value=decimal(value)))
                 row["release"]=dict(number=release.release_number,returned_at=timezone.localtime(release_items[0].returned_at).isoformat(),collector=None,valuation=valuations)
         output.append(row)
+    if v2:
+        imported_accrual_ids = {pk:key for key,pk in origin.references.get("accruals", {}).items()} if origin else {}
+        event_by_key = {event_ids.get(e.pk, identity("event", e.pk)): e for e in events}
+        original_order = {key: index for index, key in enumerate(original_events)}
+        # Preserve source order on replay; otherwise use recorded timestamps to
+        # place event-free evidence between same-day payments and release.
+        for a in accruals:
+            if a.loan_event_id is not None: continue
+            key = imported_accrual_ids.get(a.pk, identity("accrual", a.pk))
+            original = original_events.get(key)
+            def follows(row):
+                if row["kind"] == "DISBURSAL": return False
+                if row["date"] != a.period_end.isoformat(): return row["date"] > a.period_end.isoformat()
+                if original and row["id"] in original_order:
+                    return original_order[row["id"]] > original_order[key]
+                event = event_by_key.get(row["id"])
+                return event is not None and event.created_at >= a.finalized_at
+            index = next((i for i,row in enumerate(output) if follows(row)), len(output))
+            prior_events = [event_by_key[row["id"]] for row in output[:index] if row["id"] in event_by_key]
+            balance = calculate_pawn_loan_balance(loan, events=prior_events, collateral_items=items,
+                policy_snapshot=loan.policy_snapshot, as_of_date=a.period_end, pending_delivery_blocks=False)
+            output.insert(index, dict(id=key, kind="INTEREST_ACCRUAL", date=a.period_end.isoformat(),
+                actor=original["actor"] if original else source_actor(a.finalized_by_id),
+                principal="0", interest="0", fees="0", balance=_amounts(balance), allocations=[],
+                accrual=stored_accrual(a, loan.policy_snapshot, item_ids), release=None, event_recorded=False))
     source["events"]=output; source["state"]=loan.state
     # Preserve the original cutover for an unchanged imported graph. New native events extend it.
-    if not origin or set(event_ids)!=set(e.pk for e in events):
+    if not origin or set(original_events)!=set(row["id"] for row in output):
         document["manifest"]["as_of"]=max(timezone.localdate(),events[-1].effective_date).isoformat()
     cutoff=date.fromisoformat(document["manifest"]["as_of"])
     source["cutover"]=_amounts(calculate_pawn_loan_balance(loan,events=events,collateral_items=items,policy_snapshot=loan.policy_snapshot,as_of_date=cutoff,pending_delivery_blocks=False))
@@ -159,5 +196,5 @@ def _export_history(*, workspace_id, actor, loan_id):
     validate(document)
     content = encode(document)
     AuditLog.log("DATA_EXPORT", company=workspace, user=actor, description="Exported partial canonical loan history.",
-        data={"loan":loan.pk,"profile":"loan-history/1","sha256":digest(document)})
+        data={"loan":loan.pk,"profile":document["manifest"]["profile"],"sha256":digest(document)})
     return content

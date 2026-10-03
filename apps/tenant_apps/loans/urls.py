@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.tenant_apps.loans import views, browse
 from apps.tenant_apps.loans.web import workflow, release_batches, paper_closures, journey
+from apps.tenant_apps.loans.web import paper_backlog
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 from apps.tenant_apps.loans.web.rate_readiness import pawn_valuation_readiness
@@ -11,17 +12,70 @@ from apps.tenant_apps.loans.web.borrower_search import loan_borrower_autocomplet
 from apps.tenant_apps.loans.web.valuation_review import review_updated_valuation
 from apps.tenant_apps.loans.web.origination import origination_settings, borrower_outstanding
 from apps.tenant_apps.loans.web.counter_work import overdue_payments
+from apps.tenant_apps.loans.web import statutory_notices
+from apps.tenant_apps.loans.web.loan_collateral_label import loan_collateral_label
+from apps.tenant_apps.loans.web import pledge_book
+from apps.tenant_apps.loans.web import pledge_books
+from apps.tenant_apps.loans.web import auctioneer_handover
+from apps.tenant_apps.loans.web.interest_help import interest_policy_help
+
+from apps.tenant_apps.loans.web import khata_views
+from apps.tenant_apps.loans.web import khata_workflows
+from apps.tenant_apps.loans.web import khata_labels
+from apps.tenant_apps.loans.web import khata_items
+from apps.tenant_apps.loans.web import khata_draft
+from apps.tenant_apps.loans.web import khata_series
+from apps.tenant_apps.loans.web import khata_reports, recorded_corrections, recorded_batch_corrections
+from apps.tenant_apps.loans.web import recorded_servicing
+from apps.tenant_apps.loans.web import transaction_reviews
 
 app_name = "loans"
 
 urlpatterns = [
+    path("khata/", khata_views.index, name="khata_list"),
+    path("khata/collections/", khata_views.collections, name="khata_collections"),
+    path("khata/reports/", khata_reports.reports, name="khata_reports"),
+    path("khata/draft-estimate/", khata_draft.estimate, name="khata_draft_estimate"),
+    path("khata/new/", khata_workflows.operate, name="khata_new"),
+    path("khata/setup/", khata_workflows.setup, name="khata_setup"),
+    path("khata/setup/series/<int:pk>/status/", khata_series.status, name="khata_series_status"),
+    path("khata/export/", khata_workflows.export, name="khata_export"),
+    path("khata/readiness/", khata_labels.readiness, name="khata_readiness"),
+    path("khata/<int:pk>/labels/", khata_labels.labels, name="khata_labels"),
+    path("khata/<int:pk>/collateral/", khata_items.browse, name="khata_collateral"),
+    path("khata/items/<uuid:public_id>/scan/", khata_labels.item_scan, name="khata_item_scan"),
+    path("khata/accounts/<uuid:public_id>/scan/", khata_labels.account_scan, name="khata_account_scan"),
+    path("khata/<int:pk>/actions/<slug:action>/", khata_workflows.operate, name="khata_action"),
+    path("khata/<int:pk>/photos/<int:photo_pk>/", khata_workflows.photo, name="khata_photo"),
+    path("khata/<int:pk>/", khata_views.detail, name="khata_detail"),
+    path("khata/<int:pk>/events/<int:operation_pk>/", khata_views.event, name="khata_event"),
+    path("khata/<int:pk>/documents/<int:issue_pk>/", khata_views.download, name="khata_document"),
+    path("setup/economics/help/", interest_policy_help, name="interest_policy_help"),
+    path('statutory/auctioneer-lists/', auctioneer_handover.index, name='auctioneer_handovers'),
+    path('statutory/auctioneer-lists/<int:handover_pk>/', auctioneer_handover.detail, name='auctioneer_handover_detail'),
+    path('statutory/auctioneer-lists/<int:handover_pk>/versions/<int:revision_pk>/', auctioneer_handover.export, name='auctioneer_handover_export'),
+    path('statutory/pledge-book/', pledge_book.preview, name='pledge_book_preview'),
+    path('statutory/books/', pledge_books.books, name='pledge_books'),
+    path('statutory/books/<int:book_pk>/', pledge_books.detail, name='pledge_book_detail'),
+    path('statutory/books/<int:book_pk>/review/<int:loan_pk>/', pledge_books.review, name='pledge_book_review'),
+    path('statutory/books/<int:book_pk>/batch/<int:batch_pk>.pdf', pledge_books.download, name='pledge_book_download'),
+    path('statutory/books/<int:book_pk>/activity/', pledge_books.activity, name='pledge_book_activity'),
+    path('statutory/', statutory_notices.guide, name='statutory_guide'),
+    path('internal/auctions/<int:auction_pk>/statutory/', statutory_notices.detail, name='statutory_auction_notice'),
+    path('internal/auctions/<int:auction_pk>/statutory/catalogue.pdf', statutory_notices.download, name='statutory_auction_catalogue'),
+    path('internal/auctions/<int:auction_pk>/statutory/evidence/<int:evidence_pk>/', statutory_notices.download, name='statutory_auction_evidence'),
     path("overdue-payments/", overdue_payments, name="overdue_payments"),
     path("setup/loan-entry/", origination_settings, name="origination_settings"),
     path("internal/borrower-outstanding/", borrower_outstanding, name="borrower_outstanding"),
     path("internal/<int:pk>/review-updated-valuation/", review_updated_valuation, name="pawn_loan_review_updated_valuation"),
     path("internal/<int:pk>/record-earlier-payout/", workflow.pawn_loan_record_earlier_payout, name="pawn_loan_record_earlier_payout"),
+    path("internal/<int:pk>/correct-paper-history/", recorded_corrections.correction, name="pawn_loan_correct_paper_history"),
+    path("internal/<int:pk>/review-transactions/", transaction_reviews.review_transactions, name="pawn_loan_review_transactions"),
     path("guide/", journey.guide, name="loan_journey_guide"),
     path("releases/paper/new/", paper_closures.create, name="paper_closure_create"),
+    path("paper-backlog/", paper_backlog.backlog, name="paper_backlog"),
+    path("paper-backlog/review/", paper_backlog.batch_review, name="paper_batch_review"),
+    path("recovery-backup/", paper_backlog.recovery_backup, name="pawn_recovery_backup"),
     path("releases/paper/guide/", paper_closures.guide, name="paper_closure_guide"),
     path("releases/paper/settings/", paper_closures.settings, name="paper_closure_settings"),
     path("releases/paper/<int:batch_pk>.csv", paper_closures.batch_csv, name="paper_closure_csv"),
@@ -33,6 +87,7 @@ urlpatterns = [
     path("releases/batch/search/", release_batches.search, name="release_batch_search"),
     path("releases/batch/", release_batches.history, name="release_batch_list"),
     path("releases/batch/<int:batch_pk>/", release_batches.detail, name="release_batch_detail"),
+    path("releases/batch/<int:batch_pk>/correct-history/", recorded_batch_corrections.correction, name="release_batch_correct_history"),
     path("internal/<int:pk>/collateral/<int:item_pk>/photos/<int:photo_pk>/delete/", pawn_collateral_photo_delete, name="pawn_collateral_photo_delete"),
     path("collateral/", browse.collateral_list, name="pawn_collateral_list"),
     path("releases/", browse.release_list, name="pawn_release_list"),
@@ -58,6 +113,7 @@ urlpatterns = [
     path("internal/<int:pk>/collateral/<int:item_pk>/photos/add/", views.pawn_collateral_photo_add, name="pawn_collateral_photo_add"),
     path("internal/<int:pk>/collateral/<int:item_pk>/photos/<int:photo_pk>/", views.pawn_collateral_photo_document, name="pawn_collateral_photo_document"),
     path("internal/<int:pk>/collateral/<int:item_pk>/label.pdf", views.pawn_collateral_label_pdf, name="pawn_collateral_label_pdf"),
+    path("internal/<int:pk>/collateral/label.pdf", loan_collateral_label, name="loan_collateral_label"),
     path("collateral/<uuid:public_id>/scan/", views.pawn_collateral_scan, name="pawn_collateral_scan"),
     path("internal/<int:pk>/collateral/<int:item_pk>/storage/", views.pawn_collateral_storage_transfer, name="pawn_collateral_storage_transfer"),
     path("storage/<uuid:public_id>/scan/", views.pawn_storage_location_scan, name="pawn_storage_location_scan"),
@@ -81,6 +137,10 @@ urlpatterns = [
     path("internal/auctions/<int:auction_pk>/notice.pdf", views.pawn_loan_auction_notice_pdf, name="pawn_loan_auction_notice_pdf"),
     path("internal/auctions/<int:auction_pk>/recovery.pdf", views.pawn_loan_auction_recovery_pdf, name="pawn_loan_auction_recovery_pdf"),
     path("internal/<int:pk>/renew/", views.pawn_loan_renew, name="pawn_loan_renew"),
+    path("internal/<int:pk>/record-paper-closure/", recorded_servicing.closure, name="pawn_loan_record_paper_closure"),
+    path("internal/<int:pk>/correct-paper-contract/", recorded_corrections.contract_correction, name="pawn_loan_correct_paper_contract"),
+    path("internal/<int:pk>/correct-paper-closing/", recorded_corrections.settlement_facts, name="pawn_loan_correct_paper_closing"),
+    path("internal/<int:pk>/confirm-paper-handover/", recorded_servicing.handover, name="pawn_loan_confirm_paper_handover"),
     path("internal/renewals/<int:renewal_pk>/reverse/", views.pawn_loan_renewal_reverse, name="pawn_loan_renewal_reverse"),
     path("internal/renewals/<int:renewal_pk>/memo.pdf", views.pawn_loan_renewal_pdf, name="pawn_loan_renewal_pdf"),
     path("internal/<int:pk>/transfer-setup/", views.pawn_loan_transfer_setup, name="pawn_loan_transfer_setup"),

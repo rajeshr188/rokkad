@@ -1,11 +1,17 @@
 ---
 status: accepted
 owner: loans
-updated: 2026-09-26
+updated: 2026-10-02
 tags: [loans, rates, origination, audit]
 ---
 
 # Earlier payout recording and explicit daily price confirmation
+
+**2 October design update:** [unified loan recording](2026-10-02-unified-loan-recording.md)
+accepts a broader future path for supported paper facts without requiring original
+digital origination evidence. That path is not implemented. The restrictions below
+describe the existing bounded workflow until its replacement is verified; daily
+price confirmation for real-time lending remains applicable.
 
 The owner approved a separate earlier-payout/correction workflow, followed by
 unchanged-price confirmation, and requested correct signed-in user attribution.

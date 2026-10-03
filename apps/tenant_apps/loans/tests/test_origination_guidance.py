@@ -13,6 +13,10 @@ from apps.tenant_apps.loans.web.origination import borrower_outstanding
     "OPTIONS": {"context_processors": ["django.template.context_processors.request"]}}])
 class OriginationGuidanceTests(SimpleTestCase):
     def setUp(self):
+        mock_khata = patch("apps.tenant_apps.loans.web.origination.portfolio_summary", return_value=dict(
+            active_count=0, unavailable=0, principal=Decimal(0), interest=Decimal(0)))
+        mock_khata.start()
+        self.addCleanup(mock_khata.stop)
         self.workspace = SimpleNamespace(pk=7, slug="alpha")
         self.access = SimpleNamespace(can=lambda name: True, require=lambda name: None)
 
@@ -29,7 +33,7 @@ class OriginationGuidanceTests(SimpleTestCase):
     @patch("apps.tenant_apps.loans.web.appraisal.get_latest_commodity_valuation_rate")
     def test_ltv_follows_entered_appraisal_scope_and_reports_excess(self, lookup, resolve, series, access):
         access.return_value = self.workspace, self.access
-        series.return_value = SimpleNamespace(license_id=9)
+        series.return_value = SimpleNamespace(pk=3, license_id=9)
         resolve.return_value = SimpleNamespace(maximum_ltv_ratio=Decimal("0.8"),
             valuation_method="LOWER_OF_CALCULATED_AND_APPRAISAL", currency_quantum=Decimal("0.01"))
         lookup.return_value = SimpleNamespace(status="FOUND", rate=SimpleNamespace(buying_rate=Decimal("10000"), effective_at=datetime(2026,9,28,tzinfo=timezone.utc)))
@@ -39,6 +43,7 @@ class OriginationGuidanceTests(SimpleTestCase):
         self.assertContains(response, "4,000")
         self.assertContains(response, "exceeds this limit")
         self.assertEqual(resolve.call_args.kwargs["license_id"], 9)
+        self.assertEqual(resolve.call_args.kwargs["series_id"], 3)
         self.assertEqual(resolve.call_args.kwargs["workspace_id"], 7)
         values.update(appraisal="10000", principal="5000")
         response = collateral_appraisal_suggestion(self.request(**values))

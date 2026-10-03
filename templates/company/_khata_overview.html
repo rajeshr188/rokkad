@@ -1,0 +1,12 @@
+{% load humanize %}
+{% with khata=business_overview.khata %}{% if khata.account_count %}
+<section class="card mb-4" aria-labelledby="khata-overview-title"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between gap-2"><h2 class="h5" id="khata-overview-title">Khata accounts <span class="badge text-bg-secondary">{{ khata.active_count }} active</span></h2><a href="{% url 'workspace_loans:khata_list' workspace.slug %}">View khata register</a></div>
+  {% if khata.unavailable %}<p class="text-warning" role="status">{{ khata.unavailable }} khata balance{{ khata.unavailable|pluralize }} need review. Complete khata money totals are unavailable.</p>{% else %}
+  <div class="row g-3 mt-1">
+    <div class="col-6 col-lg-3"><div class="small text-muted">Accrued unpaid interest</div><strong>INR {{ khata.interest|floatformat:2|intcomma }}</strong><div class="small text-muted">Includes interest not yet due and the opening minimum.</div></div>
+    <div class="col-6 col-lg-3"><a href="{% url 'workspace_loans:khata_list' workspace.slug %}?attention=due">Interest due</a><div><strong>INR {{ khata.due_interest|floatformat:2|intcomma }}</strong></div><a class="small" href="{% url 'workspace_loans:khata_list' workspace.slug %}?attention=overdue">Overdue: INR {{ khata.overdue_interest|floatformat:2|intcomma }}</a></div>
+    <div class="col-6 col-lg-3"><div class="small text-muted">Active agreed limits</div><strong>INR {{ khata.limit|floatformat:2|intcomma }}</strong><div class="small text-muted">Unused entitlement: INR {{ khata.unused|floatformat:2|intcomma }}. Neither is debt.</div></div>
+    <div class="col-6 col-lg-3"><a href="{% url 'workspace_loans:khata_list' workspace.slug %}?attention=returns">Collateral returns pending</a><div><strong>{{ khata.pending_returns }}</strong></div><div class="small text-muted">Includes financially settled accounts still holding collateral.</div></div>
+  </div>{% endif %}
+</div></section>{% endif %}{% endwith %}

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-10-03
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -10,8 +10,55 @@ related:
 
 # PawnLoan Financial Read Models
 
+**Current local completion slices (3 October):** original and recorded-successor
+term corrections compensate/replay canonical debt while retaining earlier policy,
+disbursal and opening-line revisions. Current settlement projections read active
+replacement events. Dated custody revisions explicitly supersede earlier facts;
+later handover is an actual appended movement and changes no settlement. Imported
+openings renew without inventing pre-cutover history; current successors still
+require current approval. Recorded-origin current auction uses agreed anniversary
+debt and complete transaction coverage, stops collection at recovery and resumes
+after coupled reversal. Native recovery retains those exact identities and reviews
+alongside file bytes; it does not remap them into a new Workspace. Earlier dated
+checkpoints below describe their then-current boundaries. See the current
+[operator guide](../flows/paper-first-operator-and-release.md).
+
+**Independent paper recording (3 October):** each supported paper loan can enter
+ordinary active/closed records without reconstructing a predecessor. Contract
+proceeds after advance interest/document charge are distinct from confirmed physical
+cash. A closing settlement can clear debt while customer handover remains unknown
+(`PAPER_CLOSED`); custody uncertainty is reported separately as a warning. This is
+not collateral available to a new unrelated lending decision. A known subsequent
+renewal reconciles old settlement, successor deductions and actual net cash, with
+retained collateral linked to the successor. Current approval applies when the new
+decision happens now. Original paper terms govern collection, while current prices
+and transaction completeness govern monitoring. See the
+[decision](../adr/2026-10-03-independent-paper-loans-and-renewal.md).
+
 PawnLoan uses layered read models. They answer different questions and must not
 be collapsed into one mutable total.
+
+**Unified recording, implementation in progress (2 October):** the
+[unified recording decision](../adr/2026-10-02-unified-loan-recording.md) will admit
+supported delayed paper histories through the same canonical records. Actual
+contract terms govern debt; original valuation evidence and current collateral
+monitoring remain separate. Total-only receipts retain their source amount and
+separately derived allocation. Financial-history availability and scoped paper
+entry completeness must remain visible independently of current price freshness.
+UR-01 records supported dated paper receipts on existing opening loans. UR-02
+adds a local recorded-origination storage/read-model foundation; ordinary admission
+of never-entered histories remains pending. See the
+[implementation boundaries](../implementation/unified-loan-recording.md).
+
+A recorded payout uses the ordinary `DISBURSAL` event and immutable disbursal
+snapshot, with basis `RECORDED` and no approval snapshot. Original principal, net
+cash, deductions and explicit agreed interest rules reconcile independently of
+old digital prices. Its recorded-contract policy distinguishes those interest
+rules from a separately identified monitoring choice. Ordinary balance/tranche
+readers consume the original dated event; current coverage uses current eligible
+prices/appraisals and may remain unknown. Recording timestamps do not move the
+financial date. The initial no-fee simple-interest storage profile does not select
+Lakshmi's contract automatically or certify complete paper entry.
 
 Active imported opening loans expose a read-only interest explanation on the
 detail page. Elapsed calendar months/days are separate from chargeable months:
@@ -213,3 +260,74 @@ obligations with the concession traceable to the same source event. The whole
 release and its correction remain atomic. This does not implement active migration
 openings or concessions for ordinary repayments, renewal or batch release. See the
 [decision](../adr/2026-09-12-legacy-collection-estimates-and-concessions.md).
+
+## Recorded paper anniversary contracts
+
+The explicitly confirmed UR-03 profile charges the earlier principal for the current
+full month; a reduction affects the next loan anniversary. Current collection and
+economic exposure use cumulative agreed charges less advance interest, recognized
+interest and settled amounts. UR-03A renewals freeze cash received, cash paid,
+principal carry, gross advance and old-interest offset separately. Canonical
+settlement interest includes the offset; physical cash is read from the cash
+evidence, not inferred from settled debt. A full principal repayment/fresh advance
+has zero carry even when its net cash matches a carried-principal renewal.
+An ordinary closed/renewed source leaves current exposure, while as-of reads before
+settlement retain its debt.
+
+For these bullet/flexible contracts only, obligation reads retain the original
+maturity but project remaining interest from actual principal history instead of
+reusing the original fixed-principal schedule total. Calculations at a historical
+as-of date cannot use later receipts. Raw schedule allocation capacity is separate
+from this variable debt projection. Current monitoring selection and price freshness
+remain independent of the recorded-through paper-history date. See
+[UR-03 implementation](../implementation/unified-loan-recording.md) for exact charging
+boundaries, supported fields and pending completeness/recovery integration.
+
+UR-04 receipt corrections add same-business-date compensation and chronological
+replacement events. Date-based balance/exposure queries therefore represent the
+restated business history; creation timestamps preserve when the correction was
+recorded. Receipt totals remain the actual cash facts, while interest and principal
+allocations are recalculated. Original events and allocations stay immutable with
+linked reversal evidence. Reported correction movements must not be interpreted as
+fresh cash collection/refund. The
+[settlement extension](../adr/2026-10-02-recorded-settlement-corrections.md) permits
+reconciliation through an unchanged renewal agreement or full return. The corrected
+source principal/interest and actual settlement cash can differ from original entry;
+successor principal and terms cannot be silently recalculated. Original release and
+renewal documents retain their initial figures; operational financial presentation
+uses the linked active replacement event with correction provenance. The source
+remains closed, no custody movement is repeated and successor monitoring continues
+from its unchanged agreement and events. Unsupported contract/custody amendments
+remain blocked. Combined release-batch receipt corrections require a whole-batch
+review: every member participates, revised settlements reconcile to actual total
+collection, and all changes post together. Retained original batch/line amounts are
+audit evidence; operational batch views and reconciliation CSV use shared current
+settlement projections and label corrections. A financial restatement does not
+repeat the physical handover or represent newly received money.
+
+UR-05 can admit a fully reconciled, supported closed archive loan through that same
+recorded-contract writer. A HistoricalLoanImport source claim links the retained
+archive snapshot to its ordinary closed loan. Archive records remain evidence and
+never contribute balances or cash totals; admitted events contribute once at their
+actual dates, with zero current exposure after closure. Unknown archive facts are
+not zero facts: staff supply original contract, cash and return evidence for review.
+
+
+## Transaction coverage and provisional monitoring
+
+LoanTransactionReview confirms entered records through a date for one loan and
+one financial fingerprint. It can explicitly report incomplete records. New paper
+admission records a review for each member; subsequent activity/correction requires
+rechecking. An opening loan's review begins at its accepted checkpoint and makes no
+claim to reconstruct older receipts. Date rollover affects active coverage; a closed
+loan only needs coverage through its final activity. The current read represents
+restated knowledge, not what staff knew at a historical date.
+
+Risk snapshot V4 freezes transaction provenance separately from valuation evidence.
+Missing/stale paper coverage preserves individual calculated exposure and risk with
+a provisional explanation. Dashboard/portfolio definitive totals are unavailable
+until all included loans have suitable coverage. Report rows and borrower statement
+exports include coverage status and date. Supported reviewed reminders use the
+agreed collection amount, including unrecognized collection interest; they require
+current confirmation and are rechecked before a provider attempt. See the
+[decision](../adr/2026-10-03-loan-transaction-completeness.md).

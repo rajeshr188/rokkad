@@ -117,6 +117,7 @@ def preview_updated_valuation(loan, *, actor):
             ("net_disbursed", "Net cash to pay"))]
     policy_rows = []
     for key, label in (("valuation_method", "Valuation method"), ("interest_method", "Interest method"),
+            ("minimum_first_month", "Full first month minimum"),
             ("advance_interest_periods", "Advance-interest periods"), ("partial_month_method", "Part-month interest"),
             ("partial_month_cutoff_days", "Part-month cutoff days"), ("partial_month_lower_fraction", "Part-month fraction"),
             ("capitalization_interval_periods", "Capitalization interval"), ("rounding_method", "Rounding method"),

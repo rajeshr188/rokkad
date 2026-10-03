@@ -84,6 +84,7 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             },
         )
         self.loan = SimpleNamespace(
+            policy_snapshot_id=None,
             pk=19,
             workspace=workspace,
             workspace_id=workspace.pk,

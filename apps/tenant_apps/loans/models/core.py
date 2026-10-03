@@ -158,6 +158,12 @@ class LoanSeries(WorkspaceOwnedModel):
 
 
 class PawnLoanEconomicPolicy(models.Model):
+    series = models.ForeignKey(
+        LoanSeries, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="economic_policies",
+    )
+    # False preserves existing policies; new operator configurations explicitly set True.
+    minimum_first_month = models.BooleanField(default=False)
     workspace = models.ForeignKey(
         "orgs.Company",
         on_delete=models.PROTECT,
@@ -226,14 +232,18 @@ class PawnLoanEconomicPolicy(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("workspace", "effective_from", "revision"),
-                condition=Q(license__isnull=True),
+                condition=Q(license__isnull=True, series__isnull=True),
                 name="loans_econ_ws_date_rev_uniq",
             ),
             models.UniqueConstraint(
                 fields=("license", "effective_from", "revision"),
-                condition=Q(license__isnull=False),
+                condition=Q(license__isnull=False, series__isnull=True),
                 name="loans_econ_lic_date_rev_uniq",
             ),
+            models.UniqueConstraint(fields=("series", "effective_from", "revision"),
+                condition=Q(series__isnull=False), name="loans_econ_ser_date_rev_uniq"),
+            models.CheckConstraint(condition=Q(series__isnull=True) | Q(license__isnull=False),
+                name="loans_econ_series_license"),
             models.CheckConstraint(
                 condition=Q(maximum_ltv_ratio__gt=0)
                 & Q(maximum_ltv_ratio__lte=1),
@@ -277,9 +287,13 @@ class PawnLoanEconomicPolicy(models.Model):
     def clean(self):
         super().clean()
         _validate_policy_scope(self, label="Economic policy")
+        if self.series_id and (self.series.workspace_id != self.workspace_id
+                               or self.series.license_id != self.license_id):
+            raise ValidationError({"series": "Series must belong to the policy workspace and license."})
         try:
             DisbursalPolicySnapshot(
                 policy_version=1,
+                minimum_first_month=self.minimum_first_month,
                 interest_method=InterestMethod(self.interest_method),
                 partial_month_method=PartialMonthMethod(self.partial_month_method),
                 partial_month_cutoff_days=self.partial_month_cutoff_days,
@@ -844,6 +858,12 @@ class PawnCollateralItem(WorkspaceOwnedModel):
 
 
 class LoanPolicySnapshot(WorkspaceOwnedModel):
+    class Basis(models.TextChoices):
+        ORIGINATION = "ORIGINATION", "Origination policy"
+        RECORDED_CONTRACT = "RECORDED_CONTRACT", "Recorded contract and monitoring selection"
+
+    basis = models.CharField(max_length=24, choices=Basis.choices, default=Basis.ORIGINATION)
+    minimum_first_month = models.BooleanField(default=False)
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -888,6 +908,10 @@ class LoanPolicySnapshot(WorkspaceOwnedModel):
     class Meta:
         constraints = [
             models.CheckConstraint(
+                condition=Q(basis__in=("ORIGINATION", "RECORDED_CONTRACT")),
+                name="loans_policy_basis_valid",
+            ),
+            models.CheckConstraint(
                 condition=Q(policy_version__gt=0),
                 name="loans_policy_version_positive",
             ),
@@ -903,6 +927,7 @@ class LoanPolicySnapshot(WorkspaceOwnedModel):
         try:
             DisbursalPolicySnapshot(
                 policy_version=self.policy_version,
+                minimum_first_month=self.minimum_first_month,
                 interest_method=InterestMethod(self.interest_method),
                 partial_month_method=PartialMonthMethod(self.partial_month_method),
                 partial_month_cutoff_days=self.partial_month_cutoff_days,
@@ -1069,6 +1094,11 @@ class PawnLoanEvent(WorkspaceOwnedModel):
 class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
     """Immutable gross-to-net evidence for one PawnLoan disbursal."""
 
+    class Basis(models.TextChoices):
+        APPROVED = "APPROVED", "Approved lending decision"
+        RECORDED = "RECORDED", "Previously paid on paper"
+
+    basis = models.CharField(max_length=16, choices=Basis.choices, default=Basis.APPROVED)
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -1078,6 +1108,8 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
         PawnLoanApprovalSnapshot,
         on_delete=models.PROTECT,
         related_name="disbursal_snapshots",
+        null=True,
+        blank=True,
     )
     policy_snapshot = models.OneToOneField(
         LoanPolicySnapshot,
@@ -1109,6 +1141,11 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
         ordering = ("loan_id",)
         constraints = [
             models.CheckConstraint(
+                condition=Q(basis="APPROVED", approval_snapshot__isnull=False)
+                | Q(basis="RECORDED", approval_snapshot__isnull=True),
+                name="loans_disbursal_approval_basis",
+            ),
+            models.CheckConstraint(
                 condition=Q(gross_principal__gt=0),
                 name="loans_disbursal_gross_positive",
             ),
@@ -1123,6 +1160,11 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
 
     def clean(self):
         super().clean()
+        if self.basis == self.Basis.RECORDED:
+            from apps.tenant_apps.loans.services.recorded_origination_evidence import validate_recorded_origination
+            validate_recorded_origination(self)
+        elif self.policy_snapshot_id and self.policy_snapshot.basis != LoanPolicySnapshot.Basis.ORIGINATION:
+            raise ValidationError("Approved disbursal requires an origination policy basis.")
         if self.loan_id and self.approval_snapshot_id:
             if self.approval_snapshot.loan_id != self.loan_id:
                 raise ValidationError("Approval snapshot must belong to this PawnLoan.")
@@ -1456,10 +1498,10 @@ class PawnLoanPrincipalOpeningLine(WorkspaceOwnedModel):
         on_delete=models.PROTECT,
         related_name="principal_opening_lines",
     )
-    collateral_item = models.OneToOneField(
+    collateral_item = models.ForeignKey(
         PawnCollateralItem,
         on_delete=models.PROTECT,
-        related_name="principal_opening_line",
+        related_name="principal_opening_lines",
     )
     predecessor_collateral_item = models.ForeignKey(
         PawnCollateralItem,
@@ -1479,6 +1521,7 @@ class PawnLoanPrincipalOpeningLine(WorkspaceOwnedModel):
                 fields=("loan_event", "allocation_order"),
                 name="loans_open_event_order_uniq",
             ),
+            models.UniqueConstraint(fields=("loan_event", "collateral_item"), name="loans_open_event_item_uniq"),
             models.CheckConstraint(
                 condition=Q(allocation_order__gt=0),
                 name="loans_open_order_positive",
@@ -1499,6 +1542,9 @@ class PawnLoanPrincipalOpeningLine(WorkspaceOwnedModel):
                 )
             if self.loan_event.event_kind != TransactionKind.RENEWAL_OPENING.value:
                 raise ValidationError("Opening lines require a renewal-opening event.")
+            if type(self).objects.filter(collateral_item_id=self.collateral_item_id,
+                    loan_event__reversed_by_event__isnull=True).exclude(loan_event_id=self.loan_event_id).exists():
+                raise ValidationError("An item can have only one active renewal principal opening.")
         if self.predecessor_collateral_item_id and self.collateral_item_id:
             if self.predecessor_collateral_item_id == self.collateral_item_id:
                 raise ValidationError(
@@ -1755,6 +1801,8 @@ class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
         max_length=32,
         choices=enum_choices(CollateralCustodyState),
     )
+    restatement_of = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="dated_restatement")
     effective_date = models.DateField(db_index=True)
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -2036,6 +2084,8 @@ class PawnLoanNotice(models.Model):
     notification_template_id = models.PositiveBigIntegerField(null=True, blank=True)
     notification_template_version = models.PositiveIntegerField(null=True, blank=True)
     notification_template_locale = models.CharField(max_length=10, blank=True)
+    transaction_review = models.ForeignKey("loans.LoanTransactionReview", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="notices")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -2055,8 +2105,13 @@ class PawnLoanNotice(models.Model):
             ),
             models.UniqueConstraint(
                 fields=("source_risk_event", "notice_kind", "channel", "notification_template_version"),
-                condition=Q(source_risk_event__isnull=False),
+                condition=Q(source_risk_event__isnull=False, transaction_review__isnull=True),
                 name="loans_risk_notice_intent_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("source_risk_event", "notice_kind", "channel", "notification_template_version", "transaction_review"),
+                condition=Q(source_risk_event__isnull=False, transaction_review__isnull=False),
+                name="loans_review_notice_intent_uniq",
             ),
         ]
         indexes = [

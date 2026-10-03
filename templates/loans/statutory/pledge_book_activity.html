@@ -1,0 +1,22 @@
+{% extends "base_tenant.html" %}
+{% block title %}Form E daily activity{% endblock %}
+{% block extra_css %}{{ block.super }}<style>
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  .workspace-sidebar, .workspace-mobile-nav, .workspace-offcanvas, .workspace-context-bar, .modern-nav, .app-footer, .d-print-none { display: none !important; }
+  .workspace-content { width: 100% !important; padding: 0 !important; }
+  .workspace-shell, .workspace-page { background: white; min-height: 0 !important; }
+  .table-responsive { overflow: visible !important; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+}
+</style>{% endblock %}
+{% block workspace_content %}
+<div class="d-print-none"><a href="{% url 'workspace_loans:pledge_book_detail' request.workspace.slug book.pk %}">&larr; {{ book.reference }}</a></div>
+<h1 class="h3 mt-3">Daily activity for handwritten updates</h1>
+<p>{{ book.reference }} · {{ book.title }} · licence {{ book.series.license.license_number }} · series {{ book.series.pawn_display_name }}</p>
+<p>Use the original book/page reference to annotate payments, redemptions and corrections. This list is an aid, not a replacement Form E page or proof of annotation. Earlier paper book: {{ book.opening_note }}</p>
+<form method="get" class="card card-body mb-3 d-print-none">{{ form.non_field_errors }}<div class="row g-3">{% for field in form %}<div class="col-md-4">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div><div class="mt-3"><button class="btn btn-primary">Show activity</button> <button class="btn btn-outline-primary" type="button" onclick="window.print()">Print activity list</button></div></form>
+<p>{{ selection.start|date:"d/m/Y" }} to {{ selection.end|date:"d/m/Y" }} · filter: {{ selection.basis }} · {{ rows|length }} events. Both actual and recording dates appear below.</p>
+<div class="table-responsive"><table class="table table-bordered small"><thead><tr><th>Loan / original date</th><th>Book reference</th><th>Actual / recorded dates</th><th>Activity and annotation details</th></tr></thead><tbody>{% for row in rows %}<tr><td>{{ row.event.loan.loan_number }}<br>{{ row.event.loan.loan_date|date:"d/m/Y" }}</td><td>{{ row.reference }}{% if row.included %}<br>Already captured by saved batch cutoff{% endif %}</td><td>{{ row.event.effective_date|date:"d/m/Y" }}<br>Entered {{ row.event.created_at|date:"d/m/Y H:i" }}<br>{{ row.event.created_by }}{% if row.late %}<br><strong>Late entry</strong>{% endif %}</td><td>{{ row.detail }}</td></tr>{% empty %}<tr><td colspan="4">No activity for this selection.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

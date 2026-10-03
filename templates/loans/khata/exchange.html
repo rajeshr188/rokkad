@@ -1,0 +1,20 @@
+{% extends "base_tenant.html" %}{% load static %}
+{% block title %}Exchange Khata collateral{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab={{ account_return_tab }}">&larr; Khata {{ account.account_number }} &middot; {{ account_return_label }}</a>
+<h1 class="h3 mt-3">Exchange collateral</h1>
+<p class="text-muted">Select the outgoing group and the exact received items replacing it. Values are suggestions; the final review checks today's prices, same-metal replacement, account cover and workspace policies. Confirmation reserves a return; actual handover is separate.</p>
+<p><a class="btn btn-outline-primary" data-receive-replacement href="{% url 'workspace_loans:khata_action' request.workspace.slug account.pk 'deposit' %}?return_to=exchange">Receive replacement collateral</a> <a href="{% url 'workspace_loans:khata_collateral' request.workspace.slug account.pk %}" target="_blank" rel="noopener">Browse all collateral</a></p>
+<form method="post" data-khata-exchange>
+{% csrf_token %}{{ form.non_field_errors }}{{ form.request_key }}{{ form.request_key.errors }}
+<div data-hidden-role="outgoing">{{ form.outgoing }}</div><div data-hidden-role="incoming">{{ form.incoming }}</div>
+<div class="row g-3">
+{% include 'loans/khata/_exchange_picker.html' with role='outgoing' heading='Collateral to return' errors=form.outgoing.errors %}
+{% include 'loans/khata/_exchange_picker.html' with role='incoming' heading='Received collateral replacing these items' errors=form.incoming.errors %}
+</div>
+<noscript><div class="alert alert-info mt-3">Enable JavaScript for searchable group selection, or enter one outgoing and one incoming item ID from the collateral browser below.</div><label for="outgoing-id">Outgoing item ID</label><input id="outgoing-id" type="number" min="1" name="outgoing" class="form-control"><label for="incoming-id">Incoming item ID</label><input id="incoming-id" type="number" min="1" name="incoming" class="form-control"></noscript>
+<div class="card card-body mt-3">{{ form.reason.label_tag }}{{ form.reason }}{{ form.reason.errors }}<button class="btn btn-primary mt-3 align-self-start" type="submit">Review exchange</button></div>
+</form>
+{{ exchange_data|json_script:'khata-exchange-data' }}
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/khata-collateral.js' %}" defer></script>{% endblock %}

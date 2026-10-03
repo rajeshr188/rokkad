@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-29
+updated: 2026-10-03
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -29,20 +29,129 @@ plans; shelving an idea must not hide a release blocker.
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 | FW-005 | Broader historical loan admission and quote-age policy | Partial scope implemented; remaining work unscheduled | Missing historical evidence or a guided import contract is needed | Native earlier payouts and explicit daily confirmations are implemented; wider exceptions remain deferred |
 | FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
-| FW-007 | Guided customer-facing legacy migration | Recorded at owner request; future work, unscheduled | Owner selects self-service migration onboarding for delivery | Customer spreadsheets and prepared loan imports work; source-specific loan preparation still requires an operator |
+| FW-007 | Guided customer-facing legacy migration and ordinary paper recording | Guided register and supported paper-first workflow implemented locally; real-book/release acceptance pending | Representative acceptance, then separately selected additional source/rule profiles | See unified-loan-recording.md, flows/paper-first-operator-and-release.md and portability-confidence-and-completion.md; broader profiles remain future work |
 | FW-008 | Servicing-only subscription restriction | Deferred beyond the pre-cutover continuity increment | Owner selects a collections-only stage after read-only/grace acceptance | Full access, seven-day grace, read-only and audited administrator decisions implemented; action-level servicing exceptions undesigned |
-| FW-009 | Consent-based borrower identity verification / Aadhaar-assisted onboarding | Shelved at owner request; desk review complete | Owner explicitly resumes legal-entity clarification and written eligibility/pricing enquiries | App-sharing and hosted DigiLocker candidates compared; bounded pilot and unsent enquiry preserved |
-| FW-010 | Platform administrator role, operational workflows and UI | Recorded at owner request; unscheduled, no implementation approval | Owner selects platform operations discovery and design | Existing authorization/control-plane foundations identified; coherent operator role, journeys and console need review |
+| FW-009 | Consent-based borrower identity verification / Aadhaar-assisted onboarding | Provider enquiries sent; implementation pending | Written lender/platform eligibility, hosting terms and comparable quotes | Digio/Surepass/Cashfree compared; optional-guidance JCL pilot agreed; approved enquiries sent 30 September, answers pending |
+| FW-010 | Platform administrator role, operational workflows and UI | Console and guided lifecycle increment delivered; broader scope remains | Owner selects next action/delegation increment | Overview, directory/detail, suspend/restore review and operator guide; existing authority retained |
 | FW-011 | Platform and Workspace WhatsApp messaging and phone verification | Recorded at owner request; unscheduled discovery | Owner selects messaging product/policy review and integration acceptance | Workspace Cloud API foundation and acceptance plan exist; broader platform/workspace experience and verification need definition |
-| FW-012 | Complete Workspace export and guided restore into a fresh Workspace | Existing M7 scope clarified at owner request; unscheduled | Owner selects complete archive/restore design and coverage acceptance | Partial Party bundles and bounded loan restore exist; whole-Workspace package and continuation workflow remain future work |
-| FW-013 | Tamil Nadu prescribed forms and pledge book in English/Tamil | Recorded at owner request; unscheduled legal/form review | Owner selects statutory-document inventory, current-law verification and sample approval | Official Rules linked; preliminary form inventory and printing foundations identified |
+| FW-012 | Complete Workspace export and guided restore into a fresh Workspace | Sequenced after import confidence and guided migration; not started | Audit supported export/restore coverage and define complete-package acceptance | Partial Party bundles and bounded loan restore exist; follow portability-confidence-and-completion.md |
+| FW-013 | Tamil Nadu prescribed forms and pledge book in English/Tamil | Further work paused by owner, 30 September | Establish import confidence, then owner chooses to resume | Statutory notices, Form E and administrative auctioneer lists deployed; E-1 opened, first print batch pending |
 | FW-014 | Domain-owned email and reliable platform/Workspace communication | Active: SES production access approved | Paid-receipt delivery and monitored activation | Mumbai approval verified 28 September; 50,000/day and 14/second; health monitoring enabled, dispatch disabled |
-| FW-015 | Safe orphan-media cleanup and Workspace storage usage | Recorded at owner request; unscheduled | Owner selects media lifecycle and storage-metering design | Reported R2 orphans need inventory; safe cleanup, usage display and future billing measurement captured |
+| FW-015 | Safe orphan-media cleanup and Workspace storage usage | Core delivered; commercial extensions deferred | Select pricing/quotas/billing or online cleanup separately when needed | Inventory/usage, retention protection, offline reviewed cleanup and restoration delivered; no automatic purge or charges |
 | FW-016 | Product blog | Recorded at owner request; unscheduled | Owner selects publishing scope and editorial workflow | Product stories, guides and release updates captured; implementation approach undecided |
 | FW-017 | Community forum | Recorded at owner request; unscheduled | Owner selects community scope and moderation responsibilities | Questions, discussions and feature suggestions captured; access and moderation need design |
 | FW-018 | Support ticket system | Recorded at owner request; unscheduled | Owner selects support workflow and operator responsibilities | Private customer support, tracking and resolution captured; integration approach undecided |
 | FW-019 | Workspace subscription monetization and Razorpay automatic renewal | Active: owner selected delivery | Local implementation and provider acceptance | Held-access review and collection-attention guidance implemented; provider failure simulation unexpectedly captured, so actual failure/recovery and naturally due acceptance remain open |
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
+| FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
+
+## FW-021: Khata agreements
+
+### Improvement delivery sequence
+
+**Owner stop point, 3 October:** the owner considers the current Khata improvements
+sufficient and requested that the rest be saved for future work. Do not continue
+enhancement implementation from a generic prior “next” instruction. Resume only
+when the owner selects a remaining item. Keep broader compensating correction
+outcomes first, optional reviewed collection reminders second, and any remaining
+large-source-selector usability next, based on actual operator need. None changes
+the agreed economics without a separate decision. Named operator trials, physical
+camera/printer/QR checks, off-device recovery and hosted release checks remain
+unperformed acceptance gates before real use; deferring development does not certify
+these gates. Both loan workstreams are being prepared as one scoped repository
+checkpoint; follow the [joint release guide](../flows/khata-and-paper-first-release.md).
+
+The owner selected phased delivery on 2 October after the completeness review.
+The scope is too broad for one coherent change: new correction outcomes, reporting,
+load measurements and real operator/hardware acceptance need separate evidence.
+Existing first-version economics and ordinary/flexible loan preservation remain
+requirements. Starting a phase does not authorize production activation.
+
+| Order | Work | State and completion boundary |
+| --- | --- | --- |
+| 1 | Exception handling and support | First slice delivered/verified locally: readable supported/refused correction guidance, exact-source entry, linked blocking operations and operator runbook. Broader payout/collateral-fact/revision/settlement/handover corrections require specified cash, interest and custody outcomes before their compensating commands are added. |
+| 2 | Pending returns and searchable servicing | Delivered/verified locally (406 regressions and browser checks): searchable/photo-assisted pending returns with the reservation source preselected; reuse selection for reduction returns and later photo attachment. Preserve actual recipient/reference, revalidation and per-item handover facts. |
+| 3 | Large-account performance | Delivered/verified locally (412 regressions and browser checks): 25/250/1,000-item restricted-role measurements support lazy panel data, compact canonical balance reads, database register filtering and 25-item custody pages. Four simultaneous readers are measured. Native dropdowns/document lists and more financial sources still scale; persistent money caches/projections are not introduced. |
+| 4 | Collection and event follow-up | Delivered/verified locally (424 regressions and browser checks): next/upcoming/due/overdue worklist, receipt shortcuts, separate current LTV and recorded exchange warnings, readable event/group/valuation/policy detail. Optional reminders remain queued for a separately reviewed Loans notice-intent/audience/consent/idempotency/delivery contract through Notify v2. No penalties or automatic top-up debt. |
+| 5 | Khata cash and custody reports | Delivered/verified locally (435 regressions, 23 existing archive checks and browser checks): date-filtered source-linked cash daybook, corrections, custody/pending-return exports; historical outstanding requires a separately tested as-of replay contract. Operational reporting, not a general ledger. |
+| 6 | Action prerequisites and draft experience | Delivered/verified locally (469 regressions including archive checks and browser checks): distinct proposal/approval/current terms, stale/used approval filtering, next-action guidance, searchable borrower/outstanding, canonical monthly/annual illustration and receipt catch-up explanation. Opening agreement acknowledgement is documented design only. |
+| 7 | Series status control | Delivered/verified locally (480 regressions and browser checks): authorized signed pause/resume and permanent retirement, immutable actor/time/reason history, tenant isolation and native recovery. Existing servicing, consumed numbers and frozen association remain; no reset/reassociation shortcut. |
+| 8 | Bounded label batches | Delivered/verified locally (489 regressions and browser/PDF checks): searchable selected/100-item chunks above 100 held items, saved membership/order and exact reprints, readable 100 x 60 mm labels and private QR routes. See the [checkpoint](../implementation/khata-label-batches.md). |
+| 9 | Remaining presentation and document navigation | Delivered/verified locally (498 regressions and desktop/mobile/no-JavaScript checks): active mobile tab visibility/section chooser, contextual return links, saved-document search/type/date/order filters and 25-row pagination. Original sources/media and native guards remain unchanged. See the [checkpoint](../implementation/khata-document-navigation.md). |
+| Parallel release requirements | Living docs, operators and deployment acceptance | Reconcile stale current checklists; record named approver/cashier/releaser trial, WARN/BLOCK scenarios, reviewed release/CI identity, hosted role checks, off-device backups/restore and physical camera/printer/QR acceptance. Do not mark unperformed manual gates complete. |
+
+See [active work](active.md), the [completeness review](../implementation/khata-release-review-20261002.md#current-completeness-review)
+and [exception/support workflow](../flows/khata-servicing-and-recovery.md#exceptions-and-support).
+Record each delivered phase and its verification in Status before moving on.
+
+**Current review, 2 October:** the agreed first-version lifecycle, shared summaries,
+documents/recovery, camera receiving, search/history and detail tabs are implemented
+locally. The earlier incremental notes below are historical delivery boundaries.
+The [completeness review](../implementation/khata-release-review-20261002.md#current-completeness-review)
+prioritizes exception/support handling, pending-return/reduction usability,
+representative load checks, collection/notice and operational-report follow-up,
+series/label conveniences and named operator/hosted acceptance. These are
+recommendations, not authorization for additional financial rules or production.
+
+**Captured:** 2026-10-01. The owner requested documentation and ongoing scenario
+discussion before implementation. A khata has an agreed limit, gradual secured
+withdrawals, interest on the full limit from first withdrawal, monthly or annual
+interest payments, formal limit increases/reductions and valuation-based collateral
+substitution. It is not revolving repay-and-redraw. Actual principal remains
+separate from the limit. Follow the [living plan](khata-agreements.md) and
+[proposed ADR](../adr/2026-10-01-khata-agreement-design.md). Round 2 confirms split
+interest at increases, actual-withdrawal LTV, formal reductions only, current-rate
+valuation and payment in arrears. Exchange-value shortfalls warn and proceed by
+default; owner-selected strict mode blocks them. Round 3 confirms anniversary
+dues, four months' interest for four-month early closure, one exchange policy
+covering both value and LTV shortfalls, and owner-selected overdue warn/block.
+Dedicated top-up follow-up is deferred. Round 4 confirms monthly-only percentage
+entry, independent of payment frequency; annual-rate entry is a future extension.
+Round 5 confirms simple interest, full first-month minimum, actual-day later
+fractions, short-month clamping, overdue block scope and same-number/anniversary
+revisions with repayment above a reduced limit. Round 6 confirms annual billing
+includes month one, early closure collects the full minimum, actual-period day
+fractions and symmetric limit changes, current policy for later operations and
+no fixed maturity. Round 7 confirms overdue warnings by default, same-metal grouped
+exchanges, reduction/settlement returns and dated rate revisions. Round 8 makes
+reduction-return LTV mandatory, independent of exchange warning mode. Detailed
+calculation boundaries and screen flow remain for review; standalone excess
+returns are not selected. The original discovery-only boundary is superseded by
+the later foundation implementation instruction below.
+The [screen/calculation review](khata-screen-review.md) now records explicit owner
+acceptance of D1-D5 in round 9; screen arrangement remains proposed.
+The [delivery design](khata-delivery-design.md) adds repository-grounded boundaries,
+integration work and staged acceptance. Existing flexible products/loans and new
+flexible originations in JCL, JSK and Lakshmi must retain their current rules.
+The owner subsequently authorized the first local foundation/calculator slice;
+production deployment is not part of that instruction.
+Round 10 confirms separate khata series, existing authorised approvers, new
+accounts without historical/paper import, today-dated routine entries and no
+additional charges/penalties or funding/repledging. The delivery design now has
+the consolidated scope and engineering checklist with foundation progress.
+The [technical design](../architecture/khata-technical-design.md) now provides
+candidate schema, numbering, states, permissions, calculations and command/test
+inventory. Remaining edge proposals are explicit. The
+[foundation/calculator checkpoint](../implementation/khata-foundation.md) records
+the first local implementation and 42 passing tests; full servicing is pending.
+Round 11 confirms workspace-owned series with optional same-workspace licences,
+workspace-wide khata number uniqueness and association freeze after first issued
+account number. Independent khatas require no dummy licence; both modes appear
+in reports and retain lender identity in documents. K39-K42 cover these outcomes.
+The later continuation adds the [opening backend](../implementation/khata-opening.md):
+separate receipt/approval/payout evidence, same-day valuations, photos, policies
+and canonical opening balances. Remaining servicing, integration and production
+activation are not represented as complete by this local increment.
+The [interest collection checkpoint](../implementation/khata-interest-collection.md)
+adds frozen completed-month charges, exact segments and partial oldest-due receipts.
+The next [agreement-change checkpoint](../implementation/khata-agreement-changes.md)
+implements approved limit/rate activation and financial reductions. The
+[custody/settlement checkpoint](../implementation/khata-custody-settlement.md)
+implements grouped exchanges, hard-LTV reduction returns and full financial
+settlement with pending physical handovers. The
+[correction checkpoint](../implementation/khata-corrections.md) adds supported
+whole receipt and unhanded exchange compensation. Unsupported complex correction
+coverage, UI/documents, shared summaries and recovery remain pending.
 
 ## FW-020: Company registration and GST-ready seller transition
 
@@ -316,19 +425,43 @@ independently; recording them does not schedule or activate them.
 
 ## FW-015: Safe orphan-media cleanup and Workspace storage usage
 
-**Captured:** 2026-09-26. **State:** Recorded at owner request; unscheduled,
-no implementation or deletion approval.
+**Captured:** 2026-09-26. **State:** Owner selected inventory, usage display and
+read-only cleanup preview on 2026-09-29; deployed on 2026-09-30. The owner then selected
+the remaining reviewed cleanup workflow: a bounded offline operator command is now
+implemented, tested and available in a separate operator image on the server.
+See the [cleanup runbook](../implementation/reviewed-media-cleanup.md).
+First production-prefix scan found 29,770 objects
+with no missing/unreferenced keys in that scope. The subsequent rehearsal/preservation
+review found six unreferenced rehearsal files (2.53 MiB), with preserved evidence
+accounted for. Committed Party/collateral retention is corrected and deployed.
+The owner subsequently approved whole-rehearsal retirement after verified recovery:
+both historical databases and 58,899 media objects are removed; five private recovery
+archives remain without automatic expiry. This is separate from production orphan
+cleanup. See [retirement evidence](../implementation/rehearsal-retirement-20260930.md),
+the [recovery plan](recoverable-media-cleanup.md) and [rollout](storage-inventory-rollout.md).
 
 **Problem.** The owner reports many orphaned images in R2 and no usable cleanup
 workflow. Workspaces also need to see how much media storage they occupy, with
-reliable usage history if storage-based billing is introduced later. The quantity
-and ownership of suspected orphans have not been independently inventoried.
+reliable usage history if storage-based billing is introduced later. The initial
+inventory/reconciliation and offline reviewed cleanup are complete. Online cleanup
+and commercial extensions remain future work.
+
+**Explicitly deferred: Storage pricing, quotas and billing.** The owner reconfirmed
+this on 30 September. A future increment must decide included storage, prices,
+soft/hard quota behaviour, notifications, billable versus displayed bytes, shared
+files, retained history, recovery archives and billing periods/corrections before
+implementing limits or charges. Existing usage measurements do not authorize billing
+or restrict lending/uploads. No automatic storage charges or quota enforcement.
+
+**Other deferred extensions:** cleanup while writers remain online, a web approval
+queue, scheduled deletion and recovery-archive expiry. The delivered command requires
+an explicit maintenance window; it does not enable a recurring purge job.
 
 **Who benefits.** Platform operators can reclaim genuinely unused storage and
 investigate unassigned objects; Workspace administrators can understand their own
 usage; future subscription plans can use an auditable storage measure.
 
-**Proposed scope for later design and implementation:**
+**Scope and extension reference:**
 
 1. Inventory existing media references, upload/delete paths and R2 objects before
    choosing a schema or cleanup mechanism. Cover Party photos, collateral photos,
@@ -357,13 +490,17 @@ usage; future subscription plans can use an auditable storage measure.
    request/transfer costs. No pricing, quota enforcement or automatic charges are
    approved by this entry.
 
-**Acceptance when resumed.** Demonstrate correct totals against known fixtures,
-Workspace isolation, safe repeated reconciliation, reference/retention protection,
-concurrent-upload handling and an audited cleanup rehearsal with recovery. Start
-with visibility and dry runs, then reviewed cleanup; billing remains a later decision.
+**Delivered acceptance.** Inventory/RLS isolation, repeated reconciliation and
+offline reviewed cleanup/recovery are tested. The cleanup increment passed 30 new
+tests, 19 storage/retention regressions and the architecture-boundary check. Real R2
+synthetic acceptance verified conditional reads, overwrite refusal, recovery,
+deletion and restoration without touching production objects. The latest production
+candidate query was empty. Before online cleanup, demonstrate coordination with live
+uploads/imports rather than relying on the current stopped-writers acknowledgement.
+Billing and quotas remain a later decision.
 
 Coordinate with FW-010 for the platform operations UI and FW-012 for archive/media
-coverage and retention. Select an active delivery plan before implementation.
+coverage and retention. The selected delivery plan is [storage visibility](storage-inventory-rollout.md).
 
 ## FW-014: Domain-owned email and reliable platform/Workspace communication
 
@@ -406,8 +543,19 @@ for reliable email. Next step and acceptance gates are in the linked review.
 
 ## FW-013: Tamil Nadu prescribed forms and pledge book in English/Tamil
 
+**Current decision, 30 September:** pause further implementation/source reviews/
+permanent printing while the [portability confidence work](portability-confidence-and-completion.md)
+establishes migration correctness and actual evidence gaps. Retain deployed features.
+
 **Captured:** 2026-09-26. **Decision owner:** project owner.
-**State:** Future work; unscheduled, no implementation approval.
+**State:** Selected for staged implementation on 2026-09-30. The owner requested
+the complete scenario-based statutory suite and statutory-notice workflow, with
+auction readiness and manual postal evidence first. See the
+[active delivery plan](statutory-forms-and-notices.md) and
+[operator guide](../flows/statutory-auction-notices.md). The local first increment
+implements that auction handling path; production/template acceptance and the
+remaining form generators are outstanding. Earlier capture notes below describe
+the original proposal and pre-change review, not the current implementation status.
 
 **Problem and intended value.** Every applicable business/Workspace should be able
 to generate the prescribed forms and pledge book when required, in English and
@@ -499,6 +647,221 @@ loan economics. A source/model gap may require separately reviewed domain work,
 not a misleading blank or invented default. Do not claim universal compliance from
 successful PDF generation.
 
+### Statutory notices and postal-service evidence
+
+**Pre-implementation source/code review, 2026-09-30.** Distinguish ordinary repayment/
+overdue reminders from a legally prescribed notice or statement. The official
+Rules linked above identify auction catalogue service under Rule 12(7), surplus
+intimation under Rule 12(14), requested account statements under Rule 11, and
+special section-8 circumstances using D-5 through D-8. These are not interchangeable
+with a generic reminder. In particular, Rule 12(7)(v) contains a 45-day RPAD provision
+and an undelivered-notice/official-service procedure; the compilation also retains
+a one-week provision in (iv). Reconcile current amendments and the full auction
+procedure with qualified local review before encoding deadlines. Do not reduce
+auction eligibility to overdue status and an electronic message marked sent.
+
+Current repository support is partial:
+
+- `loans/domain/notices.py` and `services/pawn_notices.py` support repayment,
+  interest-due, overdue, release-confirmation and auction intents, with scheduled
+  delivery, request deduplication, source snapshots and actor attribution. The
+  loan notice channels are EMAIL/SMS/WHATSAPP, without a postal-service workflow.
+- Notify v2 has generic LETTER/POST vocabulary, recipient postal-address storage
+  and batch Printed/Posted handling timestamps. Those manual batch markers neither
+  book postage nor prove individual service. Digital batch dispatch can also mark
+  a batch Posted; it must never be treated as evidence of physical posting.
+- `loans/documents/payloads.py` provides an auction-notice PDF projection, but not
+  a reviewed Rule 12 catalogue/service package. `services/pawn_auctions.py` checks
+  a future scheduled date at initiation and a SENT delivery job before starting;
+  it does not enforce the statutory notice interval, postal proof, returned-service
+  procedure, authority permissions or publication evidence.
+- Borrower email uses Django `send_mail`, independently of the platform SES outbox;
+  SMS has no configured provider implementation and WhatsApp needs Workspace/provider
+  setup. Code support is not evidence that a channel is enabled or delivered in
+  production. This review did not connect to production or send any notices.
+
+Proposed bounded increment: reviewed notice/catalogue templates and recipient/
+address snapshots; downloadable print package; staff-entered postal article number,
+posting date, receipt and acknowledgement/POD or returned-cover evidence; then a
+reviewed legal-service outcome and deadline check. Keep generation, posting,
+receipt/return and legally sufficient service distinct. External auctioneer and
+authority actions must remain attributed to the responsible party, not manufactured
+by a Workspace user or inferred from provider delivery. Ordinary reminders and
+WhatsApp/email copies do not replace prescribed service.
+
+India Post lists registration and proof of delivery as Speed Post add-on services:
+[official service description](https://www.indiapost.gov.in/mailproducts/premiumservices).
+Confirm the current postal product and applicable statutory service treatment during
+template acceptance; do not treat unqualified Speed Post tracking as RPAD evidence.
+This gap belongs in FW-013 with FW-011 channel integration, before representing
+the auction workflow as Tamil Nadu statutory-compliance support. No code change or
+implementation approval is implied by this review.
+
+### Form E: daily maintenance and printing by licence/series
+
+**Selected and started, 2026-09-30:** the owner accepted both two facing portrait
+A4 pages and one landscape A4 sheet, selectable by the user in the local preview.
+Finalised batches now retain their selected layout and exact PDF for reprints.
+The workflow, deployed on 30 September, includes source review, permanent full/partial batches and a daily
+annotation aid, alongside the read-only register. See
+[implementation and remaining steps](../implementation/form-e-pledge-book.md).
+JCL C's owner accepted the landscape sample and opened E-1 from 01/01/2026,
+starting at page 1; source review precedes its first saved batch. Other branch
+physical acceptance/book opening, reviewed Tamil headings and unsupported
+historical/renewal reconciliation remain; this is not a complete historical statutory book. The
+requirements below remain the delivery contract; the earlier planning-only label
+describes their initial discussion.
+
+**Auctioneer handover follow-up, 30 September:** fixed per-licence cohorts and
+immutable reviewed versions now support the owner's initial-list → collections/
+releases → remaining-list process, with manual print/CSV sharing and explicit
+holds/changes. See [the guide](../flows/auctioneer-handover.md) and Status for
+rollout. This administrative list is separate from the still-pending prescribed
+multi-pledge catalogue and full bilingual statutory suite.
+
+**Expanded at owner request, 2026-09-30; planning only.** Replace duplicate manual
+transcription with a continuously maintained pledge register derived from recorded
+loan activity, with on-demand ledger-style printing. The owner supplied
+`C:\Users\rajes\Downloads\form-e-pledgebook-format.jpeg` as a layout reference.
+It shows a facing-page ledger with handwritten customer data; the original image
+and personal rows are not copied into repository documentation or sample fixtures.
+Use fictional records for future mockups. Its printed interest/term values are not
+application defaults or evidence of universally applicable terms.
+
+**Source distinction.** Rule 7 identifies Form E. The supplied official Form E
+includes dated payments and later redemption/sale details, alongside the original
+pledge information; its note distinguishes those later entries from information
+required on the pawning day. Separate series books are an owner-requested product
+view, not a legal requirement established by this review. Confirm current amendments,
+local-language requirements and acceptance of the proposed printed-book arrangement
+before describing it as a substitute for the physical statutory book.
+
+**Proposed user journey:** **Reports → Statutory registers → Pledge book (Form E)**.
+
+1. Select a licence/place of business, all series or a specific series, reporting
+   dates, information cutoff and reviewed language option. Preserve full loan
+   numbers, leading zeroes and prefixes; an unnamed numeric series remains a real
+   selectable series. Offer separate series output while retaining a complete
+   all-series licence view and explicit coverage, avoiding omitted or duplicate
+   entries when numbers overlap across licences/series.
+2. Build entries from actual recorded payouts, including authorised earlier payouts;
+   an unfinished draft or approval without payout is not a new pledge entry.
+   Show actual business dates separately from when staff recorded events. Later
+   payments and closures, including paper-based batch releases, update the linked
+   pledge using their evidenced dates. Keep closed loans available in historical
+   books; do not derive the register from only the currently active loan list.
+3. Preserve evidenced original borrower/address, owner where different, collateral,
+   valuation and agreed terms. Later profile or price edits must not silently
+   rewrite the original pledge particulars. Map every payment and its date, plus
+   release/auction and recipient details, to underlying records. Partial payments,
+   interest-only collections, renewals, reversals, corrections and collateral changes
+   need explicit source mapping; do not flatten them into a misleading final total.
+4. Preview the current register and a **Needs attention** list before printing.
+   Identify missing fields, unsupported events and incomplete imported/paper history.
+   Existing balances alone cannot recreate every historical payment or establish
+   that the original book was maintained on time. Missing evidence must remain
+   visible; any preview with gaps must be clearly distinguished from a reviewed
+   complete output. Do not invent historical addresses, valuations or transactions.
+5. Generate a dated PDF with licence/series scope, book/page references, template
+   version and generation actor/time. Keep original generated bytes for exact
+   reprints; later corrected/current versions are separate artifacts. Previewing
+   consumes no permanent page numbers. Finalising a print batch must be safe to
+   retry without duplicate pages or ledger entries. Generating a PDF does not prove
+   it was physically printed, signed or filed.
+
+**Owner's simplification, 2026-09-30: handwritten updates after printing.** Print
+and file new pledge entries, leaving adequate room for later payments/redemption
+details. Staff manually update the original physical entry when those events occur.
+Keep the digital register current through the normal payment/release workflows;
+handwriting in the book does not replace recording the business event in Rokkad.
+For a fictional Monday pledge redeemed on Thursday, staff record its release in
+the app and annotate Monday's printed entry. Routine releases need no replacement
+Form E page, automated page revision or supersession workflow in the first version.
+
+Provide **New entries not yet included in a print batch** and a simple printable
+**Daily payments and releases** list to assist manual updating. Include full loan
+number, licence/series, original loan date, available book/page reference and the
+relevant payment/date or release/recipient details. Cover partial and interest-only
+payments as well as final closures. The activity list is an aid for staff to update
+the book, not a substitute for doing so or proof that annotation is complete.
+Do not introduce a mandatory per-entry acknowledgement workflow for this first
+version. Late entries/corrections must be discoverable by recording date as well
+as business date so yesterday's event entered today is not overlooked.
+
+Preserve the original PDF for exact reprints. Clearly distinguish a current digital
+report from that original print snapshot; handwritten notes are not present in
+the stored PDF. A lost physical book therefore cannot be reproduced with its exact
+handwritten annotations from that PDF alone. Review the accepted annotation and
+continuation procedure, including space exhaustion and corrections, with the
+physical filing arrangement. Automated revised-page handling is deferred unless
+operating experience establishes a need.
+
+**Page capacity and ready-to-print queue (owner proposal, 2026-09-30).** Each
+approved paper/layout profile should have a default entry capacity, fixed for that
+book's pages and chosen after a legibility/handwriting sample print. For illustration,
+20 entries per page would show `13 / 20 entries ready`, then `1 full page ready`
+at 20, or `2 full pages + 5 entries` at 45. Twenty is an example, not an agreed
+default; define whether a page means one sheet or a facing-page spread in the
+chosen format. Count loan entries, not collateral rows or later release events.
+Long addresses/items must use reviewed additional space or continuations rather
+than clipping content or shrinking it to meet the target count. Readiness must
+reflect actual layout fit, not just a raw loan count.
+
+Keep the unbatched queue separate for each selected licence/series book, ordered
+deterministically by actual loan date and loan number. Offer **Preview next page**,
+**Print full pages** and **Print partial page**. A full page is a convenience cue,
+never a prerequisite to printing or a reason to defer required daily upkeep: the
+supplied Form E note requires initial particulars on the pawning day. Recommend
+printing outstanding partial pages during end-of-day work unless another reviewed
+same-day maintenance procedure applies; do not assume the digital queue alone
+satisfies the physical-book obligation. Show pending entries and their dates.
+
+Finalising a batch freezes its entries, scope, page numbers and PDF. Repeated
+requests return that same artifact; later entries start the next page. A partial
+page is closed with visibly unused rows and is not silently filled by a later PDF
+or fed through the printer again. Separate-page books and an all-series report
+must not accidentally assign the same pledge twice within one physical book.
+Late-recorded earlier loans appear on the next available page with their true
+business dates; do not renumber earlier pages to insert them. Failed/downloaded
+but unprinted batches remain available for exact reprint; generation alone does
+not establish physical printing or filing. No automatic printer integration or
+new mandatory acknowledgement workflow is required for this first version.
+
+**Print layout and scope.** Use the photographed grid/facing-page organisation as
+the usability reference, then reconcile it with the prescribed fields. Test A3
+landscape and paired A4 output, repeated headers, binding margins, legible Tamil
+fonts and long addresses/multiple collateral items. Confirm physical dimensions
+with a sample print before fixing pagination. Include quantity and weight units
+where appropriate without displacing prescribed content; every dated payment must
+remain readable, using referenced continuation pages when necessary. Preserve
+required precision and reviewed dd/mm/yyyy/Indian-number formatting. Book opening,
+period rollover and treatment of outstanding older pledges need a documented
+procedure that preserves references without counting principal twice.
+
+**Suggested delivery sequence, when selected:**
+
+1. Verify the current legal/form sources and map Form E fields to actual models,
+   immutable evidence and missing data; approve fictional English/Tamil print samples
+   and the physical filing/update procedure.
+2. Deliver a read-only current Form E view and on-demand full PDF by licence/series,
+   with coverage warnings and reconciliation to loan/payment records.
+3. Add preserved print batches, stable page/entry references, full/partial-page
+   readiness and the daily activity list for handwritten updates. Pilot the
+   print-and-annotate workflow and document
+   a simple end-of-day checklist. Retain manual updates in the physical book;
+   automated revised pages and paper-register retirement are outside this increment.
+
+Acceptance must include overlapping numeric/prefixed series, unpaid approvals,
+multiple items/payments, closed loans, earlier payouts and late batch closures,
+reversals/corrections, incomplete imports, long bilingual pages, repeated print
+requests, exact reprints versus current reports, room for handwriting, daily-list
+coverage of older loans/late entries, and Workspace/licence scope checks. Verify
+capacity boundaries, overflow/continuations, end-of-day partial pages, concurrent
+finalisation without duplicate assignment, failed-print reprints and stable page
+numbers when earlier-dated loans are recorded late.
+This extends FW-013 rather than creating a duplicate item or implementing a new
+accounting ledger. It does not schedule delivery or change production behaviour.
+
 **Related work:** [document printing](../flows/loan-document-printing.md),
 [configurable documents](loans-configurable-documents-plan.md),
 [licences and series](../domain/loans-regulatory-setup-and-policy.md).
@@ -508,6 +871,11 @@ service. Resume with current-law/Tamil-source verification and the form-to-data
 inventory; no forms, filings or production changes are authorised by this capture.
 
 ## FW-012: Complete Workspace export and guided restore into a fresh Workspace
+
+**Current sequencing, 30 September:** included after import confidence and guided
+migration in the [portability completion plan](portability-confidence-and-completion.md).
+Whole-Workspace design/implementation has not started; first establish existing
+export/restore coverage. Earlier unscheduled notes below describe their checkpoint.
 
 **Captured:** 2026-09-26. **Decision owner:** project owner.
 **State:** Future work; unscheduled, no implementation approval.
@@ -700,7 +1068,17 @@ recheck current Meta requirements, supported API versions and pricing.
 ## FW-010: Platform administrator role, operational workflows and UI
 
 **Captured:** 2026-09-26. **Decision owner:** project owner.
-**State:** Future work; unscheduled. **Implementation approval:** not granted.
+**State:** Console and guided suspend/restore increments approved on 2026-09-29; broader work remains. See Status for current release evidence.
+The approved scope is a mainly read-only console: overview, searchable Workspace
+directory, current access explanation, onboarding/invitation evidence, navigation
+to existing management workflows and an operator guide. Implementation reuses
+current superuser/global-context authorization and canonical access policy.
+See the [console guide](../flows/platform-console.md) and current Status for release
+evidence. The next approved increment adds reasoned suspend/restore confirmation,
+canonical access preview, stale/replay protection and lifecycle history using the
+existing service. It does not extend subscriptions or change billing evidence.
+Broader delegation, ownership recovery, impersonation and deletion remain outside
+these increments; the original discovery scope below is not all completed.
 
 **Problem.** The owner reports that the platform administrator's role, day-to-day
 operating workflows and UI are not yet clearly defined/implemented as a coherent
@@ -740,8 +1118,9 @@ before classifying individual capabilities as missing.
 context, forced RLS and audited actor/target/reason. Global metadata access must not
 silently imply access to tenant business data. Keep suspension separate from billing
 expiry/extensions, and distinguish the operator from the customer being assisted.
-No automatic superuser grants, new role system, impersonation, production changes
-or deletion workflows are authorised by this entry. Before delivery, validate
+No automatic superuser grants, new role system, impersonation or deletion workflows
+are authorised by this entry. The focused console release is approved separately
+above. Before delivery, validate
 permission boundaries, denied actions, lifecycle effects and audit evidence as well
 as desktop/mobile navigation and discoverability. Broader access changes need an ADR.
 
@@ -756,14 +1135,22 @@ as desktop/mobile navigation and discoverability. Broader access changes need an
 ## FW-009: Consent-based borrower identity verification / Aadhaar-assisted onboarding
 
 **Captured:** 2026-09-26. **Decision owner:** project owner.
-**State:** Shelved at owner request; desk feasibility review complete. Recording this idea does not approve implementation,
-provider onboarding, real identity-data collection or a production marketing claim.
+**State:** Provider comparison and enquiries resumed on 2026-09-30; implementation,
+provider onboarding, real identity-data collection and production marketing remain pending.
 
-**Shelved (2026-09-26).** The owner deferred resolving contracting legal entities
-and obtaining written answers before integration selection and a small pilot.
-Resume only on the owner's explicit instruction. Preserve the review and unsent
-enquiry; no provider outreach, registration, integration selection or pilot work
-should proceed meanwhile. On resumption, recheck current requirements and pricing.
+**Resumed (2026-09-30), following the 26 September deferral.** The owner accepted
+optional staff guidance with identity evidence/name-address prefilling and separate
+optional phone verification, then requested comparison with Surepass and proceeding
+with enquiries. J Champalal Pawn Brokers (JCL) is the proposed pilot; replies go to
+support@rokkad.com. Digio and Surepass are leading evaluation candidates, with
+Cashfree as the hosted DigiLocker comparison. No provider is selected. Public
+capabilities were rechecked; exact lender eligibility, legal structure, hosting and
+all-in prices remain unresolved. The [review](borrower-identity-feasibility.md)
+contains the comparison and exact enquiry. Following an initial automatic approval
+rejection, the owner explicitly approved the payload and all three recipients.
+Separate enquiries were sent from admin@rokkad.com at 15:15-15:17 IST on 30 September,
+requesting replies at support@rokkad.com; Gmail Sent verification passed.
+Provider delivery, eligibility answers and quotes remain unconfirmed.
 
 **Owner agreement (2026-09-26).** The owner agreed with the feasibility-first
 recommendation and the potential product promise: **"Verify customer identity and
@@ -868,10 +1255,45 @@ required before real paid onboarding. See the
 
 ## FW-007: Guided customer-facing legacy migration
 
+**3 October checkpoint:** independent paper loan entry, dated total-only receipts,
+supported corrections/renewals/closure, transaction review, native recovery and
+recorded-origin auction are implemented locally. Remaining additional actual paper
+profiles need representative source evidence and a separate selection; do not infer
+new rules from unexplained totals. Real-book and rollout acceptance remain pending.
+The owner requested a combined repository commit with Khata; use the
+[joint release guide](../flows/khata-and-paper-first-release.md).
+
+**2 October selected direction:** manual paper entry is now selected as an extension
+of the ordinary Loans workflow, including mixed later payments, renewals and
+closures, total-only receipts and conditional admission of reconciled archive
+history. See the [accepted design](../flows/unified-loan-recording.md) and
+[delivery plan](unified-loan-recording.md). This supersedes the unscheduled status
+below for that slice. Implementation is authorized and begins with
+[dated paper receipts on existing opening loans](../implementation/unified-loan-recording.md);
+broader history admission remains pending. Generic migration and restoration
+scope is not implicitly selected.
+
+**30 September increment:** [Guided outstanding-register import](../flows/guided-outstanding-register-import.md) now provides a template, XLSX/CSV upload, explicit existing/new customer matching, licence/series/handover setup, loan/item/totals preview, grouped exceptions, atomic confirmation and durable results. This first adapter supports unchanged-principal, upfront-first-month, original-anniversary bullet loans only. It reuses the existing opening engine. Broader rules, arbitrary vendor/sheet mappings, manual paper entry, address/media preparation and full Workspace restoration remain separate work. The older scope below remains the broader target; see Status for release evidence.
+
+**Selected audit-first, 30 September:** the owner wants to establish that the
+current legacy import is sound before further statutory features, then make
+portability robust and easy to use. The
+[active plan](portability-confidence-and-completion.md) supersedes the earlier
+unscheduled state below. Begin with read-only source/destination reconciliation;
+do not start a generic wizard or re-import the live database first.
+
+**Audit delivered, 30 September:** the [confidence report](../implementation/import-confidence-audit-20260930.md)
+reconciles the frozen financial/archive cohorts and media evidence. The bounded
+repair queue is now delivered: JCL numeric continuation, 6,411 quantities, retained
+source-reader facts and future Party-change attribution. Eight older changes stay
+preserved with incomplete attribution. No re-import or statutory attestation was
+performed. The first guided customer register profile has subsequently shipped;
+see the increment above for its supported scope.
+
 Reconfirmed on 2026-09-25 in the [loan journey reference](../flows/loan-journey.md#7-imported-history-and-deliberate-digitization)
-and in-app staff guide. Manual old-paper loan admission and guided Excel loan
-imports remain future work; the published product story distinguishes them from
-the existing assisted migration foundation.
+and in-app staff guide. Manual old-paper admission and broader Excel mappings
+remain future work; the first bounded guided register profile was added on
+30 September. The product story must distinguish that scope from universal import.
 
 **Captured:** 2026-09-24. **Last reviewed:** 2026-09-25. **Decision owner:** project owner.
 **State:** Future work; unscheduled. **Implementation approval:** not granted by

@@ -144,9 +144,11 @@ def release_pawn_loan_in_full(
 
 def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, actor,
         interest_concession, concession_reason, effective_date, historical_number=None, returned_at=None,
-        paper_evidence=None):
+        paper_evidence=None, recorded_number=None):
     """Shared writer; historical parameters are only used by atomic opening restore."""
     loan = _locked_loan(loan_id)
+    paper_settlement = bool(paper_evidence and paper_evidence.get("closure_basis") == "PAPER_SETTLEMENT")
+    target_custody = CollateralCustodyState.PAPER_CLOSED.value if paper_settlement else CollateralCustodyState.WITH_CUSTOMER.value
     require_loan_action(loan, actor, "loan.release")
     request_key = _request_key(request_key)
     amount = _money_amount(settlement_amount, loan)
@@ -173,6 +175,15 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
         )
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnReleaseError("Only an active PawnLoan can be released.")
+
+    from .recorded_collections import recording_for, recognize_collection_interest
+    recorded = recording_for(loan)
+    if paper_settlement and (not recorded or paper_evidence.get("profile") != "recorded-history-closure/1"):
+        raise PawnReleaseError("Paper-only closure requires an identified recorded paper contract.")
+    if recorded:
+        recognize_collection_interest(loan, effective_date, actor=actor, request_key=request_key)
+    if recorded_number is not None and (not recorded or not paper_evidence or historical_number is not None):
+        raise PawnReleaseError("A recorded original release number requires a recorded contract and paper evidence.")
 
     opening_origin = loan.loan_events.filter(event_kind="MIGRATION_OPENING").first()
     if historical_number is not None and (opening_origin is None or returned_at is None):
@@ -225,6 +236,9 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
             from .opening_servicing import opening_release_context
             _, obligation_state = opening_release_context(loan, as_of_date=effective_date)
             scheduled_interest_amount = min(interest_amount, obligation_state.remaining.interest)
+        elif recorded:
+            from .recorded_collections import scheduled_interest
+            scheduled_interest_amount = scheduled_interest(loan, effective_date, interest_amount)
         capitalized_principal = min(
             principal_amount,
             balance.capitalized_interest_principal_outstanding,
@@ -245,7 +259,11 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
     except Exception as exc:
         raise PawnReleaseError(str(exc)) from exc
 
-    if historical_number is None:
+    if recorded_number is not None:
+        from .recorded_numbers import claim_number
+        claim_number(loan.series, recorded_number, kind="PAWN_LOAN_RELEASE", actor=actor)
+        release_number = recorded_number
+    elif historical_number is None:
         release_number = allocate_release_number(series=loan.series, actor=actor).value
     else:
         from .history_setup import _check_number
@@ -353,27 +371,28 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
             valuation_snapshot=_json_snapshot(snapshot),
             returned_at=now,
         )
-        remove_collateral_from_storage(
-            item,
-            workflow_source="RELEASE",
-            source_reference=str(release.pk),
-            actor=actor,
-        )
+        if not paper_settlement:
+            remove_collateral_from_storage(
+                item,
+                workflow_source="RELEASE",
+                source_reference=str(release.pk),
+                actor=actor,
+            )
         PawnCollateralCustodyEvent.objects.create(
             collateral_item=item,
             release=release,
             from_state=item.custody_state,
-            to_state=CollateralCustodyState.WITH_CUSTOMER.value,
+            to_state=target_custody,
             effective_date=effective_date,
             actor=actor,
         )
-        item.custody_state = CollateralCustodyState.WITH_CUSTOMER.value
+        item.custody_state = target_custody
         item.save(update_fields=["custody_state", "updated_at"])
 
     if PawnCollateralItem.objects.filter(loan=loan).exclude(
-        custody_state=CollateralCustodyState.WITH_CUSTOMER.value
+        custody_state=target_custody
     ).exists():
-        raise PawnReleaseError("Loan cannot close until every item is returned.")
+        raise PawnReleaseError("Loan cannot close until every item agrees with its recorded closing evidence.")
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.RELEASE_COMPLETED.value,
@@ -472,6 +491,15 @@ def _build_full_release_preview(
         return PawnFullReleasePreview(readiness, partial_accrual,
             readiness.minimum_settlement + extra if readiness.minimum_settlement is not None else None)
     assert_pawn_loan_financial_actions_allowed(loan.pk, lock=lock)
+    from .recorded_collections import recording_for, collection_state
+    if recording_for(loan):
+        from dataclasses import replace
+        readiness = get_pawn_loan_release_readiness(loan.pk,
+            selected_item_ids=tuple(item.pk for item in outstanding_collateral), as_of_date=effective_date)
+        extra = Decimal(collection_state(loan, effective_date)["additional"])
+        readiness = replace(readiness, fees_and_interest_settlement=readiness.fees_and_interest_settlement + extra,
+            minimum_settlement=readiness.minimum_settlement + extra if readiness.minimum_settlement is not None else None)
+        return PawnFullReleasePreview(readiness, None, readiness.minimum_settlement)
     missing_accruals = preview_pawn_loan_accruals(
         loan.pk,
         as_of_date=effective_date,

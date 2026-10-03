@@ -357,6 +357,11 @@ def dispatch_job(job: NotificationJob) -> bool:
 	from apps.orgs.models import Company
 	from apps.subscriptions.access_policy import require_business_write
 	require_business_write(Company.all_objects.get(pk=job.workspace_id))
+	from apps.tenant_apps.loans.services.notice_delivery_readiness import dispatch_with_transaction_review
+	return dispatch_with_transaction_review(job, lambda: _dispatch_job(job))
+
+
+def _dispatch_job(job: NotificationJob) -> bool:
 	if job.channel not in DIGITAL_CHANNELS:
 		return False
 

@@ -142,15 +142,16 @@ def delete_draft_collateral_photo(collateral_item_id, photo_id, *, actor):
         raise PawnCollateralMediaError("Photograph was not found on this collateral item.")
     if photo.renewal_copies.exists():
         raise PawnCollateralMediaError("This photograph is retained as renewal evidence and cannot be deleted.")
-    storage, name = photo.file.storage, photo.file.name
     metadata = {"action": "collateral_photo_deleted", "collateral_item_id": collateral_item_id,
-                "photo_id": photo.pk, "original_filename": photo.original_filename, "sha256": photo.sha256}
+                "photo_id": photo.pk, "original_filename": photo.original_filename, "sha256": photo.sha256,
+                "file_retained_for_review": True}
     # Deliberate queryset deletion, using the existing draft-only PostgreSQL guard.
     PawnCollateralPhoto.objects.filter(pk=photo.pk).delete()
     LoanChangeLog.objects.create(loan=loan, actor=actor, event_kind="DRAFT_UPDATED",
                                 from_state="DRAFT", to_state="DRAFT", metadata=metadata)
-    if name and not photo.inherited_from_id and not PawnCollateralPhoto.objects.filter(file=name).exists():
-        transaction.on_commit(lambda: storage.delete(name))
+    # Removal changes the draft attachment, not the lifetime of the stored bytes.
+    # Tickets, migration receipts and other Workspaces can retain the same key;
+    # a scoped photo query cannot authorize physical deletion.
 
 
 @transaction.atomic

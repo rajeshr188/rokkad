@@ -73,6 +73,16 @@ def assess_risk_alert_communication_readiness(alert_id: int, *, locale="en"):
     mapping = _ALERT_NOTICE.get(alert.alert_kind)
     policy = PawnLoanCommunicationPolicy.objects.filter(workspace_id=workspace_id).first()
     blockers = []
+    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+    completeness = transaction_completeness(alert.loan, timezone.localdate())
+    if not completeness.complete:
+        blockers.append(_block("PAPER_COMPLETENESS_REVIEW", completeness.message))
+    elif completeness.required:
+        from .notice_delivery_readiness import notice_balance
+        try:
+            notice_balance(alert.loan, timezone.localdate())
+        except ValueError as exc:
+            blockers.append(_block("COLLECTION_REVIEW_REQUIRED", str(exc)))
     if alert.status != LoanRiskAlert.Status.OPEN:
         blockers.append(_block("ALERT_NOT_OPEN", "This risk alert is no longer open."))
     if alert.loan.state != PawnLoanState.ACTIVE.value:
@@ -85,7 +95,7 @@ def assess_risk_alert_communication_readiness(alert_id: int, *, locale="en"):
     elif not _snapshot_supports(alert.alert_kind, snapshot):
         blockers.append(_block("RISK_NO_LONGER_SUPPORTS_NOTICE", "The current risk state no longer supports this borrower notice."))
     channels = tuple(
-        _assess_channel(alert, mapping, channel.value, locale, policy)
+        _assess_channel(alert, mapping, channel.value, locale, policy, completeness)
         for channel in PawnLoanNoticeChannel
     ) if mapping else ()
     return RiskAlertCommunicationReadiness(
@@ -98,7 +108,7 @@ def assess_risk_alert_communication_readiness(alert_id: int, *, locale="en"):
     )
 
 
-def _assess_channel(alert, mapping, channel, locale, policy):
+def _assess_channel(alert, mapping, channel, locale, policy, coverage):
     notice_kind, event_key = mapping
     blockers = []
     recipient = alert.loan.borrower.primary_email if channel == "EMAIL" else alert.loan.borrower.primary_phone
@@ -136,6 +146,7 @@ def _assess_channel(alert, mapping, channel, locale, policy):
         notice_kind=notice_kind,
         channel=channel,
         notification_template_version=template.version,
+        transaction_review_id=coverage.review_id,
     ).exists():
         blockers.append(_block("NOTICE_ALREADY_EXISTS", "This risk event already has the same notice, channel, and template version."))
     return RiskCommunicationChannelReadiness(channel, not blockers, tuple(blockers), recipient or "", template)

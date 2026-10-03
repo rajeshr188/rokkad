@@ -1,0 +1,18 @@
+{% extends "base_tenant.html" %}
+{% block title %}Khata series status{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:khata_setup' request.workspace.slug %}">&larr; Khata series &amp; policies</a>
+<h1 class="h3 mt-3">{% if review_token %}Review{% else %}Change{% endif %} series lending status</h1>
+{% if form_error %}<div class="alert alert-danger" role="alert">{{ form_error }}</div>{% endif %}
+<p>{{ series.name }} ({{ series.prefix }}) &middot; {{ series.lending_status|title }} &middot; next number {{ series.next_number }} / {{ series.maximum_number }}</p>
+<section class="card card-body mb-3"><h2 class="h5">What changes</h2>
+<p>Pause and retirement stop new drafts, opening approvals, all withdrawals and limit increases in this series, including existing accounts. Resume restores series availability; licence eligibility, number capacity and normal lending checks still apply.</p>
+<p>Existing interest collection, collateral servicing, reductions and settlement remain available under their usual permissions and rules. Account numbers, consumed numbers and the licence association are preserved.</p>
+<p class="mb-0"><strong>Retirement is permanent.</strong> Use pause for a temporary stop. New lending after retirement requires a separate series with a distinct prefix.</p></section>
+{% if review_token %}
+<section class="card card-body mb-3"><h2 class="h5">{{ new_status }} this series</h2><p class="mb-0">Reason: {{ reason }}</p></section>
+<form method="post">{% csrf_token %}<input type="hidden" name="review_token" value="{{ review_token }}"><button class="btn btn-primary" type="submit">Confirm {{ new_status|lower }}</button> <button class="btn btn-outline-secondary" type="submit" name="edit" value="1">Edit instructions</button></form>
+{% else %}
+<form method="post" class="card card-body">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="mb-3">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}{% if not series.retired_at %}<button class="btn btn-primary align-self-start" type="submit">Review status change</button>{% else %}<p class="mb-0">This series is retired and cannot be resumed. Its status history remains available in setup.</p>{% endif %}</form>
+{% endif %}
+{% endblock %}

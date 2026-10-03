@@ -174,7 +174,9 @@ class OpeningPaymentTests(OpeningReleaseFixture):
         url = reverse("workspace_loans:pawn_loan_repay", kwargs=args)
         detail = reverse("workspace_loans:pawn_loan_detail", kwargs=args)
         self.assertContains(client.get(detail), url)
-        self.assertContains(client.get(url), "1010")
+        response = client.get(url)
+        self.assertEqual(response.context["balance"].total_due, 1010)
+        self.assertContains(response, "1,010")
         data = {"amount": "210", "request_key": "http-payment", "action": "preview"}
         self.assertContains(client.post(url, data), "Preview only")
         self.assertEqual(self.loan.loan_events.count(), 1)

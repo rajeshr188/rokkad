@@ -29,7 +29,7 @@ def get_pawn_setup_checklist(workspace):
             continue
         series_ready = True
         try:
-            policy = resolve_pawn_loan_economic_policy(workspace_id=workspace.pk, license_id=series.license_id, as_of_date=today)
+            policy = resolve_pawn_loan_economic_policy(workspace_id=workspace.pk, license_id=series.license_id, series_id=series.pk, as_of_date=today)
             for metal in ("GOLD", "SILVER"):
                 resolve_pawn_metal_interest_rate_policy(workspace_id=workspace.pk, license_id=series.license_id, series_id=series.pk, metal=metal, as_of_date=today)
         except ValueError:

@@ -14,6 +14,8 @@ class InterestMethod(StringEnum):
 class PartialMonthMethod(StringEnum):
     FULL_MONTH = "FULL_MONTH"
     SLAB = "SLAB"
+    STARTED_WEEKS = "STARTED_WEEKS"
+    ACTUAL_DAYS = "ACTUAL_DAYS"
 
 
 class ValuationMethod(StringEnum):
@@ -27,6 +29,8 @@ class RoundingMethod(StringEnum):
 
 
 def _validate_policy_values(policy):
+    if type(policy.minimum_first_month) is not bool:
+        raise ValueError("Minimum first-month charge must be a boolean.")
     if not 1 <= policy.partial_month_cutoff_days <= 30:
         raise ValueError("Partial-month cutoff days must be between 1 and 30.")
     if not Decimal("0") < policy.partial_month_lower_fraction <= Decimal("1"):
@@ -50,6 +54,7 @@ class WorkspacePolicyDefaults:
     maximum_ltv_ratio: Decimal = Decimal("0.80")
     rounding_method: RoundingMethod = RoundingMethod.PER_ACCRUAL_PERIOD
     currency_quantum: Decimal = Decimal("0.01")
+    minimum_first_month: bool = False
 
     def __post_init__(self):
         _validate_policy_values(self)
@@ -66,6 +71,7 @@ class LicensePolicyOverrides:
     maximum_ltv_ratio: Decimal | None = None
     rounding_method: RoundingMethod | None = None
     currency_quantum: Decimal | None = None
+    minimum_first_month: bool | None = None
 
     def __post_init__(self):
         defaults = WorkspacePolicyDefaults()
@@ -93,6 +99,7 @@ class ResolvedLoanPolicy:
     maximum_ltv_ratio: Decimal
     rounding_method: RoundingMethod
     currency_quantum: Decimal
+    minimum_first_month: bool = False
 
     def __post_init__(self):
         _validate_policy_values(self)
@@ -122,6 +129,7 @@ class DisbursalPolicySnapshot(ResolvedLoanPolicy):
             "maximum_ltv_ratio": str(self.maximum_ltv_ratio),
             "rounding_method": self.rounding_method.value,
             "currency_quantum": str(self.currency_quantum),
+            "minimum_first_month": self.minimum_first_month,
         }
 
     @classmethod
@@ -141,6 +149,7 @@ class DisbursalPolicySnapshot(ResolvedLoanPolicy):
             maximum_ltv_ratio=Decimal(payload["maximum_ltv_ratio"]),
             rounding_method=RoundingMethod(payload["rounding_method"]),
             currency_quantum=Decimal(payload["currency_quantum"]),
+            minimum_first_month=payload.get("minimum_first_month", False),
         )
 
 

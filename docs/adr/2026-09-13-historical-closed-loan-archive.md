@@ -1,11 +1,20 @@
 ---
 status: accepted
 owner: project
-updated: 2026-09-13
+updated: 2026-10-03
 tags: [loans, portability, archive, rls]
 ---
 
 # Retain incomplete closed-loan source claims separately from operational Loans
+
+**2 October design extension:** [unified loan recording](2026-10-02-unified-loan-recording.md)
+accepts future admission of complete, reconciled archive histories as ordinary
+closed loans with explicit source links and duplicate guards. It preserves this
+ADR's immutable retention contract. The [3 October admission decision](2026-10-03-archive-admission.md)
+implements the initial reconciled single-closed-loan profile locally, with an
+immutable source link and shared duplicate guards. It extends the historical
+behavior described below; archive acceptance alone still does not certify closure
+or create an operational loan. Deployment remains pending.
 
 The owner authorized the bounded historical-only archive slice after freezing
 the opening v1 wire contract. A source can report a released loan while its payment

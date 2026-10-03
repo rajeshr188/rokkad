@@ -99,6 +99,9 @@ def preview_pawn_loan_repayment(
         else:
             assert_pawn_loan_financial_actions_allowed(loan.pk, lock=False)
             balance = get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
+            from .recorded_collections import recording_for, collection_balance
+            if recording_for(loan):
+                balance = collection_balance(loan, timezone.localdate())
         allocation = allocate_repayment(balance, amount)
         return _repayment_preview(loan, balance, allocation)
     except PawnRepaymentError:
@@ -119,16 +122,30 @@ def record_pawn_loan_repayment(
                                          actor=actor, effective_date=timezone.localdate())
 
 
-def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effective_date):
+def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effective_date, recording_evidence=None, admission_key=None, correction_evidence=None, replay_closed=False):
     """Atomic caller only; recorded date is also used by opening restoration."""
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.repay")
     request_key = _request_key(request_key)
     amount = _money_amount(amount, loan)
+    if recording_evidence is not None:
+        from .paper_repayments import validate_paper_repayment_evidence
+        validate_paper_repayment_evidence(recording_evidence, effective_date=effective_date, amount=amount)
     existing = _existing_result(loan, request_key, amount)
     if existing:
+        if existing.loan_event.payload["repayment"].get("recording") != recording_evidence:
+            raise PawnRepaymentError("Repayment request key was already used for a different recording purpose.")
+        if existing.loan_event.payload.get("history_correction") != correction_evidence:
+            raise PawnRepaymentError("Repayment request key was already used for different correction evidence.")
         return existing
-    if loan.state != PawnLoanState.ACTIVE.value:
+    if replay_closed:
+        from .recorded_collections import recording_for
+        if (loan.state != "CLOSED" or not recording_for(loan) or not correction_evidence
+                or correction_evidence.get("schema") != "recorded-history-correction/1"
+                or not loan.loan_events.filter(event_kind__in=("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT")).exists()
+                or loan.loan_events.filter(event_kind__in=("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT"), reversed_by_event__isnull=True).exists()):
+            raise PawnRepaymentError("Closed receipt replay requires a compensated recorded settlement inside its correction transaction.")
+    elif loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
 
     opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
@@ -138,6 +155,9 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
             balance, obligation_state = opening_payment_balance(loan, as_of_date=effective_date)
         else:
             assert_pawn_loan_financial_actions_allowed(loan.pk)
+            from .recorded_collections import recording_for, recognize_collection_interest
+            if recording_for(loan):
+                recognize_collection_interest(loan, effective_date, actor=actor, request_key=request_key, correction_evidence=correction_evidence)
             balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         allocation = allocate_repayment(balance, amount)
     except PawnRepaymentError:
@@ -184,6 +204,12 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
             for item in item_allocations
         ],
     }
+    if recording_evidence is not None:
+        payload["repayment"]["recording"] = recording_evidence
+    if admission_key:
+        payload["recorded_admission"] = admission_key
+    if correction_evidence:
+        payload["history_correction"] = correction_evidence
     writer = record_loan_event
     scheduled_interest = allocation.interest
     if opening:
@@ -198,6 +224,10 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
         scheduled_interest = min(allocation.interest, obligation_state.remaining.interest)
         payload["repayment"]["unscheduled_interest_paid"] = str(allocation.interest - scheduled_interest)
         writer = _record_opening_servicing_event
+    elif recording_for(loan):
+        from .recorded_collections import scheduled_interest as recorded_scheduled_interest
+        scheduled_interest = recorded_scheduled_interest(loan, effective_date, allocation.interest)
+        payload["repayment"]["unscheduled_interest_paid"] = str(allocation.interest - scheduled_interest)
     event, _ = writer(
         loan.pk,
         event_kind=TransactionKind.REPAYMENT,
@@ -250,6 +280,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
                 "principal": _decimal_string(allocation.principal),
             },
             "loan_event_id": event.pk,
+            **({"recording": recording_evidence} if recording_evidence is not None else {}),
         },
     )
     return PawnRepaymentResult(
@@ -430,8 +461,13 @@ def _money_amount(value, loan):
         amount = Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnRepaymentError("Repayment amount must be a valid number.") from exc
-    quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
-    rounded = amount.quantize(quantum)
+    quantum = Decimal(str(loan.policy_snapshot.currency_quantum)).normalize()
+    if not amount.is_finite() or amount <= 0 or amount >= Decimal("1e16"):
+        raise PawnRepaymentError("Repayment amount must be a positive finite amount below 10,000,000,000,000,000.")
+    try:
+        rounded = amount.quantize(quantum)
+    except InvalidOperation as exc:
+        raise PawnRepaymentError("Repayment amount must use the loan's currency precision.") from exc
     if amount != rounded:
         raise PawnRepaymentError(
             f"Repayment amount must use the currency precision {quantum}."

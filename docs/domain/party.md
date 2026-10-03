@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-09-30
 tags: [domain, party]
 ---
 
@@ -18,15 +18,55 @@ Historical `contact.*` permission aliases still participate in Party authorizati
 do not remove them as unused imports. Shared borrower identity does not grant
 permission to perform loan lifecycle actions.
 
+The detail page's Loans tab has separate 20-row pages for active and closed loans,
+with Previous/Next, elided page numbers and visible ranges/counts. One loan-date
+sort control applies to both lists: newest first by default or oldest first, with
+the loan primary key breaking date ties. Switching sort resets both pages; page
+navigation preserves the other list's page and selected sort. Invalid sort values
+fall back to newest; Django's paginator handles malformed/out-of-range pages.
+Summary totals and collateral counts cover all loans, independently of the displayed
+pages. Existing state grouping and canonical balance calculations are unchanged.
+Other selector callers, including the borrower portal, retain their display limit.
+
 The customer Overview includes a private photo gallery with one default. Adding a
 photo preserves earlier photos and selects the new image; staff can select another
 default or remove an image. Removing the default selects the oldest remaining image.
 Existing profile images carry over automatically. Issued loan ticket artifacts stay
 unchanged. See the [gallery decision](../adr/2026-09-25-party-photo-gallery.md).
+Committed photo/document replacement, removal and gallery merges retain stored
+bytes for reference-aware cleanup review. These models explicitly opt out of
+automatic django-cleanup deletion; switching a default must keep both gallery files.
+Removing an attachment does not guarantee an immediate reduction in storage usage.
+See the [retention correction](../adr/2026-09-30-retain-detached-party-and-collateral-media.md).
 
 Borrower search shows name, relation, one primary phone and one default address
 (HOME preferred, otherwise the first saved default), plus the customer code. Contact
 methods and addresses remain multiple with a primary/default per type.
+
+Customer status edits and contact/address primary/default changes through the
+ordinary Workspace screens record the signed-in actor, object, timestamp and
+before/after flags in AuditLog in the same transaction. Demotions and deletions
+are included; phone numbers and address text are not duplicated in these entries.
+Import admission retains its own batch actor/provenance. This does not reconstruct
+actors for earlier unlogged changes or replace current choices with source defaults.
+
+Phone entry uses the existing `django-phonenumber-field` dependency directly,
+with India as the default region. The owner chose a compact single field rather
+than a country selector. Indian mobiles and landlines with area codes, and
+international `+country-code` numbers, are validated server-side. Valid values
+display with international spacing in edit forms, the directory, Overview and
+phone/mobile/WhatsApp contact rows; saves retain E.164 strings. Email, website
+and other contact types retain their own validation and display behavior.
+
+Phone fields remain optional on the customer master. Letters, notes, multiple
+numbers separated with a slash and extensions are rejected instead of silently
+converted or discarded; contact labels can hold extension notes. Formatting is
+applied on rendering/saving, not as-you-type validation or a reachability/ownership
+check. The contact editor changes its keyboard, hint and input type when the
+contact type changes, while Django remains authoritative without JavaScript.
+Invalid legacy strings remain visible unchanged for correction. No bulk cleanup,
+model conversion, historical ticket rewrite or global phone setting change is
+part of this update. Staged imports reuse the same Party forms and normalization.
 
 On the isolated ticket feature, `document_selectors.document_identity` provides
 authorized first-issue display facts to Loans. It requires matching Workspace

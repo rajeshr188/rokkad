@@ -77,9 +77,9 @@ def _record_opening_servicing_event(loan_id, *, event_kind, effective_date, payl
     kind = TransactionKind(event_kind).value
     detail = payload.get("opening_collection", {})
     operation = detail.get("operation", "RELEASE_RECEIPT") if kind == "INTEREST_ACCRUAL" else kind
-    if kind == "REPAYMENT" or (kind == "INTEREST_ACCRUAL" and operation == "REPAYMENT"):
+    if kind in {"REPAYMENT", "RENEWAL_SETTLEMENT"} or (kind == "INTEREST_ACCRUAL" and operation in {"REPAYMENT", "RENEWAL_SETTLEMENT"}):
         from .opening_payment_evidence import PROFILE, RULE
-        if detail.get("profile") != PROFILE or detail.get("rule") != RULE or detail.get("operation") != "REPAYMENT":
+        if detail.get("profile") != PROFILE or detail.get("rule") != RULE or detail.get("operation") != operation:
             raise OpeningEvidenceError("Unsupported opening repayment evidence.")
     require_loan_action(loan, actor, "workspace.settings.manage" if kind == "REVERSAL" else
                        "loan.repay" if operation == "REPAYMENT" else "loan.release")
@@ -88,10 +88,10 @@ def _record_opening_servicing_event(loan_id, *, event_kind, effective_date, payl
         raise OpeningEvidenceError("Opening servicing must be strictly after cutover.")
     if kind == "REVERSAL":
         if (reversal_of is None or reversal_of.loan_id != loan.pk or
-                reversal_of.event_kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT"} or
+                reversal_of.event_kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT", "RENEWAL_SETTLEMENT"} or
                 payload.get("values") != reversal_of.payload.get("values")):
             raise OpeningEvidenceError("Unsupported opening reversal.")
-    elif kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT"} or payload.get("opening_collection", {}).get("opening_event_id") != origin.pk:
+    elif kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT", "RENEWAL_SETTLEMENT"} or payload.get("opening_collection", {}).get("opening_event_id") != origin.pk:
         raise OpeningEvidenceError("Unsupported opening servicing event.")
     return _persist_locked_event(loan, kind=kind, effective_date=effective_date, payload=payload, actor=actor, reversal_of=reversal_of)
 

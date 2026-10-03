@@ -4,16 +4,17 @@
   <p class="small text-muted">Current portfolio as of {{ business_overview.as_of_date }}. Amounts in INR.</p>
   <div class="row g-3">
     <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Total customers</div><div class="h3 mb-1">{{ business_overview.total_customers|intcomma }}</div><div class="small text-muted">Customers registered for lending or with loan history, counted once.</div></div></div></div>
-    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active borrowers</div><div class="h3 mb-1">{{ business_overview.active_borrowers|intcomma }}</div><div class="small text-muted">Customers with at least one active loan.</div></div></div></div>
-    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active loans</div><div class="h3 mb-1">{{ business_overview.active_loans|intcomma }}</div><div class="small text-muted">Excludes drafts, approvals awaiting disbursal and closed loans.</div></div></div></div>
+    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active borrowers</div><div class="h3 mb-1">{{ business_overview.active_borrowers|intcomma }}</div><div class="small text-muted">Customers with at least one active ordinary loan or khata, counted once.</div></div></div></div>
+    <div class="col-6 col-lg-4"><div class="card h-100"><div class="card-body"><div class="small text-muted">Active loans</div><div class="h3 mb-1">{{ business_overview.active_loans|intcomma }}</div><div class="small text-muted">Ordinary loans and khatas. Excludes drafts, approvals awaiting payout and financially settled accounts.</div></div></div></div>
     <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-muted">Principal outstanding</div><div class="h3 mb-1">{% if business_overview.principal_outstanding != None %}₹{{ business_overview.principal_outstanding|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><div class="small text-muted">Active loans, after repayments and reversals. Includes interest already capitalized into principal.</div></div></div></div>
-    <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-muted">Recorded interest outstanding</div><div class="h3 mb-1">{% if business_overview.interest_outstanding != None %}₹{{ business_overview.interest_outstanding|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><div class="small text-muted">Finalized, unpaid interest on active loans. Excludes estimated and future interest.</div></div></div></div>
+    <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-muted">Recorded interest outstanding</div><div class="h3 mb-1">{% if business_overview.interest_outstanding != None %}₹{{ business_overview.interest_outstanding|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><div class="small text-muted">Finalized, unpaid ordinary-loan interest. Khata accrued interest is shown separately below.</div></div></div></div>
   </div>
   {% if business_overview.unavailable_balance_count %}<div class="alert alert-warning mt-3" role="status">Recorded balances need review for {{ business_overview.unavailable_balance_count }} active loan{{ business_overview.unavailable_balance_count|pluralize }}. Portfolio money totals are unavailable until that evidence is resolved. <a href="{% url 'workspace_slug_loan_list' workspace_slug=workspace.slug %}">Review loans</a>.</div>{% endif %}
 </section>
+{% include 'company/_khata_overview.html' %}
 {% include 'company/_financial_health.html' %}
 <section class="card mb-4" aria-labelledby="lending-activity-title"><div class="card-body">
-  <h2 class="h5" id="lending-activity-title">Lending activity</h2>
+  <h2 class="h5" id="lending-activity-title">Ordinary-loan lending activity</h2>
   <form method="get" class="row g-2 align-items-end mb-3">
     {% if request.GET.queue %}<input type="hidden" name="queue" value="{{ request.GET.queue }}">{% endif %}
     <div class="col-sm-4"><label for="{{ activity_form.period.id_for_label }}" class="form-label">Period</label>{{ activity_form.period }}{{ activity_form.period.errors }}</div>

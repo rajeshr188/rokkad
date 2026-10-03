@@ -38,7 +38,7 @@ def get_dashboard_health_summary(*, workspace):
         shortfall=_evidence_amount("coverage__shortfall"),
     )
     current = Q(assessment_status="CURRENT")
-    financial = (current & Q(projected__isnull=False, recorded__isnull=False,
+    financial = (current & Q(risk_snapshot__source_provenance__transactions__complete=True, projected__isnull=False, recorded__isnull=False,
         risk_snapshot__source_provenance__financial__integrity_findings=[],
         risk_snapshot__exposure=F("recorded") + F("projected")))
     coverage = (financial & Q(coverage_exposure__isnull=False, shortfall__isnull=False,
@@ -47,6 +47,7 @@ def get_dashboard_health_summary(*, workspace):
         risk_snapshot__source_provenance__coverage__status__in=("WITHIN_LIMIT", "BREACH")))
     totals = rows.aggregate(
         loan_count=Count("pk"), current_count=Count("pk", filter=current),
+        provisional_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__complete=False)),
         stale_count=Count("pk", filter=Q(assessment_status="STALE")),
         error_count=Count("pk", filter=Q(assessment_status="ERROR")),
         unassessed_count=Count("pk", filter=Q(assessment_status="UNASSESSED")),

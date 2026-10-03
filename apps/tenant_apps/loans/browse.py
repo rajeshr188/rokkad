@@ -77,8 +77,12 @@ class ReleaseTable(tables.Table):
     borrower = tables.Column(accessor="loan.borrower.display_name", verbose_name="Borrower")
     loan = tables.TemplateColumn("""<a hx-boost="false" href="{% url 'workspace_slug_loan_detail' request.workspace.slug record.loan_id %}">{{ record.loan.loan_number }}</a>""", order_by="loan__loan_number")
     kind = tables.TemplateColumn("""{% if record.is_full_release %}Full{% else %}Partial{% endif %}""", verbose_name="Type", order_by="is_full_release")
-    settlement_amount = tables.TemplateColumn("{{ record.settlement_amount|floatformat:2 }}", verbose_name="Settlement (INR)", order_by="settlement_amount")
+    settlement_amount = tables.Column(verbose_name="Settlement (INR)", orderable=False)
     status = tables.TemplateColumn("""{% if record.reversal %}Reversed{% else %}Recorded{% endif %}""", orderable=False)
+    def render_settlement_amount(self, record):
+        from apps.tenant_apps.loans.selectors.recorded_settlements import restated_release
+        current = restated_release(record)
+        return f"{current.settlement_amount:,.2f}" + (" (corrected)" if getattr(current, "correction_status", "") else "")
     class Meta:
         model = PawnLoanRelease
         fields = ("release_number", "borrower", "loan", "effective_date", "kind", "settlement_amount", "status")
@@ -120,5 +124,7 @@ def release_list(request):
 @loans_workspace_required
 @require_GET
 def release_detail(request, release_pk):
+    from apps.tenant_apps.loans.selectors.recorded_settlements import restated_release
     release = get_object_or_404(PawnLoanRelease.objects.select_related("loan__borrower", "created_by", "reversal__created_by").prefetch_related("items__collateral_item"), workspace=request.loans_workspace, pk=release_pk)
+    release = restated_release(release)
     return render(request, "loans/browse/release_detail.html", {"release": release})

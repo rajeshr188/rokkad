@@ -67,6 +67,8 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
             input_fingerprint=after,
             assessed_at=timezone.now(),
         )
+        from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+        values["source_provenance"]["transactions"] = transaction_completeness(loan, as_of_date).evidence()
         if snapshot is None:
             snapshot = LoanRiskSnapshot.objects.create(loan=loan, **values)
         else:
@@ -234,6 +236,8 @@ def _source_fingerprint(loan_id, workspace_id, as_of_date):
         .get()
     )
     payload = {"as_of": as_of_date.isoformat(), "loan": {k: str(v) for k, v in loan.items()}}
+    from apps.tenant_apps.loans.models import LoanTransactionReview
+    payload["transaction_reviews"] = LoanTransactionReview.objects.filter(loan_id=loan_id).aggregate(count=Count("pk"), max_pk=Max("pk"))
     model = PawnLoan
     for name, relation in (("events", model.loan_events.rel.related_model), ("schedules", model.repayment_schedules.rel.related_model), ("obligations", model.repayment_obligations.rel.related_model), ("allocations", model.obligation_allocations.rel.related_model), ("schedule_changes", model.repayment_schedule_changes.rel.related_model)):
         values = relation.objects.filter(loan_id=loan_id).aggregate(count=Count("pk"), max_pk=Max("pk"))

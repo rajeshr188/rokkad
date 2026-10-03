@@ -281,6 +281,8 @@ class PawnLoanReportsSelectorTests(SimpleTestCase):
             collateral = (self._collateral(CollateralCustodyState.IN_VAULT),)
         loan = SimpleNamespace(
             pk=71,
+            policy_snapshot_id=None,
+            _prefetched_objects_cache={"transaction_reviews": (), "loan_events": events},
             loan_number="PL-A-00001",
             state=state.value,
             loan_date=date(2026, 1, 1),

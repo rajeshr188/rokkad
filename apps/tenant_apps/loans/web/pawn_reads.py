@@ -83,6 +83,7 @@ def pawn_loan_list(request):
             "page_obj": page_obj,
             "readiness": readiness,
             "can_create_loans": workspace_activity(request.loans_workspace).can_write and request.loans_workspace_access.can("data.create"),
+            "can_review_paper_backlog": request.loans_workspace_access.can("data.edit"),
             "more_filters_open": any(request.GET.get(key) for key in ("license", "series", "loan_date_from", "loan_date_to")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
         },
@@ -118,6 +119,9 @@ def pawn_loan_detail(request, pk):
         ),
     }
     approval = max(loan.approval_snapshots.all(), key=lambda row: row.version, default=None)
+    from apps.tenant_apps.loans.selectors.recorded_settlements import restated_release, restated_renewal
+    context["renewals"] = [restated_renewal(row) for row in context["renewals"]]
+    context["releases"] = [restated_release(row) for row in loan.releases.all()]
     context["latest_approval"] = approval
     from apps.tenant_apps.loans.services.valuation_review import valuation_refresh_reason
     context["valuation_refresh_reason"] = valuation_refresh_reason(loan, approval)
@@ -202,9 +206,26 @@ def pawn_loan_detail(request, pk):
     for item in loan.collateral_items.all():
         item.current_appraisal = current_appraisals.get(item.pk)
     context["can_disburse"] = request.loans_workspace_access.can("loan.disburse")
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for, collection_balance
+    recorded = recording_for(loan)
+    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+    context["transaction_completeness"] = transaction_completeness(loan, context["today"])
+    context["can_review_transactions"] = request.loans_workspace_access.can("data.edit") and loan.state in ("ACTIVE", "CLOSED")
+    if recorded:
+        context["recorded_history"] = recorded
+        context["can_correct_paper_closing"] = loan.state == "CLOSED" and loan.releases.exists()
+        context["can_confirm_paper_handover"] = (loan.state == "CLOSED" and request.loans_workspace_access.can("loan.release")
+            and loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists())
+        context["archive_admission"] = loan.historical_import if hasattr(loan, "historical_import") and loan.historical_import.archive_evidence_id else None
+        context["can_print_schedule"] = True
+        context["can_print_ticket"] = True
+        for action in ("accrue", "capitalize", "send_notice"):
+            context["can_" + action] = False
+        if loan.state == "ACTIVE":
+            context["recorded_collection_balance"] = collection_balance(loan, context["today"])
     if opening:
         context["is_opening"] = True
-        for action in ("accrue", "capitalize", "renew"):
+        for action in ("accrue", "capitalize"):
             context["can_" + action] = False
         from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
         try:

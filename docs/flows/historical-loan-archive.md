@@ -1,15 +1,40 @@
 ---
 status: implemented
 owner: project
-updated: 2026-09-13
+updated: 2026-10-03
 tags: [loans, portability, archive, flow]
 ---
 
 # Historical loan evidence
 
-Open **Historical loan evidence** in Workspace settings, or follow the archive
-link from **Import Loans**. Accepted evidence has its own searchable, paginated
-list and never appears as a new operational loan.
+The [unified recording workflow](unified-loan-recording.md) now implements a local
+review route for one complete, reconciled closed history without renewals. The
+owner opens **Review admission to ordinary Loans**, supplies verified missing facts
+through the usual paper-history form and confirms the reconciled result. Admission
+links the ordinary closed loan to retained source evidence; list/detail show the
+relationship. Original records and media remain. Deployment is pending. Archive
+acceptance alone still does not create an operational loan.
+
+Open **Historical loans** in the Workspace sidebar. Accepted evidence has its own
+searchable, paginated list and never appears as a new operational loan. Loans
+carried forward for servicing remain in the ordinary Loans list after closure.
+
+The locally implemented readable browser (2 October; production activation pending)
+searches by loan number, customer name or source ID, and lists customer, loan date
+and closure date. Opening a number shows collateral, supplied payments, retained
+old-system item amounts/rates, payment splits, release records and source customer
+and loan fields. Human summary dates use DD/MM/YYYY. Raw timestamps/values retain
+their original spelling in the old-system fields. Missing payment evidence does
+not establish no collections, including at release. Stored legacy loan amounts
+are explicitly separate from verified original principal and current balances;
+no settlement totals are inferred. Photos keep their existing private routes.
+
+Source references, review findings, original JSON and evidence export remain in a
+secondary disclosure. Contradictory historical facts also show a visible warning.
+The owner upload link now sits under **Historical import tools**; existing migrated
+records do not need another upload. The archive remains read-only apart from its
+existing separately authorized staging/acceptance/export workflow. This browser
+does not resolve source people to current Party/user identities.
 
 1. An operator prepares one source-reported closed loan using the
    [closed-evidence format](../contracts/loan-closed-evidence-v1.md). Preserve missing

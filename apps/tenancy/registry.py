@@ -6,7 +6,7 @@ from django.apps import apps
 WORKSPACE_APP_LABELS = frozenset({"party", "loans", "notify_v2", "rates"})
 # Infrastructure is RLS-owned without exposing it through legacy generic data tools.
 RLS_PROTECTED_APP_LABELS = WORKSPACE_APP_LABELS | {"data_portability"}
-CONTROL_PLANE_OWNED_MODELS = frozenset({"orgs.workspacerole", "orgs.workspacerolegrant"})
+CONTROL_PLANE_OWNED_MODELS = frozenset({"orgs.workspacerole", "orgs.workspacerolegrant", "orgs.workspacestorageusage"})
 RLS_MIGRATION_BY_APP = {
     "data_portability": "0002_workspace_guards",
     "orgs": "0008_companyinvitation_role_fingerprint_workspacerole_and_more",
@@ -17,6 +17,32 @@ RLS_MIGRATION_BY_APP = {
 }
 # Models introduced after their app's original RLS rollout have their own gate.
 RLS_MIGRATION_BY_MODEL = {
+    "loans.paperbacklogcheckpoint": "0047_paper_backlog_checkpoint",
+    "loans.loantransactionreview": "0043_loan_transaction_review",
+    "loans.khatadocumentissue": "0042_khata_label_batches",
+    "loans.khatacollateralselection": "0037_khata_custody_settlement",
+    "loans.khatainterestperiod": "0035_khata_interest_collection",
+    "loans.khatainterestsegment": "0035_khata_interest_collection",
+    "loans.khatainterestallocation": "0035_khata_interest_collection",
+    "loans.khatapolicyrevision": "0034_khata_opening",
+    "loans.khataoperation": "0034_khata_opening",
+    "loans.khatacollateralitem": "0034_khata_opening",
+    "loans.khatacollateralvaluation": "0034_khata_opening",
+    "loans.khatacollateralphoto": "0034_khata_opening",
+    "loans.khataseries": "0033_khata_foundation",
+    "loans.khataseriesstatuschange": "0041_khata_series_status",
+    "loans.khataaccount": "0033_khata_foundation",
+    "loans.khataagreementrevision": "0033_khata_foundation",
+    "data_portability.guidedopeningbatch": "0016_guidedopeningbatch",
+    "loans.auctioneerhandover": "0031_auctioneer_handovers",
+    "loans.auctioneerhandoverrevision": "0031_auctioneer_handovers",
+    "loans.pledgebook": "0030_pledge_book",
+    "loans.pledgebookreview": "0030_pledge_book",
+    "loans.pledgebookbatch": "0030_pledge_book",
+    "loans.pledgebookentry": "0030_pledge_book",
+    "loans.statutoryauctionnotice": "0029_statutory_notices",
+    "loans.statutorynoticeevidence": "0029_statutory_notices",
+    "orgs.workspacestorageusage": "0010_storage_inventory",
     "loans.loanoriginationsettings": "0028_origination_photo_settings",
     "loans.paperclosuretransition": "0022_paper_closure_transition",
     "party.partyphoto": "0003_party_photo_gallery",

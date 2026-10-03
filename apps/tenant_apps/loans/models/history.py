@@ -8,6 +8,8 @@ from apps.tenancy.models import WorkspaceOwnedModel
 class HistoricalLoanImport(WorkspaceOwnedModel):
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     loan = models.OneToOneField("loans.PawnLoan", on_delete=models.PROTECT, related_name="historical_import")
+    archive_evidence = models.OneToOneField("loans.HistoricalLoanEvidence", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="financial_admission")
     source_namespace = models.UUIDField()
     source_id = models.CharField(max_length=120)
     source_sha256 = models.CharField(max_length=64)

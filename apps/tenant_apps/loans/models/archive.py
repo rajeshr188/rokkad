@@ -1,4 +1,4 @@
-"""Accepted source evidence, deliberately unrelated to operational loan rows."""
+"""Immutable source evidence retained alongside any reviewed financial admission."""
 import uuid
 from django.conf import settings
 from django.db import models

@@ -250,7 +250,7 @@ class LoanDocumentOverlayBlockForm(forms.Form):
     bold = forms.BooleanField(required=False, label="Bold text")
     optional_photo = forms.BooleanField(required=False, label="Leave absent photo blank", help_text="An unreadable or changed photo always blocks official printing.")
     padding_pt = forms.DecimalField(required=False, min_value=0, max_value=24, decimal_places=1, label="Text padding (pt)", help_text="Inset on all four sides; legacy frames use 6 pt.")
-    leading_pt = forms.DecimalField(required=False, min_value=6, max_value=48, decimal_places=1, label="Line spacing (pt)", help_text="Leave blank for automatic spacing; legacy frames use 12 pt.")
+    leading_pt = forms.DecimalField(required=False, min_value=6, max_value=48, decimal_places=1, label="Line spacing (pt)", help_text="Leave blank for automatic spacing; legacy frames use 12 pt. Auto-fit reduces spacing together with the font only when needed.")
     value_display = forms.ChoiceField(
         required=False, initial="LABEL_VALUE",
         choices=(("LABEL_VALUE", "Label and value"), ("VALUE_ONLY", "Value only")),

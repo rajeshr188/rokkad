@@ -1,12 +1,31 @@
 ---
 status: active
 owner: project
-updated: 2026-09-29
+updated: 2026-09-30
 tags: [domain, subscriptions, monetization]
 related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 ---
 
 # Subscriptions
+
+Owner monthly self-service is implemented locally with publication off by default.
+One explicitly selected recurring binding exposes INR 1,499/month for the owner
+plus five staff and at most twelve collections, independently of the private
+annual/one-off catalog. A verified canonical owner must accept a signed current
+offer; active trials must expire first. Consent and the durable provider attempt
+commit together before provider creation. Unknown outcomes require recovery, never
+a second mandate. Existing billing/access-exception history requires support review.
+See the [self-service decision](../adr/2026-09-30-owner-monthly-self-service.md).
+Production activation and the first real payment remain pending.
+
+The first current recurring capture may convert an expired trial to its frozen
+paid plan when the trial ended before agreement creation and period start, the
+Workspace is active and within seats, and there is no legacy mandate or earlier
+invoice/cycle history. Trial dates stay unchanged; exact paid dates and prior
+terms are audited atomically with payment and receipt intent. Future or conflicting
+payments remain under review. This is not early trial conversion or a general
+paid-plan replacement. See the [decision](../adr/2026-09-30-expired-trial-first-recurring-payment.md).
+This correction was deployed on 30 September with new paid authorization disabled.
 
 Operator catalog preparation is private while checkout and trial signup are both
 paused. The owner catalog then links to the Workspace's prepared recurring agreement,

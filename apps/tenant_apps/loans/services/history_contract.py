@@ -60,6 +60,8 @@ POLICY = obj(policy_version={"const": 1}, interest_method={"const": "SIMPLE"},
     partial_month_lower_fraction=DECIMAL, capitalization_interval_periods=INTEGER,
     valuation_method={"enum": ["CALCULATED_METAL_VALUE", "LATEST_APPRAISAL", "LOWER_OF_CALCULATED_AND_APPRAISAL"]},
     maximum_ltv_ratio=DECIMAL, rounding_method={"const": "PER_ACCRUAL_PERIOD"}, currency_quantum={"const": "0.01"})
+# Optional for compatibility with sealed earlier exports; omission means False.
+POLICY["properties"]["minimum_first_month"] = {"type": "boolean"}
 ITEM = obj(id=text(), description=text(255), metal={"enum": ["GOLD", "SILVER", "OTHER"]},
     gross_weight=DECIMAL, net_weight=DECIMAL, purity=DECIMAL, principal=DECIMAL, monthly_rate=DECIMAL,
     metal_rate=nullable(DECIMAL), appraised_value=nullable(DECIMAL), valuation_reference=text(255))
@@ -80,7 +82,40 @@ MANIFEST = obj(profile={"const": PROFILE}, namespace={"type": "string", "format"
 SCHEMA = {"$schema": "https://json-schema.org/draft/2020-12/schema", **obj(manifest=MANIFEST, loan=LOAN)}
 
 
-def validate(value, schema=SCHEMA, path="document"):
+PROFILE_V2 = "loan-history/2"
+PROFILES = (PROFILE, PROFILE_V2)
+# Exact Decimal evidence, including repeating calendar fractions (28-digit context).
+EXACT = {"type": "string", "pattern": r"^(0|[1-9][0-9]{0,11})(\.[0-9]{1,40})?$", "maxLength": 53}
+PRODUCT_FIELDS = ("repayment_structure", "amortisation_method", "payment_frequency", "extra_payment_rule")
+SUPPORTED_PRODUCTS = (
+    ("FLEXIBLE_PARTIAL_PAYMENT", "NONE", "FLEXIBLE", "REDUCE_PRINCIPAL"),
+    ("SINGLE_PAYMENT_BULLET", "NONE", "AT_MATURITY", "NOT_APPLICABLE"),
+)
+PRODUCT = obj(**{key: text(40) for key in PRODUCT_FIELDS})
+ACCRUAL_V2 = obj(**{**ACCRUAL["properties"], "fraction": EXACT, "unrounded": EXACT},
+    calculated=DECIMAL, advance_applied=DECIMAL, release_catch_up={"type": "boolean"},
+    period_days={"type": "integer", "minimum": 28, "maximum": 31},
+    elapsed_days={"type": "integer", "minimum": 1, "maximum": 31},
+    chargeable_days=nullable({"type": "integer", "minimum": 1, "maximum": 31}),
+    lines=array(obj(item=text(), base=DECIMAL, rate=DECIMAL, fraction=EXACT,
+        unrounded=EXACT, calculated=DECIMAL, advance_applied=DECIMAL, recognized=DECIMAL), 20, 1))
+POLICY_V2 = obj(**{**POLICY["properties"],
+    "partial_month_method": {"enum": ["FULL_MONTH", "SLAB", "STARTED_WEEKS", "ACTUAL_DAYS"]}})
+EVENT_V2 = obj(**{**EVENT["properties"], "accrual": nullable(ACCRUAL_V2)}, event_recorded={"type": "boolean"})
+LOAN_V2 = obj(**{**LOAN["properties"], "policy": POLICY_V2, "events": array(EVENT_V2, 240, 1)}, product=PRODUCT)
+SCHEMA_V2 = {"$schema": SCHEMA["$schema"], **obj(
+    manifest=obj(**{**MANIFEST["properties"], "profile": {"const": PROFILE_V2}}), loan=LOAN_V2)}
+
+
+def schema_for(value):
+    if isinstance(value, dict) and isinstance(value.get("manifest"), dict) and value["manifest"].get("profile") == PROFILE_V2:
+        return SCHEMA_V2
+    return SCHEMA
+
+
+def validate(value, schema=None, path="document"):
+    if schema is None:
+        schema = schema_for(value)
     if "oneOf" in schema:
         matches = 0
         for variant in schema["oneOf"]:
@@ -119,14 +154,14 @@ def validate(value, schema=SCHEMA, path="document"):
             field=path,
         )
     if kind == "object":
-        if set(value) != set(schema["properties"]):
+        if not set(schema["required"]).issubset(value) or not set(value).issubset(schema["properties"]):
             raise HistoryError(
                 f"{path}: missing or unsupported fields.",
-                category=MISSING_EVIDENCE if set(value) < set(schema["properties"]) else MALFORMED_DATA,
+                category=MISSING_EVIDENCE if not set(schema["required"]).issubset(value) else MALFORMED_DATA,
                 code="DOCUMENT_FIELDS",
                 field=path,
             )
-        for key, spec in schema["properties"].items(): validate(value[key], spec, f"{path}.{key}")
+        for key in value: validate(value[key], schema["properties"][key], f"{path}.{key}")
     if kind == "array":
         if not schema["minItems"] <= len(value) <= schema["maxItems"]:
             raise HistoryError(
@@ -173,14 +208,16 @@ def validate(value, schema=SCHEMA, path="document"):
             ) from exc
 
 
-def canonical_document(value, schema=SCHEMA):
+def canonical_document(value, schema=None):
     """Normalize decimal spellings without altering portable IDs or source text."""
-    if schema is DECIMAL:
+    if schema is None:
+        schema = schema_for(value)
+    if schema is DECIMAL or schema is EXACT:
         return decimal(value)
     if "oneOf" in schema:
         return None if value is None else canonical_document(value, schema["oneOf"][0])
     if schema.get("type") == "object":
-        return {key: canonical_document(value[key], child) for key, child in schema["properties"].items()}
+        return {key: canonical_document(value[key], child) for key, child in schema["properties"].items() if key in value}
     if schema.get("type") == "array":
         return [canonical_document(item, schema["items"]) for item in value]
     return value
@@ -256,4 +293,5 @@ def money(value):
 
 
 def decimal(value):
-    return format(Decimal(value).normalize(), "f")
+    result = format(Decimal(value), "f")
+    return result.rstrip("0").rstrip(".") if "." in result else result

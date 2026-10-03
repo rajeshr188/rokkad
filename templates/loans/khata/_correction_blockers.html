@@ -1,0 +1,7 @@
+{% if correction_blocker_count %}
+<section class="alert alert-warning" aria-labelledby="correction-blockers-heading" id="correction-blockers">
+  <h2 class="h6" id="correction-blockers-heading">Operations blocking correction</h2>
+  <p>{{ correction_blocker_count }} later operation{{ correction_blocker_count|pluralize }} require review. Showing up to 10 sources. A source link does not reverse the operation.</p>
+  <ul class="mb-0">{% for op in correction_blockers %}<li><a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?section=history&amp;history-operation={{ op.pk }}#operation-{{ op.pk }}">#{{ op.pk }} &middot; {{ op.get_kind_display }} &middot; {{ op.business_date|date:"d/m/Y" }}</a></li>{% endfor %}</ul>
+</section>
+{% endif %}

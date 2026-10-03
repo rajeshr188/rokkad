@@ -1,0 +1,34 @@
+{% extends "base_tenant.html" %}
+{% block title %}Pledge book (Form E) preview{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:statutory_guide' request.workspace.slug %}">&larr; Statutory forms &amp; notices</a>
+<h1 class="h3 mt-3">Pledge book (Form E) <span class="badge text-bg-secondary">Working preview</span></h1>
+<p><a href="{% url 'workspace_loans:pledge_books' request.workspace.slug %}">Open saved books, pending pledges and daily activity</a></p>
+<p>Review paid-out pledges by licence and series, then choose a single landscape A4 sheet or two facing portrait A4 pages. Drafts and unpaid approvals do not become pledge entries.</p>
+<div class="alert alert-info">This preview does not allocate permanent book/page numbers or retain a print batch. Review missing evidence and the physical layout before using finalised pages. Later handwritten updates will not appear in a downloaded PDF.</div>
+<form id="pledge-book-filters" method="get" class="card card-body mb-4">
+{{ form.non_field_errors }}
+<div class="row g-3">{% for field in form %}<div class="col-md-4">{{ field.label_tag }} {{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}</div>
+<div class="mt-3"><button class="btn btn-primary">Review entries</button></div>
+</form>
+{% if report %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+<h2 class="h5 mb-0">{{ report.entries|length }} entries for {{ report.license.license_number }}</h2>
+{% if can_export %}<button class="btn btn-outline-primary" type="submit" form="pledge-book-filters" name="format" value="pdf" formtarget="_blank">Preview selected layout PDF</button>{% endif %}
+</div>
+<p class="small text-body-secondary">Activity through {{ report.cutoff|date:"d/m/Y" }}, using records available at generation time. Late-recorded events are included. No permanent page numbers have been assigned.</p>
+<div class="alert alert-warning"><strong>Coverage needs review.</strong> {{ report.archive_count }} archived closed-loan source records in this Workspace are excluded because their licence/series mapping is not established. {{ report.excluded_count }} other loans in the selected range have no eligible payout evidence. This is not a complete reconstruction of the old pledge book.</div>
+<p>Print at <strong>A4, actual size (100%), single-sided</strong>, using the orientation shown in the PDF. <strong>Landscape</strong> puts all columns on one sheet; <strong>facing portrait pages</strong> give more writing space and should be filed Left/Right together. Both trial layouts fit up to five ordinary entries per sheet or pair. Long entries use more space or continuation pages; they are not clipped to meet a row count. Keep the evidence notes with either layout.</p>
+<div class="list-group mb-4">{% for entry in report.entries %}
+<article class="list-group-item p-3">
+<div class="d-flex justify-content-between flex-wrap gap-2"><h3 class="h5"><a href="{% url 'workspace_slug_loan_detail' request.workspace.slug entry.loan_id %}">{{ entry.number }}</a> <span class="small text-body-secondary">{{ entry.date|date:"d/m/Y" }} &middot; {{ entry.series }}</span></h3><strong>{{ entry.principal }}</strong></div>
+<div class="row"><div class="col-md-6"><p><strong>Pawner:</strong> {{ entry.borrower }}<br>{{ entry.address|linebreaksbr }}</p><p><strong>Agreed period:</strong> {{ entry.tenure }}<br><strong>Interest:</strong><br>{{ entry.rates|linebreaksbr }}</p></div><div class="col-md-6"><p>{{ entry.descriptions|linebreaksbr }}</p><p><strong>Original article values:</strong><br>{{ entry.valuations|linebreaksbr }}</p></div></div>
+<details><summary>Payments, redemption and evidence notes</summary>
+<p class="mt-2"><strong>Payments:</strong><br>{{ entry.payments|default:"No later payments in the available evidence."|linebreaksbr }}</p>
+<p><strong>Redemption / auction:</strong><br>{{ entry.closures|default:"No redemption or auction event shown."|linebreaksbr }}</p>
+<p><strong>Separate article owner:</strong> {{ entry.owner }}<br><strong>Redeemer / purchaser:</strong> {{ entry.recipients|default:"Not recorded"|linebreaksbr }}</p>
+<p class="small">Source: {{ entry.source }}</p><ul>{% for warning in entry.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+</details>
+</article>{% empty %}<p class="list-group-item">No eligible payout entries in this selection.</p>{% endfor %}</div>
+{% endif %}
+{% endblock %}

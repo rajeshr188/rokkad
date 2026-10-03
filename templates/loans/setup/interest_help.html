@@ -1,0 +1,24 @@
+{% extends "base_tenant.html" %}
+{% load i18n %}
+{% block title %}{% translate "Interest policy guide" %}{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy">&larr; {% translate "Calculation settings" %}</a>
+<h1 class="h3 mt-3">{% translate "Interest policy guide" %}</h1>
+<div class="row g-4"><div class="col-xl-5"><div class="card card-body">{% include "loans/setup/_interest_help.html" %}</div></div>
+<div class="col-xl-7"><section class="card card-body" aria-labelledby="example-heading">
+<h2 class="h5" id="example-heading">{% translate "Try an example" %}</h2>
+<p class="small text-body-secondary">{% translate "Read-only illustration: one collateral item, simple interest, unchanged principal and paise rounding. This does not save a policy or create a loan. Actual loan quotes also account for repayments, item rates, fees and the loan’s frozen terms." %}</p>
+{% include "components/forms/accessible.html#errors" %}
+<form method="get" novalidate>
+<div class="row g-2">{% for field in form %}<div class="col-sm-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div>
+<button class="btn btn-primary" type="submit">{% translate "Calculate example" %}</button>
+</form>
+{% if example %}<div class="mt-4" aria-live="polite">
+<h3 class="h6">{% translate "Example result" %}</h3>
+<p>{% translate "Interest calculated" %}: <strong>INR {{ example.total|floatformat:2 }}</strong> &middot; {% translate "Upfront credit applied" %}: INR {{ example.applied|floatformat:2 }} &middot; {% translate "Additional interest" %}: <strong>INR {{ example.additional|floatformat:2 }}</strong>.</p>
+{% if example.unused_advance %}<p class="small">{% translate "Unused upfront credit in this example" %}: INR {{ example.unused_advance|floatformat:2 }}. {% translate "This illustration does not determine refund eligibility." %}</p>{% endif %}
+<div class="table-responsive"><table class="table table-sm"><caption>{% translate "Monthly periods; fractions displayed to six decimals, calculations use full precision." %}</caption><thead><tr><th>{% translate "Period" %}</th><th>{% translate "Days / month" %}</th><th>{% translate "Fraction" %}</th><th>{% translate "Interest" %}</th><th>{% translate "Upfront credit" %}</th><th>{% translate "Additional" %}</th></tr></thead><tbody>
+{% for row in example.rows %}<tr><td>{{ row.start|date:"d M Y" }} – {{ row.end|date:"d M Y" }}{% if row.number == 1 %}<div class="small text-body-secondary">{% translate "Full first month minimum" %}</div>{% endif %}</td><td>{{ row.elapsed }} / {{ row.days }}</td><td>{{ row.fraction|floatformat:6 }}</td><td>{{ row.calculated|floatformat:2 }}</td><td>{{ row.advance|floatformat:2 }}</td><td>{{ row.additional|floatformat:2 }}</td></tr>{% endfor %}
+</tbody></table></div></div>{% endif %}
+</section></div></div>
+{% endblock %}

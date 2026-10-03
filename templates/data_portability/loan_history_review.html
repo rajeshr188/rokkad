@@ -8,7 +8,7 @@
 <p>Source loan {{ batch.document.loan.number }} · {{ batch.document.loan.state }} · disbursed {{ batch.document.loan.disbursed_on }} · cutover {{ batch.document.manifest.as_of }}.</p>
 <p>Borrower source: {{ batch.document.loan.borrower.source_system }} / {{ batch.document.loan.borrower.id }}. The exact imported Party identity must match.</p>
 <p>Source actors and original numbers are retained as historical claims. Local evidence records who imported them.</p>
-<details><summary>Source events ({{ batch.document.loan.events|length }})</summary><table class="table"><thead><tr><th>Date</th><th>Kind</th><th>Principal</th><th>Interest</th><th>Fees</th></tr></thead><tbody>{% for row in batch.document.loan.events %}<tr><td>{{ row.date }}</td><td>{{ row.kind }}</td><td>{{ row.principal }}</td><td>{{ row.interest }}</td><td>{{ row.fees }}</td></tr>{% endfor %}</tbody></table></details>
+<details><summary>Source timeline ({{ batch.document.loan.events|length }})</summary><table class="table"><thead><tr><th>Date</th><th>Kind</th><th>Principal</th><th>Interest</th><th>Fees</th></tr></thead><tbody>{% for row in batch.document.loan.events %}<tr><td>{{ row.date }}</td><td>{{ row.kind }}{% if row.event_recorded == False %}<div class="small text-body-secondary">Accrual evidence only; no financial event</div>{% endif %}</td><td>{{ row.principal }}</td><td>{{ row.interest }}</td><td>{{ row.fees }}</td></tr>{% endfor %}</tbody></table></details>
 {% endif %}
 {% if unfinished %}<form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="preview">{{ form.as_p }}<button class="btn btn-primary">Validate and preview complete history</button></form>{% endif %}
 {% if batch.preview %}

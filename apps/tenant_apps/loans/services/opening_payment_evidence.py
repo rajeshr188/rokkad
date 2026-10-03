@@ -45,7 +45,7 @@ def baseline(review, actions, on):
 
 
 def position(review, actions, on):
-    settled = bool(actions and actions[-1][0].event_kind == "RELEASE_RECEIPT")
+    settled = bool(actions and actions[-1][0].event_kind in {"RELEASE_RECEIPT", "RENEWAL_SETTLEMENT"})
     calculation_date = actions[-1][0].effective_date if settled else on
     rounded, raw, monthly = baseline(review, actions, calculation_date)
     covered = money(review["continuation"]["recognized_interest"])
@@ -73,10 +73,17 @@ def _items(opening, actions):
 def _validate_payment(opening, actions, row, state):
     detail, values = row.payload["repayment"], row.payload["values"]
     amount = money(detail["amount_received"])
+    if "recording" in detail:
+        from .paper_repayments import validate_paper_repayment_evidence
+        validate_paper_repayment_evidence(detail["recording"], effective_date=row.effective_date, amount=amount)
     require(0 < amount <= state["principal"] + state["interest"] + state["fees"], "Opening payment exceeds the amount due.")
     fees = min(amount, state["fees"])
     interest = min(amount - fees, state["interest"])
     principal = amount - fees - interest
+    if "recording" in detail:
+        require(not state["fees"], "Paper receipt allocation with fees requires an agreed rule.")
+        require(not principal or sum(before > 0 for before, _ in _items(opening, actions).values()) <= 1,
+                "Paper principal allocation across multiple items requires an agreed rule.")
     require(all(money(values.get(k, "0")) == v for k, v in
                 (("fees", fees), ("interest", interest), ("principal", principal),
                  ("original_principal", principal), ("capitalized_interest_principal", ZERO), ("interest_concession", ZERO))),
@@ -102,6 +109,7 @@ def collection_history(opening, origin, events, as_of):
     review = opening["review"]
     actions, snapshot, pending, reversing = [], [], None, None
     seen = set()
+    paper_references = set()
     ordered = sorted(events, key=lambda e: (e.effective_date, e.pk))
     for row in ordered:
         if row.pk == origin.pk:
@@ -131,8 +139,8 @@ def collection_history(opening, origin, events, as_of):
                 require(pending is None, "Opening collection has an unpaired catch-up.")
                 pending = row
                 continue
-            require(row.event_kind in {"REPAYMENT", "RELEASE_RECEIPT"}, "Unsupported opening collection event.")
-            kind = "repayment" if row.event_kind == "REPAYMENT" else "release"
+            require(row.event_kind in {"REPAYMENT", "RELEASE_RECEIPT", "RENEWAL_SETTLEMENT"}, "Unsupported opening collection event.")
+            kind = "repayment" if row.event_kind == "REPAYMENT" else "renewal" if row.event_kind == "RENEWAL_SETTLEMENT" else "release"
             key = row.payload.get(kind, {}).get("request_key")
             require(isinstance(key, str) and key and (kind, key) not in seen, "Duplicate or missing opening collection request.")
             seen.add((kind, key))
@@ -164,9 +172,14 @@ def collection_history(opening, origin, events, as_of):
             if row.event_kind == "REPAYMENT":
                 require(detail.get("profile") == PROFILE and detail.get("rule") == RULE, "Unsupported opening payment rule.")
                 _validate_payment(opening, actions, row, state)
+                recording = row.payload["repayment"].get("recording")
+                if recording:
+                    reference = recording["reference_key"]
+                    require(reference not in paper_references, "Duplicate paper receipt reference.")
+                    paper_references.add(reference)
             else:
                 values = row.payload["values"]
-                require(row.payload["release"].get("is_full_release") is True and
+                require((row.event_kind == "RENEWAL_SETTLEMENT" or row.payload["release"].get("is_full_release") is True) and
                         money(values.get("principal", "0")) == state["principal"] and
                         money(values.get("fees", "0")) == state["fees"] and
                         money(values.get("interest", "0")) + money(values.get("interest_concession", "0")) == state["interest"],

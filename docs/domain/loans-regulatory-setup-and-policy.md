@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-24
+updated: 2026-09-30
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -77,13 +77,13 @@ avoid reusing a historical number even if its original series association differ
 4. Add the required gold/silver monthly rate policies.
    A series can have its own effective-dated gold/silver override under
    Calculation, fees and monitoring > Series-specific monthly interest. Resolution
-   uses series, then licence, then Workspace rates. Other economic rules still use
-   their existing licence/Workspace scopes; approved loans remain frozen.
+   uses series, then licence, then Workspace rates. Calculation policies also support series > licence > Workspace precedence;
+   approved loans remain frozen.
 5. Add any fee policy deducted or collected by the business.
 6. Confirm the license detail shows non-consuming next numbers and readiness.
 
-The calculation policy includes simple/compound interest, full-month/slab
-part-month treatment, slab cutoff and lower fraction, capitalization interval,
+The calculation policy includes simple/compound interest, full-month/slab/started-week/actual-day
+part-month treatment and a minimum full first month for new revisions, slab cutoff and lower fraction, capitalization interval,
 cash/accrual recognition, valuation method, maximum LTV, advance-interest
 periods, per-period currency rounding, and currency quantum.
 
@@ -120,3 +120,6 @@ change the meaning of an existing loan.
 - Tenant rollout through `migrate_schemas --tenant` succeeds locally.
 - The workspace Owner accepted P1 on 2026-08-09. P2 mixed-metal origination and
   disbursal is the next capability gate.
+
+See the [series and part-month decision](../adr/2026-09-30-series-partial-month-interest.md)
+for effective dates, preservation of existing loans and daily/weekly boundaries.

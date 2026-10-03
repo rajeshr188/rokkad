@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-09-30
 tags: [loans, setup, staff, ltv]
 ---
 
@@ -10,7 +10,7 @@ tags: [loans, setup, staff, ltv]
 An Owner or Admin can open **Loan setup → Calculation, fees and monitoring**.
 
 1. The calculation form loads the current business default. To change a licence
-   override, find its row in **Calculation policy history** and select **Use these
+   or series override, find its row in **Calculation policy history** and select **Use these
    settings**. Check the scope before saving.
 2. Change the required value. For example, enter **0.95** for a maximum LTV of
    **95%**. Review the valuation method and effective start date. Leave the
@@ -33,3 +33,7 @@ explicitly revised.
 History is retained for review. An earlier row marked active remains eligible
 for its dates, but the latest applicable date/version within the scope wins.
 Changing calculation settings does not change fees or risk-monitoring thresholds.
+
+For partial-month charging and the minimum full first month, see the
+[interest policy guide](loan-interest-policies.md). A series calculation policy
+takes priority over its license and Workspace defaults.

@@ -115,6 +115,7 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
     total = None if blockers else sum((row.selected_value for row in results), Decimal("0"))
     exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date)
     ltv = calculate_ltv(exposure=exposure.ltv_exposure_basis, collateral_value=total, allowed_ltv_ratio=loan.policy_snapshot.maximum_ltv_ratio, blockers=blockers)
+    basis = "recorded-monitoring-basis" if loan.policy_snapshot.basis == "RECORDED_CONTRACT" else "loan-policy-snapshot"
     return PawnLoanCollateralValuation(loan.pk, as_of_date, tuple(results), total, ltv,
-        f"loan-policy-snapshot:{loan.policy_snapshot.pk}", policy.pk if policy else None,
+        f"{basis}:{loan.policy_snapshot.pk}", policy.pk if policy else None,
         policy.rate_freshness_days if policy else None, policy.appraisal_freshness_days if policy else None, policy_error)

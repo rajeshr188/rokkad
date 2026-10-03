@@ -38,6 +38,10 @@ from apps.tenant_apps.notify_v2.views import (
 
 class NotifyV2FoundationTests(SimpleTestCase):
     def setUp(self):
+        # The Loans guard has database/provider-boundary integration coverage in
+        # test_transaction_reviews; these tests isolate provider rendering.
+        self.enterContext(patch("apps.tenant_apps.loans.services.notice_delivery_readiness.dispatch_with_transaction_review",
+            side_effect=lambda job, deliver: deliver()))
         # These are isolated provider/rendering tests. Database-backed access
         # and expiry enforcement is exercised by WorkspaceAccessPolicyTests.
         for target in (

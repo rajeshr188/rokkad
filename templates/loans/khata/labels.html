@@ -1,0 +1,36 @@
+{% extends "base_tenant.html" %}
+{% load static %}
+{% block title %}Khata collateral labels{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab=documents">&larr; Khata {{ account.account_number }} documents</a>
+<h1 class="h3 mt-3">Khata collateral labels</h1>
+<p>{{ account.borrower.display_name }}</p>
+<p class="text-muted">100 &times; 60 mm. Print at actual size (100%). Labels show custody at issuance; scan the authenticated QR for current custody. Issuing a label does not move collateral or change debt.</p>
+<form method="get" class="row g-2 align-items-end mb-3" role="search">
+  <div class="col-sm-8"><label class="form-label" for="label-search">Find held collateral</label><input type="search" class="form-control" id="label-search" name="q" maxlength="120" value="{{ q }}" placeholder="Item number, UUID, description or storage reference"></div>
+  <div class="col-sm-4 d-flex gap-2"><button class="btn btn-outline-primary" type="submit">Search</button><a class="btn btn-outline-secondary" href="?">Clear</a></div>
+</form>
+<form method="post" class="card card-body mb-3" data-label-form>{% csrf_token %}
+  {{ form.request_key }}{{ form.request_key.errors }}{{ form.non_field_errors }}
+  <div class="mb-3">{{ form.mode.label_tag }}{{ form.mode }}{{ form.mode.errors }}</div>
+  <p class="small text-muted">{{ held_count }} items physically held, including pending returns. Each displayed batch contains at most 100 items, in item-number order. Issue this batch, then move to the next page. Searching or changing pages starts a new selection. Combined and all-item layouts apply to the whole account and are limited to 100 held items.</p>
+  <details class="mb-3"><summary>Single-item layout selection</summary><div class="mt-2">{{ form.item.label_tag }}{{ form.item }}{{ form.item.errors }}</div></details>
+  {{ form.items.errors }}
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><button type="button" class="btn btn-sm btn-outline-secondary" data-label-select hidden>Select displayed items</button><button type="button" class="btn btn-sm btn-outline-secondary" data-label-clear hidden>Clear selection</button><span class="small" data-label-count aria-live="polite"></span></div>
+  <div class="table-responsive"><table class="table table-sm align-middle" style="min-width: 44rem;"><thead><tr><th scope="col">Select</th><th scope="col">Collateral identity</th><th scope="col">Metal / quantity</th><th scope="col">Net / purity</th><th scope="col">Custody</th></tr></thead><tbody>
+  {% for row in rows %}<tr data-label-item>
+    <td><input class="form-check-input" type="checkbox" name="items" value="{{ row.item.pk }}" id="label-item-{{ row.item.pk }}" {% if row.selected %}checked{% endif %}><input type="hidden" name="page_items" value="{{ row.item.pk }}"></td>
+    <td><label for="label-item-{{ row.item.pk }}"><strong>Item {{ row.item.pk }}</strong> &middot; {{ row.item.description }}</label><div class="small text-muted text-break">{{ row.item.public_id }}</div><div class="small">Store: {{ row.item.storage_reference }}{% if row.item.photo_pk %} &middot; <a href="{% url 'workspace_loans:khata_photo' request.workspace.slug account.pk row.item.photo_pk %}" target="_blank" rel="noopener">View photo</a>{% endif %}</div></td>
+    <td>{{ row.item.get_metal_display }} / {{ row.item.quantity }}</td><td>{{ row.item.net_weight }} g / {{ row.item.purity }}%</td><td>{% if row.item.reserved %}Return pending{% else %}Held{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="5">No matching held collateral.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">Issue label PDF</button>{% if rows %}<button class="btn btn-outline-primary" type="submit" name="print_page" value="1">Print displayed batch ({{ rows|length }} labels)</button>{% endif %}</div>
+</form>
+<nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3" aria-label="Label item batches">
+  {% if item_page.has_previous %}<a class="btn btn-outline-secondary" href="?q={{ q|urlencode }}&amp;page={{ item_page.previous_page_number }}">Previous batch</a>{% endif %}
+  <span>{{ item_page.paginator.count }} matching items &middot; Batch {{ item_page.number }} of {{ item_page.paginator.num_pages }}</span>
+  {% if item_page.has_next %}<a class="btn btn-outline-secondary" href="?q={{ q|urlencode }}&amp;page={{ item_page.next_page_number }}">Next batch</a>{% endif %}
+</nav>
+<p class="small text-muted">Complete text must fit at 6 pt or larger. If a combined label is too crowded, choose individual labels. Each saved batch preserves its selected items, order and original PDF bytes under Documents, including after a return.</p>
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/khata-labels.js' %}" defer></script>{% endblock %}

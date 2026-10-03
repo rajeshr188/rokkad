@@ -115,8 +115,15 @@ def create_pawn_loan_notice(
         return existing
 
     notice_as_of_date = timezone.localtime(scheduled_for).date()
-    balance = get_pawn_loan_balance(loan.pk, as_of_date=notice_as_of_date)
+    from .notice_delivery_readiness import notice_balance, notice_transaction_evidence
+    try:
+        balance = notice_balance(loan, notice_as_of_date)
+    except ValueError as exc:
+        raise PawnLoanNoticeError(str(exc)) from exc
     _require_notice_eligibility(loan, balance, kind)
+    transaction_evidence = notice_transaction_evidence(loan, notice_as_of_date)
+    if transaction_evidence and source_risk_alert is None:
+        raise PawnLoanNoticeError("Paper/opening loan reminders require the reviewed risk-notice workflow, including borrower consent.")
     recipient_email = (loan.borrower.primary_email or "").strip()
     recipient_phone = (loan.borrower.primary_phone or "").strip()
     payload = _payload_snapshot(
@@ -130,8 +137,12 @@ def create_pawn_loan_notice(
         if source_risk_alert is None or notification_template is None:
             raise PawnLoanNoticeError("A frozen payload override is restricted to approved risk communication.")
         payload = dict(payload_snapshot_override)
+        if transaction_evidence and payload.get("transaction_review") != transaction_evidence:
+            raise PawnLoanNoticeError("Paper transaction review changed; preview the reminder again.")
     if communication_evidence:
         payload["communication_evidence"] = communication_evidence
+    if transaction_evidence:
+        payload["transaction_review"] = transaction_evidence
     notice = PawnLoanNotice.objects.create(
         workspace=loan.workspace,
         loan=loan,
@@ -150,6 +161,7 @@ def create_pawn_loan_notice(
         notification_template_id=getattr(notification_template, "pk", None),
         notification_template_version=getattr(notification_template, "version", None),
         notification_template_locale=getattr(notification_template, "locale", ""),
+        transaction_review_id=transaction_evidence["review_id"] if transaction_evidence else None,
     )
     reference = create_pawn_notice_job(notice)
     notice.notification_event_id = reference.event_id
@@ -242,6 +254,12 @@ def _locked_loan(loan_id):
 
 
 def _require_notice_eligibility(loan, balance, kind):
+    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+    completeness = transaction_completeness(loan, timezone.localdate())
+    if not completeness.complete:
+        raise PawnLoanNoticeError(completeness.message)
+    if completeness.required and kind not in (PawnLoanNoticeKind.REPAYMENT_REMINDER, PawnLoanNoticeKind.OVERDUE_NOTICE):
+        raise PawnLoanNoticeError("This paper-history profile supports reviewed repayment and overdue reminders only.")
     if kind == PawnLoanNoticeKind.AUCTION_NOTICE:
         if loan.state != PawnLoanState.ACTIVE.value or not balance.is_overdue:
             raise PawnLoanNoticeError("Auction notice requires an active overdue PawnLoan.")

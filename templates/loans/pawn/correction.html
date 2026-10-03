@@ -1,0 +1,33 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}Review paper history correction{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1100px">
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to {{ loan.loan_number }}</a>
+  <h1 class="h3 my-3">Review paper history correction</h1>
+  <p>Add a missing receipt, correct a mistaken entry or void an entry that did not happen. Existing receipts and interest calculations stay visible with linked corrections. Recalculated allocations preserve the actual dates and totals of other receipts.</p>
+  <p>A void removes a mistaken recorded receipt; it does not record money refunded. For a later renewal or full closure, check the settlement amount and retain its recorded meaning. A paper settlement with unconfirmed cash or customer handover keeps that uncertainty. The agreement and known collateral facts must remain correct. Changes to agreed terms, settlement dates or physical custody require separate reconciliation.</p>
+  {% if blockers %}<div class="alert alert-warning"><strong>History needs broader reconciliation</strong><ul>{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
+  <details class="mb-3" {% if blockers %}open{% endif %}><summary>Existing financial dependencies</summary><ul>{% for event in dependencies %}<li>Event #{{ event.pk }} · {{ event.effective_date }} · {{ event.get_event_kind_display }}</li>{% empty %}<li>No events available.</li>{% endfor %}</ul></details>
+  <form method="post">{% csrf_token %}{{ form.non_field_errors }}
+    <div class="row g-3">{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="{% if field.field.widget.input_type == 'checkbox' or field.name == 'reason' %}col-12{% else %}col-12 col-md-6{% endif %}">
+      {% if field.field.widget.input_type == 'checkbox' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+      {{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+    </div>{% endif %}{% endfor %}</div>
+    <p class="small mt-3">For a void, select the receipt and enter a reason; leave the new receipt fields blank. For a replacement, enter all corrected receipt facts.</p>
+    {% if not blockers %}<button class="btn btn-primary mt-2" name="action" value="preview">Preview correction and dependencies</button>{% endif %}
+    {% if review and not review.blockers %}<section class="border rounded p-3 mt-4" aria-labelledby="correction-review">
+      <h2 class="h4" id="correction-review">Check every affected allocation</h2>
+      <p>{{ review.reversed_count }} existing financial events will receive compensating entries. Their original evidence remains unchanged. This correction records past facts; it performs no new cash payment or collateral handover.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Date / source</th><th>Action / reference</th><th>Old receipt / settlement</th><th>Correct receipt / settlement</th><th>Old principal / interest</th><th>Correct principal / interest</th></tr></thead><tbody>
+      {% for row in review.rows %}<tr><td>{{ row.date }}{% if row.source %}<br>Event #{{ row.source }}{% endif %}{% if row.old_date and row.old_date != row.date %}<br>Previously {{ row.old_date }}{% endif %}</td><td>{{ row.action }}<br>{{ row.reference }}{% if row.old_reference and row.old_reference != row.reference %}<br>Previous reference: {{ row.old_reference }}{% endif %}</td><td>{{ row.amount|indian_money }}</td><td>{{ row.new_amount|indian_money }}</td><td>{{ row.old_principal|indian_money }} / {{ row.old_interest|indian_money }}</td><td>{{ row.principal|indian_money }} / {{ row.interest|indian_money }}</td></tr>{% endfor %}
+      </tbody></table></div>
+      {% for row in review.rows %}{% if row.terms %}<div class="alert alert-info"><strong>Settlement reconciliation</strong><p>{{ row.terms }}.</p><p>Receipt / settlement {{ row.amount|indian_money }} → {{ row.new_amount|indian_money }}; cash paid out {{ row.old_cash_paid|indian_money }} → {{ row.cash_paid|indian_money }}; interest offset {{ row.old_offset|indian_money }} → {{ row.offset|indian_money }}. Source: {{ row.reference }}.</p></div>{% endif %}{% endfor %}
+      {% if review.downstream %}<h3 class="h5">Linked loan history checked</h3><p>Successor agreements and their later payments or closure remain as recorded. A change to this history before confirmation requires a new preview.</p><div class="table-responsive"><table class="table"><thead><tr><th>Loan</th><th>Agreed contract</th><th>Status</th><th>Principal / interest outstanding</th><th>Custody</th></tr></thead><tbody>{% for row in review.downstream %}<tr><td><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug row.loan %}">{{ row.number }}</a></td><td>{{ row.date }}<br>Principal {{ row.agreed_principal|indian_money }}<br>{{ row.rate|floatformat:"-6" }}% monthly; {{ row.tenure }} months</td><td>{{ row.status }}</td><td>{{ row.principal|indian_money }} / {{ row.interest|indian_money }}</td><td>{{ row.custody }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+      <p>Current principal: {{ review.before.principal|indian_money }} → {{ review.after.principal|indian_money }}. Current interest: {{ review.before.interest|indian_money }} → {{ review.after.interest|indian_money }}. Total due: {{ review.before.total|indian_money }} → {{ review.after.total|indian_money }}.</p>
+      <p>Historical balances will reflect the corrected business dates. The audit records who entered this correction now and why. The original completeness confirmation remains dated {{ review.complete_through }}; this correction does not confirm later unentered paper activity.</p>
+      <button class="btn btn-success" name="action" value="confirm">Record reviewed correction</button>
+    </section>{% endif %}
+  </form>
+</div>
+{% endblock %}

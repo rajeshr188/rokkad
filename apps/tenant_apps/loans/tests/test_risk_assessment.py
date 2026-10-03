@@ -56,7 +56,8 @@ class RiskAssessmentTests(SimpleTestCase):
         self, _workspace, get_loan, active_schedule, resolve_policy,
         delinquency, collateral,
     ):
-        loan = SimpleNamespace(pk=11, license_id=3)
+        loan = SimpleNamespace(pk=11, license_id=3, policy_snapshot_id=None,
+            _prefetched_objects_cache={"transaction_reviews": (), "loan_events": ()})
         get_loan.return_value = loan
         active_schedule.return_value = SimpleNamespace(maturity_date=date(2026, 12, 31))
         resolve_policy.return_value = SimpleNamespace(

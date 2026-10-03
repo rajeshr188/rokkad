@@ -98,7 +98,9 @@
     <li>Values can use approved case, ISO-date, and plain-decimal formats.</li>
     <li>Optional presentation can use present, empty, equals, or not-equals conditions over registered fields.</li>
     <li>Mandatory visible information cannot exist only inside conditional blocks. Older layouts also require printed verification; precision tickets keep internal verification in their issue evidence.</li>
-    <li>Long values must explicitly wrap, shrink after a character threshold, or fail rendering.</li>
+    <li>New precision-ticket text and table frames automatically fit their complete contents. Text keeps its chosen size when it fits; otherwise fonts and line spacing reduce together, down to 6 pt. Table rows and values are never omitted.</li>
+    <li>Older frames can enable this with <strong>overflow_policy: SHRINK</strong>. Precision frames fit the actual available rectangle, including padding, rather than shrinking merely because a value has many characters. WRAP and ERROR remain explicit alternatives.</li>
+    <li>If complete content still cannot fit at 6 pt, enlarge the frame or choose a roomier layout. Text is never clipped, truncated or allowed to overlap adjacent frames. Photos and QR codes retain their own sizing rules.</li>
   </ul>
 </div>
 

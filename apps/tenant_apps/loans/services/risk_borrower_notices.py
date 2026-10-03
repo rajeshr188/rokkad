@@ -7,7 +7,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.tenant_apps.loans.models import LoanRiskAlert, current_tenant_workspace_id
-from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.notify_v2.services.delivery_service import build_whatsapp_cloud_payload, render_job_message
 from .pawn_notices import create_pawn_loan_notice
 from .risk_communication_readiness import assess_risk_alert_communication_readiness
@@ -40,8 +39,15 @@ def preview_risk_borrower_notice(alert_id, *, channel="EMAIL", locale="en"):
         if channel_readiness:
             messages.extend(row.message for row in channel_readiness.blockers)
         raise RiskBorrowerNoticeError(" ".join(messages) or f"{channel.title()} communication is not ready.")
-    balance = get_pawn_loan_balance(readiness.alert.loan_id, as_of_date=timezone.localdate())
+    from .notice_delivery_readiness import notice_balance, notice_transaction_evidence
+    try:
+        balance = notice_balance(readiness.alert.loan, timezone.localdate())
+    except ValueError as exc:
+        raise RiskBorrowerNoticeError(str(exc)) from exc
     payload = _payload(readiness.alert, balance)
+    evidence = notice_transaction_evidence(readiness.alert.loan, timezone.localdate())
+    if evidence:
+        payload["transaction_review"] = evidence
     recipient = SimpleNamespace(
         name_snapshot=readiness.alert.loan.borrower.display_name,
         email=channel_readiness.recipient if channel == "EMAIL" else "",
@@ -50,7 +56,7 @@ def preview_risk_borrower_notice(alert_id, *, channel="EMAIL", locale="en"):
     event = SimpleNamespace(
         payload=payload,
         recipient=recipient,
-        event_type=channel.template.event_type,
+        event_type=channel_readiness.template.event_type,
     )
     subject, body = render_job_message(SimpleNamespace(
         event=event, template=channel_readiness.template, channel=channel, batch=None,
@@ -72,6 +78,8 @@ def create_risk_borrower_notice(alert_id, *, actor, expected_fingerprint, channe
     if not expected_fingerprint or expected_fingerprint != preview.fingerprint:
         raise RiskBorrowerNoticeError("The preview changed. Review the current message before confirming again.")
     request_key = f"risk-{alert.source_event_id}-{preview.readiness.notice_kind}-{preview.channel.channel.lower()}-v{preview.channel.template.version}"
+    if preview.payload.get("transaction_review"):
+        request_key += f"-review{preview.payload['transaction_review']['review_id']}"
     return create_pawn_loan_notice(
         alert.loan_id,
         notice_kind=preview.readiness.notice_kind,

@@ -40,7 +40,7 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquenc
         if schedule is not None
         else get_pawn_loan_balance(loan, as_of_date=as_of_date).due_date
     )
-    return assess_pawn_loan_risk(
+    assessment = assess_pawn_loan_risk(
         as_of_date=as_of_date,
         maturity_date=maturity_date,
         days_past_due=delinquency.assessment.days_past_due,
@@ -49,3 +49,13 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquenc
         overdue_interpretation_variance=delinquency.overdue_variance,
         policy=policy,
     )
+    from dataclasses import replace
+    import hashlib
+    from .transaction_completeness import transaction_completeness
+    completeness = transaction_completeness(loan, as_of_date)
+    if not completeness.complete:
+        assessment = replace(assessment, flags=assessment.flags + ("TRANSACTIONS_UNCONFIRMED",),
+            explanations=assessment.explanations + (completeness.message,),
+            action_hint="RECONCILE_PAPER_RECORDS",
+            fingerprint=hashlib.sha256((assessment.fingerprint + str(completeness.evidence())).encode()).hexdigest())
+    return assessment

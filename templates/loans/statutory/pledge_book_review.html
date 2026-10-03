@@ -1,0 +1,12 @@
+{% extends "base_tenant.html" %}
+{% block title %}Review {{ row.number }} for Form E{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:pledge_book_detail' request.workspace.slug book.pk %}">&larr; {{ book.reference }}</a>
+<h1 class="h3 mt-3">Review original evidence · {{ row.number }}</h1>
+<p>{{ row.date|date:"d/m/Y" }} · {{ row.principal }} · source {{ row.source }}</p>
+<div class="card card-body mb-3"><p>Pawner: {{ row.borrower }}<br>Address: {{ row.address }}<br>Owner: {{ row.owner }}<br>Agreed period: {{ row.tenure }}</p><p>{{ row.descriptions|linebreaksbr }}<br>Values: {{ row.valuations|linebreaksbr }}<br>Interest: {{ row.rates|linebreaksbr }}</p><ul>{% for warning in row.warnings %}<li>{{ warning }}</li>{% endfor %}{% for warning in row.blockers %}<li>{{ warning }}</li>{% endfor %}</ul></div>
+<div class="alert alert-warning">Use original source documents, not today's customer profile or prices. Leave unsupported facts unknown and describe the gap below. A review records your assessment; it does not make missing history complete. Known frozen particulars cannot be overwritten here. New reviews replace earlier supplements for future printing while retaining their history.</div>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="mb-3">{{ field.label_tag }} {{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}<button class="btn btn-primary" {% if row.blockers %}disabled{% endif %}>Save source review</button></form>
+<h2 class="h5 mt-4">Retained review history</h2>
+{% for review in history %}<div class="card card-body mb-2"><p>{{ review.created_at|date:"d/m/Y H:i" }} · {{ review.created_by }} · {{ review.source_reference }}</p><p>{{ review.notes }}</p>{% for key,value in review.supplements.items %}<p><strong>{{ key|title }}:</strong> {{ value|linebreaksbr }}</p>{% endfor %}</div>{% empty %}<p>No earlier source reviews.</p>{% endfor %}
+{% endblock %}

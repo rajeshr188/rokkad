@@ -1,9 +1,42 @@
 {% extends 'base_tenant.html' %}
-{% block title %}Accepted historical evidence{% endblock %}
+{% load loans_display %}
+{% block title %}Historical loan {{ document.facts.loan_number|default_if_none:evidence.source_id }}{% endblock %}
 {% block workspace_content %}
-<h1 class="h3">Accepted historical evidence</h1>
-<p>Accepted by {{ evidence.accepted_by }} on {{ evidence.accepted_at }}. Source claims are preserved as an immutable snapshot.</p>
-{% include 'data_portability/_archive_evidence.html' %}
+<div class="app-heading"><div><h1 class="h3">Historical loan {{ document.facts.loan_number|default_if_none:evidence.source_id }}</h1><p>{{ document.facts.borrower_name|default_if_none:"Customer not recorded" }} <span class="badge text-bg-secondary">Closed · Historical</span></p></div><a class="btn btn-outline-secondary" href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Back to historical loans</a></div>
+<p class="alert alert-info">These details are retained from the previous system. Missing records remain unknown; the archive does not reconstruct a complete payment history or establish the amount collected at closure.</p>
+{% if origin %}<p class="alert alert-success">This source is linked to ordinary loan <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug origin.loan_id %}">{{ origin.loan.loan_number }}</a>. Retained evidence below is not another loan or cash movement.</p>{% elif can_admit %}{% if admission_error %}<p class="alert alert-warning">Admission needs source-identity reconciliation: {{ admission_error }}</p>{% else %}<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}?entry=paper&amp;archive={{ evidence.public_id }}">Review admission to ordinary Loans</a></p>{% endif %}{% endif %}
+<section class="card card-body mb-4" aria-labelledby="historical-overview"><h2 class="h5" id="historical-overview">Loan details</h2>
+<dl class="row mb-0">
+  <dt class="col-sm-5">Customer</dt><dd class="col-sm-7 text-break">{{ document.facts.borrower_name|default_if_none:"Not recorded" }}</dd>
+  <dt class="col-sm-5">Loan date</dt><dd class="col-sm-7">{{ historical.opened_on|date:"d/m/Y"|default:"Not recorded" }}</dd>
+  <dt class="col-sm-5">Closed date</dt><dd class="col-sm-7">{{ historical.closed_on|date:"d/m/Y"|default:"Not recorded" }}</dd>
+  <dt class="col-sm-5">Original principal reported by source</dt><dd class="col-sm-7">{% if document.facts.original_principal != None %}{{ document.facts.original_principal|indian_money }}{% else %}Not established{% endif %}</dd>
+  <dt class="col-sm-5">Balance reported by source</dt><dd class="col-sm-7">{% if document.facts.reported_balance != None %}{{ document.facts.reported_balance|indian_money }}{% else %}Not recorded{% endif %}</dd>
+  {% if historical.stored_amount != None %}<dt class="col-sm-5">Stored loan amount (old system)</dt><dd class="col-sm-7">{{ historical.stored_amount }}<div class="small text-body-secondary">Preserved source value. It may have changed during servicing and is not verified original principal, current debt or the amount collected at release.</div></dd>{% endif %}
+  <dt class="col-sm-5">Closure classification (source)</dt><dd class="col-sm-7 text-break">{{ document.facts.raw_status|default_if_none:"Closed; original status not recorded" }}</dd>
+</dl></section>
+{% for finding in report.findings %}{% if finding.category == 'HISTORICAL_INCONSISTENCY' %}<p class="alert alert-warning">{{ finding.message }}</p>{% endif %}{% endfor %}
+<section class="mb-4" aria-labelledby="historical-collateral"><h2 class="h5" id="historical-collateral">Collateral</h2>
+{% if historical.collateral == None %}<p>Collateral details are not established in the summary. Any retained old-system item or inline description appears below.</p>
+{% elif historical.collateral %}<div class="table-responsive"><table class="table"><thead><tr><th scope="col">Description</th><th scope="col">Quantity</th><th scope="col">Net weight (g)</th><th scope="col">Gross weight (g)</th></tr></thead><tbody>
+{% for item in historical.collateral %}<tr><td class="text-break">{{ item.description }}</td><td>{{ item.quantity|default_if_none:"Not recorded" }}</td><td>{{ item.net_weight|default_if_none:"Not established" }}</td><td>{{ item.gross_weight|default_if_none:"Not established" }}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p>The supplied summary explicitly lists no collateral items.</p>{% endif %}
+{% if historical.source_groups.items %}<h3 class="h6">Old-system item details</h3><p class="small text-body-secondary">Recorded metal, purity, amounts, rates and source weight are shown as stored. Source weight is separate from established net or gross weight above.</p>{% include 'data_portability/_archive_source_fields.html' with records=historical.source_groups.items %}{% endif %}
+</section>
+<section class="mb-4" aria-labelledby="historical-payments"><h2 class="h5" id="historical-payments">Recorded payments</h2>
+{% if historical.payments == None %}<p>Payment history is unknown in the supplied summary. Missing rows do not mean no payments were made or that no money was collected at release.</p>
+{% elif historical.payments %}<div class="table-responsive"><table class="table"><thead><tr><th scope="col">Payment reference</th><th scope="col">Date</th><th scope="col">Recorded amount</th></tr></thead><tbody>
+{% for payment in historical.payments %}<tr><td class="text-break">{{ payment.id }}</td><td>{{ payment.date|date:"d/m/Y"|default:"Not recorded" }}</td><td>{% if payment.amount != None %}{{ payment.amount|indian_money }}{% else %}Not recorded{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p>The supplied summary explicitly lists no payment records. This does not establish the complete settlement history.</p>{% endif %}
+{% if historical.source_groups.payments %}<h3 class="h6">Old-system payment breakdowns</h3>{% include 'data_portability/_archive_source_fields.html' with records=historical.source_groups.payments %}{% endif %}
+</section>
+<section class="mb-4" aria-labelledby="historical-release"><h2 class="h5" id="historical-release">Release records</h2>
+<p class="small text-body-secondary">A release record preserves the old system's closure and recipient references. It does not by itself establish a settlement amount or identify a current Rokkad user.</p>
+{% if historical.source_groups.releases %}{% include 'data_portability/_archive_source_fields.html' with records=historical.source_groups.releases %}{% else %}<p>No separately readable release row is available. The retained closure classification is shown above.</p>{% endif %}
+</section>
+{% if historical.source_groups.loan %}<section class="mb-4"><h2 class="h5">Old-system loan terms and fields</h2>{% include 'data_portability/_archive_source_fields.html' with records=historical.source_groups.loan %}</section>{% endif %}
+{% if historical.source_groups.borrower %}<section class="mb-4"><h2 class="h5">Old-system customer details</h2><p class="small text-body-secondary">Customer information at the source snapshot; it is not a current customer profile or proof of particulars on the original loan date.</p>{% include 'data_portability/_archive_source_fields.html' with records=historical.source_groups.borrower %}</section>{% endif %}
+{% if historical.source_groups.setup %}<details class="mb-4"><summary>Old-system licence and series details</summary><div class="mt-2">{% include 'data_portability/_archive_source_fields.html' with records=historical.source_groups.setup %}</div></details>{% endif %}
 {% if evidence.attachments.exists %}
 <h2 class="h5 mt-4">Legacy source images</h2>
 <p class="small text-muted">Original capture dates are unknown. Blank source placeholders are retained as supplied; they do not establish photographic evidence. These files are separate from the JSON evidence export.</p>
@@ -11,6 +44,10 @@
 <a href="{% url 'workspace_portability:archive_attachment' workspace_slug=request.workspace.slug evidence_id=evidence.public_id attachment_id=media.pk %}"><img width="160" height="120" class="img-thumbnail object-fit-cover" loading="lazy" src="{% url 'workspace_portability:archive_attachment' workspace_slug=request.workspace.slug evidence_id=evidence.public_id attachment_id=media.pk %}?inline=1" alt="Legacy collateral source image"><span class="d-block small">{{ media.original_filename }}</span>{% if media.is_blank_legacy_image %}<span class="d-block small text-warning-emphasis">Blank source image: no usable photograph</span>{% endif %}</a>
 {% endfor %}</div>
 {% endif %}
+<details class="mt-4"><summary>Source references, review findings and original records</summary><div class="mt-3">
+<h2 class="h5">Accepted historical evidence</h2><p>Accepted by {{ evidence.accepted_by }} on {{ evidence.accepted_at }}. Source claims are preserved as an immutable snapshot.</p>
+{% include 'data_portability/_archive_evidence.html' %}
 {% if can_export %}<form method="post" action="{% url 'workspace_portability:archive_export' workspace_slug=request.workspace.slug evidence_id=evidence.public_id %}" class="mt-3">{% csrf_token %}<button class="btn btn-secondary">Export retained evidence</button></form>{% endif %}
-<p class="mt-3"><a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}?q={{ evidence.source_id|urlencode }}">Browse source snapshots</a> · <a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Historical archive</a></p>
+<p class="mt-3"><a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}?q={{ evidence.source_id|urlencode }}">Browse source snapshots</a></p>
+</div></details>
 {% endblock %}

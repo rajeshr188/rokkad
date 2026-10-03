@@ -50,11 +50,14 @@ def get_pawn_principal_tranche_balances(
     elif disbursal is not None:
         tranches = tuple(disbursal.evidence.get("tranches") or ())
     else:
+        active_opening = Q(loan_event__reversed_by_event__isnull=True)
+        if as_of_date is not None:
+            active_opening |= Q(loan_event__reversed_by_event__effective_date__gt=as_of_date)
+        opening_query = PawnLoanPrincipalOpeningLine.objects.filter(active_opening, loan_event__loan=loan)
+        if as_of_date is not None:
+            opening_query = opening_query.filter(loan_event__effective_date__lte=as_of_date)
         opening_lines = tuple(
-            PawnLoanPrincipalOpeningLine.objects.filter(
-                loan_event__loan=loan,
-                loan_event__reversed_by_event__isnull=True,
-            ).order_by("allocation_order")
+            opening_query.order_by("allocation_order")
         )
         if not opening_lines:
             return ()

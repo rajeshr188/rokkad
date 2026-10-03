@@ -12,6 +12,20 @@ related:
 
 # Loans Physical Identity
 
+## Khata identity boundary (2 October 2026)
+
+Khata received items are immutable source evidence, including before opening;
+the PawnLoan draft-delete rules below do not apply to khata. Private labels use
+the immutable item/account UUID, complete held-item facts and custody at issuance.
+Individual, combined-all-held and one-page-per-held-item layouts are 100 x 60 mm
+with a 6 pt floor and explicit overflow refusal. Selected subsets are also supported
+in saved batches of up to 100 identities, with a searchable/paged held-item picker
+for larger accounts. Membership and ascending item-number order are frozen per
+issue; page/search navigation starts a new selection. Outgoing reservations remain
+physically held but do not back draws; actual returns exclude new labels. Original
+label reprints preserve saved bytes after returns. Authenticated scans resolve
+current custody under workspace access. See the [operator flow](../flows/khata-labels-and-pilot-review.md).
+
 ## P3 Boundary
 
 Draft capture is pre-contract working data: a mistaken collateral item and its

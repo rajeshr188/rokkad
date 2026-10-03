@@ -1,13 +1,27 @@
 ---
 status: active
 owner: project
-updated: 2026-09-21
+updated: 2026-09-30
 tags: [plans, portability, migration]
 ---
 
 # Incremental data portability delivery plan
 
-## Current migration checkpoint (2026-09-21)
+## Current priority (2026-09-30)
+
+The final September 24 package was imported and reconciled before production
+activation; the application now contains real post-cutover transactions. The owner
+has paused further statutory-form work to verify the existing migration and then
+complete a usable portability experience. Follow
+[Import confidence first, then usable data portability](portability-confidence-and-completion.md)
+for the active sequence and acceptance criteria. The read-only audit and bounded
+repairs are complete. The first [guided outstanding-register adapter](../flows/guided-outstanding-register-import.md)
+is implemented over the existing opening engine; see Status for deployment evidence.
+Owner acceptance and further source/rule profiles follow without re-importing live
+data or requiring blanket manual review of every Form E row. The dated sections
+below are historical evidence and do not define today's source or next action.
+
+## Historical migration checkpoint (2026-09-21)
 
 The historical entries below describe earlier source snapshots and implementation
 steps. Current production discovery uses the September 21 Linode archive and the

@@ -1,0 +1,12 @@
+{% extends "base_tenant.html" %}
+{% block title %}Form E books{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:statutory_guide' request.workspace.slug %}">&larr; Statutory workflow guide</a>
+<h1 class="h3 mt-3">Pledge books (Form E)</h1>
+<p>Keep a separate physical book for each licence/series. Review new pledges, save permanent pages, then print and file them. Record later payments/releases in Rokkad and annotate the original paper entry.</p>
+<p><a href="{% url 'workspace_loans:pledge_book_preview' request.workspace.slug %}">Compare layouts / current register preview</a></p>
+<div class="list-group mb-4">{% for book in books %}<a class="list-group-item list-group-item-action" href="{% url 'workspace_loans:pledge_book_detail' request.workspace.slug book.pk %}"><strong>{{ book.reference }} · {{ book.title }}</strong><br>Licence {{ book.series.license.license_number }} · {{ book.series.pawn_display_name }} · {{ book.get_layout_display }} · from {{ book.starts_on|date:"d/m/Y" }}</a>{% empty %}<p class="list-group-item">No digital print book has been opened yet.</p>{% endfor %}</div>
+{% if can_manage %}<details {% if form.errors %}open{% endif %} class="card card-body"><summary class="h5">Open a book for a series</summary>
+<p class="mt-3">Choose the start date to avoid duplicating an earlier physical book. Layout and starting page are permanent. Facing A4 numbers each physical sheet separately; a normal pair uses two consecutive page numbers. The default capacity is up to five loans per pair or landscape sheet; long entries use more space.</p>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="mb-3">{{ field.label_tag }} {{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}<button class="btn btn-primary">Open book</button></form></details>{% endif %}
+{% endblock %}

@@ -358,12 +358,48 @@ class PawnDisbursalForm(forms.Form):
 
 
 class PawnRepaymentForm(forms.Form):
+    recording_purpose = forms.ChoiceField(
+        label=_("Payment entry"), required=False,
+        choices=(("CURRENT", _("Receive and record now")), ("PAPER", _("Record a paper receipt"))),
+        initial="CURRENT",
+    )
     amount = forms.DecimalField(label=_("Amount received (INR)"), help_text=_("Use Preview allocation to check the split before recording payment."), max_digits=18, decimal_places=2, min_value=0.01)
+    received_on = forms.DateField(
+        label=_("Actual paper receipt date"), required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text=_("For paper entry only. Interest is calculated at this date using the recorded loan terms."),
+    )
+    receipt_reference = forms.CharField(
+        label=_("Paper receipt or book/page reference"), max_length=255, required=False,
+        help_text=_("Identify this receipt within this loan. A scan is not required."),
+    )
+    confirmed_received = forms.BooleanField(
+        label=_("I confirm this total was already received on the stated paper date and have checked the allocation."),
+        required=False,
+    )
+    review_token = forms.CharField(required=False, widget=forms.HiddenInput())
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, allow_paper=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["amount"].widget.attrs["class"] = "form-control"
+        if not allow_paper:
+            self.fields["recording_purpose"].choices = (("CURRENT", _("Receive and record now")),)
+            self.fields["recording_purpose"].widget = forms.HiddenInput()
+            for name in ("received_on", "receipt_reference", "confirmed_received", "review_token"):
+                self.fields.pop(name)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = (
+                "form-check-input" if isinstance(field.widget, forms.CheckboxInput)
+                else "form-select" if isinstance(field.widget, forms.Select) else "form-control"
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("recording_purpose") == "PAPER":
+            for name in ("received_on", "receipt_reference"):
+                if not cleaned.get(name):
+                    self.add_error(name, _("This is required when recording a paper payment."))
+        return cleaned
 
 
 class PawnAccrualForm(forms.Form):
@@ -475,7 +511,9 @@ class PawnLoanNoticeForm(forms.Form):
 class PawnAuctionInitiateForm(forms.Form):
     scheduled_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     channel = forms.ChoiceField(
-        choices=[
+        required=False,
+        label="Optional courtesy reminder (separate from statutory postal notice)",
+        choices=[("", "No digital reminder")] + [
             (channel.value, channel.name.title())
             for channel in PawnLoanNoticeChannel
         ]
@@ -500,6 +538,7 @@ class PawnAuctionCompletionForm(forms.Form):
 
 
 class PawnRenewalForm(forms.Form):
+    successor_product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label="New loan product")
     mode = forms.ChoiceField(
         choices=[
             (PawnLoanRenewalMode.PAY_AND_RENEW.value, "Pay and renew"),
@@ -538,8 +577,13 @@ class PawnRenewalForm(forms.Form):
         )
     )
 
-    def __init__(self, *args, workspace, **kwargs):
+    def __init__(self, *args, workspace, opening=False, **kwargs):
         super().__init__(*args, **kwargs)
+        if opening:
+            self.fields["successor_product_version"].queryset = LoanProductVersion.objects.filter(
+                product__workspace=workspace, product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value)
+        else:
+            del self.fields["successor_product_version"]
         self.fields["successor_license"].queryset = LoanLicense.objects.filter(
             workspace=workspace,
             is_active=True,

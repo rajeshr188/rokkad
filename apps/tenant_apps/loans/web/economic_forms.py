@@ -35,12 +35,13 @@ class GroupedPolicyForm:
 
 
 ECONOMIC_LABELS = {
+    "series": _("Series override (optional)"),
     "license": _("Policy scope"), "effective_from": _("Applies from"),
     "valuation_method": _("How collateral value is chosen"), "maximum_ltv_ratio": _("Maximum loan-to-value ratio"),
     "advance_interest_periods": _("Months of interest collected upfront"), "interest_method": _("Interest calculation"),
     "gold_monthly_interest_rate": _("Gold: monthly interest (%)"), "silver_monthly_interest_rate": _("Silver: monthly interest (%)"),
     "partial_month_method": _("Charging for part of a month"), "partial_month_cutoff_days": _("Part-month cutoff (days)"),
-    "partial_month_lower_fraction": _("Month fraction below the cutoff"),
+    "partial_month_lower_fraction": _("Month fraction through the cutoff"),
     "capitalization_interval_periods": _("Compound interest interval (months)"),
     "rounding_method": _("Rounding rule"), "currency_quantum": _("Smallest currency rounding unit"),
     "code": _("Fee code"), "name": _("Fee name"), "calculation_type": _("How the fee is calculated"),
@@ -56,7 +57,7 @@ ECONOMIC_LABELS = {
 
 class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     groups = (
-        (_("1. Scope and dates"), ("license", "effective_from", "effective_until")),
+        (_("1. Scope and dates"), ("license", "series", "effective_from", "effective_until")),
         (_("2. Monthly interest"), ("gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods")),
         (_("3. Part-month and compound rules"), ("partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction", "capitalization_interval_periods")),
         (_("4. Collateral value and rounding"), ("valuation_method", "maximum_ltv_ratio", "rounding_method", "currency_quantum")),
@@ -68,6 +69,8 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         empty_label="Business default (all licenses)",
         help_text=_("Keep the business default unless this policy should apply only to a particular license."),
     )
+    series = forms.ModelChoiceField(queryset=LoanSeries.objects.none(), required=False,
+        help_text=_("Choose a series to apply this complete calculation policy and these rates only to that series. Its license is selected automatically when left blank."))
     valuation_method = forms.ChoiceField(
         choices=[(ValuationMethod.CALCULATED_METAL_VALUE.value, _("Calculated Metal Value")),
                  (ValuationMethod.LATEST_APPRAISAL.value, _("Latest Appraisal")),
@@ -91,8 +94,11 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         choices=[
             (PartialMonthMethod.FULL_MONTH.value, _("Always charge a full month")),
             (PartialMonthMethod.SLAB.value, _("Use part-month slab")),
+            (PartialMonthMethod.STARTED_WEEKS.value, _("Started weeks (seven-day blocks, capped at one month)")),
+            (PartialMonthMethod.ACTUAL_DAYS.value, _("Actual days in the monthly period")),
         ],
         initial=PartialMonthMethod.FULL_MONTH.value,
+        help_text=_("Applies after the full first month minimum. Open the policy guide for examples."),
     )
     partial_month_cutoff_days = forms.IntegerField(
         min_value=1,
@@ -145,6 +151,9 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         self.fields["license"].queryset = LoanLicense.objects.filter(
             workspace=workspace
         ).order_by("license_number")
+        self.fields["series"].queryset = LoanSeries.objects.filter(workspace=workspace).select_related("license").prefetch_related("number_sequences")
+        self.fields["series"].empty_label = _("All series in the chosen scope")
+        self.fields["series"].label_from_instance = lambda obj: f"{obj.pawn_display_name} ({obj.license.license_number})"
         for field in self.fields.values():
             field.widget.attrs.setdefault(
                 "class",
@@ -152,6 +161,17 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
                 if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
                 else "form-control",
             )
+
+    def clean(self):
+        data = super().clean()
+        series, license = data.get("series"), data.get("license")
+        if series:
+            if license and series.license_id != license.pk:
+                self.add_error("series", _("Choose a series under the selected license."))
+            else:
+                data["license"] = series.license
+        data["minimum_first_month"] = True
+        return data
 
 
 class PawnSeriesInterestForm(GroupedPolicyForm, forms.Form):

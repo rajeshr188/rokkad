@@ -1,0 +1,25 @@
+{% extends 'base_tenant.html' %}
+{% load static %}
+{% block title %}Import existing loans{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1100px">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-4"><div><h1 class="h3 mb-1">Import existing loans</h1><p class="text-muted mb-0">Bring outstanding loans from your old register into this Workspace.</p></div>
+    <a class="btn btn-outline-secondary align-self-start" href="{% url 'workspace_portability:guided_guide' workspace_slug=request.workspace.slug %}">Import guide</a></div>
+  <ol class="d-flex flex-wrap gap-4 text-muted mb-4"><li class="fw-semibold text-primary">Upload register</li><li>Match customers and review</li><li>Confirm and see results</li></ol>
+  <div class="alert alert-info"><strong>Supported first profile:</strong> unchanged principal, first month paid upfront, original-anniversary interest and principal due at the original maturity. Other terms or partial principal repayments need assisted review. <a href="{% url 'workspace_portability:guided_guide' workspace_slug=request.workspace.slug %}">See examples and limits</a>.</div>
+  <div class="row g-4"><div class="col-lg-7"><section class="card"><div class="card-body">
+    <h2 class="h5">1. Prepare your register</h2><p>One row per collateral item. Repeat loan details for additional items. Keep original numbers and stable customer references.</p>
+    <a class="btn btn-outline-primary mb-3" href="{% url 'workspace_portability:guided_template' workspace_slug=request.workspace.slug %}"><i class="bi bi-download me-1" aria-hidden="true"></i>Download Excel template</a>
+    <h2 class="h5">2. Upload for review</h2><form method="post" enctype="multipart/form-data" data-import-submit>{% csrf_token %}
+      {{ form.non_field_errors }}{% for field in form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}<div class="form-text">{{ field.help_text }}</div></div>{% endfor %}
+      <button class="btn btn-primary" type="submit">Upload and match customers</button><p class="small text-muted mt-2 mb-0">Uploading creates a private review. It does not create loans or disburse money.</p>
+    </form></div></section></div>
+    <div class="col-lg-5"><section class="card bg-light"><div class="card-body"><h2 class="h5">Before you start</h2><ul class="mb-0">
+      <li>Use one licence and series per file; up to 20 loans and 200 rows.</li><li>Reconcile principal, unpaid interest and fees at a completed handover date.</li><li>Confirm each collateral item is in your vault.</li><li>Use DD/MM/YYYY date text. Enter rates as 2 for 2% per month.</li><li>Missing facts stay unknown. Blank unpaid interest or fees do not mean zero.</li>
+    </ul></div></section></div></div>
+  <h2 class="h5 mt-4">Import history</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Register / file</th><th>Uploaded</th><th>Status</th></tr></thead><tbody>
+  {% for batch in batches %}<tr><td><a href="{% url 'workspace_portability:guided_batch' workspace_slug=request.workspace.slug batch_id=batch.public_id %}">{{ batch.source_key }} — {{ batch.source_name }}</a></td><td>{{ batch.created_at|date:'d/m/Y H:i' }}</td><td>{{ batch.get_state_display }}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted">No register imports yet.</td></tr>{% endfor %}</tbody></table></div>
+  <nav aria-label="Import history">{% if batches.has_previous %}<a href="?page={{ batches.previous_page_number }}">Previous</a>{% endif %} <span>Page {{ batches.number }} of {{ batches.paginator.num_pages }}</span> {% if batches.has_next %}<a href="?page={{ batches.next_page_number }}">Next</a>{% endif %}</nav>
+  <p class="small mt-4"><a href="{% url 'workspace_portability:opening_list' workspace_slug=request.workspace.slug %}">Operator-prepared openings</a> · <a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Complete-history imports</a> · <a href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Closed-history archive</a></p>
+</div><script src="{% static 'js/guided-import-submit.js' %}"></script>
+{% endblock %}

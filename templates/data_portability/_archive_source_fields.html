@@ -1,0 +1,8 @@
+{% for record in records %}
+<div class="card card-body mb-3">
+  <h3 class="h6 text-break">Source record: {{ record.reference }}</h3>
+  <dl class="row mb-0">
+    {% for field in record.fields %}<dt class="col-sm-5">{{ field.label }}</dt><dd class="col-sm-7 text-break" style="white-space:pre-wrap">{{ field.value|default_if_none:"Not recorded" }}</dd>{% endfor %}
+  </dl>
+</div>
+{% endfor %}

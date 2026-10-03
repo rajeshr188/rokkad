@@ -357,6 +357,8 @@ def document_layout_overlay_designer(request, revision_pk):
                     raise ValueError("Overlay block settings are invalid.")
                 block = form.block_definition()
                 if operation == "add_block":
+                    if layout.schema_version >= 4 and block["type"] in {"title", "field", "table", "signature", "verification"}:
+                        block["overflow_policy"] = "SHRINK"
                     definition["blocks"].append(block)
                 else:
                     index = int(request.POST.get("index", "-1"))

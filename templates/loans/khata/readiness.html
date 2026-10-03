@@ -1,0 +1,10 @@
+{% extends "base_tenant.html" %}
+{% block title %}Khata pilot review{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:khata_list' request.workspace.slug %}">&larr; Khata register</a>
+<h1 class="h3 mt-3">Khata pilot review</h1><p>{{ report.workspace_slug }} &middot; {{ report.as_of }}</p>
+<p class="text-muted">This read-only review does not activate a pilot. Software checks and the owner's operational acceptance are separate.</p>
+<section class="card card-body mb-3"><h2 class="h5">Software checks</h2><ul class="list-group list-group-flush">{% for check in report.checks %}<li class="list-group-item px-0"><strong>{{ check.code }}</strong> <span class="badge {% if check.passed %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ check.passed|yesno:"Pass,Needs attention" }}</span><div class="small mt-1">{{ check.detail }}</div></li>{% endfor %}</ul></section>
+<section class="card card-body mb-3"><h2 class="h5">Required pilot acceptance</h2><ol class="mb-0">{% for gate in report.manual_gates %}<li class="mb-2">{{ gate }}</li>{% endfor %}</ol></section>
+<details class="card card-body"><summary class="h5">Supported operations and boundaries</summary><p class="mt-3">Khata supports staged collateral-backed withdrawals, agreed-limit interest, approved limit/rate changes, grouped same-metal exchanges, formal reduction returns and full settlement with separate physical handover.</p><p>Whole interest receipts and unhanded exchanges have bounded corrections. Payout, revision, settlement, completed handover and complex historical corrections are unavailable. Review this support boundary before opening real accounts.</p><p class="mb-0">Khata documents and labels are operational evidence. Khata is not included in ordinary pawn pledge books, statutory notices, auctions, renewals, funding/repledging or historical imports. An independent series does not certify regulatory exemption. Decide the applicable external records and procedures before a pilot.</p></details>
+{% endblock %}

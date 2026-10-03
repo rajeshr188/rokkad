@@ -113,7 +113,7 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
             primary_email="borrower@example.com",
             primary_phone="+919999999999",
         )
-        loan = SimpleNamespace(pk=9, borrower=borrower, borrower_id=7, state="ACTIVE", risk_snapshot=snapshot)
+        loan = SimpleNamespace(pk=9, borrower=borrower, borrower_id=7, state="ACTIVE", risk_snapshot=snapshot, policy_snapshot_id=None)
         event = SimpleNamespace(pk=11)
         alert = SimpleNamespace(
             pk=12,
@@ -155,7 +155,8 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.loans.services.risk_communication_readiness.PawnLoanCommunicationPolicy.objects.filter",
             return_value=policy_query,
-        ):
+        ), patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness", return_value=SimpleNamespace(complete=True, required=False, review_id=None)):
+
             result = assess_risk_alert_communication_readiness(alert.pk)
             snapshot.as_of_date -= timedelta(days=1)
             stale = assess_risk_alert_communication_readiness(alert.pk)
@@ -174,7 +175,7 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
             workspace_id=5,
             status=LoanRiskAlert.Status.OPEN,
             alert_kind=LoanRiskAlert.Kind.LTV_BREACH,
-            loan=SimpleNamespace(state="ACTIVE", risk_snapshot=SimpleNamespace(status="CURRENT", flags=["LTV_BREACH"])),
+            loan=SimpleNamespace(state="ACTIVE", policy_snapshot_id=None, risk_snapshot=SimpleNamespace(status="CURRENT", flags=["LTV_BREACH"])),
         )
         alert_query = MagicMock()
         alert_query.get.return_value = alert
@@ -189,7 +190,8 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.loans.services.risk_communication_readiness.PawnLoanCommunicationPolicy.objects.filter",
             return_value=policy_query,
-        ):
+        ), patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness", return_value=SimpleNamespace(complete=True, required=False, review_id=None)):
+
             result = assess_risk_alert_communication_readiness(alert.pk)
         self.assertFalse(result.eligible)
         self.assertIn("NOTICE_KIND_UNAPPROVED", {row.code for row in result.blockers})

@@ -13,6 +13,7 @@ from apps.tenant_apps.loans.models import HistoricalLoanEvidence
 from apps.tenant_apps.loans.services.archive import get_evidence, export_evidence, require_archive_read
 from apps.tenant_apps.loans.services.archive_contract import MAX_BYTES, SCHEMA
 from apps.tenant_apps.loans.services.history_contract import dump
+from apps.tenant_apps.loans.selectors.archive import historical_loan_details, historical_loan_summary
 from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
 from apps.tenant_apps.loans.services.portability_validation import PortabilityValidationError
 from . import loan_archive
@@ -37,12 +38,22 @@ def listing(request):
     query = request.GET.get("q", "")[:255].strip()
     rows = HistoricalLoanEvidence.objects.filter(workspace_id=workspace.pk).order_by("-accepted_at", "-pk")
     if query:
-        rows = rows.filter(Q(source_id__icontains=query) | Q(document__facts__loan_number__icontains=query))
+        rows = rows.filter(Q(source_id__icontains=query) | Q(document__facts__loan_number__icontains=query)
+                           | Q(document__facts__borrower_name__icontains=query))
     access = resolve_workspace_access(actor=request.user, workspace=workspace)
     can_import = (access.platform_override or workspace.owner_id == request.user.pk) and all(
         access.can(action) for action in ("data.import", "workspace.settings.manage"))
+    page = Paginator(rows, 25).get_page(request.GET.get("page"))
+    from apps.tenant_apps.loans.services.archive_admission import archive_origin
+    archive_rows = []
+    for row in page:
+        try:
+            origin = archive_origin(row)
+        except ValueError:
+            origin = None
+        archive_rows.append(dict(evidence=row, summary=historical_loan_summary(row.document), origin=origin))
     return render(request, "data_portability/archive_list.html", {
-        "page": Paginator(rows, 25).get_page(request.GET.get("page")), "query": query, "can_import": can_import})
+        "page": page, "archive_rows": archive_rows, "query": query, "can_import": can_import})
 
 
 @login_required
@@ -94,9 +105,18 @@ def review(request, batch_id):
 def detail(request, evidence_id):
     evidence = get_evidence(workspace_id=request.workspace.pk, actor=request.user, evidence_id=evidence_id)
     access = resolve_workspace_access(actor=request.user, workspace=request.workspace)
+    from apps.tenant_apps.loans.services.archive_admission import archive_origin
+    origin, admission_error = None, ""
+    try:
+        origin = archive_origin(evidence)
+    except ValueError as exc:
+        admission_error = str(exc)
     return render(request, "data_portability/archive_detail.html", dict(
         evidence=evidence, document=evidence.document, report=evidence.review,
-        source_json=dump(evidence.document), can_export=access.can("data.export")))
+        source_json=dump(evidence.document), historical=historical_loan_details(evidence.document),
+        can_export=access.can("data.export"), origin=origin, admission_error=admission_error,
+        can_admit=(access.platform_override or request.workspace.owner_id == request.user.pk)
+            and access.can("data.import") and access.can("workspace.settings.manage")))
 
 
 @login_required

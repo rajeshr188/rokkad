@@ -1,0 +1,15 @@
+{% load i18n %}
+<p>{% translate "New policy versions charge at least one full first month, even on early closure. Your part-month choice applies afterward." %}</p>
+<dl>
+  <dt>{% translate "Full month" %}</dt><dd>{% translate "Any chargeable part of a later month costs one month." %}</dd>
+  <dt>{% translate "Half-month slab" %}</dt><dd>{% translate "Choose Use part-month slab, cutoff 15 and fraction 0.5. Days 1–15 cost half a month; day 16 onward costs a full month. A completed month always costs one month." %}</dd>
+  <dt>{% translate "Started weeks" %}</dt><dd>{% translate "Round elapsed days up to seven-day blocks, capped at the monthly period length. Divide those chargeable days by the actual period length." %}</dd>
+  <dt>{% translate "Actual days" %}</dt><dd>{% translate "Divide elapsed days by the actual monthly period length. This uses the month’s opening principal; it is not daily reducing-balance interest." %}</dd>
+</dl>
+<p class="small">{% translate "Days include both the start and end date. Monthly anniversaries follow calendar months, with month-end dates clamped to the available day. February and leap years can change the denominator." %}</p>
+<h3 class="h6">{% translate "Choose where the policy applies" %}</h3>
+<p>{% translate "A series calculation policy takes priority over its license, then the Workspace default. It supplies the complete calculation policy. Monthly metal rates resolve separately in the same order. Within a scope, the latest applicable start date and revision win." %}</p>
+<h3 class="h6">{% translate "Before saving" %}</h3>
+<p>{% translate "Use the saved history’s Use these settings link, then review the scope, rates and effective dates. Saving creates a new version. Already approved or disbursed loans keep their frozen terms; imported openings keep their source rules." %}</p>
+<h3 class="h6">{% translate "Upfront collection and rounding" %}</h3>
+<p>{% translate "The first-month minimum and upfront collection are separate. Upfront interest is credited against calculated interest, so the covered amount is not charged twice. Fees are separate. Use 0.01 for paise rounding. Slab fields apply only to slab charging; the capitalization interval applies only to compound interest." %}</p>

@@ -58,6 +58,7 @@ def create_pawn_economic_configuration(
     rate_scope = {
         "workspace": workspace,
         "license": policy_values.get("license"),
+        "series": policy_values.get("series"),
         "effective_from": policy_values.get("effective_from"),
         "effective_until": policy_values.get("effective_until"),
         "actor": actor,
@@ -77,6 +78,9 @@ def create_pawn_economic_configuration(
         description="Saved a new calculation policy revision and monthly rates.",
         data={"economic_policy_id": economic_policy.pk, "revision": economic_policy.revision,
               "effective_from": str(economic_policy.effective_from), "license_id": economic_policy.license_id,
+              "series_id": economic_policy.series_id,
+              "partial_month_method": economic_policy.partial_month_method,
+              "minimum_first_month": economic_policy.minimum_first_month,
               "maximum_ltv_ratio": str(economic_policy.maximum_ltv_ratio),
               "gold_rate_policy_id": gold_rate_policy.pk, "silver_rate_policy_id": silver_rate_policy.pk})
     return PawnEconomicConfiguration(
@@ -97,22 +101,26 @@ def create_pawn_loan_economic_policy(
     partial_month_method: PartialMonthMethod | str = PartialMonthMethod.FULL_MONTH,
     partial_month_cutoff_days: int = 15,
     partial_month_lower_fraction: Decimal = Decimal("0.5"),
+    minimum_first_month: bool = True,
     capitalization_interval_periods: int = 12,
     rounding_method: RoundingMethod | str = RoundingMethod.PER_ACCRUAL_PERIOD,
     currency_quantum: Decimal = Decimal("0.01"),
     effective_from: date | None = None,
     effective_until: date | None = None,
     license: LoanLicense | None = None,
+    series: LoanSeries | None = None,
     actor=None,
 ) -> PawnLoanEconomicPolicy:
     _require_scope(workspace.pk, license)
     require_setup_administration(workspace.pk, actor)
     day = effective_from or timezone.localdate()
-    revision = _next_revision(PawnLoanEconomicPolicy, workspace, license=license, effective_from=day)
+    revision = _next_revision(PawnLoanEconomicPolicy, workspace, license=license, series=series, effective_from=day)
     policy = PawnLoanEconomicPolicy(
         revision=revision,
         workspace=workspace,
         license=license,
+        series=series,
+        minimum_first_month=minimum_first_month,
         valuation_method=ValuationMethod(valuation_method).value,
         maximum_ltv_ratio=maximum_ltv_ratio,
         advance_interest_periods=advance_interest_periods,
@@ -220,14 +228,20 @@ def create_pawn_loan_fee_policy(
 
 
 def resolve_pawn_loan_economic_policy(
-    *, workspace_id: int, license_id: int | None, as_of_date: date, recorded_before=None
+    *, workspace_id: int, license_id: int | None, as_of_date: date, recorded_before=None,
+    series_id: int | None = None,
 ) -> PawnLoanEconomicPolicy:
     _require_scope_ids(workspace_id, license_id)
     current = _current_rows(PawnLoanEconomicPolicy, workspace_id, as_of_date)
     if recorded_before is not None:
         current = current.filter(created_at__lt=recorded_before)
     policy = None
-    if license_id is not None:
+    if series_id is not None:
+        if not LoanSeries.objects.filter(pk=series_id, workspace_id=workspace_id, license_id=license_id).exists():
+            raise PawnEconomicPolicyError("Series must belong to the policy workspace and license.")
+        policy = current.filter(series_id=series_id).order_by("-effective_from", "-revision", "-id").first()
+    current = current.filter(series__isnull=True)
+    if policy is None and license_id is not None:
         policy = current.filter(license_id=license_id).order_by("-effective_from", "-revision", "-id").first()
     if policy is None:
         policy = current.filter(license__isnull=True).order_by("-effective_from", "-revision", "-id").first()

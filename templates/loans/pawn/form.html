@@ -3,6 +3,7 @@
 {% block title %}{% if loan %}Edit {{ loan.loan_number }}{% else %}{% translate "New loan draft" %}{% endif %}{% endblock %}
 {% block workspace_content %}
 <div class="loan-entry" hx-history="false">
+{% if not loan %}<nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Loan entry purpose"><span class="btn btn-primary" aria-current="page">Approve and pay now</span><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}?entry=paper">Already completed on paper</a></nav>{% endif %}
 <div class="mb-2"><a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; {% translate "Loan drafts" %}</a><h1 class="h3 mt-2">{% if loan %}Edit {{ loan.loan_number }}{% else %}{% translate "New loan draft" %}{% endif %}</h1>
 <div class="d-flex flex-wrap align-items-center gap-2"><p class="text-muted mb-0">{% if loan %}{% translate "Update your draft, review, then approve and disburse." %}{% else %}{% translate "Save a draft, review, then approve and disburse." %}{% endif %}</p><button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#draft-guidance" aria-expanded="false" aria-controls="draft-guidance">{% translate "How this works" %}</button></div></div>
 <section class="collapse" id="draft-guidance" aria-label="{% translate 'How this works' %}"><div class="border rounded p-3 mt-3 small">

@@ -3,7 +3,7 @@
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 from django.db.models import Sum
@@ -95,6 +95,11 @@ def preview_pawn_loan_accruals(
     include_partial: bool = True,
 ) -> tuple[AccrualPeriodPreview, ...]:
     loan = _tenant_loan(loan_id)
+    from .recorded_collections import recording_for
+    if recording_for(loan):
+        # This profile recognizes cumulative anniversary charges at collection;
+        # it does not manufacture completed calendar-period accrual rows.
+        return ()
     if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
         raise PawnInterestError("Migration opening interest continuation is not enabled; historical periods cannot be replayed.")
     if loan.state != PawnLoanState.ACTIVE.value:
@@ -102,6 +107,12 @@ def preview_pawn_loan_accruals(
     policy = loan.policy_snapshot
     if policy is None:
         raise PawnInterestError("Loan is missing its frozen disbursal policy.")
+    # SQL DecimalFields return 0.0100. New minimum-first-month policies use
+    # its numeric precision (paise), retaining the historic calculation for
+    # earlier frozen snapshots.
+    quantum = policy.currency_quantum.normalize() if (
+        policy.minimum_first_month or policy.basis == "RECORDED_CONTRACT"
+    ) else policy.currency_quantum
     last_finalized = (
         loan.interest_accruals.exclude(
             release_catch_up__reversal__isnull=False
@@ -138,7 +149,7 @@ def preview_pawn_loan_accruals(
             is_partial = False
         elif include_partial and period_start <= as_of_date:
             period_end = as_of_date
-            fraction = _partial_fraction(policy, period_start, period_end)
+            fraction = _partial_fraction(policy, period_start, period_end, period_number=period_number)
             is_partial = True
         else:
             break
@@ -150,7 +161,7 @@ def preview_pawn_loan_accruals(
             as_of_date=period_start,
             period_fraction=fraction,
             aggregate_balance=balance,
-            currency_quantum=policy.currency_quantum,
+            currency_quantum=quantum,
             pending_advance_applied=pending_advance_applied,
         )
         if lines:
@@ -179,7 +190,7 @@ def preview_pawn_loan_accruals(
                 calculation_base=base,
                 monthly_interest_rate=loan.monthly_interest_rate,
                 period_fraction=fraction,
-                currency_quantum=policy.currency_quantum,
+                currency_quantum=quantum,
             )
             calculated = recognized
             advance_applied = Decimal("0")
@@ -374,6 +385,9 @@ def finalize_pawn_loan_accrual(
 ) -> AccrualFinalizationResult:
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.accrue")
+    from .recorded_collections import recording_for
+    if recording_for(loan):
+        raise PawnInterestError("This recorded contract recognizes anniversary interest with collection.")
     if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
         raise PawnInterestError("Opening collection catch-up is posted only within full release, not native period finalization.")
     existing = loan.interest_accruals.filter(period_number=period_number).first()
@@ -470,8 +484,10 @@ def persist_pawn_accrual_lines(accrual, preview):
             collateral_item_id=line.collateral_item_id,
             principal_base=line.principal_base,
             monthly_interest_rate=line.monthly_interest_rate,
-            period_fraction=line.period_fraction,
-            unrounded_interest=line.unrounded_interest,
+            # Fixed-precision row projections; full computed values are retained
+            # in build_pawn_accrual_detail before these rows are persisted.
+            period_fraction=line.period_fraction.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
+            unrounded_interest=line.unrounded_interest.quantize(Decimal("0.000000000001"), rounding=ROUND_HALF_UP),
             calculated_interest=line.calculated_interest,
             advance_interest_applied=line.advance_interest_applied,
             recognized_interest=line.recognized_interest,
@@ -579,13 +595,17 @@ def _locked_loan(loan_id):
         raise PawnInterestError("PawnLoan was not found in the active workspace.") from exc
 
 
-def _partial_fraction(policy, period_start, period_end):
-    if policy.partial_month_method == PartialMonthMethod.FULL_MONTH.value:
-        return Decimal("1")
-    elapsed_days = (period_end - period_start).days + 1
-    if elapsed_days <= policy.partial_month_cutoff_days:
-        return Decimal(str(policy.partial_month_lower_fraction))
-    return Decimal("1")
+def _partial_fraction(policy, period_start, period_end, *, period_number=1):
+    from apps.tenant_apps.loans.domain.interest import partial_period_fraction
+    return partial_period_fraction(
+        method=policy.partial_month_method,
+        elapsed_days=(period_end - period_start).days + 1,
+        period_days=(_add_months(period_start, 1) - period_start).days,
+        minimum_first_month=policy.minimum_first_month,
+        period_number=period_number,
+        cutoff_days=policy.partial_month_cutoff_days,
+        lower_fraction=policy.partial_month_lower_fraction,
+    )
 
 
 def _capitalized_boundaries(loan):

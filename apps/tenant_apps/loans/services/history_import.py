@@ -1,6 +1,6 @@
 """Authorized atomic restoration of the bounded complete-history contract."""
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction, connection
 from django.utils import timezone
@@ -25,6 +25,7 @@ from .obligations import persist_disbursal_repayment_schedule, allocate_event_to
 from .pawn_repayment import allocate_repayment, allocate_repayment_principal_to_tranches
 from .pawn_tranches import get_pawn_principal_tranche_balances
 from .pawn_interest import preview_pawn_loan_accruals, build_pawn_accrual_detail, persist_pawn_accrual_lines
+from .history_accrual import portable_accrual
 
 
 def require_history_access(workspace_id, actor, document):
@@ -108,6 +109,9 @@ def _chronology(document):
         )
     previous = start
     for index, event in enumerate(events):
+        if event.get("event_recorded") is False and (
+                event["kind"] != "INTEREST_ACCRUAL" or any(money(event[k]) for k in ("principal", "interest", "fees"))):
+            raise HistoryError("Only a zero-recognized accrual may omit its financial event.")
         day = date.fromisoformat(event["date"])
         if not previous <= day <= cutoff:
             raise HistoryError(
@@ -128,6 +132,9 @@ def _chronology(document):
                 category=MISSING_EVIDENCE if event["accrual"] is None else HISTORICAL_INCONSISTENCY,
                 code="ACCRUAL_EVIDENCE",
             )
+        if event["accrual"] and event["accrual"].get("release_catch_up"):
+            if index != len(events)-2 or events[-1]["kind"] != "RELEASE_RECEIPT" or events[-1]["date"] != event["date"]:
+                raise HistoryError("Release catch-up must immediately precede its full release on the same date.")
         if (event["release"] is not None) != (event["kind"] == "RELEASE_RECEIPT"):
             raise HistoryError(
                 "Release evidence must match its event kind.",
@@ -192,7 +199,8 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
         source_license_number=source["licence_number"], disbursed_on=date.fromisoformat(source["disbursed_on"]),
         tenure_months=source["tenure_months"], calculation_contract_version=source["calculation_contract"],
         operational_grace_days=source["grace_days"], source_release_id=release_event["id"] if release_event else "",
-        source_release_number=release_event["release"]["number"] if release_event else "")
+        source_release_number=release_event["release"]["number"] if release_event else "",
+        source_product=source.get("product"))
     # The borrower is resolved by the portability boundary using exact Party source identity.
     from apps.tenant_apps.party.models import Party
     borrower = Party.objects.select_for_update().get(workspace_id=workspace_id, pk=mapping["borrower_id"])
@@ -238,7 +246,7 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
     approval = _create(m.PawnLoanApprovalSnapshot, workspace=workspace, loan=loan, version=1,
         payload=approval_payload, fingerprint=digest(approval_payload))
     snapshot = _create(m.LoanPolicySnapshot, workspace=workspace, loan=loan, **source["policy"])
-    events, schedule, latest_accrual = {}, None, None
+    events, schedule, latest_accrual, accrual_ids = {}, None, None, {}
     for entry in source["events"]:
         day, kind = date.fromisoformat(entry["date"]), entry["kind"]
         values = {k: money(entry[k]) for k in ("principal", "interest", "fees")}
@@ -255,6 +263,12 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
                 )
             period = previews[0]
             supplied = entry["accrual"]
+            if manifest["profile"] == "loan-history/2":
+                expected = portable_accrual(period, snapshot, reverse_items,
+                    release_catch_up=supplied["release_catch_up"])
+                if supplied != expected:
+                    raise HistoryError("Exact accrual dates, fractions, item amounts or advance application do not reconcile.",
+                        category=HISTORICAL_INCONSISTENCY, code="CALCULATION_MISMATCH")
             if supplied["start"] != period.period_start.isoformat() or supplied["end"] != period.period_end.isoformat() or day != period.period_end or supplied["period"] != period.period_number:
                 raise HistoryError(
                     "Missing or misordered accrual periods.",
@@ -311,9 +325,13 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
                 "advance_interest_periods": economics.advance_interest_periods, "monthly_interest": decimal(economics.monthly_interest), "tranches": tranches, "fees": source["disbursal"]["fees"]}
         if period:
             payload["accrual"] = build_pawn_accrual_detail(period, snapshot)
+            if entry["accrual"].get("release_catch_up"):
+                payload["accrual"]["release_catch_up"] = True
             payload["values"]["advance_interest_applied"] = decimal(period.advance_interest_applied)
-        event, _ = record_loan_event(loan.pk, event_kind=kind, effective_date=day, payload=payload, actor=actor)
-        events[entry["id"]] = event.pk
+        event = None
+        if entry.get("event_recorded", True):
+            event, _ = record_loan_event(loan.pk, event_kind=kind, effective_date=day, payload=payload, actor=actor)
+            events[entry["id"]] = event.pk
         if kind == "DISBURSAL":
             _create(m.PawnLoanDisbursalSnapshot, workspace=workspace, loan=loan, approval_snapshot=approval,
                 policy_snapshot=snapshot, loan_event=event, gross_principal=economics.gross_principal,
@@ -347,10 +365,11 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
         if period:
             latest_accrual = _create(m.PawnLoanInterestAccrual, workspace=workspace, loan=loan,
                 period_number=period.period_number, period_start=period.period_start, period_end=period.period_end,
-                period_fraction=period.period_fraction, calculation_base=period.calculation_base,
-                unrounded_interest=period.unrounded_interest, recognized_interest=period.recognized_interest,
+                period_fraction=period.period_fraction.quantize(Decimal(".0001"), rounding=ROUND_HALF_UP), calculation_base=period.calculation_base,
+                unrounded_interest=period.unrounded_interest.quantize(Decimal(".000000000001"), rounding=ROUND_HALF_UP), recognized_interest=period.recognized_interest,
                 loan_event=event, finalized_by=actor)
             persist_pawn_accrual_lines(latest_accrual, period)
+            accrual_ids[entry["id"]] = latest_accrual.pk
         if kind in {"REPAYMENT", "RELEASE_RECEIPT"}:
             allocate_event_to_obligations(source_event=event, principal_amount=values["principal"], interest_amount=values["interest"], actor=actor)
             for order, row in enumerate(expected_lines, 1):
@@ -372,7 +391,8 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
                 request_key="history:"+digest(entry)[0:64], effective_date=day, settlement_amount=sum(values.values()),
                 principal_amount=values["principal"], interest_amount=values["interest"], fee_amount=values["fees"],
                 valuation_snapshot={"historical_source":release_data}, loan_event=event, created_by=actor,
-                catch_up_accrual=latest_accrual if latest_accrual and latest_accrual.period_end == day else None)
+                catch_up_accrual=latest_accrual if latest_accrual and latest_accrual.period_end == day and (
+                    manifest["profile"] == "loan-history/1" or (source["events"][-2]["accrual"] or {}).get("release_catch_up")) else None)
             for key, item in items.items():
                 _create(m.PawnLoanReleaseItem, workspace=workspace, release=release, collateral_item=item,
                     returned_at=_stamp(release_data["returned_at"]), valuation_snapshot={"value":valuations[key], "source_collector":release_data["collector"]})
@@ -408,7 +428,7 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
         "contractual_remaining":{"principal":decimal(obligations.remaining.principal),"interest":decimal(obligations.remaining.interest)},
         "borrower_name":borrower.display_name}
     origin = m.HistoricalLoanImport.objects.create(workspace=workspace, loan=loan, source_namespace=manifest["namespace"], source_id=binding_id,
-        source_sha256=checksum, document=document, references={"mapping":mapping,"items":{k:v.pk for k,v in items.items()},"events":events,"summary":summary}, imported_by=actor)
+        source_sha256=checksum, document=document, references={"mapping":mapping,"items":{k:v.pk for k,v in items.items()},"events":events,"accruals":accrual_ids,"summary":summary}, imported_by=actor)
     AuditLog.log("DATA_IMPORT", company=workspace, user=actor, description="Imported reconciled complete loan history without replaying live workflows.",
         data={"history":str(origin.public_id),"loan":loan.pk,"sha256":checksum,"events":len(events)})
     return origin, summary

@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-09-28
+updated: 2026-09-30
 tags: [architecture, saas, control-plane, workspace, rls, rbac, billing]
 related:
   - saas-control-plane-architecture-audit.md
@@ -325,6 +325,13 @@ disabled. Physical retention erasure is intentionally not implemented here.
 
 ## 9. Billing and subscription
 
+The first verified, currently due recurring capture can move a history-free
+expired trial to the frozen paid offer after its natural expiry. It must preserve
+trial dates, enforce active lifecycle/capacity, reject legacy/conflicting financial
+history, and audit prior terms in the same transaction as invoice/payment/receipt
+intent. An authorization or future-period capture cannot make this transition.
+See the [expired-trial decision](../adr/2026-09-30-expired-trial-first-recurring-payment.md).
+
 The Workspace is the customer and has one commercial `Subscription`.
 `BillingAccount` holds provider/customer/contact identity. `Subscription`
 holds commercial terms and stored transition state. Provider events are
@@ -363,6 +370,14 @@ reason. Expiry re-evaluates the original subscription policy, never older grants
 Suspension/archive and ordinary RBAC/RLS remain stronger boundaries. Grants do not
 change billing records. See the
 [accepted decision](../adr/2026-09-24-subscription-access-continuity.md).
+
+The owner monthly self-service POST at `/app/billing/recurring/start/` is a global
+control-plane adapter. Login, CSRF and a signed current owner/Workspace/offer review
+are required. The transaction-owning service rechecks canonical ownership,
+verified email, publication, eligibility and consent under its explicit Workspace
+context and Company lock. Consent and reservation commit before provider I/O;
+ordinary Workspace middleware and RLS remain unchanged. See the
+[decision](../adr/2026-09-30-owner-monthly-self-service.md).
 
 Recurring preparation adds global billing evidence (`RecurringPlanBinding`,
 `RecurringAgreement`, `RecurringAgreementEvent`) under the
@@ -715,3 +730,54 @@ account state and generates native allauth links against the canonical origin at
 dispatch. A separate disabled-by-default flag controls this extension; existing
 invitation-only scheduling stays scoped. See the
 [account-email decision](../adr/2026-09-29-durable-account-email.md).
+
+## 17. Platform console metadata boundary
+
+The `/app/platform/` console uses the existing active-superuser policy and runs
+only in global context, with no Workspace RLS context. Overview, directory, detail
+and guide are GET-only/no-store surfaces. Workspace metadata includes inactive
+states; it does not grant entry to business data or weaken lifecycle restrictions.
+Effective access comes from `workspace_activity`, not a new subscription/status
+interpretation. Existing management links retain explicit Workspace identity,
+authorization and audit. No new authority or impersonation is introduced.
+
+The owner-approved lifecycle screens add CSRF-protected POST confirmation for
+ACTIVE -> SUSPENDED and SUSPENDED -> ACTIVE only. They require an operational
+reason, exact Workspace slug and explicit acknowledgement. A signed 15-minute
+review binds the operator, target, lifecycle version, owner and projected access;
+confirmation locks the Workspace and rejects stale, altered or replayed reviews.
+`transition_workspace_lifecycle` remains the mutation/audit authority. Audit failure
+rolls back the transition. Restore previews use `workspace_activity` against an
+in-memory ACTIVE copy; they never grant commercial access or change subscription
+dates, trial duration, payment evidence or billing mandates. The console displays
+only allowlisted lifecycle audit fields (actor/time/from/to/reason), latest ten.
+Archiving, deletion and ownership changes remain separate workflows.
+See the [operator guide](../flows/platform-console.md).
+
+
+## 18. Storage reconciliation boundary
+
+Storage inventory runs/physical object metadata are platform control-plane records;
+`WorkspaceStorageUsage` is directly Workspace-owned, registered and forced-RLS.
+Global storage pages require active-superuser authority and global context. Scoped
+usage requires explicit matching request/database Workspace context and
+`workspace.settings.manage`. Platform detail enters only the selected Workspace
+context to read its aggregate. File paths/borrower identities and download links
+are absent from these pages.
+
+Reconciliation runs as an authorized operator command under the restricted database
+role. It reads references per Workspace (including inactive scopes), lists only the
+configured application prefix, and publishes complete dated summaries atomically.
+Failed scans preserve the previous result. Pages never call the provider. These
+measurements are not entitlements, billing evidence, deletion approvals or a new
+permission to enter business records. See the [storage decision](../adr/2026-09-29-storage-inventory-and-usage.md).
+
+The separate reviewed cleanup command retains the same platform authority and
+restricted runtime role. It enters each Workspace explicitly for reference checks;
+no global tenant-data bypass is introduced. Execution/restoration is offline, with
+operator-confirmed stopped external writers and database locks on all registered
+reference tables. Signed private filesystem checkpoints preserve intent/outcome
+across database rollback; AuditLog summarizes successful phases. Exact manifest
+approval, independent recovery and create-only restoration are required. Inventory
+alone never grants deletion authority. No pricing, quotas, billing or automatic
+expiry is enabled. See the [cleanup decision](../adr/2026-09-30-reviewed-offline-media-cleanup.md).

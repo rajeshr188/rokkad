@@ -1,5 +1,6 @@
 """Shared Party child writes; callers provide an authorized Party."""
 from django.db import transaction
+from apps.orgs.audit import AuditLog
 from apps.tenant_apps.party.models import Party, PartyAddress, PartyContactMethod
 
 def sync_party_primary_contact(party, contact, *, old_contact=None, deleted=False):
@@ -39,38 +40,70 @@ def sync_party_primary_contact(party, contact, *, old_contact=None, deleted=Fals
         party.save(update_fields=update_fields)
 
 
-def save_contact_form(form, party):
+def _audit_flag(obj, party, actor, field, before, after):
+    if actor is not None and before != after:
+        AuditLog.log('UPDATE', user=actor, company=party.workspace, content_object=obj,
+            description='Changed a customer contact/address default.',
+            data={'operation': 'PARTY_DEFAULT_CHANGE', 'party_id': party.pk,
+                  'field': field, 'before': before, 'after': after})
+
+
+def save_contact_form(form, party, *, actor=None):
     contact = form.save(commit=False)
     contact.party = party
-    old_contact = None
-    if contact.pk:
-        old_contact = PartyContactMethod.objects.get(pk=contact.pk)
     with transaction.atomic():
         party = Party.objects.select_for_update().get(pk=party.pk, workspace_id=party.workspace_id)
+        old_contact = PartyContactMethod.objects.get(pk=contact.pk, party=party) if contact.pk else None
         if contact.is_primary:
-            PartyContactMethod.objects.filter(
+            demoted = list(PartyContactMethod.objects.filter(
                 party=party,
                 contact_type=contact.contact_type,
                 is_primary=True,
-            ).exclude(pk=contact.pk).update(is_primary=False)
+            ).exclude(pk=contact.pk))
+            PartyContactMethod.objects.filter(pk__in=[c.pk for c in demoted]).update(is_primary=False)
+            for previous in demoted:
+                _audit_flag(previous, party, actor, 'is_primary', True, False)
         contact.save()
         sync_party_primary_contact(party, contact, old_contact=old_contact)
+        _audit_flag(contact, party, actor, 'is_primary', old_contact.is_primary if old_contact else None, contact.is_primary)
     return contact
 
 
-def save_address_form(form, party):
+def save_address_form(form, party, *, actor=None):
     address = form.save(commit=False)
     address.party = party
     with transaction.atomic():
         Party.objects.select_for_update().get(pk=party.pk, workspace_id=party.workspace_id)
+        previous = PartyAddress.objects.get(pk=address.pk, party=party) if address.pk else None
         if address.is_default:
-            PartyAddress.objects.filter(
+            demoted = list(PartyAddress.objects.filter(
                 party=party,
                 address_type=address.address_type,
                 is_default=True,
-            ).exclude(pk=address.pk).update(is_default=False)
+            ).exclude(pk=address.pk))
+            PartyAddress.objects.filter(pk__in=[a.pk for a in demoted]).update(is_default=False)
+            for old in demoted:
+                _audit_flag(old, party, actor, 'is_default', True, False)
         address.save()
+        _audit_flag(address, party, actor, 'is_default', previous.is_default if previous else None, address.is_default)
     return address
+
+
+@transaction.atomic
+def delete_contact(*, party, contact_id, actor):
+    party = Party.objects.select_for_update().get(pk=party.pk, workspace_id=party.workspace_id)
+    contact = PartyContactMethod.objects.get(pk=contact_id, party=party)
+    _audit_flag(contact, party, actor, 'is_primary', contact.is_primary, None)
+    sync_party_primary_contact(party, contact, deleted=True)
+    contact.delete()
+
+
+@transaction.atomic
+def delete_address(*, party, address_id, actor):
+    Party.objects.select_for_update().get(pk=party.pk, workspace_id=party.workspace_id)
+    address = PartyAddress.objects.get(pk=address_id, party=party)
+    _audit_flag(address, party, actor, 'is_default', address.is_default, None)
+    address.delete()
 
 
 

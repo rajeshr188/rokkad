@@ -127,7 +127,7 @@ def _write(*, workspace_id, actor, document, restoration=None):
     for row in review["collateral"]:
         # Only v2 review validation authorizes excluding this unknown field.
         item = _create(m.PawnCollateralItem, exclude={"gross_weight"} if row["gross_weight"] is None else (),
-            workspace=workspace, loan=loan, description=row["description"], metal=row["metal"],
+            workspace=workspace, loan=loan, description=row["description"], metal=row["metal"], quantity=row["quantity"],
             gross_weight=Decimal(row["gross_weight"]) if row["gross_weight"] is not None else None,
             net_weight=Decimal(row["net_weight"]), purity_percentage=Decimal(row["purity"]),
             allocated_principal=Decimal(row["remaining_principal"]), monthly_interest_rate=Decimal(row["monthly_rate"]),

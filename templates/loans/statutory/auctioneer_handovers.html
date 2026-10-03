@@ -1,0 +1,15 @@
+{% extends "base_tenant.html" %}
+{% block title %}Auctioneer handover lists{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:statutory_guide' request.workspace.slug %}">&larr; Statutory forms &amp; staff guide</a>
+<h1 class="h3 mt-3">Auctioneer handover lists</h1>
+<p>Prepare a list for your auctioneer, then reconcile the same loans before sending an updated list. Saving does not send anything, start an auction or record postal service.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }} Preview the selection again before saving.</div>{% endif %}
+<div class="card card-body mb-4"><h2 class="h5">1. Choose a list to review</h2>
+<p>Use the full loan numbers from your overdue-loan review. Lists are limited to 100 loans so every change can be checked; create separate lists for further loans or licences.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button name="action" value="preview" class="btn btn-primary">Preview loans</button></form></div>
+{% if preview %}{% include 'loans/statutory/_auctioneer_review.html' %}{% endif %}
+<h2 class="h5">Saved lists</h2>
+<div class="list-group mb-3">{% for handover in handovers %}<a class="list-group-item list-group-item-action" href="{% url 'workspace_loans:auctioneer_handover_detail' request.workspace.slug handover.pk %}"><strong>{{ handover.reference }} · {{ handover.title }}</strong><br>{{ handover.auctioneer }} · licence {{ handover.license.license_number }} · {{ handover.created_at|date:"d/m/Y H:i" }}</a>{% empty %}<p>No saved handover lists yet.</p>{% endfor %}</div>
+{% if handovers.has_previous %}<a href="?page={{ handovers.previous_page_number }}">Previous</a>{% endif %} {% if handovers.has_next %}<a href="?page={{ handovers.next_page_number }}">Next</a>{% endif %}
+{% endblock %}

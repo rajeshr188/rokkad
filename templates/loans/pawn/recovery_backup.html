@@ -1,0 +1,12 @@
+{% extends "base_tenant.html" %}
+{% block title %}Loans recovery backup{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:800px">
+<h1 class="h3">Loans recovery backup</h1>
+<p>Save this Workspace's ordinary loans, original evidence, corrections, linked renewals, reviews, custody history and retained files together.</p>
+<p>This backup includes all ordinary loans and their setup, including paper and imported loans. It can be restored by an operator into the original Workspace in a matching recovery environment. Keep your full database and media backups as well.</p>
+<p>Store the file privately. Its filename includes the checksum: copy that checksum into your separate backup record. This file cannot be used to import loans into another Workspace.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+<form method="post">{% csrf_token %}<button class="btn btn-primary" type="submit">Download recovery backup</button></form>
+</div>
+{% endblock %}

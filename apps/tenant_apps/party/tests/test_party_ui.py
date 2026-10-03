@@ -1,6 +1,9 @@
 import tempfile
 import uuid
+from datetime import date, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -91,6 +94,16 @@ class PartyUITests(WorkspaceTestCase):
         self.client.login(username=username, password="testpass123")
         return user
 
+    def test_customer_status_change_records_actor_before_after_without_profile_values(self):
+        from apps.orgs.audit import AuditLog
+        party=Party.objects.create(display_name='Fictional status example',party_type='INDIVIDUAL',status='ACTIVE')
+        response=self.client.post(reverse('party:party_update',args=[party.pk]),
+            {'display_name':party.display_name,'party_type':'INDIVIDUAL','status':'INACTIVE'})
+        self.assertEqual(response.status_code,302)
+        audit=AuditLog.objects.get(company=self.tenant,object_id=party.pk,data__operation='PARTY_STATUS_CHANGE')
+        self.assertEqual(audit.user_id,self.user.pk)
+        self.assertEqual(audit.data,{'operation':'PARTY_STATUS_CHANGE','field':'status','before':'ACTIVE','after':'INACTIVE'})
+
     def test_party_list_search_displays_party(self):
         Party.objects.create(party_code="P1001", display_name="Asha Traders")
 
@@ -99,6 +112,66 @@ class PartyUITests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Asha Traders")
         self.assertContains(response, "P1001")
+
+    def test_party_loan_pages_sort_dates_and_preserve_complete_totals(self):
+        from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnLoan
+        from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
+
+        party = Party.objects.create(display_name="Many loans")
+        other = Party.objects.create(display_name="Other borrower")
+        license = LoanLicense.objects.create(workspace=self.tenant, name="History",
+            license_number="HISTORY", issued_on=date(2026, 1, 1), expires_on=date(2027, 1, 1))
+        series = LoanSeries.objects.create(license=license, name="History", code="H")
+        product = ensure_test_product_version(self.tenant)
+        groups = {}
+        for state in ("ACTIVE", "CLOSED"):
+            groups[state] = [PawnLoan.objects.create(
+                workspace=self.tenant, license=license, series=series, borrower=party,
+                product_version=product, loan_number=f"{state}-{number:03}", state=state,
+                principal_amount=100, monthly_interest_rate=2, tenure_months=12,
+                loan_date=date(2026, 1, 1) + timedelta(days=(number * 7) % 13),
+            ) for number in range(41)]
+        PawnLoan.objects.create(workspace=self.tenant, license=license, series=series,
+            borrower=other, product_version=product, loan_number="OTHER-BORROWER",
+            state="ACTIVE", principal_amount=100, monthly_interest_rate=2, tenure_months=12)
+        url = reverse("party:party_detail", args=[party.pk])
+        balance = SimpleNamespace(total_due=Decimal("100"),
+            principal_outstanding=Decimal("90"), interest_outstanding=Decimal("10"))
+        with patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", return_value=balance):
+            for sort, active_page, closed_page in (("newest", 1, 1), ("newest", 2, 2), ("oldest", 2, 3)):
+                with self.subTest(sort=sort, active_page=active_page, closed_page=closed_page):
+                    response = self.client.get(url, {"tab": "loans", "loan_sort": sort,
+                        "active_page": active_page, "closed_page": closed_page})
+                    self.assertEqual(response.status_code, 200)
+                    history = response.context["loan_history"]
+                    self.assertEqual(history["counts"]["active_outstanding"], Decimal("4100"))
+                    self.assertEqual(history["counts"]["active_loans"], 41)
+                    for kind, state, number in (("active", "ACTIVE", active_page), ("closed", "CLOSED", closed_page)):
+                        ordered = sorted(groups[state], key=lambda loan: (loan.loan_date, loan.pk), reverse=sort == "newest")
+                        self.assertEqual([row.pk for row in history[f"{kind}_loans"]],
+                            [loan.pk for loan in ordered[(number - 1) * 20:number * 20]])
+                    self.assertContains(response, f'loan_sort={sort}&amp;closed_page={closed_page}&amp;active_page=')
+                    self.assertContains(response, f'loan_sort={sort}&amp;active_page={active_page}&amp;closed_page=')
+                    self.assertNotContains(response, "OTHER-BORROWER")
+                    self.assertContains(response, 'aria-current="page"')
+            response = self.client.get(url, {"tab": "loans", "loan_sort": "-principal_amount",
+                "active_page": "nonsense", "closed_page": "999"})
+            history = response.context["loan_history"]
+            self.assertEqual(history["sort"], "newest")
+            self.assertEqual(history["active_page"].number, 1)
+            self.assertEqual(history["closed_page"].number, 3)
+            self.assertContains(response, "Showing 1–20 of 41 active loans")
+            self.assertContains(response, "Showing 41–41 of 41 closed loans")
+
+    def test_party_empty_loan_pages_are_safe(self):
+        party = Party.objects.create(display_name="No loans")
+        response = self.client.get(reverse("party:party_detail", args=[party.pk]),
+            {"tab": "loans", "active_page": "-1", "closed_page": "0", "loan_sort": "oldest"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Showing 0–0 of 0 active loans")
+        self.assertContains(response, "No closed loans found.")
+        self.assertNotContains(response, 'aria-label="Active loan pages"')
+        self.assertNotContains(response, 'aria-label="Closed loan pages"')
 
     def test_native_partial_matches_filtered_page_without_shell(self):
         Party.objects.create(party_code="P1001", display_name="Asha & Sons")
@@ -711,6 +784,31 @@ class PartyUITests(WorkspaceTestCase):
         delete_request.workspace = self.tenant
         with self.assertRaises(PermissionDenied):
             party_views.party_contact_delete(delete_request, party.pk, contact.pk)
+
+    def test_phone_entry_and_display_keep_canonical_storage_and_legacy_values(self):
+        payload = {"party_type": Party.PartyType.INDIVIDUAL, "display_name": "Phone formatting",
+                   "primary_phone": "98765 43210", "status": Party.PartyStatus.ACTIVE}
+        response = self.client.post(reverse("party:party_create"), payload)
+        self.assertEqual(response.status_code, 302)
+        party = Party.objects.get(display_name="Phone formatting")
+        self.assertEqual(party.primary_phone, "+919876543210")
+        edit = self.client.get(reverse("party:party_update", args=[party.pk]))
+        self.assertContains(edit, 'value="+91 98765 43210"')
+        self.assertContains(edit, 'autocomplete="tel"')
+        detail = self.client.get(reverse("party:party_detail", args=[party.pk]))
+        self.assertContains(detail, "+91 98765 43210")
+        self.assertContains(self.client.get(reverse("party:party_list")), "+91 98765 43210")
+        payload["primary_phone"] = "123"
+        rejected = self.client.post(reverse("party:party_update", args=[party.pk]), payload)
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "Enter a valid phone number")
+        party.refresh_from_db()
+        self.assertEqual(party.primary_phone, "+919876543210")
+        Party.objects.filter(pk=party.pk).update(primary_phone="old number missing")
+        legacy = self.client.get(reverse("party:party_update", args=[party.pk]))
+        self.assertContains(legacy, 'value="old number missing"')
+        party.refresh_from_db()
+        self.assertEqual(party.primary_phone, "old number missing")
 
     def test_invalid_phone_contact_returns_form_error(self):
         party = Party.objects.create(party_code="P1011", display_name="Bad Phone")

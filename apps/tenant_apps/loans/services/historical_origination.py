@@ -72,7 +72,7 @@ def historical_policies(context, collateral, *, license_id, series_id):
                   as_of_date=context["loan_date"], recorded_before=context["cutoff"])
     basis = context["approval"]
     if basis is None:
-        return (resolve_pawn_loan_economic_policy(**kwargs),
+        return (resolve_pawn_loan_economic_policy(**kwargs, series_id=series_id),
                 tuple(resolve_pawn_metal_interest_rate_policy(**kwargs, series_id=series_id,
                     metal=item.metal) for item in collateral),
                 resolve_pawn_loan_fee_policies(**kwargs))
@@ -102,6 +102,8 @@ def historical_policies(context, collateral, *, license_id, series_id):
         "valuation_method", "maximum_ltv_ratio", "advance_interest_periods", "interest_method",
         "partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction",
         "capitalization_interval_periods", "rounding_method", "currency_quantum")])
+    if policy.minimum_first_month != frozen.get("minimum_first_month", False):
+        raise ValueError("The earlier approved minimum first-month rule was modified.")
     tranches = {row["metal"]: row for row in frozen["tranches"]}
     for item, rate in zip(collateral, rates, strict=True):
         values = tranches[item.metal]

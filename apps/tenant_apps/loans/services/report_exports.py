@@ -1,5 +1,6 @@
 import csv
 import io
+from xml.sax.saxutils import escape
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -44,6 +45,7 @@ def build_party_statement_dataset(statement):
     rows = []
     for loan_row in statement.loans:
         balance = loan_row.balance
+        completeness = getattr(loan_row, "transaction_completeness", None)
         rows.append((
             "LOAN POSITION",
             loan_row.loan.loan_number,
@@ -54,6 +56,7 @@ def build_party_statement_dataset(statement):
             balance.fees_outstanding if balance else "",
             balance.total_due if balance else "",
             "", "", "",
+            completeness.status if completeness else "", completeness.through_date if completeness else "",
         ))
     transaction_rows = getattr(statement, "transaction_rows", None)
     if transaction_rows is None:
@@ -95,6 +98,7 @@ def build_party_statement_dataset(statement):
             getattr(event, "pk", ""),
             correction_status,
             correction_event_id or "",
+            "", "",
         ))
     return PawnLoanReportDataset(
         "party_statement",
@@ -102,8 +106,10 @@ def build_party_statement_dataset(statement):
         (
             "Row type", "Loan", "Date", "State / kind", "Principal", "Interest",
             "Fees", "Total", "Event ID", "Correction status", "Correction event",
+            "Transaction review", "Paper records through",
         ),
         tuple(rows),
+        notes="Recorded positions exclude collection interest awaiting recognition. Paper coverage is shown separately; unconfirmed histories are provisional.",
     )
 
 
@@ -130,23 +136,28 @@ def render_report_dataset(dataset, export_format):
             topMargin=10 * mm, bottomMargin=10 * mm, title=dataset.title,
         )
         styles = getSampleStyleSheet()
+        cell_style = styles["BodyText"].clone("ReportCell")
+        if len(dataset.columns) >= 10:
+            cell_style.fontSize = 7
+            cell_style.leading = 9
         data = [
-            [Paragraph(str(value), styles["BodyText"]) for value in dataset.columns]
+            [Paragraph(escape(str(value)), cell_style) for value in dataset.columns]
         ]
         data.extend(
-            [Paragraph(str(_cell(value)), styles["BodyText"]) for value in row]
+            [Paragraph(escape(str(_cell(value))), cell_style) for value in row]
             for row in dataset.rows
         )
-        table = Table(data, repeatRows=1, hAlign="LEFT")
+        table = Table(data, repeatRows=1, hAlign="LEFT",
+            colWidths=[document.width / len(dataset.columns)] * len(dataset.columns) if len(dataset.columns) >= 10 else None)
         table.setStyle(TableStyle([
             ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("FONTSIZE", (0, 0), (-1, -1), 7),
         ]))
-        story = [Paragraph(dataset.title, styles["Title"])]
+        story = [Paragraph(escape(dataset.title), styles["Title"])]
         if dataset.notes:
-            story.extend([Paragraph(dataset.notes, styles["BodyText"]), Spacer(1, 8)])
+            story.extend([Paragraph(escape(dataset.notes), styles["BodyText"]), Spacer(1, 8)])
         story.extend([Spacer(1, 8), table])
         document.build(story)
         return output.getvalue(), "application/pdf"
@@ -168,7 +179,7 @@ def _overdue(report):
 def _portfolio_dataset(key, title, rows):
     return PawnLoanReportDataset(
         key, title,
-        ("Loan", "Party", "Due date", "Principal", "Interest", "Fees", "Total due", "Status"),
+        ("Loan", "Party", "Due date", "Principal", "Interest", "Fees", "Total due", "Status", "Transaction review", "Paper records through"),
         tuple((
             row.loan.loan_number, row.loan.borrower.display_name,
             row.balance.due_date if row.balance else "",
@@ -177,7 +188,10 @@ def _portfolio_dataset(key, title, rows):
             row.balance.fees_outstanding if row.balance else "",
             row.balance.total_due if row.balance else row.balance_error,
             row.status,
+            row.transaction_completeness.status if row.transaction_completeness else "",
+            row.transaction_completeness.through_date if row.transaction_completeness else "",
         ) for row in rows),
+        notes="Amounts derive from entered transactions. Unconfirmed paper histories are provisional. Transaction coverage is separate from valuation freshness.",
     )
 
 
@@ -209,7 +223,8 @@ def _releases_renewals(report):
         (
             row.effective_date, "RELEASE", row.loan.loan_number,
             row.release_number, row.settlement_amount,
-            "REVERSED" if hasattr(row, "reversal") else "COMPLETED",
+            "REVERSED" if hasattr(row, "reversal") else getattr(row, "correction_status", "") or "COMPLETED",
+            "",
         )
         for row in report.releases
     ]
@@ -217,7 +232,8 @@ def _releases_renewals(report):
         (
             row.renewal_date, "RENEWAL", row.source_loan.loan_number,
             row.renewal_number, row.successor_loan.loan_number,
-            "REVERSED" if hasattr(row, "reversal") else "COMPLETED",
+            "REVERSED" if hasattr(row, "reversal") else getattr(row, "correction_status", "") or "COMPLETED",
+            _recorded_renewal_cash(row),
         )
         for row in report.renewals
     )
@@ -225,9 +241,20 @@ def _releases_renewals(report):
         "releases_renewals", "Releases and renewals",
         (
             "Date", "Kind", "Source loan", "Reference",
-            "Settlement / successor", "Status",
+            "Settlement / successor", "Status", "Recorded renewal cash / custody",
         ), tuple(rows),
     )
+
+
+def _recorded_renewal_cash(renewal):
+    cash = (getattr(renewal, "valuation_snapshot", None) or {}).get("cash_evidence")
+    if not cash:
+        return ""
+    method = "Full principal repayment / fresh advance" if cash["method"] == "REPAY_REDRAW" else "Principal carry"
+    custody = "stayed held" if cash["custody"] == "HELD" else "returned and repledged"
+    return (f"{method}; received {cash['cash_received']}; paid {cash['cash_paid']}; "
+            f"old interest offset {cash['interest_offset']}; principal carried {cash['principal_carried']}; "
+            f"gross advance {cash['gross_advance']}; collateral {custody}")
 
 
 def _storage(report):

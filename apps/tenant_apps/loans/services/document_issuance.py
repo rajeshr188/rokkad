@@ -162,4 +162,34 @@ def _revision_assets(revision):
     return tuple(values)
 
 
-__all__ = ["ConfigurableDocumentIssueResult", "issue_configurable_document"]
+@transaction.atomic
+def issue_recorded_document(*, workspace, loan, actor, position=False):
+    """Serialize a paper copy with its financial and transaction-coverage source."""
+    from django.utils import timezone
+    from apps.tenant_apps.loans.models import PawnLoan
+    from apps.tenant_apps.loans.documents import PawnLoanDocumentProjectionBuilder as Builder
+    loan = PawnLoan.objects.select_for_update(of=("self",)).select_related(
+        "borrower", "license", "series", "policy_snapshot").get(pk=loan.pk, workspace=workspace)
+    require_loan_action(loan, actor, "data.view")
+    day = timezone.localdate()
+    payload = Builder.recorded_contract(loan, position=position, as_of_date=day)
+    source_type, source_id = "PawnLoan", loan.pk
+    fingerprint = Builder.recorded_position_fingerprint(loan, day)
+    if not position:
+        origin = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
+        source_type, source_id, fingerprint = "PawnLoanEvent", origin.pk, origin.payload_fingerprint
+    existing = LoanDocumentLayoutService.find_official_issue(workspace=workspace, document_type=payload.document_type,
+        source_type=source_type, source_id=source_id, source_fingerprint=fingerprint)
+    if existing:
+        return existing, payload
+    rendered = PawnLoanDocumentService.render_payload(payload, copy_labels=())
+    result = SimpleNamespace(pdf=rendered.pdf, renderer_version="fixed-recorded-contract-v1",
+        payload_hash=hashlib.sha256(repr(payload).encode()).hexdigest(), layout_hash="", asset_hashes={})
+    issue = LoanDocumentLayoutService.issue(workspace=workspace, document_type=payload.document_type,
+        source_type=source_type, source_id=source_id, source_fingerprint=fingerprint,
+        payload_schema_version=payload.schema_version, render_result=result,
+        filename=payload.file_name, actor=actor)
+    return issue, payload
+
+
+__all__ = ["ConfigurableDocumentIssueResult", "issue_configurable_document", "issue_recorded_document"]

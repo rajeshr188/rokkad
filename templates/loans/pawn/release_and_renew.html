@@ -5,6 +5,7 @@
 <div class="mb-4">
   <a class="small text-decoration-none" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
   <h1 class="h3 mt-2 mb-1">Release and renew</h1>
+  {% if loan.policy_snapshot.basis == 'RECORDED_CONTRACT' or form.successor_product_version %}<a class="btn btn-outline-secondary my-2" href="?entry_mode=paper">Record a renewal already completed on paper</a>{% endif %}
   <p class="text-muted">Close the old contract, return omitted items, and create a newly numbered loan for retained and additional collateral.</p>
 </div>
 

@@ -399,6 +399,7 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
                 resolved_economics.economic_policy.advance_interest_periods
             ),
             "interest_method": resolved_economics.economic_policy.interest_method,
+            "minimum_first_month": resolved_economics.economic_policy.minimum_first_month,
             "partial_month_method": (
                 resolved_economics.economic_policy.partial_month_method
             ),

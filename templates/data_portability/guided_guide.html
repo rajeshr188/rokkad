@@ -1,0 +1,38 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Existing-loan import guide{% endblock %}
+{% block workspace_content %}
+<article class="container py-3" style="max-width:960px">
+<a href="{% url 'workspace_portability:guided_upload' workspace_slug=request.workspace.slug %}">← Import existing loans</a>
+<h1 class="h3 mt-3">Bring an outstanding register into Rokkad</h1>
+<p class="lead">Keep recording new business while bringing supported old loans into the same Workspace in reviewed batches.</p>
+<div class="alert alert-info">Only the Workspace owner (or authorized platform administrator) can approve historical debt. Uploading and previewing do not create customers, loans or payouts.</div>
+<h2 class="h5 mt-4">1. Check that the source terms are supported</h2>
+<p>This first profile supports outstanding bullet loans with unchanged principal, collateral currently in your vault, known original date and tenure, and known unpaid interest/fees. The first month must already have been paid upfront. Interest is based on original principal and the original loan-date anniversaries. Later monthly charges are summed across items and rounded once to whole rupees using half-even rounding.</p>
+<p>For example, a loan dated 10 January starts its next charge on 11 February. The anniversary itself does not start another charge. Rokkad shows the opening balance you reviewed; it does not invent receipts to explain prior collections. Unpaid interest cannot exceed the supported total charge through handover.</p>
+<p>Principal reductions, capitalized interest, instalments, other interest rules, unknown net weight/purity, released/repledged collateral and missing opening amounts need assisted review. Keep those rows outside this batch until a compatible import profile is available. A zero is a known amount; blank does not mean zero.</p>
+<h2 class="h5 mt-4">2. Fill the template</h2>
+<p><a href="{% url 'workspace_portability:guided_template' workspace_slug=request.workspace.slug %}">Download the Excel template</a>. Use one visible values-only sheet with the supplied headers. Do not use formulas, hidden sheets, filters or merged cells. Dates must be text in <strong>DD/MM/YYYY</strong> format. The template's cells use text formatting to preserve dates and leading zeroes. Plain UTF-8 CSV with the same headers also works.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Columns</th><th>What to enter</th></tr></thead><tbody>
+<tr><td>loan_ref, loan_number</td><td>Stable source loan reference and the full original number, including prefix/leading zeroes. Reuse the references on later imports; do not assign new references to retry a loan.</td></tr>
+<tr><td>borrower_ref, borrower_name, borrower_phone</td><td>Stable source customer reference, name and optional phone. Repeat identical details wherever that customer appears. You will explicitly choose an existing customer or create a new one; names never merge customers automatically.</td></tr>
+<tr><td>original_date, tenure_months</td><td>Original payout date and agreed whole-month tenure. The maturity is derived from these original terms, not moved to the import date.</td></tr>
+<tr><td>item_ref, description, metal, quantity</td><td>One row per distinct item. Keep item references unique within each loan. Use GOLD, SILVER, BRONZE or OTHER and a positive whole piece count.</td></tr>
+<tr><td>gross_weight_g, net_weight_g, purity_percent</td><td>Weights in grams, with up to three decimals; purity as 75 for 75%. Gross weight may be blank when unknown. Net weight and purity must be known. A row's weight/principal is its total, not a per-piece value to multiply by quantity.</td></tr>
+<tr><td>original_principal, outstanding_principal, monthly_rate_percent</td><td>Principal allocated to this collateral row and monthly rate, for example 2 for 2%. The two principal values must match in this first profile. Do not repeat a whole-loan principal on every item.</td></tr>
+<tr><td>unpaid_interest, unpaid_fees</td><td>Whole-loan amounts as at handover. Repeat the same loan amounts on every item row; they are counted once per loan.</td></tr>
+<tr><td>first_month_paid, in_vault</td><td>Enter yes only when supported by your records and custody check.</td></tr>
+</tbody></table></div>
+<p>Use one licence/series per batch, at most 20 loans and 200 rows. Larger registers can be split while retaining the same source register key and stable references.</p>
+<h2 class="h5 mt-4">3. Match customers and establish the handover</h2>
+<p>The source register key identifies the original register, independently of its filename. Select the licence revision covering the original dates and its destination series. If a loan number overlaps an existing loan or a future number range, stop and review Loan setup; the import does not expand or rewind counters.</p>
+<p>Choose an existing customer using the searchable dropdown, or explicitly create a new customer. Search results show identifying details where available. A new customer receives only the supplied name and optional phone; complete their other profile details later. Previously accepted source references keep their customer binding.</p>
+<p>Select a completed handover date before today. Include every source payment through that date in the opening balances. Transactions in Rokkad must be dated from the following day. Freeze old-system transactions for those particular loans before approval, even while other loans continue their normal workflow.</p>
+<h2 class="h5 mt-4">4. Review, confirm and reconcile</h2>
+<p>Check every loan, customer match, item count and total. Errors are grouped by borrower or loan. Fix setup/matches and preview again; for source corrections cancel the review and upload a corrected file. No partial batch is committed. The preview expires after an hour and changed destination data requires another review.</p>
+<p>After confirmation, the saved result lists every imported loan, totals, importing user and time. Each loan has an immutable opening/source record and continues through supported servicing. No new cash-out, old receipt or approval/disbursal history is fabricated. A retired import-servicing definition is prepared automatically if needed; it is not offered for new lending.</p>
+<p>Repeating a successful confirmation returns the same result. Uploading the exact file under the same register key reopens its existing review/result. A changed file containing already-imported source loans is held for review rather than adding debt or overwriting the prior opening.</p>
+<h2 class="h5 mt-4">What this does not establish</h2>
+<p>This is a reviewed opening position, not complete historical transactions or statutory certification. Photos, addresses, original appraisals and old receipts are not imported by this template. Unknown valuations remain unverified and can affect coverage reports. Reports include the digitized portfolio, which may still be only part of your business.</p>
+<p>Other software exports can later use source-specific mappings into the same admission services. Manual paper entry, additional calculation profiles and complete Workspace export/restore remain separate planned increments.</p>
+</article>
+{% endblock %}

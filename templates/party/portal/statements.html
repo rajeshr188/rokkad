@@ -10,13 +10,13 @@
         <div class="portal-list-row">
             <strong>{{ row.label }}</strong>
             <span>{{ summary.period_label }}</span>
-            <span>{{ row.amount|indian_money }}</span>
+            <span>{% if row.amount != None %}{{ row.amount|indian_money }}{% else %}Unavailable{% endif %}</span>
         </div>
     {% endfor %}
     <div class="portal-list-row">
         <strong>{% trans "Closing balance" %}</strong>
         <span>{{ summary.period_label }}</span>
-        <span>{{ summary.closing_balance|indian_money }}</span>
+        <span>{% if summary.closing_balance != None %}{{ summary.closing_balance|indian_money }}{% else %}Unavailable{% endif %}</span>
     </div>
 </div>
 {% endblock %}

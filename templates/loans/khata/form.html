@@ -1,0 +1,25 @@
+{% extends "base_tenant.html" %}{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block workspace_content %}
+{% if account %}<a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab={{ account_return_tab }}">&larr; Khata {{ account.account_number }} &middot; {{ account_return_label }}</a>{% else %}<a href="{% url 'workspace_loans:khata_list' request.workspace.slug %}">&larr; Khata register</a>{% endif %}
+<h1 class="h3 mt-3">{{ title }}</h1>
+{% if action == 'new' %}<details class="mb-3"><summary>Borrower search without JavaScript</summary><form method="get" class="row g-2 mt-2"><input type="hidden" name="native" value="1"><div class="col-md-8"><label for="borrower-q">Name, party code or phone</label><input class="form-control" id="borrower-q" name="borrower_q" value="{{ borrower_q }}" maxlength="120"></div><div class="col-md-4 align-self-end"><button class="btn btn-outline-secondary" type="submit">Find borrower</button></div><p class="small text-muted">Shows up to 25 active matches. Search before entering terms; this reloads the form. Narrow the search if the borrower is absent.</p></form></details>{% endif %}
+{% if action == 'finalize' or action == 'interest' %}<p class="small text-muted">Interest receipts automatically finalize elapsed periods. Separate finalization is an optional evidence action, not a payment or a prerequisite to receiving interest.</p>{% endif %}
+{% if action == 'activate-change' %}<p class="small text-muted">Only an unused approval for today's latest proposal and unchanged account evidence can be activated. Cash repayment requires cashier permission; releasing reduction collateral also requires release permission.</p><a class="d-inline-block mb-3" href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab=actions">Check agreement status and next step</a>{% endif %}
+{% if action == 'correct' %}{% include 'loans/khata/_correction_help.html' %}{% include 'loans/khata/_correction_blockers.html' %}{% endif %}
+<p class="text-muted">Business date: {{ today|date:"d/m/Y" }}. Interest uses the full agreed limit from the first actual withdrawal, with a minimum first month. Saving terms does not activate them.</p>
+<form method="post" enctype="multipart/form-data" class="card card-body" {% if immediate %}data-khata-receive{% endif %} {% if servicing_data %}data-khata-servicing{% endif %}>
+{% csrf_token %}{{ form.non_field_errors }}
+<div class="row g-3">{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="col-md-6" {% if servicing_data and field.name == "item" or servicing_data and field.name == "outgoing" or servicing_data.handover and field.name == "parent" %}data-servicing-fallback{% endif %}>{{ field.label_tag }}{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}{% if immediate and field.name == 'upload' %}{% include 'loans/khata/_photo_capture.html' %}{% endif %}</div>{% endif %}{% endfor %}</div>
+{% if action == 'new' %}<div id="borrower-outstanding" class="mt-3" data-url="{% url 'workspace_loans:borrower_outstanding' request.workspace.slug %}" role="status" aria-live="polite"></div><noscript><p class="small mt-2">Choose a borrower through the search above. Review existing outstanding in their Party &gt; Loans page before confirming.</p></noscript><div id="khata-opening-estimate" class="mt-3" data-url="{% url 'workspace_loans:khata_draft_estimate' request.workspace.slug %}" role="status" aria-live="polite">{% include 'loans/khata/_opening_estimate.html' %}</div>{% endif %}
+{% if servicing_data %}
+<div class="row g-3 mt-2" data-servicing-picker hidden>
+{% if action == 'approve-change' %}{% include 'loans/khata/_exchange_picker.html' with role='outgoing' heading='Collateral to return on reduction (optional)' errors=form.outgoing.errors full_width=True %}{% else %}{% include 'loans/khata/_exchange_picker.html' with role='item' heading='Select collateral' errors=form.item.errors full_width=True %}{% endif %}
+</div><div data-hidden-role="{% if action == 'approve-change' %}outgoing{% else %}item{% endif %}"></div>{% if action == 'handover' %}<div data-hidden-parent></div>{{ form.parent.errors }}<p class="form-text">Select a pending item to use its exact reservation source. This records physical handover only after review and confirmation.</p>{% endif %}
+<button type="button" class="btn btn-link align-self-start" data-servicing-native hidden>Use ordinary selection</button>
+{% endif %}
+<div class="mt-3"><button class="btn btn-primary" type="submit">{% if immediate %}Attach photo{% else %}Review{% endif %}</button></div>
+</form>
+{% if servicing_data %}{{ servicing_data|json_script:'khata-servicing-data' }}{% endif %}
+{% endblock %}
+{% block extra_js %}{{ block.super }}{% if immediate or servicing_data %}<script src="{% static 'js/khata-collateral.js' %}" defer></script>{% endif %}{% if action == 'new' %}<script src="{% static 'js/pawn-borrower-outstanding.js' %}" defer></script><script src="{% static 'js/khata-draft.js' %}" defer></script>{% endif %}{% endblock %}

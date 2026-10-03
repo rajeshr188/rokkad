@@ -1,0 +1,28 @@
+<div data-photo-controls class="mt-2" hidden>
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <button type="button" class="btn btn-outline-primary btn-sm" data-camera-start>Open camera</button>
+    <label class="small mb-0">Camera
+      <select class="form-select form-select-sm" data-camera-facing aria-label="Front or rear camera">
+        <option value="environment">Rear camera</option><option value="user">Front camera / webcam</option>
+      </select>
+    </label>
+    <label class="small mb-0" data-camera-device-label hidden>Device
+      <select class="form-select form-select-sm" data-camera-device aria-label="Camera device"></select>
+    </label>
+  </div>
+  <div data-camera-panel class="mt-2" hidden>
+    <video data-camera-video autoplay playsinline muted class="rounded bg-dark w-100" style="max-width:400px;max-height:300px" aria-label="Live collateral camera preview"></video>
+    <div class="d-flex gap-2 mt-2">
+      <button type="button" class="btn btn-primary btn-sm" data-camera-capture disabled>Take photo</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-camera-stop>Close camera</button>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mt-2">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-camera-native="environment">Phone rear camera</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-camera-native="user">Phone front camera</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-photo-clear hidden>Remove selected photo</button>
+  </div>
+  <p data-camera-status class="small text-muted mt-2 mb-0" role="status" aria-live="polite"></p>
+</div>
+<img data-photo-preview hidden alt="Selected collateral photo preview" class="img-thumbnail mt-2" style="max-width:240px;max-height:180px;object-fit:contain">
+<div class="form-text">Preview the selected photo before saving. JPEG or PNG, up to 10 MB. Live camera needs HTTPS or localhost and browser permission; phone camera buttons use your device's picker where supported. If saving fails, select or take the photo again.</div>

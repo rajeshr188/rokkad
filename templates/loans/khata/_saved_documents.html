@@ -1,0 +1,20 @@
+<section aria-labelledby="saved-documents-heading">
+  <h3 class="h5 mt-4" id="saved-documents-heading">Saved documents</h3>
+  <form method="get" class="card card-body mb-3" data-saved-documents-filter><input type="hidden" name="tab" value="documents">
+    {{ documents_form.non_field_errors }}
+    <div class="row g-3">{% for field in documents_form %}<div class="{% if field.name == 'q' %}col-12{% else %}col-sm-6 col-lg-3{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+    <div class="d-flex flex-wrap gap-2 mt-3"><button type="submit" class="btn btn-outline-primary">Find saved documents</button><a class="btn btn-outline-secondary" href="?tab=documents">Clear document filters</a></div>
+    <p class="small text-muted mb-0 mt-2">Document date is the saved statement/label date or source event's business date. Issued order uses recording time. Item IDs match saved contents; label UUIDs and request UUIDs match exactly. Filters never change a reprint.</p>
+  </form>
+  <p class="small" role="status">{{ documents_page.paginator.count }} matching saved document{{ documents_page.paginator.count|pluralize }}{% if documents_page.paginator.count %} &middot; showing {{ documents_page.start_index }}&ndash;{{ documents_page.end_index }}{% endif %}.</p>
+  <ul class="list-group list-group-flush">{% for issue in issues %}<li class="list-group-item px-0" data-saved-document="{{ issue.pk }}">
+    {% if can_export %}<a href="{% url 'workspace_loans:khata_document' request.workspace.slug account.pk issue.pk %}" target="_blank" rel="noopener">{{ issue.payload.title }} &middot; {{ issue.as_of|date:"d/m/Y" }}</a>{% else %}{{ issue.payload.title }} &middot; {{ issue.as_of|date:"d/m/Y" }}{% endif %}
+    <div class="small text-muted">{{ issue.get_kind_display }} &middot; issued {{ issue.created_at|date:"d/m/Y H:i" }} &middot; issue #{{ issue.pk }}</div>
+    {% if issue.source_operation_id %}<div class="small"><a href="{% url 'workspace_loans:khata_event' request.workspace.slug account.pk issue.source_operation_id %}">Source operation #{{ issue.source_operation_id }}</a>{% if issue.source_operation.corrected_by %} &middot; original source subsequently corrected; <a href="?tab=history&amp;history-operation={{ issue.source_operation.corrected_by.pk }}#operation-{{ issue.source_operation.corrected_by.pk }}">see correction #{{ issue.source_operation.corrected_by.pk }}</a>{% endif %}</div>{% endif %}
+  </li>{% empty %}<li class="list-group-item px-0 text-muted">No saved documents match these filters.</li>{% endfor %}</ul>
+  <nav class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3" aria-label="Saved document pages">
+    {% if documents_page.has_previous %}<a class="btn btn-outline-secondary" href="?{{ documents_query }}&amp;documents-page={{ documents_page.previous_page_number }}">Previous documents</a>{% endif %}
+    <span>Page {{ documents_page.number }} of {{ documents_page.paginator.num_pages }}</span>
+    {% if documents_page.has_next %}<a class="btn btn-outline-secondary" href="?{{ documents_query }}&amp;documents-page={{ documents_page.next_page_number }}">Next documents</a>{% endif %}
+  </nav>
+</section>

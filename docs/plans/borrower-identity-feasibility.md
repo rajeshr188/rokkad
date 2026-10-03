@@ -1,7 +1,7 @@
 ---
-status: shelved
+status: active
 owner: project
-updated: 2026-09-26
+updated: 2026-09-30
 tags: [plans, party, identity, feasibility]
 related: [future-work.md, ../domain/party.md, ../architecture/control-plane-contracts.md]
 ---
@@ -10,12 +10,15 @@ related: [future-work.md, ../domain/party.md, ../architecture/control-plane-cont
 
 ## Outcome and scope
 
-**Shelved at owner request on 2026-09-26.** Resume only when the owner explicitly
-reopens FW-009. The deferred next step is identifying the contracting legal entities
-and obtaining written eligibility/hosting answers and quotes before selecting an
-integration for a small pilot. The recommendations below are retained for later;
-do not initiate outreach, registration or implementation while shelved. Recheck
-requirements and prices when resumed.
+**Resumed by the owner on 2026-09-30 for provider comparison and enquiries.**
+The owner accepted optional staff guidance for the pilot, with identity evidence
+and name/address prefilling, a staff-review alternative and separately optional
+phone-possession verification. This introduces no loan-approval gate. The proposed
+pilot lender is **J Champalal Pawn Brokers (JCL)**; provider replies should go to
+**support@rokkad.com**. Its legal structure remains unconfirmed. Rokkad is operated
+by Rajesh Rathod; do not describe it as an incorporated company.
+Compare Digio, Surepass and Cashfree before selecting a method/provider. Registration,
+paid commitments, implementation and live identity collection are not yet selected.
 
 Desk review completed on 2026-09-26 for FW-009. The owner approved investigation
 and the potential promise, **"Verify customer identity and reduce manual entry."**
@@ -25,7 +28,7 @@ not an accepted implementation architecture or a claim of regulatory KYC complia
 No provider accounts, applications, paid services, real identity tests or external
 communications were initiated. Production and customer data were not accessed.
 
-**Recommendation:** investigate a registered-lender Aadhaar app credential-sharing
+**Original 26 September recommendation:** investigate a registered-lender Aadhaar app credential-sharing
 flow first, with Rokkad acting only in a confirmed permitted software role. Compare
 one provider-hosted DigiLocker issued-document journey as the alternative if it
 can lawfully support our independent lenders with less onboarding effort. Choose
@@ -59,7 +62,7 @@ Experience and engineering effort below are estimates, not measured pilot result
 
 | Route | Borrower and staff experience | Main dependency | Assessment |
 | --- | --- | --- | --- |
-| Aadhaar app selective credential sharing | Borrower uses the official app to consent/share; staff reviews returned fields and presenter evidence. First-time app setup adds effort. | Eligible verifier registration, permitted hosting and an agreed field/retention contract. | Preferred first eligibility enquiry; best conceptual fit for minimal sharing. |
+| Aadhaar app selective credential sharing | Borrower uses the official app to consent/share; staff reviews returned fields and presenter evidence. First-time app setup adds effort. | Eligible verifier registration, permitted hosting and an agreed field/retention contract. | Original preferred enquiry; now compare Surepass's advertised OVSE integration alongside hosted DigiLocker. |
 | Signed Secure QR / offline XML | QR scanning can suit a physical counter; XML download, share code and upload are more cumbersome. A photograph of a card or OCR is not signature verification. | Method-specific permission, current signature/trust specifications, safe parsing and presenter matching. | Evaluate as a supported fallback; do not implement all formats at once or bypass registration through a file upload. |
 | Provider-hosted DigiLocker issued-document sharing | Borrower completes provider/DigiLocker consent on their own device or a private customer-facing screen; staff reviews returned evidence. Account recovery/OTP can interrupt the journey. | Provider must accept the actual lender/platform structure and document who requests, receives and stores data. | Credible alternative; official issued documents must be distinguished from user-uploaded scans. Not synonymous with direct UIDAI online e-KYC. |
 | Online Aadhaar authentication/e-KYC through an authorised arrangement | Customer completes the supported authentication; demographic retrieval depends on the actual authorised service. | Eligibility, KUA/Sub-KUA arrangements, contracts and ongoing obligations. Yes/no authentication alone does not populate a profile. | Defer unless the simpler candidates fail a concrete need; investigate current LITE terms rather than assuming online is impossible. |
@@ -77,6 +80,7 @@ These are candidates for enquiries, not endorsements or verified eligibility.
 | --- | --- | --- |
 | Direct UIDAI OVSE arrangement | Official registration and app integration requirements above. | Which legal entity registers, permitted SaaS processor role, fee schedule, onboarding duration and testing access. |
 | Digio | Published integration guides describe DigiLocker workflows and offline KYC workflows. | Independent pawn-lender eligibility, each lender's registration/contract, necessary-only fields, retention/deletion and all-in price. |
+| Surepass | Advertises Aadhaar OVSE app/QR workflows, QR/XML verification, DigiLocker links/SDK and sandbox testing. | Exact supported method, lender registration and permitted SaaS role, authenticated callback contract, minimal fields, retention/deletion and all-in price. |
 | Cashfree Secure ID | Public DigiLocker offering describes consented document retrieval and a hosted user journey. | The same legal/contractual points, onboarding and pricing; no assumption that its payment products are needed. |
 
 Capability sources: [Digio DigiLocker integration](https://documentation.digio.in/digikyc/digilocker/integration_guide/),
@@ -108,6 +112,11 @@ Repeated loan creation should not automatically trigger another paid identity ch
 define refresh conditions from the selected method and lender requirements.
 
 ## Recommended first customer journey
+
+Owner-selected pilot policy (30 September): optional guidance, no new mandatory
+verification condition for creating/approving a loan. Digital failure or refusal
+keeps the staff-review alternative available. Phone possession, source identity,
+presenter matching and current residence retain separate evidence and labels.
 
 1. From a Party profile or customer creation, authorized staff selects **Verify
    customer**. Explain lender identity, purpose, requested fields, retention and
@@ -169,7 +178,147 @@ must preserve these existing architectural boundaries:
 - Resolve withdrawal/deletion and legally required evidence preservation, including
   providers, backups and downstream documents; no blanket promise of instant erasure.
 
-## Ready-to-send eligibility and quote enquiry (not sent)
+## Provider comparison refreshed 2026-09-30
+
+This is a desk comparison of provider-published capabilities, not measured quality,
+confirmed pawn-lender eligibility or a supplier selection. Digio was the first
+evaluation candidate in discussion; Surepass is now a co-leading candidate because
+its advertised app/OVSE route also matches the original selective-sharing proposal.
+Cashfree remains the hosted DigiLocker comparison. Direct UIDAI registration remains
+an alternative, not an additional integration to build in the pilot.
+
+| Criterion | Digio | Surepass | Cashfree Secure ID |
+| --- | --- | --- | --- |
+| Relevant published routes | Aadhaar Offline KYC and DigiLocker integration guides | Aadhaar app/OVSE, QR/XML, DigiLocker API and SDK | DigiLocker hosted consent/document retrieval; Dev Studio also lists Aadhaar OKYC |
+| Counter journey to evaluate | Provider-led DigiLocker or offline KYC flow | Aadhaar app scans a request QR and consents, or DigiLocker link/SDK | Create DigiLocker URL, customer completes consent, retrieve issued document details |
+| Specific question | Can the standard Aadhaar/PAN template be reduced to necessary identity/address fields? | What registration is required per legal lender, and what exactly differs between its app QR and document QR/XML products? | Can Secure ID be contracted independently of payment services for this multi-lender SaaS use case? |
+| Engineering evidence still needed | Current payload, callback authentication, retry/idempotency and deletion contract | Same, plus explicit issuer-document provenance and browser/device support | Same, plus exact permitted Aadhaar service for the selected lender |
+| Phone/current residence | Separate possession/residence checks needed | Same; hashed contact evidence or data lookup is not current phone possession | Same; DigiLocker authentication does not verify an arbitrary contact saved in Party |
+| Comparable all-in pricing | Not established; written quote required | Not established; written quote required | Not established; written quote required |
+
+Sources checked 30 September:
+
+- [Digio offline KYC](https://documentation.digio.in/digikyc/aadhaar_offline/)
+  and [integration](https://documentation.digio.in/digikyc/aadhaar_offline/integration_guide/).
+  The web reader returned an empty rendered body for these documentation pages;
+  search-index excerpts support the route names, not a fully reviewed API contract.
+- [Digio DigiLocker integration](https://documentation.digio.in/digikyc/digilocker/integration_guide/).
+- [Surepass Aadhaar verification](https://surepass.io/aadhaar-verification-api/),
+  [OVSE workflow](https://surepass.io/aadhaar-ovse-api/),
+  [DigiLocker](https://surepass.io/digilocker-api/) and
+  [DigiBoost](https://surepass.io/digiboost-sdk/). Its app/OVSE page describes
+  consent and face authentication in the Aadhaar app. Product availability for
+  JCL/Rokkad remains a written eligibility question. Voice/language support is
+  advertised; Tamil and the actual counter-device journey still need demonstration.
+- [Cashfree DigiLocker](https://www.cashfree.com/digilocker-api/) and
+  [Secure ID Dev Studio](https://www.cashfree.com/devstudio/secureid).
+- [UIDAI OVSE](https://uidai.gov.in/hi/ovse) still expressly disallows verification
+  on behalf of another entity; provider use is not evidence that our SaaS arrangement
+  is permitted.
+
+Do not rank vendor latency, accuracy or compliance slogans as measured results.
+Surepass's rental-tenant package prices, Cashfree payment-gateway rates and Digio
+Account Aggregator pricing are different products, not prices for this pilot.
+Request the same 100/1,000/10,000 monthly completed-check scenarios from all three;
+these are quotation scenarios, not claimed actual volumes or commitments.
+
+Provider choice should first pass written eligibility, minimal-data/retention and
+technical-security checks, then compare customer completion, staff effort and
+total cost. A quoted unit rate alone cannot select the supplier.
+
+## Eligibility and quote enquiry
+
+Prepared for separate enquiries to Digio, Surepass and Cashfree. Replies:
+support@rokkad.com. Delivery status is recorded below; do not infer sending from
+the prepared text. No borrower data or business identity documents are attached.
+
+**Subject:** Rokkad / J Champalal Pawn Brokers - identity verification eligibility and quote
+
+Hello,
+
+Please route this enquiry to your identity-verification sales/solutions team.
+I am Rajesh Rathod, operator of Rokkad (https://rokkad.com), a loan-management SaaS
+for independent pawn-lending businesses. Our proposed first pilot lender is
+J Champalal Pawn Brokers (JCL). We seek a consent-based, in-branch identity check
+and name/address prefilling, initially optional staff guidance with a manual
+alternative. Please advise which legal-entity documents you require; this enquiry
+does not represent Rokkad as an incorporated company or JCL as an NBFC.
+
+Please confirm:
+
+1. Can you support independent pawn lenders using our multi-tenant SaaS? Who must
+   contract/register: Rokkad, each legal lender, or both? How are branches handled,
+   and may Rokkad receive/process results for the lender under your arrangement?
+2. Which exact service do you recommend: Aadhaar app/OVSE, signed QR/XML OKYC, or
+   DigiLocker issued-document retrieval? State required approvals and the permitted
+   data flow; we do not assume that one platform registration covers all lenders.
+3. Can we request only necessary identity/address fields, without mandatory PAN
+   or full Aadhaar-number retention? Explain issuer authenticity, presenter evidence,
+   field freshness, consent receipts and optional separately priced phone OTP.
+4. Please share API/hosted-flow documentation, synthetic sandbox identities,
+   callback authentication/replay protection, result retrieval and retry semantics.
+   Can customers complete the flow privately on their phone, with Tamil guidance?
+5. Confirm hosting locations, subprocessors, retention/deletion (including backups),
+   permitted evidence reuse for repeat customers, and lender-specific data separation.
+6. Quote 100, 1,000 and 10,000 completed verifications/month as comparison scenarios,
+   not commitments. Include setup/per-lender fees, minimums, prepaid-credit expiry,
+   success/failure/retry/abandonment charges, SMS, optional add-ons, taxes and support.
+   Include onboarding requirements/timeline and a sample commercial agreement.
+
+Please reply in writing to support@rokkad.com. This is an eligibility/pricing enquiry,
+not an order, account-registration request or commitment to a paid plan.
+
+Thank you,
+Rajesh Rathod
+Rokkad
+
+### Enquiry delivery record
+
+On 30 September, automatic approval review initially rejected sending the prepared
+Surepass message. The owner subsequently explicitly approved the exact enquiry to
+all three named recipients from admin@rokkad.com. All three were sent separately,
+with the body above and provider-specific subject prefixes. Gmail confirmed each
+send, and the final Sent search showed exactly three matching conversations:
+
+| Provider | Recipient | Sent time, 30 September 2026 (IST) |
+| --- | --- | --- |
+| Surepass | contact@surepass.io | 15:15 |
+| Digio | support@digio.in | 15:16 |
+| Cashfree | care@cashfree.com | 15:17 |
+
+Each body requests replies to support@rokkad.com; the sender is admin@rokkad.com.
+This is a written reply-address request, not a changed mail-account Reply-To setting.
+Sent evidence is saved in `outputs/fw009/provider-enquiries-sent.png`.
+Gmail sending is confirmed. Digio's acknowledgement/business-team routing is
+confirmed below; other provider delivery and substantive eligibility/pricing answers
+are not established by this checkpoint. Do not resend automatically.
+
+Verified public routing contacts: Surepass contact@surepass.io on its
+[contact page](https://surepass.io/contact-us/); Digio support@digio.in on its
+[official site](https://www.digio.in/); Cashfree care@cashfree.com on its
+[pricing contact page](https://www.cashfree.com/payment-gateway-charges/).
+The latter two are general routing addresses, not confirmed dedicated identity-sales
+inboxes. Each message asks for routing to identity-verification sales/solutions.
+Do not use surepass.com, an unrelated service, for Surepass Technologies enquiries.
+JCL's legal structure is not assumed and is unnecessary to request the provider's
+initial eligibility/document requirements. Substantive provider answers remain pending.
+
+### Digio acknowledgement reviewed 30 September
+
+Richa Sharma of Digio Support Desk replied at **16:44 IST** from support@digio.in:
+"Looping in Business Team to connect with you." The message copies
+**Digio Business Team <bd@digio.in>**, is addressed to admin@rokkad.com, and also
+copies support@digio.in. Gmail shows signing by digio.in and mailing through
+digiosupport.zohodesk.in. The requested support@rokkad.com reply address was not
+included among this response's recipients.
+
+This establishes receipt and a handoff to the business team, not confirmation of
+lender/platform eligibility, permitted data handling, method availability or price.
+No quote, document request or substantive answer to the six questions was supplied.
+Await the business team's response; do not start registration/integration on this
+acknowledgement. Review only; no follow-up message was sent.
+
+## Original detailed enquiry checklist (26 September)
 
 Rokkad is a shared-schema, Workspace-isolated loan-management SaaS for independent
 pawn-lending businesses. The initial use case is borrower-present onboarding:
@@ -220,6 +369,7 @@ do not answer those questions.
    accurate badges. Market only the exact completed capability; do not claim all
    borrowers are verified, fraud-proof lending, or universal KYC compliance.
 
-**Deferred resumption point:** resolve contracting legal entities, then obtain
-written eligibility/hosting clarification and quotes. The desk review is complete;
-provider selection and implementation remain shelved pending explicit owner resumption.
+**Current next step:** obtain written eligibility/hosting clarification and comparable
+quotes for the JCL pilot from Digio, Surepass and Cashfree. Resolve legal structures
+and required registrations before onboarding. Provider selection, implementation
+and live identity collection remain pending; optional guidance is agreed.

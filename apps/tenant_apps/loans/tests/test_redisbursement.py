@@ -244,9 +244,10 @@ class DisbursalMigrationTests(TransactionTestCase):
             try:
                 MigrationExecutor(connection).migrate([("loans", "0024_disbursal_schedule_identity")])
                 with workspace_context(self.tenant.pk):
-                    self.loan.refresh_from_db()
-                    self.assertEqual(self.loan.policy_snapshot_id, original_policy)
-                    self.assertEqual(self.loan.disbursal_snapshot_id, original_disbursal)
+                    apps = MigrationExecutor(connection).loader.project_state([("loans", "0024_disbursal_schedule_identity")]).apps
+                    migrated = apps.get_model("loans", "PawnLoan").objects.get(pk=self.loan.pk)
+                    self.assertEqual(migrated.policy_snapshot_id, original_policy)
+                    self.assertEqual(migrated.disbursal_snapshot_id, original_disbursal)
                     self.assertEqual(list(self.loan.loan_events.values()), events)
             finally:
                 MigrationExecutor(connection).migrate(latest)

@@ -53,6 +53,7 @@ def resolve_pawn_draft_economics(
             historical_context, collateral, license_id=license_id, series_id=series_id)
     else:
         policy = resolve_pawn_loan_economic_policy(
+            series_id=series_id,
             workspace_id=workspace_id,
             license_id=license_id,
             as_of_date=as_of_date,

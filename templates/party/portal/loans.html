@@ -5,12 +5,13 @@
 <div class="portal-page-header">
     <h1>{% trans "My loans" %}</h1>
 </div>
+<p class="small text-muted">Includes ordinary loans and khatas. Khata balances include accrued unpaid interest, including amounts not yet due; agreed limits are not debt.</p>
 <div class="portal-list">
     {% for row in summary.items %}
         <div class="portal-list-row">
             <strong>{{ row.loan_id }}</strong>
             <span>{{ row.loan_type }} · {{ row.status }}</span>
-            <span>{{ row.total_outstanding|default:""|indian_money }}</span>
+            <span>{% if row.total_outstanding != None %}{{ row.total_outstanding|indian_money }}{% else %}Unavailable / not opened{% endif %}</span>
         </div>
     {% empty %}
         <p class="portal-empty">{% trans "No loans are available for your portal access." %}</p>

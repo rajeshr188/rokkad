@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Prefetch, prefetch_related_objects
+from django.db.models import F, Prefetch, prefetch_related_objects
 
 from apps.tenant_apps.loans.models import (
     ObligationAllocation,
@@ -56,7 +56,7 @@ def get_active_repayment_schedule_as_of(loan, as_of_date):
     schedules = RepaymentScheduleVersion.objects.filter(
         loan=loan,
         source_event__effective_date__lte=as_of_date,
-    ).order_by("-version", "-pk")
+    ).select_related("loan__policy_snapshot").order_by("-version", "-pk")
     for schedule in schedules:
         terminations = schedule.changes.filter(
             kind=RepaymentScheduleChangeKind.TERMINATE,
@@ -85,7 +85,7 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
     schedules = RepaymentScheduleVersion.objects.filter(
         workspace=workspace, loan_id__in=loan_ids,
         source_event__effective_date__lte=as_of_date,
-    ).order_by("loan_id", "-version", "-pk").prefetch_related(Prefetch(
+    ).select_related("loan__policy_snapshot").order_by("loan_id", "-version", "-pk").prefetch_related(Prefetch(
         "changes",
         queryset=RepaymentScheduleChange.objects.filter(
             workspace=workspace, kind=RepaymentScheduleChangeKind.TERMINATE,
@@ -99,7 +99,9 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
             selected[schedule.loan_id] = schedule
     prefetch_related_objects(list(selected.values()), Prefetch(
         "obligations",
-        queryset=RepaymentObligation.objects.filter(workspace=workspace).order_by("due_date", "sequence").prefetch_related(Prefetch(
+        queryset=RepaymentObligation.objects.filter(workspace=workspace).annotate(
+            recorded_profile=F("schedule_version__source_event__payload__recording__collection_profile")
+        ).order_by("due_date", "sequence").prefetch_related(Prefetch(
             "allocations",
             queryset=ObligationAllocation.objects.filter(
                 workspace=workspace, source_event__effective_date__lte=as_of_date,
@@ -117,19 +119,22 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
     return states
 
 
-def calculate_obligation_state_as_of(schedule, as_of_date):
+def calculate_obligation_state_as_of(schedule, as_of_date, *, adjust_recorded=True):
     return _fold_obligation_state(
         schedule, as_of_date,
-        schedule.obligations.order_by("due_date", "sequence").prefetch_related(Prefetch(
+        schedule.obligations.annotate(
+            recorded_profile=F("schedule_version__source_event__payload__recording__collection_profile")
+        ).order_by("due_date", "sequence").prefetch_related(Prefetch(
             "allocations",
             queryset=ObligationAllocation.objects.filter(source_event__effective_date__lte=as_of_date),
             to_attr="as_of_allocations",
         )) if schedule else (),
         lambda obligation: obligation.as_of_allocations,
+        adjust_recorded=adjust_recorded,
     )
 
 
-def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for):
+def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *, adjust_recorded=True):
     zero = ObligationAmount(ZERO, ZERO)
     if schedule is None:
         return PawnLoanObligationState(None, "", None, (), zero, zero, zero, ())
@@ -138,7 +143,9 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for):
     remaining_principal = remaining_interest = ZERO
     rows = []
     findings = []
+    recorded_profile = None
     for obligation in obligations:
+        recorded_profile = getattr(obligation, "recorded_profile", None)
         allocated = {"PRINCIPAL": ZERO, "INTEREST": ZERO}
         for allocation in allocations_for(obligation):
             allocated[allocation.component] += allocation.amount
@@ -163,7 +170,7 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for):
         if obligation.due_date < as_of_date:
             overdue_principal += principal
             overdue_interest += interest
-    return PawnLoanObligationState(
+    result = PawnLoanObligationState(
         schedule_id=schedule.pk,
         schedule_fingerprint=schedule.fingerprint,
         maturity_date=schedule.maturity_date,
@@ -173,4 +180,8 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for):
         remaining=ObligationAmount(remaining_principal, remaining_interest),
         integrity_findings=tuple(findings),
     )
+    if adjust_recorded and recorded_profile == "recorded-anniversary/1":
+        from apps.tenant_apps.loans.services.recorded_collections import recorded_obligation_state
+        return recorded_obligation_state(schedule, as_of_date, result)
+    return result
 

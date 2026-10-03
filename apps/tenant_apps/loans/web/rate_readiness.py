@@ -43,6 +43,7 @@ def pawn_valuation_readiness(request):
         try:
             policy = resolve_pawn_loan_economic_policy(
                 workspace_id=request.loans_workspace.pk, license_id=series.license_id,
+                series_id=series.pk,
                 as_of_date=values["as_of"],
             )
             context["interest_rates"] = [resolve_pawn_metal_interest_rate_policy(

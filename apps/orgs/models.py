@@ -332,3 +332,4 @@ class CompanyPreferenceModel(models.Model):
 
 # Import AuditLog model to make it discoverable by migrations
 from apps.orgs.audit import AuditLog  # noqa: E402, F401
+from apps.orgs.storage_models import StorageInventoryRun, StorageInventoryObject, WorkspaceStorageUsage  # noqa: E402, F401

@@ -1,0 +1,69 @@
+{% extends "base_tenant.html" %}
+{% block title %}Statutory forms and notices{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:pawn_loan_reports' request.workspace.slug %}">&larr; Reports</a>
+<h1 class="h3 mt-3">Statutory forms and notices</h1>
+<p>Choose the document for the actual business situation. Ordinary loan tickets, reports and digital reminders do not automatically satisfy a prescribed statutory form or service requirement.</p>
+<nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Statutory guide contents">
+<a class="btn btn-outline-primary" href="#staff-workflow">Staff workflow</a>
+<a class="btn btn-outline-primary" href="{% url 'workspace_loans:pledge_book_preview' request.workspace.slug %}">Pledge book (Form E) preview</a>
+<a class="btn btn-primary" href="{% url 'workspace_loans:pledge_books' request.workspace.slug %}">Form E books &amp; daily activity</a>
+<a class="btn btn-outline-primary" href="{% url 'workspace_loans:auctioneer_handovers' request.workspace.slug %}">Auctioneer handover lists (administrators)</a>
+<a class="btn btn-outline-secondary" href="#corrections">Corrections and missed deadlines</a>
+<a class="btn btn-outline-secondary" href="#coverage">Available and planned forms</a>
+</nav>
+<section id="staff-workflow" class="card mb-4"><div class="card-body">
+<h2 class="h4">Staff workflow: auction postal notices</h2>
+<p><strong>Where to start:</strong> open the loan, find <strong>Auction recovery</strong>, prepare the auction, then choose <strong>Statutory notice &amp; readiness</strong>. Preparing a new auction opens that screen directly.</p>
+<p><strong>Who records it:</strong> a Workspace administrator. Other staff can read this guide, but issuing catalogues, recording handling and downloading private evidence require Workspace administration permission.</p>
+<p><strong>If your auctioneer prepares the notices:</strong> open <strong>Auctioneer handover lists</strong>, choose a licence and paste the complete loan numbers from your overdue-loan review. Preview and save the reviewed list, then print or download it for manual sharing. Keep the actual signed notice in each loan's printing evidence and record your branch's posting and follow-up here. After collections/releases, reopen the saved list, review its changes and holds, and save an updated version before handing over the remaining loans. Previously withheld loans need explicit reselection. These administrative lists do not replace the statutory catalogue or cancel notices automatically.</p>
+<div class="alert alert-info">Email and WhatsApp reminders are separate. A digital Sent status does not establish statutory service. Rokkad records your manual postal workflow; it does not send post or obtain government permission.</div>
+<ol class="ps-3">
+<li class="mb-3"><strong>Review and preserve the catalogue.</strong> Check the licensed business details, pawner's last-known address, every pledged article, approved auctioneer, approval reference, sale date, time and place. Use <strong>Preview PDF</strong>, then <strong>Preserve reviewed catalogue</strong> once checked. Generation is not service.</li>
+<li class="mb-3"><strong>Print and arrange signing.</strong> Print the preserved PDF and arrange the auctioneer's signature. Record the actual printing date and person. Reprints retrieve the original particulars, even if the customer's details later change. The original PDF does not acquire handwritten signatures; retain a signed scan separately as supporting evidence.</li>
+<li class="mb-3"><strong>Post manually and record the booking.</strong> Use the appropriate registration and acknowledgement/proof-of-delivery service. Record the actual posting date, postal article number, service and person who posted it. Attach the booking receipt. Downloading or printing a PDF does not record posting.</li>
+<li class="mb-3"><strong>Record what happened to the letter.</strong>
+<div class="row g-3 mt-1">
+<div class="col-md-6"><div class="border rounded p-3 h-100"><h3 class="h6">Acknowledgement / proof received</h3><p class="mb-0">Upload the acknowledgement or proof of delivery (POD). Record the delivery date shown on it and the actual date the proof was received.</p></div></div>
+<div class="col-md-6"><div class="border rounded p-3 h-100"><h3 class="h6">Cover returned</h3><p class="mb-0">Record when the returned cover was received, its endorsement and the cover itself. Record referral to the competent Village Officer, confirm officer receipt, then attach the actual official affixture/proclamation certificate with its dates. A return is not successful delivery.</p></div></div>
+</div></li>
+<li class="mb-3"><strong>Review service and auction readiness.</strong> Review the evidence, permission, schedule, newspaper publications, required distribution and remaining prerequisites. Upload the supporting dossier and record the current-rule/authority review reference. Read the outstanding checks on the auction screen. The app checks a 45-day postal interval, separate official-service follow-up windows and ten clear days after the second newspaper publication.</li>
+<li><strong>Start on the advertised sale date.</strong> All recorded checks must pass. Completion checks readiness again; the existing debt, collateral custody and settlement rules still apply. Staff review is not legal certification or an authority's permission.</li>
+</ol>
+</div></section>
+<section id="corrections" class="card mb-4"><div class="card-body">
+<h2 class="h5">Corrections, late handling and attachments</h2>
+<dl class="mb-0">
+<dt>A handling step happened late</dt><dd>Record its actual date. Late evidence is retained, but does not clear a missed deadline. The handling history also records the signed-in user and time of entry. Future event dates and backdated readiness decisions are rejected.</dd>
+<dt>The preserved notice is wrong, expired or the sale must move</dt><dd>Withdraw the notice, cancel that auction and prepare a fresh auction arrangement. Do not alter the old PDF or silently reuse its date. Previous records remain visible.</dd>
+<dt>More evidence was added after review</dt><dd>Review readiness again. Later handling can invalidate an earlier review; use the current outstanding checks on the auction screen.</dd>
+<dt>An attachment will not save</dt><dd>Use a readable PDF, JPEG or PNG of at most 10 MB. After a validation error you may need to select the attachment again. Upload only relevant evidence.</dd>
+<dt>Keeping records</dt><dd class="mb-0">Files are private and retained. They cannot be overwritten or deleted through this workflow. Keep the original postal documents and signed papers with your business records.</dd>
+</dl>
+</div></section>
+<section class="card mb-4" id="form-e"><div class="card-body">
+<h2 class="h5">Form E: daily pledge-book routine</h2>
+<ol><li><strong>Open one book per licence/series.</strong> An administrator chooses facing portrait or single-sheet landscape A4, a starting date/page and the earlier paper-book reference. Check a physical sample first; layout and opening scope are fixed.</li>
+<li><strong>Review pending paid-out pledges.</strong> Drafts/unpaid approvals are excluded. Review each entry's original evidence; add only source-backed missing particulars, or record unresolved gaps explicitly. Unsupported origin/renewal mappings and ambiguous disbursal attempts need reconciliation before permanent printing.</li>
+<li><strong>Preview and save full or partial pages.</strong> Capacity is up to five ordinary loans per landscape sheet or portrait pair, reduced by long particulars. Close the day with outstanding partial pages rather than waiting for a full page. Confirming saves the exact PDF and permanent physical page numbers; it does not prove printing or filing.</li>
+<li><strong>Print and file.</strong> Use A4 at 100%, single-sided, in the saved orientation. Facing pages have two consecutive physical page numbers. Keep the evidence notes. Closed unused space is not for new pledges; later pledges start on the next page.</li>
+<li><strong>Annotate older paper entries.</strong> Record payments/releases in Rokkad as usual. Open Daily activity, preferably by date entered, to find late entries as well as today's work. It supplies business/recording dates, amounts, available recipient details and the original saved page reference. Mark the physical book manually; no per-row acknowledgement is required.</li>
+<li><strong>Reprint saved bytes when needed.</strong> Exact reprints do not include handwritten later notes. Missing/damaged stored files require recovery of the original artifact. Corrections must retain original pages and source references; changing customer profiles does not rewrite saved pages.</li></ol>
+<p class="mb-0">Archived closed records without licence/series mappings, unsupported renewals and missing historical particulars remain explicit limits. Source review does not certify a complete historical book or legal compliance. Tamil particulars render; reviewed Tamil headings remain pending.</p>
+</div></section>
+<h2 id="coverage" class="h5">Prescribed-document coverage</h2>
+<p>The full statutory suite is selected for staged delivery. The auction postal workflow and Form E book workflow are available here. Other prescribed generators below remain planned; existing custom documents are not certified equivalents.</p>
+<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Situation</th><th>Form / rule</th><th>Current scope</th></tr></thead><tbody>
+<tr><td>Apply for or renew a licence</td><td>A; B is the authority-issued licence</td><td>Application generator planned; Rokkad cannot issue a government licence</td></tr>
+<tr><td>Transferred rights, agent redemption, lost ticket and disputed ownership</td><td>C, D, D-1–D-8</td><td>Scenario-specific declarations/notices planned; signatures and service must be recorded separately</td></tr>
+<tr><td>Maintain the pledge book</td><td>E</td><td>Both A4 layouts, source review, permanent full/partial batches, exact reprints and daily annotation aid. Later physical updates are handwritten; historical coverage gaps remain explicit.</td></tr>
+<tr><td>Issue a pawn ticket</td><td>F</td><td>Custom loan tickets exist; prescribed bilingual template review remains</td></tr>
+<tr><td>Record sale and redemption</td><td>G, H</td><td>Prescribed generators planned; existing recovery/release documents remain separate</td></tr>
+<tr><td>Certified account copy and pass-book</td><td>I, J, K</td><td>Generators and actual certification/acknowledgement workflow planned</td></tr>
+<tr><td>Proposed auction and postal service</td><td>Rule 12 catalogue</td><td>Reviewed particulars, preserved PDF, postal evidence and readiness review implemented; first template has English headings</td></tr>
+<tr><td>Auctioneer's register</td><td>L</td><td>Planned; responsibility remains with the auctioneer</td></tr>
+<tr><td>Half-yearly advances return</td><td>M</td><td>Prescribed return and reconciliation planned</td></tr>
+<tr><td>Requested statement / auction surplus intimation</td><td>Rules 11 / 12(14)</td><td>Dedicated document and service workflows planned; surplus settlement remains unsupported</td></tr>
+</tbody></table></div>
+<p>Review current amendments, applicable language and local procedure with the responsible professional or authority. The app preserves staff review and evidence; it does not certify legal compliance. <a href="https://www.cra.tn.gov.in/tnscs/Files/act/003b_Tamil%20Nadu%20Pawnbrokers%20Rules%201943.pdf" target="_blank" rel="noopener">Published Rules and forms</a>.</p>
+{% endblock %}

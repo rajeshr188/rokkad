@@ -113,6 +113,11 @@ def get_pawn_loan_release_readiness(
         )
     unvalued_opening_item_ids = ()
     opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").first()
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for
+    if recording_for(loan):
+        # Full debt settlement needs no retained-collateral LTV decision. Missing
+        # original valuation stays unknown; partial release still requires it.
+        unvalued_opening_item_ids = tuple(item.pk for item in collateral_items)
     if opening:
         from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
         evidence = read_opening_evidence(loan, opening)

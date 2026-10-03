@@ -1,0 +1,13 @@
+{% extends "base_tenant.html" %}
+{% block title %}Paper-book progress{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1000px">
+<h1 class="h3">Paper-book progress</h1>
+<p>Track books, dates and pages entered. This progress does not confirm any loan balance or certify that every paper loan has been entered.</p>
+<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:paper_batch_review' request.workspace.slug %}">Review selected loans together</a></p>
+{% if can_export_recovery %}<p><a href="{% url 'workspace_loans:pawn_recovery_backup' request.workspace.slug %}">Download Loans recovery backup</a></p>{% endif %}
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{% else %}<div class="mb-3"><label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}<button class="btn btn-primary">Record progress</button></form>
+<h2 class="h5 mt-4">Recent progress history</h2>
+<ul class="list-unstyled">{% for checkpoint in checkpoints %}<li class="border rounded p-3 mb-2"><strong>{{ checkpoint.book_reference }}</strong>: {{ checkpoint.get_state_display }} through {{ checkpoint.through_date }}; last page {{ checkpoint.last_page_reference }}.<br>{{ checkpoint.note }} <span class="small text-body-secondary">Recorded by {{ checkpoint.recorded_by }} at {{ checkpoint.recorded_at }}.</span></li>{% empty %}<li>No paper-book progress recorded.</li>{% endfor %}</ul>
+</div>
+{% endblock %}

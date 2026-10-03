@@ -909,11 +909,13 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         ):
             auction = initiate_pawn_loan_auction(
                 loan.pk,
-                scheduled_date=date(2026, 12, 5),
+                scheduled_date=date(2027, 1, 20),
                 channel="EMAIL",
                 request_key="loans-only-auction-recovery",
                 actor=self.tenant.owner,
             )
+        from apps.tenant_apps.loans.tests.factories import prepare_test_auction_service
+        prepare_test_auction_service(auction, self.tenant.owner, date(2026, 12, 4))
         NotificationJob.objects.filter(
             pk=auction.notice.notification_job_id
         ).update(
@@ -922,7 +924,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         )
         with patch(
             "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
-            return_value=date(2026, 12, 5),
+            return_value=date(2027, 1, 20),
         ), patch(
             "apps.tenant_apps.loans.services.pawn_auctions.preview_pawn_loan_accruals",
             return_value=(),
@@ -951,7 +953,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
 
         with patch(
             "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
-            return_value=date(2026, 12, 5),
+            return_value=date(2027, 1, 20),
         ):
             reversed_auction = reverse_pawn_loan_auction(
                 completed.auction.pk,

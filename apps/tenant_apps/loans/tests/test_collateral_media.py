@@ -188,12 +188,23 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.assertEqual(self.client.post(url).status_code, 302)
         self.assertFalse(PawnCollateralPhoto.objects.filter(pk=photo.pk).exists())
-        self.assertFalse(storage.exists(name))
+        self.assertTrue(storage.exists(name))
+        self.assertTrue(self.loan.change_log.filter(metadata__file_retained_for_review=True).exists())
         self.assertTrue(self.loan.change_log.filter(metadata__action="collateral_photo_deleted").exists())
         with self.assertRaisesRegex(PawnLifecycleError, "requires at least one photograph"):
             approve_pawn_loan(self.loan.pk, actor=self.owner)
         append_collateral_photo(self.item.pk, upload=self.photo("replacement.jpg"), actor=self.owner)
         approve_pawn_loan(self.loan.pk, actor=self.owner)
+
+    def test_removing_collateral_rows_retains_stored_media_after_commit(self):
+        from apps.tenant_apps.loans.services.pawn_drafts import _delete_draft_collateral
+        photo = append_collateral_photo(self.item.pk, upload=self.photo(), actor=self.owner)
+        storage, name, item_id = photo.file.storage, photo.file.name, self.item.pk
+        with self.captureOnCommitCallbacks(execute=True), transaction.atomic():
+            _delete_draft_collateral(self.item)
+        self.assertFalse(PawnCollateralItem.objects.filter(pk=item_id).exists())
+        self.assertFalse(PawnCollateralPhoto.objects.filter(pk=photo.pk).exists())
+        self.assertTrue(storage.exists(name))
 
     def test_optional_default_allows_approval_and_freezes_rule(self):
         from apps.tenant_apps.loans.services.origination_settings import set_collateral_photo_requirement
@@ -350,6 +361,62 @@ class PawnCollateralMediaTests(WorkspaceTestCase):
             f"{reverse('workspace_slug_loan_detail', kwargs={'workspace_slug': self.tenant.slug, 'pk': self.loan.pk})}#collateral-{self.item.public_id}",
             fetch_redirect_response=False,
         )
+
+    def test_combined_label_keeps_all_items_quantities_and_separate_metal_totals(self):
+        from apps.tenant_apps.loans.services.loan_collateral_label import render_loan_collateral_label
+        second = PawnCollateralItem.objects.create(loan=self.loan, description="Silver anklets",
+            metal="SILVER", quantity=2, gross_weight=21, net_weight=20, purity_percentage=80)
+        url = reverse("loans:loan_collateral_label", args=[self.loan.pk])
+        with patch("apps.tenant_apps.loans.web.loan_collateral_label.render_loan_collateral_label", wraps=render_loan_collateral_label) as render_label:
+            response = self.client.get(url, {"action":"PRINT"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response["Cache-Control"])
+        with fitz.open(stream=response.content, filetype="pdf") as pdf:
+            self.assertEqual(len(pdf), 1)
+            self.assertAlmostEqual(pdf[0].rect.width, 100 * 72 / 25.4, places=3)
+            self.assertAlmostEqual(pdf[0].rect.height, 60 * 72 / 25.4, places=3)
+            text = pdf[0].get_text()
+        for expected in ("PL-M-1", "Media Borrower", "Gold ring", "qty not recorded", "Silver anklets", "qty 2", "Gold: 2.0000 g", "Silver: 20.0000 g", "2 entries"):
+            self.assertIn(expected, text)
+        issues = list(PawnCollateralLabelIssue.objects.order_by("collateral_item_id"))
+        self.assertEqual([issue.collateral_item_id for issue in issues], [self.item.pk, second.pk])
+        for issue in issues:
+            self.assertEqual(issue.action, "PRINT")
+            self.assertEqual(issue.payload_sha256, hashlib.sha256(response.content).hexdigest())
+            self.assertEqual(issue.qr_target, render_label.call_args.kwargs["qr_target"])
+            self.assertTrue(issue.qr_target.endswith(reverse("workspace_loans:pawn_loan_detail",
+                kwargs={"workspace_slug":self.tenant.slug, "pk":self.loan.pk}) + "#collateral-gallery"))
+        self.assertFalse(self.loan.loan_events.exists())
+
+    def test_combined_label_rejects_overflow_and_bad_action_without_partial_audit(self):
+        for number in range(20):
+            PawnCollateralItem.objects.create(loan=self.loan, description="Full description " * 12,
+                metal="GOLD", gross_weight=2, net_weight=1, purity_percentage=90)
+        url = reverse("loans:loan_collateral_label", args=[self.loan.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 409)
+        self.assertContains(response, "no text has been omitted", status_code=409)
+        self.assertFalse(PawnCollateralLabelIssue.objects.exists())
+        response = self.client.get(url, {"action":"INVALID"})
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(PawnCollateralLabelIssue.objects.exists())
+
+    def test_combined_label_rejects_missing_scope_and_mixed_loan_items(self):
+        from apps.tenant_apps.loans.services.loan_collateral_label import render_loan_collateral_label, loan_collateral_label_pdf
+        with patch("apps.tenant_apps.loans.services.loan_collateral_label.current_tenant_workspace_id", return_value=None), self.assertRaises(PawnCollateralMediaError):
+            render_loan_collateral_label(self.loan.pk, qr_target="https://example.test/", action="PRINT", actor=self.owner)
+        with patch("apps.tenant_apps.loans.services.loan_collateral_label.current_tenant_workspace_id", return_value=self.tenant.pk + 1000000), self.assertRaises(PawnCollateralMediaError):
+            render_loan_collateral_label(self.loan.pk, qr_target="https://example.test/", action="PRINT", actor=self.owner)
+        from django.core.exceptions import PermissionDenied
+        outsider = get_user_model().objects.create_user(username="label-outsider")
+        with self.assertRaises(PermissionDenied):
+            render_loan_collateral_label(self.loan.pk, qr_target="https://example.test/", action="PRINT", actor=outsider)
+        with self.assertRaisesRegex(PawnCollateralMediaError, "no collateral"):
+            loan_collateral_label_pdf(self.loan, [], "https://example.test/")
+        self.item.loan_id = self.loan.pk + 1000
+        with self.assertRaisesRegex(PawnCollateralMediaError, "Every label item"):
+            loan_collateral_label_pdf(self.loan, [self.item], "https://example.test/")
+        self.assertFalse(PawnCollateralLabelIssue.objects.exists())
 
     def test_required_storage_hierarchy_and_owner_only_transfer(self):
         branch = self._location("BRANCH", "BR-1", None)

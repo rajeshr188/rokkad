@@ -181,6 +181,9 @@
             },
             "currency_quantum": {
               "const": "0.01"
+            },
+            "minimum_first_month": {
+              "type": "boolean"
             }
           },
           "required": [

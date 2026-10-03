@@ -1,0 +1,16 @@
+{% extends "base_tenant.html" %}
+{% block title %}Review: {{ title }}{% endblock %}
+{% block workspace_content %}
+{% if account %}<a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab={{ account_return_tab }}">&larr; Khata {{ account.account_number }} &middot; {{ account_return_label }}</a>{% else %}<a href="{% url 'workspace_loans:khata_list' request.workspace.slug %}">&larr; Khata register</a>{% endif %}
+<h1 class="h3">Review: {{ title }}</h1>
+{% if account %}<p>Khata {{ account.account_number }} &middot; {{ account.borrower.display_name }}</p>{% endif %}
+<p class="text-muted">Check these instructions before confirming. Reviews expire after 30 minutes and at the end of the business day. Changed prices, terms or source evidence require a fresh review.</p>
+{% for warning in warnings %}<div class="alert alert-warning" role="alert">{{ warning }}</div>{% endfor %}
+<section class="card card-body mb-3"><h2 class="h5">Your instructions</h2><dl class="row mb-0">{% for label, value in entries %}<dt class="col-sm-5">{{ label }}</dt><dd class="col-sm-7 text-break">{{ value|default_if_none:"—" }}</dd>{% endfor %}</dl></section>
+{% if opening_estimate %}<div class="mb-3">{% include 'loans/khata/_opening_estimate.html' %}</div>{% endif %}
+{% if facts %}<section class="card card-body mb-3"><h2 class="h5">Reviewed position</h2><dl class="row mb-0">{% for label, value in facts %}<dt class="col-sm-7">{{ label }}</dt><dd class="col-sm-5">{{ value }}</dd>{% endfor %}</dl></section>{% endif %}
+{% if exchange_groups %}<section class="card card-body mb-3"><h2 class="h5">Selected replacement groups</h2><div class="table-responsive"><table class="table"><thead><tr><th>Metal</th><th>Outgoing items / net weight</th><th>Incoming items / net weight</th><th>Outgoing value</th><th>Incoming value</th></tr></thead><tbody>{% for group in exchange_groups %}<tr><td>{{ group.metal }}</td><td>{{ group.outgoing_count }} / {{ group.outgoing_net }} g</td><td>{{ group.incoming_count }} / {{ group.incoming_net }} g</td><td>INR {{ group.outgoing_value }}</td><td>INR {{ group.incoming_value }}</td></tr>{% endfor %}</tbody></table></div><p class="small text-muted mb-0">Groups replace groups; these are not one-to-one item pairs. Received replacements are already included once in retained account cover.</p></section>{% endif %}
+{% if valuations %}<details class="card card-body mb-3"><summary>Current approved valuations</summary><ul class="mb-0 mt-2">{% for row in valuations %}<li>Item {{ row.item_id }}: INR {{ row.value }}</li>{% endfor %}</ul></details>{% endif %}
+{% if periods %}<section class="card card-body mb-3"><h2 class="h5">Completed interest periods</h2><ul class="mb-0">{% for period in periods %}<li>{{ period.start_on }} – {{ period.end_on }} (end excluded): INR {{ period.charge }}; due {{ period.due_on }}</li>{% endfor %}</ul></section>{% endif %}
+<form method="post">{% csrf_token %}<input type="hidden" name="review_token" value="{{ review_token }}"><button class="btn btn-primary" type="submit">Confirm {{ title|lower }}</button> <button class="btn btn-outline-secondary" type="submit" name="edit" value="1">Edit instructions</button></form>
+{% endblock %}

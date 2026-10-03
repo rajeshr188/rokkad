@@ -27,6 +27,46 @@ from apps.tenant_apps.loans.tests.test_opening_import import OpeningImportFixtur
 
 
 class OpeningRestoreTests(OpeningImportFixture):
+    def test_paper_multi_item_interest_supported_but_principal_requires_agreement(self):
+        from apps.tenant_apps.loans.services import paper_repayments as paper
+        self.review["collateral"][0].update(original_principal="500", remaining_principal="500")
+        second = copy.deepcopy(self.review["collateral"][0])
+        second.update(id="second-item", monthly_rate="2")
+        self.review["collateral"].append(second)
+        self.review["source"]["item_ids"].append("second-item")
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 3, 2)):
+            origin = self.write()
+            args = dict(amount="215", received_on=date(2021, 2, 2), receipt_reference="Items 17",
+                        request_key="items-17", actor=self.actor)
+            with self.assertRaisesMessage(ValueError, "agreed item allocation rule"):
+                paper.preview_paper_repayment(origin.loan_id, **args)
+            self.assertEqual(origin.loan.loan_events.count(), 1)
+            args["amount"] = "15"
+            review = paper.preview_paper_repayment(origin.loan_id, **args)
+            result = paper.record_paper_repayment(origin.loan_id, **args,
+                review_token=review.review_token, confirmed_received=True)
+            self.assertEqual((result.allocation.interest, result.allocation.principal), (15, 0))
+
+    def test_paper_receipt_metadata_and_balances_survive_opening_restore(self):
+        from apps.tenant_apps.loans.services import paper_repayments as paper
+        from apps.tenant_apps.loans.selectors import get_pawn_loan_exposure
+        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 3, 2)):
+            origin = self.write()
+            args = dict(amount="210", received_on=date(2021, 2, 2), receipt_reference="Paper 17",
+                        request_key="paper-restore", actor=self.actor)
+            review = paper.preview_paper_repayment(origin.loan_id, **args)
+            original = paper.record_paper_repayment(origin.loan_id, **args,
+                review_token=review.review_token, confirmed_received=True)
+            content = export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=origin.loan_id)
+        source = parse_opening_export(content)
+        with self.scoped(self.b), patch("django.utils.timezone.localdate", return_value=date(2021, 3, 2)):
+            restored, _ = self.restore(content)
+            event = restored.loan.loan_events.get(event_kind="REPAYMENT")
+            self.assertEqual(event.payload["repayment"]["recording"], original.loan_event.payload["repayment"]["recording"])
+            self.assertEqual(get_pawn_loan_exposure(restored.loan_id, as_of_date=date(2021, 3, 2)).total_economic_exposure, 808)
+            again = parse_opening_export(export_opening(workspace_id=self.b.pk, actor=self.actor, loan_id=restored.loan_id))
+            self.assertEqual(semantic_evidence(source["evidence"]), semantic_evidence(again["evidence"]))
+
     def test_mixed_item_rates_allocate_highest_first_and_restore_every_line(self):
         from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
         from apps.tenant_apps.loans.selectors import get_pawn_loan_exposure

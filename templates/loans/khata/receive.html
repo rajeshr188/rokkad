@@ -1,0 +1,17 @@
+{% extends "base_tenant.html" %}{% load static %}
+{% block title %}Receive Khata collateral{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab={{ account_return_tab }}">&larr; Khata {{ account.account_number }} &middot; {{ account_return_label }}</a>
+<h1 class="h3 mt-3">Receive collateral</h1>
+<p class="text-muted">Record each item actually received, with its photograph on the same screen. No cash payout or exchange is recorded here.</p>
+{% if received %}<div class="alert alert-success" role="status">Received Item {{ received.pk }}: {{ received.description }}. <a href="{% url 'workspace_loans:khata_labels' request.workspace.slug account.pk %}">Print collateral labels</a></div>{% endif %}
+<div class="alert alert-info">{% if photo_required %}This workspace requires photographs before opening approval and relevant withdrawal/exchange checks. You may receive an item now and attach its photo later.{% else %}Photographs are optional in this workspace. You can attach one now or later.{% endif %}</div>
+<form method="post" enctype="multipart/form-data" class="card card-body" data-khata-receive>
+{% csrf_token %}{{ form.non_field_errors }}{{ form.request_key }}{{ form.request_key.errors }}
+{% if return_exchange %}<input type="hidden" name="return_to" value="exchange">{% for id in exchange_outgoing %}<input type="hidden" name="exchange_outgoing" value="{{ id }}">{% endfor %}{% for id in exchange_incoming %}<input type="hidden" name="exchange_incoming" value="{{ id }}">{% endfor %}<p class="small text-muted">After saving, return to the exchange with your existing selections. Select this new item explicitly as a replacement.</p>{% endif %}
+<div class="row g-3">{% for field in form %}{% if not field.is_hidden and field.name != 'receipt_confirmed' %}<div class="col-md-6">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{% if field.name == 'upload' %}{% include 'loans/khata/_photo_capture.html' %}{% endif %}</div>{% endif %}{% endfor %}</div>
+<div class="form-check mt-3">{{ form.receipt_confirmed }}<label class="form-check-label" for="{{ form.receipt_confirmed.id_for_label }}">{{ form.receipt_confirmed.label }}</label>{{ form.receipt_confirmed.errors }}</div>
+<div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-primary" type="submit">{% if return_exchange %}Save and return to exchange{% else %}Save received collateral{% endif %}</button>{% if not return_exchange %}<button class="btn btn-outline-primary" type="submit" name="add_another" value="1">Save and add another</button>{% endif %}</div>
+</form>
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/khata-collateral.js' %}" defer></script>{% endblock %}

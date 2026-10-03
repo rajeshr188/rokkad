@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
 
-SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V3"
+SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V4"
 
 
 def snapshot_is_current(snapshot, as_of_date):
@@ -52,6 +52,7 @@ class RiskPortfolioSummary:
     totals_complete: bool
     by_severity: tuple[dict, ...]
     by_product: tuple[dict, ...]
+    provisional_count: int = 0
 
 
 def get_risk_portfolio(*, page=1, page_size=50, status=None, severity=None,
@@ -91,7 +92,8 @@ def get_risk_portfolio_summary(*, as_of_date=None):
         stale_count=Count("pk", filter=Q(assessment_status="STALE")),
         error_count=Count("pk", filter=Q(assessment_status="ERROR")),
         unknown_coverage_count=Count("pk", filter=current & Q(risk_snapshot__ltv_ratio__isnull=True)),
-        incomplete_money=Count("pk", filter=~current | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True)),
+        provisional_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__complete=False)),
+        incomplete_money=Count("pk", filter=~current | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True) | Q(risk_snapshot__source_provenance__transactions__complete=False)),
         total_exposure=Sum("risk_snapshot__exposure", filter=current),
         total_overdue=Sum("risk_snapshot__overdue", filter=current),
     )

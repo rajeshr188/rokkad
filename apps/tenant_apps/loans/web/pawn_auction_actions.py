@@ -56,8 +56,8 @@ def pawn_loan_auction_initiate(request, pk):
         except (PawnAuctionError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, f"Auction {auction.auction_number} initiated and notice queued.")
-            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+            messages.success(request, f"Auction {auction.auction_number} prepared. Complete its statutory postal notice before starting.")
+            return redirect('workspace_loans:statutory_auction_notice', auction_pk=auction.pk, workspace_slug=request.workspace.slug)
     return _render_action(
         request,
         loan,

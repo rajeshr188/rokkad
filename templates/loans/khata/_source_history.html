@@ -1,0 +1,37 @@
+{% load loans_display %}
+<section id="source-history" aria-labelledby="history-heading">
+  <h2 class="h5 mb-0" id="history-heading">Source history</h2>
+  {% if correction_guidance %}
+  <section class="card card-body mt-3" aria-labelledby="correction-guidance-heading" id="correction-guidance">
+    <h3 class="h6" id="correction-guidance-heading">Correction review for operation #{{ correction_guidance.source.pk }}</h3>
+    <p>{{ correction_guidance.message }}</p>
+    {% if workspace_can_write and can_review_correction and correction_guidance.review_available %}<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:khata_action' request.workspace.slug account.pk 'correct' %}?source={{ correction_guidance.source.pk }}">Review correction</a></p>{% endif %}
+    {% include 'loans/khata/_correction_blockers.html' with correction_blockers=correction_guidance.blockers correction_blocker_count=correction_guidance.blocker_count %}
+    {% include 'loans/khata/_correction_help.html' %}
+  </section>
+  {% endif %}
+  <p class="small text-muted mt-3">Filter recorded events without changing account balances. Dates are business dates; sequence breaks ties on the same day. Corrections remain visible as separate audit events.</p>
+  <form method="get" action="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}#source-history" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="section" value="history">
+    {{ history_form.non_field_errors }}
+    {% for field in history_form %}<div class="col-sm-6 col-lg-4">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+    <div class="col-12"><button class="btn btn-primary" type="submit">Filter events</button> <a class="btn btn-outline-secondary" href="?section=history#source-history">Reset history filters</a></div>
+  </form>
+  <p class="small">{{ history_page.paginator.count }} matching event{{ history_page.paginator.count|pluralize }}{% if history_page.paginator.count %}; showing {{ history_page.start_index }}&ndash;{{ history_page.end_index }}{% endif %}.</p>
+  <div class="table-responsive" tabindex="0" aria-label="Source history table; scroll horizontally for all columns"><table class="table align-middle" style="min-width:760px"><thead><tr><th>Business date / recorded</th><th>Event</th><th>Amount (INR)</th><th>Interest component (INR)</th><th>Related sources</th></tr></thead><tbody>
+    {% for op in history_page %}<tr id="operation-{{ op.pk }}">
+      <td>{{ op.business_date|date:"d/m/Y" }}<div class="small text-muted">{{ op.created_at|date:"d/m/Y H:i" }}</div></td>
+      <td>{{ op.get_kind_display }} <a href="?section=history&amp;history-operation={{ op.pk }}#operation-{{ op.pk }}">#{{ op.pk }}</a><div class="small text-muted">Sequence {{ op.sequence }} &middot; {{ op.created_by.get_username }}</div>
+        {% if op.received_item %}<div class="small"><a href="?section=collateral&amp;item={{ op.received_item.public_id }}#collateral-item-{{ op.received_item.public_id }}">Item {{ op.received_item.pk }}: {{ op.received_item.description }}</a></div>{% elif op.item %}<div class="small"><a href="?section=collateral&amp;item={{ op.item.public_id }}#collateral-item-{{ op.item.public_id }}">Item {{ op.item.pk }}: {{ op.item.description }}</a></div>{% endif %}
+        {% if op.evidence.payment_reference %}<div class="small text-muted">{{ op.evidence.payment_reference }}</div>{% elif op.evidence.reference %}<div class="small text-muted">{{ op.evidence.reference }}</div>{% endif %}
+        <div class="small"><a href="{% url 'workspace_loans:khata_event' request.workspace.slug account.pk op.pk %}">View event details</a>{% if op.evidence.warnings %} <span class="badge text-bg-warning">Recorded warning</span>{% endif %}</div>
+      </td><td>{{ op.amount|indian_money }}</td><td>{{ op.interest_amount|indian_money }}</td>
+      <td>{% if op.corrected_by %}<div><a href="?section=history&amp;history-operation={{ op.corrected_by.pk }}#operation-{{ op.corrected_by.pk }}">Corrected by #{{ op.corrected_by.pk }}</a></div>{% endif %}{% if op.correction_of_id %}<div><a href="?section=history&amp;history-operation={{ op.correction_of_id }}#operation-{{ op.correction_of_id }}">Corrects #{{ op.correction_of_id }}</a></div>{% endif %}{% if op.parent_id %}<div><a href="?section=history&amp;history-operation={{ op.parent_id }}#operation-{{ op.parent_id }}">Return source #{{ op.parent_id }}</a></div>{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="5" class="text-muted">No events match these filters.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <nav aria-label="Source history pages" class="d-flex justify-content-between align-items-center gap-2">
+    {% if history_page.has_previous %}<a class="btn btn-outline-secondary" href="?{{ history_query }}&amp;history-page={{ history_page.previous_page_number }}#source-history">Previous events</a>{% else %}<span></span>{% endif %}
+    <span>Page {{ history_page.number }} of {{ history_page.paginator.num_pages }}</span>
+    {% if history_page.has_next %}<a class="btn btn-outline-secondary" href="?{{ history_query }}&amp;history-page={{ history_page.next_page_number }}#source-history">Next events</a>{% endif %}
+  </nav>
+</section>

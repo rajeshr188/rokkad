@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-11
+updated: 2026-09-30
 tags: [loans, interest, accrual, repayment, capitalization, internals]
 related:
   - ../domain/loans-regulatory-setup-and-policy.md
@@ -25,7 +25,8 @@ monthly rate, and rate-policy identity. At disbursal it persists the approved
 tranches and an immutable `LoanPolicySnapshot` containing:
 
 - interest method (`SIMPLE` or `COMPOUND`);
-- partial-month method (`FULL_MONTH` or `SLAB`);
+- partial-month method (`FULL_MONTH`, `SLAB`, `STARTED_WEEKS` or `ACTUAL_DAYS`);
+- minimum full first month (True for new setup revisions; False for earlier evidence);
 - partial-month cutoff and lower fraction;
 - capitalization interval;
 - accounting recognition (`CASH` or `ACCRUAL`);
@@ -102,6 +103,24 @@ at the day after the latest non-reversed finalized accrual.
 A period whose completed end is on or before `as_of_date` has fraction `1`.
 When partial periods are requested and the current period has started, its
 fraction follows the frozen policy.
+
+### Minimum first month and new prorating choices
+
+New setup revisions charge one full first period, including early closure. This
+minimum is separate from collecting advance interest: the advance offsets the
+calculated charge once; zero advance does not waive the minimum.
+
+After that first period, STARTED_WEEKS rounds inclusive elapsed days up to the
+next seven-day block, caps that count at the actual monthly period length, then
+divides by the period length. ACTUAL_DAYS divides inclusive elapsed days by that
+same period length. Both retain the monthly period-opening principal basis.
+February, leap years and month-end clamps use the period construction above.
+
+New minimum-first-month snapshots normalize a stored quantum such as 0.0100 to
+its numeric precision before interest rounding. Earlier snapshots retain their
+historic precision behavior. Exact fractions/unrounded values are retained in
+immutable event evidence. Accrual lines explicitly project them to the existing
+four- and twelve-decimal columns without changing the calculated money amount.
 
 ### Full-month policy
 

@@ -1,0 +1,12 @@
+{% extends "base_tenant.html" %}
+{% block title %}{{ handover.reference }} · Auctioneer list{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:auctioneer_handovers' request.workspace.slug %}">&larr; Auctioneer handover lists</a>
+<h1 class="h3 mt-3">{{ handover.reference }} · {{ handover.title }}</h1>
+<p>The original loan cohort stays fixed. Reconcile it after collections and releases; save a new version, then print or download it for manual sharing. Previous versions remain available.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }} The refreshed comparison appears below; review it again.</div>{% endif %}
+<section class="card card-body mb-4"><h2 class="h5">Saved versions</h2>
+{% for revision in revisions %}<div class="d-flex flex-wrap align-items-center gap-2 border-bottom py-2"><strong>Version {{ revision.number }}</strong><span>{{ revision.created_at|date:"d/m/Y H:i" }} · {{ revision.snapshot.reviewed_by }}</span><a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_loans:auctioneer_handover_export' request.workspace.slug handover.pk revision.pk %}" target="_blank" rel="noopener">Print saved list</a><a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_loans:auctioneer_handover_export' request.workspace.slug handover.pk revision.pk %}?format=csv">Download CSV</a></div>{% endfor %}
+{% if revisions.has_previous %}<a href="?page={{ revisions.previous_page_number }}">Previous versions</a>{% endif %}{% if revisions.has_next %}<a href="?page={{ revisions.next_page_number }}">Older versions</a>{% endif %}</section>
+{% include 'loans/statutory/_auctioneer_review.html' %}
+{% endblock %}

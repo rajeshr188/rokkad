@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-29
+updated: 2026-10-03
 tags: [agents, context, architecture]
 ---
 
@@ -12,7 +12,652 @@ selected work in [the hardening plan](plans/project-hardening.md), and shelved i
 in [Future work](plans/future-work.md). Prior notes, including superseded decisions,
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
+## Unified loan recording accepted (2 October)
+
+**Completion programme authorized (3 October):** the owner selected the ordered
+remaining recommendations in the existing tracking plan. UR-08 adds ordinary
+operational usability: optional original closing numbers with explicit system
+assignment provenance; later customer handover appends custody evidence while
+financial closure remains unchanged; book/day checkpoints do not certify loan
+completeness; atomic batch review retains each loan's ordinary immutable review.
+UR-09 uses existing multiple recorded policy/disbursal/schedule snapshots and
+canonical compensation/replay for original contract transcription errors. Current
+snapshot pointers/contract fields are projections; original evidence and issued
+copies remain intact. The programme is still in progress, with no deployment.
+
+The local UR-09 extension supports recorded successor principal/rate and paired
+date corrections, restating the predecessor's actual cash and replaying receipts.
+An unchanged native successor is locked/bound while its approval remains intact.
+Single paper closure date/amount/recipient corrections preserve the existing
+custody basis; newly known handover uses UR-08 confirmation. Dated custody revisions
+have an explicit immutable `restatement_of` link and a deferred database binding
+to their canonical financial correction; ordinary movements retain projected-state
+checks. Item principal-opening lines retain revisions with one active origin.
+UR-10 now renews reviewed imported openings through ordinary Renew, preserving
+cutover/remaining obligations. Current successors require a current selected
+product and approval; known completed paper successors preserve actual dated
+terms/net cash. Imported originals and previous issued copies are never rewritten.
+UR-11 adds `ordinary-loans-native-recovery/1`, using the existing native recovery
+pattern to retain all ordinary-Loans rows/identities/JSON links and file bytes.
+It is original-identity offline recovery into empty tables in a matching database;
+Party, Rates, actors and portability prerequisites must match. Runtime export is
+allowed; restore is table-owner only. It is not a cross-Workspace import/merge.
+UR-12 uses current transaction coverage and existing statutory readiness for
+recorded-origin auctions, with agreed anniversary debt and coupled recognition/
+custody reversal. Exact full recovery only; imported-opening auctions remain
+outside this profile. Focused integration and broad regressions passed locally;
+local technical verification is complete for the implemented profile. Real-paper acceptance
+and the selected release environment are still needed before rollout/completion.
+
+**3 October clarification:** Lakshmi records each numbered paper loan separately
+and may not know its renewal ancestry. Chain reconstruction must be optional.
+UR-07 implements independent opening/closure and later known renewal through
+ordinary Renew. Document charge and advance-month deductions are preserved; paper
+proceeds/settlement amounts do not attest physical cash unless confirmed. PAPER_CLOSED
+preserves unconfirmed customer handover without a fabricated storage removal.
+Current renewal from a recorded paper source uses its agreed collection balance
+and ordinary current approval for the successor. Known completed renewal uses its
+actual terms/date and net cash; 12,000 less 240, 10 and old settlement 10,200 pays
+1,550. Recorded contract/interest-position documents are available locally;
+position copies bind the financial history, coverage review and date. A renewal
+performed now supports ordinary paired reversal without reversing original paper
+origination. Known completed paper renewals keep the history-correction boundary.
+UR-08–12 above supersede the earlier limits for opening renewal, supported term/
+closing corrections, current recorded-origin auction and original-identity native
+recovery. Cross-Workspace recorded-origin remapping and broader physical/financial
+profiles are not enabled. No deployment. See the
+[independent-loan decision](adr/2026-10-03-independent-paper-loans-and-renewal.md).
+
+The owner selected one Loans workflow for actions performed now and actions
+recorded afterward; see the [accepted ADR](adr/2026-10-02-unified-loan-recording.md)
+and [workflow](flows/unified-loan-recording.md). Implementation is now authorized
+and started; the initial local slice records dated total-only paper receipts on
+existing reviewed opening loans through ordinary Repayment. Signed review,
+source-reference deduplication, actual-date allocation and preserved metadata use
+the existing financial records. UR-02 adds explicit recorded contract/payout bases
+to the existing immutable snapshots: no fictional approval, actual source date,
+recording actor/time, reconciled terms and a separate monitoring selection. It is
+now used by UR-03's ordinary paper-history review/admission command. A complete,
+supported never-entered timeline is committed atomically as ordinary active/closed
+loans. Signed source facts, normalized number/source checks and locked counter
+reservation protect entry. The owner confirmed next-anniversary principal reduction
+and carried-principal renewal with collateral held. The owner subsequently clarified
+that renewal can retain principal, reduce it through payment, or increase it with a
+top-up. Retained collateral does not constrain the new principal to the old balance.
+The initial implemented profile is simple FULL_MONTH, one collateral group, no
+fees/concessions and zero/one original advance month. UR-03A extends paper renewal
+to explicit principal carry/reduction/top-up or actual full principal repayment
+and fresh advance. Both are valid per transaction. Record actual cash received,
+cash paid and any old-interest offset from the advance separately; never infer
+capitalization. Collateral staying held versus actual return/repledge is an
+independent fact. UR-07 later supports new-contract advance-interest/document-charge
+deductions for known subsequent net-settlement renewals. Current collection
+and monitoring readers use anniversary interest; original fixed schedule interest
+must not overstate the revised debt. UR-05 supplies bounded archive admission and
+UR-07 routine recorded-origin renewal. Broader contract/custody amendments,
+restorable exports, imported-opening renewal and auction integration remain pending; see the
+[implementation checkpoint](implementation/unified-loan-recording.md).
+UR-04 has receipt/accrual correction and now extends the same command to reconcile
+an unchanged renewal agreement or single-loan full return. Signed review,
+same-business-date compensation and chronological replay preserve actual receipt
+facts. Actual settlement cash must reconcile; successor terms, numbers, dates and
+physical custody remain unchanged. Original documents survive with linked corrected
+financial events and shared current-document projections. Forward successor events
+and custody are locked and bound to review even when no successor event changes.
+Shared release batches now have an atomic whole-batch receipt review: changed
+paper-loan settlements plus explicitly unchanged members must reconcile to actual
+combined collection. Original batch/handovers remain; every member binds the signed
+review. Native/opening members can remain unchanged. Changing contracts/custody,
+partial release and concessions remain outside this correction profile. See the
+[settlement decision](adr/2026-10-02-recorded-settlement-corrections.md).
+Generic one-event reversal cannot split this history. See the
+[correction decision](adr/2026-10-02-recorded-receipt-corrections.md).
+UR-05 now implements initial archive admission for one fully closed supported loan,
+without renewals, using ordinary paper entry. Known normalized claims across source
+snapshots must agree; missing facts require identified supplementary records and
+staff confirmation. Existing HistoricalLoanImport carries the protected archive link
+and shared source identity, guarding opening/history/manual duplicates. Original
+archive JSON/media remain retained and both interfaces show links. Migration 0042
+adds the nullable relation and database binding guard; no new financial table.
+See the [archive admission decision](adr/2026-10-03-archive-admission.md).
+UR-06 now adds immutable loan-scoped transaction reviews: checked-through date,
+complete/incomplete result, source reference, actor/time and financial fingerprint.
+Admission creates the initial review; later activity/corrections require a fresh
+check. An opening confirmation covers its checkpoint onward. Current monitoring
+still calculates provisional risk, separately from price freshness, and definitive
+portfolio totals require transaction coverage. Reviewed repayment/overdue reminders
+freeze the review and recheck at the common Notify provider boundary. Old intents
+remain; a new review permits a new intent. No admission/review automatically sends.
+UR-07 supplies recorded contract/interest-position documents and routine subsequent
+renewal. Restorable recorded-history exports, imported-opening renewal and auction
+integration remain pending. See the
+[coverage decision](adr/2026-10-03-loan-transaction-completeness.md).
+Lakshmi's backlog starts 24 September 2026 and includes
+later payments, renewals and closures. Its paper receipts record total received;
+the owner confirmed INR 2,000 against INR 200 interest and INR 10,000 principal
+pays interest first and reduces principal by INR 1,800. Preserve the source total
+and derived split separately; fees and exceptional allocation remain to be defined.
+Separate actual contract, original valuation evidence and current monitoring.
+Missing original digital prices/policies alone must not block supported admission.
+Complete reconciled histories may become ordinary active/closed loans. Existing
+archive evidence may qualify through an explicit admission link and source-level
+duplicate guards; preserve immutable snapshots/media and never invent missing
+receipts or settlement. Recording time, actual date and scoped transaction
+completeness remain distinct. Delivery is tracked in the
+[unified recording plan](plans/unified-loan-recording.md).
+
+## Readable historical closed loans (2 October)
+
+Historical closed-loan browsing now has a locally implemented readable detail/list
+(2 October; production deployment pending). It searches normalized customer names
+and displays retained collateral/payments plus exact source-bound legacy item,
+payment-split, release, customer and term fields. Never promote mutable source
+`loan_amount` into verified original principal or closing/current debt, infer
+settlement totals, treat missing receipts as zero collections, or map old actor/
+recipient IDs to current people. The retained documents/exports/financial models
+are unchanged. Source JSON/export and owner upload tools remain secondary controls.
+
+## Khata searchable servicing (2 October)
+
+**Owner stop point, 3 October:** current Khata improvements are sufficient. Remaining
+enhancements are deferred in FW-021 until explicitly selected. Named staff/hardware/
+hosted/recovery acceptance remains a real-use gate. The owner requested a scoped
+commit of Khata together with paper-first ordinary recording, including their merged
+migrations and shared dependencies; unrelated billing/storage/console changes stay
+pending. Follow the [joint release guide](flows/khata-and-paper-first-release.md).
+
+Pending-return selection uses the active typed OUT reservation and excludes actual
+returns. Contextual handover GET resolves the source itself, ignoring a supplied
+parent; review/confirmation still validate exact item/source and recipient/reference.
+The existing bounded collateral browser also serves held-photo and eligible-reduction
+selection. Native scoped Django choices remain the no-JavaScript/error fallback.
+This UI phase does not add batch handovers or relax hard reduction cover/due checks.
+
+## Khata source-backed read profiles
+
+Detail loads only the selected panel. Balance-only reads retain every WITHDRAW,
+REVISE and SETTLE source, activated terms, saved charges and uncorrected allocations,
+using the unchanged canonical calculator; custody counts query immutable receipts,
+active OUT memberships and actual returns. These are live reads, not stored money
+projections. New financial source kinds must extend both calculator and read profile.
+Register identity/state/borrower/series/licence filters run before replay; attention
+filters/totals still use every matched account before pagination. Custody pages
+contain 25 records; UUID query selection, QR redirects and history links select the
+exact item. Fragment-only bookmarks outside a page are resolved by a small script.
+
+Saved document reads have 25-row pages, stable issued-time ordering and scoped
+type/as-of-date filters. Search reads retained titles/payment references and exact
+issue/source/item IDs or label/request UUIDs from saved evidence. Filtering never
+replays money or rewrites PDFs; invalid ranges return errors without partial results.
+The complete new-issue source selector remains unchanged. Recent photos are bounded
+to 25 with a link to the searchable full browser. Mobile has a GET section chooser
+and active-tab positioning. Fixed same-account form/review/confirmation destinations
+retain source, exchange, receipt and pending-return routing without arbitrary next
+URLs. Commands, signed reviews and role/Workspace boundaries remain authoritative.
+
+## Khata collection and event reads
+
+The active-only collection worklist distinguishes the oldest unpaid instalment
+from total arrears and current due/overdue totals. Upcoming forecasts restore the
+original monthly/annual anniversary and group canonical monthly charges by due
+date using activated terms only; they are estimates, not balances or posted dues.
+Evidence-review accounts remain visible and prevent false complete totals. Current
+LTV uses eligible held items/current approved prices; historical warned exchanges
+stay separate, including corrected sources. Exact event pages use typed immutable
+IN/OUT/valuation/allocation/period sources and recorded policy/consent/cash evidence,
+without substituting today's quotes or terms. No notification intent or message
+is created; optional reminders need their own reviewed Loans/Notify contract.
+
+## Khata operational report semantics
+
+The cash daybook uses inclusive business dates and corrections known today.
+NOT_RECEIVED makes the original receipt zero actual cash with a zero-cash
+correction; REFUNDED preserves the inflow and dates actual outflow to the refund.
+Principal reduction/settlement and settlement interest use typed recorded amounts.
+Approvals/accruals are not cash; exchange corrections remain labelled non-cash.
+This is not historical outstanding, an opening cash balance or a general ledger.
+Current custody spans all account states and derives receipts, active reservations
+and actual returns. Receipt dates select a cohort, never past custody. Pending
+returns remain physically held; records/pieces and per-metal weights stay distinct.
+Report/export GETs reuse data.view/report.export, direct Workspace scoping/RLS and
+private headers. CSV includes all matching rows up to 10,000, refuses larger
+exports explicitly and preserves source IDs/URLs with formula-safe staff text.
+New source/correction kinds must extend the report semantics and boundary tests.
+
+## Khata selected collateral label batches
+
+Selected label issues freeze between 1 and 100 distinct held identities in
+ascending item-number order. The searchable picker is paged at 100; the no-JavaScript
+batch action submits displayed IDs, never recomputes membership at POST. Searches/
+pages start fresh selections and use current custody, not a whole-account frozen
+bundle. New stale/returned/foreign selections fail completely; exact UUID retries
+preserve saved membership/bytes after handover. Old modes/hashes remain compatible;
+ALL/EACH still require the complete holding. SELECTED uses one readable 100 x 60 mm
+page/private UUID QR per item, preserving complete text and the 6 pt floor. Guard
+migration 0042 branches from Khata series 0041; full-checkout no-op merge 0050 is
+excluded with the ordinary branch from the composed pilot. Native inventory stays
+fourteen but guard fingerprints change; old archives need matching images/schema.
+No financial/custody sources are added by labels.
+
+## Khata series status controls
+
+Setup-authorized pause/resume and permanent retirement use signed reviewed reasons
+and immutable Workspace-owned status events. `is_active` remains the existing
+lending gate; an inactive row without `retired_at` is paused. Retirement is terminal.
+The database validates transitions and atomically updates availability; direct
+status rewrites and status-history edits/deletes are refused. Drafts, opening,
+all withdrawals and increases stop; existing collection/custody/reduction/settlement
+servicing retains its rules. Numbers and frozen association remain unchanged.
+Native recovery adds the fourteenth table and retirement field, retaining strict
+schema/guard matching. Older archives need their old matching image or full DB/media
+recovery. Khata migration 0041 branches from 0040; no-op 0046 joins the separate
+ordinary Loans branch only in the full checkout. See the
+[decision](adr/2026-10-03-khata-series-status.md).
+
+## Khata advisory workflow guidance
+
+Overview/Actions distinguish saved proposal, approval and financially current terms.
+Advisory links filter known prerequisites; confirmation remains command-authoritative.
+Change-approval choices must be latest, today-dated and unused and reuse the command's
+live-evidence comparison. Signed confirmation retains original scoped choices for
+idempotent replay, never granting activation authority. Actions intentionally reads
+the compact canonical schedule; nonfinancial History/Collateral/Documents remain
+source-only. Receiving interest finalizes elapsed periods automatically; separate
+finalization is optional evidence without cash. Draft estimates reuse KHATA-1 with
+monthly rate even for annual payment, actual anniversary/rounding and no source writes.
+Borrower autocomplete reuses active Party identity/Workspace tokens; native fallback
+is bounded to 25 active matches. Opening acknowledgement is design-only, not a new
+approval requirement or a captured borrower signature.
+The current local checkpoint is [document navigation](implementation/khata-document-navigation.md),
+verified with 498 regressions and desktop/mobile/no-JavaScript acceptance. No schema
+or native guard change is introduced. Selected labels retain their dated 489-test
+and browser/PDF checkpoint. Series status
+retains its dated 480-test checkpoint. Action guidance
+retains its dated 469-test checkpoint. Its runtime is composed from
+the prior verified Khata archive plus an explicit Khata-only overlay; unrelated
+ordinary Loans development remains in the checkout. Account financial models/services retain the verified base; the later series
+status branch adds only setup evidence and guarded series availability. Do not equate the full current worktree with
+this local candidate or silently activate unrelated work.
+
 ## Product and tenant foundation
+
+The [Khata account workflow](flows/khata-account-workflow.md) is the shared staff
+and developer reference. Receipt, photograph, exchange IN/OUT membership and actual
+handover remain separate audit facts when screens combine entry. The owner
+authorized combined receiving/photos and searchable large-item selection; see
+the [usability checkpoint](implementation/khata-collateral-usability.md).
+Khata receiving/later attachment supports explicit webcam/front-rear camera capture
+with a still preview and file/native-picker fallback; live camera needs a secure
+context. Captures reuse private immutable photo sources. The register separates
+agreed limit from actual principal debt; pending returns mean reserved item records
+still awaiting physical handover. UUID/Item ID/individual QR, rather than photo or
+storage description, identifies collateral.
+Khata source history has 25-event pages, date/type/item/reference filters and
+exact operation links that preserve cross-page correction/return relationships.
+Display filters never narrow canonical balance replay or mutate audit sources.
+The Khata register groups its filtered money totals above the filters and keeps
+matching count/range in the results header. Account detail uses URL-selected
+Overview, Actions, Collateral, Interest, History and Documents sections; existing
+QR/source/exchange links select the relevant section and document errors select
+Documents. Ordinary links work without JavaScript. Actions reuse existing role,
+state and workspace write checks rather than introducing new servicing rules.
+Incoming exchange selection explicitly identifies which received
+items replace the outgoing group; it does not duplicate receipt or collateral value.
+
+Khata's foundation/calculator and servicing backend, including custody/settlement
+and bounded correction slices, are implemented locally (1 October), after the
+owner instructed proceeding. Borrower/dashboard summaries, read-only khata
+register/detail and preserved private documents are also implemented locally.
+Operator forms, private photos, native recovery and collateral labels are also
+implemented locally. The owner selected a new test workspace and 100 x 60 mm
+labels for pilot preparation. Local candidate/recovery tooling uses only new
+fictional databases; full restores preserve numbering state, while native Khata
+PK sequences advance monotonically and ordinary counters remain unchanged.
+See the [test candidate checkpoint](implementation/khata-test-candidate-20261002.md).
+The frozen candidate is now built/verified on Linux, with a persistent, isolated
+local test pilot; see the [image/pilot checkpoint](implementation/khata-image-pilot-20261002.md).
+Local HTTP uses the existing container development profile; production HTTPS-cookie,
+restricted-role and owner-startup-refusal checks are separate. Hosted/operator/
+physical/off-device acceptance remains open; no production activation follows.
+Unsupported correction coverage and named production/pilot
+acceptance remain pending. It has staged secured
+withdrawals, interest on the full agreed limit from first withdrawal, monthly or
+annual payments, formal limit revisions, and valuation-based collateral exchange.
+Round 2 confirms split old/new-limit interest at a mid-period increase, actual
+withdrawal coverage at agreed LTV, partial principal payments only with formal
+reduction/renewal, and current approved rates on both sides of exchanges. Exchange
+value shortfalls warn and proceed by default; the owner may select strict
+at-least-equivalent enforcement. Later collateral top-ups are allowed. Payment
+frequency is selected at agreement time, in arrears. Round 3 confirms monthly
+and annual anniversary due dates and only four months' interest for an annual
+payer closing after four months. Round 4 fixes initial rate entry to a monthly
+percentage, separate from monthly/annual payment; annual rate entry is deferred.
+Preserve the monthly unit in agreement evidence. Round 5 confirms simple interest,
+a full first-month minimum collected at month end, then actual-day partial months;
+clamp short months and restore the original anniversary. Keep the same khata number
+and anniversary through limit revisions; repay principal above any reduced limit.
+Round 6 includes month one in the annual bill for annual payers and collects the
+full minimum at closure if before month one ends. Actual-day fractions use actual
+days between monthly anniversaries, for both increases and reductions. Round 9
+confirms D1 start-day inclusion/end-day exclusion and monthly half-up paise rounding.
+Khata has no fixed maturity; it continues until
+settlement. Current warn/block policy applies to future operations on existing
+accounts, preserving completed transactions. One owner exchange policy allows with warning even when value or account
+LTV fails, or disallows the exchange; no separate top-up workflow for now. The
+owner also chooses warn/block for overdue interest; block prevents withdrawals and
+exchanges while allowing payments, collateral deposits and settlement. Round 7
+sets warn as default, overdue from the day after due date. Grouped exchanges
+are allowed only within the same metal; warning mode cannot permit cross-metal
+replacement. Returns during reduction/settlement are confirmed; standalone excess
+returns are not selected. Round 8 makes reduction-return LTV mandatory against
+actual principal after repayment, even if exchanges use warning mode. New rates
+use dated agreement revisions, preserving earlier calculations. Keep exchange
+shortfalls separate from cash debt and whole-account
+coverage. No general withdrawal-LTV waiver is implied.
+It is not revolving repay-and-redraw. Foundation implementation is authorized;
+production activation is outside that instruction. Keep actual principal separate from the limit; do not extend the
+ordinary-loan partial-release rules implicitly. Refine the
+[proposed ADR](adr/2026-10-01-khata-agreement-design.md) and
+[scenario plan](plans/khata-agreements.md) with each discussion answer.
+The owner selected screen/calculation review next; the
+[screen proposal](plans/khata-screen-review.md) remains documentation only, but
+D1-D5 are now explicitly accepted: day/rounding convention; one-time opening
+minimum or higher actual interest; unused entitlement adjusted only by draws and
+limit changes, not replenished by repayments; oldest-due interest allocation with
+advance/excess payments deferred; and due-interest clearance for reduction returns,
+leaving unbilled interest on schedule.
+The subsequent [delivery design](plans/khata-delivery-design.md) proposes explicit
+khata records within Loans, preserving PawnLoan's single-disbursal/item-principal
+contracts. It contains phased work and release gates; the later owner instruction
+authorizes the first foundation/calculator slice.
+The owner explicitly requires the flexible products and loans in JCL, JSK and
+Lakshmi, including new flexible originations, to retain their existing behaviour.
+Khata-specific policies must not affect them; prove this with regression and
+preservation checks before release. Sharing the Loans UI/Party identity is not
+sharing calculation rules or converting existing loans.
+Round 10 fixes first-release scope: separate khata series, existing authorised
+loan approvers for opening/limit/rate changes, new agreements only with recorded
+collateral, today-dated routine entries and no added charges/penalties or funding/
+repledging. No historical digital/paper import is required. Never represent old
+paper principal or a collateral record as fresh cash payout. Native-data recovery
+is separate from historical import. The delivery design has a staged
+scope/checklist; approval of scope is not production activation.
+The [concrete technical design](architecture/khata-technical-design.md) proposes
+dedicated khata tables/series counters within Loans, KHATA-1 calculations and
+existing action-code mapping. Financial settlement and physical return completion
+are separate; pending outgoing items cannot back another withdrawal. Technical
+edge proposals and verification cases remain full-release requirements. The
+[foundation checkpoint](implementation/khata-foundation.md) records implemented
+scope and tests: three models, optional-licence series, permanent numbering,
+append-only draft proposals, forced RLS/parent guards and pure KHATA-1 math.
+The [opening checkpoint](implementation/khata-opening.md) supersedes the initial
+draft-only boundary. Five more guarded/RLS tables hold operations, owner policies,
+received items, valuations and private photos. Separate approval and withdrawal
+sources drive APPROVED/ACTIVE and first-payout date. Current same-day Rates quotes,
+photo policy, entitlement, LTV and overdue policy are rechecked for payouts.
+Saved proposals remain immutable; editing before opening appends a successor and
+requires new approval. The [collection checkpoint](implementation/khata-interest-collection.md)
+adds immutable monthly charges/exact segments and oldest-due receipt allocations.
+Annual dues retain annual anniversaries; interest receipts change neither principal
+nor entitlement. Canonical balances subtract actual receipts and clear overdue
+blocks when paid. The [agreement-change checkpoint](implementation/khata-agreement-changes.md)
+adds separately approved/activated limit and monthly-rate revisions, exact split
+segments and atomic principal repayment within a formal limit reduction. Proposal
+or approval alone never changes live terms. Principal repayments do not replenish
+entitlement; account number, anniversary, LTV/frequency and lender identity remain
+fixed. Increases use current lending eligibility; reductions/rate changes retain
+servicing access. The [custody/settlement checkpoint](implementation/khata-custody-settlement.md)
+adds same-metal grouped exchanges under current WARN/BLOCK policy, typed immutable
+IN/OUT selections, hard-LTV/due-cleared reduction returns and linked actual
+handovers. Reserved outgoing items immediately stop backing new draws. Active
+reduction handovers recheck current retained cover and due interest; committed
+exchanges retain their accepted authorization after policy changes. Settlement
+collects all unpaid interest through closure, including annual unbilled accrual,
+and zeroes principal/entitlement. Exact closing partial periods retain the
+original minimum once; `settled_on` stops interest separately from physical
+handover. `SETTLED_RETURN_PENDING` becomes `CLOSED` only after all actual returns.
+The [correction checkpoint](implementation/khata-corrections.md) adds bounded
+administrator-authorized CORRECT sources: whole receipts not received or fully
+refunded, and exchanges cancelled before outgoing handover. Preserve original
+evidence; restore dues or old eligibility logically and reserve replacements for
+actual return. Refuse later dependencies with IDs; independent receipts can unwind
+newest-first. Payout/revision/settlement/physical-return and complex corrections
+remain unsupported. Unique source links and active-selection guards prevent
+duplicate compensation and allow legitimate reuse of released items.
+The owner selected phased follow-up from the completeness review. First deliver
+read-only correction scope/support guidance and exact linked blockers; retain
+the accepted ACTIVE-only compensating rules. Future Work holds the ordered
+performance, collection/reporting and further usability phases after the delivered
+pending-return/reduction/photo selectors. Broadening
+correction kinds needs explicit cash, interest, entitlement and custody outcomes,
+not generic editing of completed sources.
+The [integration checkpoint](implementation/khata-integration.md) composes typed
+pawn/khata Party and portal reads, deduplicates dashboard borrowers and combines
+actual principal. Ordinary recorded interest/health/activity remain separately
+labelled; khata accrued/due/overdue interest, limits, unused entitlement and pending
+returns have distinct fields. Totals precede pagination and unavailable evidence
+never becomes zero. The new-loan borrower card includes actual khata debt.
+Read-only register/detail and source-linked private documents use explicit khata
+routes, immutable typed snapshots and exact hash-verified saved PDF reprints.
+Late-issued vouchers use source-prefix terms/position/custody; borrower contacts
+are explicitly current at issuance. Missing prices affect suggested cover, not
+known debt. Portal statements do not subtract already-reflected receipts twice.
+The [operator/recovery checkpoint](implementation/khata-operator-and-recovery.md)
+connects reviewed forms to every supported command, adds series/owner policy setup
+and hash-verified private photo access. Signed confirmations bind actor/workspace/
+account/action/date and expire in 30 minutes; services recheck original review hashes.
+Native recovery retains all thirteen khata tables and original media, with an
+independently retained archive checksum. Offline table-owner restore is exact-
+identity into an empty khata destination with matching prerequisite identities;
+preview rolls back, runtime restore is denied, and P/U/interest/custody reconcile.
+This is trusted disaster recovery, not edited/paper imports or a workspace clone.
+The [label/pilot review](implementation/khata-release-review-20261002.md) adds
+immutable private individual/combined held-collateral labels, a 6 pt fitting floor,
+authenticated UUID scan routes and a read-only role/RLS/evidence assessment.
+Labels reuse document issues with 0040 identity/custody guards and original-byte
+reprints. Pending returns remain held; new labels exclude actual returns. Khata
+statutory/default/funding/ordinary-renewal/import operations remain unsupported,
+not implicitly delegated to PawnLoan. Independent series do not certify exemption.
+Native recovery is guard-version-bound; restore matching older schema then migrate
+forward. Named pilot, hardware print/scan, real backup/recovery rehearsal and
+acceptance of bounded corrections/external-record procedures remain pending.
+Never undo committed reservations by editing/deleting evidence.
+No production enablement or ordinary-loan workflow change.
+Round 11 supersedes mandatory licence attachment: khata series are workspace-owned
+with an optional same-workspace licence. Each owns its counter; khata numbers are
+workspace-unique across both modes. Freeze the licence association (including none)
+at first issued account number; later changes need a new series/distinct prefix.
+Independent khatas need no placeholder licence. Both modes use approved khata terms
+and workspace permissions; licence eligibility applies only when associated.
+Documents retain explicit lender identity and reports include independent series.
+
+Precision ticket SHRINK frames measure complete formatted content against the actual
+padded rectangle, keep fitting text at its configured size, and otherwise fit font
+and line spacing together down to 6 pt. New v4 frames default to auto-fit; existing
+WRAP/ERROR and older schemas retain their rules. Tables retain all rows; oversized
+content still requires a larger layout. Reprints use stored issued bytes. See the
+[decision](adr/2026-10-01-ticket-frame-autofit.md).
+
+Loan collateral can be printed as one 100 x 60 mm label alongside individual
+labels. Keep every recorded description/quantity, net-weight totals by metal,
+and an authenticated loan QR; unknown quantities stay unknown. Oversized content
+must fail rather than truncate below the 6 pt floor. Reuse atomic per-item label
+evidence with one PDF hash/QR; do not change custody or financial events.
+Interest rate precedence is series > license > Workspace per metal; calculation
+rules now also support series > license > Workspace. New setup revisions charge
+a full first month minimum, then full month, slab, started seven-day blocks or
+actual days over the actual monthly period length. Keep monthly opening principal
+bases and historic snapshot behavior; JSK WH selects started weeks from 30 September. Preserve approval/disbursal snapshots
+and source-specific imported-loan evidence. See
+[the policy guide](flows/loan-interest-policies.md).
+
+FW-007 now includes the bounded `outstanding-register/1` guided Excel/CSV adapter
+(30 September). See `docs/flows/guided-outstanding-register-import.md`. It supports
+unchanged-principal, upfront-first-month original-anniversary bullet loans through
+the existing opening engine, with explicit borrower matching and atomic owner
+confirmation. It is not universal spreadsheet import, complete historic evidence,
+manual paper admission or a Workspace restore. Retain these remaining FW-007/FW-012
+gaps. Deployment/test checkpoints belong in STATUS.
+
+FW-019 owner decision on 30 September: exact Razorpay fee/promotion clarification
+must not block launch; the owner accepts learning charges from real settlements.
+Keep INR 1,499 customer pricing unchanged and reconcile actual provider deductions
+after an approved collection. Prepare a limited monthly pilot risk review rather
+than waiting indefinitely for pricing/support. Preserve unproved technical test
+outcomes as unproved; this does not authorize live charging or shortening JSK's
+trial. See `docs/plans/monthly-billing-pilot.md` for the revised preparation.
+The owner then selected JSK after natural expiry (8 October 23:39:08 IST), not a
+new empty paid Workspace. Prepare an attended pilot on 9 October or later; no
+automatic expiry charge or activation approval is implied. A scoped fix
+for the first verified paid conversion from expired trial Plan 1 to paid Plan 2
+is tracked in `docs/adr/2026-09-30-expired-trial-first-recurring-payment.md`; it
+passed 139 billing tests and is deployed in web image
+`rokkad:expired-trial-20260930-110476c6eb7f` with billing paused. Paid time comes from the verified invoice,
+not the trial model's generic end_date. Unverified sandbox cases remain tracked;
+the 28 October test is follow-up evidence, not an automatic gate for this pilot.
+The owner accepts JSK first, then JCL/Lakshmi before their 15 October 23:39 IST
+grace deadlines. Temporary access is a fallback requiring explicit scope/end;
+no grant or trial extension has been applied. Monthly self-service is implemented
+locally with signed current owner consent, a transaction-owning global POST,
+durable creation and existing recovery. `BILLING_PUBLIC_RECURRING_BINDING_ID=0`
+keeps publication off independently of operator recurring authorization. Only
+history-free/new or naturally expired-trial Workspaces are eligible; replacements
+and access exceptions need review. The existing monitored mail batch can include
+receipts after queue/first-receipt review; its production scope is unchanged.
+Deploy paused, then review public activation after JSK's first verified payment.
+See [the decision](adr/2026-09-30-owner-monthly-self-service.md).
+
+**Current owner priority (30 September): import confidence and data portability.**
+Pause further FW-013 development and Form E review/print-batch work; retain deployed
+features and E-1. First audit the final legacy import across JCL/JSK/Lakshmi using
+the sealed source/package, distinguishing missing source facts, reader gaps, actual
+mismatches and legitimate post-cutover activity. Form E's blanket source-review
+warning is not an import-failure finding. No bulk attestation or re-import to clear
+it. Follow `docs/plans/portability-confidence-and-completion.md`: audit, targeted
+repairs, guided migration (FW-007), then proved export/restore coverage (FW-012).
+The 30 September audit and bounded corrections are complete; see
+`docs/implementation/import-confidence-audit-20260930.md`. Frozen imports reconcile.
+JCL's unused numeric series 5 now continues at 10000 with an empty prefix; its
+existing ceiling is still 10000. All 6,411 source quantities are now in the newer
+operational column, with per-loan source/actor audit and preservation checks. New
+opening imports keep quantity. The Form E working reader surfaces retained
+source-era borrower/address and recorded tenure, without treating a maturity
+assumption or current Party profile as original proof. Source-review/print gates
+remain; do not resume statutory work without the owner's decision.
+Eight later JCL status/default changes still lack complete attribution; preserve
+them. Future native Party status/contact/address-default changes have atomic actor
+and before/after audit. The four source-inactive/accepted-active borrowers are
+separate owner-approved outstanding-loan interpretations. The first guided
+outstanding-register journey (FW-007) is now deployed. Obtain owner acceptance of
+its documented profile, then prioritize remaining source/rule coverage and proved
+export/restore (FW-012).
+Older clean-target verification assumes no later business activity and must not be
+rerun unchanged as a live integrity audit. Keep sensitive audit artifacts server-side.
+
+FW-013's delivered staged scope started with statutory auction notices.
+The implementation uses immutable Loans-owned catalogue/postal evidence;
+Notify SENT and batch Posted cannot establish statutory service. Start and completion
+require the manual service/readiness review, including pre-existing open auctions.
+The first English-heading catalogue supports shaped Tamil particulars. The owner
+accepted deployment with cosmetic work deferred; statutory handling is deployed
+as of 30 September. The full prescribed suite/Tamil wording and external legal
+acceptance remain open. See [the plan](plans/statutory-forms-and-notices.md); do not represent all
+statutory forms as already delivered. The two new private FileFields are registered
+with storage inventory and retained for reviewed cleanup.
+The in-workspace statutory staff reference is linked from Workspace settings,
+Reports and individual notice screens; keep its instructions aligned with
+`docs/flows/statutory-auction-notices.md` and distinguish planned forms clearly.
+The delivered Form E scope has user-selectable facing portrait A4 or single-sheet
+landscape A4 layouts, handwritten later updates,
+and preserved full/partial print batches after the layout/coverage pilot. The
+auctioneer prepares actual notices; branches post/follow up and reconcile releases
+before the final handover list. Consolidated administrative auctioneer lists now
+preserve a fixed licence/cohort and immutable reviewed versions. Administrators
+paste complete loan numbers (up to 100), review canonical balances/custody and
+remaining-loan selection, then print or download CSV for manual sharing. Later
+reconciliation accounts for every original loan and highlights changes. Signed
+actor-bound stale-review protection and duplicate-save handling apply. Both new
+tables have forced RLS, parent/cohort guards and SQL immutability. These lists do
+not replace prescribed catalogues, cancel notices, send messages or change loans.
+See `docs/flows/auctioneer-handover.md` and Status for rollout evidence.
+The deployed Form E working register remains read-only, with a separate administrator
+workflow for source reviews, immutable series books and full/partial saved batches.
+Both A4 layouts preserve exact private PDF bytes, actor/time and physical page
+references; facing sheets consume two numbers per ordinary pair. Queues process
+the first 100 pending entries, nominally five per pair/sheet with measured overflow.
+Source-backed supplements cannot overwrite frozen facts; unknowns stay explicit.
+Unsupported origins/renewals and ambiguous payout attempts remain blocked. Daily
+activity supports business/recording dates and saved page references for handwriting.
+All four new tables have forced RLS and SQL immutability; the new artifact is in
+storage inventory. Form E was deployed on 30 September; no real books were opened
+by the deployment. Subsequently the owner accepted JCL C's landscape sample and
+opened E-1 from 01/01/2026, starting at page 1. Source review and the first permanent
+batch remain pending. Other branches' physical acceptance and opening scope
+remain administrator decisions in the book-opening form. See
+`docs/implementation/form-e-pledge-book.md` before extending the projection.
+
+FW-010's platform console is deployed at `/app/platform/`.
+Browsing is GET-only/no-store and requires the existing active-superuser authority in
+global context. Overview/directory/detail show control-plane metadata, canonical
+`workspace_activity`, invitation outcomes and recent access decisions; no borrower
+data or impersonation. Search includes inactive Workspaces, excludes the public
+sentinel and paginates at 25; invitation detail paginates at ten. Existing management
+links preserve their own authorization/audit. Inactive Workspace settings links are
+omitted; archived recovery uses `/app/workspaces/archived/`. A workspace owner or
+ordinary staff account receives 403. Permanent platform sign-in remains
+`admin@rokkad.com`. See the [operator guide](flows/platform-console.md).
+Guided suspension/restoration uses explicit CSRF-protected POST confirmation,
+reason, typed slug and a signed 15-minute review bound to the actor/target/state.
+The Workspace lock and existing lifecycle service preserve atomic audit and reject
+stale/replayed confirmations. Restore previews use canonical commercial policy;
+restoration never grants paid access or extends trial/subscription dates. The
+Access history tab separates lifecycle changes from commercial access decisions.
+Broader FW-010 role delegation, ownership recovery and deletion remain separate.
+Deployment evidence and the current web image are recorded in Status.
+
+FW-015 storage visibility uses global inventory runs/physical metadata plus a
+directly owned, forced-RLS `orgs.WorkspaceStorageUsage` aggregate. The restricted
+runtime reconciliation command requires an active platform operator, inventories
+only the configured application prefix, checks all 14 registered FileFields and historical
+ticket/admission references, and unions two reference passes. Pages read completed
+snapshots, never list R2 on demand. Workspace settings require settings.manage;
+platform detail reads aggregates inside the explicitly selected Workspace context.
+Shared bytes and unknown ownership remain separate. Unreferenced objects are review
+candidates only; inventory itself authorizes no deletion or charges.
+Category display preserves the current media type when its only additional use is
+historical evidence. History-only files retain that category; multiple current
+types remain Multiple uses. All references still protect files and determine
+shared ownership; physical bytes are counted once.
+See [storage usage](flows/storage-usage.md); release evidence is in Status.
+
+The separate `cleanup_storage` operator command now supplies bounded offline
+plan/prepare/execute/restore with exact-digest approval, independent R2 recovery,
+signed private checkpoints and retry reconciliation. Require stopped external
+writers, restricted runtime authority, explicit all-Workspace reference checks and
+NOWAIT locks on registered reference tables. No automatic purge/expiry or web delete
+endpoint. Recovery remains indefinitely. The operator image/launcher is separate
+from web and must be rebuilt when its live base changes. See
+[the runbook](implementation/reviewed-media-cleanup.md). Storage pricing, quotas and
+billing remain explicitly deferred in FW-015; no limits or charges are enabled.
+
+Party, PartyPhoto and PartyDocument opt out of django-cleanup: committed replacement,
+clear, gallery removal and merge must retain private bytes that other rows/history
+can reference. Draft collateral photo/item removal likewise removes attachment rows
+without physical deletion; permissions, draft/renewal guards and audit stay intact.
+Failed-command compensation of newly uploaded files remains separate. Removal is
+not immediate storage reclamation. Actual cleanup requires reference/retention
+review and recoverability; whole rehearsal retirement also requires verified database,
+media and configuration recovery. See [the plan](plans/recoverable-media-cleanup.md).
+The two historical rehearsal recovery packages passed isolated database/media/read
+checks and full private R2 archive readback on 30 September. The owner subsequently
+approved retirement: both historical databases, hosted runtimes and exact rehearsal
+media prefixes are removed after fresh fingerprint/reference checks. Retain all five
+private recovery archives with no automatic expiry. Shared PostgreSQL/proxy/network
+still serve production despite their rehearsal names; unrelated billing rehearsal
+8083 and the legacy server remain. Recovery archives contain secrets/customer data;
+never copy them to the synced project. Locations and limits are in
+[the recovery report](implementation/rehearsal-recovery-20260930.md) and
+[retirement record](implementation/rehearsal-retirement-20260930.md).
 
 Rokkad is operated by Rajesh Rathod under an as-yet unregistered business name.
 The owner-approved public privacy/grievance contact is Rajesh Rathod at
@@ -50,7 +695,23 @@ Legacy dashboard `?queue=overdue` links redirect with their date/page parameters
 Party/borrower-portal loan summary totals must include every active loan regardless
 of the history display limit (normally 20). Use canonical recorded balances;
 draft/approved loans do not acquire posted debt. Regression coverage includes
-more than 20 loans and zero-row display limits. The Party list explains truncation.
+more than 20 loans and zero-row display limits. Party detail paginates active and
+closed loans independently at 20 rows, with a shared newest/oldest loan-date sort
+and primary-key tie-breaker. Page links preserve both lists and sort; changing
+sort resets both pages. Borrower-portal limit semantics stay unchanged.
+
+Borrower phones use the installed django-phonenumber-field through a compact
+single field (owner preference), India default, international display and E.164
+string saves. Phone/mobile/WhatsApp contacts use the same validation; other contact
+types stay separate. Preserve invalid legacy text for correction, reject notes/
+extensions instead of silently dropping them, and do not bulk rewrite existing
+records or issued tickets. See [Party](domain/party.md).
+
+JCL ticket contact text uses SHRINK with automatic leading inside its original
+60 x 30 mm frame. Preserve full name/relationship/address/phone, the 12 pt starting
+font and existing minimum-size guard; do not truncate addresses to solve overflow.
+Changes to this frame must also preserve the mixed-metal weight correction and
+immutable published revisions/issued artifacts.
 
 The owner reconfirmed the existing individual/personal-PAN seller setup on
 29 September, with possible future incorporation and GST registration recorded
@@ -89,7 +750,11 @@ scheduled runs passed, with no due queue or health flags. Activation sent no new
 test messages and preserved existing billing/mail/Workspace records and access.
 See [mail activation](implementation/platform-mail.md#ongoing-account-and-invitation-mail-enabled-2026-09-29).
 
-Web uses the five-template `rokkad:trial-landing-20260929-044f48f88473` overlay.
+Web now uses `rokkad:billing-cancel-20260930-c1db71cd66e6`, a one-template
+cancellation-notice overlay on the 30 September Form E release. The reviewed
+pre-confirmation uncertainty text/refund-policy link are deployed, with paid
+billing still paused. The offline cleanup operator is rebased to
+`rokkad:storage-cleanup-20260930-e7d7bd28c3dd`; its sources remain unchanged.
 Public home/pricing/FAQ now describe the live 30-day trial and label the planned
 INR 1,499 monthly continuation unavailable. Preserve the no-card/no-auto-charge,
 six-member and one-trial-per-owner terms; update availability copy when paid
@@ -140,6 +805,15 @@ passed without persistent accounts, trials or mail; HTTPS signup/login and the
 next scheduled mail run passed. Existing records/access are unchanged. Monitor
 the first genuine trial/team journey. Never enable trials on an older generic
 catalog image. Paid continuation still needs separate consent and launch acceptance.
+
+Earlier FW-019 preparation pursued a shorter supported Test Mode acceptance path.
+The later owner-selected bounded JSK pilot supersedes waiting for that path as a
+universal launch gate. Keep held-period/failure-recovery evidence unproved until
+actually accepted; do not relabel local tests as provider acceptance.
+The 30 September short scheduled attempt also failed at provider authorization;
+its unresolved payment is preserved, new local authorization is disabled and the
+owner-approved escalation is submitted in 21146138 referencing 21146171. Consult
+the latest [monthly pilot checkpoint](plans/monthly-billing-pilot.md) before retries.
 
 Razorpay pricing correspondence must use Dashboard support: the previous email
 address returned an unmonitored-mailbox notice. Ticket 21170392 received a
@@ -526,12 +1200,15 @@ No historical sent-flag replay; no production activation before scoped credentia
 restricted workers, migration and controlled real-provider acceptance.
 
 FW-009's potential promise is "Verify customer identity and reduce manual entry."
-The owner approved feasibility review, not implementation. The
-[desk review](plans/borrower-identity-feasibility.md) is complete; lender/platform
-eligibility, permitted hosting and all-in cost still need written confirmation.
-The owner shelved the legal-entity clarification and written-enquiry next step on
-2026-09-26. Resume FW-009 only on explicit owner instruction; preserve the review
-and unsent enquiry, and recheck current requirements/pricing when resumed.
+The owner resumed provider comparison/enquiries on 30 September after shelving
+the original review on 26 September. Compare Digio, Surepass and Cashfree; no
+supplier is selected. The agreed pilot is optional staff guidance with identity
+evidence/name-address prefilling and separate optional phone possession checks,
+not a mandatory loan-approval gate. J Champalal Pawn Brokers (JCL) is the proposed
+pilot; replies go to support@rokkad.com. Its legal structure remains unconfirmed.
+The [review](plans/borrower-identity-feasibility.md) contains the refreshed comparison
+and exact enquiry. Lender/platform eligibility, permitted hosting and all-in cost
+still need written confirmation before integration or live collection.
 Do not treat existing Party verification flags as integrated Aadhaar verification
 or automatically reuse identity evidence in the photo gallery/loan tickets.
 
@@ -579,7 +1256,8 @@ implemented lifecycle and boundaries. Keep them synchronized when workflows
 change. Workspace users find the guide in navigation, Loans and loan details.
 Draft split requires DRAFT, at least two collateral rows and create/edit access;
 piece quantity within one row is not multiple rows. The Overview explains this.
-Guided manual/Excel old-loan admission remains FW-007, not a shipped loan form.
+The first bounded Excel outstanding-register adapter is now shipped under FW-007;
+manual old-paper admission and other calculation/source profiles remain future work.
 
 Monetary display uses Indian lakh/crore grouping via `display_money(grouping=True)`
 and the `indian_money` template filter. Keep input values, wire contracts and frozen

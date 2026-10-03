@@ -1,0 +1,44 @@
+{% extends "base_tenant.html" %}
+{% block title %}Statutory postal notice · {{ loan.loan_number }}{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_slug_loan_detail' request.workspace.slug loan.pk %}">&larr; Loan {{ loan.loan_number }}</a>
+<h1 class="h3 mt-3">Statutory auction notice <span class="badge text-bg-secondary">{{ auction.auction_number }}</span></h1>
+<p><a href="{% url 'workspace_loans:statutory_guide' request.workspace.slug %}#staff-workflow">Staff workflow guide: preparation, posting and service review</a></p>
+<p>Sale scheduled for <strong>{{ auction.scheduled_date|date:"d/m/Y" }}</strong>. Prepare and review → print and post manually → attach service evidence → review readiness.</p>
+<div class="alert alert-info">Email and WhatsApp reminders are independent. They do not establish statutory postal service. This workflow records evidence; it does not book postage or grant auction permission.</div>
+<div class="card mb-4"><div class="card-body">
+<h2 class="h5">Auction readiness</h2>
+{% if readiness.ready %}<p class="text-success">Recorded notice checks are complete for the advertised sale date. The responsible auctioneer must still conduct the sale under the applicable authority and procedure.</p>
+{% if auction.state == 'INITIATED' %}<form method="post" action="{% url 'workspace_loans:pawn_loan_auction_start' request.workspace.slug auction.pk %}">{% csrf_token %}<button class="btn btn-primary">Start auction</button></form>{% endif %}
+{% else %}<ul class="mb-0">{% for issue in readiness.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+{% if readiness.eligible_on %}<p class="mt-2 mb-0">45-day postal interval ends: {{ readiness.eligible_on|date:"d/m/Y" }}. The advertised sale date and all remaining checks still apply.</p>{% endif %}
+</div></div>
+{% if notice %}
+<div class="d-flex gap-2 flex-wrap mb-3"><a class="btn btn-primary" target="_blank" rel="noopener" href="{% url 'workspace_loans:statutory_auction_catalogue' request.workspace.slug auction.pk %}">Open / reprint preserved catalogue</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:statutory_auction_notice' request.workspace.slug auction.pk %}">Handling history</a></div>
+<p class="small text-muted">Prepared {{ notice.created_at|date:"d/m/Y H:i" }} by {{ notice.created_by }}. {{ notice.template_version }}. Reprints preserve the original particulars. Correct a mistaken notice by withdrawing it, cancelling this auction and preparing a new one.</p>
+<div class="d-flex gap-2 flex-wrap mb-4">{% for value,label in steps %}<a class="btn btn-sm {% if value == 'WITHDRAWN' %}btn-outline-danger{% else %}btn-outline-primary{% endif %}" href="?step={{ value }}">{{ label }}</a>{% endfor %}</div>
+{% endif %}
+{% if form %}<div class="card mb-4"><div class="card-body"><h2 class="h5">{{ step_title }}</h2>
+{% if not notice %}<p>Check the last-known address and every article before generating. This first template uses English headings; confirm the applicable language and prescribed particulars with the auctioneer before service.</p>{% endif %}
+{% if kind == 'REVIEWED' %}<p>Review the uploaded documents and local-authority requirements. These confirmations record your review, not an automated legal certification. A returned letter needs the official certificate route before review.</p>{% endif %}
+<form method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="kind" value="{{ kind|default:'' }}">
+{{ form.non_field_errors }}{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+{% for field in form.visible_fields %}<div class="mb-3">{{ field.label_tag }} {{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+{% if not notice %}<button class="btn btn-outline-secondary" name="operation" value="preview" formtarget="_blank">Preview PDF</button> <button class="btn btn-primary" name="operation" value="issue">Preserve reviewed catalogue</button>{% else %}<button class="btn btn-primary">Save handling evidence</button>{% endif %}
+</form></div></div>{% endif %}
+{% if events %}<h2 class="h5">Handling history</h2><div class="list-group mb-4">{% for event in events %}<div class="list-group-item">
+<strong>{{ event.get_kind_display }}</strong> · {{ event.occurred_on|date:"d/m/Y" }}
+<div class="small text-muted">Recorded {{ event.created_at|date:"d/m/Y H:i" }} by {{ event.created_by }}</div>
+<p class="mb-1">{{ event.details.notes }}</p>
+{% if event.details.article_number %}<p class="mb-1">Article: {{ event.details.article_number }} · {{ event.details.postal_service }}</p>{% endif %}
+{% if event.attachment %}<a target="_blank" rel="noopener" href="{% url 'workspace_loans:statutory_auction_evidence' request.workspace.slug auction.pk event.pk %}">View supporting evidence</a>{% endif %}
+<details class="mt-2"><summary>Recorded particulars</summary><dl>{% for label,value in event.display_details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></details>
+</div>{% endfor %}</div>{% endif %}
+<details class="mb-4"><summary>How to use this workflow</summary><ol class="mt-2">
+<li>Check catalogue particulars, preview and preserve the reviewed PDF. Arrange actual auctioneer signing and printing, then record that handling.</li>
+<li>Post manually with registration and acknowledgement/POD. Record the article number, actual posting date and booking receipt. Allow at least 45 days before the advertised sale.</li>
+<li>Attach acknowledgement/POD. For a returned cover, retain the endorsement, refer to the competent Village Officer within seven days, then retain the official affixture/proclamation certificate. Do not mark a returned letter delivered.</li>
+<li>Review permission, publications, required catalogue distribution, service and objections. The second newspaper publication needs ten clear days before sale. Record actual dates; missed deadlines require a new arrangement rather than backdating.</li>
+<li>Start only on the advertised sale date after readiness checks pass. Completed loan accounting and custody controls still apply.</li>
+</ol><p>Current amendments, applicable language and local procedural directions need professional/authority review. <a href="https://www.cra.tn.gov.in/tnscs/Files/act/003b_Tamil%20Nadu%20Pawnbrokers%20Rules%201943.pdf" target="_blank" rel="noopener">Published Rules</a>.</p></details>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}Correct original paper terms{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1000px"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.loan_number }}</a>
+<h1 class="h3 mt-3">Correct original paper terms</h1>
+<p>Correct a transcription error in the original date, principal or rate. Rokkad retains the previous contract and recalculates existing receipts. This records no new payout, collection or jewellery movement.</p>
+{% if blockers %}<div class="alert alert-warning"><ul>{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.field.widget.input_type == 'checkbox' %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
+<button class="btn btn-primary" name="action" value="preview">Review corrected contract</button>
+{% if review %}<section class="border rounded p-3 mt-4"><h2 class="h5">Review before recording</h2>
+<p>Original date {{ review.before.date }} → {{ review.after.date }}; agreed principal {{ review.before.principal|indian_money }} → {{ review.after.principal|indian_money }}; monthly rate {{ review.before.rate }}% → {{ review.after.rate }}%.</p>
+<p>Current amount due {{ review.before.balance|indian_money }} → {{ review.after.balance|indian_money }}. Original proceeds {{ review.proceeds|indian_money }}; advance interest {{ review.advance_interest|indian_money }}.</p>
+<ul>{% for row in review.rows %}<li>{{ row.date }} · {{ row.reference }}: principal {{ row.principal|indian_money }}; interest {{ row.interest|indian_money }}.</li>{% endfor %}</ul>
+<p>Transaction coverage will require another check against the paper records.</p><button class="btn btn-success" name="action" value="confirm">Record reviewed correction</button></section>{% endif %}
+</form></div>
+{% endblock %}

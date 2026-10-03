@@ -139,7 +139,9 @@ def create(request):
 @never_cache
 def detail(request, batch_pk):
     batch = get_object_or_404(PawnReleaseBatch.objects.select_related("created_by").prefetch_related("lines__release__loan", "lines__release__reversal"), workspace=request.loans_workspace, pk=batch_pk)
-    return render(request, "loans/batches/detail.html", {"batch": batch})
+    from apps.tenant_apps.loans.selectors.recorded_batches import batch_financial_review
+    return render(request, "loans/batches/detail.html", {"batch": batch, "financial": batch_financial_review(batch),
+        "can_correct": request.loans_workspace_access.can("workspace.settings.manage")})
 
 
 @loans_workspace_required
@@ -147,4 +149,10 @@ def detail(request, batch_pk):
 @never_cache
 def history(request):
     rows = PawnReleaseBatch.objects.filter(workspace=request.loans_workspace).order_by("-pk")
-    return render(request, "loans/batches/history.html", {"page": Paginator(rows, 25).get_page(request.GET.get("page"))})
+    from apps.tenant_apps.loans.selectors.recorded_batches import batch_correction_event
+    page = Paginator(rows, 25).get_page(request.GET.get("page"))
+    for batch in page:
+        event = batch_correction_event(batch)
+        if event:
+            batch.reviewed_total = event.payload["history_correction"]["batch_correction"]["total_received"]
+    return render(request, "loans/batches/history.html", {"page": page})

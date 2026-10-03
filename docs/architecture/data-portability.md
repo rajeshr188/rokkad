@@ -7,6 +7,40 @@ tags: [architecture, portability, audit, migration, rls]
 
 # Data portability: repository audit and proposed architecture
 
+The [archive admission decision](../adr/2026-10-03-archive-admission.md) adds a local
+single-closed-loan reconciliation path through ordinary recorded history. It reuses
+HistoricalLoanImport's isolated immutable source registry with an optional protected
+archive link. Original archive evidence/media remain retained; no duplicate financial
+ledger is introduced. Deployment, renewal-chain archive admission and recorded-origin
+portable financial export remain pending.
+
+The [exact-interest v2 decision](../adr/2026-09-30-exact-interest-history-v2.md)
+extends the bounded complete-history path with exact calendar fractions, frozen
+first-month policy, item calculations and advance-covered event-free accruals.
+Native exports use [loan-history/2](../contracts/loan-history-v2.md); v1 remains
+accepted. Supported non-amortizing bullet/flexible product contracts are explicitly
+mapped. This does not expand the contract to a complete Workspace restore.
+
+**Current delivery priority (30 September):** the owner selected
+[import confidence and portability completion](../plans/portability-confidence-and-completion.md).
+The final legacy migration is already live. The source-to-live audit is complete;
+see the [confidence report](../implementation/import-confidence-audit-20260930.md)
+for its findings and subsequent repair checkpoint. Earlier pilot/local-only
+descriptions below are dated architecture history, not today's migration status.
+
+The [retained-fact correction decision](../adr/2026-09-30-retained-import-particulars-and-quantity-repair.md)
+keeps accepted opening evidence immutable. New opening imports populate validated
+collateral quantities; a guarded Loans service fills previously null projections
+with exact source/event agreement and an audit, including after later servicing.
+An internal bounded reader exposes completed source identity/address and recorded
+tenure to authorized loan reports, separately from current mutable profiles and
+owner-assumed maturity. It does not certify original statutory completeness.
+
+The first [guided outstanding-register adapter](../flows/guided-outstanding-register-import.md)
+adds a customer-facing XLSX/CSV preparation path over those same opening services.
+Its supported rule and source coverage are explicit; additional source adapters
+do not bypass financial admission, identity or RLS boundaries.
+
 For the current Loans-specific architecture, implemented boundaries and gaps, use
 the [2026-09-12 Loans audit](loans-portability-audit.md). Owner-authorized slices are
 tracked in the [follow-up plan](../plans/loans-portability-audit-followup.md). Earlier increment descriptions

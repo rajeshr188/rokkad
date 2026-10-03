@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models, transaction
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from django_cleanup import cleanup
 from apps.tenancy.context import current_workspace_id
 from apps.tenancy.models import WorkspaceOwnedModel
 
@@ -32,6 +33,7 @@ class PartyCodeSequence(WorkspaceOwnedModel):
         return f"{self.key}: {self.next_number}"
 
 
+@cleanup.ignore
 class Party(WorkspaceOwnedModel):
     class PartyType(models.TextChoices):
         INDIVIDUAL = "INDIVIDUAL", _("Individual")

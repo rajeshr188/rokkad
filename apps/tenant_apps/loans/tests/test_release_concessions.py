@@ -64,14 +64,14 @@ class ReleaseConcessionTests(WorkspaceTestCase):
         self.assertEqual(result.loan_event.created_by_id, self.actor.pk)
         from apps.tenant_apps.loans.documents.payloads import PawnLoanDocumentProjectionBuilder
         memo = PawnLoanDocumentProjectionBuilder.release_memo(result.release)
-        self.assertIn(("Interest lost / concession", "INR 5.00"), memo.details)
-        self.assertIn("INR 5.00 forgone: Accepted interest shortfall", dict(memo.details)["Interest settled"])
+        self.assertIn(("Interest lost / concession", "INR 5"), memo.details)
+        self.assertIn("INR 5 forgone: Accepted interest shortfall", dict(memo.details)["Interest settled"])
         from apps.tenant_apps.loans.documents import ConfigurableDocumentRenderer, starter_layout
         import fitz
         rendered = ConfigurableDocumentRenderer.render(memo, starter_layout("release_memo"))
         with fitz.open(stream=rendered.pdf, filetype="pdf") as pdf:
             text = " ".join(page.get_text() for page in pdf)
-        self.assertIn("INR 5.00 forgone", text)
+        self.assertIn("INR 5 forgone", text)
         self.assertIn("Accepted interest shortfall", text)
 
     def test_reversal_restores_interest_cash_principal_and_custody(self):

@@ -233,7 +233,8 @@ def _restore_servicing(loan, *, actor, evidence, item_mapping):
         if event["event_kind"] == "REPAYMENT":
             detail = event["payload"]["repayment"]
             result = _record_pawn_loan_repayment_at(loan.pk, actor=actor, effective_date=date.fromisoformat(event["effective_date"]),
-                amount=detail["amount_received"], request_key=detail["request_key"])
+                amount=detail["amount_received"], request_key=detail["request_key"],
+                recording_evidence=detail.get("recording"))
             event_map[event["id"]] = result.loan_event.pk
         elif event["event_kind"] == "RELEASE_RECEIPT":
             row = releases[event["id"]]

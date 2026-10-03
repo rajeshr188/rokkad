@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.urls import reverse
 from django.utils import timezone
@@ -30,6 +31,7 @@ class PartyPawnLoanRow:
     detail_url: str
     repayment_url: str
     document_links: tuple
+    account_state: str = ""
 
 
 def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
@@ -58,16 +60,21 @@ def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
         detail_url=reverse("workspace_loans:pawn_loan_detail", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
         repayment_url=reverse("workspace_loans:pawn_loan_repay", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
         document_links=(),
+        account_state=loan.state,
     )
 
 
-def get_party_pawn_loan_history_summary(party, *, limit=20):
+def get_party_pawn_loan_history_summary(
+    party, *, limit=20, page_size=None, active_page=1, closed_page=1, sort="newest",
+):
     """Return Party-owned Loans history without consulting retired Girvi."""
     as_of_date = timezone.localdate()
+    sort = sort if sort in {"oldest", "newest"} else "newest"
+    ordering = ("loan_date", "pk") if sort == "oldest" else ("-loan_date", "-pk")
     loans = list(
         PawnLoan.objects.filter(borrower=party).select_related("workspace")
         .annotate(collateral_items_count=Count("collateral_items", distinct=True))
-        .order_by("-loan_date", "-pk")
+        .order_by(*ordering)
     )
     active_states = {
         PawnLoanState.DRAFT.value,
@@ -78,14 +85,28 @@ def get_party_pawn_loan_history_summary(party, *, limit=20):
     closed = [loan for loan in loans if loan.state not in active_states]
     # The display limit must never truncate the borrower's outstanding balance.
     active_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in active)
-    closed_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in closed[:limit])
     outstanding = sum(
         (row.total_outstanding for row in active_rows if row.total_outstanding is not None),
         Decimal("0"),
     )
+    pages = {}
+    if page_size is not None:
+        active_page = Paginator(active_rows, page_size).get_page(active_page)
+        closed_page = Paginator(closed, page_size).get_page(closed_page)
+        closed_page.object_list = tuple(
+            _loan_row(loan, as_of_date=as_of_date) for loan in closed_page.object_list
+        )
+        displayed_active = active_page.object_list
+        displayed_closed = closed_page.object_list
+        pages = {"active_page": active_page, "closed_page": closed_page}
+    else:
+        displayed_active = active_rows[:limit]
+        displayed_closed = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in closed[:limit])
     return {
-        "active_loans": active_rows[:limit],
-        "closed_loans": closed_rows,
+        **pages,
+        "sort": sort,
+        "active_loans": displayed_active,
+        "closed_loans": displayed_closed,
         "counts": {
             "active_loans": len(active),
             "closed_loans": len(closed),

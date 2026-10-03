@@ -18,7 +18,8 @@ def collateral_photo_upload_to(instance, filename):
 
 @cleanup.ignore
 class PawnCollateralPhoto(WorkspaceOwnedModel):
-    # Renewal rows may share files; draft services own reference-aware cleanup.
+    # Renewal/ticket/import evidence may share files. Removing a draft row retains
+    # the bytes until a separate reference-aware operator cleanup review.
     class WorkflowSource(models.TextChoices):
         DRAFT = "DRAFT", "Draft capture"
         RENEWAL = "RENEWAL", "Release and renew"

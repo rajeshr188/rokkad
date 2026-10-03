@@ -234,6 +234,7 @@ def _persist_policy_snapshot(loan: PawnLoan, resolved_policy=None) -> LoanPolicy
     policy = (resolved_policy or resolve_policy()).to_disbursal_snapshot()
     values = {
         "policy_version": policy.policy_version,
+        "minimum_first_month": policy.minimum_first_month,
         "interest_method": policy.interest_method.value,
         "partial_month_method": policy.partial_month_method.value,
         "partial_month_cutoff_days": policy.partial_month_cutoff_days,
@@ -316,6 +317,7 @@ def _approved_disbursal_policy(economics):
         return resolve_policy()
     try:
         defaults = WorkspacePolicyDefaults(
+            minimum_first_month=evidence.get("minimum_first_month", False),
             interest_method=InterestMethod(evidence["interest_method"]),
             partial_month_method=PartialMonthMethod(evidence["partial_month_method"]),
             partial_month_cutoff_days=int(evidence["partial_month_cutoff_days"]),

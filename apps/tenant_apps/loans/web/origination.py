@@ -10,6 +10,7 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.access import loans_setup_required, loans_workspace_required
 from apps.tenant_apps.loans.selectors.balances import calculate_pawn_loan_balance, _optional_policy_snapshot
+from apps.tenant_apps.loans.selectors.khata_summary import portfolio_summary
 from apps.tenant_apps.loans.services.origination_settings import collateral_photos_required, set_collateral_photo_requirement
 
 
@@ -65,5 +66,11 @@ def borrower_outstanding(request):
             for key, value in values.items(): totals[key] += value
         except (ValueError, InvalidOperation):
             unavailable += 1
+    khata = portfolio_summary(workspace=request.loans_workspace, borrower=party, include_rows=False)
+    count += khata["active_count"]
+    unavailable += khata["unavailable"]
+    if not unavailable:
+        totals["principal"] += khata["principal"]
+        totals["total"] += khata["principal"] + khata["interest"]
     return render(request, "loans/pawn/_borrower_outstanding.html",
-        {"party": party, "totals": totals, "count": count, "unavailable": unavailable, "as_of": today})
+        {"party": party, "totals": totals, "count": count, "khata": khata, "unavailable": unavailable, "as_of": today})

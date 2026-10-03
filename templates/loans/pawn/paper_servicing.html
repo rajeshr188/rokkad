@@ -1,0 +1,28 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}{% if renewal %}Record paper renewal{% else %}Record paper closure{% endif %}{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:900px">
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.loan_number }}</a>
+  <h1 class="h3 mt-3">{% if renewal %}Record a known paper renewal{% else %}Record paper closure{% endif %}</h1>
+  {% if renewal %}
+  <p>Record the agreed new loan and settle this existing loan. Collateral remained with the business and was relabelled for the new loan. No earlier renewal chain is required. This records a completed transaction; it does not pay the customer again.</p>
+  <a class="btn btn-outline-secondary mb-3" href="{% url 'workspace_loans:pawn_loan_renew' request.workspace.slug loan.pk %}">Perform renewal now</a>
+  {% else %}<p>Enter this loan's closing record. You do not need to know whether another paper loan followed it. A paper settlement can close the loan without asserting physical cash collection or customer handover.</p>{% endif %}
+  <form method="post" novalidate>{% csrf_token %}
+    {% if renewal %}<input type="hidden" name="entry_mode" value="paper">{% endif %}
+    {{ form.non_field_errors }}
+    <div class="row g-3">{% for field in form %}{% if field.is_hidden %}{{ field }}{% else %}<div class="col-12 col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}</div>
+    <button class="btn btn-primary mt-3" name="action" value="preview">Review paper record</button>
+    {% if review %}<section class="border rounded p-3 mt-4"><h2 class="h5">Review before recording</h2>
+      <p>Actual date: {{ review.date }}. Source: {{ review.reference|default:form.reference.value }}.</p>
+      {% if renewal %}<p>Close {{ review.number }} and create {{ review.successor }}. Old principal {{ review.old_principal|indian_money }}; old interest settled {{ review.interest|indian_money }}; new principal {{ review.new_principal|indian_money }}.</p><p>Net cash received {{ review.cash_received|indian_money }}; net paid out {{ review.cash_paid|indian_money }}. New advance interest {{ form.advance_months.value }} month(s); document charge {{ form.document_charge.value }}. Collateral stays held under the new identifiers.</p>
+      {% else %}<p>Principal settled {{ review.principal|indian_money }}; interest settled {{ review.interest|indian_money }}; total {{ review.settlement|indian_money }}.</p><p>{% if review.basis == 'PAPER_SETTLEMENT' %}Customer handover and physical cash method remain unconfirmed. No successor is inferred.{% else %}Cash collection and return to {{ form.recipient.value }} are confirmed from the record.{% endif %}</p>{% endif %}
+      {% if not renewal %}<p>Closing number: {{ review.closing_number }} ({% if review.number_basis == 'SYSTEM_ASSIGNED' %}system recording number; no original paper number supplied{% else %}original paper number{% endif %}).</p>{% endif %}
+      <input type="hidden" name="review_token" value="{{ review_token }}">
+      <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="confirmed" id="confirmed"><label class="form-check-label" for="confirmed">I checked this loan's transactions through this date and the settlement against the paper record. These facts are already completed.</label></div>
+      <button class="btn btn-success" name="action" value="confirm">Record reviewed {% if renewal %}renewal{% else %}closure{% endif %}</button>
+    </section>{% endif %}
+  </form>
+</div>
+{% endblock %}

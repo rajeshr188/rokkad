@@ -1,5 +1,5 @@
 {% extends 'base_tenant.html' %}
-{% load i18n static %}
+{% load i18n static party_phone %}
 {% block title %}{% translate "Customers & parties" %}{% endblock %}
 {% block workspace_content %}
 <section class="party-directory" aria-labelledby="directory-title" hx-history="false">
@@ -60,7 +60,7 @@
             {% if party.legal_name and party.legal_name != party.display_name %}<div class="small text-muted">{{ party.legal_name }}</div>{% endif %}
           </div>
         </div>
-        <dl class="directory-contact mb-0"><dt>{% translate "Contact" %}</dt><dd class="mb-0">{% if party.primary_phone %}{{ party.primary_phone }}{% else %}{% translate "No phone recorded" %}{% endif %}{% if party.primary_email %}<div class="small">{{ party.primary_email }}</div>{% endif %}</dd></dl>
+        <dl class="directory-contact mb-0"><dt>{% translate "Contact" %}</dt><dd class="mb-0">{% if party.primary_phone %}{{ party.primary_phone|phone_display }}{% else %}{% translate "No phone recorded" %}{% endif %}{% if party.primary_email %}<div class="small">{{ party.primary_email }}</div>{% endif %}</dd></dl>
         <div><span class="badge {% if party.status == 'ACTIVE' %}text-bg-success{% elif party.status == 'BLOCKED' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{% translate party.get_status_display %}</span>
           <div class="small text-muted mt-1">{% translate party.get_party_type_display %}</div>
           {% for role in party.roles.all %}{% if role.status == 'ACTIVE' %}<div class="small">{{ role.role_type.label }}</div>{% endif %}{% endfor %}

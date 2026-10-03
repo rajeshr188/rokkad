@@ -11,6 +11,8 @@ from .balances import (
     _optional_policy_snapshot,
 )
 from .dashboard_health import get_dashboard_health_summary
+from .khata_summary import portfolio_summary
+from apps.tenant_apps.loans.models import KhataAccount
 
 
 ZERO = Decimal("0")
@@ -29,13 +31,18 @@ def get_business_overview(*, workspace, activity_start=None, activity_end=None):
 
     loans = PawnLoan.objects.filter(workspace_id=workspace.pk)
     active = loans.filter(state="ACTIVE")
+    khata = portfolio_summary(workspace=workspace, include_rows=False)
     # Count customer-role profiles and actual borrowers, including archived history.
     # A supplier without a customer role or loan is not a customer.
     customers = party_detail_queryset().filter(workspace_id=workspace.pk).filter(
         Q(roles__role_type__key="CUSTOMER", roles__status="ACTIVE")
         | Q(pk__in=loans.values("borrower_id"))
+        | Q(pk__in=KhataAccount.objects.filter(workspace=workspace).values("borrower_id"))
     ).values("pk").distinct().count()
     counts = active.aggregate(active_loans=Count("pk"), active_borrowers=Count("borrower_id", distinct=True))
+    if khata["account_count"]:
+        counts["active_borrowers"] = len(set(active.values_list("borrower_id", flat=True)) | khata["borrower_ids"])
+        counts["active_loans"] += khata["active_count"]
 
     principal = interest = ZERO
     unavailable = 0
@@ -66,9 +73,9 @@ def get_business_overview(*, workspace, activity_start=None, activity_end=None):
             unavailable += 1
 
     result = dict(as_of_date=today, total_customers=customers, **counts,
-        principal_outstanding=principal if not unavailable else None,
+        principal_outstanding=principal + (khata["principal"] or ZERO) if not unavailable and not khata["unavailable"] else None,
         interest_outstanding=interest if not unavailable else None,
-        unavailable_balance_count=unavailable, activity=None)
+        unavailable_balance_count=unavailable + khata["unavailable"], activity=None, khata=khata)
     if activity_start is not None:
         result["activity"] = _activity(workspace.pk, activity_start, activity_end, today)
     result["health"] = get_dashboard_health_summary(workspace=workspace)

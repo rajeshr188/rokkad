@@ -123,6 +123,9 @@ def pawn_loan_ticket_pdf(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
         approval = loan.approval_snapshots.order_by("-version").first()
+        from apps.tenant_apps.loans.services.recorded_collections import recording_for
+        if recording_for(loan):
+            return _recorded_document_response(request, loan)
         if approval and request.GET.get("renderer") != "fixed" and request.GET.get("print_profile") != "legacy":
             existing = LoanDocumentLayoutService.find_official_issue(
                 workspace=request.loans_workspace, document_type="loan_ticket", source_type="PawnLoan",
@@ -149,6 +152,9 @@ def pawn_loan_ticket_pdf(request, pk):
 def pawn_loan_kfs_schedule_pdf(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
+        from apps.tenant_apps.loans.services.recorded_collections import recording_for
+        if recording_for(loan):
+            return _recorded_document_response(request, loan, position=True)
         payload = PawnLoanDocumentProjectionBuilder.loan_kfs_schedule(loan)
         schedule = loan.repayment_schedules.order_by("-version").first()
         existing = LoanDocumentLayoutService.find_official_issue(
@@ -174,6 +180,14 @@ def pawn_loan_kfs_schedule_pdf(request, pk):
         return _issued_document_response(issue, payload)
     except (PawnLoanDocumentError, ValueError, ValidationError) as exc:
         return HttpResponse(str(exc), status=409, content_type="text/plain")
+
+
+def _recorded_document_response(request, loan, *, position=False):
+    """Retain fixed recorded copies without passing through approval-based layouts."""
+    from apps.tenant_apps.loans.services.document_issuance import issue_recorded_document
+    issue, payload = issue_recorded_document(workspace=request.loans_workspace, loan=loan,
+        actor=request.user, position=position)
+    return _issued_document_response(issue, payload)
 
 
 @loans_workspace_required
@@ -204,6 +218,7 @@ def pawn_repayment_receipt_pdf(request, pk, event_pk):
 
 @loans_workspace_required
 def pawn_release_memo_pdf(request, release_pk):
+    from apps.tenant_apps.loans.selectors.recorded_settlements import restated_release
     release = get_object_or_404(
         PawnLoanRelease.objects.select_related(
             "workspace",
@@ -217,11 +232,13 @@ def pawn_release_memo_pdf(request, release_pk):
         pk=release_pk,
         workspace=request.loans_workspace,
     )
+    release = restated_release(release)
     payload = PawnLoanDocumentProjectionBuilder.release_memo(release)
+    from apps.tenant_apps.loans.services.paper_handover import release_document_fingerprint
     response = _configurable_document_response(
         request, payload=payload, loan=release.loan,
         source_type="PawnLoanRelease", source_id=release.pk,
-        source_fingerprint=release.loan_event.payload_fingerprint,
+        source_fingerprint=release_document_fingerprint(release),
     )
     if response is not None:
         return response
@@ -260,7 +277,8 @@ def pawn_loan_auction_recovery_pdf(request, auction_pk):
 
 @loans_workspace_required
 def pawn_loan_renewal_pdf(request, renewal_pk):
-    renewal = _pawn_renewal_for_workspace(request, renewal_pk)
+    from apps.tenant_apps.loans.selectors.recorded_settlements import restated_renewal
+    renewal = restated_renewal(_pawn_renewal_for_workspace(request, renewal_pk))
     payload = PawnLoanDocumentProjectionBuilder.renewal_memo(renewal)
     response = _configurable_document_response(
         request, payload=payload, loan=renewal.source_loan,

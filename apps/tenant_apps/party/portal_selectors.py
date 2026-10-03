@@ -17,7 +17,7 @@ class PortalLoanSummary:
     total_count: int = 0
     active_count: int = 0
     closed_count: int = 0
-    outstanding_amount: Decimal = Decimal("0")
+    outstanding_amount: Decimal | None = Decimal("0")
     items: tuple[Any, ...] = field(default_factory=tuple)
 
 
@@ -67,7 +67,7 @@ class PortalDocumentSummary:
 class PortalStatementSummary:
     period_label: str = ""
     opening_balance: Decimal = Decimal("0")
-    closing_balance: Decimal = Decimal("0")
+    closing_balance: Decimal | None = Decimal("0")
     items: tuple[Any, ...] = field(default_factory=tuple)
 
 
@@ -95,9 +95,9 @@ def get_portal_loans_summary(
     identity: PortalIdentity, *, limit: int = 20
 ) -> PortalLoanSummary:
     identity = _require_verified_identity(identity)
-    from apps.tenant_apps.loans.selectors import get_party_pawn_loan_history_summary
+    from apps.tenant_apps.loans.selectors.party_loans import get_party_loan_history_summary
 
-    loan_history = get_party_pawn_loan_history_summary(identity.party, limit=limit)
+    loan_history = get_party_loan_history_summary(identity.party, limit=limit)
     active_rows = tuple(loan_history.get("active_loans", ()))
     closed_rows = tuple(loan_history.get("closed_loans", ()))
     counts = loan_history.get("counts", {})
@@ -105,7 +105,7 @@ def get_portal_loans_summary(
         total_count=(counts.get("active_loans") or 0) + (counts.get("closed_loans") or 0),
         active_count=counts.get("active_loans") or 0,
         closed_count=counts.get("closed_loans") or 0,
-        outstanding_amount=_money_amount(counts.get("active_outstanding")),
+        outstanding_amount=counts.get("active_outstanding"),
         items=(active_rows + closed_rows)[:limit],
     )
 
@@ -122,9 +122,10 @@ def get_portal_payments_summary(
 ) -> PortalPaymentSummary:
     identity = _require_verified_identity(identity)
     from apps.tenant_apps.loans.domain import TransactionKind
-    from apps.tenant_apps.loans.models import PawnLoanEvent
+    from apps.tenant_apps.loans.models import PawnLoanEvent, KhataOperation
 
     repayment_events = PawnLoanEvent.objects.filter(
+        workspace=identity.workspace,
         loan__borrower=identity.party,
         event_kind=TransactionKind.REPAYMENT.value,
         reversed_by_event__isnull=True,
@@ -132,6 +133,12 @@ def get_portal_payments_summary(
     loan_payment_rows = []
     for event in repayment_events:
         loan_payment_rows.append(_portal_loan_payment_row(event))
+    for op in KhataOperation.objects.filter(workspace=identity.workspace, account__borrower=identity.party,
+        kind__in=("INTEREST", "REVISE", "SETTLE"), corrected_by__isnull=True).order_by("-business_date", "-pk"):
+        received = op.amount + op.interest_amount
+        if received:
+            loan_payment_rows.append(PortalLoanPaymentRow(payment_id=f"KHATA-{op.pk}",
+                payment_date=op.business_date, total_amount=Money(received, "INR")))
     loan_payment_rows.sort(
         key=lambda row: (getattr(row, "payment_date", None), getattr(row, "pk", 0) or 0),
         reverse=True,
@@ -167,9 +174,11 @@ def get_portal_statements_summary(
     rows = (
         {"label": "Loan outstanding", "amount": loans.outstanding_amount},
         {"label": "Invoice outstanding", "amount": invoices.outstanding_amount},
-        {"label": "Payments recorded", "amount": payments.total_amount},
+        {"label": "Payments recorded (already reflected in outstanding)", "amount": payments.total_amount},
     )
-    closing = loans.outstanding_amount + invoices.outstanding_amount - payments.total_amount
+    # Both loan kinds' outstanding is already net of receipts/compensation.
+    # Subtracting payment history here would reduce the debt twice.
+    closing = None if loans.outstanding_amount is None else loans.outstanding_amount + invoices.outstanding_amount
     return PortalStatementSummary(
         period_label="Current",
         opening_balance=Decimal("0"),

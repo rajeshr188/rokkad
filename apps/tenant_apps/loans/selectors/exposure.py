@@ -61,6 +61,8 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
     previews = ()
     continuation = None
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for
+    recorded = recording_for(loan)
     if balance.financial_history_from is not None:
         from apps.tenant_apps.loans.services.opening_continuation import preview_opening_collection
         try:
@@ -69,7 +71,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
             raise PawnLoanExposureError(str(exc)) from exc
         if as_of_date > continuation.cutover_date:
             previews = ((continuation.cutover_date + timedelta(days=1), as_of_date, continuation.additional_interest),)
-    elif loan.state == PawnLoanState.ACTIVE.value and as_of_date >= loan.loan_date:
+    elif (loan.state == PawnLoanState.ACTIVE.value or recorded) and as_of_date >= loan.loan_date:
         previews = _project_interest_periods(loan, as_of_date)
     projected_interest = sum(
         (row[2] for row in previews), Decimal("0")
@@ -106,7 +108,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         findings.append("Recorded total due does not equal its balance components.")
     provenance = (
         "recorded:event-fold-v1",
-        f"projection:{continuation.rule}" if continuation else "projection:actual-outstanding-daily-v1",
+        f"projection:{recorded['collection_profile']}" if recorded else (f"projection:{continuation.rule}" if continuation else "projection:actual-outstanding-daily-v1"),
         f"contract:{loan.product_version.calculation_contract_version}",
         "due:active-obligation-fold-v1",
         f"schedule:{obligation_state.schedule_fingerprint or 'none'}",
@@ -135,6 +137,10 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
 
 
 def _project_interest_periods(loan, as_of_date):
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for, collection_state
+    if recording_for(loan):
+        extra = Decimal(collection_state(loan, as_of_date)["additional"])
+        return ((loan.loan_date, as_of_date, extra),) if extra else ()
     if loan.policy_snapshot is None:
         raise ValueError("Loan is missing its frozen disbursal policy.")
     # Import lazily to avoid selectors <-> services package initialization cycles.
@@ -147,6 +153,8 @@ def _project_interest_periods(loan, as_of_date):
     ).order_by("-period_number").first()
     period_start = last.period_end + timedelta(days=1) if last else loan.loan_date
     quantum = loan.policy_snapshot.currency_quantum
+    if loan.policy_snapshot.basis == "RECORDED_CONTRACT":
+        quantum = quantum.normalize()
     periods = []
     while period_start <= as_of_date:
         full_end = _add_months(period_start, 1) - timedelta(days=1)

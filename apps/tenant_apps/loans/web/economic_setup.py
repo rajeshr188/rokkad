@@ -49,7 +49,7 @@ def pawn_economics_setup(request):
             except (ValueError, TypeError) as exc:
                 raise Http404("Calculation policy not found.") from exc
         else:
-            source_policy = policies.filter(license__isnull=True, is_active=True,
+            source_policy = policies.filter(license__isnull=True, series__isnull=True, is_active=True,
                 effective_from__lte=timezone.localdate()).filter(
                     Q(effective_until__isnull=True) | Q(effective_until__gte=timezone.localdate())
                 ).order_by("-effective_from", "-revision", "-pk").first()
@@ -60,6 +60,7 @@ def pawn_economics_setup(request):
                 try:
                     rate = resolve_pawn_metal_interest_rate_policy(workspace_id=request.loans_workspace.pk,
                         license_id=source_policy.license_id, metal=metal,
+                        series_id=source_policy.series_id,
                         as_of_date=configuration_initial["effective_from"])
                 except PawnEconomicPolicyError:
                     continue
@@ -162,7 +163,7 @@ def pawn_economics_setup(request):
         "monitoring_amendment": amendment,
         "economic_policies": PawnLoanEconomicPolicy.objects.filter(
             workspace=request.loans_workspace
-        ).select_related("license"),
+        ).select_related("license", "series").prefetch_related("series__number_sequences"),
         "rate_policies": PawnMetalInterestRatePolicy.objects.filter(
             workspace=request.loans_workspace
         ).select_related("license", "series").prefetch_related("series__number_sequences"),

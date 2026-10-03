@@ -47,6 +47,9 @@ def _pawn_loan_for_workspace(request, pk):
 @loans_action_required("data.create")
 @never_cache
 def pawn_loan_create(request):
+    if request.GET.get("entry") == "paper" or request.POST.get("entry_mode") == "paper":
+        from .recorded_history import paper_history_entry
+        return paper_history_entry(request)
     token = request.POST.get("submission_token", "") if request.method == "POST" else None
     token_error = None
     if request.method == "POST":

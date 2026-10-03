@@ -16,7 +16,7 @@ SALT = "loan-history-approval-v1"
 
 def get_batch(*, workspace_id, actor, batch_id, lock=False):
     require_history_setup_access(workspace_id, actor)
-    query = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, profile="loan-history/1")
+    query = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, profile__in=("loan-history/1", "loan-history/2"))
     if lock: query = query.select_for_update()
     try: return query.get(public_id=batch_id)
     except (LoanHistoryBatch.DoesNotExist, ValueError, ValidationError) as exc:
@@ -33,7 +33,7 @@ def stage(*, workspace_id, actor, content):
     if LoanHistoryBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED","READY"]).count() >= 20:
         raise HistoryError("Finish or cancel an unfinished Loans import before staging another (limit 20).")
     return LoanHistoryBatch.objects.create(workspace_id=workspace_id, created_by=actor,
-        document=document, source_sha256=digest(document))
+        document=document, profile=document["manifest"]["profile"], source_sha256=digest(document))
 
 
 def resolve_mapping(document, workspace_id, values):

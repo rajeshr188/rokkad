@@ -1,5 +1,5 @@
 {% extends 'base_tenant.html' %}
-{% load loans_display static i18n %}
+{% load loans_display static i18n party_phone %}
 
 {% block title %}{{ party.display_name }}{% endblock %}
 
@@ -115,7 +115,7 @@
         <div class="row g-3">
             <div class="col-md-4"><div class="text-muted small">Legal Name</div><div class="fw-semibold">{{ party.legal_name|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Relation</div><div class="fw-semibold">{{ party.relation_display|default:"-" }}</div></div>
-            <div class="col-md-4"><div class="text-muted small">Phone</div><div class="fw-semibold">{{ party.primary_phone|default:"-" }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Phone</div><div class="fw-semibold">{{ party.primary_phone|phone_display|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Email</div><div class="fw-semibold">{{ party.primary_email|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">PAN</div><div class="fw-semibold">{{ party.tax_pan|default:"-" }}</div></div>
             <div class="col-md-4"><div class="text-muted small">GSTIN</div><div class="fw-semibold">{{ party.gstin|default:"-" }}</div></div>
@@ -251,6 +251,7 @@
                     {% if edit_contact %}<a class="btn btn-outline-secondary" href="{% if user_workspace %}{% url 'workspace_slug_party_detail' workspace_slug=user_workspace.slug pk=party.pk %}{% else %}{% url 'party:party_detail' party.pk %}{% endif %}?tab=contacts">Cancel</a>{% endif %}
                 </div>
             </div>
+            <p class="form-text mb-0 mt-2" id="{{ contact_form.value.auto_id }}_helptext" data-contact-phone-help{% if not contact_form.value.help_text %} hidden{% endif %}>{% translate "India is the default. Enter a mobile number or a landline with its area code. For another country, start with + and the country code." %}</p>
         </form>{% endif %}
         <div class="table-responsive">
             <table class="table table-sm align-middle">
@@ -260,7 +261,7 @@
                     <tr>
                         <td>{{ contact.get_contact_type_display }}</td>
                         <td>{{ contact.label|default:"-" }}</td>
-                        <td>{{ contact.value }}</td>
+                        <td>{{ contact|contact_display }}</td>
                         <td>{{ contact.is_primary|yesno:"Yes,No" }}</td>
                         <td>{{ contact.is_verified|yesno:"Yes,No" }}</td>
                         <td class="text-end">
@@ -326,15 +327,25 @@
         <div class="row g-3 mb-3">
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Closed Loans</div><div class="h4 mb-0">{{ loan_history.counts.closed_loans }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{{ loan_history.counts.active_outstanding|indian_money }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{% if loan_history.counts.active_outstanding != None %}{{ loan_history.counts.active_outstanding|indian_money }}{% else %}Unavailable{% endif %}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Collateral Items</div><div class="h4 mb-0">{{ loan_history.counts.collateral_items }}</div></div></div>
         </div>
 
-        <div class="card mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <p class="text-muted small mb-0">{% translate "Outstanding includes ordinary-loan recorded debt and accrued unpaid khata interest, including amounts not yet due. Khata limits and unused entitlement are not debt. Open records can include drafts and settled khatas awaiting collateral return." %}</p>
+            <form method="get" action="#loans" class="d-flex flex-wrap align-items-center gap-2">
+                <input type="hidden" name="tab" value="loans">
+                <label for="party-loan-sort" class="small">{% translate "Loan date" %}</label>
+                <select name="loan_sort" id="party-loan-sort" class="form-select form-select-sm w-auto">
+                    <option value="newest"{% if loan_history.sort == 'newest' %} selected{% endif %}>{% translate "Newest first" %}</option>
+                    <option value="oldest"{% if loan_history.sort == 'oldest' %} selected{% endif %}>{% translate "Oldest first" %}</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">{% translate "Apply" %}</button>
+            </form>
+        </div>
+        <div class="card mb-3" id="active-loans">
             <div class="card-header"><h2 class="h6 mb-0">Active Loans</h2>
-                {% if loan_history.counts.active_loans > loan_history.active_loans|length %}
-                <div class="text-muted small">Showing the latest {{ loan_history.active_loans|length }} of {{ loan_history.counts.active_loans }} loans. Outstanding above includes all active loans.</div>
-                {% endif %}
+                <div class="text-muted small">{% blocktranslate with start=loan_history.active_page.start_index end=loan_history.active_page.end_index total=loan_history.counts.active_loans %}Showing {{ start }}–{{ end }} of {{ total }} active loans{% endblocktranslate %}</div>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
@@ -368,7 +379,7 @@
                             </td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
-                                    <a class="btn btn-outline-primary" href="{{ row.repayment_url }}">Repay</a>
+                                    {% if row.repayment_url %}<a class="btn btn-outline-primary" href="{{ row.repayment_url }}">Repay</a>{% endif %}
                                     <a class="btn btn-outline-secondary" href="{{ row.detail_url }}"><i class="bi bi-box-arrow-up-right"></i></a>
                                 </div>
                             </td>
@@ -379,8 +390,12 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header"><h2 class="h6 mb-0">Closed Loans</h2></div>
+        {% include "party/_loan_pagination.html" with page=loan_history.active_page page_numbers=loan_history.active_page_numbers page_url=loan_history.active_page_url anchor="active-loans" label="Active loan pages" %}
+
+        <div class="card" id="closed-loans">
+            <div class="card-header"><h2 class="h6 mb-0">Closed Loans</h2>
+                <div class="text-muted small">{% blocktranslate with start=loan_history.closed_page.start_index end=loan_history.closed_page.end_index total=loan_history.counts.closed_loans %}Showing {{ start }}–{{ end }} of {{ total }} closed loans{% endblocktranslate %}</div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead><tr><th>Loan</th><th>Status</th><th>Final Outstanding</th><th>Payments</th><th>Documents</th><th>Collateral</th><th class="text-end">Open</th></tr></thead>
@@ -420,6 +435,7 @@
                 </table>
             </div>
         </div>
+        {% include "party/_loan_pagination.html" with page=loan_history.closed_page page_numbers=loan_history.closed_page_numbers page_url=loan_history.closed_page_url anchor="closed-loans" label="Closed loan pages" %}
     </div>
 
     <div class="tab-pane fade {% if active_tab == 'kyc' %}show active{% endif %}" id="kyc" role="tabpanel" aria-labelledby="tab-kyc" tabindex="0">
@@ -536,4 +552,5 @@
 
 {% block extra_js %}{{ block.super }}<script src="{% static 'js/entry-summary.js' %}"></script>
 <script src="{% static 'js/form-errors.js' %}"></script>
+<script src="{% static 'js/party-contact-input.js' %}"></script>
 {% endblock %}

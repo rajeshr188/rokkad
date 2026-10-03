@@ -1,0 +1,61 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}Record paper loan history{% endblock %}
+{% block workspace_content %}
+<div class="container-fluid py-3" style="max-width:1100px">
+  <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">← Loans</a>
+  <h1 class="h3 mt-3">Record paper loan history</h1>
+  {% if archive %}<div class="alert alert-info"><h2 class="h5">Reconcile historical loan {{ archive.document.facts.loan_number|default:archive.source_id }}</h2><p>Review the <a href="{% url 'workspace_portability:archive_detail' request.workspace.slug archive.public_id %}">retained archive and attachments</a>. Enter supported missing facts and check every receipt. Use each archived payment ID as its transaction reference; select whether it was a receipt or the final closure. This review admits one closed loan, without renewals. The original evidence remains accessible.</p><p class="mb-0">No original approval or metal price is invented. Admission records past financial history and the custody facts established by the paper. Cash method and customer handover may remain unspecified. Entry does not perform a new payout, collection or handover.</p></div>{% endif %}
+  <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Loan entry purpose">
+    <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}">Approve and pay now</a>
+    <span class="btn btn-primary" aria-current="page">Already completed on paper</span>
+  </nav>
+  <p>Record this paper loan and the activity you have checked through the stated date. You do not need its earlier or later renewal sequence. Known receipts and closure can be entered here or recorded from the loan later.</p>
+{% if not archive %}  <div class="alert alert-info">Enter agreed principal separately from proceeds after advance interest and document charge. Paper proceeds may have settled another loan; they do not automatically mean physical cash paid. No predecessor loan is required. This profile supports one collateral group and simple monthly interest; concessions and interest capitalization require further review.</div>{% endif %}
+  <form method="post" action="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}" novalidate>
+    {% csrf_token %}<input type="hidden" name="entry_mode" value="paper">
+    {% if archive %}<input type="hidden" name="archive_evidence_id" value="{{ archive.public_id }}">{% endif %}
+    <input type="hidden" name="intent_token" value="{{ intent_token }}">
+    {{ form.non_field_errors }}
+    {% for title, fields in sections %}
+      <fieldset class="border rounded p-3 mb-3"><legend class="float-none w-auto px-2 h5">{{ title }}</legend>
+        <div class="row g-3">{% for field in fields %}<div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-12 col-md-6{% endif %}">
+          {% if field.field.widget.input_type == 'checkbox' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+          {% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}
+        </div>{% endfor %}</div>
+      </fieldset>
+    {% endfor %}
+    <section class="mb-3" aria-labelledby="timeline-title"><h2 class="h5" id="timeline-title">Transactions after the payout</h2>
+{% if not archive %}      <p class="small">Renewal details are optional. Record each loan separately when its paper record does not identify a predecessor. For a known renewal after this loan has been entered, use Renew on its detail page. A paper closure does not require identifying another loan.</p>{% endif %}
+      <p class="small text-body-secondary">Leave unused rows blank. Keep same-day transactions in paper order. Each full month starts on the original loan-date anniversary, clamped to month end; a payment on that anniversary reduces the following month’s base. This includes a receipt or closure on the maturity anniversary. A renewal starts its own anniversary. Original historical valuation and digital approval are not required.</p>
+      {{ rows.management_form }}{{ rows.non_form_errors }}
+      {% for row in rows %}<fieldset class="border rounded p-3 mb-3"><legend class="float-none w-auto px-2 h6">Transaction {{ forloop.counter }}</legend>
+        {{ row.non_field_errors }}<div class="row g-3">{% for field in row %}{% if field.name in "rate tenure renewal_method new_principal cash_paid interest_offset custody" %}{% elif field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="col-12 col-md-6">
+          {% if field.name == "DELETE" %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">Remove this transaction</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{{ field.errors }}
+        </div>{% endif %}{% endfor %}</div>{% if not archive %}<details class="mt-3"><summary>Optional known linked renewal details</summary><div class="row g-3 mt-1">{% for field in row %}{% if field.name in "rate tenure renewal_method new_principal cash_paid interest_offset custody" %}<div class="col-12 col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}</div></details>{% endif %}
+      </fieldset>{% endfor %}
+      <button class="btn btn-outline-secondary" name="action" value="add" formnovalidate>Add another transaction</button>
+    </section>
+    <button class="btn btn-primary" name="action" value="preview">Preview complete history</button>
+    {% if review %}<section class="border rounded p-3 mt-4" aria-labelledby="history-review-title">
+      <h2 class="h4" id="history-review-title">Review before recording</h2>
+      {% if review.archive %}<p><strong>Archive admission:</strong> checked source snapshots {% for source in archive_snapshots %}<a href="{% url 'workspace_portability:archive_detail' request.workspace.slug source.public_id %}" target="_blank" rel="noopener">{{ source.document.source.snapshot_reference }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}. Supporting records: {{ review.archive.reconciliation }}. Original archive records and attachments will remain available.</p>{% endif %}
+      <p>Paper totals are preserved. Interest and principal allocations below are calculated from the agreed terms. Original operators and exact historical times remain unknown.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Date</th><th>Loan / action</th><th>Receipt / settlement</th><th>Proceeds / cash paid</th><th>Principal</th><th>Interest settled / deducted</th></tr></thead><tbody>
+        {% for row in review.rows %}<tr><td>{{ row.date }}</td><td>{{ row.number }} · {{ row.kind }}{% if row.successor %}<br>To {{ row.successor }}; old principal {{ row.old_principal|indian_money }}; principal carried {{ row.carried|indian_money }}; new advance {{ row.advance|indian_money }}; new principal {{ row.new_principal|indian_money }}<br>Old interest offset {{ row.interest_offset|indian_money }}<br>Collateral: {{ row.custody }}{% if row.recipient %}; recipient {{ row.recipient }}{% endif %}{% endif %}</td><td>{{ row.cash_received|indian_money }}</td><td>{{ row.cash_paid|indian_money }}</td><td>{{ row.principal|indian_money }}</td><td>{{ row.interest|indian_money }}</td></tr>{% endfor %}
+      </tbody></table></div>
+      <p>Original principal is the agreed debt. Advance interest and document charge are already deducted. Paper proceeds and closing settlement amounts do not confirm physical cash unless that meaning was selected. Unknown customer handover remains unknown. Carried principal is not an additional cash payout.</p>
+      <ul>{% for row in review.loans %}<li><strong>{{ row.number }}</strong>: {% if row.state == "ACTIVE" %}Active{% else %}Closed{% endif %} · principal {{ row.principal|indian_money }} · interest due {{ row.interest|indian_money }} · custody {% if row.custody == "IN_VAULT" %}Held in vault{% elif row.custody == "PAPER_CLOSED" %}Paper closed; customer handover unconfirmed{% elif row.custody == "RENEWAL_TRANSFERRED" %}Carried to successor loan{% else %}Returned to customer{% endif %}</li>{% endfor %}</ul>
+      {% for row in review.rows %}{% if row.closing_number %}<p>Closing number {{ row.closing_number }}: {% if row.number_basis == 'SYSTEM_ASSIGNED' %}system recording number; no original paper number supplied{% else %}original paper number{% endif %}.</p>{% endif %}{% endfor %}
+      <p>History confirmed complete through {{ review.complete_through }}. Current price/appraisal freshness is assessed separately; missing current evidence leaves coverage unknown.</p>
+      {% if review.counters %}<div class="alert alert-warning">Recording these original numbers advances the live counters:
+        <ul class="mb-0">{% for counter in review.counters %}<li>{% if counter.kind == "PAWN_LOAN" %}Loan numbers{% else %}Release numbers{% endif %}: {{ counter.before }} → {{ counter.after }}</li>{% endfor %}</ul>
+      </div>{% endif %}
+      <input type="hidden" name="review_token" value="{{ review_token }}">
+      <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="confirm_review" id="confirm-history"><label class="form-check-label" for="confirm-history">I checked this loan’s terms, amounts, original numbers and the stated closing evidence against its paper record through the selected date.</label></div>
+      <button class="btn btn-success" name="action" value="confirm">Record reviewed history</button>
+    </section>{% endif %}
+  </form>
+</div>
+{% endblock %}

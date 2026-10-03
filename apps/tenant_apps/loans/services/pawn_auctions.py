@@ -15,9 +15,7 @@ from apps.tenant_apps.loans.domain import (
     CollateralCustodyState,
     PawnLoanAuctionState,
     PawnLoanEventKind,
-    PawnLoanNoticeChannel,
     PawnLoanNoticeKind,
-    PawnLoanNoticeStatus,
     PawnLoanState,
     TransactionKind,
 )
@@ -26,7 +24,6 @@ from apps.tenant_apps.loans.integrations import (
     auction_recovery_payload,
     reversal_payload,
 )
-from apps.tenant_apps.loans.integrations.notice_delivery import get_pawn_notice_delivery_states
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     PawnCollateralCustodyEvent,
@@ -84,7 +81,7 @@ def initiate_pawn_loan_auction(
     loan_id: int,
     *,
     scheduled_date: date,
-    channel=PawnLoanNoticeChannel.SMS,
+    channel=None,
     request_key: str,
     actor,
 ) -> PawnLoanAuction:
@@ -99,6 +96,7 @@ def initiate_pawn_loan_auction(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnAuctionError("Only an active PawnLoan can enter auction recovery.")
     notice_date = timezone.localdate()
+    _recorded_coverage(loan, notice_date)
     if scheduled_date <= notice_date:
         raise PawnAuctionError("Auction date must be after the notice date.")
     try:
@@ -134,14 +132,16 @@ def initiate_pawn_loan_auction(
         scheduled_date=scheduled_date,
         created_by=actor,
     )
-    create_pawn_loan_notice(
-        loan.pk,
-        notice_kind=PawnLoanNoticeKind.AUCTION_NOTICE,
-        channel=channel,
-        request_key=f"auction-notice:{auction.pk}",
-        actor=actor,
-        source_auction_id=auction.pk,
-    )
+    # Optional courtesy reminder; never evidence of statutory postal service.
+    if channel:
+        create_pawn_loan_notice(
+            loan.pk,
+            notice_kind=PawnLoanNoticeKind.AUCTION_NOTICE,
+            channel=channel,
+            request_key=f"auction-notice:{auction.pk}",
+            actor=actor,
+            source_auction_id=auction.pk,
+        )
     LoanChangeLog.objects.create(
         loan=loan,
         event_kind=PawnLoanEventKind.AUCTION_INITIATED.value,
@@ -161,21 +161,16 @@ def initiate_pawn_loan_auction(
 def start_pawn_loan_auction(auction_id: int, *, actor) -> PawnLoanAuction:
     auction = _locked_auction(auction_id)
     _require_administrator(actor, auction.workspace)
+    _recorded_coverage(auction.loan, timezone.localdate())
+    from .statutory_notices import require_statutory_readiness
     if auction.state == PawnLoanAuctionState.IN_PROGRESS.value:
+        require_statutory_readiness(auction)
         return auction
     if auction.state != PawnLoanAuctionState.INITIATED.value:
         raise PawnAuctionError("Only an initiated auction can be started.")
     if timezone.localdate() < auction.scheduled_date:
         raise PawnAuctionError("Auction cannot start before its scheduled date.")
-    try:
-        notice = auction.notice
-    except Exception as exc:
-        raise PawnAuctionError("Auction notice evidence is missing.") from exc
-    delivery = get_pawn_notice_delivery_states([notice.notification_job_id]).get(
-        notice.notification_job_id
-    )
-    if delivery is None or delivery.status != PawnLoanNoticeStatus.SENT.value:
-        raise PawnAuctionError("Auction notice must be sent before the auction starts.")
+    require_statutory_readiness(auction)
     auction.state = PawnLoanAuctionState.IN_PROGRESS.value
     auction.started_at = timezone.now()
     auction.save(update_fields=["state", "started_at", "updated_at"])
@@ -224,23 +219,30 @@ def complete_pawn_loan_auction(
     if not buyer_name:
         raise PawnAuctionError("Auction completion requires the buyer name.")
     if auction.state == PawnLoanAuctionState.COMPLETED.value:
-        if auction.recovery_amount != amount or auction.buyer_name != buyer_name:
+        if (auction.recovery_amount != amount or auction.buyer_name != buyer_name
+                or auction.buyer_reference != str(buyer_reference or "").strip()):
             raise PawnAuctionError("Completed auction instructions do not match recorded evidence.")
         return PawnAuctionCompletionResult(
             loan, auction, auction.loan_event, True
         )
     if auction.state != PawnLoanAuctionState.IN_PROGRESS.value:
         raise PawnAuctionError("Only an auction in progress can be completed.")
+    from .statutory_notices import require_statutory_readiness
+    require_statutory_readiness(auction)
     effective_date = timezone.localdate()
+    coverage = _recorded_coverage(loan, effective_date)
     collateral = tuple(PawnCollateralItem.objects.select_for_update().filter(loan=loan))
     if not collateral or any(item.custody_state != CollateralCustodyState.IN_VAULT.value for item in collateral):
         raise PawnAuctionError("Every collateral item must remain in the vault until completion.")
     try:
         assert_pawn_loan_financial_actions_allowed(loan.pk)
-        missing = preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=False)
+        from .recorded_collections import recognize_collection_interest
+        recognition = recognize_collection_interest(loan, effective_date, actor=actor,
+            request_key=f"auction:{auction.pk}") if coverage else None
+        missing = [] if coverage else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=False)
         if missing:
             raise PawnAuctionError("Finalize every completed interest period before auction completion.")
-        partials = preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=True)
+        partials = [] if coverage else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=True)
         partial = partials[0] if partials and partials[0].is_partial else None
         catch_up = _record_auction_accrual(
             loan,
@@ -277,6 +279,11 @@ def complete_pawn_loan_auction(
         "buyer_reference": str(buyer_reference or "").strip(),
         "full_debt_recovery": True,
     }
+    if coverage:
+        from .recorded_collections import PROFILE
+        payload["auction"]["recorded_collection"] = dict(profile=PROFILE,
+            coverage=coverage.evidence(), recognition_event_id=recognition.pk if recognition else None,
+            request_key=f"auction:{auction.pk}")
     event, _ = record_loan_event(
         loan.pk,
         event_kind=TransactionKind.AUCTION_RECOVERY,
@@ -284,10 +291,11 @@ def complete_pawn_loan_auction(
         payload=payload,
         actor=actor,
     )
+    from .recorded_collections import scheduled_interest
     allocate_event_to_obligations(
         source_event=event,
         principal_amount=balance.principal_outstanding,
-        interest_amount=balance.interest_outstanding,
+        interest_amount=scheduled_interest(loan, effective_date, balance.interest_outstanding) if coverage else balance.interest_outstanding,
         actor=actor,
     )
     terminate_active_repayment_schedule(
@@ -341,6 +349,11 @@ def complete_pawn_loan_auction(
     loan.state = PawnLoanState.CLOSED.value
     loan.updated_by = actor
     loan.save(update_fields=["state", "updated_by", "updated_at"])
+    if coverage:
+        from .transaction_reviews import _store
+        _store(loan, actor, through_date=effective_date, confirmed_complete=True,
+            source_reference=f"Current auction {auction.auction_number}; paper review {coverage.review_id}",
+            request_key=f"auction:{auction.pk}")
     _audit(
         auction,
         PawnLoanEventKind.AUCTION_COMPLETED,
@@ -401,6 +414,16 @@ def reverse_pawn_loan_auction(
         allow_auction_recovery=True,
     )
     catch_up_reversal_event = None
+    recorded = auction.loan_event.payload.get("auction", {}).get("recorded_collection", {})
+    recognition_id = recorded.get("recognition_event_id")
+    if recognition_id:
+        original = auction.loan.loan_events.get(pk=recognition_id, event_kind="INTEREST_ACCRUAL",
+            reversed_by_event__isnull=True, payload__recorded_collection__request_key=f"auction:{auction.pk}")
+        payload = reversal_payload(auction.loan, effective_date=timezone.localdate(), original_event_id=original.pk,
+            original_event_kind=original.event_kind, values=original.payload["values"], reason=reason).to_dict()
+        payload["reversal"]["auction_id"] = auction.pk
+        catch_up_reversal_event, _ = record_loan_event(auction.loan_id, event_kind=TransactionKind.REVERSAL,
+            effective_date=timezone.localdate(), payload=payload, actor=actor, reversal_of=original)
     if auction.catch_up_accrual_id and auction.catch_up_accrual.loan_event_id:
         original = auction.catch_up_accrual.loan_event
         payload = reversal_payload(
@@ -527,6 +550,8 @@ def _locked_loan(loan_id):
 def _locked_auction(auction_id):
     workspace_id = current_tenant_workspace_id()
     try:
+        loan_id = PawnLoanAuction.objects.values_list("loan_id", flat=True).get(pk=auction_id, workspace_id=workspace_id)
+        _locked_loan(loan_id)
         return (
             PawnLoanAuction.objects.select_for_update(of=("self",))
             .select_related("workspace", "loan", "loan__policy_snapshot", "loan__borrower")
@@ -534,6 +559,17 @@ def _locked_auction(auction_id):
         )
     except PawnLoanAuction.DoesNotExist as exc:
         raise PawnAuctionError("PawnLoan auction was not found in the active workspace.") from exc
+
+
+def _recorded_coverage(loan, day):
+    from .recorded_collections import recording_for
+    if not recording_for(loan):
+        return None
+    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+    coverage = transaction_completeness(loan, day)
+    if not coverage.complete:
+        raise PawnAuctionError("Confirm complete paper transactions through today before auction recovery. " + coverage.message)
+    return coverage
 
 
 def _request_key(value):
@@ -549,7 +585,7 @@ def _money(value, loan):
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnAuctionError("Recovery amount must be a valid number.") from exc
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
-    if amount <= 0 or amount != amount.quantize(quantum):
+    if not amount.is_finite() or amount <= 0 or amount != amount.quantize(quantum):
         raise PawnAuctionError(f"Recovery amount must be positive and use precision {quantum}.")
     return amount
 
@@ -558,6 +594,8 @@ def _require_administrator(actor, workspace):
     access = resolve_workspace_access(actor=actor, workspace=workspace)
     if not access.can(LOANS_ADMIN_ACTION):
         raise PawnAuctionError("PawnLoan auction requires an administrator.")
+    from .action_access import require_workspace_action
+    require_workspace_action(workspace, actor, "data.edit")
 
 
 def _audit(auction, event_kind, actor, *, reason="", from_state=None, to_state=None, metadata=None):

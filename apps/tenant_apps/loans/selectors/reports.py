@@ -33,6 +33,7 @@ class PawnLoanPortfolioRow:
     balance: object | None
     balance_error: str
     status: str
+    transaction_completeness: object | None = None
 
 
 @dataclass(frozen=True)
@@ -212,6 +213,7 @@ def _report_loans(workspace_id):
         PawnLoan.objects.filter(workspace_id=workspace_id)
         .select_related("borrower", "license", "series", "policy_snapshot")
         .prefetch_related(
+            "transaction_reviews",
             "collateral_items__custody_history",
             "collateral_items__current_storage_location",
             "collateral_items__release_items__release__reversal",
@@ -288,6 +290,12 @@ def get_pawn_report_page(*, section, as_of_date, page=None, query=""):
         rows = _license_expiry_rows(records, as_of_date)
     elif section == "daily":
         rows = tuple(_event_report_row(event, as_of_date=as_of_date) for event in records)
+    elif section == "releases":
+        from .recorded_settlements import restated_release
+        rows = tuple(restated_release(row) for row in records)
+    elif section == "renewals":
+        from .recorded_settlements import restated_renewal
+        rows = tuple(restated_renewal(row) for row in records)
     else:
         rows = records
     return {"page_obj": page_obj, "report_rows": rows, "as_of_date": as_of_date}
@@ -317,22 +325,25 @@ def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=()):
         except (PawnLoanBalanceSelectorError, ValueError) as exc:
             balance_error = str(exc)
             issues.append(_issue("BALANCE_DERIVATION_ERROR", loan, balance_error))
+        from .transaction_completeness import transaction_completeness
         portfolio.append(
             PawnLoanPortfolioRow(
                 loan=loan,
                 balance=balance,
                 balance_error=balance_error,
                 status=_portfolio_status(loan, balance),
+                transaction_completeness=transaction_completeness(loan, as_of_date),
             )
         )
         accruals.extend(loan.interest_accruals.all())
         repayments.extend(
             event for event in events if event.event_kind == TransactionKind.REPAYMENT.value
         )
-        releases.extend(loan.releases.all())
+        from .recorded_settlements import restated_release, restated_renewal
+        releases.extend(restated_release(row) for row in loan.releases.all())
         renewal = _optional_related(loan, "renewal_as_source")
         if renewal is not None:
-            renewals.append(renewal)
+            renewals.append(restated_renewal(renewal))
         custody_items.extend(collateral)
         issues.extend(_loan_issues(loan, events, collateral, balance))
     return PawnLoanReportBundle(
@@ -357,6 +368,7 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
         PawnLoan.objects.filter(workspace_id=workspace_id, borrower=party)
         .select_related("borrower", "license", "series", "policy_snapshot")
         .prefetch_related(
+            "transaction_reviews",
             "collateral_items__custody_history",
             "collateral_items__current_storage_location",
             "collateral_items__release_items__release__reversal",
@@ -423,6 +435,7 @@ def _loan_issues(loan, events, collateral, balance):
         in {
             CollateralCustodyState.RENEWAL_TRANSFERRED.value,
             CollateralCustodyState.WITH_CUSTOMER.value,
+            CollateralCustodyState.PAPER_CLOSED.value,
         }
         for item in collateral
     )
@@ -462,9 +475,16 @@ def _custody_issues(loan, collateral):
         if loan.state == PawnLoanState.CLOSED.value and item.custody_state not in {
             CollateralCustodyState.WITH_CUSTOMER.value,
             CollateralCustodyState.RENEWAL_TRANSFERRED.value,
+            CollateralCustodyState.PAPER_CLOSED.value,
         }:
             issues.append(_custody_issue(loan, item, "Closed loan still has collateral outside customer custody."))
-        history = tuple(item.custody_history.all())
+        if item.custody_state == CollateralCustodyState.PAPER_CLOSED.value:
+            issues.append(_issue("PAPER_CLOSURE_HANDOVER_UNCONFIRMED", loan,
+                "Paper settlement is recorded; physical customer handover was not supplied.",
+                severity="WARNING",
+                action="Check custody separately when the source is available."))
+        from .recorded_custody import current_custody_history
+        history = current_custody_history(item)
         if history and history[-1].to_state != item.custody_state:
             issues.append(_custody_issue(loan, item, "Current custody does not match the latest immutable custody event."))
         returned_by_renewal = any(
@@ -613,6 +633,10 @@ def _event_amount(event):
         keys = ("principal", "interest", "fees")
     elif kind == TransactionKind.RENEWAL_SETTLEMENT.value:
         renewal = event.payload.get("renewal") or {}
+        cash = renewal.get("cash_evidence")
+        if cash:
+            # Gross actual movement; principal carry and interest offsets are not cash.
+            return Decimal(cash["cash_received"]) + Decimal(cash["cash_paid"])
         source_control = Decimal(
             str(renewal.get("source_control_principal", "0"))
         )
@@ -671,6 +695,12 @@ def _event_report_row(event, *, as_of_date=None):
         correction_status = "REVERSED" if reversed_by else "CURRENT"
         correction_event_id = reversed_by.pk if reversed_by else None
         amount = _report_event_amount(event)
+    if event.payload.get("history_correction"):
+        activity += " (historical correction; no new cash movement)"
+    if event.payload.get("recording", {}).get("funding", {}).get("basis") == "PROCEEDS":
+        activity += " (paper proceeds; physical cash unconfirmed)"
+    if event.payload.get("release", {}).get("paper_closure", {}).get("closure_basis") == "PAPER_SETTLEMENT":
+        activity += " (paper settlement; cash and handover unconfirmed)"
     return PawnLoanEventReportRow(
         event=event,
         activity=activity,

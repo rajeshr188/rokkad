@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-28
+updated: 2026-09-30
 tags: [loans, collateral, interest, ltv, disbursal]
 related:
   - ../adr/2026-08-05-pawn-loan-collateral-tranche-economics.md
@@ -79,6 +79,22 @@ and leaves the source number unchanged. The split is atomic and creates no
 accounting event.
 
 ## Invariants
+
+Loan detail also offers one **100 x 60 mm combined collateral label** alongside
+the individual item labels. It lists all recorded items with their description
+and saved quantity (unknown remains "not recorded"), and separate net-weight totals
+by metal. It does not infer quantity from the number of item rows or claim that
+every recorded item is still in custody. One QR opens the authenticated owning
+loan; the label directs staff there for current custody. Tamil text uses the
+bundled shaped font. Text may shrink to 6 pt; an oversized list fails clearly
+instead of truncating or spilling onto another label.
+
+Preview/print follows existing label audit semantics: each included item receives
+immutable label evidence with the same combined PDF checksum, loan QR and actor,
+atomically. No new table, financial event, source ticket or custody transition is
+created. Workspace/action authorization and explicit loan ownership remain required.
+See [interest policy resolution and enforcement](../flows/loan-interest-policies.md)
+for the separate rate and calculation-policy hierarchies.
 
 Migration opening v2 can retain net-only collateral with null gross weight and
 explicit Bronze. This is evidence from the old register, with separate reviewed

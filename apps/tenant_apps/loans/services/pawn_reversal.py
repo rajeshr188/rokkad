@@ -77,6 +77,30 @@ def assess_pawn_loan_event_reversal(
     """Explain whether this immutable event is the next safe correction target."""
     if original.event_kind not in REVERSIBLE_EVENT_KINDS:
         return PawnReversalReadiness(False, latest_event_id, "This event kind cannot be reversed.")
+    from .recorded_collections import recording_for
+    recorded_source = getattr(original.loan, "policy_snapshot_id", None) and recording_for(original.loan)
+    current_renewal_settlement = False
+    current_auction_recovery = False
+    if recorded_source and allow_auction_recovery and original.event_kind == TransactionKind.AUCTION_RECOVERY.value:
+        from .recorded_collections import PROFILE
+        auction = getattr(original, "auction", None)
+        current_auction_recovery = bool(auction and auction.loan_id == original.loan_id
+            and original.payload.get("auction", {}).get("recorded_collection", {}).get("profile") == PROFILE)
+    if recorded_source and allow_renewal and original.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value:
+        renewal = getattr(original.loan, "renewal_as_source", None)
+        current_renewal_settlement = bool(renewal and renewal.settlement_event_id == original.pk
+            and not renewal.valuation_snapshot.get("recorded_admission")
+            and renewal.successor_loan.policy_snapshot.basis == "ORIGINATION")
+    if (original.payload.get("history_correction") or
+            (recorded_source and not (current_renewal_settlement or current_auction_recovery))):
+        return PawnReversalReadiness(False, latest_event_id, "Use Review paper history correction to reconcile dependent receipt and interest history.")
+    if (original.payload.get("recorded_admission") or
+            original.payload.get("recorded_collection", {}).get("request_key", "").startswith("admission:") or
+            original.payload.get("release", {}).get("paper_closure", {}).get("profile") == "recorded-history-closure/1"):
+        return PawnReversalReadiness(False, latest_event_id, "Admitted paper history requires a complete history correction review.")
+    if original.event_kind == TransactionKind.DISBURSAL.value and original.payload.get("disbursal", {}).get("basis") == "RECORDED":
+        return PawnReversalReadiness(False, latest_event_id,
+            "Recorded paper origination requires a history correction review; it cannot return to an approved payout state.")
     if original.event_kind == TransactionKind.AUCTION_RECOVERY.value and not allow_auction_recovery:
         return PawnReversalReadiness(
             False, latest_event_id,
@@ -129,7 +153,8 @@ def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_d
     original = _locked_original_event(original_event_id)
     _require_administrator(actor, original.loan.workspace)
     is_opening = original.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
-    if is_opening and original.event_kind not in {TransactionKind.RELEASE_RECEIPT.value, TransactionKind.REPAYMENT.value}:
+    if is_opening and original.event_kind not in {TransactionKind.RELEASE_RECEIPT.value, TransactionKind.REPAYMENT.value} and not (
+            allow_renewal and original.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value):
         raise PawnReversalError("Opening interest catch-up can only be reversed with its collection; the opening itself cannot be reversed here.")
     reason = str(reason or "").strip()
     if not reason:

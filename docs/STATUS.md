@@ -1,16 +1,2500 @@
 ---
 status: active
 owner: project
-updated: 2026-09-29
+updated: 2026-10-03
 tags: [status, architecture]
 ---
 
 # Status
 
+## Joint loan checkpoint verified for commit (2026-10-03)
+
+The owner stopped further Khata enhancements and asked to defer the remainder in
+Future work, commit the implemented Khata and paper-first work, and explain their
+joint release. The scoped commit preparation includes shared loan dependencies and
+the complete merged migration graph; unrelated billing/storage/console application
+changes remain pending; the required storage schema/model prerequisite is included.
+**1,081 broad cases pass** in the initial 1,103-test run (632.856 seconds). Its 22 errors all came from an omitted private-media reference dependency, now included. **486 affected/integration tests pass in 295.000 seconds** across 33 modules on the corrected staged tree. Counts overlap. All 2,263 frozen source files
+match the exact staged source. A fresh isolated test database exercises both
+branches and the merged Loans leaf 0055, then is destroyed. No model drift is
+detected; forced-RLS registry and tenant/financial boundaries pass. No deployment
+or real Workspace change follows from committing. Follow the
+[joint release guide](flows/khata-and-paper-first-release.md).
+
+## Paper completion programme in progress (2026-10-03)
+
+The owner authorized the ordered remaining recommendations in the
+[tracking plan](plans/unified-loan-recording.md). UR-08 now supplies optional
+original closing numbers with explicitly labelled system assignments, later
+source-referenced customer handover without changed money, paper-book progress,
+and atomic batch reviews retaining a separate per-loan confirmation. Archive
+closure can leave physical cash/handover unconfirmed. The first 128 regressions
+passed; a subsequent corrected 34-test run passed including new forced-RLS
+checkpoint metadata, restricted-role isolation, and handover evidence guards.
+
+UR-09's original DISBURSAL contract slice compensates old calculations, saves
+new recorded policy/disbursal/schedule snapshots, and replays retained receipt
+totals. Original date/principal/rate and exact unchanged-date closure reconciliation
+passed domain/document checks. A 32-test run also passed original/successor terms,
+paired funding, unchanged native forward dependencies and both current/paper
+opening renewals. Closure/paired renewal date and custody evidence revisions
+passed the final 52-test focused run in 43.229 seconds, including scope/immutability,
+handovers, current/paper opening renewals, ordinary forms and retained documents.
+A database movement guard exposed the need for explicit
+restatement identity, which now has a deferred financial-evidence binding.
+Old snapshots and issued document bytes remain retained. The next broader run
+passed **599 tests in 421.791 seconds**. This is not completion of the programme.
+Nine captured fictional pages passed desktop/mobile/no-JavaScript verification
+with full local static assets, no overflow or page errors. Before/after handover
+PDFs were reconciled and visually inspected; earlier issued bytes survive.
+UR-11 now supplies a versioned 89-table original-identity native recovery archive,
+ordinary download and offline owner-only preview/restore, preserving complete
+correction/renewal/custody/coverage graphs and retained files. It requires the
+matching recovered database/external identities; it is not a cross-Workspace
+importer. UR-12 connects recorded-origin current auctions to agreed anniversary
+debt, current completeness and existing statutory/custody checks, with coupled
+recognition/custody reversal. **125 integration tests passed in 51.604 seconds**
+on a fresh isolated database, including native entry, funding, statutory service,
+corrections, imported-opening renewals and native recovery. The reused earlier QA
+database had retained unrelated fixtures; fresh verification resolved global-count
+failures. A document binding omission was also corrected and verified.
+An additional **147 boundary tests passed in 141.454 seconds**, covering archive
+duplicate guards, transaction reviews, notifications and shared receipt corrections.
+Final broad release checks passed **745 tests in 463.689 seconds** on another
+fresh isolated database. The earlier broad attempt found an optional document
+payload fixture compatibility issue; its fallback is corrected and verified.
+No model drift was detected; all 1,401 frozen QA source files match the checkout.
+The five isolated QA databases were removed after their runners finished;
+frozen source, checksums, screenshots and local verification evidence are retained.
+Migrations 0047–0049 and 0051–0055 were exercised on isolated QA databases;
+their application to operating Workspaces and deployment remain pending.
+Real Lakshmi acceptance examples and the rollout environment have been requested;
+no staff sign-off or real Workspace change is claimed. Local technical checks are
+complete for the implemented profile; the full programme remains open. The
+[operator/release guide](flows/paper-first-operator-and-release.md) and
+[tracking plan](plans/unified-loan-recording.md) identify those remaining steps.
+
 Entries are dated delivery checkpoints, newest first. Earlier images, counters,
 access assignments and outstanding tasks describe their checkpoint, not the
 current live state; later entries supersede them. Private runtime evidence and
 backups remain on the server.
+
+## Khata document navigation verified locally (2026-10-03)
+
+Phase nine adds saved-document search/type/date/order filters and 25-row pagination,
+active mobile section visibility, a no-JavaScript section chooser and fixed
+contextual action/review returns. **29 focused tests pass in 14.083 seconds** and
+**498 frozen Linux regressions pass in 250.389 seconds**. Actual desktop/mobile/
+no-JavaScript checks verify 25 + 3 pages, retained filters, exact PDF hashes,
+invalid-range errors, contextual links and viewer export denial. Screenshots are
+inspected without overflow or page errors.
+
+The local fictional pilot runs `khata-local-20261003-2216df647199`. All 1,435
+application/settings files match the image; twelve scoped UI/read/test paths overlay
+the verified label base. Unrelated ordinary changes/migrations are excluded. Schema,
+financial/custody commands and native guards are unchanged. Full-worktree/frozen
+model drift, restricted-runtime startup/static and owner-startup refusal checks pass;
+pre-switch backups and the prior container are retained. New fictional draft
+QNAV00001 has 28 saved document issues, one simulated receipt and no approval/cash/
+interest. All pre-existing source rows and media bytes remain unchanged. Restricted
+native readiness and fourteen-table/39-file archive verification pass, with unchanged
+guards. Production, remote CI, named staff trials and hardware/off-device acceptance
+remain open. See [the checkpoint](implementation/khata-document-navigation.md).
+
+## Khata selected label batches verified locally (2026-10-03)
+
+Phase eight adds a searchable 100-item picker, explicit item batches and
+no-JavaScript print-displayed-batch for accounts above 100 held items. Selected
+membership/order and PDF bytes are immutable; new returned/foreign/oversized
+selections fail completely. Existing combined/all-item layouts keep their bounds.
+Complete 100 x 60 mm labels, 6 pt minimum and private item QR routes remain.
+Migration Khata 0042 extends only the guard; no-op full-checkout merge 0050 joins
+the unrelated ordinary branch, which is excluded from this pilot image.
+
+The final scoped image passes **489 Linux regressions in 289.451 seconds**.
+All **1,432 application/settings files** match its frozen manifest;
+only eight label paths differ from the verified series base. Model drift,
+dependencies, owner-runtime refusal and restricted runtime/static checks pass.
+Actual desktop/mobile/no-JavaScript browser checks cover 100 + 5 chunks, two-item
+selection, search, exact retry, viewer refusal and authenticated scans. PDF size,
+UUID order and minimum text sizes pass across 107 pages; representative rendered
+pages/screens are inspected. The separate fictional draft QLABEL00001 records
+105 simulated receipts/two returns and three issues, with no approval, withdrawal
+or interest. Saved PDFs/memberships remain exact after returns; all pre-existing
+source rows and media bytes are unchanged. Native fourteen-table encoding/readiness
+and selected-batch restore pass. Guard-mismatched old archives still need their
+matching image/schema or full database/media recovery. Backups and rollback
+containers are retained. Production/remote CI/physical hardware are unchanged.
+
+See [the current checkpoint](implementation/khata-label-batches.md). Next: phase 9
+presentation and saved-document navigation; operator/release acceptance remains
+separate.
+
+## Khata series status controls verified locally (2026-10-03)
+
+Phase seven adds setup-authorized signed pause/resume and permanent retirement,
+reasoned append-only history and database-guarded availability. Existing lending
+checks stop drafts, openings, withdrawals and increases; servicing continues.
+The new Workspace-owned table has forced RLS and native recovery coverage.
+Migration 0041 branches from Khata 0040; a no-operation 0046 merge preserves the
+separate ordinary Loans branch in the checkout. The local candidate overlays
+only the Khata branch and explicitly scoped application changes on the prior
+verified image. The frozen image passes **480 regressions in
+290.652 seconds**, including new status tests and existing archive checks.
+Actual desktop/mobile/viewer/no-JavaScript pause, resume and retirement checks pass;
+exact confirmation retry records no extra transition. Four screenshots are inspected.
+All 12 account/policy/financial/custody/photo/document table fingerprints are unchanged;
+only one fictional unused acceptance series and its recorded status events are added.
+Prior collection, report, exception and guidance browser checks also pass.
+All 1,429 application/settings files match the frozen image. Both the composed
+schema and full checkout's merge pass drift checks. Pre-migration database/media
+backups, restricted non-root/read-only runtime and stopped prior web are retained.
+Current localhost candidate: `khata-local-20261003-6bfe7f30d391`, image `sha256:31dabdc493e9070bd4d8a68d58a819974f7e6d4fa8e747f66172abdf8ef4d85f`.
+No production update or unrelated ordinary Loans activation. Next: bounded selected
+label batches; hosted/operator/physical acceptance remains separate.
+See [the series checkpoint](implementation/khata-series-status.md).
+
+## Independent paper entry and later renewal verified locally (2026-10-03)
+
+UR-07 follows the owner's simplified workflow: record each paper loan independently,
+with original dates/terms, total receipts and financial closure. No unknown renewal
+sequence is required. Advance interest and deducted document charges reconcile to
+paper proceeds; physical cash can remain unspecified. A closed paper record can
+leave customer handover unconfirmed through explicit PAPER_CLOSED custody, without
+inventing a storage exit or customer return.
+
+Already-entered active recorded loans can use ordinary Renew for a new approved
+decision now, or record a known completed paper renewal with actual dates/number,
+net cash and retained/relabelled collateral. The owner's INR 12,000 example yields
+INR 1,550 after INR 240 advance interest, INR 10 charge and INR 10,200 old settlement.
+Recorded contract and current interest-position copies retain immutable issued
+bytes. Native real-time approval remains required for a successor performed now.
+
+Verification passed 508 broad regressions (333.608 seconds), 98 native renewal/
+reversal and paper checks (130.459 seconds), 154 document/coverage checks (68.819
+seconds), 90 final settlement/register checks (67.196 seconds) and 15 final routine
+paper checks (8.488 seconds). These runs overlap. Desktop/mobile/no-JavaScript
+checks passed for entry, closure and renewal, with no overflow/page errors; contract
+and position PDFs were reconciled and visually inspected. Changed coverage produces
+a new position copy while earlier issued bytes remain intact. Runtime import
+boundaries include untracked Loans files; Python syntax, local links, diff whitespace
+and migration drift checks passed. Unknown handover is a reconciliation warning,
+not invalid closed debt; receipt corrections/registers retain the same uncertainty.
+The isolated paper-first test database was removed after verification.
+
+Migration 0045 and this work are local only; no pilot
+or production migration/deployment has been performed. Recorded-origin restorable
+portability, auction recovery, imported-opening renewal and broader amendments
+remain open. See the [tracking plan](plans/unified-loan-recording.md) and
+[decision](adr/2026-10-03-independent-paper-loans-and-renewal.md).
+
+## Unified recording UR-06 transaction coverage verified locally (2026-10-03)
+
+Per-loan paper transaction review is implemented through ordinary loan detail.
+Signed confirmation or an explicit missing-record report freezes actor, source,
+checked-through date and financial fingerprint. New paper admission creates the
+initial review atomically. Current monitoring/reporting retains provisional values
+when coverage is incomplete; definitive dashboard totals respect this boundary.
+Reports and borrower statement CSV/XLSX/PDF expose the same coverage status/date.
+
+Reviewed repayment/overdue reminders freeze the review and agreed collection amount.
+The common Notify provider boundary rechecks source, current date/amount, review,
+consent, contact, current risk and confirmed message. An obsolete intent remains;
+a fresh paper review can support a new intent. No historical messages are sent by
+admission or transaction review. Migrations 0043/0044 add review isolation/immutability
+and notice bindings; they are local only.
+
+Verification passed **358 regressions in 268.845 seconds** and **143 final checks
+in 62.584 seconds**, plus two final canonical-collection checks. Coverage includes
+signed/stale/retried reviews, concurrent confirmations, opening checkpoint scope,
+correction invalidation, guarded provider dispatch, obsolete-intent replacement,
+RLS/immutability, reports/documents and existing native notifications. Desktop,
+mobile and no-JavaScript review checks pass; report/statement PDFs were text-checked
+and visually inspected. Migration consistency, 841 tracked/29 changed Python
+import-boundary checks, 1,356 final source hashes and 955 curated documentation
+links pass. The isolated monitoring test database was removed.
+
+This is the completeness/monitoring/reminder slice of UR-06. Recorded contract and
+schedule documents, restorable recorded-origin portability and subsequent renewal/
+auction integration remain pending. No production or pilot changes. See the
+[decision](adr/2026-10-03-loan-transaction-completeness.md).
+
+## Unified recording UR-05 initial archive admission verified locally (2026-10-03)
+
+The initial closed-loan archive admission is implemented locally through the
+ordinary paper-history form and canonical writer. Known normalized archive facts
+must agree; missing facts require identified supporting records. All retained
+snapshots of the same source bind the review. The existing immutable financial-origin
+registry gains a protected archive link in migration 0042, retaining forced RLS and
+shared source uniqueness across history/opening imports. Archive list/detail and
+ordinary loan detail link both ways; original documents and media stay retained.
+
+Verification passed **335 regression tests in 342.664 seconds**, covering archive,
+opening/history imports, existing paper history, corrections, numbering, reports,
+documents, monitoring and tenant registry. The final form/source-snapshot review
+passed **86 tests in 66.712 seconds**. Tests cover missing facts, conflicting source
+snapshots, amount/date/borrower mismatches, immutable cross-Workspace link guards
+under a restricted role, concurrent admission, retries and rollback. Desktop/mobile/
+no-JavaScript checks pass. Migration consistency, 841 tracked/10 changed Python
+import boundaries, 1,347 source hashes and 1,029 curated documentation links pass.
+The isolated archive-admission test database was removed.
+
+This first slice excludes renewal-chain archive admission and broader calculation
+profiles. Migration 0042 is local only; no production/pilot changes or bulk conversions. See the
+[decision](adr/2026-10-03-archive-admission.md).
+
+## Unified recording UR-04 batch correction verified locally (2026-10-03)
+
+Whole-batch receipt correction is implemented locally. Every member is checked,
+changed paper-loan settlements must reconcile to actual cash, and the combined
+collection must match before atomic posting. Original batch, releases and handovers
+remain. Detail/history, reconciliation CSV and regenerated memos expose reviewed
+amounts with provenance. No new model or migration.
+
+Batch/settlement/release regressions passed **87 tests in 193.101 seconds**. Final
+correction/report/monitoring/document integration passed **105 tests in 102.097
+seconds**, including the simplified closure form and subsequent native-member
+reversal. Coverage includes mixed native/admitted batches, atomic rollback, stale
+reviews, safe retries, concurrent confirmation, authorization and restricted-role
+Workspace isolation. Desktop/mobile/no-JavaScript checks pass; corrected batch
+release PDF pages were text-checked and visually inspected. Migration consistency,
+841 tracked/27 changed Python import-boundary checks and 952 curated documentation
+links pass. All correction sources match the tested snapshot (1,343 hashes match;
+one concurrent, unrelated Khata test edit was inspected and left untouched).
+The isolated batch test database was removed.
+
+Contract/custody/date amendments remain outside this receipt correction profile;
+UR-05 archive admission and UR-06 completeness/integration remain pending.
+No production or pilot changes. See the
+[implementation checkpoint](implementation/unified-loan-recording.md).
+
+## Khata action guidance and draft experience verified locally (2026-10-03)
+
+Phase six is implemented locally: separate proposal/approval/current-source status,
+next-step guidance, usable approval choices, known prerequisite filtering and explicit
+receipt catch-up/finalization explanation. The draft reuses borrower search and
+actual outstanding, offers a bounded native search and canonical monthly/annual
+opening illustration, also shown during signed draft review. No schema or financial
+command changes. Opening acknowledgement remains a documented design proposal.
+The frozen image passes **469 Linux regressions in 286.994 seconds**, including
+archive checks and 11 new guidance tests. Actual desktop/mobile, viewer and
+no-JavaScript browser checks pass, alongside earlier servicing, collections,
+reports and exception screens; four new screenshots are inspected. All 1,424
+application/settings files match the frozen image. The candidate is composed from
+the prior verified Khata archive plus 15 explicit application paths; financial
+models/services/migrations and unrelated apps retain their prior bytes. Separately
+evolving ordinary Loans work remains in the checkout and is not activated here.
+Current localhost candidate: `khata-local-20261003-ac52235bea54`, image
+`sha256:06f7970074913db752104ea62c18cd2e0aa461948744a618782d591b0048af5e`.
+Non-root/read-only runtime, private persistent storage, pre-update backups and
+stopped rollback are verified. No production update or pilot financial confirmation.
+Next: series pause/retire controls; operator/hosted/physical gates remain separate.
+See [the guidance checkpoint](implementation/khata-action-guidance.md).
+
+## Unified recording UR-04 settlement extension verified locally (2026-10-03)
+
+Receipt correction now reconciles a later recorded renewal or single-loan full
+return with actual settlement cash. The original agreement, successor principal,
+dates, numbering and custody remain unchanged. Canonical financial compensations
+and replacement settlements retain originals; shared selectors update operational
+figures and regenerated documents with correction provenance. Forward successor
+activity is locked and bound to review. No new model or migration is required.
+
+The broad regression run passed **598 tests in 376.269 seconds**. Final financial,
+UI, reports, release-batch and document checks passed **233 tests in 172.665 seconds**.
+Desktop/mobile/no-JavaScript review checks pass; corrected release/renewal PDFs
+were text-checked and visually inspected. A small PDF pagination fix keeps section
+headings with their tables. Migration consistency, source hashes, app boundaries
+and documentation links pass.
+
+The final readable review labels passed **31 settlement tests in 46.838 seconds**.
+The isolated settlement test database was removed after verification.
+
+Broader contract/custody/date amendments and shared
+release-batch receipts remain explicitly unsupported, so UR-04 is not an unrestricted
+history editor. No production or existing pilot was changed. See the
+[decision](adr/2026-10-02-recorded-settlement-corrections.md) and
+[implementation checkpoint](implementation/unified-loan-recording.md).
+
+## Unified recording UR-04 receipt correction verified locally (2026-10-02)
+
+The ordinary Loans detail/repayment interface now has a local administrator review
+for missing, replaced or voided receipts on active paper anniversary contracts.
+It previews dependent allocations, retains old evidence, adds dated compensation
+and replays actual receipt totals. Existing loan/event/obligation records are reused.
+Signed review, source reference checks, locked atomic posting and retry guards are
+verified. The broad regression run passed **568 tests in 327.261 seconds**; final
+provenance, UI, reporting, servicing and printed-receipt checks passed **135 tests in
+39.424 seconds**. Desktop/mobile/no-JavaScript captured-response checks pass and
+the corrected receipt PDF was visually inspected. Migration consistency, import
+boundaries, source hashes and documentation links pass.
+The isolated correction test database was removed after verification.
+
+Cross-renewal/closure/custody corrections remain unsupported and explicitly blocked;
+UR-04 remains open for that extension. This is a delivered receipt correction
+boundary, not complete lifecycle correction. No production or existing pilot has
+changed. See the
+[decision](adr/2026-10-02-recorded-receipt-corrections.md) and
+[tracking plan](plans/unified-loan-recording.md).
+
+## Unified recording UR-03A renewal extension (2026-10-02)
+
+The ordinary paper-history interface now records unchanged/reduced/top-up carry or
+actual full principal repayment and a fresh advance. Signed review reconciles old
+and new principal, carry, gross advance, actual cash received/paid and any explicit
+old-interest offset. Collateral staying held versus actual same-day return/repledge
+is independent, with source/successor custody evidence and recipient. Existing
+canonical renewal/settlement/opening records are reused; no new migration is needed.
+
+Loan detail, renewal report/export, pledge book and printed agreement show actual
+cash separately from carried debt. Monitoring exposure and new-contract interest
+use the successor's agreed principal. New-contract advance interest, fees,
+concessions and capitalization remain outside this paper profile.
+
+The broad run passed **522 tests in 299.410 seconds**. Final evidence/review and PDF
+checks passed **126 tests in 35.353 seconds**, including report/export, documents,
+native lifecycle and paper histories. This covers full redraw and carry with both
+custody paths, interest offsets, later receipts/closure, multiple renewals, signed
+review, retries, rollback and restricted-role isolation. Desktop/mobile/no-JavaScript
+captured-response checks pass; printed cash/return evidence was inspected. Source
+hashes, migration consistency, import boundaries and documentation links pass.
+The isolated test database was removed after verification.
+See the [implementation checkpoint](implementation/unified-loan-recording.md).
+
+The [plan](plans/unified-loan-recording.md) now marks UR-03A locally complete; UR-04
+is next. No production, real loan, archive or existing pilot was changed. Rollout
+and the remaining unified-recording stages remain pending.
+
+## Renewal scope clarified after UR-03 (2026-10-02)
+
+The owner clarified that a renewed loan's principal depends on the customer's
+agreement: unchanged carry, reduction through repayment, or increase through a
+top-up. The earlier answer established retained collateral and a new numbered loan;
+it did not exclude top-ups. The local UR-03 writer already supports unchanged or
+reduced principal, but fixes top-up at zero. This is a scope gap in the initial
+implementation, not a business restriction.
+
+[UR-03A](plans/unified-loan-recording.md) now tracks the required top-up extension
+before UR-04. The reconciliation must distinguish old principal, principal repaid,
+additional advance, new principal, interest settlement and actual cash directions.
+The owner subsequently accepted both actual full principal repayment/fresh advance
+and principal carry; collateral handling is independent. The implementation and
+verification checkpoint above supersedes the original zero-top-up limitation.
+Earlier test counts apply to their original bounded checkpoint.
+
+## Unified recording UR-03 local admission (2026-10-02)
+
+The ordinary New loan workflow now offers **Already completed on paper**. A signed
+review reconciles original payout, total-only receipts, carried-principal renewals
+and full closure before committing the complete history atomically. The confirmed
+profile preserves next-anniversary principal reductions and retained custody on
+renewal. It uses ordinary loan/event/schedule/release/renewal records, original
+numbers with counter reservation, scoped borrower selection and source/retry guards.
+No historical digital approval or original metal-price entry is required.
+
+Current receipts/full release, anniversary exposure and principal-sensitive
+maturity/delinquency reads are integrated. Details show paper source and the
+confirmed-through date; pledge-book renewal cash is distinct from principal carry.
+Existing fixed schedule allocations remain immutable. Unsupported subsequent
+renewal, dependent correction, automatic notices, auctions and portable export
+remain guarded pending the next stages. Archive conversion remains UR-05.
+
+The combined run passed **508 tests** in 282.588 seconds, covering concurrent
+submissions, restricted-role admission/isolation, native origination/servicing,
+opening history, risk readers, numbering, documents and portability. A further **171 tests passed** in 60.743 seconds after the final document/UI
+changes: truthful recorded-paper memos and the unsupported fixed-schedule KFS guard. Desktop/mobile/no-JavaScript
+captured-response checks passed; final source hashes, migration consistency,
+scoped import boundaries, whitespace and documentation links are checked. The
+isolated test database was removed after verification. See the
+[implementation evidence](implementation/unified-loan-recording.md) and
+[tracking plan](plans/unified-loan-recording.md). No production, real loan, archive
+or existing local pilot has changed; rollout remains pending.
+
+## Unified recording UR-02 storage foundation (2026-10-02)
+
+The next [tracked slice](plans/unified-loan-recording.md) extends existing immutable
+policy/disbursal snapshots with explicit recorded-contract/payout bases. Approved
+origins retain their approval requirement; recorded origins retain source facts
+without a fictional approval and identify the current monitoring selection
+separately. Migration 0041 adds checked relationships and retains forced RLS and
+append-only guards. Financial readers, current valuation and the pledge book are
+adapted; unsupported approval-based export/ticket and original-payout reversal
+cannot misrepresent this new basis. **309 regressions passed**, including ten new
+recorded-origin tests and restricted-role SQL guards. Two additional published
+history-schema tests initially lacked documentation fixtures in the disposable
+container; their exact pure test methods passed separately after including those
+files. Application source was unchanged between these checks. Model/migration
+consistency, application boundaries, source hashes and documentation checks pass;
+see [implementation details](implementation/unified-loan-recording.md).
+
+This is a storage/read-model foundation, not an enabled paper-origination screen.
+UR-03 must add ordinary draft/review and atomic complete-timeline admission with
+source identity, original-number reservation and duplicate protection. No live
+loan, archive, production database or existing local pilot has changed.
+
+## Unified recording UR-01 verified locally (2026-10-02)
+
+Following the owner's implementation instruction, the
+[tracked adaptation plan](plans/unified-loan-recording.md) now has six delivery
+slices. UR-01 extends ordinary Repayment for reviewed opening loans: actual paper
+date, total received, source reference, signed allocation review and confirmation.
+It reuses canonical collection/repayment records, preserves date-only source facts
+and actual recording actor/time, and protects retries and duplicate references.
+Later financial activity, outstanding fees and multi-item principal allocation
+remain explicit unsupported cases. No never-entered loan admission or archive
+conversion is claimed. Paper metadata survives opening export/restore and appears
+in loan history/receipt projections; existing correction and future exposure
+readers use the same events. Repayment currency precision is normalized correctly.
+
+The final Linux test run reports **163 passes in 60.732 seconds** across new paper
+receipt, opening/payment/restore/export/release, event storage, native lifecycle,
+document/layout and risk/monitoring suites. Fictional Django HTTP responses pass
+Chromium desktop/mobile/no-JavaScript layout checks, with screenshots inspected.
+All 1,293 application/template files match the tested source snapshot; boundary,
+documentation-link and scoped whitespace checks pass. See the
+[implementation evidence and limits](implementation/unified-loan-recording.md).
+No production deployment, schema migration, real-data posting or existing local
+pilot replacement. UR-02 recorded origination and separate monitoring basis are next.
+
+## Unified loan recording direction documented (2026-10-02)
+
+The owner accepted ordinary Loans support for business performed now and recorded
+afterward, including Lakshmi's mixed paper backlog from 24 September. The
+[ADR](adr/2026-10-02-unified-loan-recording.md),
+[business workflow](flows/unified-loan-recording.md) and
+[delivery plan](plans/unified-loan-recording.md) separate actual contract, historical
+decision evidence and current monitoring. Lakshmi's total-only receipt example is
+confirmed: INR 2,000 pays INR 200 interest and INR 1,800 principal. Fees and
+exceptional allocations are not inferred from that answer. Qualified archived
+loans may later be admitted as ordinary closed loans after reconciliation, with
+immutable source retention, explicit links and duplicate guards; no blanket
+conversion is promised. Documentation only: no application/configuration/data
+changes, migrations, conversion or deployment in this checkpoint. Implementation
+and representative contract/evidence assessment remain pending.
+Documentation validation passes: 889 links in the current-docs set and 57 links
+in the additional decision/workflow/plan references; scoped whitespace checks pass.
+
+## Khata cash and custody reports verified locally (2026-10-02)
+
+Phase five delivers a date-filtered, source-linked cash daybook and current
+custody/pending-return register across all account states, with 25-row pagination,
+all-matching totals and authorized bounded CSV. Later not-received evidence removes
+fictitious receipt cash; actual refunds retain their separate dated outflow.
+Receipt cohort filters do not reconstruct historical custody. Item/piece counts
+and metal weights remain distinct. No migration, financial writes or notifications.
+Eleven focused Linux cases pass in 9.123 seconds after an aggregate alias collision
+was fixed before freezing. The frozen image passes **435 regressions in 221.837
+seconds**, plus 23 existing historical-archive checks in 4.757 seconds for those
+changes present in the shared snapshot. Actual Chromium verifies report filters /
+pages/source links/full CSV/private headers/viewer export refusal/mobile/no-JavaScript
+and prior Khata tabs/servicing/custody/collections/events/exceptions. Four report
+screenshots are inspected; no page errors or document overflow. QA uses the exact
+configured Bootstrap bytes/SRI; asset configuration is unchanged.
+
+At this report checkpoint, localhost candidate: `khata-local-20261002-2fc1557b6beb`, image
+`sha256:0a763226b6c8fae3c7cb3628aec2f0f1f313589d15d5e02d87ed6a7136cc5a8b`. All 1,418 application/settings files match the frozen archive
+and image. Schema/no-drift/dependency/restricted-runtime/static/owner-refusal checks
+pass. Fictional database/media and pre-update backups/checksums are retained with
+stopped web `khata-img-20261002-web-pre-reports`. Later edits are documentation only.
+Production is unchanged; hosted/operator/physical and remote-CI acceptance remain
+separate. The later action-guidance checkpoint above completes phase six; optional reminders
+retain their separate intent/delivery gate. See [the report checkpoint](implementation/khata-operational-reports.md).
+
+## Historical closed-loan browser made readable locally (2026-10-02)
+
+The owner reported that old closed-loan details were difficult to find and looked
+lost. The existing archive now has a readable local list/detail: customer-name,
+loan-number and source-ID search; customer and DD/MM/YYYY dates in the 25-record
+list; collateral, supplied payments, source item amounts/rates, payment splits,
+release/recipient records and retained borrower/loan fields on detail. Mutable
+source loan amounts remain explicitly distinct from original principal/current
+balances; missing payments, empty lists and zero remain distinct. No totals or
+settlement events are inferred. Source inconsistencies stay visibly flagged.
+Raw evidence/export and owner upload tools sit in secondary disclosures.
+
+All **23 focused presenter/HTTP/archive regressions pass in 9.749 seconds** on
+Linux using a disposable fictional database, including unchanged document/export,
+source identity binding, escaping, customer search/pagination, read access and
+existing adversarial RLS/acceptance checks. Actual Chromium layout/disclosure
+checks pass on captured fictional Django HTTP responses at 1440/390 px, including
+no-JavaScript use, without page errors or document-width overflow. Desktop list
+and mobile detail screenshots are inspected. These are captured-response layout
+checks, not a live production browser acceptance test.
+
+No schema, financial data, import/reimport, production deployment or existing
+localhost pilot change occurs. Production rollout and real JCL page verification
+remain pending. See the [implementation](implementation/historical-loan-browser.md)
+and [archive flow](flows/historical-loan-archive.md).
+
+## Khata collection worklist and readable events (2026-10-02)
+
+The owner authorized phase four. The separate active-account worklist shows
+oldest unpaid / next anniversary, instalment unpaid versus total dues, overdue
+days, 7/30/90-day upcoming windows and authorized receipt shortcuts. Future
+amounts are labelled estimates from activated terms, with annual monthly charges
+grouped at the anniversary. Totals precede pagination; evidence-review accounts
+remain visible. Current eligible-item LTV and historical warned exchanges are
+separate, including missing prices and subsequently corrected sources.
+History links to readable immutable event details: exact IN/OUT groups, saved
+valuations/price dates/policy, actual references/consent, allocations/charge segments
+and related sources. No financial writes, migration, ordinary-loan changes or
+production activation. Twelve new boundary/provenance/access cases pass in
+11.001 seconds. The first frozen run caught a redundant date that failed statement
+JSON validation; it was removed before any pilot switch. The corrected source
+passes 38 document/layout/collection checks in 26.649 seconds. The final frozen
+image passes **424 Linux regressions in 217.369 seconds**.
+Actual Chromium verifies filters, saved groups/values, exact links, private access,
+viewer/foreign refusal, desktop/mobile/no-JavaScript use and prior tab/register /
+servicing/custody/exception checks. Styled screenshots are inspected; no page
+JavaScript errors occur. QA uses exact configured Bootstrap bytes/SRI because
+sandbox CDN sockets are blocked; application assets are unchanged.
+
+Current localhost candidate: `khata-local-20261002-53cb3807081f`, image
+`sha256:ff9b400b815abc4a9be261f24ed9ab3597794cae1dd4940ea84f4d0579e4343b`.
+All 1,410 application/settings files match the archive and actual image.
+Schema/no-drift/dependency/restricted-runtime/static/owner-refusal checks pass.
+Fictional database/media are preserved with pre-update backups/checksums and stopped
+web `khata-img-20261002-web-pre-collections`. Later changes are documentation only.
+Optional reminders remain queued for a separately reviewed Loans-intent/Notify v2
+delivery contract. Cash/custody reports are next; production, hosted/operator /
+physical and remote-CI acceptance remain separate.
+See the [collection/event checkpoint](implementation/khata-collection-worklist.md).
+
+## Khata measured read performance (2026-10-02)
+
+Phase three is authorized. A dedicated fictional benchmark uses supported services,
+25/250/1,000 items, 41 accounts, corrected receipts/exchanges, pending/actual returns,
+photos, twelve months of interest and four concurrent readers under the restricted
+runtime role. Warm direct-view latency, queries, Python allocation and response
+bytes are measured separately from network/browser/hosted acceptance.
+Measurements support lazy panel data, compact source-backed balance reads,
+database register filters before replay and 25-item custody pages with exact
+QR/history/photo links. Financial calculators/posting/guards are unchanged; no
+persistent money cache or migration is introduced. Canonical balances and fixture
+counts match at all three sizes. In the final quiet 1,000-item run, History falls
+from 147.97 to 38.22 ms, custody from 195.38 to 31.96 ms, and four simultaneous
+history reads from 506.86 to 146.88 ms. These are local direct-view diagnostics,
+not hosted latency promises; native dropdowns and larger financial histories still scale.
+
+Six new equivalence/boundary cases pass in 5.135 seconds. The final frozen image
+passes **412 Linux regressions in 200.291 seconds**. Actual Chromium verifies
+custody pages/exact links/legacy bookmarks, private photos, viewer/foreign scope,
+mobile/no-JavaScript use and prior tabs/register/servicing/exception flows.
+Styled screenshots are inspected; no page JavaScript errors occur. QA uses exact
+configured Bootstrap 5.3.8 bytes/SRI to overcome sandbox CDN restrictions.
+
+Current localhost candidate: `khata-local-20261002-de09e77ef1d9`, image
+`sha256:f8a4023a4b0020b867798afeb457e29e7d6376badee38d2387744f00e26b1ae7`.
+All 1,405 application/settings files match the archive and actual image.
+Schema/no-drift/dependency/restricted-runtime/static/owner-refusal checks pass.
+Existing fictional database/media are preserved with pre-update backups/checksums
+and prior web `khata-img-20261002-web-pre-performance` retained stopped. Later
+changes are documentation only. Collection/event follow-up is next; production,
+remote CI, hosted/operator and physical acceptance remain separate.
+See the [read-performance checkpoint](implementation/khata-read-performance.md).
+
+
+## Khata searchable servicing (2026-10-02)
+
+The owner authorized phase two. Pending returns now have a paginated/photo-assisted
+browser with source-history links and per-item handover entry. Entry selects the
+exact active reservation source server-side; selection also pairs it automatically.
+Reduction approval uses searchable multiple selection; later photo attachment
+uses searchable single selection and retains camera/upload preview. Filters/pages
+preserve selection, and ordinary form controls remain available without JavaScript
+or through an explicit fallback. The signed review, per-item recipient/reference,
+revalidation, hard reduction LTV/due checks and private media contracts are unchanged.
+No migration, new operation type, production activation or economic change.
+The 37 focused checks pass in 19.433 seconds. The final frozen image passes
+**406 Linux regressions in 197.108 seconds**, including seven new servicing-selection
+cases. Actual Chromium passes pending-source pairing, persistent multiple selection
+across searches/pages, single photo selection, protected thumbnails/camera controls,
+search failure and pending-debounce native fallback, viewer/foreign-account refusal,
+mobile/no-JavaScript access and existing exchange/register/tab/exception checks.
+Correctly styled desktop/mobile screenshots are inspected; no page JavaScript errors.
+The sandbox blocked the CDN, so QA serves the exact configured Bootstrap 5.3.8
+CSS/JS bytes with matching SRI hashes; application asset configuration is unchanged.
+
+Current localhost candidate: `khata-local-20261002-535598b92cbb`, image
+`sha256:51d3fe51099cc750948300a9a941808ef43044aa53e605e2ffa5af0ee1056112`.
+All 1,403 application/settings files match the source archive and actual image.
+Schema/no-drift/dependency/restricted-runtime/static/owner-refusal checks pass.
+Existing fictional database/media are preserved, with pre-update backups/checksums
+and prior web `khata-img-20261002-web-pre-servicing-final` retained stopped.
+Later changes are documentation only. See the
+[servicing checkpoint](implementation/khata-collateral-usability.md#searchable-servicing-follow-up-2-october).
+Measured large-account performance is next; production, remote CI and physical
+acceptance remain separate.
+
+## Khata phased improvements: exception guidance (2026-10-02)
+
+The owner selected phased delivery when all recommendations cannot form one
+coherent change. [Future Work](plans/future-work.md#improvement-delivery-sequence)
+now records the complete recommended order and parallel operator/release gates.
+The first slice adds exact-source correction guidance, source-prefilled review,
+bounded links to actual blocking operations and an in-app/support runbook.
+Existing ACTIVE-only whole receipt/unhanded exchange correction rules remain;
+no new financial kinds, source mutation, migration or production activation occurs.
+The final frozen image passes **399 Linux regressions in 184.928 seconds**.
+The four new scope/form/blocked-preview/access cases pass in 2.648 seconds;
+49 existing checks also passed during the initial focused run. Browser acceptance
+covers exact guidance and support, source-prefilled forms, linked blockers,
+refused previews without confirmation, foreign-account isolation, viewer refusal,
+mobile/no-JavaScript access and prior register/tab regressions. Desktop/mobile
+screenshots are inspected; no page JavaScript errors occur.
+
+Current candidate: `khata-local-20261002-1cde3312c625`; image
+`sha256:e5cd51eb489c7c16d6adc75816b73e75acbf4f5aeae88267893ac9ae97ea3b82`. All 1,402 application/settings files match the frozen archive
+and actual image. Schema/no-drift/dependency/restricted-runtime/static/owner-refusal
+checks pass. The localhost pilot retains its fictional records/media, pre-update
+backups/checksums and prior web `khata-img-20261002-web-pre-exceptions`. Later delivery changes
+are documentation only. See the [correction checkpoint](implementation/khata-corrections.md#exception-guidance-follow-up-2-october).
+Broader exception commands still need specified cash/interest/custody outcomes
+within phase one; pending-return/searchable servicing is next in the operational
+sequence. Production, remote CI and physical acceptance remain unchanged.
+
+## Khata completeness and operations review (2026-10-02)
+
+The owner requested review and recommendations after the tab/register work. The
+[completeness review](implementation/khata-release-review-20261002.md#current-completeness-review)
+maps the agreed lifecycle to implemented services and existing test evidence.
+Opening, staged draws, agreed-limit simple interest, anniversary collections,
+approved changes/reductions, grouped exchanges, settlement and actual returns are
+implemented locally. This does not mark real-money/operator acceptance complete.
+
+Highest-priority findings are bounded ACTIVE-account correction/support coverage,
+ordinary dropdowns/manual item-reservation pairing outside exchange, full replay
+and custody construction behind visible pagination, and missing explicit Khata
+collection/notice and cash/custody reporting workflows. Further recommendations
+cover readable operation evidence/warnings, action prerequisites, series status
+management, bounded label batches above 100 held items and living-doc reconciliation.
+Deliberate exclusions are separated from implementation gaps; same-limit renewal
+is not currently supported even though broader early discussion mentioned renewal.
+
+This is a read-only source/document/evidence review. The existing verified
+candidate's 395 passing regressions and browser acceptance are cited, not rerun
+or represented as a load/hardware/hosted acceptance test. No application, financial
+policy, production or fictional pilot-record changes occur. Prioritized findings
+are recorded for owner review; no additional financial scope is accepted.
+
+## Khata register metrics and detail tabs (2026-10-02)
+
+The owner clarified the metric placement applies to the Khata register. Financial
+totals are now equal-height cards above the filters, with matching count/range in
+the results-table header. Account detail uses Overview, Actions, Collateral,
+Interest, History and Documents sections with ordinary Bootstrap-styled links.
+Actions reuse state/permission-aware workflows in four groups; relevant shortcuts
+appear in Collateral/Interest. Legacy QR/item/source/history/exchange links resolve
+the correct section. Document errors select Documents. Only one panel renders;
+no financial calculation, write permission or migration change is introduced.
+
+The final frozen image passes **395 Linux regressions in 183.149 seconds**,
+including tab/source/document/access cases. The old QR test now checks the active
+Collateral panel and exact item anchor instead of the former open disclosure.
+Schema, dependency, restricted production-profile/static startup and owner-startup
+refusal checks pass. Actual read-only Chromium checks cover aligned/filtered
+register totals, count/range placement, six sections, grouped actions, photos,
+interest, history filtering/pagination, exact source/exchange links, viewer access,
+mobile overflow and navigation without JavaScript. Desktop/mobile screenshots
+are inspected; no page JavaScript errors occur.
+
+Current local candidate: `khata-local-20261002-0d22c65edc36`; image
+`sha256:544544d43ae6ced2c9c62d97644a608baba46497afd431459265612beb0caa92`.
+All 1,399 application/settings files match the frozen source and actual image.
+The fictional pilot at `http://127.0.0.1:8077` preserves records and media, with
+pre-update database/media backups and the previous web retained as
+`khata-img-20261002-web-pre-tabs`. Only later documentation changes differ from
+the frozen archive. See the updated [workflow](flows/khata-account-workflow.md) and
+[usability checkpoint](implementation/khata-collateral-usability.md).
+Production and hosted/remote CI remain unchanged.
+
+## Khata source-history browsing (2026-10-02)
+
+Following the owner's request, detail-page source history now uses 25-event
+pages, newest/oldest business-date and sequence sorting, event-type/inclusive-date
+filters, exact operation lookup and item/reference search. Grouped item matches
+are deduplicated. Correction and return-source links locate exact related events
+across pages/filters. Recording time, actor, direct item links and payment
+references help identify events. Display filters do not alter balances or hide
+compensating audit sources. No migration or financial policy changes.
+
+The 43 focused history/collateral/integration checks pass in 24.744 seconds,
+including 52 same-day receipts across pages, inclusive dates, invalid filters,
+item/exchange deduplication, corrections outside the current page, unchanged
+balances and account/workspace boundaries. The history candidate
+`khata-local-20261002-16c741a72ede` passes **392 Linux regressions in 183.508 seconds**.
+A final table-width/keyboard-scroll-only change is frozen as
+`khata-local-20261002-10e98f81aa49`; its seven history cases pass in 5.502 seconds.
+Manifest comparison proves this is the only application change since the full
+regression run. Final image:
+`sha256:a7a03b562498cd8bf8a310368f1343a69de936f5015e2c7fe867001a045fac1f`.
+Schema/no-drift/dependency/restricted-runtime/static/owner-refusal checks pass.
+Actual Chromium verifies filters, retained sort/date/search through page two,
+disjoint rows, exact source lookup, invalid dates, empty matches, unchanged
+balances, reset, item search and viewer reads. Final mobile rows remain readable
+in a keyboard-focusable horizontal-scroll container; screenshots are inspected.
+All 1,398 application/settings files match both the source archive and built image.
+The local pilot retains current database/media and private pre-update backups;
+prior web is retained stopped as `khata-img-20261002-web-pre-history-layout`.
+Browser checks perform no business writes. The
+[workflow](flows/khata-account-workflow.md) and
+[checkpoint](implementation/khata-collateral-usability.md) describe the controls.
+976 local documentation links and whitespace checks pass; later edits update
+docs only. Production remains unchanged.
+
+## Khata camera capture and register clarity (2026-10-02)
+
+Owner-requested webcam/mobile front/rear capture is implemented on receiving and
+later photo attachment, with live/still previews, available-device choice,
+removal and native mobile picker fallback. Tracks stop on switch/close/file
+selection/submit/page exit; late requests cannot revive a closed camera. JPEG
+captures use existing private photo validation/storage. Detail custody rows now
+show each item's latest protected thumbnail while preserving prior photos and
+UUID scan anchors. The register separates agreed limit from actual principal
+outstanding and links **Items awaiting handover** to pending custody, with a
+plain explanation of record counts. No financial policy or migration changes.
+
+The 53 focused collateral UI/integration/operator tests pass in 28.496 seconds,
+including captured-JPEG persistence and latest-photo selection without changing
+originals. Final frozen `khata-local-20261002-cbb08c7071bf` passes **385 Linux regressions
+in 183.491 seconds**, dependency/schema/no-drift/static/restricted-runtime and
+owner-startup-refusal checks. Image ID:
+`sha256:4f6630e45e98b0dfabc40dc0d0b25216f08c7b134d3d90ccdc9fe3e81fafff5f`.
+Actual Chromium with a synthetic video device verifies JPEG capture/receipt,
+front/rear constraints, late-request closure, track cleanup, removal, native
+picker hints, simulated denial/file fallback, later camera attachment, private
+detail thumbnails, separate real limit/principal figures, pending-return drilldown
+and mobile layout. Desktop/mobile screenshots are inspected. Physical webcams,
+phone camera selection, hosted HTTPS and off-device acceptance remain open.
+The localhost pilot is updated with pre-update database/media backups and prior
+web retained stopped as `khata-img-20261002-web-pre-camera`. Fictional KH00004 now
+includes camera Item 73 and two captured photos; its two pending outgoing items
+and original KH00001/KH00002 are preserved. Production remains unchanged. See the updated
+[workflow](flows/khata-account-workflow.md) and
+[implementation checkpoint](implementation/khata-collateral-usability.md).
+The frozen archive and all 1,395 application/settings files match; 974 local
+documentation links and whitespace checks pass. Later edits update docs only.
+
+## Khata collateral usability implementation (2026-10-02)
+
+Following explicit owner authorization, all three usability improvements are
+implemented: direct combined receiving/photos with actual-receipt confirmation
+and Save and add another; a scoped 25-item collateral browser; and searchable
+outgoing/incoming exchange tables with persistent selected groups and replacement
+receipt round trips. Review shows exact per-metal group totals and retained cover.
+Small private thumbnails verify originals without altering retained bytes.
+
+Receipt/photo remain separate immutable sources. Invalid uploads and partial-file/
+row failures roll back receipt and clean newly written files; retry fingerprints
+include photo bytes. Existing approval, photo, same-metal, LTV, policy, custody and
+ordinary-loan contracts remain unchanged. No migration is needed. The 45 focused
+UI/storage/search plus opening/workflow cases pass in 24.328 seconds, including
+203-item browsing, cross-account/workspace refusal and incoming-reuse filtering.
+Final frozen `khata-local-20261002-569b1175f32e` passes **384 Linux regressions
+in 185.540 seconds**, plus dependency/schema/no-drift/static/restricted-runtime and
+owner-startup-refusal checks. Image ID:
+`sha256:46c5fdb4030c4583f7c569efecb6376e19ec30c456ffdee6c5d9c8390847cea5`.
+Actual Chromium verifies receiving/photo preview, Save and add another, pagination,
+selection retention, replacement-receipt round trip, explicit selection, reviewed
+group exchange, pending custody, private thumbnail, mobile stacking and viewer
+refusal. Numeric searches target the exact item ID. The updated localhost pilot
+retains its database/media volumes, private pre-update backups/checksums and stopped
+prior web containers. Original KH00001/KH00002 remain unchanged; additional fictional
+KH00003/KH00004 retain browser evidence. Production is unchanged; hosted, remote CI,
+off-device and physical acceptance remain open. See the
+[checkpoint](implementation/khata-collateral-usability.md).
+
+Final documentation validation passes 972 local links across 40 current/Khata
+guides and whitespace checks. The frozen archive hash is intact; all 1,394
+application files in its apps/templates/static/settings inventory match the
+verified source. Later edits update delivery documentation only.
+
+## Khata workflow reference and collateral usability proposal (2026-10-02)
+
+The owner requested the walkthrough as a lasting developer/user reference and
+asked about combined collateral receipt/photos and searching large holdings.
+The [account workflow](flows/khata-account-workflow.md) now records setup through
+financial settlement and physical closure, worked limit/rate/LTV examples, current
+screen actions, identification, supported boundaries and links to authoritative
+services. It explains receipt versus exchange IN/OUT membership versus handover.
+
+Inspected forms, selectors, models and exchange services confirm that current
+item lists have no dedicated search/pagination. The
+[usability proposal](plans/khata-collateral-usability.md) records one receiving/photo
+screen, a paginated item browser and searchable outgoing/incoming selections with
+visible selected groups. These are proposals, not implemented app behavior. No
+new schema/financial policy, application source, frozen candidate or production
+change is made. Validation passes 965 local links across 39 current/Khata guides
+and the whitespace check; application tests are not repeated for these prose-only edits.
+
+## Khata Linux image verified and persistent local pilot ready (2026-10-02)
+
+After the owner fixed/started Docker and instructed proceeding, the frozen source
+`khata-local-20261002-8e030b414955` builds successfully. Verified local image ID:
+`sha256:a84bef3712092d0c99a67b0d0a697356551a0bccc3c9f8834248013b07d41bf3`.
+The source snapshot/requirements/base pin and revision label are retained; no
+Git commit/push, registry publication or production deployment occurs.
+
+A complete fictional PostgreSQL/media recovery passes all 199 table/1,287 original
+row fingerprints using independently sorted row bytes after rechecking the original
+Windows evidence. The permissions-table discrepancy was Windows/Linux collation
+ordering. Original native evidence and PDF bytes reconcile. Restricted runtime
+startup succeeds; owner web startup is rejected with `tenancy.E020`. The non-root
+image runs with a read-only root filesystem and runtime-only credentials. Package,
+migration/model and static checks pass. **372 Linux regressions pass in 133.932
+seconds**, covering Khata, RLS/storage and ordinary-loan/Party/dashboard/document
+preservation on a separate test database/media volume.
+
+New local workspace `khata-73081a4c` has fictional monthly/annual KH agreements
+opened through actual services on the setup day. Owner/viewer username login,
+protected pages, 16 static assets, CSRF and role/workspace refusals pass against
+actual Gunicorn HTTP. The existing `container_dev` profile enables local HTTP
+review; production-profile HTTPS-cookie/runtime checks remain separate. App/database
+stay on an internal network; a credential-free relay publishes only localhost:8077.
+Billing is disabled, mail captured and no external providers/workers are activated.
+
+Before handover, the disposable tmpfs database is copied with local-socket
+`pg_basebackup`/SHA256 manifest, verified twice with `pg_verifybackup` and moved to
+the dedicated persistent Docker volume. All main public rows and sequence states
+match before/after; the physical copy is 100,935,680 bytes. Database/web restart
+and actual HTTP checks pass again. Private fictional login/settings and complete
+evidence remain under `.tmp/khata-image-20261002/`.
+
+The local review app is http://127.0.0.1:8077; use the private test-login file.
+Production JCL/JSK/Lakshmi data, roles and deployments remain unchanged. Hosted/TLS
+pilot bindings, remote CI, off-device recovery, physical 100 x 60 mm printer/phone
+QR and owner/operator scope acceptance remain open. See the
+[image/local pilot checkpoint](implementation/khata-image-pilot-20261002.md).
+
+## Khata test candidate preparation and full fictional recovery pass (2026-10-02)
+
+The owner selected a new test workspace and 100 x 60 mm labels. A new local
+fictional workspace, `khata-83f6003f`, uses an independent KH series with active
+monthly/annual and closed agreements. Services record an exchange with pending
+return, photo, preserved label/statement, corrected receipt, settlement and actual
+handover. No real customer/production workspace, ordinary-loan record or production
+migration is changed. The simulated dates are 10 October/10 November 2026.
+
+The repeatable local drill applies owner-only migrations from empty, then restores
+a complete pg_dump and saved private-media ZIP into new disposable databases.
+All **199 public tables / 1,287 rows**, **196 sequences** and **4 files / 139,718
+bytes** reconcile. Native preview leaves no rows/files; committed exact-identity
+recovery preserves source/media/P/U/interest/custody, advances Khata sequences
+monotonically and leaves ordinary sequences unchanged. A restricted NOLOGIN role
+sees zero Khata rows outside Workspace context, passes all software readiness
+checks, retrieves original PDFs and records a new fictional withdrawal successfully.
+The unused-counter assertion was aligned with the existing safe sequence contract;
+no lending or recovery-service changes were required.
+
+An allowlisted source-freeze tool captures current source/member hashes and archive
+checksum without Git staging/commit/push or copying secrets/media/backups. Two
+unchanged trial captures are byte-identical; final snapshot evidence is retained
+in `.tmp/khata-test-candidate-20261002/`. Four import-boundary unit checks, the
+841-tracked-file boundary scan, dependency and operator-script syntax checks pass.
+Recovered PDF samples render correctly. Disposable fictional evidence/databases
+remain inspectable; no real data or credentials are copied into local backups.
+Final owner-settings system/migration checks pass without model drift. Source
+inventory covers all present application/static/template/locale build inputs;
+928 documentation links across 36 current/Khata files pass.
+
+Docker Desktop's local engine cannot start after permitted startup checks, so
+container-image verification remains open. The frozen source is a local snapshot,
+not a committed/image-verified release. Remote CI, hosted test deployment/logins,
+off-device candidate recovery, paper printer/QR and owner/operator scope acceptance
+remain pending. No production pilot is activated. See the
+[candidate checkpoint](implementation/khata-test-candidate-20261002.md) and
+[test-pilot acceptance guide](flows/khata-test-pilot-acceptance.md).
+
+## Khata collateral labels and pilot review implemented locally (2026-10-02)
+
+Khata collateral can now be issued as one selected-item label, one combined label
+for all physically held items, or one 100 x 60 mm page per held item. Labels keep
+complete item UUIDs/descriptions/quantity/weights/purity/storage and custody at
+issuance, with net totals by metal. Pending returns are labelled; actual returns
+exclude new labels. A 6 pt floor and overflow refusal preserve all text. Authenticated
+UUID scans resolve the current account/item custody and open its detail disclosure.
+Issuance is a scoped, permission/write-availability checked, idempotent POST; original
+PDF bytes remain in Documents for private reprints after later custody changes.
+No label changes actual debt, agreement terms or physical custody.
+
+Migration 0040 extends existing document issues with LABEL snapshots and SQL
+held-item/identity/selection/custody guards. Existing A4 guards remain intact and
+all kinds stay immutable. Forced RLS/file inventory are reused; the registry gate
+advances to 0040. Native recovery includes saved labels with original payload/bytes;
+guard-version mismatches still require recovery into the matching older schema
+followed by forward migration, rather than a weakened restore.
+
+A read-only readiness page/CLI checks migration, forced RLS, restricted runtime
+role, enabled/present source guards, file coverage, eligible series, balances and
+native evidence encoding/integrity. It never activates a pilot or certifies saved
+off-device backups, real restore rehearsal or hardware acceptance. The release
+review records the supported/unsupported statutory/default and correction boundaries,
+and remaining candidate/named-workspace/operator/hardware/recovery/monitoring gates.
+
+Validation: 346 selected regression tests pass in 191.107 seconds, including khata
+workflow/integration/recovery, restricted-role/RLS/storage checks and ordinary loan,
+Party/portal/dashboard/ticket/layout preservation. A further 12 final label/readiness
+tests pass, including missing-guard refusal. A fictional three-page combined/individual
+sample with Tamil text and pending return is rendered and visually reviewed; every
+text span fits the page and remains at least 6 pt. System/migration consistency
+checks pass. All 25 existing ordinary collateral/media/combined-label tests also
+pass in 6.487 seconds; syntax/whitespace and 944 local documentation links pass.
+Only the dedicated fictional test database receives migration 0040;
+no development/production migration, deployment, real-account changes or pilot
+activation occurs. See the [release review](implementation/khata-release-review-20261002.md),
+[operator guide](flows/khata-labels-and-pilot-review.md) and
+[decision](adr/2026-10-02-khata-labels-and-pilot-review.md).
+
+## Khata operator forms and native recovery implemented locally (2026-10-01)
+
+The next owner-authorized slice adds scoped forms for all supported opening,
+financial, custody, revision, settlement and bounded correction commands. Signed,
+30-minute reviews bind actor/workspace/account/action/date and preserve request
+UUIDs; services recheck original evidence before posting. Editing reviews retains
+instructions. Series setup supports independent/associated numbering, with owner
+WARN/BLOCK policies. Private photo reads verify original bytes and stay scoped.
+
+Native `khata-native-recovery/1` ZIPs capture all thirteen khata tables, complete
+source/revision/period/segment/allocation/custody evidence and original photos/PDFs.
+Schema/financial-guard fingerprints and export-date P/U/interest/custody reconciliation
+are retained. Offline exact-identity restore requires the table-owner connection,
+matching prerequisite identities, an empty khata destination and an independently
+retained archive SHA-256. Preview inserts/reconciles and rolls back without media
+writes. Commit requires explicit workspace confirmation; runtime restore is denied.
+This is trusted disaster recovery, not edited/paper import or workspace cloning.
+Existing evidence/media conflicts refuse recovery; failed restores roll back rows/
+trigger state and remove only new files. No ordinary-loan numbering is changed.
+
+Validation: 335 selected regression tests pass in 211.941 seconds, including khata
+services/integration/UI/recovery, forced-RLS/storage coverage and ordinary product,
+Party/portal/dashboard/ticket/layout preservation. A further 26 focused tests pass
+on final review-editing, recovery parent validation and continued servicing changes.
+Exact recovery/re-export includes corrected receipts, formal reduction, settlement,
+closed custody and original media; restricted runtime export/restore boundaries,
+stale/tampered/shared/date-expired reviews and compensation cleanup are covered.
+Migration consistency reports no changes. System and documentation checks pass.
+Only the dedicated local test database is used for writes; no new migration,
+production deployment, real restore or workspace activation occurs.
+
+Item labels, statutory/default boundaries, final release verification and a
+separately approved named workspace pilot remain. Unsupported correction kinds
+stay unavailable. See the [checkpoint](implementation/khata-operator-and-recovery.md),
+[operator flow](flows/khata-servicing-and-recovery.md) and
+[decision](adr/2026-10-01-khata-operator-forms-and-native-recovery.md).
+
+## Khata borrower/dashboard, documents and summaries integrated locally (2026-10-01)
+
+Party history, the new-loan borrower card and verified portal summaries now include
+actual khata debt. Shared totals precede pagination; mixed borrowers count once,
+and agreed limits/unused entitlement never become outstanding. Dashboard principal
+includes both kinds, with a compact separate khata interest/custody card. Ordinary
+recorded interest, saved health, lending activity and reports retain their labelled
+scope. Portal statements no longer subtract already-reflected payments twice.
+
+A scoped, paginated khata register/detail exposes balances, schedules, current
+same-day cover suggestions/policies, custody and source/correction links. Both
+independent and associated series are included. Missing prices leave known debt
+intact; settlement clears debt while actual returns remain visible.
+
+Migration 0039 adds immutable, directly owned, forced-RLS document issues with
+source/agreement/position/licence guards, retained private-file coverage and exact
+hash/size-verified reprints. Approved agreements/amendments, payouts, interest,
+exchanges, reductions/handovers, settlement, corrections and today's statements
+use typed snapshots. Late-issued vouchers retain their source prefix; later
+changes never rewrite saved PDFs. Complete text flows across A4 pages.
+
+308 focused/regression tests pass, initially including 22 new integration/document cases,
+ordinary product/Party/portal/dashboard/ticket/layout regressions and restricted-
+role isolation/immutability checks. Final renderer/state-label refinements pass a further 23 integration tests plus
+the existing Party selector cases. A fictional multilingual, long-address/multiple-collateral
+PDF is rendered and visually reviewed. Migration consistency, system, documentation
+and syntax/whitespace checks pass.
+Only the dedicated local test database was migrated; no production deployment
+or workspace activation.
+
+Full servicing command forms/private photo access, labels/statutory boundaries,
+native recovery, unsupported corrections and pilot acceptance remain release
+work. See the [checkpoint](implementation/khata-integration.md),
+[workflow guide](flows/khata-balances-and-documents.md) and
+[decision](adr/2026-10-01-khata-summaries-and-documents.md).
+
+## Khata correction safeguards implemented locally (2026-10-01)
+
+Administrator-authorized, immutable CORRECT sources now link uniquely to their
+original operations. Whole receipt correction requires confirmation that money
+was not received or fully refunded; it restores dues without altering charges,
+allocations, principal or entitlement. Unhanded exchange cancellation logically
+releases original reservations and reserves replacements for actual return, with
+hard retained LTV and independent handover evidence.
+
+Later dependencies are identified and refused; independent receipts can unwind
+newest-first. Payout/opening, charges, active amendments/reductions, settlement,
+completed returns and complex corrections remain unavailable. Money/custody
+capabilities are required in addition to administration and Workspace write access.
+
+Migration 0038 extends existing forced-RLS tables and uses account-locked active
+membership guards. SQL recognizes compensation by operation sequence. 163
+focused/regression tests pass, including 22 new correction cases. Migration
+consistency, system, documentation and syntax/whitespace checks pass. Only the
+dedicated local test database was migrated; no development/production activation
+or ordinary-loan workflow changes.
+
+UI/documents, shared summaries, native recovery and pilot review of correction
+coverage remain release gates. See the [checkpoint](implementation/khata-corrections.md)
+and [bounded correction ADR](adr/2026-10-01-khata-bounded-corrections.md).
+
+## Khata exchanges, reduction returns and settlement implemented locally (2026-10-01)
+
+All three authorized backend workflows are implemented. Same-metal grouped
+exchanges use current approved prices and the owner's WARN/BLOCK policies.
+Typed outgoing reservations stop backing withdrawals immediately; linked actual
+handovers retain recipient/reference evidence. Formal reduction returns require
+cleared due interest and hard retained LTV after repayment, independently of
+exchange warning mode. Active reduction handovers recheck current cover and dues.
+
+Settlement atomically collects principal and all unpaid interest through closure,
+including annual accrued interest not yet due. Closing partial months use exact
+activated revision segments and actual days; the original first-month floor is
+preserved once. Financial settlement stops interest and zeroes entitlement, while
+`SETTLED_RETURN_PENDING` preserves physical return obligations until the final
+handover changes the account to `CLOSED`.
+
+Migration 0037 adds guarded, directly owned selection evidence with forced RLS,
+registry coverage and additive source/lifecycle fields. 141 focused/regression
+tests pass, including 26 new custody/settlement cases. Tests cover warnings/blocks,
+stale reviews, hard LTV, annual/partial/same-day closing interest, prior receipts,
+permission separation, rollback, retries, concurrent exchanges/settlement and
+restricted-role bypass attempts. Migration consistency, system, documentation and
+syntax/whitespace checks pass. Only the dedicated local test database was migrated.
+
+Corrections/compensation, operational UI/documents, shared summaries and native
+recovery remain release gates. No development/production activation or changes
+to existing flexible-loan workflows. See the
+[custody/settlement checkpoint](implementation/khata-custody-settlement.md).
+
+## Khata approved agreement changes implemented locally (2026-10-01)
+
+The next backend slice adds immutable active-account proposals, separate approval
+and activation operations, and principal repayment within formal limit reductions.
+Only activated terms affect interest or future withdrawals. Limit increases add
+unused entitlement without inventing principal; repayments reduce principal
+without replenishing entitlement. Account number, opening date, payment anniversary,
+frequency, LTV and lender identity remain fixed. Approvers cannot collect principal
+without repayment authority; a cashier can execute an approved repayment.
+
+Migration 0036 extends existing source shapes/guards, without new tenant tables or
+ordinary-loan data changes. Canonical position replay and withdrawal guards now
+recognize formal reductions. Interest uses exact dated segments under activated
+revisions, summed before monthly half-up rounding. The original first-month floor
+is preserved once. Already billed months and receipts remain immutable; raw
+backdating, omitted repayment, unactivated segment sources and overdrawing repaid
+capacity fail under the restricted database role.
+
+115 focused/regression tests pass: 21 revision cases plus all earlier khata,
+registry, ordinary partial-month policy and storage inventory suites. Coverage
+includes annual dues, same-day ordering, half-paise segments, financial reductions,
+licence servicing boundaries, stale approval, retries, permission separation and
+concurrent activation. Migration consistency, Django system, documentation links
+and Python syntax/whitespace checks pass. Only the dedicated local test database
+was migrated; no development/production migration or activation.
+
+This is a financial agreement-change checkpoint, with no collateral leaving
+custody. Exchanges, reduction returns, settlement, corrections, UI/documents,
+shared summaries and recovery remain delivery gates. See the
+[agreement-change checkpoint](implementation/khata-agreement-changes.md).
+
+## Khata interest finalization and collection implemented locally (2026-10-01)
+
+The owner's next-step instruction now adds immutable completed-month charges,
+exact calculation segments and interest allocations in migration 0035. Monthly
+and annual anniversary dues retain the agreed monthly rate unit. Partial receipts
+pay oldest dues first, reject advance/excess payments, and change neither principal
+nor unused entitlement. Balances subtract actual receipts; clearing overdue dues
+removes the interest-based withdrawal block.
+
+Finalization and cash receipt are separate source operations, committed atomically
+when collection needs catch-up finalization. Current-date commands enforce existing
+repayment authority and Workspace write restrictions, UUID retries, review freshness
+and Workspace/account locks. Three directly owned tables have forced RLS, registry
+coverage, immutable evidence and parent/math/allocation guards. Deferred database
+checks reject incomplete periods/segments/receipts; restricted-role tests reject
+forged charges, skipped older dues, over-allocation and later additions to receipts.
+
+94 focused/regression tests pass: 20 collection tests plus existing khata,
+tenancy registry, ordinary partial-month policies and storage inventory suites.
+Coverage includes annual billing without compounding, short-month clamping and
+restoration, frozen charge authority, concurrent cashiers, rollback, commercial
+access and permission separation. Migration consistency, Django system checks,
+documentation links and syntax/whitespace checks pass. Migration 0035 was applied
+only to the dedicated local test database; no development/production migration.
+
+This checkpoint supports completed months under activated opening terms. Approved
+limit/rate changes, exchanges, reductions, settlement/corrections, UI/documents,
+shared summaries and recovery remain pending. Revision/settlement delivery must
+extend the calculation/source guards together; those actions remain unavailable.
+See the [collection checkpoint](implementation/khata-interest-collection.md).
+
+## Khata opening, custody and staged withdrawals implemented locally (2026-10-01)
+
+The owner's next-slice instruction is implemented in the local backend. Migration
+0034 adds five guarded/RLS tables for source operations, owner policies, collateral,
+valuation and photos. Receipt, approval and payout are separate; first payout
+starts interest on the full limit. Staged withdrawals enforce current price cover,
+unused entitlement, photo policy and overdue WARN/BLOCK. Unopened items can be
+returned with evidence; cancellation cannot abandon held items or cancel debt.
+
+Approval and payout snapshots bind typed valuation rows to their exact reviewed
+items/prices. Later rows cannot extend an earlier frozen valuation. Deferred
+database guards reject incomplete receipt/photo/valuation evidence and over-LTV
+payouts, including raw restricted-role DML. Photos participate in retained private
+storage inventory. Existing ordinary-loan operations are unchanged by this slice.
+
+74 focused/regression tests pass: all khata modules, tenancy registry, existing
+partial-month interest policies and storage inventory. They include concurrent
+cashiers, retries/rollback, stale terms/prices/policies, current photo enforcement,
+overdue blocking, permission separation, populated cross-workspace evidence and
+raw history/LTV attacks. Migration drift, Django system, documentation and
+syntax/whitespace checks pass. Verified migration rollback/reapply only on the
+dedicated local test database after confirming no khata operation/custody rows.
+
+No khata UI, production migration or enablement. Interest receipts, formal
+revisions, exchanges, reductions/settlement and corrections remain next, followed
+by documents, shared summaries and recovery. See the
+[opening checkpoint](implementation/khata-opening.md) for exact delivered scope.
+
+## Khata foundation and calculator implemented locally (2026-10-01)
+
+Following the owner's implementation instruction, delivered the first backend
+slice: independent/licence-associated series, immutable numbered draft identities,
+append-only agreement proposals, authorized retry-safe services and pure KHATA-1
+interest/entitlement/LTV calculations. Migration 0033 adds three directly owned
+tables with forced RLS, parent guards, evidence/identity protection and registry
+gates. A database allocator advances/fixes series numbering atomically; cancelled
+accounts cannot recycle numbers or unfreeze licence association.
+
+42 tests pass in a dedicated local test database: khata calculator/foundation/
+concurrency, tenancy registry and existing partial-month policy tests. Raw
+adversarial DML runs under a restricted role. Initial validation found and fixed
+an address-length validator omission and updated the registry count for three
+new models. See the [checkpoint and exact boundaries](implementation/khata-foundation.md).
+
+Only DRAFT/CANCELLED are admitted; no financial activation, collateral workflow,
+UI, auto-created series or production migration/enablement. Ordinary flexible-loan
+services and policies remain unchanged by this slice. Full servicing, integration,
+documents and recovery remain the next delivery work; these tests are not full
+khata product acceptance.
+
+Migration drift and Django system checks pass. Documentation checks cover 794
+curated links and 25 khata-document links; syntax/whitespace checks pass.
+
+## Khata independent and licence-associated series confirmed (2026-10-01)
+
+Round 11 replaces mandatory licence attachment with workspace-owned khata series
+and an optional same-workspace licence. The series owns its counter; numbers are
+unique across all khata series in the workspace. Licence association (including
+none) freezes at first issued account number; later changes use a new series with
+a distinct prefix. Existing numbers, evidence and ordinary-loan sequences remain
+unchanged by this design.
+
+Updated the ADR, technical/delivery designs, screen proposal and scenario plan.
+Added K39-K42 and planned SERIES-01 through SERIES-04 checks covering both modes,
+number collisions, association freeze/races, isolation, totals and documents.
+Independent series require no placeholder licence; lender identity is captured
+explicitly, and reports offer a no-licence filter. No code, migration, test
+implementation or production change was made.
+
+Documentation checks pass: 788 curated links and 22 khata-document links, plus
+scoped whitespace validation. Business/runtime tests remain planned.
+
+## Khata concrete technical design prepared (2026-10-01)
+
+Prepared the [technical design](architecture/khata-technical-design.md) against
+current Loans, access, numbering and tenancy contracts. It specifies 13 candidate
+records, dedicated khata counters under existing licences, account states and
+existing action permissions, KHATA-1 interest/entitlement calculations, immutable
+operations and ownership guards. Financial settlement stops interest independently
+of physical handover; reserved outgoing items cannot secure another withdrawal.
+
+Added concrete calculation, servicing, isolation, concurrency, correction,
+document/recovery and ordinary flexible-loan preservation test cases. These are
+planned tests, not executed checks. Annual leap-day/same-day revision conventions,
+valuation freshness, correction coverage, licence/default boundaries and exact
+document/recovery schemas remain identified technical review items. Business
+scope remains as confirmed in rounds 1-10. Documentation only; no application,
+migration, workspace configuration or production changes.
+
+Documentation validation passes: 788 curated local links and 22 links in the
+five khata design documents; scoped Git whitespace checks pass.
+
+## Khata first-release scope confirmed (2026-10-01)
+
+Round 10 confirms separate khata series, existing authorised loan approvers for
+opening and limit/rate changes, new khatas without historical/paper import,
+today-dated routine entries and no added charges, penalties or funding/repledging
+in the first release. Updated ADR, screen/scenario plans and the
+[consolidated scope/checklist](plans/khata-delivery-design.md#first-release-scope-and-implementation-checklist).
+Collateral recording cannot invent new cash payout or silently import old paper
+principal. Native khata recovery remains separate from historical migration.
+
+Concrete schema/sequence mapping, correction/date edges, documents, preservation
+tests and pilot preparation remain engineering work. Scope confirmation has not
+changed application code, schema, existing products or production data.
+
+## Khata D1-D5 accepted; flexible-loan compatibility explicit (2026-10-01)
+
+Owner explicitly confirmed the five screen-review decisions: start/end day and
+monthly paise rounding, one-time opening minimum across revisions, entitlement
+carry-forward without repayment replenishment, oldest-due partial interest
+allocation with advance/excess payments deferred, and clearance of due interest
+before reduction returns while unbilled interest stays on schedule. Updated ADR,
+scenario plan, screen review and delivery design to remove superseded pending
+markers. Architecture remains proposed and implementation has not started.
+
+Clarified that khata is a distinct offering in the existing Loans area, sharing
+Party identity/access rather than ordinary-loan economics. Preservation of the
+existing flexible products, current loans and future flexible originations in
+JCL, JSK and Lakshmi is now an explicit release requirement. The delivery plan
+requires workspace-policy fixtures, ordinary workflow regressions, mixed-account
+summary reconciliation and migration/evidence preservation. Those code-level
+checks are planned, not claimed as passed. Documentation links and whitespace
+checks pass; no application or production change was made.
+
+## Khata delivery design prepared; policy choices still pending (2026-10-01)
+
+Prepared the [implementation design and sequence](plans/khata-delivery-design.md)
+after inspecting actual disbursal, item-principal, obligation, media and access
+contracts. Recommend explicit khata records/services within Loans, without
+weakening ordinary-loan guards or inventing a maturity date. The proposal maps
+record responsibilities, transactional commands, physical handover, reporting,
+documents, portability, RLS and release/recovery requirements.
+
+Delivery proceeds from design closure through calculator/evidence, complete
+servicing, UI/integration and a separately reviewed named pilot. No real account
+creation is enabled before servicing and correction readiness. The five D1-D5
+recommendations remain pending confirmation. Documentation only: no application,
+schema, product setup, tests or production records changed.
+
+## Khata screen and calculation review prepared (2026-10-01)
+
+At the owner's request, prepared a [screen-by-screen proposal](plans/khata-screen-review.md)
+for the list, opening, account overview, withdrawal/deposit, exchange, interest
+receipt, agreement change/reduction and settlement/history/settings. The compact
+overview separates limit, actual principal, drawable amount and next interest due;
+long guidance stays in contextual help. Reduction returns visibly enforce the
+confirmed mandatory LTV check.
+
+Five explicitly proposed decisions cover boundary days/rounding, minimum interest
+across first-month revisions, unused drawing entitlement after amendments, partial
+interest allocation and due-interest clearance for reduction returns. Fictional
+examples and acceptance cases make each reviewable. No new business decisions
+are inferred from the request to proceed. Remaining authorization, documents,
+correction/default and portability design is retained. Documentation only; no
+application, schema, tests, product configuration or production changes.
+
+## Khata requirements refined through round 8; discussion only (2026-10-01)
+
+Recorded the owner's confirmed staged-withdrawal, full-limit interest,
+monthly/annual payment, formal limit-change and valuation-based exchange rules.
+The [proposed ADR](adr/2026-10-01-khata-agreement-design.md) separates confirmed
+requirements from the architecture proposal. The
+[living plan](plans/khata-agreements.md) contains 38 scenarios with confirmed,
+proposed and open outcomes, plus confirmed monthly-only rate entry and future
+acceptance gates. FW-021 tracks this discovery; no delivery priority changed.
+No application code, schema, configuration or production data changed. Existing
+ordinary-loan rules remain authoritative; khata implementation awaits a later
+owner instruction after design refinement.
+
+Round 2 confirms mid-period old/new-limit interest splitting, actual-withdrawal
+coverage at agreed LTV, principal reductions only through formal reduction/renewal,
+current-rate exchange valuation and monthly/annual payment in arrears. Exchange
+value shortfalls now warn and proceed by default, with owner-selected strict
+enforcement and later top-ups. This refines the earlier blanket equivalence rule.
+Exchange and account-LTV shortfalls are distinct.
+
+Round 3 confirms anniversary dues (10 October to 10 November or next 10 October)
+and four months' interest for an annual payer closing after four months. One
+owner exchange policy warns/allows even for value shortfalls or account-LTV
+breaches, or disallows the exchange. Separate top-up follow-up is deferred.
+Overdue interest also has owner-selected warn/block behaviour. Round 4 fixes rate entry to a monthly percentage,
+independent of monthly/annual payment. Annual-rate entry is deferred; retain the
+monthly unit in agreement evidence and documents.
+
+Round 5 confirms simple interest, a full first-month minimum collected at month
+end, later actual-day partial months, and short-month clamping with restoration
+of the original anniversary. Overdue block mode prevents withdrawals/exchanges
+but permits payments, deposits and settlement. Limit revisions retain number
+and anniversary; reducing below outstanding principal requires repayment of the
+difference. A fictional dated walkthrough now covers staged draws, exchange,
+increase, reduction and closure.
+
+Round 6 confirms month one is included in the annual bill for annual payers;
+early closure collects the full first-month minimum. Actual-day fractions use
+actual days between anniversaries, with symmetric dated increase/reduction splits.
+Current warn/block policies govern subsequent operations on existing accounts,
+preserving completed transactions. Khata has no fixed maturity and continues
+until borrower settlement. Boundary-day/rounding details remain proposed.
+
+Round 7 confirms default overdue warnings from the day after due date, grouped
+same-metal exchanges, no cross-metal replacement, returns through reduction or
+settlement, and dated monthly-rate revisions preserving earlier calculations.
+A reduction-return example explains selecting whole items while retaining
+coverage for reduced actual principal. Round 8 confirms that coverage as a
+mandatory reduction-return check, with no exchange-warning override. Standalone
+excess returns are not selected. Next review the screen flow and remaining
+calculation/operational details. Documentation only; no deployment.
+
+## Consistent ticket frame auto-fit deployed (2026-10-01)
+
+Implemented measured v4 SHRINK fitting for complete scalar text and table rows,
+with a largest-fitting tenth-point font search and 6 pt floor. Explicit leading
+scales with the font; padding, frame geometry and short text retain their settings.
+Character thresholds no longer unnecessarily shrink precision frames. New starter
+and editor-added frames default to SHRINK; old schema/Flow/explicit WRAP/ERROR
+semantics remain. Renderer evidence has a distinct v4-fit2 identifier.
+
+All 160 document/setup regression tests pass, including existing artifact reprints.
+Fictional English/Tamil paragraphs, long identifiers and tables were rendered and
+visually reviewed. Production is `rokkad:ticket-autofit-20261001-8dd479dbb0bf`, a
+scoped five-file patch over the prior live image. Baseline hashes, candidate build,
+zero-migration plan, drift and a fresh verified server-only backup passed. Candidate
+checks rendered RA00594, C07565 and 30 recent active JCL loans without issuing PDFs.
+No production borrower data was downloaded.
+
+JCL's audited template revision 6 (version 5) is published and resolves for every
+active series. The five remaining WRAP text frames now use SHRINK; geometry,
+starting typography and paper profiles are unchanged. Activation and independent
+verification preserved the full contact block in both copies and the earlier
+mixed-metal weight fix. Previous revision 5 remains immutable; business, customer,
+issued-document and numbering rows were unchanged. Stored PDF reprints retain
+their existing bytes. Content that cannot fit at 6 pt still requires a larger frame.
+
+Live source hashes and read-only checks in all three Workspaces passed under the
+restricted role; no migrations remain. Runtime configuration, mail/storage timers
+and mail health are preserved. Private deployment/template evidence remains under
+`/home/rokkad/deploy/cutover-20260924/ticket-autofit-20261001/`.
+
+See [the decision](adr/2026-10-01-ticket-frame-autofit.md).
+
+## Exact interest history and contextual policy help deployed (2026-09-30)
+
+Implemented loan-history/2 alongside v1: exact calendar fractions/unrounded values,
+item rates/bases/charges, advance application, event-free accruals and release catch-up
+are reconciled on export and restore. Product mappings explicitly preserve supported
+bullet/flexible contracts. Existing staging, approval, idempotence and RLS remain;
+0017 extends the immutable batch profile guard. Other history exclusions remain.
+
+Calculation setup now has a Bootstrap help drawer, full guide/read-only example,
+conditional slab/compound fields and pre-save summary. Existing loan snapshots and
+JSK WH policy 5 are unchanged. All 53 focused/regression tests pass, including exact
+weekly restore, all four treatments, early closure, native advance-covered release,
+mixed rates, cross-Workspace restore, corruption rejection, profile immutability,
+setup mapping, older v1 compatibility and calendar examples. Another 76 compatibility
+tests passed for opening contracts/export/restore, history guards, bundle history and
+legacy opening admission: 129 tests across the final suites. Migration drift is
+clean; 768 curated documentation links pass.
+
+Production is `rokkad:interest-help-history-20260930-6fe8241d45bd`, a scoped 19-file
+patch over the prior live image. Baseline hashes, candidate schema drift and the
+single migration plan passed before a fresh verified server-only backup. Owner-only
+migration 0017 and candidate/live read-only checks passed under the restricted role
+in JCL, JSK and Lakshmi; no pending migrations remain. The new static volume preserves
+previous assets, and the public hashed interest-policy script matches the source.
+Mail/storage timers and runtime configuration are retained; mail health passed.
+JSK WH policy 5 remains unchanged. No production loan was imported or repriced.
+
+Live browser checks confirmed the help drawer and full guide, the fictional weekly
+example (440 calculated / 300 advance applied / 140 additional), conditional slab
+fields and the pre-save summary. The verification tab was closed without saving
+form selections. Private deployment evidence remains under
+`/home/rokkad/deploy/cutover-20260924/interest-help-history-20260930/`.
+
+See [the decision](adr/2026-09-30-exact-interest-history-v2.md) and
+[contract](contracts/loan-history-v2.md).
+
+## Partial-month choices deployed; JSK WH uses started weeks (2026-09-30)
+
+New calculation-policy revisions now have a full first-month minimum followed by
+full-month, slab, started seven-day blocks, or actual-day charging. Weekly/day
+fractions use the actual monthly period length; weekly charges cap at one month.
+Monthly opening principal bases, advance consumption and servicing workflows are
+retained. Setup supports complete series calculation policies above license and
+Workspace defaults. Approval, disbursal and renewal freeze the new minimum flag;
+earlier rows/payloads retain their prior meaning. New-policy paise rounding handles
+the database quantum's trailing zeros, while old snapshots retain their precision
+behavior. Exact recurring fractions stay in event evidence, with explicit rounding
+only for the existing fixed-precision accrual projections.
+
+Production is `rokkad:partial-interest-20260930-b42a046cdc53`, a reviewed twenty-file
+application/migration patch on the combined-label image. Migration 0032 was applied
+through owner-only settings after a verified server-only backup. Candidate and live
+checks passed in all three Workspaces under the restricted runtime role, including
+forced RLS, no pending migrations, setup rendering, resolution and source hashes.
+Static assets, mail/storage timers and configuration were retained. The first
+candidate attempt rejected a case-sensitive verification string; schema rollback
+and old-web restoration succeeded before the corrected check and deployment.
+Private evidence remains under
+`/home/rokkad/deploy/cutover-20260924/partial-interest-20260930/`.
+
+The owner-authorized activation appended **policy 5, revision 1**, effective
+**30 September 2026**, specifically for **JSK WH (LINODE-2, series 9)**. It retains
+gold 1.1%/silver 3% monthly, simple interest, 95% LTV and one upfront month, with
+STARTED_WEEKS after the first-month minimum. The audited transaction verified hashes
+of existing JSK loans, approvals, disbursals, policy snapshots and events were
+unchanged; the other series still resolves its previous policy. The live browser
+shows WH and the selected weekly rule. No existing loan was repriced or charged.
+
+All **107 distinct focused/regression tests passed across the final runs**, covering
+the accepted table, leap years/month ends, first-month minimum, advance application,
+approval freezing, weekly release persistence/idempotence, setup, isolation,
+origination, redisbursal, renewal and older history compatibility. Test fixtures were
+corrected for scoped series IDs, historical migration model state, static storage
+and release numbering. Migration drift and curated documentation links are clean.
+
+The bounded `loan-history/1` contract accepts the optional minimum flag while keeping
+old documents valid. It explicitly refuses weekly/daily history export because its
+fraction format cannot guarantee exact restore; complete database backups retain
+the evidence. See the [policy guide](flows/loan-interest-policies.md) and
+[decision](adr/2026-09-30-series-partial-month-interest.md).
+
+## Combined loan collateral label deployed; interest policies reviewed (2026-09-30)
+
+Loan detail > Collateral now offers **Print one label for all collateral** alongside
+the existing individual labels. The single 100 × 60 mm PDF includes every recorded
+item's description and saved quantity, net-weight totals separately by metal, and
+one QR link to the authenticated loan. Tamil shaping and font fitting preserve full
+text; content that cannot fit at the minimum readable size is rejected with guidance
+to use individual labels. Successful rendering records the existing per-item label
+audit entries atomically, sharing the combined PDF checksum. No financial events
+or new database tables are involved.
+
+All **25 distinct collateral-media tests passed** after fixture corrections, covering
+dimensions/content, audit records, overflow rollback, permissions and Workspace
+boundaries. A fictional mixed-metal/Tamil PDF was rendered and visually inspected.
+Read-only candidate and deployed checks passed in JCL, JSK and Lakshmi without
+creating label audit records; the production browser displays the new link.
+
+Production is now `rokkad:loan-label-20260930-366c681c499d`
+(`sha256:68e594ce00b30c6fa88da45373e55e6197627378123673e2610ffe17d1ef1c0e`),
+a four-file patch on the guided-import image. Baseline source hashes, a fresh
+server-only recovery backup, candidate checks and automatic rollback protected the
+switch. Static assets, schema, runtime configuration and mail workers/timers were
+unchanged; unrelated local billing work was excluded. Private release evidence is
+under `/home/rokkad/deploy/cutover-20260924/loan-label-20260930/`.
+
+A restricted-role, read-only review also verified the current interest defaults
+and their enforcement. The [interest policy guide](flows/loan-interest-policies.md)
+records monthly rates by Workspace/series, the distinct rate and calculation-rule
+inheritance, approval/disbursal freezing, authorized overrides and imported-loan
+exceptions. No interest policy or existing loan terms were changed.
+
+## Guided outstanding-register import deployed (2026-09-30)
+
+The first FW-007 customer workflow now accepts its explicit XLSX/CSV template,
+selects the original licence/series and handover, matches existing/new customers,
+previews individual collateral/terms and totals, groups exceptions, and commits a
+confirmed batch atomically through the existing opening engine. Exact retries
+reuse results; changed source identities, stale reviews and future-number clashes
+hold the batch. Owner authority, write access, forced RLS and immutable evidence
+remain enforced. No new disbursal or fabricated historic receipts are produced.
+
+This first profile is limited to unchanged principal, first-month interest paid
+upfront, original-anniversary aggregate interest and known bullet maturity/custody.
+Other rules, reduced-principal openings, manual paper entry, arbitrary source
+mapping and richer customer/media input remain FW-007 work; complete Workspace
+export/restore remains FW-012. The [workspace guide](flows/guided-outstanding-register-import.md)
+explains these limits and the shared architecture.
+
+All **61 focused/regression tests passed**, including 13 guided-workflow tests,
+real HTTP/CSRF, source replay, customer drift, multi-item totals, all-or-nothing
+rollback, XLSX/formula handling, restricted-role RLS, immutable results, protected
+numbering and subsequent release. Fictional desktop/mobile pages were rendered
+and inspected using the exact verified Bootstrap stylesheet; no page overflow
+at 390 px. Workbook structure roundtrip passed.
+
+Production is now `rokkad:guided-import-20260930-14a3228cbcf7`, a 15-file patch on
+`rokkad:expired-trial-20260930-110476c6eb7f`. Only
+`data_portability.0016_guidedopeningbatch` was pending and applied through owner-only
+migration settings after a verified server-only recovery backup. Runtime checks
+confirm forced RLS, restricted database role, no pending migrations, nine owner
+GET/download checks across JCL/JSK/Lakshmi, and zero created import batches. Public
+HTTPS still requires sign-in, all source hashes match, and mail/storage timers,
+configuration and mail health are preserved. Separate local FW-019 billing changes
+were excluded. The initial collectstatic attempt found the inherited read-only
+static volume; the corrected command uses a dedicated writable collector mount,
+while the web mount remains read-only. Candidate checks passed before switching.
+Private deployment/recovery evidence remains in
+`/home/rokkad/deploy/cutover-20260924/guided-import-20260930/`; no customer data or
+backup was copied off the server. No real loan import was part of deployment.
+
+## FW-019 monthly self-service implemented locally; activation remains paused (2026-09-30)
+
+Added the selected INR 1,499/month offer, six-member/twelve-collection consent,
+signed thirty-minute review and owner-facing agreement-creation POST. Authority,
+verified email, current frozen terms, natural trial expiry, lifecycle and capacity
+are checked again before the durable consent/reservation commits. Provider creation
+occurs outside a Workspace transaction; duplicate/uncertain attempts retain the
+existing recovery path. Generic one-off/annual catalog publication stays separate.
+
+The new `BILLING_PUBLIC_RECURRING_BINDING_ID` defaults to zero. No production
+configuration, source release, billing/access record, provider agreement or outgoing
+email was changed. JSK/JCL/Lakshmi trials and the attended JSK-first plan remain.
+The existing monitored mail batch can include receipts after the reviewed first
+receipt and queue inspection; its prepared scope and rollback are documented in
+the [pilot plan](plans/monthly-billing-pilot.md).
+
+All **178 focused and regression tests passed** in 305.155 seconds, including the
+**14 new self-service tests** covering real HTTP transaction boundaries, restricted
+runtime role, changed/stale/tampered consent, ownership/CSRF, seats/lifecycle,
+active-trial rejection, timeout/double-submit recovery, exact paid period and one
+receipt despite replay/dispatch repetition. Provider/SES calls use fictional mocks;
+this is not real payment or delivery evidence. Regression coverage includes public
+trials, recurring creation/owner actions/cycles/access, live-mode boundaries,
+expired-trial conversion and scoped mail dispatch. Django checks and scoped diff
+whitespace checks passed. Local result: `outputs/public-recurring-regression-20260930.log`.
+See the [decision](adr/2026-09-30-owner-monthly-self-service.md). Next: deploy paused,
+verify release preservation, then conduct the approved-scope JSK pilot after expiry
+before enabling public paid subscriptions and recurring receipt dispatch.
+
+## FW-019 existing-Workspace rollout agreed; self-service scope clarified (2026-09-30)
+
+Owner accepted JSK first, then JCL/Lakshmi before their seven-day grace periods
+end on **15 October at 23:39 IST**. An explicit temporary-access decision is the
+fallback if delayed; no grant, date change or charge was made. Current paid flow
+still requires operator-created agreements. Recommended next implementation is
+the monthly owner offer/consent/creation/recovery flow and paid receipt dispatch
+scope during the trial window, with public paid activation after pilot review.
+See [the documented sequence](plans/monthly-billing-pilot.md#existing-workspace-rollout-and-self-service-preparation-2026-09-30).
+
+## FW-019 JSK pilot prepared; expired-trial payment fix deployed (2026-09-30)
+
+The owner selected JSK after natural trial expiry: **8 October at 23:39:08 IST**.
+Prepare attended activation on **9 October or later**; no automatic charge or
+activation approval is implied. Read-only checks verified the frozen live
+INR 1,499/six-member offer, clean billing evidence, public callback routing and
+active mail monitoring. Fees will be reconciled after the approved settlement.
+
+Found and fixed a first-payment gap: expired trial Plan 1 could not adopt paid
+Plan 2. A verified current capture now converts only a naturally expired,
+history-free trial with an eligible active Workspace, matching agreement and seat
+capacity. It uses exact paid dates and records old terms; preserves trial dates;
+and rejects early/future/conflicting histories. Replay and receipt-failure rollback
+are covered. **139 billing tests passed**, including twenty new Test/Live cases.
+
+Deployed only `apps/subscriptions/recurring_cycles.py` at **18:30:43 IST** as
+**rokkad:expired-trial-20260930-110476c6eb7f** over the import-repairs image.
+Candidate/live restricted read-only checks, source/configuration hashes, public
+HTTPS and four mail timers passed. JSK's trial/three members and zero billing
+records are unchanged. Both purchase gates stay false; public trial and mail stay
+enabled. No migration, provider write, charge or email. Temporary candidate
+credentials copy removed; private rollback/release evidence retained server-side.
+
+The [pilot runbook](plans/monthly-billing-pilot.md#jsk-selected-after-natural-trial-expiry-2026-09-30)
+specifies approval, one durable agreement, exact payment/access verification,
+reconciliation before retry, one approved receipt and settlement/renewal monitoring.
+Sandbox failure/held-period acceptance remains unproved, tracked separately from
+the bounded pilot; full FW-019 is not complete. See the
+[transition decision](adr/2026-09-30-expired-trial-first-recurring-payment.md).
+
+## FW-019 fee clarification removed as a launch gate (2026-09-30)
+
+The owner accepts learning exact Razorpay charges from real payments. Updated
+the pilot plan, rollout checklist and stable memory: detailed fee/promotion
+clarification no longer blocks launch; reconcile actual deductions after the
+first approved settlement. Customer pricing remains INR 1,499/month.
+Next is a limited monthly pilot readiness/risk review, with unresolved provider
+test outcomes still recorded honestly. No activation, collection, trial change or
+support message was performed. See the
+[revised pilot preparation](plans/monthly-billing-pilot.md#owner-accepts-fee-uncertainty-prepare-a-limited-pilot-2026-09-30).
+
+## FW-009 Digio acknowledgement and business handoff verified (2026-09-30)
+
+Reviewed Digio Support Desk's **16:44 IST** reply from Richa Sharma. It acknowledges
+the enquiry and copies bd@digio.in to connect with us. Gmail shows signing by
+digio.in; response recipients include admin@rokkad.com and Digio support/business,
+not the requested support@rokkad.com. No eligibility, hosting, method or pricing
+answer is supplied. Await the business team's response; supplier selection remains
+pending. Updated the [enquiry record](plans/borrower-identity-feasibility.md).
+Read-only email review; no follow-up sent or registration/integration performed.
+
+## FW-019 post-call email verified; technical resolution still unproved (2026-09-30)
+
+Verified Razorpay's **17:48 IST** email from Farooq.K in pricing ticket 21174094,
+including Gmail sender/signing details. It adds first-payment examples for INR 1,499:
+net UPI INR 1,474.82, cards INR 1,447.71, Aadhaar eMandate INR 1,447.68. Listed
+components sum correctly; these are quotes, not verified settlements. Renewal,
+promotion and mandate-variant fee combinations remain open.
+
+The email says integration ticket 21146138 was resolved, but a fresh Dashboard
+check still shows In Progress with our escalation latest. It supplies no working
+authorization, failure/recovery or shorter-test procedure, only generic creation
+instructions. Technical launch acceptance remains unproved. No message, provider
+mutation or live activation was performed. See the
+[post-call review](plans/monthly-billing-pilot.md#post-call-pricing-email-verified-2026-09-30-1748-ist).
+
+## Import corrections deployed; retained facts restored without re-import (2026-09-30)
+
+Deployed **rokkad:import-repairs-20260930-fa40fe550478**, a six-file patch over the
+auctioneer-handover image. A fresh server-only PostgreSQL backup passed archive
+catalogue and SHA-256 checks before repairs. No schema migration was required.
+See the [audit and repair checkpoint](implementation/import-confidence-audit-20260930.md)
+and [decision](adr/2026-09-30-retained-import-particulars-and-quantity-repair.md).
+
+- JCL's unused unnamed series 5 now has an empty prefix and next **10000**, after
+  checking the sealed numeric history through 9999, prefix overlap and no native
+  use. The existing ceiling remains **10000**; this does not extend the register.
+  Existing loan numbers and the other sequences were not changed.
+- Restored **6,411** null operational collateral quantities from accepted opening
+  evidence: JCL **2,455**, JSK **1,514**, Lakshmi **2,442**. Each of the **6,391**
+  affected loans has an actor/source-linked correction audit. The restricted-role
+  operator locked each loan and compared before/after hashes of all loan fields,
+  collateral fields except quantity, events and issued-document evidence. All
+  passed, including loans with later releases. No balance/event/custody rewrites.
+- New opening imports retain quantity directly. The working Form E reader now
+  surfaces completed import borrower/address particulars and recorded tenure,
+  including C04526. It labels source-snapshot identity honestly and distinguishes
+  an owner maturity assumption from recorded original tenure. Original valuation,
+  unsupported history and other genuine source gaps remain explicit.
+- Ordinary customer status and contact/address default edits now record the
+  authenticated actor, object and before/after flags atomically, including
+  demotions/deletions. The eight older JCL changes remain preserved with incomplete
+  attribution; no retrospective actors or reset to source choices were invented.
+
+**180 tests passed**: 154 opening/repair/reader/numbering/Party/Form E tests plus
+26 Party-child import compatibility tests. Coverage includes replay, audit-failure
+rollback, conflicting quantities, later full releases, permissions and restricted
+Workspace isolation. Candidate and deployed C04526 checks passed; deployed file
+hashes match, no migrations are pending, HTTPS requires login, and mail/storage
+worker configuration/timers and mail health remain intact.
+The final enforced-read-only rerun matched all 6,411 quantities with zero repairs
+remaining. The temporary runtime-credentials copy was removed and 31 private
+artifacts were sealed; the original audit evidence is retained unchanged.
+
+Private backup and correction evidence remain server-side under
+`import-repairs-20260930/`; no sensitive copy was placed in OneDrive. No Form E
+review or permanent batch was created. Further statutory work stays paused.
+Next is the bounded guided customer migration journey (FW-007), followed by proved
+export/restore coverage (FW-012); neither is claimed complete. No commit/push requested.
+
+## Import confidence audit completed; bounded corrections identified (2026-09-30)
+
+Completed the owner-authorized read-only audit against the final source/package
+and current production. [Full report](implementation/import-confidence-audit-20260930.md).
+All 45 sealed files and three freshly extracted source indexes match. The restricted
+runtime role used enforced read-only transactions; the main run used a repeatable
+snapshot. No business writes, deployment, re-import or Form E attestation occurred.
+
+All **8,639 imported customer identities, 6,391 opening loans, 39,215 archived
+closed records and three accepted exclusions** reconcile. Frozen balances,
+borrower/loan identities, original dates, collateral economics, original schedules
+and interest readers pass. Every source loan is accounted once. JSK's 33 later
+closures are preserved, with 33 release and five accrual events; native later loans
+are counted separately. Current recorded balances are not final collection quotes.
+
+All **28,422** media receipts/targets and **29,564** application objects pass fresh
+existence/size checks; **3,614** files remain documented as missing at original
+source. This did not re-download/hash every R2 object or certify backup prefixes.
+
+The bounded findings are:
+
+- JCL's unused unnamed source series (destination 5) remains active with invented
+  prefix `LEGACY6-`/next 1 instead of continuing the numeric register through 9999.
+  No native loans exist in it. Correct its continuation under numbering guards
+  before using it; this audit did not change the counter.
+- **6,411** collateral quantities are retained in opening evidence but absent from
+  the newer operational quantity column. Prepare source-backed mapping/reader
+  corrections, not manual re-entry or changes to frozen evidence.
+- C04526 retains its borrower, linked address and recorded tenure. Form E's native
+  ticket-only identity projection and explicit unknown tenure hide available
+  source evidence. Unknown original valuations/gross weight remain genuine gaps.
+- Eight JCL records changed after import: one customer status, three primary
+  contact flags, four default-address flags. Original inputs match, but inspected
+  audit evidence is insufficient to attribute every later change. Preserve current
+  choices; improve traceability rather than resetting them.
+
+Four raw-source/package customer-status differences map exactly to the owner's
+outstanding-loan decisions for RA00554/C07517/RA00575/C07545. They are accepted
+interpretations, distinct from the eight later changes. Recorded tenure exists for
+5,780 openings; 611 use the documented missing-maturity rule. No opening establishes
+a valuation dated to original pawning. Preservation is verified within the accepted
+scope; this is not blanket certification of historical statutory completeness.
+
+Private evidence stays under the server's `import-confidence-20260930/` directory.
+Three operator audit scripts and the report are now in the working tree. An initial
+archive-shape checker failure and a resource-exhausted follow-up were corrected;
+final runs completed. Follow-up queries now select narrow fields and used resource
+caps; web remained running with zero restarts. Scripts passed syntax checks.
+Next: the small numbering/retained-fact/provenance queue in the
+[active plan](plans/portability-confidence-and-completion.md), then guided migration.
+Further statutory work remains paused; no commit/push was requested.
+
+## Priority reset: import confidence before further statutory work (2026-09-30)
+
+The owner feels spread across too many features and has explicitly put legacy-data
+correctness and robust, usable portability ahead of further statutory forms.
+Recorded the [single active sequence](plans/portability-confidence-and-completion.md):
+read-only three-Workspace import confidence report → demonstrated repairs → guided
+migration (FW-007) → export/restore coverage and complete-package scope (FW-012).
+Further FW-013 implementation, Form E source attestations and permanent print batches
+are paused. Existing deployed features and JCL E-1 remain intact. No application,
+schema, financial data, source-review or production configuration change was made.
+
+Preliminary evidence review confirmed the September 25 checkpoint documents 8,639
+customers, 6,391 outstanding openings, 39,215 closed-history records and three
+accepted exclusions, plus 28,422 attached media references and 3,614 missing source
+files. These are historical acceptance figures, not a new claim about live totals.
+Read-only server metadata confirms `MIGRATION_AND_LOCAL_RECOVERY_VERIFIED`,
+`RECONCILED_DATABASE_ONLY`, an exact source match, and package
+`650becbb16bcd44c2cb9af2281eaeb3d5497dda72a546aaa790b2cc125028400` bound to
+`rokkad_production_20260924`. No customer rows, source dump or backup were downloaded.
+
+Code review establishes that the old `verify_package` assumes a just-imported
+target: exact Party/loan/event counts and equality of mutable Party fields. It must
+not be rerun unchanged to assess a system with legitimate later business activity.
+The selected audit must separate frozen import evidence, current records and later
+events, and classify actual mismatches versus source limitations, approved
+interpretations and reader gaps. C04526's Form E review warning alone does not
+establish an import defect; trace its fields from retained source to reader first.
+
+Memory, active/future work and portability/statutory plans now reflect this scope.
+Older migration plan checkpoints are explicitly historical. Full source-to-live
+reconciliation and the confidence report remain the next deliverable; no clean-data
+certification, repair or portability-completion claim is made. Documentation-only
+changes were checked for consistency; no code tests or deployment were needed.
+
+## Auctioneer handover deployed; first JCL Form E book opened (2026-09-30)
+
+Deployed the reviewed 12-file handover patch as
+**rokkad:auctioneer-handover-20260930-bac8e8898a04**, over the billing-cancellation
+image. Administrators can save a fixed per-licence cohort (up to 100 complete loan
+numbers), print/download a reviewed version, and reconcile every original loan
+against subsequent releases, repayments, custody and notice-readiness changes.
+Prior omissions need explicit reselection; closed/settled/held loans cannot enter
+the remaining list. Saved versions preserve their reviewer/time, canonical recorded
+balances and particulars. No sending, auction transition, collateral movement or
+financial write is introduced. The in-workspace staff guide explains the boundary
+from statutory catalogues and postal service. See the
+[handover guide](flows/auctioneer-handover.md) and
+[ADR](adr/2026-09-30-auctioneer-handover-reconciliation.md).
+
+**78 tests passed** across handover, statutory notices, Form E batches and the
+Workspace registry. Coverage includes duplicate/stale/expired confirmations,
+release/repayment reconciliation, manual withholding, immutable/cohort/version SQL
+guards, restricted-role isolation, permissions, CSRF, private hash-checked exports
+and spreadsheet formula protection. Migration drift/system checks passed; fictional
+English/Tamil print-media rendering and Indian money formatting were inspected.
+Administrative print HTML preserves facts, not byte-identical PDF layout.
+
+Production preparation compared the four existing-file hashes with the retained
+local release archive; unrelated dirty changes were not packaged. Automatic review
+rejected downloading live source into OneDrive, so no production source was copied:
+hash-only comparison was used. A private server-side operational backup preceded
+the sole additive `loans.0031_auctioneer_handovers` migration. Both new models have
+direct ownership, forced RLS, table/sequence grants and SQL immutability; registry
+coverage is now 126 models, with the unchanged 14 media FileFields.
+Candidate and deployed read-only checks passed: 21 page renders, three real loan
+projections, zero saved handovers, one existing Form E book, all 12 source hashes,
+unchanged configuration/billing/mail flags and timers, and mail health. Private
+logs/manifests remain in the server's `auctioneer-handover-20260930/` cutover folder.
+No auctioneer message or business transaction was created by release verification.
+
+Rebased the separate cleanup operator to
+**rokkad:storage-cleanup-20260930-a08a54876c8b** with unchanged cleanup sources.
+Read-only discovery passed with no candidates; no cleanup ran.
+
+Separately, the owner selected **JCL C, landscape A4, from 01/01/2026**, confirmed
+the physical sample and specified a new book. Opened **E-1**, licence **813/94**,
+starting at page **1**, through the existing authorized service with an explicit
+assisted-operation note. There are **1,500 pending entries**; the first 100 have no
+hard mapping blockers but still require original-evidence review. No source review
+or permanent print batch was invented/saved. Earlier paper references were not
+supplied and remain explicit. Next Form E acceptance is review of the first entries
+and the first full/partial saved batch; this is not certification of historical
+completeness or the entire statutory suite.
+
+## FW-009 approved provider enquiries sent (2026-09-30)
+
+Following explicit owner approval of the exact message and all three recipients,
+sent separate enquiries from admin@rokkad.com to Surepass contact@surepass.io
+(15:15 IST), Digio support@digio.in (15:16), and Cashfree care@cashfree.com (15:17).
+Each body requests replies to support@rokkad.com; no account Reply-To setting was
+changed. Gmail confirmed every send and the Sent search showed all three messages.
+Evidence: `outputs/fw009/provider-enquiries-sent.png`. The initial sending block
+below is resolved. Provider delivery, sales routing, eligibility and pricing remain
+unconfirmed; no registration, purchase, integration or live identity collection.
+The [review](plans/borrower-identity-feasibility.md) records the exact enquiry and
+delivery evidence. Optional guidance for the JCL pilot remains the agreed direction.
+
+## FW-009 provider comparison resumed; enquiry awaiting approval (2026-09-30)
+
+The owner selected optional staff guidance for the identity/name-address pilot,
+with separate optional phone possession checks and no new loan-approval gate.
+J Champalal Pawn Brokers (JCL) is the proposed first lender; replies should go to
+support@rokkad.com. Refreshed the [feasibility review](plans/borrower-identity-feasibility.md)
+with Digio, Surepass and Cashfree capabilities, pricing unknowns, selection criteria
+and one comparable enquiry. Surepass's advertised OVSE/app and DigiLocker routes
+make it a leading candidate alongside Digio; no supplier or integration is selected.
+The exact Surepass email is saved as a Gmail draft from admin@rokkad.com.
+Automatic approval review rejected Send because the external payload includes
+operating-model and pilot-lender details; explicit message approval is required.
+No enquiry was sent; Digio/Cashfree remain prepared local text. No registration,
+paid commitment, live identity test, application or production change occurred.
+
+## FW-019 awaiting provider test guidance (2026-09-30)
+
+At **14:39:52 IST**, the preserved shorter provider agreement had **expired** with
+zero paid cycles and no invoices. The INR 5 payment candidate remains Created;
+local financial/mail counts and absence of Workspace access are unchanged.
+This attempt is terminal and cannot become the shorter successful acceptance by
+waiting. No replacement attempt or provider mutation was made.
+The subsequent ticket check found **21146138** still In Progress with our escalation
+as the latest message; no technical procedure or alternative has arrived there.
+
+The read-only recheck at **12:58:59 IST** found the preserved shorter test still
+Created, with zero paid count/invoices and no Workspace access. Its INR 5 payment
+candidate also remains Created. Ticket **21146138** is In Progress with our approved
+technical escalation as the latest message; closed ticket **21146171** has no
+technical answer. Pricing ticket **21174094** has no new clarification beyond the
+29 September responses and displays a response target of 1 October, 13:43.
+
+The earliest-launch work is blocked on provider guidance/external evidence for
+authorization, failed renewal/recovery and shorter held-access acceptance.
+Remaining fee clarification and bounded live-pilot acceptance are also open.
+Resume when Razorpay supplies a supported procedure or a documented alternative
+that can be reviewed and validated. Production paid billing remains disabled;
+this checkpoint does not mark FW-019 complete.
+
+## FW-019 cancellation notice deployed with billing paused (2026-09-30)
+
+Production read-only readiness found the reviewed pre-confirmation cancellation
+notice/refund-policy link missing from the live image. Deployed only
+`templates/subscriptions/recurring.html` as
+**rokkad:billing-cancel-20260930-c1db71cd66e6** over the current Form E image.
+Candidate and live unsaved-agreement renders pass; exact source and preserved
+configuration hashes match. Frozen INR 1,499/zero-GST/six-member offer, permanent
+admin, JSK trial expiry/member count and zero live financial records were verified
+under the restricted role in a read-only transaction. Billing gates stay false;
+public trials/mail stay enabled. Four mail timers and login/pricing/refund HTTPS
+checks passed. No payment, email, trial change or migration occurred.
+
+The separate cleanup operator was rebased to
+**rokkad:storage-cleanup-20260930-e7d7bd28c3dd** with identical cleanup sources;
+read-only candidate discovery passed, with no cleanup performed. Private rollback
+and release evidence: `billing-cancellation-release-20260930/` under the existing
+server cutover directory. See [billing readiness evidence](plans/monthly-billing-pilot.md#cancellation-notice-deployed-and-live-readiness-verified-2026-09-30).
+The preserved short authorization was still Created at 12:52 IST. Provider
+failure/recovery, shorter held-access validation and fee clarification remain open.
+
+## FW-019 shorter test attempted; technical escalation submitted (2026-09-30)
+
+Prepared one fictional monthly Test Mode agreement with a thirty-minute scheduled
+start using the existing implementation/binding. Updated only the isolated local
+billing database's five pending additive migrations; historical paid/mail counts
+were preserved. The official test-card authorization opened a blank bank page and
+checkout reported failure. At 12:49:45 IST, the agreement and INR 5 payment candidate
+remain Created, with zero invoices/paid count and no Workspace Subscription/access.
+No retry, simulator charge, refund or cancellation was performed.
+
+All **119** focused recurring/owner/cycle/held-access/live-boundary tests passed
+in a dedicated database. No app defect was established or billing rule weakened.
+The user-approved technical escalation was sent and verified in ticket **21146138**,
+referencing **21146171**, asking for working authorization, failure/recovery and a
+shorter supported acceptance path or precise limitations. New local authorization
+is disabled again; webhook/tunnel/mail remain disabled, production unchanged.
+The [pilot plan](plans/monthly-billing-pilot.md#shorter-rehearsal-attempted-and-technical-escalation-sent-2026-09-30)
+records exact evidence and criteria for replacing the 28 October check. Both
+provider failure/recovery and naturally due held-access acceptance remain open.
+
+## Form E deployed; physical book opening remains branch-controlled (2026-09-30)
+
+Owner approved proceeding with rollout. Deployed the reviewed 19-file Form E patch
+on the existing statutory release as `rokkad:form-e-20260930-16449e12f6d0`.
+The five changed existing files were compared against live source; unrelated dirty
+repository changes were not packaged. A private server-side operational backup
+completed before the exact `loans.0030_pledge_book` migration using owner settings.
+No other migration was pending. Runtime table/sequence grants, forced RLS and
+immutability triggers were verified for all four new tables.
+
+Candidate and live checks passed: 40 existing/navigation pages plus Form E-specific
+renders, nine live series projections, 18 PDFs across both layouts and two existing
+private document reads. All 19 source hashes match the release manifest; email and
+billing flags/configuration and timers were preserved, mail health passed, and
+anonymous requests to the JCL/JSK book pages redirect to sign-in. Final container
+check shows running with zero restarts. Checks were read-only; no real books,
+reviews, batches or loan transactions were created. The 111-test local validation
+and numbered fictional PDF inspections from the preceding checkpoint remain the
+implementation evidence. Physical sample acceptance and each branch's opening
+date/page/reference are deliberately captured when an administrator opens a book.
+
+Rebased the separate cleanup operator to
+`rokkad:storage-cleanup-20260930-dbb25cc5c6fe`, based on the new live image. Its
+read-only candidate discovery passed with no candidates; no cleanup executed.
+Both runtime and operator now register all 14 FileFields, including retained Form E
+PDFs. The inventory timer uses the current web container.
+
+Private deployment manifests, logs and configuration remain on the server under
+`/home/rokkad/deploy/cutover-20260924/form-e-deploy-20260930/`; private backups remain
+server-side. Local source-only release tooling is under ignored
+`outputs/form-e-deploy-20260930/`. Entry point: **Reports > Statutory forms & notices
+> Form E books & daily activity**. JCL: `/w/jcl/loans/statutory/books/`; JSK:
+`/w/jsk/loans/statutory/books/`. Unsupported historical/renewal mapping and reviewed
+Tamil headings remain explicit follow-up work; saved evidence does not certify
+complete historic or statutory compliance.
+
+## Form E permanent batches and daily annotation workflow implemented locally (2026-09-30)
+
+Added one immutable book per licence/series with either accepted A4 layout, explicit
+opening date/page and earlier paper-book reference. Administrators review original
+evidence, add source-backed missing particulars and retain unresolved gaps; no
+frozen loan facts are overwritten. Unsupported origins/renewals and ambiguous payout
+attempts remain blocked. Pending queues show the first 100 eligible unbatched loans
+and total count. Shared measured pagination supports full groups or a closed partial
+page; long entries continue without clipping.
+
+Finalisation locks the book/selected loans, rejects stale confirmations, preserves
+actor/time, scope, hashes, per-loan physical page ranges and exact private PDF bytes.
+Repeated identical requests return the original batch; changed/reused selections
+cannot duplicate pages. Facing sheets receive separate consecutive numbers; evidence
+appendices are unnumbered. Exact downloads verify the hash and never regenerate
+missing/corrupt files. Later entries use the next page without renumbering old ones.
+Daily printable activity includes business/recorded dates, late-entry discovery,
+collections, partial/full releases, available recipient details, reversals, renewal
+warnings and saved page references for manual annotation. No printing/filing or
+per-entry annotation completion is fabricated.
+
+Migration `0030_pledge_book` adds four directly Workspace-owned forced-RLS tables,
+SQL immutability/parent guards and consecutive page-allocation checks. The retained
+batch FileField is covered by storage inventory (14 local fields; 13 in current
+production). Existing administrator/export/write authority is reused. Updated the
+in-Workspace statutory guide, [staff guide](flows/form-e-pledge-book.md),
+[implementation](implementation/form-e-pledge-book.md), future-work record and
+[ADR](adr/2026-09-30-form-e-preserved-print-batches.md).
+
+Validation: **111 tests passed** across Form E, statutory notices, RLS registry,
+storage inventory and reviewed cleanup, including duplicate/stale submissions,
+full/partial/late numbering, exact downloads, failure rollback/file compensation,
+source review, late activity, CSRF/authorization and restricted-role isolation.
+Migration drift and system checks passed. Both numbered fictional A4 PDFs were
+rendered and visually checked, including Tamil particulars and evidence appendices.
+Evidence is under ignored `outputs/form-e-20260930/`. No production changes or real
+books/batches were created. Next: physical acceptance and a controlled migration/
+rollout with cleanup-operator rebase; choose each branch's opening scope explicitly.
+Reviewed Tamil headings and unsupported historical/renewal mappings remain pending.
+
+## Both Form E layouts selectable locally (2026-09-30)
+
+Owner accepted both layouts. Added a Print layout selector for facing portrait A4
+or single-sheet landscape A4, sharing the same report projection and permissions.
+The PDF button submits the current filters and layout. Facing A4 stays the default
+for old links. Both preserve all fields, allow long-entry continuation, and include
+evidence notes in the selected orientation; no stored book or business data changes.
+All 15 Form E tests passed, including paper dimensions, five/six-entry pagination,
+long-entry tail preservation and route selection/validation. Fictional five-entry
+samples in both layouts, including Tamil particulars, were rendered and visually
+checked across all five output pages. This is local only, not deployed. Saved
+batches, permanent numbering and physical print acceptance remain outstanding;
+future retained batches must freeze their chosen layout and exact PDF.
+
+## Single-sheet landscape Form E alternative sampled (2026-09-30)
+
+Owner requested a simpler single A4 landscape sheet, one loan per row, preserving
+the earlier fields and manual-update workflow. Created a fictional five-loan sample
+at `output/pdf/form-e-a4-landscape-sample.pdf`, including Tamil particulars, mixed
+item rates, quantities, gross/net weights, Indian amount grouping and later-event
+handwriting space. All cells passed fit checks; the one-page A4 landscape PDF was
+rendered and visually inspected. This is a layout alternative for review, not a
+change to the application renderer, fixed page capacity or production deployment.
+The earlier paired-A4 sample remains available for comparison.
+
+## Form E working register and facing-A4 preview implemented locally (2026-09-30)
+
+Added a read-only licence/series/date-scoped pledge-book projection and facing-A4
+PDF preview. Admission requires actual payout/opening evidence; unpaid approvals
+are excluded and closed operational histories remain available. Native original
+amounts/articles come from frozen disbursal/approval evidence. First-ticket identity
+is labelled by capture date; missing original address, owner, recipient address or
+valuation stays explicit. Imported original principal is distinct from remaining
+balance; a cutover valuation is not relabelled as original. Archived source claims
+without licence/series mappings are counted as excluded, never silently omitted
+under a complete-book claim. Payments, concessions, reversals and renewal caveats
+retain their source distinctions.
+
+The trial print format has up to five ordinary entries per Left/Right pair, aligned
+long-entry continuations and an evidence appendix. It supports Tamil particulars,
+Indian money grouping and dd/mm/yyyy dates. It does not allocate permanent pages,
+store a print batch or establish physical filing. A 100-entry bound requests narrower
+filters instead of truncating. No new table, migration or dependency was introduced.
+
+Validation: 13 new projection/UI/PDF tests passed; the final combined Form E,
+statutory notice and loan UI run passed all 99 tests. Migration drift and system
+checks passed. The three-page fictional sample was rendered and visually checked,
+including both facing sheets and the evidence appendix. Source/sample/test logs are
+under ignored `outputs/form-e-20260930/`. Form E remains local, separate from the
+deployed statutory notice release. Final production check confirms web running
+with zero restarts; the storage timer executes the current web image and therefore
+includes its new statutory reference fields.
+
+Next: physical sample/capacity review, evidence-gap handling, retained full/partial
+print batches with stable page references, and the daily annotation aid. See the
+[field mapping and delivery notes](implementation/form-e-pledge-book.md).
+
+## Statutory notice workflow deployed; Form E selected next (2026-09-30)
+
+Owner accepted the catalogue for deployment with cosmetic refinements deferred,
+confirmed no open auctions, and described auctioneer-prepared notices followed by
+branch posting and a reconciled unreleased-loans handover. Updated the staff guide
+to preserve this responsibility split and to distinguish the remaining consolidated
+handover-list feature. Owner selected two facing A4 pages for Form E.
+
+Restricted READ ONLY preflight confirmed zero initiated/in-progress auctions across
+all six Workspaces. Private operational backup, the exact one-migration plan
+(`loans.0029_statutory_notices`), migration and runtime grants/RLS checks passed.
+Deployed `rokkad:statutory-notices-20260930-76e120aeb6a3`: 28 candidate and live
+pages rendered; all 18 source hashes, migration state, HTTPS login boundary,
+mail health and preserved feature flags/timers passed. No borrower notices sent
+or business transactions created. Private release evidence remains at
+`/home/rokkad/deploy/cutover-20260924/statutory-deploy-20260930/`.
+
+Rebased the cleanup operator to `rokkad:storage-cleanup-20260930-b8fe1096e0f4`
+with both statutory file references covered. Read-only candidate discovery passed;
+no cleanup executed. Form E implementation is separate from this deployed release.
+
+## Workspace statutory staff reference expanded (2026-09-30)
+
+Expanded the existing statutory scope page into the full staff workflow reference:
+preparation, manual printing/posting, acknowledgement or returned-cover handling,
+readiness review, corrections, late dates and attachment requirements. Added a
+Workspace settings link labelled Statutory workflow guide and a contextual link
+from every statutory auction notice screen; the Reports entry remains. The page
+keeps implemented versus planned forms explicit and does not change permissions
+or auction rules. The repository operator guide documents all three entry points.
+
+Validation: the existing administrator UI/private-download/access test passed,
+rendering the updated guide and notice screens; Django system checks and diff
+whitespace passed. Local changes only; deployment remains pending with the
+statutory workflow's template review, existing-auction inspection and migration.
+
+## Razorpay mail checked and callback questions prepared (2026-09-30)
+
+Read the scoped admin@rokkad.com Razorpay mail search. Latest message: 29 September
+22:17 IST, ticket 21174094; no 30 September message in the results. Email confirms
+the owner-supplied fee components, requests callback availability within three
+days, and says technical cases 21146138/21146171 remain under investigation without
+a technical answer. Added the [call brief](plans/monthly-billing-pilot.md#mail-verification-and-callback-brief-2026-09-30),
+including itemized settlement questions, failed-renewal/recovery evidence and
+confirmation that the quote addressed to "Hanumanram" belongs to Rokkad's account.
+Clarified that 28 October is an existing test-period dependency, not a Razorpay
+waiting rule; JSK's 8 October expiry does not authorize launch. Read-only browser
+and official documentation review only: no message, callback commitment, API
+mutation, trial change or billing activation. No fresh provider API verification.
+
+## Statutory auction postal workflow implemented locally (2026-09-30)
+
+Owner selected FW-013's statutory suite, prioritising complete manual auction
+notice handling independently of borrower email/WhatsApp reminders. Added reviewed
+catalogue preview/preservation, printing, article/date/receipt capture, acknowledgement/
+POD and returned-cover referral/officer-receipt/certificate routes, administrator
+readiness review and withdrawal. Late facts are retained but cannot clear missed
+deadlines. Start and completion now require the statutory evidence rather than
+a Notify SENT job; existing open auctions receive no implicit exemption.
+
+The Workspace Reports guide shows scenario/form coverage and the remaining
+generators. Loan auction actions link to Statutory notice & readiness. English
+catalogue headings, shaped Tamil particulars, exact reprints, actual event dates,
+recorder attribution and private hash-checked downloads are implemented. Both new
+tables have forced RLS, scope guards and append-only SQL protection; both new file
+references are included in storage inventory/retention. Auction commands also
+enforce the existing business-write access policy.
+
+Validation: 211 focused notice, loan service/UI, setup, document, registry and
+storage tests passed. The final 16-test statutory run also passed, including the
+exact-45-day boundary. Fictional single-page and three-page PDFs were rendered
+and visually checked, including Tamil text; samples and test logs are under ignored
+`outputs/statutory-notices-20260930/`. Migration drift and documentation whitespace/
+links are checked. No production database, deployment or recipient contact occurred.
+
+This is the first local increment, not completion of every prescribed form or legal
+certification. Reviewed Tamil statutory wording, multi-pledge catalogue support,
+remaining forms and current-rule/physical-paper acceptance remain explicit in the
+[delivery plan](plans/statutory-forms-and-notices.md). Deployment needs the owner-role
+migration, runtime grants, refreshed storage tooling and review of existing open
+auctions. See the [operator guide](flows/statutory-auction-notices.md) and
+[decision](adr/2026-09-30-statutory-auction-service-evidence.md).
+
+## Statutory postal notices compared with existing implementation (2026-09-30)
+
+Reviewed the official Rules and current Loans/Notify source in response to the
+owner's reminder-notice question. Added the gap analysis to
+[FW-013](plans/future-work.md#statutory-notices-and-postal-service-evidence).
+Existing loan notices, a generic auction PDF and batch Printed/Posted markers are
+useful foundations, but do not implement prescribed postal service. Auction start
+currently relies on a SENT digital job, without the statutory notice interval,
+acknowledgement/returned-service procedure or authority/publication evidence.
+Borrower delivery is distinct from the platform SES queue; provider availability
+must not be inferred from channel choices. Current-law/service review remains
+required before compliance claims. Repository/source review only: no production
+inspection, notices sent or application changes; documentation whitespace checked.
+
+## Form E page capacity and printing readiness planned (2026-09-30)
+
+Expanded [FW-013](plans/future-work.md#form-e-daily-maintenance-and-printing-by-licenceseries)
+with a sample-tested default capacity per print layout, a licence/series pending
+queue and full/partial-page printing. Full-page readiness is a convenience cue;
+partial pages remain printable for daily upkeep. Finalised page contents/numbers
+stay fixed, with exact reprints and late entries on subsequent pages. Actual layout
+fit must accommodate long content and handwriting. No entry count is fixed yet;
+20 is illustrative. Planning only; documentation whitespace validation passed.
+
+## Form E first version simplified to print and manually annotate (2026-09-30)
+
+Owner prefers handwritten payment/release updates to already printed pledge-book
+entries. Updated [FW-013](plans/future-work.md#form-e-daily-maintenance-and-printing-by-licenceseries)
+to print new entries with room for annotations and offer a simple daily activity
+list covering older loans, partial payments and late-recorded events. Normal app
+recording still maintains the digital register. Routine replacement pages and an
+annotation-acknowledgement workflow are outside the first version. Original PDFs
+remain exact print snapshots and cannot reproduce later handwritten notes. This
+supersedes the earlier proposed automatic revised-page workflow; planning only,
+with no application or production changes. Documentation whitespace check passed.
+
+## Form E daily pledge-book workflow captured in FW-013 (2026-09-30)
+
+Expanded [FW-013](plans/future-work.md#form-e-daily-maintenance-and-printing-by-licenceseries)
+at owner request with a continuously maintained register, separate licence/series
+views, ledger-style PDF output and daily printing. The plan explicitly handles
+payments/releases against already printed entries through an update worklist,
+stable references and preserved/revised print artifacts. It includes historical
+coverage gaps, actual versus recorded dates, bilingual print acceptance and a
+staged delivery proposal. The supplied ledger photo is a format reference only;
+its customer data was not copied into the repository.
+
+Reviewed the official Rules text for Rule 7, Form E and the language provision.
+Current amendments and acceptance of electronic/loose-leaf replacement procedures
+remain review items, not established compliance claims. This is unscheduled future
+work: no application, lending, database or production changes were made. Validation
+for this increment is documentation/link and whitespace review only.
+
+## Storage media categories corrected and refreshed (2026-09-30)
+
+Owner approved correcting JCL's misleading Collateral photos count. Classification
+now ignores the historical-evidence label only when choosing a display category;
+all references remain intact for ownership, sharing and cleanup protection.
+Files with one current media type retain it; history-only files remain Historical
+evidence and multiple current types remain Multiple uses. The Workspace table
+explains this distinction. No schema, file or lending-record changes.
+
+All 52 storage inventory/cleanup/retention and architecture tests passed. Deployed
+`rokkad:storage-category-20260930-625feb7250e4` after the private operational backup
+and candidate checks. Candidate/live checks rendered 22 pages; both runtime source
+hashes, restricted role, migration plan, mail health, existing flags/timers and
+HTTPS login boundary passed. Private release/rollback evidence is under
+`.../cutover-20260924/storage-category-20260930/` on the new server.
+
+Refreshed inventory **4**, completed **30 September, 10:06 IST**. JCL now shows
+**2,303 Collateral photos / 16,951,125 bytes**, comprising 2,245 imported photos
+and 58 recent non-import photos, with zero missing references. All 58 recent files
+passed live existence checks. Workspace total is 11,820 objects / 74,747,984 bytes;
+new business uploads since the earlier diagnostic explain growth in those totals.
+All six Workspace category sums equal their assigned object/byte totals.
+An actual rendered JCL page shows 2,303 in the correct row. A further photo arrived
+after the scan (2,304 current keys); all pre-scan photo keys are covered. The dated
+measurement updates on subsequent reconciliation, not each upload/page request.
+
+Rebased the unchanged cleanup operator files onto this release as
+`rokkad:storage-cleanup-20260930-5023e640932a`; its read-only candidate check passes
+against inventory 4 with no candidates. No cleanup executed. The operator's initial
+concurrent check correctly refused the running inventory lock and passed afterwards.
+
+## JCL collateral storage category discrepancy verified (2026-09-30)
+
+Owner reported only two collateral-photo objects in Workspace storage despite
+recent uploads. Restricted READ ONLY inspection confirmed **55 non-import photos
+since 24 September across 54 loans**; all 55 objects exist in production storage.
+Inventory 3 (30 September, 03:19 IST) includes all 2,300 current JCL collateral
+photo keys: two classified `collateral_photos`, 2,298 `multiple_uses`. Of the recent
+55, 53 also have historical-evidence references and consequently appear under
+Multiple uses. The other 2,245 photo rows are legacy imports.
+
+The current disjoint category rule moves a photo into Multiple uses whenever ticket
+or import evidence also references it. This is misleading as a photo count; it is
+not a missing-upload finding. JCL's snapshot includes 11,811 assigned objects /
+73,088,696 bytes, with zero missing references. No database or object changes were
+made during diagnosis. Recommended correction: preserve the current media type
+when its only additional use is historical evidence, retaining every protection
+reference and counting physical bytes once. Classification/UI correction remains
+pending; all-photo existence beyond the 55 recent objects was checked against the
+inventory rather than individual live HEAD requests.
+
+## FW-015 reviewed offline cleanup available to operators (2026-09-30)
+
+Owner requested completion of the remaining cleanup workflow and explicit deferral
+of storage pricing, quotas and billing; those commercial items are now separately
+called out in FW-015. Added `cleanup_storage` with candidates/plan/private inspection,
+verified recovery preparation, exact-digest execution and restoration. No schema,
+web endpoint, automatic purge, expiry, quota or charging changes.
+
+The command uses existing platform authority and the restricted role, checks all
+registered current/historical/global references, and bounds review to 50 old
+unreferenced objects / 64 MiB total / 20 MiB each. Execute/restore requires an exact
+stopped-writers acknowledgement plus NOWAIT reference-table locks and the inventory
+advisory lock. Atomic signed filesystem checkpoints persist per-object intent and
+outcome across SQL rollback or uncertain provider responses. Changed/referenced
+objects, missing/corrupt recovery and occupied restore keys stop the operation.
+Restoration permanently disables deletion replay for that plan.
+
+Thirty new cleanup tests, nineteen storage/retention regressions and one architecture
+check pass (50 total). A restricted second PostgreSQL connection demonstrated
+reference-write lock exclusion. Real R2 acceptance used two isolated synthetic
+objects: conditional GET, create-only PUT, hash readback, exact deletion and byte/
+metadata restoration passed; both test objects were removed. No customer objects
+or business records changed. Initial read-only production candidate query: none
+in inventory 3.
+
+Operator image `rokkad:storage-cleanup-20260930-55a3f2ce5a92` and private launcher/
+evidence are under `.../cutover-20260924/storage-cleanup-20260930/` on the new server.
+Production web remains `rokkad:media-retention-20260930-b65c552f57c4`. No restart or
+migration. The launcher refuses a changed base release until its operator image
+is reviewed/rebuilt. Online writers, automatic expiry and a web cleanup queue remain
+outside this offline workflow. See [runbook](implementation/reviewed-media-cleanup.md)
+and [decision](adr/2026-09-30-reviewed-offline-media-cleanup.md).
+
+## Both historical rehearsal environments retired (2026-09-30)
+
+Owner approved proceeding after verified recovery preparation. Retain the five
+private recovery archives with **no automatic expiry**. The baseline 8081 server
+was found running and stopped; unrelated billing rehearsal 8083 remains. Disabled
+restart for the two stopped hosted runtimes. Both source databases were frozen and
+all **321 table fingerprints** matched the archived snapshots before deletion.
+Fresh full R2 SHA256 readback passed for all five archives; exact rehearsal object
+listings were unchanged and production had no references into either retired scope.
+
+Removed both historical rehearsal databases and the two stopped hosted runtimes;
+shared PostgreSQL/proxy/network/volumes remain. Audited exact-key batches removed
+**58,899 objects / 1,665,493,265 bytes**; both rehearsal prefixes are empty.
+Recovery archives remain **2,299,177,212 bytes** in R2, plus verified server packages.
+This reclaims the loose copies, not all storage associated with recovery.
+
+Final production reference check: **29,770 objects / 880,056,600 bytes**, all
+references present; unchanged from pre-retirement. Production image, HTTPS login
+boundary and mail/storage timers pass; old legacy server untouched. Temporary
+transfer helpers were removed. Completion around **01:25 IST**; no code deployment.
+Exact scopes, private evidence and recovery limits are in the
+[retirement record](implementation/rehearsal-retirement-20260930.md).
+General production orphan cleanup, quarantine and storage billing remain separate.
+
+## Both rehearsal recovery packages verified on-server and in R2 (2026-09-30)
+
+Owner approved private recovery preparation, isolated restore tests and a private
+R2 archive; separately confirmed sensitive server-side staging after automatic
+review required that explicit destination approval. No source retirement approved.
+
+Captured the local baseline through a shared PostgreSQL snapshot and streamed its
+dump directly to the new server without a dump in OneDrive. Hosted backup's before/
+after table fingerprints match. Isolated restores verified every public table:
+baseline **160 tables / 295,602 rows**, hosted **161 / 275,390**. Matching historical
+images booted with zero pending migrations, restricted read-only roles and no
+network; unscoped Party/Loans reads returned no rows.
+
+Copied, archived, reconstructed and SHA256-verified **58,899 media objects /
+1,665,493,265 bytes**. Original before/after R2 listings match. Recovered applications
+resolved all **29,379 baseline / 29,514 hosted** current/historical media references.
+Environment archives also retain database dumps and private recovery configuration;
+shared artifacts retain both historical application images, PostgreSQL, baseline
+source, manifests and the recovery recipe. All **five R2 objects / 2,299,177,212 bytes**
+passed full streamed SHA256 readback under
+`rokkad-production-media/recovery/rehearsal-retirement/20260930/22c54576e1d9d1ad/`.
+
+Removed only this turn's temporary capture/upload/restore containers, disposable
+restored copies and temporary transfer settings. All original rehearsal databases/
+media and server-side verified packages remain. Production image/HTTPS and existing
+mail/storage timers passed final checks; no old-server change. Private evidence is
+under `/home/rokkad/deploy/cutover-20260924/rehearsal-recovery-20260930/`.
+
+Limits: these are data/media and read-only app recovery checks, not live OAuth,
+business-write, mail/payment or all-UI acceptance. The Windows baseline's
+English_India.1252 collation differs from the Linux drill's default locale; data and
+constraints match, while exact locale sorting requires separate review. R2 is
+independent of the Linode but remains the same account/bucket, with no immutability
+or automatic expiry claim. Actual retirement needs a fresh source-change/writer
+check and explicit scope/retention approval. See
+[recovery evidence](implementation/rehearsal-recovery-20260930.md) and
+[retirement plan](plans/recoverable-media-cleanup.md).
+
+## FW-015 committed-media retention correction deployed (2026-09-30)
+
+The owner requested the next cleanup increment and guidance on retiring 1.67 GB of
+rehearsal media. Removal-path review found that django-cleanup could delete Party
+default/gallery files after commit despite the gallery's retention contract, and
+Party documents despite retained admission receipts. Draft collateral deletion
+checked only current same-Workspace photo rows before physically deleting bytes.
+
+Party, PartyPhoto and PartyDocument now explicitly opt out of automatic cleanup.
+Draft collateral photo/item removal retains bytes for reference-aware operator
+review while preserving attachment removal, draft/renewal guards, locking, permission
+checks and audit. Single-photo removal records `file_retained_for_review`. Failed
+command compensation of newly uploaded files remains unchanged. This prevents
+future deletion through the corrected paths; it does not recover previously deleted
+files. No physical purge, quarantine, new schema or billing was introduced.
+
+Validation: **165 tests passed** across commit-callback retention, Party UI,
+collateral operations, draft uploads and storage inventory, plus four import-boundary
+tests. A six-file overlay excludes unrelated Party UI changes. Deployed
+`rokkad:media-retention-20260930-b65c552f57c4` after the established server-only backup.
+Candidate/live checks each rendered 22 pages under restricted READ ONLY access,
+confirmed no pending migrations and disabled cleanup registration for the three
+Party models. All six deployed hashes, existing mail configuration/health, runtime
+flags and the storage timer passed. Previous image remains
+`rokkad:storage-inventory-20260930-2b332cc6b6bc`; private release/backup/rollback evidence
+is under `/home/rokkad/deploy/cutover-20260924/media-retention-20260930/`.
+Code/docs remain uncommitted locally.
+
+The [recovery plan](plans/recoverable-media-cleanup.md) records existing removal
+paths, the proposed two-diagnostic-object pilot and separate rehearsal retirement.
+Keep both rehearsal environments until complete database/media/configuration
+packages have been verified and restored in isolation, with independent recovery
+and an approved retention period. Those rehearsal packages have **not** been prepared
+or restore-tested by this increment. Moving files to another R2 prefix does not
+reduce total bucket bytes. No existing media was deleted and the old server was
+unchanged. See the [decision](adr/2026-09-30-retain-detached-party-and-collateral-media.md)
+and [usage guide](flows/storage-usage.md).
+
+## FW-015 legacy and rehearsal storage review (2026-09-30)
+
+Completed a read-only metadata review of the existing production-media bucket:
+121,378 objects / 3,237,145,152 bytes across production, two rehearsal prefixes,
+preserved originals and migration reports. Production still has no missing or
+unreferenced objects in the checked snapshot. Rehearsal databases account for all
+but six objects / 2,651,905 bytes: two synthetic upload diagnostics and four
+template PDFs whose creation history/retention need review. No missing application
+references were found in either rehearsal scope.
+
+All 32,697 preserved-original/report keys and sizes match the copy plan plus
+immutable admission evidence; all 12 separate attachment reports also match their
+receipts. This is metadata reconciliation, not fresh content-hash verification.
+Preserved unresolved originals are evidence, not orphans. No objects were deleted,
+no app/legacy-server changes were made, and private raw evidence stays on the server.
+The two rehearsal scopes occupy 1.67 GB but remain referenced: environment retirement
+requires its own retention/recovery decision. See the
+[scope review](implementation/storage-scope-review-20260930.md) for exact scopes,
+coverage, limits and the proposed recoverable-cleanup increment.
+
+## FW-015 inventory and usage deployed (2026-09-30)
+
+Owner selected storage inventory, Workspace usage and read-only cleanup previews.
+Implemented a metadata-only R2 listing restricted to the configured application
+prefix, explicit coverage of all 11 FileFields plus ticket snapshots and admission
+receipts, two reference passes and atomic publication. A forced-RLS Workspace
+summary and global physical-object metadata separate exclusive, shared, platform,
+missing and unreferenced objects. Unknown ownership stays unassigned. No file
+contents, deletion, quarantine, quota enforcement or billing are part of this work.
+
+Platform console > Storage provides counts/bytes and paginated review fingerprints;
+workspace settings and the platform workspace detail provide scoped usage/category
+summaries. Completed run time and stale/failure states prevent partial scans from
+looking current. Dated aggregate snapshots are retained. The first release adds
+orgs.0010_storage_inventory through owner-only migration settings; web/job remain
+restricted runtime. See [rollout](plans/storage-inventory-rollout.md) and
+[guide](flows/storage-usage.md).
+
+Validation: 37 focused tests passed, covering metadata-only prefix scope, registry
+coverage, RLS DML/read denial, database-superuser rejection, workspace/admin action
+boundaries, shared-byte accounting, archived and retained evidence, references
+arriving during listing, duplicate/partial listing failure and audit rollback.
+Fictional desktop/390px browser review passed with no document overflow.
+Deployed `rokkad:storage-inventory-20260930-2b332cc6b6bc` after a server-only
+backup and the single owner-only additive migration. Candidate/live checks rendered
+22 pages, confirmed restricted runtime/RLS, denied ordinary platform access and
+verified all 16 source hashes. Existing mail health/timers, worker configuration,
+public trials and account/invitation mail are preserved; checkout/recurring stay off.
+Preparation caught and corrected review-script permissions/PYTHONPATH before the
+migration ran. No borrower/loan records or R2 objects were mutated.
+
+First production scan: **29,770 objects / 880,056,600 bytes** in
+`rokkad-production-media/media/application/production/linode-rls/`, all assigned to
+one Workspace. JCL: 11,811 objects / 73,088,696 bytes; JSK: 5,043 / 348,221,910;
+Lakshmi: 12,916 / 458,745,994. The three test Workspaces have zero measured objects.
+No missing references, shared objects or unreferenced objects were found **within
+this prefix**. This does not certify original migration/rehearsal/backup prefixes
+or byte-level image integrity. Dated historical references intentionally retain
+files even when their current UI attachment was replaced.
+
+Daily timer `rokkad-storage-inventory.timer` is enabled/active, scheduled around
+03:15 IST plus up to five minutes jitter. Its service acceptance produced a second
+completed scan with identical counts/bytes and passed the aggregate/RLS check. The
+next run was verified for 30 September 03:19:17 IST. Private source/migration/backup/scan/
+rollback evidence remains on the server under
+`/home/rokkad/deploy/cutover-20260924/storage-inventory-20260930/`.
+The release excludes unrelated Party edits. Code/docs remain uncommitted locally.
+
+## FW-010 guided suspension/restoration (2026-09-29)
+
+Implemented the owner-approved lifecycle increment: workspace detail offers review
+screens for ACTIVE -> SUSPENDED and SUSPENDED -> ACTIVE. Each shows the workspace,
+owner and signed-in actor; requires reason, typed slug and acknowledgement; and
+explains the access impact. Restoration previews canonical subscription access and
+never creates commercial access, extends a trial or changes subscription dates.
+Lifecycle history shows the latest ten actor/time/from/to/reason records separately
+from subscription access decisions. The in-app guide and repository guide cover use.
+
+The service uses global active-superuser authorization, CSRF-protected POSTs,
+15-minute signed reviews, a Workspace row lock and the existing atomic lifecycle
+transition/audit service. Changed/replayed confirmations fail closed. Audit failure
+rolls back the state. No schema, RLS, ownership, business-record or billing changes.
+
+Validation: 37 focused console/new lifecycle/existing lifecycle tests passed,
+including restricted-role boundaries, CSRF, state replay, token tampering/expiry,
+wrong actor/target, changed projected access, atomic audit failure and unchanged
+subscription data. Fictional desktop and 390px mobile review passed with no
+horizontal document overflow. Candidate rendered 15 production pages within a
+restricted READ ONLY transaction and denied ordinary users. Server-only operational
+backup completed; private release evidence is under
+`/home/rokkad/deploy/cutover-20260924/platform-lifecycle-20260929/`.
+
+Deployed `rokkad:platform-lifecycle-20260929-d1caed09cb6d`. All 15 live render/
+authorization checks and seven exact source hashes passed; anonymous HTTPS requires
+sign-in. Mail health passed, all four mail timers remain active, and worker/config
+hashes are preserved. Account/invitation mail and public trials remain enabled;
+paid checkout/recurring remain disabled. No real workspace was suspended or restored
+for verification. The unrelated Party changes remain outside this seven-file release.
+Code/docs remain uncommitted in the working tree.
+
+## FW-010 first platform console deployed (2026-09-29)
+
+Delivered the owner-selected read-only console at `/app/platform/`: overview and
+review signals, searchable/filterable Workspace directory, detail tabs for current
+access/owner/team/invitations/access history, existing management links and an
+in-app operator guide. Navigation appears for active superusers in the main header,
+Workspace-manager sidebar and Django-admin header. Permanent platform identity
+remains `admin@rokkad.com`; no permissions or accounts were changed.
+
+Directory pages are bounded at 25 and invitation pages at ten. Effective access
+uses canonical policy; active lifecycle is not labelled paid access. Invitation
+delivery, acceptance and current membership stay distinct. Empty filters/results,
+inactive Workspace links and secret exclusion are covered. Suspended/deletion-pending
+metadata is available, but no new restoration or impersonation workflow is added.
+Archived recovery uses a canonical alias to the existing restore list.
+
+Sixteen focused console/onboarding/canonical-route tests passed, including restricted
+role, global-context and GET-only/no-store boundaries, SELECT-only selectors,
+grace/expiry/extension semantics and bounded pagination. Fictional desktop and 390px
+browser checks passed for search, tabs and document overflow. The first candidate
+caught a new-template-directory permission error; packaging was corrected before
+deployment, preserving the image's non-root runtime user.
+
+Web image `rokkad:platform-console-20260929-980dd0c5cfe5` overlays eleven reviewed
+files on `rokkad:trial-landing-20260929-044f48f88473`. Candidate and deployed checks
+rendered nine pages in restricted READ ONLY transactions and denied an ordinary
+user. All eleven live source hashes match. Anonymous HTTPS requires login; the
+existing non-platform browser session receives 403 as intended. Trial/account/mail
+flags remain enabled, checkout/recurring disabled, worker/settings/env hashes
+unchanged, all four mail timers active and mail health passed. No migration or
+business-data mutation was part of this release.
+
+Backup, candidate logs, manifest, prior compose/release metadata and `deployed.json`
+remain private under server `platform-console-20260929/`. Rollback restores the
+saved compose and release metadata and recreates web only; no database restore or
+worker change is required. [Operator guide](flows/platform-console.md) describes
+scope and remaining work. This completes the focused first increment, not the full
+FW-010 discovery/delegation backlog. Repository changes remain uncommitted.
 
 ## FW-019 WhatsApp fee reply recorded; method totals still need clarification (2026-09-29)
 
@@ -565,7 +3049,6 @@ eligibility before any named pilot activation. Private deployment evidence and
 rollback are in `receipt-worker-20260929/` on the deployment host. See the
 [receipt runbook](implementation/platform-mail.md#receipt-only-preparation-2026-09-29).
 
-
 ## Live webhook registration verified (2026-09-29)
 
 The owner entered the webhook secret and submitted Razorpay's Live Mode form.
@@ -588,7 +3071,6 @@ review receipt-worker dispatch scope and remaining provider delivery/failure/rec
 acceptance, preserving JSK's trial and the separate activation decision. No charge
 or email was sent. See the
 [updated runtime evidence](implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29).
-
 
 ## Permanent platform admin and paused live webhook runtime (2026-09-29)
 
@@ -626,7 +3108,6 @@ are retained server-private under `live-webhook-20260929/`.
 Next: verify the saved provider webhook, review receipt dispatch scope and preserve
 the unresolved provider acceptance/trial eligibility gates. See the
 [runtime checkpoint](implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29).
-
 
 ## Live credentials verified and monthly catalog bound (2026-09-29)
 
@@ -666,7 +3147,6 @@ permission to promote Test Mode data. Next: live webhook/runtime configuration a
 receipt-worker review, while unresolved provider acceptance and JSK's trial remain.
 See [live catalog evidence](implementation/billing-provider-readiness.md#live-keys-and-bound-monthly-catalog-2026-09-29).
 
-
 ## Confirmed billing seller configured with activation paused (2026-09-29)
 
 At **11:45 IST**, the shared web/worker environment received only the four
@@ -698,6 +3178,102 @@ Next: protected live credentials and exact monthly catalog preview/binding,
 with provider acceptance and JSK's trial preserved. See the
 [configuration checkpoint](implementation/billing-provider-readiness.md#confirmed-seller-configuration-2026-09-29).
 
+## JCL borrower contact auto-sizing published (2026-09-29)
+
+Owner confirmed **RA00594** and authorized automatic font sizing. JCL now uses
+layout revision ID **5**, version **4**, published/assigned through audited template
+services. Only `borrower.contact_block` changed: WRAP to SHRINK and fixed 12 pt
+leading to automatic leading. Its starting 12 pt font, 6 pt padding, 60 x 30 mm
+rectangle and (40,50) mm position remain unchanged; the existing 6 pt minimum and
+overflow failure guard remain in effect. Complete contact text is retained.
+
+Read-only review and post-publication official-mode rendering passed for both
+RA00594 copies, including full-text extraction inside each printed contact frame.
+Its contact renders at approximately **10.08 pt**. Short and longer fictional
+contacts passed at 12 pt and 6.67 pt, with visual review using only fictional data.
+Automatic approval review blocked downloading the real borrower review image;
+real-data checks remained on production. C07565's two mixed-metal weight lines
+still render on both copies. All active JCL series resolve the new revision;
+the old published revision remains intact. Loan, event, approval, customer,
+address, issued-document and number-sequence row hashes were unchanged.
+
+No ticket was issued on the owner's behalf, and existing issued PDFs retain their
+original bytes. No application deployment, schema or paper-profile change.
+Server-local backup `production-20260929T053658Z.dump` passed archive validation;
+private configuration, review/apply/verify and backup evidence is retained in
+`ticket-contact-20260929/` on the deployment host. Layout hash:
+`1beea9a243d997795e71d93bce8a47ad34eb50236c93e02e58d5829a98d420ca`.
+Physical printer output remains unverified.
+
+## JCL borrower contact overflow verified (2026-09-29)
+
+Read-only production diagnosis reproduced the reported `(40,50) mm`
+`borrower.contact_block` error on **RA00594**, including full-ticket rendering.
+The owner's specific failing loan is not yet confirmed. The active JCL contact
+frame is 60 x 30 mm, 12 pt font/leading, 6 pt padding and WRAP. This borrower's
+address is already split across line1/line2/area/city/state/PIN/country; the document
+selector joins those fields with commas before wrapping. Its full contact block
+needs seven lines / 84 pt against 73.04 pt available. Moving address text between
+fields alone does not address this template capacity limit.
+
+In-memory contact-only checks fit with either 10 pt text or SHRINK plus automatic
+leading; no proposal was published and no ticket issued. A future correction
+should preserve full contact text, existing frame geometry, immutable issued PDFs
+and the earlier mixed-metal weight fix. Scripts/evidence: local
+`outputs/ticket-contact-check.py` and `outputs/ticket-contact-measure.py`; no customer
+address text was exported. Application and production configuration are unchanged.
+
+## Party loan pagination and date sorting deployed (2026-09-29)
+
+Web runs `rokkad:party-loan-pages-20260929-5143b3441f2b`, a four-file update built
+on the phone-entry release. Party detail's Loans tab now provides independent
+20-row active/closed pages, range/count labels, Previous/Next and elided numbered
+links. A shared loan-date selector offers newest first (default) and oldest first
+with a primary-key tie-breaker. Page links preserve sort and the other list's page;
+applying a new sort resets both lists. Full outstanding/collateral totals and
+borrower-portal limit semantics remain unchanged.
+
+All **67 focused tests passed** across Party UI, loan-history selectors and borrower
+portal behavior. New persisted-loan coverage exercises 41 active and 41 closed
+loans, tied/non-monotonic dates, other-borrower exclusion, complete outstanding,
+independent navigation, malformed/out-of-range parameters and empty lists.
+Candidate/deployed read-only checks under the restricted runtime role passed for
+JSK, JCL and Lakshmi Pawnbroker. At verification, JSK P-000433 had 301 active and
+five closed loans; both date orders and page ranges matched the database, with
+unchanged totals across pages. Live browser checks confirmed sort persistence on
+page 2, the single-row page 16 and mobile controls without page-wide overflow.
+
+A fresh server-local backup and prior Compose/image references provide rollback;
+private evidence is in `party-loan-pages-20260929/` on the deployment host. HTTPS
+login/startup passed. The existing static volume, resolved environment, production
+settings and mail-worker images are unchanged. No schema migration or lending
+record mutation was performed. Documentation links and whitespace checks passed.
+See the [Party contract](domain/party.md).
+
+## Compact customer phone entry deployed (2026-09-29)
+
+Web now runs `rokkad:phone-entry-20260929-fb66afff9ef0`, built from the paused
+billing release with seven reviewed Party form/display/static files. Customer
+phone entry uses the existing `django-phonenumber-field` dependency with a compact
+single field, India as default, international country-code support, and mobile
+and landline validation on save. Valid numbers display with international spacing
+and retain E.164 storage. Phone, Mobile and WhatsApp contacts share this behavior;
+email and website contacts keep their respective validation. Invalid legacy values
+remain visible unchanged. No model migration or bulk customer-data rewrite.
+
+Validation: **84 distinct tests passed** across phone handling, Party UI and staged
+imports, including canonical storage, rejected edits, legacy display and mixed
+contact types. Desktop/mobile browser checks covered formatting, error display and
+contact-type switching. Candidate and deployed checks passed under the restricted
+runtime role in read-only transactions across JSK, JCL and Lakshmi Pawnbroker;
+production customer creation rendered correctly in the browser. HTTPS login and
+the hashed JavaScript asset passed. A fresh server-local backup and previous
+image/static/compose references provide rollback; private evidence is retained in
+`phone-entry-20260929/` on the deployment host.
+
+Production settings and resolved environment are unchanged, including paused
+billing and sending. Mail workers retain the preceding billing-paused image;
+this release changes no worker code. See the [Party contract](domain/party.md).
 
 ## Razorpay resolution verified against payment evidence (2026-09-29)
 

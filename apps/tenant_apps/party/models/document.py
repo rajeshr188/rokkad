@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from django_cleanup import cleanup
 from apps.tenancy.models import WorkspaceOwnedModel
 
 
@@ -58,6 +59,7 @@ def party_document_upload_to(instance, filename):
     return f"party_documents/{instance.party_id}/{filename}"
 
 
+@cleanup.ignore
 class PartyDocument(WorkspaceOwnedModel):
     class DocumentType(models.TextChoices):
         KYC = "KYC", _("KYC")

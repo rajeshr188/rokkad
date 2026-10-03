@@ -1,0 +1,12 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}Correct paper closing facts{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1000px"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to {{ loan.loan_number }}</a>
+<h1 class="h3 mt-3">Correct paper closing facts</h1>
+<p>Correct a copied closing date, amount or recipient. Rokkad retains the original evidence, recalculates the settlement and appends any corrected custody date. Customer handover stays confirmed or unspecified as originally recorded. Use handover confirmation for newly available return evidence.</p>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.field.widget.input_type == 'checkbox' %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
+<button class="btn btn-primary" name="action" value="preview">Review corrected closing facts</button>
+{% if review %}<section class="border rounded p-3 mt-4"><h2 class="h5">Review before recording</h2><p>Closing date {{ review.before.date }} → {{ review.after.date }}; settlement {{ review.before.amount|indian_money }} → {{ review.after.amount|indian_money }}; recipient {{ review.before.recipient|default:"Unspecified" }} → {{ review.after.recipient|default:"Unspecified" }}.</p><p>{{ review.custody }}.</p><p>Source {{ review.reference }}. Transaction coverage needs another check.</p><button class="btn btn-success" name="action" value="confirm">Record reviewed correction</button></section>{% endif %}
+</form></div>
+{% endblock %}

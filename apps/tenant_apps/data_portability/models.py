@@ -173,7 +173,7 @@ class ImportBundle(WorkspaceOwnedModel):
 
 class LoanHistoryBatch(WorkspaceOwnedModel):
     profile = models.CharField(max_length=32, default="loan-history/1",
-        choices=[("loan-history/1", "Complete history"), ("legacy-opening/1", "Legacy opening")])
+        choices=[("loan-history/1", "Complete history v1"), ("loan-history/2", "Complete history v2"), ("legacy-opening/1", "Legacy opening")])
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     source_sha256 = models.CharField(max_length=64)
     document = models.JSONField()
@@ -195,3 +195,25 @@ class LoanArchiveBatch(WorkspaceOwnedModel):
     result = models.ForeignKey("loans.HistoricalLoanEvidence", null=True, on_delete=models.PROTECT, related_name="batches")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class GuidedOpeningBatch(WorkspaceOwnedModel):
+    """Bounded register staging; financial results remain owned by Loans."""
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    source_key = models.CharField(max_length=48)
+    source_name = models.CharField(max_length=255)
+    source_sha256 = models.CharField(max_length=64)
+    document = models.JSONField()
+    mapping = models.JSONField(default=dict)
+    preview = models.JSONField(default=dict)
+    approval_digest = models.CharField(max_length=64, blank=True)
+    state = models.CharField(max_length=12, default="STAGED", choices=[(s, s) for s in ("STAGED", "READY", "COMPLETED", "CANCELLED")])
+    results = models.JSONField(default=list)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    committed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    committed_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["workspace", "source_key", "source_sha256"],
+            condition=~models.Q(state="CANCELLED"), name="port_guided_source_active_uniq")]

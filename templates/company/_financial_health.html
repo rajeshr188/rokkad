@@ -5,7 +5,7 @@
     <h2 class="h5 mb-0" id="financial-health-title">Financial health</h2>
     {% if can_manage_health %}<a href="{% url 'workspace_loans:pawn_risk_portfolio' workspace.slug %}">Review Loan health</a>{% endif %}
   </div>
-  <p class="small text-muted">Saved assessments for {{ health.as_of_date }}. Viewing this dashboard does not refresh assessments or finalize interest.</p>
+  <p class="small text-muted">Saved ordinary-loan assessments for {{ health.as_of_date }}. Khata cover and overdue policies are shown in the khata register. Viewing this dashboard does not refresh assessments or finalize interest.</p>
   <div class="d-flex flex-wrap gap-3 mb-3" aria-label="Assessment freshness">
     <span>Current: <strong>{{ health.current_count|intcomma }}</strong> / {{ health.loan_count|intcomma }} active loans</span>
     <span>Stale: <strong>{{ health.stale_count|intcomma }}</strong></span>
@@ -23,3 +23,5 @@
   <p class="small text-muted mt-3 mb-0">Coverage is assessed loan by loan: maturity payoff for bullet/flexible loans, economic exposure for amortizing loans. Surplus collateral on one loan does not cancel another loan's shortfall.{% if health.oldest_assessed_at %} Oldest current assessment: {{ health.oldest_assessed_at|date:"d M Y H:i" }}.{% endif %}</p>
 </div></section>
 {% endwith %}
+
+{% if health.provisional_count %}<p class="text-warning">{{ health.provisional_count }} loan(s) require a paper transaction check. Calculated balances and risk remain provisional.</p>{% endif %}

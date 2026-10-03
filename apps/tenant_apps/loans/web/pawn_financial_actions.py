@@ -120,13 +120,35 @@ def pawn_loan_disburse(request, pk):
 def pawn_loan_repay(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     repayment_preview = None
+    is_opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for
+    paper_available = is_opening or bool(recording_for(loan))
     form = PawnRepaymentForm(
         request.POST if request.method == "POST" else None,
-        initial={"request_key": uuid.uuid4().hex},
+        initial={"request_key": uuid.uuid4().hex, "received_on": timezone.localdate()},
+        allow_paper=paper_available,
     )
     if request.method == "POST" and form.is_valid():
         try:
-            if request.POST.get("action") == "preview":
+            if form.cleaned_data.get("recording_purpose") == "PAPER":
+                from apps.tenant_apps.loans.services.paper_repayments import (
+                    preview_paper_repayment, record_paper_repayment,
+                )
+                values = {name: form.cleaned_data[name] for name in (
+                    "amount", "received_on", "receipt_reference", "request_key",
+                )}
+                if request.POST.get("action") == "preview":
+                    review = preview_paper_repayment(loan.pk, actor=request.user, **values)
+                    repayment_preview = review.preview
+                    form.data = form.data.copy()
+                    form.data["review_token"] = review.review_token
+                else:
+                    result = record_paper_repayment(
+                        loan.pk, actor=request.user, **values,
+                        review_token=form.cleaned_data["review_token"],
+                        confirmed_received=form.cleaned_data["confirmed_received"],
+                    )
+            elif request.POST.get("action") == "preview":
                 repayment_preview = preview_pawn_loan_repayment(
                     loan.pk,
                     amount=form.cleaned_data["amount"],
@@ -151,11 +173,22 @@ def pawn_loan_repay(request, pk):
                     f"{allocation.current_interest}, principal {allocation.principal}.",
                 )
                 return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+    balance_date = timezone.localdate()
+    if (form.is_bound and form.cleaned_data.get("recording_purpose") == "PAPER"
+            and form.cleaned_data.get("received_on")):
+        balance_date = form.cleaned_data["received_on"]
     balance = _safe_balance(loan)
-    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+    if is_opening:
         from apps.tenant_apps.loans.services.opening_servicing import opening_payment_balance
         try:
-            balance, obligation_state = opening_payment_balance(loan, as_of_date=timezone.localdate())
+            balance, obligation_state = opening_payment_balance(loan, as_of_date=balance_date)
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            balance = None
+            form.add_error(None, str(exc))
+    elif recording_for(loan):
+        from apps.tenant_apps.loans.services.recorded_collections import collection_balance
+        try:
+            balance = collection_balance(loan, balance_date)
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             balance = None
             form.add_error(None, str(exc))
@@ -168,6 +201,10 @@ def pawn_loan_repay(request, pk):
         _("Preview how the amount will be applied, then record it only after receiving payment. This action does not return collateral or close the loan."),
         {
             "balance": balance,
+            "balance_date": balance_date,
+            "paper_entry_available": paper_available,
+            "paper_correction_available": bool(recording_for(loan)) and _can_administer(request),
+            "paper_receipt_preview": bool(repayment_preview and form.cleaned_data.get("recording_purpose") == "PAPER"),
             "is_repayment": True,
             "supports_preview": True,
             "preview_action_label": _("Preview allocation"),

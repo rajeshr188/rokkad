@@ -1,7 +1,7 @@
 ---
 status: preparation
 owner: project
-updated: 2026-09-29
+updated: 2026-09-30
 tags: [billing, pilot, commercial, razorpay]
 related: [subscription-monetization-rollout.md, ../implementation/billing-provider-readiness.md]
 ---
@@ -13,6 +13,370 @@ on 28 September 2026. This unpublished offer does not authorize charging.
 Production paid billing remains disabled. Public free trials and invitation/account
 mail are enabled; receipt dispatch remains separately controlled. See the
 [free-trial release](../implementation/public-trial-release-20260929.md).
+
+## Existing Workspace rollout and self-service preparation (2026-09-30)
+
+The owner accepted this sequence: verify JSK's first payment after trial expiry,
+then onboard **JCL and Lakshmi Pawn Broker** before their grace periods end.
+Production read-only policy checks confirm all three trials end on **8 October
+at approximately 23:39:08 IST**, followed by seven days of normal-access grace,
+then read-only from **15 October at approximately 23:39:08 IST** if neither paid
+access nor an explicit temporary access decision is in place. None has a recurring
+agreement or temporary override. Each Workspace requires its own subscription;
+JSK's payment cannot activate the others. No access decision was made by accepting
+this rollout. If delayed, obtain the exact temporary-access scope/end before
+recording an audited grant; never rewrite trial or financial history.
+
+Paid self-service is now implemented locally: selected monthly offer, explicit
+signed owner consent, durable creation and the existing authorization/recovery
+page. Production still exposes only operator-prepared agreements. The new
+`BILLING_PUBLIC_RECURRING_BINDING_ID` defaults to zero; both a selected binding and
+the recurring gate are required. Generic checkout remains off and annual stays
+private. See the [decision](../adr/2026-09-30-owner-monthly-self-service.md).
+All 178 focused/regression tests passed (14 new self-service cases); provider and
+SES responses are fictional mocks, not live acceptance. No migration is required.
+
+Next release: deploy the reviewed source with selection zero and recurring off,
+verify paused routes/configuration and existing trials, then perform the attended
+JSK pilot after expiry. After its first capture/invoice/receipt is verified, review
+public selection and ongoing receipt dispatch together. Then onboard JCL/Lakshmi
+before grace ends. Publication is not automatic at expiry or after a code release.
+
+Receipt preparation reuses the existing monitored worker, feedback, stale-send
+recovery and health checks. For JSK, retain the exact-delivery, limit-one procedure
+below. For public activation, first review every due queue source and recipient,
+verify no test/unclassified receipt can be sent, and back up the current dispatch
+unit. The prepared batch is `dispatch_platform_mail --send --limit 10` (remove
+only `--invitations-and-accounts` from the existing worker command). Keep the same
+private worker environment, rate delay, timeout and timers; no SES secrets go to
+the web container. Verify the next scheduled run, receipt acceptance/delivery and
+health. Restore the prior scope if validation fails; do not retry an uncertain
+send. No scheduler or email-sending change is applied by this preparation.
+
+## JSK selected after natural trial expiry (2026-09-30)
+
+The owner chose **Keep JSK after its trial ends**, rather than creating an empty
+paying Workspace. Keep Workspace **2**, slug **jsk**, canonical owner **1**, as the
+only first pilot. Its trial ends **8 October 2026 at 23:39:08 IST**. Plan an attended
+activation review **9 October or later**, subject to actual eligibility and the
+specific activation approval. Nothing is scheduled to charge automatically on
+trial expiry. No date/plan/status changes are authorized before payment.
+
+Read-only production/provider checks at **18:22 IST** verified the live provider
+plan **plan_ThkgxD2zC0o8FL**, local binding **1** / Plan **2**, INR **149900 paise**,
+six members, frozen seller, cancellation wording, live mode and paused purchase
+switches. JSK is Active with three members including pending invitations, still
+on trial Plan **1**. Its generic Subscription end_date is 24 October; the canonical
+trial expiry is 8 October, and the generic end is not paid coverage. There are
+zero live agreements/cycles/invoices/payments/webhook events or receipt rows.
+Mode evidence is clean; login/pricing return 200 and callback GET returns 405.
+All four mail timers are active, health is clear, and scheduled invitation/account
+batches exclude receipts. These checks establish readiness components, not actual
+provider callback or payment acceptance. Evidence: ignored
+`outputs/pilot-readiness-review-20260930.json`.
+
+The review found a local transition gap: the paid-cycle handler held a first
+payment solely because the expired trial's plan differs from the paid offer.
+The scoped fix permits an eligible, history-free expired trial to adopt the frozen
+paid plan only with a verified current captured period. It preserves trial dates,
+records old terms in the existing transition audit and queues one receipt.
+See the [decision](../adr/2026-09-30-expired-trial-first-recurring-payment.md).
+All **139** recurring/owner/cycle/held-access/live-boundary/expired-trial tests
+passed (190.014 seconds), including twenty new Test/Live-mode transition cases.
+The initial fixture attempted to rewrite immutable agreement creation time; it
+was corrected to create the intended date initially, without weakening the guard.
+
+The single production source file was deployed at **18:30:43 IST** as
+`rokkad:expired-trial-20260930-110476c6eb7f` over the import-repairs image. Candidate
+and deployed checks passed under the restricted role in read-only transactions.
+JSK's trial/member count and zero billing records are unchanged; both purchase
+switches remain false. Seller/cancellation renders, exact deployed source hash,
+preserved configuration hashes, public HTTPS checks and four mail timers passed.
+No migration, agreement, payment or email was created. The temporary server-only
+candidate environment copy was removed. Prior Compose/release records and logs
+remain private under `expired-trial-release-20260930/` in the existing cutover
+directory; rollback was prepared but not needed. Other operator images were not
+modified by this one-file web deployment.
+
+### Attended activation and first-payment sequence
+
+1. The tested transition patch is deployed with billing paused. At activation time,
+   recheck JSK's owner, lifecycle, trial expiry, seats/pending invitations, no legacy
+   mandate, invoices or conflicting agreement, and current frozen live offer.
+2. Obtain specific approval for **JSK, INR 1,499/month, owner plus five staff,
+   maximum twelve monthly collections**, with owner-authorized payment and a
+   reviewed receipt recipient. This preparation is not that approval.
+3. Enable recurring preparation/authorization only; keep one-off checkout and
+   annual publication off. Prepare exactly one agreement using binding 1 and one
+   durable request UUID. Unknown creation must reconcile the existing attempt;
+   never generate another UUID just to retry.
+4. The canonical owner reviews the frozen agreement and authorizes on Razorpay.
+   No payment credentials or OTP enter chat. Observe exact provider invoice and
+   captured payment, signed callback, one local cycle/invoice/payment, correct
+   Plan 2/six-member access dates and the trial-conversion audit. Authorization
+   alone grants nothing; a future period stays held for explicit review.
+5. If the callback is missing or fails, inspect its stored status and provider
+   evidence, then use the existing owner recovery or `reconcile_recurring_cycle`
+   for that exact invoice. Verify replay preserves invoice/payment/access/receipt
+   counts. Never ask the owner to pay again while the first outcome is uncertain.
+6. Review the single receipt intent and send only its approved delivery ID with
+   `dispatch_platform_mail --send --receipts-only --delivery ID --limit 1` using
+   the existing private worker environment. Confirm delivery; scheduled mail
+   remains invitation/account-only. Inspect real fee/GST/settlement evidence after
+   settlement; fee differences alone do not invalidate the purchased access.
+7. Pause new authorization after the one-Workspace pilot. This does **not** cancel
+   an authorized recurring mandate: existing callbacks, reconciliation and
+   cancellation stay available, and authorized renewals remain possible. Monitor
+   the provider's actual next charge date, paid-through access and Pending/Halted
+   events. Cancellation requires its explicit owner action and provider confirmation.
+
+The owner-approved direction is a limited pilot despite incomplete sandbox
+acceptance, not a claim that the sandbox anomalies were fixed. Held-period,
+failed-renewal/recovery and annual evidence stay tracked; annual is excluded.
+The 28 October test observation remains a follow-up check, not an automatic
+prerequisite for this separately approved pilot. Stop broader onboarding on any
+unexplained charge, identity/amount mismatch, duplicate or payment/access discrepancy.
+
+## Owner accepts fee uncertainty; prepare a limited pilot (2026-09-30)
+
+The owner explicitly accepts learning exact provider charges from real payments.
+Detailed fee clarification is **not a launch gate**. Retain the supplied estimates
+and reconcile actual fees/GST/net settlement after the first collection; do not
+delay pilot preparation for another pricing response or silently change the
+customer's INR 1,499 price to recover provider fees.
+
+Fee uncertainty is commercial, separate from the unverified Test Mode scenarios.
+The proposed next step is a named monthly pilot readiness review that considers
+those scenarios as explicit remaining risks rather than requiring an indefinite
+wait for support. This is not a claim that failed-renewal/held-period acceptance
+passed or that Razorpay confirmed a sandbox limitation.
+
+Prepare the existing INR 1,499/month, six-member, twelve-collection offer for one
+eligible Workspace with owner consent. Preserve JSK's current trial; no early
+conversion is authorized. Before enabling authorization, verify the current live
+callback/reconciliation path and review how to contain a failed or uncertain
+first collection. During the approved pilot, verify one exact captured payment,
+one invoice, correct access dates, the separately approved receipt and settlement;
+stop expansion on discrepancies and reconcile before retrying. Keep annual
+billing unpublished. Outstanding renewal/failure and held-period observations
+remain tracked independently. This instruction accepts fee uncertainty and pilot
+preparation; it does not authorize a real charge or a production switch change.
+
+## Post-call pricing email verified (2026-09-30, 17:48 IST)
+
+Read the new reply from **Farooq.K** in pricing thread **21174094**, subject
+`Re: [Merchant] Account related assistance`, delivered to `admin@rokkad.com`.
+Gmail shows the sender `rzr06py08emsp@razorpay.com`, mailed by
+`fwdkim1.razorpay.com`, signed by `razorpay.com`, TLS and its verified-sender badge.
+The search-list date was stale; opening the thread revealed the 30 September
+17:48 message. Source: [mail thread](https://mail.google.com/mail/u/3/#search/21174094/FMfcgzQhWfTQdVcKGDJXmXbdbtxxSKML).
+
+The email adds these **first-payment examples**, not verified settlements:
+
+| Method | Listed fee components before GST | Listed GST | Total deduction | Net from INR 1,499 |
+| --- | --- | --- | --- | --- |
+| UPI AutoPay | INR 7 setup + INR 13.49 subscription add-on | INR 3.69 | INR 24.18 | INR 1,474.82 |
+| Cards | INR 29.98 processing + INR 13.49 subscription add-on | INR 7.82 | INR 51.29 | INR 1,447.71 |
+| Aadhaar eMandate | INR 30 setup + INR 13.49 subscription add-on | INR 7.83 | INR 51.32 | INR 1,447.68 |
+
+The displayed components sum correctly. Card total uses rounded components;
+calculating GST on unrounded percentage fees before rounding the total can differ
+by one paisa. Provider invoicing/settlement will establish the actual rounding.
+The examples do not show renewal deductions, INR 17 auto-UPI treatment or explicit
+during/after-promotion comparisons. The body separately repeats INR 22 setup/INR 20
+automatic eMandate fees, while the example uses INR 30 Aadhaar setup: ask which
+mandate variant is enabled and how its renewal and add-on charges combine.
+The promotion still excludes the subscription add-on; setup/GST treatment remains
+unitemized. The attached PDF was not re-read in this check.
+
+The email says integration ticket **21146138** was marked resolved. A fresh
+Dashboard inspection after reading it still shows **In Progress**, with our
+30 September escalation as the latest message. No new authorization procedure,
+failed-renewal/Pending/Halted/recovery steps, shorter-period test or documented
+Test Mode limitation is provided; generic plan/subscription creation instructions
+do not resolve those cases. Do not treat the email's closure statement as technical
+acceptance. Next: obtain a substantive Subscriptions integration-team response
+and the remaining fee examples. No reply, provider test, new plan/subscription or
+live activation was performed during this verification.
+
+## Provider blocker recheck (2026-09-30)
+
+At **14:39:52 IST**, a fresh GET reports **sub_TiA179M8LEPooF expired**,
+zero authorization attempts/paid cycles, no current period and no invoices.
+The INR 5 candidate **pay_TiA4lUn0JCbQ7q** remains Created. Historical local
+financial/mail counts are unchanged and Workspace 9 has no Subscription/access.
+The isolated local agreement still records Created because this read-only check
+does not reconcile it and its callback is disabled. The provider attempt is now
+terminal; waiting for this scheduled start cannot establish successful acceptance.
+No retry, new agreement or provider mutation was performed.
+The subsequent dashboard check still shows ticket **21146138 In Progress**, our
+approved escalation as the latest message, and a 4-8 working-hour reply estimate.
+No working procedure or documented alternative has arrived in that ticket.
+
+At **12:58:59 IST**, the preserved shorter agreement and INR 5 payment candidate
+remain Created, with no invoices, paid count or Workspace access. Read-only
+dashboard checks found no provider reply after our approved escalation in
+**21146138**; **21146171** remains closed without a technical answer. Pricing
+**21174094** still contains the 29 September responses and displays a response
+target of **1 October, 13:43**. No additional message or payment attempt was made.
+
+Earliest-launch work is blocked pending a supported authorization/failure-recovery
+procedure or documented alternative that can be validated. The fixture's scheduled
+start is not itself evidence that authorization succeeded. Resume acceptance work
+when the provider guidance or evidence changes; do not weaken access rules or
+enable live charging to bypass this blocker. Itemized fees and bounded live-pilot
+acceptance remain separate unfinished launch checks.
+
+## Cancellation notice deployed and live readiness verified (2026-09-30)
+
+At **12:53:58 IST**, a read-only transaction under the production restricted role
+confirmed live-mode configuration, the frozen INR 1,499/zero-GST/six-member offer,
+permanent platform administrator, zero live agreements/cycles/invoices/payments,
+and JSK's unchanged three-member trial ending 8 October at 23:39:08 IST. Public
+trial/account/invitation mail remain enabled; checkout and recurring authorization
+remain disabled. Rendering an unsaved agreement revealed that the reviewed
+pre-confirmation cancellation notice and refund-policy link were still absent.
+
+Prepared a **single-template overlay** on the current Form E release. Candidate
+and deployed read-only renders at **12:56:31 IST** verify cancellation confirmation,
+in-flight-payment uncertainty, the refund-policy link, the frozen no-GST seller,
+12-cycle wording and unavailable authorization. Exact source hash and preserved
+configuration files match. Web now runs **rokkad:billing-cancel-20260930-c1db71cd66e6**;
+the previous image/compose/release records are retained for rollback. No schema,
+provider, account, financial or trial data changed. Login, pricing and refund-policy
+HTTPS checks passed; four mail timers remain active. No test email was sent.
+
+Rebuilt the existing offline cleanup operator on the new web base as
+**rokkad:storage-cleanup-20260930-e7d7bd28c3dd** without changing its implementation.
+Its read-only candidate check passed with none found; no cleanup ran. Private
+release records/configuration are under
+`/home/rokkad/deploy/cutover-20260924/billing-cancellation-release-20260930/`.
+Local sanitized readiness evidence and source-only helpers are in ignored outputs.
+This closes the cancellation-copy deployment item, not actual live cancellation
+or provider acceptance. At 12:52 IST the preserved short test was still Created
+with no invoice/access; it was not retried.
+
+## Shorter rehearsal attempted and technical escalation sent (2026-09-30)
+
+The owner selected the earliest safe launch through a shorter supported test plus
+the other launch checks. Reused the existing scheduled-Test-Mode implementation
+and monthly binding; no application validation, provider timestamps or clocks
+were changed. Five additive migrations brought only the fictional local billing
+database up to current source. Historical invoice/payment/cycle/receipt counts
+were preserved. Production was not changed.
+
+Fresh fixture: Workspace **9**, `short_monthly_20260930`, ordinary owner **1**,
+agreement **8**, provider **sub_TiA179M8LEPooF**, monthly binding **1**, quantity 1,
+three cycles, notifications false. Frozen start **1790753952**, **30 September
+13:09:12 IST**, was thirty minutes after preparation. This is a test schedule,
+not a live customer commitment; the INR 1,768.82 fixture retains illustrative tax.
+
+One authorization used the official domestic Visa subscription test card ending
+4366 and fictional contacts. The visible Test Mode checkout offered the INR 5
+token; its optional card-saving OTP skip was followed by **Pay on bank's page**.
+That page remained `about:blank`; checkout then reported **Payment could not be
+completed**. No second authorization or simulated charge was attempted.
+
+At **12:49:45 IST**, provider GETs still showed Created, auth_attempts 0,
+paid_count 0, and no invoices. The only recent matching INR 5 payment candidate,
+**pay_TiA4lUn0JCbQ7q**, remained Created with no invoice or error code; support must
+confirm its subscription association. Workspace 9 has no Subscription or paid
+access. Global isolated counts remain ten invoices/payments/deliveries, eight
+cycles, zero held-access resolutions and one historical mail attempt. The earlier
+annual Created/Issued and failed-simulation Captured results were also reverified
+at 12:37 IST. A browser failure message is not a final provider payment outcome.
+
+**119 focused tests passed** in 191.695 seconds using a dedicated test database:
+agreement scheduling/authority, owner actions, paid cycles, failure/Pending/Halted/
+recovery, exact held-access timing/idempotence and matching live-mode boundaries.
+These are local regressions, not acceptance of actual provider failure events.
+
+The owner explicitly approved the prepared technical escalation; it was submitted
+and visibly verified in [ticket 21146138](https://dashboard.razorpay.com/app/business-settings/ticket-support/rzpind/ThM5iRU28CFNdZ/merchant/conversation),
+referencing **21146171**. It requests a Subscriptions engineering review of the
+new blank-bank-page authorization, reproducible failed-renewal/recovery steps,
+supported short scheduling and explicit limitations/alternatives. The case remains
+In Progress with a displayed 4-8 working-hour reply expectation, not a promised fix.
+No keys, real customer details, attachment or callback commitment were sent.
+
+Cleanup: local 8083 runs with new authorization false, confirmed in the owner
+page; Test webhook/tunnel and outbound mail remain disabled. The browser test and
+blank popup are closed. Provider attempts and history are retained unchanged.
+Evidence and exact approved support text are in ignored `outputs/short-rehearsal-
+20260930-*`, `billing-short-preflight-20260930.json` and
+`razorpay-short-test-followup-20260930.txt`.
+
+### Requirements for replacing the 28 October checkpoint
+
+1. Obtain working scheduled authorization or a documented provider-supported
+   alternative. Re-read this preserved attempt first; if its start passes while
+   Created, do not reauthorize it or edit dates. A future replacement requires a
+   separately identified durable attempt, never an automatic retry.
+2. On a working fixture, verify actual captured invoice/payment/plan evidence
+   before its real period start. Record one future hold and prove that early
+   application, replay and unpaid status observations grant no access.
+3. When that real start arrives, run the existing reviewed held-period command
+   with the current subscription revision. Prove exact end date and six-member
+   entitlements, one resolution, unchanged original financial evidence and
+   idempotent replay without a second receipt.
+4. Separately validate actual provider failure/Pending/Halted and paid recovery,
+   including signed event delivery through the restricted callback. No new tunnel
+   was needed for today's failed authorization; a fresh temporary callback is
+   required for that event-delivery phase. If Test Mode cannot support it, document
+   a reviewed alternative explicitly rather than marking the scenario passed.
+5. Close commercial/live rollout gates independently, then obtain bounded pilot
+   activation/first-collection approval. Until this alternative passes, the older
+   October fixture remains a fallback, not the target we are deliberately waiting for.
+
+## Mail verification and callback brief (2026-09-30)
+
+Read the admin@rokkad.com Gmail results for `in:anywhere from:(razorpay.com)
+after:2026/09/29`. Three matching threads; the latest received message was
+**29 September, 22:17 IST**, with no 30 September message in these results.
+[Ticket 21174094 correspondence](https://mail.google.com/mail/u/3/#search/in%3Aanywhere+from%3A(razorpay.com)+after%3A2026%2F09%2F29/FMfcgzQhWfTQdVcKGDJXmXbdbtxxSKML)
+independently confirms the owner-supplied WhatsApp fee components below. The
+22:10 reply says both technical tickets 21146138 and 21146171 are actively being
+worked on; it supplies no technical resolution. The 22:17 reply attaches a pricing
+PDF and requests callback availability or an alternate number within three days
+to avoid auto-closure. No callback time is confirmed in this correspondence.
+The older pricing ticket 21170392 has resolution notifications; that is not
+evidence that the technical cases or remaining fee questions are resolved.
+
+Call checklist:
+
+1. **21174094, merchant-specific costs:** request itemized INR 1,499 first-payment
+   and renewal examples for card, UPI AutoPay and eMandate, during and after the
+   promotion. Reconcile the reviewed PDF's INR 17 auto-UPI row with the 2% method
+   fee and 0.9% add-on; clarify fixed versus percentage eMandate charges, GST and
+   setup credit coverage, failed/retry/minimum fees and promotion dates. Emails
+   address "Hanumanram"; confirm that the quote belongs to Rokkad's merchant
+   account under Rajesh Rathod H rather than assuming the salutation is harmless.
+2. **21146171, monthly failure/recovery:** explain that selecting Charge as
+   failure produced Captured/Paid evidence. Request reproducible Test Mode steps
+   and expected events for failure, Pending, Halted and recovery, or written
+   confirmation of a limitation and its supported alternative.
+3. **21146138, annual completion:** request the reason for the preserved final
+   Created payment/Issued invoice after Charge as Success and supported completion
+   steps. Annual stays outside the initial monthly pilot.
+4. **Earlier acceptance:** ask for a supported short Test Mode schedule and clear
+   handling of provider period timestamps. The official
+   [test guide](https://razorpay.com/docs/payments/subscriptions/test/) supports
+   simulated charges before their due date and documents a three-day test card
+   token lifetime for subsequent debits. That lifetime does not explain the
+   historical failure by itself and must not be confused with validity of already
+   captured payment evidence. Obtain answers in the support ticket after the call.
+
+**Timing clarification:** 28 October is the start of the paid period in existing
+monthly test evidence, not a Razorpay-imposed waiting period. Rokkad recorded the
+future payment while holding its access effect. The remaining check applies that
+held period when eligible, preserving exact dates and preventing duplicate access.
+The current acceptance plan waits for those dates; a reviewed shorter test path
+could replace this dependency once it actually passes. Simulating a charge alone
+does not prove that access is applied at the right time. The earlier short scheduled
+attempt expired without a paid cycle. JSK's 8 October trial expiry is independent:
+it neither authorizes charging nor clears these gates. Any interim access treatment
+requires its own explicit decision; no extension, early charge or live activation
+was made during this review. Provider API statuses were not re-fetched today.
 
 ## Owner-supplied WhatsApp pricing reply (2026-09-29)
 
@@ -638,8 +1002,9 @@ launch. [Razorpay Test Mode behavior](https://razorpay.com/docs/payments/subscri
 3. Seller configuration is complete; applicable provider acceptance remains open. Retain
    published refund review/initiation windows of seven/five working days; review
    cancellation wording before activation.
-4. Live Card/UPI/eMandate are enabled; confirm the exact merchant fees described
-   in the review above. Live keys and the
+4. Live Card/UPI/eMandate are enabled. The owner accepts fee uncertainty; reconcile
+   actual deductions after the first approved payment instead of blocking launch
+   on exact fee clarification. Live keys and the
    separate webhook secret are protected on the server; provider registration and
    HTTPS/HMAC diagnostics are complete. Actual provider event delivery/recovery
    acceptance remains open, with purchases paused.

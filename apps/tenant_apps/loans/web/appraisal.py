@@ -55,7 +55,7 @@ def collateral_appraisal_suggestion(request):
             series = get_object_or_404(LoanSeries, pk=data["series"], workspace=request.loans_workspace)
             try:
                 policy = resolve_pawn_loan_economic_policy(workspace_id=request.loans_workspace.pk,
-                    license_id=series.license_id, as_of_date=data["as_of"])
+                    license_id=series.license_id, series_id=series.pk, as_of_date=data["as_of"])
                 context["ltv_percent"] = policy.maximum_ltv_ratio * 100
                 method = ValuationMethod(policy.valuation_method)
                 calculated = None

@@ -179,14 +179,15 @@ def batch_csv(request, batch_pk):
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="paper-closures-{batch.pk}.csv"'
     writer = csv.writer(response)
-    writer.writerow(["Batch", "Closure date", "Recorded at", "Loan", "Borrower", "Release", "Cash", "Interest concession", "Concession reason", "Paid by", "Received by", "Book/page", "Reversed"])
+    writer.writerow(["Batch", "Closure date", "Recorded at", "Loan", "Borrower", "Release", "Cash", "Interest concession", "Concession reason", "Paid by", "Received by", "Book/page", "Reversed", "Settlement correction"])
     def cell(value):
         text = str(value)
         return "'" + text if text.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")) else text
-    for line in batch.lines.select_related("release__loan", "release__reversal"):
+    from apps.tenant_apps.loans.selectors.recorded_batches import batch_financial_review
+    for line in batch_financial_review(batch)["lines"]:
         release = line.release
         writer.writerow([cell(value) for value in [batch.pk, batch.effective_date.strftime("%d/%m/%Y"), batch.created_at.isoformat(),
             release.loan.loan_number, line.borrower_name, release.release_number, release.settlement_amount,
             release.interest_concession_amount, release.interest_concession_reason, line.paid_by,
-            line.collector_name, line.paper_reference, "Yes" if hasattr(release, "reversal") else "No"]])
+            line.collector_name, line.paper_reference, "Yes" if hasattr(release, "reversal") else "No", getattr(release, "correction_status", "")]])
     return response

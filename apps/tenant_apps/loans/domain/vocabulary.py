@@ -67,6 +67,7 @@ class CollateralCustodyState(StringEnum):
     AUCTION_DISPOSED = "AUCTION_DISPOSED"
     RENEWAL_TRANSFERRED = "RENEWAL_TRANSFERRED"
     RENEWAL_REVERSED = "RENEWAL_REVERSED"
+    PAPER_CLOSED = "PAPER_CLOSED"
 
 
 class CollateralMetal(StringEnum):

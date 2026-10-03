@@ -1,0 +1,27 @@
+{% extends "base_tenant.html" %}{% load loans_display %}
+{% block title %}Review release batch correction{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1100px">
+<a href="{% url 'workspace_loans:release_batch_detail' request.workspace.slug batch.pk %}">Back to release batch {{ batch.pk }}</a>
+<h1 class="h3 mt-3">Review release batch correction</h1>
+<p>Review all loans covered by this collection. Select the loans with a missing, mistaken or voided receipt and enter their actual closure cash. Loans left unchanged are included in the total and checked again on confirmation.</p>
+<p>This review preserves the original contract, release date and collateral handover. It supports one receipt correction per selected loan. A discrepancy must be resolved from the source records; no balancing payment or refund is created.</p>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}
+<div class="row g-3">{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="{% if field.field.widget.input_type == 'checkbox' or field.name == 'reason' %}col-12{% else %}col-md-6{% endif %}">
+{% if field.field.widget.input_type == 'checkbox' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}</div>
+{% for row in rows %}<section class="card mt-4"><div class="card-body">
+<h2 class="h5">{{ row.loan.loan_number }} · {{ row.line.borrower_name }}</h2>
+<p>Release {{ row.line.release.release_number }} on {{ row.line.release.effective_date }} · Current recorded collection {{ row.line.release.settlement_amount|indian_money }} · Collected by {{ row.line.collector_name }}</p>
+<div class="form-check"><input class="form-check-input" id="change-{{ row.loan.pk }}" name="changed_loans" type="checkbox" value="{{ row.loan.pk }}" {% if row.selected %}checked{% endif %}><label class="form-check-label" for="change-{{ row.loan.pk }}">Correct a receipt on this loan</label></div>
+{% if row.blockers %}<p class="small mt-2">This loan can remain unchanged. Its receipt correction needs broader reconciliation:</p><ul>{% for blocker in row.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
+<details class="mt-3" {% if row.selected or row.form.errors %}open{% endif %}><summary>Receipt and settlement facts for this loan</summary>{{ row.form.non_field_errors }}<div class="row g-3 mt-1">
+{% for field in row.form %}<div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-md-6{% endif %}">{% if field.field.widget.input_type == 'checkbox' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}
+</div></details></div></section>{% endfor %}
+<button class="btn btn-primary mt-3" name="action" value="preview">Preview all batch corrections</button>
+{% if review %}<section class="border rounded p-3 mt-4"><h2 class="h4">Check the combined collection</h2>
+<p>Original recorded batch {{ review.original_total|indian_money }}. Previously reviewed collection {{ review.before_total|indian_money }} → actual total {{ review.total|indian_money }}. Source: {{ review.reference }}.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Loan</th><th>Change</th><th>Previous collection</th><th>Correct collection</th><th>Collateral recipient</th></tr></thead><tbody>{% for row in review.rows %}<tr><td>{{ row.number }}</td><td>{% if row.changed %}Receipt and settlement corrected{% else %}Unchanged{% endif %}</td><td>{{ row.amount|indian_money }}</td><td>{{ row.after|indian_money }}</td><td>{{ row.collector }}</td></tr>{% endfor %}</tbody></table></div>
+{% for loan in review.corrections %}<h3 class="h5">{{ loan.number }}: affected allocations</h3><div class="table-responsive"><table class="table"><thead><tr><th>Date / source</th><th>Action</th><th>Old / correct cash</th><th>Old principal / interest</th><th>Correct principal / interest</th></tr></thead><tbody>{% for row in loan.review.rows %}<tr><td>{{ row.date }}{% if row.source %}<br>Event #{{ row.source }}{% endif %}</td><td>{{ row.action }}<br>{{ row.reference }}{% if row.old_date and row.old_date != row.date %}<br>Previously {{ row.old_date }}{% endif %}{% if row.old_reference and row.old_reference != row.reference %}<br>Previous source: {{ row.old_reference }}{% endif %}</td><td>{{ row.amount|indian_money }} / {{ row.new_amount|indian_money }}</td><td>{{ row.old_principal|indian_money }} / {{ row.old_interest|indian_money }}</td><td>{{ row.principal|indian_money }} / {{ row.interest|indian_money }}</td></tr>{% endfor %}</tbody></table></div><p class="small">Original completeness confirmation remains {{ loan.review.complete_through }}.</p>{% endfor %}
+<p>All selected corrections are recorded together. Original batch, releases and handover evidence remain. Business-date balances are restated; no new money or collateral changes hands.</p>
+<button class="btn btn-success" name="action" value="confirm">Record reviewed batch correction</button></section>{% endif %}
+</form></div>{% endblock %}

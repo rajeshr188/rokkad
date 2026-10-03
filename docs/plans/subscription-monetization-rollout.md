@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-29
+updated: 2026-09-30
 tags: [plans, billing, subscriptions, razorpay]
 related: [future-work.md, ../domain/subscriptions.md, ../flows/subscription-checkout.md, ../architecture/control-plane-contracts.md]
 ---
@@ -14,6 +14,51 @@ with charging paused. Invitation and account mail are enabled; receipts remain
 separately controlled. The 30-day public free trial is now enabled. Free access
 and account activation are not payment acceptance.
 The following snapshot supersedes the dated preparation history below.
+
+**30 September self-service implementation:** the owner-facing monthly offer,
+signed explicit consent and safe agreement-creation route are implemented locally.
+The new selected-binding setting defaults to zero; no paid publication, production
+deployment, activation, real collection or email is part of this change. Existing
+Checkout, recovery, cancellation, verified paid access and receipt handling are
+reused. The public mail-batch scope change is prepared in the
+[pilot plan](monthly-billing-pilot.md#existing-workspace-rollout-and-self-service-preparation-2026-09-30).
+All 178 focused/regression tests passed, including fourteen new self-service cases.
+Release paused next; activate public paid signup only after JSK's pilot and release
+review. Fee clarification is still not a launch gate.
+
+**30 September owner decision:** exact fee clarification is no longer a launch
+gate. The owner accepts learning actual charges from real settlements. Prepare a
+limited monthly pilot review while tracking unresolved provider test scenarios
+honestly; no real collection or activation is authorized by this fee decision.
+See [the revised pilot preparation](monthly-billing-pilot.md#owner-accepts-fee-uncertainty-prepare-a-limited-pilot-2026-09-30).
+The owner subsequently chose **JSK after its trial expires on 8 October at
+23:39:08 IST**. The attended pilot review is 9 October or later, with specific
+activation approval still required. The first-capture transition from the expired
+trial to the distinct paid plan is fixed and deployed with billing paused; all
+139 focused/broader billing tests and candidate/live checks passed. See
+[the sequence](monthly-billing-pilot.md#jsk-selected-after-natural-trial-expiry-2026-09-30).
+
+**30 September live readiness:** the reviewed cancellation notice and refund-policy
+link are now deployed in a one-template overlay, with candidate/live read-only
+renders and exact source verification. Billing gates remain off, the frozen offer
+and JSK trial are unchanged, and live financial counts remain zero. Mail timers
+and public HTTPS checks passed. See [release evidence](monthly-billing-pilot.md#cancellation-notice-deployed-and-live-readiness-verified-2026-09-30).
+
+**30 September shorter-path attempt:** a fresh scheduled monthly Test Mode
+agreement for a start thirty minutes later reproduced the blank bank-page/token
+authorization problem. No invoice or access was created. The 119 focused local
+regressions passed. The approved engineering escalation is sent in 21146138,
+referencing 21146171; local authorization is paused again. The shorter-path gate
+remains open. See [evidence and replacement criteria](monthly-billing-pilot.md#shorter-rehearsal-attempted-and-technical-escalation-sent-2026-09-30).
+
+**30 September post-call email (17:48 IST):** verified Farooq.K's reply in
+21174094 adds first-payment net examples: UPI INR 1,474.82, cards INR 1,447.71,
+Aadhaar eMandate INR 1,447.68 from INR 1,499. Displayed arithmetic checks out,
+but renewal/promotion examples and mandate-variant combinations remain unclear.
+The email says technical ticket 21146138 is resolved; a fresh Dashboard check
+still shows In Progress with our escalation latest, and no technical procedure
+or supported alternative was supplied. Billing acceptance remains open. See
+[verified post-call evidence](monthly-billing-pilot.md#post-call-pricing-email-verified-2026-09-30-1748-ist).
 
 ## Current monthly pilot (reviewed 2026-09-29)
 
@@ -56,24 +101,37 @@ recovery emails both reached admin@rokkad.com. Normal timing is five minutes plu
 five minutes grace. This completes the external mail alert route, separately from
 the paid-billing gates below.
 
-## Production critical path (reviewed 2026-09-29)
+## Production critical path (reviewed 2026-09-30)
+
+The owner accepted JSK first, then JCL/Lakshmi before their 15 October 23:39 IST
+grace deadlines, with explicitly approved temporary access if the pilot is delayed.
+Prepare public monthly self-service during the trial window; enable it only after
+the pilot/release review. Today recurring creation is exposed only through the
+operator command. See [scope and sequence](monthly-billing-pilot.md#existing-workspace-rollout-and-self-service-preparation-2026-09-30).
 
 | Gate | Current result and remaining work |
 | --- | --- |
-| Failure/recovery | Local regression coverage exists; actual failure simulation captured successfully. Ticket 21146171 has not supplied the required failure/Pending/Halted/recovery acceptance. Preserve evidence. |
-| Naturally due held access | Existing monthly fixtures begin **28 October 2026**. Apply and verify at the real eligible time; no earlier alternative acceptance path has passed. |
+| Failure/recovery | Local regression coverage exists; actual failure simulation captured successfully. Track as an unverified risk during the owner-selected bounded pilot; monitor real renewal and stop expansion on discrepancies. Do not mark provider acceptance passed. |
+| Naturally due held access | Existing monthly fixtures begin **28 October 2026**; no shorter provider rehearsal passed. Preserve exact dates and follow-up validation. This is no longer an automatic prerequisite for the separately approved JSK pilot. |
 | Annual completion | Deferred from launch and still unresolved: final payment Created/invoice Issued with ticket 21146138 now In Progress after the owner-approved 29 September follow-up; annual remains unpublished. |
-| Merchant fees and terms | Owner-supplied reply clarifies 0.9% add-on, quoted 2% method fee, 18% fee GST and method-only credits. Obtain itemized UPI/eMandate combinations and promotional tax/setup treatment; no verified settlement yet. Cancellation/refund wording review is complete locally; deploy the pre-confirmation caveat/policy link in the next billing release. |
+| Merchant fees and terms | Owner accepts fee uncertainty on 30 September: exact fee/promotion clarification does not block launch. Reconcile actual deductions and net settlement after the first approved payment. Cancellation/refund wording review and deployment are complete; actual live cancellation acceptance remains separate. |
 | Inbox continuity | Owner's INR 500 payment verified credited, no balance due and payment warning cleared. Business Starter and storage add-on Active. India tax info remains requested; maintain funding as paid service begins **10 October**. |
-| Named pilot activation | Preserve JSK's trial, verify eligibility and obtain bounded activation/first-collection approval after applicable gates pass. Scheduled live starts remain unsupported. |
+| Named pilot activation | JSK after 8 October 23:39:08 IST. Expired-trial conversion fix is deployed; recheck eligibility and obtain specific activation/first-collection approval. No early trial change or scheduled live start. |
 | Actual live acceptance | Observe provider callback, exact payment/invoice/access, one approved receipt and settlement during the bounded pilot before broader onboarding. |
 | Remaining broader scope | Actual replacement payment, general settlement/prepaid transition acceptance and ongoing mail scope remain separate; live reservation release and annual launch are excluded. |
 
-There is **no committed paid-billing launch date**. Under the current acceptance plan, the
-28 October held-period observation remains on the path to activation; the 8 October
-trial expiry is not a launch promise. An earlier date requires a reviewed alternative
-acceptance path, not merely live keys or an enabled merchant account. A bounded
-pilot is also not completion of the full annual/renewal acceptance scope.
+There is **no committed general paid-billing launch date**. The selected bounded
+pilot may be reviewed on 9 October or later after JSK's natural trial expiry
+and specific activation approval. The transition fix is deployed with billing paused.
+Trial expiry does not trigger a charge. The 28 October held-period observation
+remains follow-up evidence, not an automatic gate for this pilot. A bounded pilot
+does not complete the full annual/renewal acceptance scope.
+
+The 28 October date belongs to existing test evidence and Rokkad's held-access
+acceptance plan; it is **not a mandatory Razorpay waiting period**. Razorpay's test
+tools can simulate charges early, but that alone does not validate applying the
+resulting paid access at the correct time. A supported shorter rehearsal remains
+an option to investigate, not a completed replacement for this gate.
 
 See [monthly pilot evidence and next actions](monthly-billing-pilot.md),
 [live runtime evidence](../implementation/billing-provider-readiness.md#permanent-admin-and-live-webhook-runtime-2026-09-29),
@@ -465,7 +523,7 @@ Use the current owner/platform authorization and immutable audit patterns.
 - [x] First increment's pricing display and frozen-checkout tests pass (28 focused tests).
 - [x] Merchant account approved and Live/Test modes active (owner-reported); all three test list APIs verified.
 - [x] Merchant recurring Card/UPI/eMandate enabled, verified in account settings (29 September).
-- [ ] Account-specific subscription/method fees, GST and promotion coverage confirmed for launch.
+- [ ] Reconcile actual subscription/method fees, GST and promotion credits after the first approved settlement; owner accepts uncertainty, so this is not a launch gate.
 - [x] Contract schema/ADR, durable attempt recovery and mode binding implemented locally.
 - [x] Immediate live recurring workflows implemented with mode-isolation regression coverage; activation remains off, scheduled starts and live reservation release excluded.
 - [x] Actual Test Mode initial recurring cycle creates one invoice/payment/term; replay/recovery do not duplicate them.

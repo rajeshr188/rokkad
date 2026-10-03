@@ -969,6 +969,8 @@ def starter_layout(document_type, *, schema_version=1, layout_mode="FLOW"):
                        "x_mm": 10, "y_mm": 265, "width_mm": 190, "height_mm": 8, "font_size_pt": 10,
                        "copy_scope": "BOTH"})
         for block in blocks:
+            if block["type"] in {"title", "field", "table", "signature", "verification"}:
+                block["overflow_policy"] = "SHRINK"
             if block["type"] == "table":
                 block["table_columns"] = [
                     {"index": index, "label": label, "width_percent": width, "align": "LEFT"}

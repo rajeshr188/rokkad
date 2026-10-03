@@ -1,7 +1,7 @@
 from django import forms
 from django.core.validators import URLValidator, validate_email
 from django.utils.translation import gettext_lazy as _
-from phonenumber_field.formfields import PhoneNumberField
+from .phone_numbers import PHONE_CONTACT_TYPES, PartyPhoneNumberField
 
 from .widgets import PrivateFileInput
 from .models import (
@@ -19,21 +19,17 @@ from apps.tenancy.context import current_workspace_id
 
 CONTROL_CLASS = "form-control"
 SELECT_CLASS = "form-select"
-PHONE_CONTACT_TYPES = {
-    PartyContactMethod.ContactType.PHONE,
-    PartyContactMethod.ContactType.MOBILE,
-    PartyContactMethod.ContactType.WHATSAPP,
-}
 
 
 def normalize_phone_number(value):
-    phone = PhoneNumberField(region="IN").clean(value)
+    phone = PartyPhoneNumberField(required=False).clean(value)
     if not phone:
         return ""
     return phone.as_e164
 
 
 class PartyForm(forms.ModelForm):
+    primary_phone = PartyPhoneNumberField(required=False, max_length=32)
     party_code = forms.CharField(
         required=False,
         help_text=_("Leave blank to auto-generate."),
@@ -64,7 +60,6 @@ class PartyForm(forms.ModelForm):
             "legal_name": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "relation_label": forms.Select(attrs={"class": SELECT_CLASS}),
             "relation_name": forms.TextInput(attrs={"class": CONTROL_CLASS}),
-            "primary_phone": forms.TextInput(attrs={"class": CONTROL_CLASS}),
             "primary_email": forms.EmailInput(attrs={"class": CONTROL_CLASS}),
             "profile_photo": PrivateFileInput(attrs={"class": CONTROL_CLASS}),
             "tax_pan": forms.TextInput(attrs={"class": CONTROL_CLASS}),
@@ -88,12 +83,9 @@ class PartyForm(forms.ModelForm):
         for name, label in labels.items():
             self.fields[name].label = label
         self.fields["display_name"].help_text = _("Enter the name used to find this customer. Keep the original spelling.")
-        self.fields["primary_phone"].help_text = _("For an Indian number, enter 10 digits. For another country, include the country code.")
         self.fields["profile_photo"].help_text = _("Optional. Choose a clear photo; you can add it later.")
         self.fields["relation_name"].help_text = _("If you enter a related person's name, also choose a relation.")
         self.fields["legal_name"].help_text = _("Enter only if different from the customer name.")
-        self.fields["primary_phone"].widget.input_type = "tel"
-        self.fields["primary_phone"].widget.attrs["inputmode"] = "tel"
         self.fields["primary_email"].widget.attrs["inputmode"] = "email"
         self.fields["profile_photo"].widget.attrs["accept"] = "image/*"
         self.fields["tax_pan"].widget.attrs["autocapitalize"] = "characters"
@@ -109,10 +101,8 @@ class PartyForm(forms.ModelForm):
         return (self.cleaned_data.get("gstin") or "").strip().upper()
 
     def clean_primary_phone(self):
-        value = (self.cleaned_data.get("primary_phone") or "").strip()
-        if not value:
-            return ""
-        return normalize_phone_number(value)
+        phone = self.cleaned_data.get("primary_phone")
+        return phone.as_e164 if phone else ""
 
     def clean_relation_name(self):
         return (self.cleaned_data.get("relation_name") or "").strip()
@@ -172,6 +162,19 @@ class PartyProfilePhotoForm(forms.ModelForm):
 
 
 class PartyContactMethodForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        contact_type = (self.data.get(self.add_prefix("contact_type")) if self.is_bound
+                        else self.initial.get("contact_type", PartyContactMethod.ContactType.PHONE))
+        if contact_type in PHONE_CONTACT_TYPES:
+            self.fields["value"] = PartyPhoneNumberField(label=_("Number"), max_length=32)
+        self.fields["value"].widget.attrs["data-contact-value"] = ""
+        self.fields["contact_type"].widget.attrs["data-contact-type"] = ""
+        if contact_type == PartyContactMethod.ContactType.EMAIL:
+            self.fields["value"].widget.input_type = "email"
+        elif contact_type == PartyContactMethod.ContactType.WEBSITE:
+            self.fields["value"].widget.input_type = "url"
+
     class Meta:
         model = PartyContactMethod
         fields = ["contact_type", "label", "value", "is_primary"]
@@ -183,12 +186,13 @@ class PartyContactMethodForm(forms.ModelForm):
         }
 
     def clean_value(self):
-        value = (self.cleaned_data.get("value") or "").strip()
+        value = self.cleaned_data.get("value") or ""
         contact_type = self.cleaned_data.get("contact_type")
         if not value:
             return ""
         if contact_type in PHONE_CONTACT_TYPES:
-            return normalize_phone_number(value)
+            return value.as_e164
+        value = value.strip()
         if contact_type == PartyContactMethod.ContactType.EMAIL:
             validate_email(value)
             return value.lower()

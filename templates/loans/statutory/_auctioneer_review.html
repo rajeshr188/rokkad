@@ -1,0 +1,20 @@
+<section class="card card-body mb-4"><h2 class="h5">{% if handover %}Reconcile against version {{ preview.previous }}{% else %}2. Review before saving{% endif %}</h2>
+<p><strong>{{ preview.title }}</strong> · {{ preview.auctioneer }} · licence {{ preview.license }}</p>
+<div class="alert alert-info">Amounts are recorded balances as of today, excluding unposted interest. Addresses and contacts are current defaults, not verified postal-service particulars. A tick means “include in the administrative handover”; it does not mean legally ready for auction.</div>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="token" value="{{ token }}">
+{% if not handover %}{% for field in form %}<input type="hidden" name="{{ field.name }}" value="{{ field.value|default_if_none:'' }}">{% endfor %}{% endif %}
+<div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Include</th><th>Loan / borrower</th><th>Recorded balance</th><th>Collateral / current status</th><th>Changes / statutory workflow</th></tr></thead><tbody>
+{% for row in rows %}<tr>
+<td>{% if row.eligible %}<input class="form-check-input" type="checkbox" name="included" value="{{ row.loan_id }}" {% if row.suggested %}checked{% endif %} aria-label="Include {{ row.number }}">{% else %}<span class="badge text-bg-secondary">On hold</span>{% endif %}</td>
+<td><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug row.loan_id %}" target="_blank" rel="noopener"><strong>{{ row.number }}</strong></a><br>{{ row.date_display }} · {{ row.series }}<br>{{ row.borrower }}<br><small>{{ row.address }}<br>{{ row.phone }}</small></td>
+<td>Principal {{ row.principal_display }}<br><small>Interest {{ row.interest_display }}<br>Fees {{ row.fees_display }}<br>Due {{ row.due_display }}</small></td>
+<td><strong>{{ row.state }}</strong>{% for item in row.items %}<div class="small">{{ item.description }} · {{ item.metal }} · Qty {{ item.quantity|default_if_none:"unknown" }} · {{ item.net }} g net · {{ item.custody }}</div>{% endfor %}{% for hold in row.holds %}<div class="text-danger small">{{ hold }}</div>{% endfor %}</td>
+<td>{% if row.changes %}<strong class="text-warning-emphasis">Changed: {{ row.changes|join:", " }}</strong><br><small>Previously {{ row.previous_state }}; principal {{ row.previous_principal_display }}</small>{% elif handover %}<span class="text-muted">No changes since previous version</span>{% endif %}
+{% if row.auction_id %}<div><a href="{% url 'workspace_loans:statutory_auction_notice' request.workspace.slug row.auction_id %}">{{ row.auction_number }} · {{ row.auction_state }}</a><br>{{ row.sale_display }}</div>{% endif %}
+{% for check in row.readiness %}<div class="small">{{ check }}</div>{% empty %}<div class="small">Recorded checks clear as of this review; recheck before sale.</div>{% endfor %}</td>
+</tr>{% endfor %}</tbody></table></div>
+<label class="form-label" for="handover-notes">Review note — include reasons for withholding any remaining loan</label><textarea class="form-control mb-3" id="handover-notes" name="notes" required maxlength="2000" rows="3">{{ request.POST.notes }}</textarea>
+<div class="form-check mb-3"><input class="form-check-input" id="handover-reviewed" type="checkbox" name="reviewed" value="yes" required><label class="form-check-label" for="handover-reviewed">I reviewed all loans, changes, holds and the selected remaining loans. Save this version for manual handover.</label></div>
+<button class="btn btn-primary" type="submit">{% if handover %}Save updated version{% else %}Save reviewed list{% endif %}</button>
+<p class="small text-muted mt-2 mb-0">Closed, settled, missing-evidence and custody-review loans cannot be included. Previously withheld loans stay unticked until explicitly selected again. An updated version may have no remaining loans. Refresh this page after any new collection or release.</p>
+</form></section>

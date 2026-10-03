@@ -21,7 +21,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.vary import vary_on_headers
 from django.views.decorators.http import require_POST
 
-from apps.tenant_apps.loans.selectors import get_party_pawn_loan_history_summary
+from apps.tenant_apps.loans.selectors.party_loans import get_party_loan_history_summary
 
 from .access import assert_party_action_permission, party_action_required
 from .forms import (
@@ -204,7 +204,19 @@ def _party_detail_context(
     )
 
     active_tab = active_tab or request.GET.get("tab") or "overview"
-    loan_history = get_party_pawn_loan_history_summary(party, limit=20)
+    loan_history = get_party_loan_history_summary(
+        party, page_size=20, active_page=request.GET.get("active_page"),
+        closed_page=request.GET.get("closed_page"), sort=request.GET.get("loan_sort", "newest"),
+    )
+    for kind, other in (("active", "closed"), ("closed", "active")):
+        page = loan_history[f"{kind}_page"]
+        loan_history[f"{kind}_page_numbers"] = page.paginator.get_elided_page_range(
+            page.number, on_each_side=1, on_ends=1,
+        )
+        loan_history[f"{kind}_page_url"] = (
+            f"?tab=loans&loan_sort={loan_history['sort']}"
+            f"&{other}_page={loan_history[f'{other}_page'].number}&{kind}_page="
+        )
     identifier_form = identifier_form or PartyIdentifierForm(instance=edit_identifier, party=party)
     document_form = document_form or PartyDocumentForm(instance=edit_document, party=party)
     # Both forms contain expires_on; distinct IDs preserve label/error targets.
@@ -350,11 +362,17 @@ def party_create(request):
 def party_update(request, pk):
     party = get_object_or_404(Party.objects.select_for_update(), pk=pk)
     previous_photo = party.profile_photo.name or ""
+    previous_status = party.status
     form = PartyForm(request.POST if request.method == "POST" else None, request.FILES or None, instance=party)
     if request.method == "POST" and form.is_valid():
         party = form.save(commit=False)
         party.updated_by = request.user
         party.save()
+        if party.status != previous_status:
+            from apps.orgs.audit import AuditLog
+            AuditLog.log('UPDATE', user=request.user, company=request.workspace, content_object=party,
+                description='Changed customer status.', data={'operation': 'PARTY_STATUS_CHANGE',
+                    'field': 'status', 'before': previous_status, 'after': party.status}, request=request)
         from .services.photos import remember_profile_photo
         remember_profile_photo(party, previous_name=previous_photo, actor=request.user)
         messages.success(request, _("Customer record updated."))
@@ -474,7 +492,7 @@ def party_contact_save(request, pk, contact_pk=None):
     form = PartyContactMethodForm(request.POST, instance=instance)
     if form.is_valid():
         try:
-            _save_contact_form(form, party)
+            _save_contact_form(form, party, actor=request.user)
             messages.success(request, "Contact saved.")
             return redirect(_party_detail_url(request, party, "contacts"))
         except IntegrityError:
@@ -493,8 +511,8 @@ def party_contact_save(request, pk, contact_pk=None):
 def party_contact_delete(request, pk, contact_pk):
     party = get_object_or_404(Party, pk=pk)
     contact = get_object_or_404(PartyContactMethod, pk=contact_pk, party=party)
-    _sync_party_primary_contact(party, contact, deleted=True)
-    contact.delete()
+    from .services.contact_details import delete_contact
+    delete_contact(party=party, contact_id=contact.pk, actor=request.user)
     messages.success(request, "Contact deleted.")
     return redirect(_party_detail_url(request, party, "contacts"))
 
@@ -509,7 +527,7 @@ def party_address_save(request, pk, address_pk=None):
     form = PartyAddressForm(request.POST, instance=instance)
     if form.is_valid():
         try:
-            _save_address_form(form, party)
+            _save_address_form(form, party, actor=request.user)
             messages.success(request, "Address saved.")
             return redirect(_party_detail_url(request, party, "addresses"))
         except IntegrityError:
@@ -528,7 +546,8 @@ def party_address_save(request, pk, address_pk=None):
 def party_address_delete(request, pk, address_pk):
     party = get_object_or_404(Party, pk=pk)
     address = get_object_or_404(PartyAddress, pk=address_pk, party=party)
-    address.delete()
+    from .services.contact_details import delete_address
+    delete_address(party=party, address_id=address.pk, actor=request.user)
     messages.success(request, "Address deleted.")
     return redirect(_party_detail_url(request, party, "addresses"))
 
