@@ -182,21 +182,12 @@ def pawn_loan_repay(request, pk):
     if (form.is_bound and form.cleaned_data.get("recording_purpose") == "PAPER"
             and form.cleaned_data.get("received_on")):
         balance_date = form.cleaned_data["received_on"]
-    balance = _safe_balance(loan)
-    if is_opening:
-        from apps.tenant_apps.loans.services.opening_servicing import opening_payment_balance
-        try:
-            balance, obligation_state = opening_payment_balance(loan, as_of_date=balance_date)
-        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-            balance = None
-            form.add_error(None, str(exc))
-    elif recording_for(loan):
-        from apps.tenant_apps.loans.services.recorded_collections import collection_balance
-        try:
-            balance = collection_balance(loan, balance_date)
-        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
-            balance = None
-            form.add_error(None, str(exc))
+    from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+    try:
+        balance = get_servicing_position(loan, as_of_date=balance_date).balance
+    except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+        balance = None
+        form.add_error(None, str(exc))
     item_by_id = {item.pk: item for item in loan.collateral_items.all()}
     return _render_action(
         request,

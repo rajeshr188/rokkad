@@ -12,14 +12,18 @@ selected work in [the hardening plan](plans/project-hardening.md), and shelved i
 in [Future work](plans/future-work.md). Prior notes, including superseded decisions,
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
-## Proposed loan-domain correction (5 October)
+## Loan-domain correction selected (5 October)
 
-The owner requested analysis/planning only for one operational loan domain across
-direct, paper and imported entry. The [review](architecture/ordinary-loan-domain-review-20261005.md),
-[proposed ADR](adr/2026-10-05-unified-loan-admission-and-continuation.md) and
-[plan](plans/unified-loan-domain-correction.md) are not accepted implementation or
-deployment. The current dirty release checkout, rather than the September audit,
-is the baseline. PawnLoan is already canonical; no parallel servicing model is needed.
+The owner first requested analysis/planning for one operational loan domain across
+direct, paper and imported entry, then selected the recommended direction and
+requested a checkpoint/start on LD-01. Checkpoint `89f7321e` on
+`work/loan-servicing-contract-ld01` records completed shared entry and the review;
+unrelated billing/platform/storage work is preserved separately. The
+[review](architecture/ordinary-loan-domain-review-20261005.md),
+[accepted direction](adr/2026-10-05-unified-loan-admission-and-continuation.md) and
+[plan](plans/unified-loan-domain-correction.md) use that working implementation,
+rather than the September audit, as baseline. Later writer/admission extensions
+remain pending. PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
 frozen continuation semantics, checked transaction coverage and each action's purpose.
@@ -34,9 +38,14 @@ at cutover despite supporting later reductions; broader validation descriptors d
 not establish operational support. Never replay pre-cutover charges, add an opening
 over an existing disbursal or invent unknown history/allocations/actors/timestamps.
 
-Recommended first slice LD-01 is a read-only frozen-contract/position resolver,
-reusing current calculators for repayment preview and reminder balance. No new
-model, migration or writer eligibility is needed. Later common operations should
+LD-01 implements a read-only frozen-contract/position resolver, reusing current
+calculators for repayment preview, reminder balance and repayment form context.
+Optional coverage metadata does not create an attestation. Unknown recorded
+profiles, mixed origins and operational records without a financial origin fail
+explicitly; no native fallback invents their debt. Older native event folds without
+itemized snapshots preserve unknown policy fields. No new model, migration,
+posting behavior or writer eligibility was introduced. See the
+[implementation](implementation/loan-servicing-contract-ld01.md). Later operations should
 depend on evidenced position, semantics, chronology, custody and authority rather
 than original channel. Missing original LTV can coexist with verified current debt;
 current monitoring needs eligible current evidence. Historical-only closed records

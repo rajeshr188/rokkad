@@ -6,17 +6,8 @@ from apps.tenant_apps.loans.selectors.transaction_completeness import transactio
 
 
 def notice_balance(loan, day):
-    from .recorded_collections import recording_for, collection_balance
-    if recording_for(loan):
-        return collection_balance(loan, day)
-    if loan.policy_snapshot_id and loan.policy_snapshot.basis == "RECORDED_CONTRACT":
-        raise ValueError("This recorded contract has no supported collection profile for borrower reminders.")
-    from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
-    balance = get_pawn_loan_balance(loan, as_of_date=day)
-    if loan.state == "ACTIVE" and loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
-        from .opening_servicing import opening_payment_balance
-        balance, _ = opening_payment_balance(loan, as_of_date=day)
-    return balance
+    from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+    return get_servicing_position(loan, as_of_date=day, operation="NOTICE").balance
 
 
 def notice_transaction_evidence(loan, day):

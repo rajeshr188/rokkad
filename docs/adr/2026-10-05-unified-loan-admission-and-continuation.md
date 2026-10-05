@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 owner: project
 updated: 2026-10-05
 tags: [adr, loans, admission, continuation, provenance]
@@ -10,12 +10,14 @@ related: [../architecture/ordinary-loan-domain-review-20261005.md, ../plans/unif
 
 ## Status and scope
 
-Proposed following the owner's request for repository analysis and a correction
-plan. This document does not authorize implementation, change accepted contracts
-or supersede an existing ADR yet. The [source review](../architecture/ordinary-loan-domain-review-20261005.md)
-identifies the checkout, evidence and current limitations. The
-[plan](../plans/unified-loan-domain-correction.md) sequences implementation after
-the proposal is selected.
+The owner selected the recommended direction and requested a checkpoint/start on
+LD-01 on 5 October, after the analysis-only review. Acceptance authorizes that
+read-only slice; later writer/admission extensions remain separately planned.
+It does not change existing calculation contracts or supersede earlier ADRs before
+their corresponding implementation is delivered. The
+[source review](../architecture/ordinary-loan-domain-review-20261005.md) identifies
+the reviewed checkout, evidence and limitations. The
+[plan](../plans/unified-loan-domain-correction.md) tracks implementation.
 
 ## Context
 
@@ -33,7 +35,7 @@ recognition, rounding and item allocation. The opening profile also has a review
 recognition baseline and an unavailable pre-cutover history. Unification must
 preserve those facts rather than choose one formula for every existing loan.
 
-## Proposed decision
+## Decision
 
 ### 1. Keep one operational entity and lifecycle
 

@@ -93,15 +93,8 @@ def preview_pawn_loan_repayment(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
     try:
-        if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
-            from .opening_servicing import opening_payment_balance
-            balance, _ = opening_payment_balance(loan, as_of_date=timezone.localdate())
-        else:
-            assert_pawn_loan_financial_actions_allowed(loan.pk, lock=False)
-            balance = get_pawn_loan_balance(loan.pk, as_of_date=timezone.localdate())
-            from .recorded_collections import recording_for, collection_balance
-            if recording_for(loan):
-                balance = collection_balance(loan, timezone.localdate())
+        from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+        balance = get_servicing_position(loan, as_of_date=timezone.localdate()).balance
         allocation = allocate_repayment(balance, amount)
         return _repayment_preview(loan, balance, allocation)
     except PawnRepaymentError:

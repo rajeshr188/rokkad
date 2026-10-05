@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -9,6 +9,16 @@ related:
 ---
 
 # PawnLoan Financial Read Models
+
+LD-01 centralizes read-side servicing selection in
+`selectors/servicing_contract.py`. Repayment preview, reminder balance and repayment
+form context share the same supported position while retaining native posted debt,
+recorded anniversary recognition and opening catch-up. The read-only contract
+exposes original/cutover dates and saved rounding/calendar conventions; optional
+coverage metadata uses the existing checked-through selector. No financial
+writer or interest formula changed. Unsupported profiles and conflicting/missing
+operational origins are explicit errors. See the
+[implementation](../implementation/loan-servicing-contract-ld01.md).
 
 Itemized recorded contracts use `recorded-anniversary/2`: principal is the exact
 sum of actual item amounts, and each anniversary charge is the sum of item-rounded

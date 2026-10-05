@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: active
 owner: project
 updated: 2026-10-05
 tags: [plan, loans, admission, continuation, compatibility]
@@ -10,9 +10,16 @@ related: [../architecture/ordinary-loan-domain-review-20261005.md, ../adr/2026-1
 
 ## Scope and checkpoint
 
-This plan follows the owner's 5 October request for **analysis and documentation
-only**. All implementation slices below are pending; no application behavior,
-migration, production data or deployment changes were made for this review.
+The initial 5 October request was **analysis and documentation only** and that
+review is complete. The owner subsequently selected the direction and requested a
+checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
+and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
+storage work stays uncommitted. LD-01 is complete locally; later slices are pending.
+Production and the running candidates are unchanged.
+
+LD-01 verification passes **239 affected tests in 94.193s**, including 16 new
+contract tests and restricted-role isolation. See the
+[implementation and evidence](../implementation/loan-servicing-contract-ld01.md).
 
 Baseline: current dirty checkout on `release/2026-09-24-rc1`, HEAD
 `4b93f67fe9412f6f401db97707e78d7ffaca9566`, including uncommitted UR-15--23 and
@@ -30,7 +37,7 @@ with a model rewrite or switch every loan to paper anniversary interest.
 
 | Slice | Status | Coherent result | Schema expectation |
 |---|---|---|---|
-| LD-01 | Pending; recommended first | Common read-only servicing contract and position for repayment preview/reminder balance | None |
+| LD-01 | Complete locally; 239 tests pass | Common read-only servicing contract and position for repayment preview/reminder balance | None |
 | LD-02 | Pending; after LD-01 | Common purpose/eligibility for supported repayment and full release; retain validated writers | Prefer none; additive versioned evidence only if needed |
 | LD-03 | Pending; after LD-02 | General completed-payout admission replacing historical digital-row prerequisites | Prefer existing recorded evidence; narrow SQL guard change may be needed |
 | LD-04 | Pending; after LD-03, actual checkpoint examples | Explicit reduced-principal/period-carry opening continuation | New review/profile version; additive guard changes only if required |
@@ -50,9 +57,9 @@ the corresponding slice is implemented and verified.
 ### Boundary
 
 Introduce a small read-only `selectors/servicing_contract.py` and a Loans-owned
-servicing-position function using existing calculator outputs. The filename is
-proposed; the file does not exist in this review. A plain immutable dataclass and
-ordinary functions are sufficient. Avoid a plugin registry, generic policy engine,
+servicing-position function using existing calculator outputs. The file is now
+implemented with plain immutable dataclasses and ordinary functions. Avoid a
+plugin registry, generic policy engine,
 new model, new table, middleware or persistent derived balance cache.
 
 Resolve supported origin, frozen calculation/version, original/cutover dates,
@@ -383,5 +390,5 @@ The following decisions affect later extensions and require actual evidence:
    treating an unconfirmed balance as verified.
 
 These decisions do not justify inventing source values or blocking read-only
-centralization. The next concrete implementation is LD-01 only, after the proposed
-direction is selected; broader writer/admission changes remain separate slices.
+centralization. LD-01 is the selected first implementation; broader writer/admission
+changes remain separate slices.

@@ -7,6 +7,31 @@ tags: [status, architecture]
 
 # Status
 
+## LD-01 shared servicing reads complete (5 October)
+
+The owner selected the correction direction and requested a checkpoint/start.
+Checkpoint `89f7321e` on `work/loan-servicing-contract-ld01` captures completed
+shared entry and the review; unrelated billing/platform/storage work is preserved
+uncommitted. LD-01 now centralizes read-only contract/position resolution for
+repayment preview, reminder balances and repayment form context. Existing native,
+recorded and opening calculations remain intact. Unsupported recorded profiles,
+mixed origins and operational records without a financial origin fail explicitly.
+Optional coverage metadata does not create a book attestation.
+
+Verification passes **239 affected tests in 94.193s**, including **16 new contract
+tests**, native origination, itemized paper entry/payment, opening servicing and
+reversal, reminders and restricted-role isolation. The isolated QA container and
+`test_rokkad_ld01_20261005` database use test settings. An initial broader run had
+six local QA media-permission errors; those directories were corrected and the
+final suite passes. No financial code was changed to work around the harness.
+
+No new migration, posting change or action permission was introduced. Production
+and running candidates 8077/8078 are unchanged. The loan work is checkpointed
+separately from pending unrelated changes; LD-02 and later slices remain pending.
+See the [implementation](implementation/loan-servicing-contract-ld01.md),
+[plan](plans/unified-loan-domain-correction.md) and
+[accepted direction](adr/2026-10-05-unified-loan-admission-and-continuation.md).
+
 ## Loan-domain correction review (5 October)
 
 The requested current-checkout analysis is complete; the architecture correction
