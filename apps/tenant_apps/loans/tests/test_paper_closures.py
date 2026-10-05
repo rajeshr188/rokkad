@@ -111,7 +111,7 @@ class PaperClosureTests(ReleaseBatchTests):
         for day in (date(2026, 7, 17), date(2026, 7, 19)):
             if day.day == 17:
                 preview = preview_paper_closures(workspace=self.tenant, actor=self.owner, loan_ids=[self.loans[0].pk], closure_date=day)
-                self.assertIn("precede", preview["rows"][0]["error"])
+                self.assertIn("before the original loan date", preview["rows"][0]["error"])
             else:
                 with self.assertRaisesMessage(ValueError, "today or earlier"):
                     preview_paper_closures(workspace=self.tenant, actor=self.owner, loan_ids=[self.loans[0].pk], closure_date=day)
@@ -196,4 +196,4 @@ class PaperOpeningTests(OpeningReleaseFixture):
         self.assertEqual(release.interest_concession_amount, 5)
         reverse_pawn_loan_event(release.loan_event_id, actor=self.actor, reason="Wrong date in paper book")
         preview = preview_paper_closures(workspace=self.tenant, actor=self.actor, loan_ids=[self.loan.pk], closure_date=date(2021, 2, 2))
-        self.assertIn("Later financial activity", preview["rows"][0]["error"])
+        self.assertIn("Later activity", preview["rows"][0]["error"])

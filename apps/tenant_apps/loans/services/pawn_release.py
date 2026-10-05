@@ -74,10 +74,11 @@ class PawnFullReleasePreview:
     readiness: object
     release_day_accrual: object | None
     minimum_settlement: Decimal | None
+    completed_period_accruals: tuple = ()
 
     @property
     def release_day_catch_up_interest(self):
-        return (
+        return sum((row.recognized_interest for row in self.completed_period_accruals), Decimal("0")) + (
             self.release_day_accrual.recognized_interest
             if self.release_day_accrual is not None
             else Decimal("0")
@@ -178,16 +179,24 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
 
     from .recorded_collections import recording_for, recognize_collection_interest
     recorded = recording_for(loan)
-    if paper_settlement and (not recorded or paper_evidence.get("profile") != "recorded-history-closure/1"):
-        raise PawnReleaseError("Paper-only closure requires an identified recorded paper contract.")
+    from .servicing_eligibility import servicing_eligibility, shared_monthly_bullet
+    servicing_eligibility(loan, operation="FULL_RELEASE", purpose="PAPER" if paper_evidence else "CURRENT",
+        effective_date=effective_date).require()
+    if paper_settlement and paper_evidence.get("profile") != "recorded-history-closure/1":
+        raise PawnReleaseError("Paper-only closure requires reviewed completed-settlement evidence.")
     if recorded:
         recognize_collection_interest(loan, effective_date, actor=actor, request_key=request_key)
-    if recorded_number is not None and (not recorded or not paper_evidence or historical_number is not None):
-        raise PawnReleaseError("A recorded original release number requires a recorded contract and paper evidence.")
+    if recorded_number is not None and (not paper_evidence or paper_evidence.get("profile") != "recorded-history-closure/1" or historical_number is not None):
+        raise PawnReleaseError("A recorded original release number requires reviewed paper closure evidence.")
 
     opening_origin = loan.loan_events.filter(event_kind="MIGRATION_OPENING").first()
     if historical_number is not None and (opening_origin is None or returned_at is None):
         raise PawnReleaseError("Historical release restoration requires a reviewed opening and return timestamp.")
+    if not recorded and opening_origin is None:
+        from .pawn_interest import recognize_due_monthly_interest
+        # Completed charges remain independently owed. The started-period catch-up
+        # retains the existing paired full-release/reversal evidence.
+        recognize_due_monthly_interest(loan, effective_date, actor=actor, include_partial=False)
     collateral = tuple(
         PawnCollateralItem.objects.select_for_update().filter(loan=loan)
     )
@@ -236,7 +245,7 @@ def _release_pawn_loan_in_full_at(loan_id, *, settlement_amount, request_key, ac
             from .opening_servicing import opening_release_context
             _, obligation_state = opening_release_context(loan, as_of_date=effective_date)
             scheduled_interest_amount = min(interest_amount, obligation_state.remaining.interest)
-        elif recorded:
+        elif recorded or shared_monthly_bullet(loan):
             from .recorded_collections import scheduled_interest
             scheduled_interest_amount = scheduled_interest(loan, effective_date, interest_amount)
         capitalized_principal = min(
@@ -470,6 +479,8 @@ def _build_full_release_preview(
     effective_date,
     lock,
 ):
+    from .servicing_eligibility import servicing_eligibility
+    servicing_eligibility(loan, operation="FULL_RELEASE", purpose="CURRENT", effective_date=effective_date).require()
     from .physical_verification import (
         PawnPhysicalVerificationBlockerError,
         assert_physical_verification_clear,
@@ -505,7 +516,9 @@ def _build_full_release_preview(
         as_of_date=effective_date,
         include_partial=False,
     )
-    if missing_accruals:
+    from .pawn_interest import started_month_charge_allowed
+    completed = missing_accruals if started_month_charge_allowed(loan.policy_snapshot) else ()
+    if missing_accruals and not started_month_charge_allowed(loan.policy_snapshot):
         raise PawnReleaseError(
             "Finalize every completed interest period before releasing the loan."
         )
@@ -515,8 +528,8 @@ def _build_full_release_preview(
         include_partial=True,
     )
     partial_accrual = (
-        partial_candidates[0]
-        if partial_candidates and partial_candidates[0].is_partial
+        partial_candidates[-1]
+        if partial_candidates and partial_candidates[-1].is_partial
         else None
     )
     readiness = get_pawn_loan_release_readiness(
@@ -524,7 +537,7 @@ def _build_full_release_preview(
         selected_item_ids=tuple(item.pk for item in outstanding_collateral),
         as_of_date=effective_date,
     )
-    catch_up_interest = (
+    catch_up_interest = sum((row.recognized_interest for row in completed), Decimal("0")) + (
         partial_accrual.recognized_interest if partial_accrual else Decimal("0")
     )
     minimum_settlement = (
@@ -536,6 +549,7 @@ def _build_full_release_preview(
         readiness=readiness,
         release_day_accrual=partial_accrual,
         minimum_settlement=minimum_settlement,
+        completed_period_accruals=tuple(completed),
     )
 
 

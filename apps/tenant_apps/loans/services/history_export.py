@@ -45,6 +45,8 @@ def _export_history(*, workspace_id, actor, loan_id):
     # Lock existing mutable collateral and the aggregate before taking its materialized snapshot.
     items=list(loan.collateral_items.select_for_update().order_by("pk"))
     events=list(loan.loan_events.select_for_update().order_by("effective_date","pk"))
+    if any(e.payload.get("repayment", {}).get("recording") for e in events):
+        raise HistoryError("Completed paper receipts include source references and actual item allocations outside this history restore profile. Use Loans recovery backup to retain the original evidence.")
     if any(e.payload.get("release", {}).get("paper_closure") for e in events):
         raise HistoryError("Paper closures include date-only handovers and per-row evidence not supported by this restore profile. Use release records and the paper batch CSV; database backups retain full evidence.")
     if not items or len(items)>20 or not events or len(events)>240: raise HistoryError("History exceeds profile bounds or lacks evidence.")

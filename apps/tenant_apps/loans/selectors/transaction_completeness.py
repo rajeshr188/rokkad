@@ -38,8 +38,12 @@ def transaction_completeness(loan, as_of_date):
     events = cached.get("loan_events")
     opening = (any(e.event_kind == "MIGRATION_OPENING" for e in events) if events is not None
                else loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists())
+    completed_paper = (any(e.payload.get("repayment", {}).get("recording") or e.payload.get("release", {}).get("paper_closure")
+                           for e in events) if events is not None else
+                       loan.loan_events.filter(payload__repayment__recording__isnull=False).exists()
+                       or loan.loan_events.filter(payload__release__paper_closure__isnull=False).exists())
     required = bool(review or (loan.policy_snapshot_id and loan.policy_snapshot.basis == "RECORDED_CONTRACT")
-                    or opening)
+                    or opening or completed_paper)
     if not required:
         return TransactionCompleteness("SYSTEM_RECORDED", False, True, None, None,
             "Recorded through ordinary system actions; no paper-history confirmation is assigned.")

@@ -95,6 +95,14 @@ def resolve_servicing_contract(loan, *, as_of_date):
         if not isinstance(recording, dict):
             raise ServicingContractError("This recorded contract has malformed collection evidence.")
         profile = recording.get("collection_profile")
+        if profile is None and policy.policy_version == 1 and origin:
+            # Early recorded snapshots support the existing event fold, without
+            # implying an anniversary agreement or granting paper continuation.
+            return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,
+                profile="recorded-event-fold/1", financial_history_from=loan.loan_date,
+                currency_quantum=policy.currency_quantum, rounding_scope=policy.rounding_method,
+                rounding_mode="HALF_UP", anniversary_rule="FROZEN_RECORDED_PERIODS",
+                principal_reduction_rule="FROZEN_RECORDED_CONTRACT")
         if profile == "recorded-anniversary/3" and (policy.policy_version != 2 or policy.currency_quantum.normalize() not in (Decimal("0.01"), Decimal("1"))):
             raise ServicingContractError("The shared monthly contract requires its captured supported economic policy.")
         if profile not in {"recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3"}:

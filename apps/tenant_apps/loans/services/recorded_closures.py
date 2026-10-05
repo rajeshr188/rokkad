@@ -1,4 +1,4 @@
-"""Record one existing paper loan's closure, without reconstructing other loans."""
+"""Review a completed closure on one supported ordinary loan."""
 from datetime import date
 from decimal import Decimal
 
@@ -8,7 +8,6 @@ from django.utils import timezone
 
 from .action_access import require_loan_action
 from .pawn_release import _locked_loan, _release_pawn_loan_in_full_at
-from .recorded_collections import recording_for
 from .recorded_history import _amount, _digest, _text
 from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint
 
@@ -35,17 +34,13 @@ def _facts(data):
 def _source(loan_id, actor):
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.release")
-    if not recording_for(loan):
-        raise ValueError("Use the ordinary release workflow for this loan.")
     return loan
 
 
 def _write(loan, facts, actor):
     day = date.fromisoformat(facts["date"])
-    if day < loan.loan_date or loan.loan_events.filter(effective_date__gt=day).exists():
-        raise ValueError("Review later financial activity before recording this earlier closure.")
-    if loan.collateral_items.filter(custody_history__effective_date__gt=day).exists():
-        raise ValueError("Review later collateral activity before this closure.")
+    from .servicing_eligibility import servicing_eligibility
+    servicing_eligibility(loan, operation="FULL_RELEASE", purpose="PAPER", effective_date=day).require()
     evidence = dict(profile="recorded-history-closure/1", date_precision="DAY",
         paper_reference=facts["reference"], collector_name=facts["recipient"], original_actor=None,
         closure_basis=facts["basis"], request_sha256=_digest(facts),
@@ -97,7 +92,8 @@ def record_paper_closure(*, loan_id, actor, data, review_token, confirmed=False)
     if any(expected.get(key) != value for key, value in values.items()):
         raise ValueError("Loan activity or closure facts changed. Review again.")
     from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
-    covered = transaction_completeness(loan, date.fromisoformat(facts["date"])).complete
+    coverage = transaction_completeness(loan, date.fromisoformat(facts["date"]))
+    covered = coverage.required and coverage.complete
     result = _write(loan, facts, actor)
     if expected["review"] != _review(result, facts):
         raise ValueError("The closure calculation changed. Review again.")

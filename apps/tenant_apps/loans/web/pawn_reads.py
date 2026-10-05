@@ -211,11 +211,14 @@ def pawn_loan_detail(request, pk):
     from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
     context["transaction_completeness"] = transaction_completeness(loan, context["today"])
     context["can_review_transactions"] = request.loans_workspace_access.can("data.edit") and loan.state in ("ACTIVE", "CLOSED")
+    context["can_confirm_paper_handover"] = (loan.state == "CLOSED" and request.loans_workspace_access.can("loan.release")
+        and loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists())
+    from apps.tenant_apps.loans.services.servicing_eligibility import servicing_eligibility
+    context["can_record_paper_closure"] = (loan.state == "ACTIVE" and context["can_release"]
+        and servicing_eligibility(loan, operation="FULL_RELEASE", purpose="PAPER", effective_date=context["today"]).ready)
     if recorded:
         context["recorded_history"] = recorded
         context["can_correct_paper_closing"] = loan.state == "CLOSED" and loan.releases.exists()
-        context["can_confirm_paper_handover"] = (loan.state == "CLOSED" and request.loans_workspace_access.can("loan.release")
-            and loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists())
         context["archive_admission"] = loan.historical_import if hasattr(loan, "historical_import") and loan.historical_import.archive_evidence_id else None
         context["can_print_schedule"] = True
         context["can_print_ticket"] = True

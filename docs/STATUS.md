@@ -7,6 +7,36 @@ tags: [status, architecture]
 
 # Status
 
+## LD-02 common repayment and full release complete locally (5 October)
+
+The owner authorized LD-02. Shared factual eligibility now separates action purpose
+from loan origin while reusing existing authorized, locked, immutable writers.
+Supported native shared-monthly bullet loans accept reviewed completed paper
+receipts and closures. Paper/opening loans retain current digital collections.
+Legacy recorded event-fold repayments remain compatible without invented monthly
+terms. Full settlement needs no collateral price/appraisal; partial release keeps
+valuation/LTV checks. Native shared-monthly release recognizes completed periods
+atomically, retaining existing paired current-period reversal.
+
+Unknown handover remains PAPER_CLOSED until a separately evidenced return. Native
+completed paper activity now requires explicit book verification, without creating
+an automatic completeness claim. Existing opening multi-item completed principal
+allocations remain blocked before posting; wider profile support is pending.
+Bounded history export explicitly rejects source facts it cannot preserve;
+exact-identity Loans recovery remains available.
+
+Final scoped verification passes **256 tests in 251.059s**, including frozen opening
+restore, paired reversal, concurrent posting, native paper recovery, restricted-role
+posting/immutability/isolation and risk/coverage reads. The wider 294-test run found
+three outdated blocker assertions and one frozen-release zero-representation
+regression; these were corrected and rechecked in the final suite. System checks,
+migration-drift checks, Python parsing and scoped whitespace checks pass. The full
+repository suite was not repeated; the prior unrelated baseline failures remain.
+No new migration, application database change, contract conversion or deployment
+is included. LD-03 admission is next; wider operation/correction, opening profile,
+coverage transition and portable-profile work remain later slices. See the
+[implementation record](implementation/loan-servicing-eligibility-ld02.md).
+
 ## LD-01A shared monthly contract complete locally (5 October)
 
 The owner authorized the shared-calendar/policy-rounding slice. Corrected direct
@@ -40,8 +70,8 @@ only those stale tests, the final affected-module run passes **159 tests in
 claimed wholly green and was not repeated. System, migration-drift, Python parsing
 and scoped whitespace checks pass. See the [implementation and verification
 record](implementation/loan-interest-contract-ld01a.md) for the failure inventory,
-reviewed-adoption limits and compatible rollback. LD-02 remains pending; wider
-opening admission and correction/operation integration are later slices.
+reviewed-adoption limits and compatible rollback. LD-02 was subsequently implemented
+above; wider opening admission and correction/operation integration are later slices.
 
 ## Shared interest contract clarified (5 October)
 

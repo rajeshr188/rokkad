@@ -95,8 +95,7 @@ def assess_pawn_loan_event_reversal(
             (recorded_source and not (current_renewal_settlement or current_auction_recovery))):
         return PawnReversalReadiness(False, latest_event_id, "Use Review paper history correction to reconcile dependent receipt and interest history.")
     if (original.payload.get("recorded_admission") or
-            original.payload.get("recorded_collection", {}).get("request_key", "").startswith("admission:") or
-            original.payload.get("release", {}).get("paper_closure", {}).get("profile") == "recorded-history-closure/1"):
+            original.payload.get("recorded_collection", {}).get("request_key", "").startswith("admission:")):
         return PawnReversalReadiness(False, latest_event_id, "Admitted paper history requires a complete history correction review.")
     if original.event_kind == TransactionKind.DISBURSAL.value and original.payload.get("disbursal", {}).get("basis") == "RECORDED":
         return PawnReversalReadiness(False, latest_event_id,

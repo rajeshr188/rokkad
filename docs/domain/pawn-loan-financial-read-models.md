@@ -28,6 +28,20 @@ See the [plan](../plans/unified-loan-domain-correction.md).
 
 ## Current read implementation
 
+LD-02 adds common factual eligibility for REPAYMENT/FULL_RELEASE and CURRENT/PAPER
+purpose, independent of origin. Commands retain their existing authorization,
+locking, signed source review and atomic posting. Shared native monthly bullet
+contracts support reviewed completed receipts; legacy recorded snapshots without
+an anniversary profile keep their original event-fold current collection behavior.
+No fallback invents interest terms for paper continuation. Full-release previews
+include unposted eligible completed charges without writing; commit recognizes
+them before settlement and pairs only current-period catch-up with reversal.
+Full settlement leaves no retained exposure and needs no current valuation;
+partial release still requires its valuation/LTV checks. Completed paper activity
+requires explicit coverage review even on a native-origin loan. Coverage describes
+the checked book, separately from calculable debt and current valuation.
+See [LD-02 implementation](../implementation/loan-servicing-eligibility-ld02.md).
+
 LD-01 centralizes read-side servicing selection in
 `selectors/servicing_contract.py`. Repayment preview, reminder balance and repayment
 form context share the same supported position while retaining native posted debt,

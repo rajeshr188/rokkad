@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.configuration.models import PreferenceAuditLog
 from apps.tenant_apps.loans.models import (
-    PaperClosureTransition, PawnCollateralCustodyEvent, PawnLoan,
+    PaperClosureTransition, PawnLoan,
     PawnReleaseBatch, PawnReleaseBatchLine, current_tenant_workspace_id,
 )
 from .action_access import require_workspace_action
@@ -90,14 +90,8 @@ def _loans(workspace, ids, *, lock=False):
 
 
 def _quote(loan, day):
-    if day < loan.loan_date:
-        raise ValueError("Closure cannot precede the loan date.")
-    if loan.loan_events.filter(effective_date__gt=day).exists():
-        raise ValueError("Later financial activity exists. Review it before recording this earlier closure.")
-    if loan.interest_accruals.filter(period_end__gt=day).exists():
-        raise ValueError("Interest has been finalized beyond this closure date. Review the later periods first.")
-    if PawnCollateralCustodyEvent.objects.filter(collateral_item__loan=loan, effective_date__gt=day).exists():
-        raise ValueError("Later collateral movements exist. Review them before recording this earlier closure.")
+    from .servicing_eligibility import servicing_eligibility
+    servicing_eligibility(loan, operation="FULL_RELEASE", purpose="PAPER", effective_date=day).require()
     quote = preview_pawn_loan_full_release(loan.pk, as_of_date=day)
     if quote.blockers or quote.minimum_settlement is None:
         raise ValueError("; ".join(row.message for row in quote.blockers) or "Settlement unavailable.")

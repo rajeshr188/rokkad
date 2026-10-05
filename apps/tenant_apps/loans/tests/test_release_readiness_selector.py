@@ -156,7 +156,7 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
         )
         readiness = calculate_pawn_loan_release_readiness(
             self._loan(),
-            collateral_items=(self._item(1, appraisal=None),),
+            collateral_items=(self._item(1, appraisal=None), self._item(2, appraisal="20000")),
             balance=self._balance(),
             policy_snapshot=self._policy(
                 ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL
@@ -173,6 +173,16 @@ class PawnLoanReleaseReadinessTests(SimpleTestCase):
                 "LATEST_APPRAISAL_REQUIRED",
             },
         )
+        self.assertIsNone(readiness.item_valuations[0].valuation_amount)
+
+    def test_full_settlement_does_not_require_collateral_valuation(self):
+        readiness = calculate_pawn_loan_release_readiness(self._loan(),
+            collateral_items=(self._item(1, appraisal=None),), balance=self._balance(interest="200", fees="10"),
+            policy_snapshot=self._policy(ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL), selected_item_ids=(1,),
+            as_of_date=self.as_of_date, rate_resolver=lambda **kwargs: SimpleNamespace(status=RATE_MISSING, rate=None))
+        self.assertTrue(readiness.ready)
+        self.assertTrue(readiness.is_full_release)
+        self.assertEqual(readiness.minimum_settlement, Decimal("10210"))
         self.assertIsNone(readiness.item_valuations[0].valuation_amount)
 
     def test_selector_uses_rates_public_facade_not_rate_models(self):

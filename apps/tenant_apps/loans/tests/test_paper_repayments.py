@@ -170,7 +170,7 @@ class PaperRepaymentTests(OpeningReleaseFixture):
         LoanPolicySnapshot.objects.create(loan=native, interest_method="SIMPLE",
             partial_month_method="FULL_MONTH", valuation_method="LATEST_APPRAISAL",
             rounding_method="PER_ACCRUAL_PERIOD")
-        with self.assertRaisesMessage(ValueError, "reviewed opening or admitted paper-history loans only"):
+        with self.assertRaisesMessage(ValueError, "no supported financial origin"):
             paper.preview_paper_repayment(native.pk, **self.inputs)
         self.assertFalse(native.loan_events.exists())
         from apps.tenant_apps.loans.forms import PawnRepaymentForm

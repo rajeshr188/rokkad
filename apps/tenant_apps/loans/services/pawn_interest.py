@@ -524,11 +524,11 @@ def monthly_collection_balance(loan, on):
         total_due=balance.total_due + extra, closure_ready=balance.closure_ready and extra == 0)
 
 
-def recognize_due_monthly_interest(loan, on, *, actor):
+def recognize_due_monthly_interest(loan, on, *, actor, include_partial=True):
     """Native monthly recognition inside an authorized, locked repayment command."""
     if started_month_charge_allowed(loan.policy_snapshot):
-        pending = preview_pawn_loan_accruals(loan.pk, as_of_date=on)
-        if any(row.recognized_interest > 0 for row in pending):
+        pending = preview_pawn_loan_accruals(loan.pk, as_of_date=on, include_partial=include_partial)
+        if not include_partial or any(row.recognized_interest > 0 for row in pending):
             for row in pending:
                 _persist_accrual_preview(loan, row, actor=actor)
 

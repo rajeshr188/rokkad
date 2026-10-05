@@ -93,6 +93,8 @@ def preview_pawn_loan_repayment(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
     try:
+        from .servicing_eligibility import servicing_eligibility
+        servicing_eligibility(loan, operation="REPAYMENT", purpose="CURRENT", effective_date=timezone.localdate()).require()
         from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
         balance = get_servicing_position(loan, as_of_date=timezone.localdate()).balance
         allocation = allocate_repayment(balance, amount)
@@ -141,6 +143,11 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
     elif loan.state != PawnLoanState.ACTIVE.value:
         raise PawnRepaymentError("Only an active PawnLoan can receive repayment.")
 
+    if not replay_closed and not correction_evidence:
+        from .servicing_eligibility import servicing_eligibility
+        servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER" if recording_evidence else "CURRENT",
+            effective_date=effective_date).require()
+
     opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
     try:
         if opening:
@@ -156,6 +163,9 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
                 recognize_due_monthly_interest(loan, effective_date, actor=actor)
             balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         allocation = allocate_repayment(balance, amount)
+        if recording_evidence:
+            from .servicing_eligibility import paper_repayment_allocation_allowed
+            paper_repayment_allocation_allowed(loan, balance, allocation)
     except PawnRepaymentError:
         raise
     except Exception as exc:
@@ -209,6 +219,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
         payload["history_correction"] = correction_evidence
     writer = record_loan_event
     scheduled_interest = allocation.interest
+    from .servicing_eligibility import shared_monthly_bullet
     if opening:
         from .opening_servicing import (opening_release_accrual_preview, payment_collection_detail,
                                        _record_opening_servicing_event)
@@ -221,7 +232,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
         scheduled_interest = min(allocation.interest, obligation_state.remaining.interest)
         payload["repayment"]["unscheduled_interest_paid"] = str(allocation.interest - scheduled_interest)
         writer = _record_opening_servicing_event
-    elif recording_for(loan):
+    elif recording_for(loan) or shared_monthly_bullet(loan):
         from .recorded_collections import scheduled_interest as recorded_scheduled_interest
         scheduled_interest = recorded_scheduled_interest(loan, effective_date, allocation.interest)
         payload["repayment"]["unscheduled_interest_paid"] = str(allocation.interest - scheduled_interest)

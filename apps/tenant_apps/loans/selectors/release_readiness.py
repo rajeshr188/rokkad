@@ -156,7 +156,8 @@ def calculate_pawn_loan_release_readiness(
     }
     item_ids = {item.pk for item in items}
     outstanding_ids = {item.pk for item in items if item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value}
-    unvalued_full_opening = bool(outstanding_ids) and selected_set == outstanding_ids and bool(unvalued_opening_item_ids)
+    # Full settlement leaves no retained secured debt, regardless of entry origin.
+    full_settlement = bool(outstanding_ids) and selected_set == outstanding_ids
     blockers = []
     if loan.state != PawnLoanState.ACTIVE.value:
         blockers.append(
@@ -180,7 +181,7 @@ def calculate_pawn_loan_release_readiness(
                 unknown_id,
             )
         )
-    quantum = Decimal(str(policy_snapshot.currency_quantum))
+    quantum = Decimal("0.01") if getattr(policy_snapshot, "policy_version", 1) == 2 else Decimal(str(policy_snapshot.currency_quantum))
     method = policy_snapshot.valuation_method
     rate_cache = {}
     valuations = []
@@ -209,7 +210,7 @@ def calculate_pawn_loan_release_readiness(
         snapshot, item_blockers = _value_item(
             item,
             selected=selected,
-            requires_valuation=not (unvalued_full_opening and item.pk in unvalued_opening_item_ids) and (
+            requires_valuation=not (full_settlement and item.pk in unvalued_opening_item_ids) and (
                 selected
                 or item.custody_state
                 != CollateralCustodyState.WITH_CUSTOMER.value
@@ -222,7 +223,9 @@ def calculate_pawn_loan_release_readiness(
             appraisal_value=appraisal_values.get(item.pk),
         )
         valuations.append(snapshot)
-        blockers.extend(item_blockers)
+        # Available values remain useful evidence; they do not gate full settlement.
+        if not full_settlement:
+            blockers.extend(item_blockers)
 
     valid_selection = bool(selected_ids) and selected_set <= item_ids
     complete_valuations = all(
@@ -291,7 +294,7 @@ def calculate_pawn_loan_release_readiness(
         if item.pk not in selected_set
         and item.custody_state != CollateralCustodyState.WITH_CUSTOMER.value
     )
-    if unvalued_full_opening and valid_selection and not blockers and not retained_ids:
+    if full_settlement and valid_selection and not blockers and not retained_ids and not complete_valuations:
         # Full settlement leaves no secured exposure. Unknown source values are
         # not needed to collect all debt and return every item; never use this for partial release.
         principal_reduction = _money(balance.principal_outstanding, quantum)

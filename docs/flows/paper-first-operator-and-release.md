@@ -1,11 +1,31 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [loans, paper-entry, acceptance, release]
 ---
 
 # Operate and accept the paper-first workflow
+
+**LD-02 local extension:** repayment purpose describes this receipt, independently
+of how the loan began. A supported native shared-monthly flexible/single-payment
+bullet loan can use Record a paper receipt with actual date, reference and item
+principal split. A paper/opening loan can use ordinary collection for money received
+now. The saved contract and actual transaction date determine debt. Unsupported
+contracts, later activity and allocation limits give a blocker before posting.
+Reviewed openings still support completed paper principal payments against only
+one outstanding item; current digital collections retain highest-rate-first
+allocation. No arbitrary allocation is inferred to overcome that profile limit.
+
+Supported ordinary loans can record completed paper closure, retaining an unknown
+handover as PAPER_CLOSED until a separately evidenced return. Full settlement needs
+no metal quote or appraisal; partial release still requires valuation. Native
+shared-monthly full release recognizes completed charges during settlement,
+without a separate finalization task. Paper receipt/closure entry does not establish
+whole-book completeness, even when the original loan was created directly.
+Check paper transactions remains a separate optional review; borrower reminders
+retain coverage checks. Broader source corrections and reduced-principal opening
+admission remain later slices. This is local implementation, not deployment.
 
 Use ordinary **New loan** for each original numbered paper agreement. Select the
 series and check **Entry: From paper**; use the compact Change control for an

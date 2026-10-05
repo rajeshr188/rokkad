@@ -14,8 +14,8 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01 and LD-01A are complete locally; LD-02 and
-later slices are pending.
+storage work stays uncommitted. LD-01, LD-01A and LD-02 are complete locally;
+LD-03 and later slices are pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
@@ -49,7 +49,7 @@ checkpoint implementation and are superseded as the target by this clarification
 |---|---|---|---|
 | LD-01 | Complete locally; 239 tests pass | Common read-only servicing contract and position for repayment preview/reminder balance | None |
 | LD-01A | Complete locally; rollout review pending | Shared inclusive anniversary boundary and captured-policy rounding, with explicit financial correction compatibility | Existing evidence plus corrected policy/profile versions; portability migration 0018 |
-| LD-02 | Pending; after LD-01A | Common purpose/eligibility for supported repayment and full release; retain validated writers | Prefer none; additive versioned evidence only if needed |
+| LD-02 | Complete locally; rollout pending | Common purpose/eligibility for supported repayment and full release; retain validated writers | None |
 | LD-03 | Pending; after LD-02 | General completed-payout admission replacing historical digital-row prerequisites | Prefer existing recorded evidence; narrow SQL guard change may be needed |
 | LD-04 | Pending; after LD-03, actual checkpoint examples | Explicit reduced-principal/period-carry opening continuation | New review/profile version; additive guard changes only if required |
 | LD-05 | Pending; after source-rule examples and LD-04 | Source-faithful supported history allocation and numbering/setup compatibility | New portable contract; alias table only if proven necessary |
@@ -233,6 +233,26 @@ Verification details and rollout limits are tracked in
 Existing cohorts are not converted and deployment remains separate.
 
 ## LD-02: supported common repayment and full release
+
+Implemented locally on 5 October; **256 final targeted tests pass in 251.059s**.
+`services/servicing_eligibility.py` supplies
+read-only factual blockers reused under locks by the existing validated writers.
+Native shared monthly bullet contracts with disbursal snapshots accept reviewed
+completed paper receipts; existing recorded and opening loans retain current
+digital collection. Full settlement removes valuation prerequisites and recognizes
+native completed shared-monthly charges atomically. Completed paper closure and
+later evidenced handover work on supported ordinary loans regardless of origin.
+Legacy recorded event-fold current repayments remain compatible without inventing
+an anniversary profile. Opening multi-item completed principal allocations remain
+explicitly unsupported by their existing reviewed profile, before posting.
+
+New native paper activity requires explicit book verification; known debt can still
+be serviced without a fabricated complete-book claim. Existing immutable wire
+profiles are unchanged: bounded history export blocks paper receipts/closures it
+cannot preserve, while Loans recovery retains exact source identity. Wider
+correction, native re-recognition after coupled reversal, coverage transition and
+portable profile expansion remain later work. See the
+[implementation and verification](../implementation/loan-servicing-eligibility-ld02.md).
 
 Build shared prerequisite results on LD-01 and LD-01A: operation purpose, effective date,
 known position, supported allocation, coverage, lifecycle, custody and later

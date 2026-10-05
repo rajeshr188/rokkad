@@ -1,4 +1,4 @@
-"""Reviewed recording of an already received paper payment on an opening loan."""
+"""Reviewed recording of an already received payment on a supported loan."""
 
 from dataclasses import asdict, dataclass
 from datetime import date
@@ -14,7 +14,6 @@ from .pawn_repayment import (
     _locked_loan, _money_amount, _record_pawn_loan_repayment_at,
     _repayment_preview, _request_key, allocate_repayment,
 )
-from .opening_servicing import opening_payment_balance
 
 
 PROFILE = "paper-repayment/1"
@@ -82,18 +81,9 @@ def validate_paper_repayment_evidence(evidence, *, effective_date, amount):
 
 
 def _preview(loan, *, amount, received_on, evidence):
-    if loan.state != "ACTIVE":
-        raise PawnRepaymentError("Only an active loan can receive a paper repayment.")
-    from .recorded_collections import recording_for, collection_balance
-    recorded = recording_for(loan)
-    if not loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists() and not recorded:
-        raise PawnRepaymentError("Paper receipt recording supports reviewed opening or admitted paper-history loans only.")
-    if recorded and received_on < loan.loan_date:
-        raise PawnRepaymentError("Receipt date cannot precede the original loan date.")
-    if loan.loan_events.filter(effective_date__gt=received_on).exists():
-        raise PawnRepaymentError(
-            "Later activity is already recorded. Reconcile that activity before entering this earlier receipt."
-        )
+    from .servicing_eligibility import servicing_eligibility, paper_repayment_allocation_allowed
+    from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+    servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER", effective_date=received_on).require()
     if loan.loan_events.filter(
         event_kind="REPAYMENT",
         payload__repayment__recording__reference_key=evidence["reference_key"],
@@ -102,13 +92,9 @@ def _preview(loan, *, amount, received_on, evidence):
             "This paper reference is already recorded for this loan. Review the original receipt or its correction."
         )
     try:
-        if recorded:
-            balance = collection_balance(loan, received_on)
-        else:
-            balance, _ = opening_payment_balance(loan, as_of_date=received_on)
-        if balance.fees_outstanding:
-            raise PawnRepaymentError("Paper receipt allocation with outstanding fees needs an agreed fee rule.")
+        balance = get_servicing_position(loan, as_of_date=received_on).balance
         allocation = allocate_repayment(balance, amount)
+        paper_repayment_allocation_allowed(loan, balance, allocation)
         preview = _repayment_preview(loan, balance, allocation, item_principal_split=evidence.get("item_principal_split"), paper=True)
     except ValueError as exc:
         raise PawnRepaymentError(str(exc)) from exc

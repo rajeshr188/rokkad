@@ -22,8 +22,9 @@ unrelated billing/platform/storage work is preserved separately. The
 [review](architecture/ordinary-loan-domain-review-20261005.md),
 [accepted direction](adr/2026-10-05-unified-loan-admission-and-continuation.md) and
 [plan](plans/unified-loan-domain-correction.md) use that working implementation,
-rather than the September audit, as baseline. Later writer/admission extensions
-remain pending. PawnLoan is already canonical; no parallel servicing model is needed.
+rather than the September audit, as baseline. LD-02 now shares supported repayment/
+full-release prerequisites; wider admission and operation extensions remain pending.
+PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
 frozen continuation semantics, checked transaction coverage and each action's purpose.
@@ -70,6 +71,28 @@ remain archived until supported settlement is evidenced. An explicit reviewed
 future-capture transition is proposed; it is not current implemented behavior.
 
 ## Shared loan entry and actual paper item agreements (3 October)
+
+LD-02 keeps action purpose independent of origin. Shared factual eligibility checks
+saved contract, actual date, active lifecycle, later financial/accrual/custody
+activity and full-release collateral. Existing writers retain authorization,
+aggregate locks, reviewed evidence, posting and retry checks. New native simple/
+full-month flexible/single-payment bullet contracts with saved disbursal evidence
+support completed paper receipts with actual item splits. Older recorded snapshots
+without an anniversary profile retain their existing event-fold current collections;
+that fallback does not invent a paper continuation agreement.
+
+Full settlement needs no collateral valuation because no secured debt remains;
+partial release retains valuation/LTV prerequisites. Native shared monthly full
+release recognizes completed charges atomically and pairs the current-period
+catch-up with release reversal. Unknown physical return remains PAPER_CLOSED until
+evidenced handover. Any completed paper receipt/closure also makes native loans
+require explicit book verification; routine entry does not certify missing history.
+The old reviewed opening profile still blocks completed paper principal payment
+against multiple outstanding items before writes, even with a supplied split;
+current digital highest-rate-first collection remains supported. No generic opening
+event posting or automatic contract conversion is enabled. Bounded approval-history
+export rejects completed paper receipt/closure facts it cannot preserve; use Loans
+recovery backup. See [LD-02](implementation/loan-servicing-eligibility-ld02.md).
 
 The owner selected one familiar New loan experience. Standing entry purpose follows
 series, license, Workspace, then DIRECT; INHERIT falls through to the broader scope.

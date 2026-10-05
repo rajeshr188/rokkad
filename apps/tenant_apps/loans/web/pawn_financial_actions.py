@@ -120,9 +120,10 @@ def pawn_loan_disburse(request, pk):
 def pawn_loan_repay(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     repayment_preview = None
-    is_opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
     from apps.tenant_apps.loans.services.recorded_collections import recording_for
-    paper_available = is_opening or bool(recording_for(loan))
+    from apps.tenant_apps.loans.services.servicing_eligibility import servicing_eligibility
+    paper_eligibility = servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER", effective_date=timezone.localdate())
+    paper_available = paper_eligibility.ready
     from apps.tenant_apps.loans.services.entry_purpose import default_entry_purpose
     purpose = default_entry_purpose(workspace=request.loans_workspace, series_id=loan.series_id)
     form = PawnRepaymentForm(
@@ -199,6 +200,7 @@ def pawn_loan_repay(request, pk):
             "balance": balance,
             "balance_date": balance_date,
             "paper_entry_available": paper_available,
+            "paper_entry_blockers": paper_eligibility.blockers,
             "paper_correction_available": bool(recording_for(loan)) and _can_administer(request),
             "paper_receipt_preview": bool(repayment_preview and form.cleaned_data.get("recording_purpose") == "PAPER"),
             "staff_item_split": bool(repayment_preview and form.cleaned_data.get("recording_purpose") == "PAPER" and form.paper_item_split is not None),
