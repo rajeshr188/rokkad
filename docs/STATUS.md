@@ -36,7 +36,10 @@ deferred. These counts are old snapshot evidence, not current production invento
 An isolated clone of the fictional local rehearsal restores **202 public tables**
 and **9 private media files** exactly before owner-only additive migrations. Clean
 image startup caught and fixed `.dockerignore` excluding runtime portability
-contracts. Restricted startup and model/migration consistency pass. Original local
+contracts. Restricted startup and model/migration consistency pass. The exact
+committed candidate `792662b5` is frozen as `rokkad:loan-domain-ld08-792662b5`
+and passes startup/template compilation with a non-superuser, non-bypass-RLS
+runtime role and no owner credentials in its environment. Original local
 rehearsal and production data/schema remain unchanged. Live target inventory,
 actual target recovery/operator acceptance, final candidate release checks and
 controlled production rollout remain pending. See the

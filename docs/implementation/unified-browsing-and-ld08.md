@@ -137,12 +137,22 @@ This is preliminary local staging evidence, not a production release artifact.
 The rollback archive retains LD-07 financial readers; it does not reverse schema
 guards or discard legitimate transactions.
 
+The subsequent exact-commit freeze uses `792662b5b8b5b70dd7a313be2b64c75308b45afa`,
+excluding all unrelated checkout changes. Its image is
+`rokkad:loan-domain-ld08-792662b5` with ID
+`sha256:9ab8f2cca64eb08571b70549dfee1b04966ee995742972a348cd652b5b9dc46a`.
+Startup and changed presentation compilation pass against the isolated clone.
+The runtime role is neither superuser nor RLS-bypassing, and owner credentials
+are absent from the runtime environment. `committed-candidate.json` retains the
+source ZIP checksum and `committed-startup.log` retains the local-settings warnings.
+This verifies the committed local candidate, not production configuration.
+
 ## Remaining production steps
 
 1. Run a current read-only inventory on the named production target under its
    restricted role, including interest-contract cohorts, archive identity links
    and old-contract correction holds. Do not use the September counts as current.
-2. Freeze the final clean committed candidate and its compatible reader artifact;
+2. Use the frozen clean committed candidate and compatible reader artifact;
    verify actual target migration level, runtime guards and deployment settings.
 3. Back up and restore the actual target database and private media, then exercise
    representative entry/collection/closure/monitoring journeys in its staging
