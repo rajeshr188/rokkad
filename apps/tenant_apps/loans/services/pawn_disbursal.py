@@ -1,6 +1,6 @@
 """Atomic PawnLoan disbursal source-event workflow."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 
@@ -97,6 +97,7 @@ def disburse_pawn_loan(
         raise PawnDisbursalError(str(exc)) from exc
 
     policy_snapshot = _persist_policy_snapshot(loan, resolved_policy)
+    loan.policy_snapshot = policy_snapshot
     if economics is None:
         payload = disbursal_payload(
             loan,
@@ -300,7 +301,7 @@ def _approved_economics(loan, approval_snapshot):
 def _approved_disbursal_policy(economics):
     """Rehydrate frozen policy, with compatibility for pre-itemized approvals."""
     if economics is None:
-        return resolve_policy()
+        return replace(resolve_policy().to_disbursal_snapshot(), policy_version=1)
     evidence = economics["evidence"]
     required = {
         "interest_method",
@@ -314,7 +315,7 @@ def _approved_disbursal_policy(economics):
         "currency_quantum",
     }
     if not required.issubset(evidence):
-        return resolve_policy()
+        return replace(resolve_policy().to_disbursal_snapshot(), policy_version=1)
     try:
         defaults = WorkspacePolicyDefaults(
             minimum_first_month=evidence.get("minimum_first_month", False),
@@ -334,7 +335,10 @@ def _approved_disbursal_policy(economics):
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise PawnDisbursalError("Approval has an invalid frozen loan policy.") from exc
-    return resolve_policy(workspace_defaults=defaults)
+    version = evidence.get("policy_version", 1)
+    if type(version) is not int or version not in (1, 2):
+        raise PawnDisbursalError("Approval has an unsupported frozen interest policy version.")
+    return replace(resolve_policy(workspace_defaults=defaults).to_disbursal_snapshot(), policy_version=version)
 
 
 def _existing_disbursal_result(loan: PawnLoan) -> PawnDisbursalResult:

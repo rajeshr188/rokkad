@@ -8,10 +8,15 @@ from .pawn_interest import (
     AccrualLinePreview, AccrualPeriodPreview, _add_months, _partial_fraction,
     build_pawn_accrual_detail,
 )
+from apps.tenant_apps.loans.domain.monthly_contract import period_dates
 
 
 def portable_accrual(period, policy, item_ids, *, release_catch_up=False):
-    days = (_add_months(period.period_start, 1) - period.period_start).days
+    if policy.policy_version == 2:
+        start, end = period_dates(policy.loan.loan_date, period.period_number)
+        days = (end - start).days + 1
+    else:
+        days = (_add_months(period.period_start, 1) - period.period_start).days
     elapsed = (period.period_end - period.period_start).days + 1
     chargeable = None
     if policy.minimum_first_month and period.period_number == 1:
@@ -37,7 +42,7 @@ def stored_accrual(accrual, policy, item_ids):
     """Reconstruct exact arithmetic from saved inputs; never trust rounded fractions."""
     fraction = _partial_fraction(policy, accrual.period_start, accrual.period_end,
                                  period_number=accrual.period_number)
-    quantum = policy.currency_quantum.normalize() if policy.minimum_first_month else policy.currency_quantum
+    quantum = policy.currency_quantum.normalize() if policy.minimum_first_month or policy.policy_version == 2 else policy.currency_quantum
     lines = []
     for line in accrual.lines.order_by("collateral_item_id"):
         unrounded, calculated = calculate_period_interest(calculation_base=line.principal_base,
@@ -57,7 +62,8 @@ def stored_accrual(accrual, policy, item_ids):
     total = lambda field: sum((getattr(line, field) for line in lines), Decimal(0))
     preview = AccrualPeriodPreview(accrual.period_number, accrual.period_start, accrual.period_end,
         fraction, total("principal_base"), total("unrounded_interest"), total("recognized_interest"),
-        accrual.period_end < _add_months(accrual.period_start, 1) - timedelta(days=1),
+        accrual.period_end < (period_dates(policy.loan.loan_date, accrual.period_number)[1] if policy.policy_version == 2
+                            else _add_months(accrual.period_start, 1) - timedelta(days=1)),
         total("calculated_interest"), total("advance_interest_applied"), tuple(lines))
     if (accrual.period_fraction != fraction.quantize(Decimal(".0001"), rounding=ROUND_HALF_UP)
             or accrual.calculation_base != preview.calculation_base

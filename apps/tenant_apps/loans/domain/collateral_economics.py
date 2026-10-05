@@ -88,6 +88,7 @@ def calculate_pawn_disbursal_economics(
     advance_interest_periods=1,
     fees=(),
     currency_quantum=Decimal("0.01"),
+    interest_policy_version=1,
 ):
     """Validate item LTV and derive exact gross, deduction, and net totals."""
 
@@ -106,6 +107,7 @@ def calculate_pawn_disbursal_economics(
         )
     if quantum <= ZERO:
         raise CollateralEconomicsError("Currency quantum must be positive.")
+    amount_quantum = Decimal("0.01") if interest_policy_version == 2 else quantum
 
     results = tuple(
         _calculate_tranche(
@@ -114,13 +116,14 @@ def calculate_pawn_disbursal_economics(
             maximum_ltv_ratio=ltv,
             advance_interest_periods=periods,
             quantum=quantum,
+            amount_quantum=amount_quantum,
         )
         for item in tranches
     )
     if not results:
         raise CollateralEconomicsError("At least one collateral tranche is required.")
     gross = sum((item.allocated_principal for item in results), ZERO).quantize(
-        quantum
+        amount_quantum
     )
     if gross <= ZERO:
         raise CollateralEconomicsError("Gross principal must be positive.")
@@ -130,11 +133,11 @@ def calculate_pawn_disbursal_economics(
     advance_interest = sum(
         (item.advance_interest for item in results), ZERO
     ).quantize(quantum)
-    fee_results = tuple(_calculate_fee(item, gross, quantum) for item in fees)
+    fee_results = tuple(_calculate_fee(item, gross, amount_quantum) for item in fees)
     deducted_fees = sum(
         (item.amount for item in fee_results if item.deducted_at_disbursal), ZERO
-    ).quantize(quantum)
-    net = (gross - advance_interest - deducted_fees).quantize(quantum)
+    ).quantize(amount_quantum)
+    net = (gross - advance_interest - deducted_fees).quantize(amount_quantum)
     if net <= ZERO:
         raise CollateralEconomicsError(
             "Advance interest and deducted fees must leave a positive net disbursal."
@@ -155,12 +158,12 @@ def calculate_pawn_disbursal_economics(
     )
 
 
-def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_periods, quantum):
+def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_periods, quantum, amount_quantum):
     try:
         metal = CollateralMetal(item.metal)
         net_weight = Decimal(str(item.net_weight))
         purity = Decimal(str(item.purity_percentage))
-        principal = Decimal(str(item.allocated_principal)).quantize(quantum)
+        principal = Decimal(str(item.allocated_principal)).quantize(amount_quantum)
         rate = Decimal(str(item.monthly_interest_rate))
         metal_rate = (
             Decimal(str(item.metal_rate_per_unit))
@@ -168,7 +171,7 @@ def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_peri
             else None
         )
         appraisal = (
-            Decimal(str(item.latest_appraised_value)).quantize(quantum)
+            Decimal(str(item.latest_appraised_value)).quantize(amount_quantum)
             if item.latest_appraised_value is not None
             else None
         )
@@ -193,7 +196,7 @@ def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_peri
             )
         calculated = (
             metal_rate * net_weight * purity / Decimal("100")
-        ).quantize(quantum, rounding=ROUND_DOWN)
+        ).quantize(amount_quantum, rounding=ROUND_DOWN)
     selected = _selected_value(
         item.reference,
         method=method,
@@ -201,7 +204,7 @@ def _calculate_tranche(item, *, method, maximum_ltv_ratio, advance_interest_peri
         appraisal=appraisal,
     )
     maximum = (selected * maximum_ltv_ratio).quantize(
-        quantum, rounding=ROUND_DOWN
+        amount_quantum, rounding=ROUND_DOWN
     )
     if principal > maximum:
         raise CollateralEconomicsError(

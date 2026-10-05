@@ -203,8 +203,8 @@ class PartialMonthLifecycleTests(WorkspaceTestCase):
         self.assertEqual((first.calculated_interest, first.advance_interest_applied, first.recognized_interest),
                          (Decimal("20"), Decimal("20"), Decimal("0")))
         preview = preview_pawn_loan_accruals(self.loan.pk, as_of_date=date(2026, 9, 8))
-        self.assertEqual(preview[1].period_fraction, Decimal(14)/30)
-        self.assertEqual(preview[1].recognized_interest, Decimal("9.33"))
+        self.assertEqual(preview[1].period_fraction, Decimal(7)/30)
+        self.assertEqual(preview[1].recognized_interest, Decimal("4.67"))
         with patch("django.utils.timezone.now", return_value=timezone.make_aware(datetime(2026, 9, 8, 10))):
             finalized = finalize_pawn_loan_accrual(self.loan.pk, period_number=1, actor=self.actor)
         self.assertEqual(finalized.accrual.lines.get().advance_interest_applied, Decimal("20"))
@@ -235,7 +235,7 @@ class PartialMonthLifecycleTests(WorkspaceTestCase):
         self.originate(method="ACTUAL_DAYS", advance=0)
         periods = preview_pawn_loan_accruals(self.loan.pk, as_of_date=date(2026, 9, 8))
         self.assertEqual(periods[0].recognized_interest, Decimal("20"))
-        self.assertEqual(periods[1].recognized_interest, Decimal("5.33"))
+        self.assertEqual(periods[1].recognized_interest, Decimal("4.67"))
 
     def test_weekly_release_persists_exact_event_and_retries_without_double_charge(self):
         from apps.tenant_apps.loans.models import LoanNumberSequence
@@ -247,15 +247,15 @@ class PartialMonthLifecycleTests(WorkspaceTestCase):
         with patch("django.utils.timezone.now", return_value=timezone.make_aware(datetime(2026, 9, 8, 10))):
             finalize_pawn_loan_accrual(self.loan.pk, period_number=1, actor=self.actor)
             preview = preview_pawn_loan_full_release(self.loan.pk)
-            self.assertEqual(preview.release_day_catch_up_interest, Decimal("9.33"))
-            result = release_pawn_loan_in_full(self.loan.pk, settlement_amount="1009.33",
+            self.assertEqual(preview.release_day_catch_up_interest, Decimal("4.67"))
+            result = release_pawn_loan_in_full(self.loan.pk, settlement_amount="1004.67",
                 request_key="weekly-close", actor=self.actor)
-            again = release_pawn_loan_in_full(self.loan.pk, settlement_amount="1009.33",
+            again = release_pawn_loan_in_full(self.loan.pk, settlement_amount="1004.67",
                 request_key="weekly-close", actor=self.actor)
         self.assertEqual(result.loan_event.pk, again.loan_event.pk)
         self.loan.refresh_from_db()
         self.assertEqual(self.loan.state, "CLOSED")
         self.assertEqual(self.loan.interest_accruals.count(), 2)
         catch_up = self.loan.interest_accruals.get(period_number=2)
-        self.assertEqual(catch_up.recognized_interest, Decimal("9.33"))
-        self.assertEqual(Decimal(catch_up.loan_event.payload["accrual"]["period_fraction"]), Decimal(14)/30)
+        self.assertEqual(catch_up.recognized_interest, Decimal("4.67"))
+        self.assertEqual(Decimal(catch_up.loan_event.payload["accrual"]["period_fraction"]), Decimal(7)/30)

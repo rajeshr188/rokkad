@@ -24,14 +24,14 @@ from .history_setup import preview_history_setup, require_history_setup_access
 from .import_identity import find_source_origin, source_binding_id
 from .opening_evidence import OpeningEvidenceError, opening_event_payload
 from .opening_obligations import persist_opening_repayment_schedule
-from .opening_validation import COLLECTION_PROFILE, validate_opening
+from .opening_validation import COLLECTION_PROFILE, COLLECTION_PROFILES, POLICY_COLLECTION_PROFILE, validate_opening
 
 PROFILE = "loan-opening-commit/1"
 
 
 def _document(review, setup):
     result = validate_opening(review)
-    if result["profile"] != COLLECTION_PROFILE or not result["document_reconciled"]:
+    if result["profile"] not in COLLECTION_PROFILES or not result["document_reconciled"]:
         raise OpeningEvidenceError("A reconciled v2 review is required; unresolved loans remain held.")
     required_setup = {"tenure_months", "source_license_number", "policy"}
     if (type(setup) is not dict or not required_setup <= set(setup)
@@ -43,8 +43,13 @@ def _document(review, setup):
     if "legacy_license_evidence" in setup:
         from .history_setup import _text
         _text(setup["legacy_license_evidence"], "Legacy licence evidence", 255)
-    validate(setup["policy"], schema=POLICY, path="setup.policy")
+    from .history_contract import POLICY_V3
+    validate(setup["policy"], schema=POLICY_V3 if review["profile"] == POLICY_COLLECTION_PROFILE else POLICY, path="setup.policy")
     policy = DisbursalPolicySnapshot.from_dict(setup["policy"])
+    if review["profile"] == POLICY_COLLECTION_PROFILE and (
+            policy.policy_version != 2 or policy.interest_method.value != "SIMPLE" or
+            policy.partial_month_method.value != "FULL_MONTH" or policy.currency_quantum != Decimal(review["terms"]["interest_quantum"])):
+        raise OpeningEvidenceError("Version 3 continuation must match its reviewed, captured economic policy.")
     if policy.valuation_method.value != "LATEST_APPRAISAL":
         raise OpeningEvidenceError("Opening commit currently requires reviewed appraisals.")
     tenure = setup["tenure_months"]

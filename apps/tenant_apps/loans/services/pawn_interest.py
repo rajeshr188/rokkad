@@ -21,6 +21,7 @@ from apps.tenant_apps.loans.domain.interest import (
     InterestCalculationError,
     calculate_period_interest,
 )
+from apps.tenant_apps.loans.domain.monthly_contract import POLICY_VERSION, period_dates
 from apps.tenant_apps.loans.integrations import accrual_payload, capitalization_payload
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
@@ -93,6 +94,7 @@ def preview_pawn_loan_accruals(
     *,
     as_of_date: date,
     include_partial: bool = True,
+    known_through: date | None = None,
 ) -> tuple[AccrualPeriodPreview, ...]:
     loan = _tenant_loan(loan_id)
     from .recorded_collections import recording_for
@@ -107,14 +109,24 @@ def preview_pawn_loan_accruals(
     policy = loan.policy_snapshot
     if policy is None:
         raise PawnInterestError("Loan is missing its frozen disbursal policy.")
+    if known_through is not None and (policy.policy_version != POLICY_VERSION or
+            not loan.loan_date <= known_through <= as_of_date):
+        raise PawnInterestError("Forecast knowledge must be within the supported shared contract dates.")
+    known_through = known_through or as_of_date
     # SQL DecimalFields return 0.0100. New minimum-first-month policies use
     # its numeric precision (paise), retaining the historic calculation for
     # earlier frozen snapshots.
     quantum = policy.currency_quantum.normalize() if (
-        policy.minimum_first_month or policy.basis == "RECORDED_CONTRACT"
+        policy.minimum_first_month or policy.basis == "RECORDED_CONTRACT" or policy.policy_version == POLICY_VERSION
     ) else policy.currency_quantum
+    eligible_accruals = loan.interest_accruals
+    if policy.policy_version == POLICY_VERSION:
+        eligible_accruals = eligible_accruals.filter(period_end__lte=known_through)
+        if eligible_accruals.filter(loan_event__reversed_by_event__effective_date__lte=known_through).exclude(
+                release_catch_up__reversal__isnull=False).exists():
+            raise PawnInterestError("Review the reversed monthly charge before continuing this loan; its retained calculation cannot be silently reused.")
     last_finalized = (
-        loan.interest_accruals.exclude(
+        eligible_accruals.exclude(
             release_catch_up__reversal__isnull=False
         )
         .order_by("-period_number")
@@ -141,28 +153,37 @@ def preview_pawn_loan_accruals(
         period_number = 1
         period_start = loan.loan_date
     while True:
-        exclusive_end = _add_months(period_start, 1)
-        completed_end = exclusive_end - timedelta(days=1)
+        if policy.policy_version == POLICY_VERSION:
+            period_start, completed_end = period_dates(loan.loan_date, period_number)
+            exclusive_end = completed_end + timedelta(days=1)
+        else:
+            exclusive_end = _add_months(period_start, 1)
+            completed_end = exclusive_end - timedelta(days=1)
         if completed_end <= as_of_date:
             period_end = completed_end
             fraction = Decimal("1")
             is_partial = False
         elif include_partial and period_start <= as_of_date:
             period_end = as_of_date
-            fraction = _partial_fraction(policy, period_start, period_end, period_number=period_number)
+            fraction = _partial_fraction(policy, period_start, period_end, period_number=period_number,
+                original_date=loan.loan_date)
             is_partial = True
         else:
             break
 
-        balance = get_pawn_loan_balance(loan.pk, as_of_date=period_start)
+        basis_date = period_start - timedelta(days=1) if policy.policy_version == POLICY_VERSION and period_number > 1 else period_start
+        if policy.policy_version == POLICY_VERSION:
+            basis_date = min(basis_date, known_through)
+        balance = get_pawn_loan_balance(loan.pk, as_of_date=basis_date)
         base = balance.principal_outstanding
         lines = _itemized_accrual_lines(
             loan,
-            as_of_date=period_start,
+            as_of_date=basis_date,
             period_fraction=fraction,
             aggregate_balance=balance,
             currency_quantum=quantum,
             pending_advance_applied=pending_advance_applied,
+            use_original_principal=policy.policy_version == POLICY_VERSION and period_number == 1,
         )
         if lines:
             base = sum((line.principal_base for line in lines), Decimal("0"))
@@ -250,6 +271,7 @@ def _itemized_accrual_lines(
     aggregate_balance,
     currency_quantum,
     pending_advance_applied,
+    use_original_principal=False,
 ):
     from apps.tenant_apps.loans.selectors.disbursal import effective_disbursal_snapshot
     disbursal = effective_disbursal_snapshot(loan, as_of_date=as_of_date)
@@ -309,7 +331,8 @@ def _itemized_accrual_lines(
     consumed = {
         row["collateral_item_id"]: row["total"] or Decimal("0")
         for row in (
-            PawnLoanInterestAccrualLine.objects.filter(accrual__loan=loan)
+            PawnLoanInterestAccrualLine.objects.filter(accrual__loan=loan,
+                **({"accrual__period_end__lte": as_of_date} if loan.policy_snapshot.policy_version == POLICY_VERSION else {}))
             .exclude(
                 accrual__loan_event__reversed_by_event__isnull=False
             )
@@ -336,7 +359,7 @@ def _itemized_accrual_lines(
             raise PawnInterestError(
                 "Reconstructed item rate differs from frozen disbursal evidence."
             )
-        principal_base = principal_balance.principal_outstanding
+        principal_base = Decimal(str(tranche["allocated_principal"])) if use_original_principal else principal_balance.principal_outstanding
         already_applied = consumed.get(item_id, Decimal("0")) + (
             pending_advance_applied.get(item_id, Decimal("0"))
         )
@@ -367,9 +390,10 @@ def _itemized_accrual_lines(
             "Capitalized principal lacks immutable item attribution; "
             "itemized accrual cannot continue yet."
         )
-    if item_base.quantize(quantum) != Decimal(
-        str(aggregate_balance.original_principal_outstanding)
-    ).quantize(quantum):
+    principal_quantum = Decimal("0.01") if loan.policy_snapshot.policy_version == POLICY_VERSION else quantum
+    if item_base.quantize(principal_quantum) != Decimal(
+        str(loan.principal_amount if use_original_principal else aggregate_balance.original_principal_outstanding)
+    ).quantize(principal_quantum):
         raise PawnInterestError(
             "Collateral principal does not reconcile to immutable item allocations."
         )
@@ -393,6 +417,8 @@ def finalize_pawn_loan_accrual(
     existing = loan.interest_accruals.filter(period_number=period_number).first()
     if existing:
         event = existing.loan_event
+        if loan.policy_snapshot.policy_version == POLICY_VERSION and event and hasattr(event, "reversed_by_event"):
+            raise PawnInterestError("This monthly charge was reversed. Review its correction before recognizing it again.")
         return AccrualFinalizationResult(
             existing,
             event,
@@ -408,12 +434,12 @@ def finalize_pawn_loan_accrual(
         candidates = preview_pawn_loan_accruals(
             loan.pk,
             as_of_date=timezone.localdate(),
-            include_partial=False,
+            include_partial=started_month_charge_allowed(loan.policy_snapshot),
         )
         preview = candidates[0] if candidates else None
         if preview is None or preview.period_number != period_number:
             raise PawnInterestError(
-                "The requested period is not the next eligible completed period."
+                "The requested period is not the next eligible monthly charge."
             )
         policy = loan.policy_snapshot
     except PawnInterestError:
@@ -421,6 +447,13 @@ def finalize_pawn_loan_accrual(
     except Exception as exc:
         raise PawnInterestError(str(exc)) from exc
 
+    return _persist_accrual_preview(loan, preview, actor=actor)
+
+
+def _persist_accrual_preview(loan, preview, *, actor):
+    """Validated atomic caller owns authorization and the aggregate lock."""
+    if loan.policy_snapshot.policy_version == POLICY_VERSION and loan.interest_accruals.filter(period_number=preview.period_number).exists():
+        raise PawnInterestError("This monthly period retains an earlier recognition. Review its correction before recording a replacement charge.")
     event = None
     if should_record_pawn_accrual_event(preview, loan.policy_snapshot):
         payload = accrual_payload(
@@ -474,6 +507,30 @@ def finalize_pawn_loan_accrual(
         },
     )
     return AccrualFinalizationResult(accrual, event)
+
+
+def started_month_charge_allowed(policy):
+    return bool(policy and policy.policy_version == POLICY_VERSION and
+                policy.interest_method == "SIMPLE" and policy.partial_month_method == "FULL_MONTH")
+
+
+def monthly_collection_balance(loan, on):
+    from dataclasses import replace
+    balance = get_pawn_loan_balance(loan, as_of_date=on)
+    extra = sum((row.recognized_interest for row in preview_pawn_loan_accruals(loan.pk, as_of_date=on)), Decimal("0"))
+    return replace(balance, interest_outstanding=balance.interest_outstanding + extra,
+        current_interest_outstanding=balance.current_interest_outstanding + (Decimal("0") if on > balance.due_date else extra),
+        overdue_interest_outstanding=balance.overdue_interest_outstanding + (extra if on > balance.due_date else Decimal("0")),
+        total_due=balance.total_due + extra, closure_ready=balance.closure_ready and extra == 0)
+
+
+def recognize_due_monthly_interest(loan, on, *, actor):
+    """Native monthly recognition inside an authorized, locked repayment command."""
+    if started_month_charge_allowed(loan.policy_snapshot):
+        pending = preview_pawn_loan_accruals(loan.pk, as_of_date=on)
+        if any(row.recognized_interest > 0 for row in pending):
+            for row in pending:
+                _persist_accrual_preview(loan, row, actor=actor)
 
 
 def persist_pawn_accrual_lines(accrual, preview):
@@ -595,12 +652,22 @@ def _locked_loan(loan_id):
         raise PawnInterestError("PawnLoan was not found in the active workspace.") from exc
 
 
-def _partial_fraction(policy, period_start, period_end, *, period_number=1):
+def _partial_fraction(policy, period_start, period_end, *, period_number=1, original_date=None):
     from apps.tenant_apps.loans.domain.interest import partial_period_fraction
+    if getattr(policy, "policy_version", 1) == POLICY_VERSION:
+        if original_date is None:
+            # Derive the original anchor only from the related frozen loan.
+            original_date = policy.loan.loan_date
+        start, end = period_dates(original_date, period_number)
+        if start != period_start or not start <= period_end <= end:
+            raise PawnInterestError("Accrual dates do not match the frozen inclusive monthly contract.")
+        days = (end - start).days + 1
+    else:
+        days = (_add_months(period_start, 1) - period_start).days
     return partial_period_fraction(
         method=policy.partial_month_method,
         elapsed_days=(period_end - period_start).days + 1,
-        period_days=(_add_months(period_start, 1) - period_start).days,
+        period_days=days,
         minimum_first_month=policy.minimum_first_month,
         period_number=period_number,
         cutoff_days=policy.partial_month_cutoff_days,

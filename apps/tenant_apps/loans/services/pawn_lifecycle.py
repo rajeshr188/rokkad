@@ -390,6 +390,7 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
     if resolved_economics is not None:
         economics = resolved_economics.economics
         payload["collateral_economics"] = {
+            "policy_version": 2,
             "economic_policy_id": resolved_economics.economic_policy.pk,
             "valuation_method": resolved_economics.economic_policy.valuation_method,
             "maximum_ltv_ratio": str(

@@ -22,6 +22,8 @@ def generate_repayment_schedule(value: RepaymentScheduleInput) -> RepaymentSched
     principal = Decimal(value.principal)
     rate = Decimal(value.monthly_interest_rate) / Decimal("100")
     quantum = Decimal(value.currency_quantum)
+    if value.interest_policy_version == 2:
+        quantum = quantum.normalize()
     tenure = int(value.tenure_months)
     if principal <= 0 or tenure <= 0 or rate < 0 or quantum <= 0:
         raise RepaymentScheduleError("Principal, tenure, rate, and currency quantum are invalid.")
@@ -98,6 +100,8 @@ def generate_shortened_installment_schedule(
     principal = Decimal(value.principal)
     rate_percent = Decimal(value.monthly_interest_rate)
     quantum = Decimal(value.currency_quantum)
+    if value.interest_policy_version == 2:
+        quantum = quantum.normalize()
     method = LoanAmortisationMethod(value.amortisation_method)
     rows = []
     balance = principal
@@ -174,7 +178,7 @@ def _schedule_from_rows(value, rows, raw_interest_total):
 def _maturity_bullet(value, quantum):
     raw_monthly = _raw_monthly_interest(value)
     raw_total = raw_monthly * value.tenure_months
-    interest = _money(raw_total, quantum)
+    interest = _rounded_monthly_interest(value, quantum) * value.tenure_months if value.interest_policy_version == 2 else _money(raw_total, quantum)
     return [ScheduledRepayment(
         sequence=1,
         due_date=_anniversary(value.disbursed_on, value.tenure_months),
@@ -187,7 +191,8 @@ def _maturity_bullet(value, quantum):
 
 def _periodic_interest_bullet(value, quantum):
     raw_monthly = _raw_monthly_interest(value)
-    interest = _money(raw_monthly, quantum)
+    interest = (_rounded_monthly_interest(value, quantum)
+                if value.interest_policy_version == 2 else _money(raw_monthly, quantum))
     principal = Decimal(value.principal)
     rows = []
     for sequence in range(1, value.tenure_months + 1):
@@ -268,6 +273,16 @@ def _raw_monthly_interest(value):
         period_fraction=Decimal("1"),
         currency_quantum=value.currency_quantum,
     )[0]
+
+
+def _rounded_monthly_interest(value, quantum):
+    if value.rate_tranches:
+        return sum((calculate_period_interest(calculation_base=item.principal,
+            monthly_interest_rate=item.monthly_interest_rate, period_fraction=1,
+            currency_quantum=Decimal(quantum).normalize())[1] for item in value.rate_tranches), Decimal("0"))
+    return calculate_period_interest(calculation_base=value.principal,
+        monthly_interest_rate=value.monthly_interest_rate, period_fraction=1,
+        currency_quantum=Decimal(quantum).normalize())[1]
 
 
 def _anniversary(anchor: date, months: int):

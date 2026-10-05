@@ -10,20 +10,49 @@ related:
 
 # PawnLoan Financial Read Models
 
+## Shared monthly interest contract: owner clarification, 5 October
+
+Direct, backdated paper and imported entry use the same agreed interest boundary.
+A loan dated 5 April with the first month paid upfront has no second-month charge
+through 5 May; that charge starts on 6 May. Anchor subsequent boundaries to the
+original loan date with individual short-month clamping. Rounding follows the
+standing economic policy captured for the agreement. Entry channel and later
+policy edits do not change these terms.
+
+LD-01A implements this calendar and captured-policy rounding for new versioned
+contracts. The older profile behavior below remains historical implementation evidence. Preserve
+actual recorded amounts, opening cutover baselines and issued documents. Correct
+affected posted amounts through supported compensating actions. Charge eligibility,
+recorded recognition and remaining unpaid interest stay separate read concepts.
+See the [plan](../plans/unified-loan-domain-correction.md).
+
+## Current read implementation
+
 LD-01 centralizes read-side servicing selection in
 `selectors/servicing_contract.py`. Repayment preview, reminder balance and repayment
 form context share the same supported position while retaining native posted debt,
 recorded anniversary recognition and opening catch-up. The read-only contract
 exposes original/cutover dates and saved rounding/calendar conventions; optional
-coverage metadata uses the existing checked-through selector. No financial
-writer or interest formula changed. Unsupported profiles and conflicting/missing
+coverage metadata uses the existing checked-through selector. That read-only checkpoint changed no financial writer or interest formula. LD-01A
+now adds the shared calculation contract: native-monthly-policy/2, recorded-anniversary/3
+and reviewed opening/3. Native monthly repayment recognizes eligible interest
+atomically; risk, collection previews and notices use the shared eligible charge.
+Posted recognition remains independently visible. Active native simple/full-month
+flexible/single-payment bullet forecasts now use the same eligible calculation with
+knowledge capped at the reporting date, subtracting advance once and applying
+principal reductions to the correct following period. Raw original schedules remain
+immutable allocation capacity. Old contracts require reviewed correction rather
+than automatic reinterpretation. Unsupported profiles and conflicting/missing
 operational origins are explicit errors. See the
 [implementation](../implementation/loan-servicing-contract-ld01.md).
 
-Itemized recorded contracts use `recorded-anniversary/2`: principal is the exact
+The earlier itemized recorded contract uses `recorded-anniversary/2`: principal is the exact
 sum of actual item amounts, and each anniversary charge is the sum of item-rounded
 interest on the applicable item balances/rates. A principal payment on an
-anniversary still changes the following anniversary's base. The loan-level
+anniversary still changes the following anniversary's base in this implementation;
+The corrected /3 contract instead starts the charge the day after that anniversary;
+a payment on the covered anniversary changes that next charge, while a payment on
+the new charge day changes the following charge. The loan-level
 effective rate is display data. Existing `recorded-anniversary/1` evidence retains
 its previous aggregate calculation; adding entry defaults never rewrites contracts.
 Paper receipts may freeze `STAFF_SPECIFIED` item principal allocation and retain

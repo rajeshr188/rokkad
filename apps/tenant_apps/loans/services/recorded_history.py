@@ -23,6 +23,7 @@ from apps.tenant_apps.party.models import Party
 from .recorded_numbers import claim_number, identity
 from .recorded_origination_evidence import CONTRACT_POLICY_FIELDS
 from .recorded_collections import PROFILE, collection_balance
+from apps.tenant_apps.loans.domain.monthly_contract import RECORDED_PROFILE, POLICY_VERSION
 
 SALT = "loans.recorded-history.review.v1"
 INTENT_SALT = "loans.recorded-history.intent.v1"
@@ -59,6 +60,9 @@ def validate_input(data):
     if not isinstance(data, dict) or len(_canonical(data)) > 40000:
         raise ValueError("Paper history is missing or exceeds the supported size.")
     value = deepcopy(data)
+    quantum = Decimal(value.pop("currency_quantum", "0.01"))
+    if quantum not in (Decimal("0.01"), Decimal("1")):
+        raise ValueError("Select paise or whole-rupee rounding from the actual agreement.")
     from .recorded_items import validate_items, monthly_interest, effective_rate
     collateral = value.pop("collateral", None)
     if collateral is not None:
@@ -183,9 +187,10 @@ def validate_input(data):
                 raise ValueError("Full return must be the final transaction.")
     if renewals > 5 or (value["final_state"] == "CLOSED") != bool(value["events"] and value["events"][-1]["kind"] == "CLOSE"):
         raise ValueError("A closed history needs a final full return; at most five renewals are supported.")
-    monthly = monthly_interest(collateral) if collateral is not None else (Decimal(value["principal"]) * Decimal(value["rate"]) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monthly = monthly_interest(collateral, quantum) if collateral is not None else (Decimal(value["principal"]) * Decimal(value["rate"]) / 100).quantize(quantum.normalize(), rounding=ROUND_HALF_UP)
     if Decimal(value["cash_paid"]) != Decimal(value["principal"]) - monthly * value["advance_months"] - Decimal(value.get("document_charge", "0")):
         raise ValueError("Original proceeds must equal principal less agreed advance interest and document charge.")
+    value["currency_quantum"] = str(quantum.normalize())
     return value
 
 
@@ -280,12 +285,13 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
         item.full_clean()
         item.save()
         items.append(item)
-    policy = m.LoanPolicySnapshot.objects.create(loan=loan, basis="RECORDED_CONTRACT", interest_method="SIMPLE",
+    quantum = Decimal(data.get("currency_quantum", "0.01")).normalize()
+    policy = m.LoanPolicySnapshot.objects.create(loan=loan, policy_version=POLICY_VERSION, basis="RECORDED_CONTRACT", interest_method="SIMPLE",
         partial_month_method="FULL_MONTH", valuation_method=data["monitoring_method"], maximum_ltv_ratio=Decimal(data["monitoring_ltv"]),
-        rounding_method="PER_ACCRUAL_PERIOD", currency_quantum=Decimal("0.01"))
+        rounding_method="PER_ACCRUAL_PERIOD", currency_quantum=quantum)
     tranches = []
     for item in items:
-        charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(quantum, rounding=ROUND_HALF_UP)
         tranches.append(dict(collateral_item_id=item.pk, allocated_principal=str(item.allocated_principal),
             monthly_interest_rate=str(item.monthly_interest_rate), monthly_interest=str(charge),
             advance_interest=str(charge * data.get("advance_months", 0))))
@@ -300,7 +306,7 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
         monthly_interest_rate=str(item.monthly_interest_rate), latest_appraised_value=None) for item in items]
     recording = dict(schema="recorded-origination/1" if predecessor is None else "recorded-renewal/1",
         source_reference=data["source_reference"], payout_already_occurred=predecessor is None,
-        original_actor=None, date_precision="DAY", occurred_on=day.isoformat(), collection_profile=ITEM_PROFILE if data.get("collateral") else PROFILE,
+        original_actor=None, date_precision="DAY", occurred_on=day.isoformat(), collection_profile=RECORDED_PROFILE,
         advance_interest=str(advance), terms=dict(loan_number=number, principal_amount=str(principal),
             monthly_interest_rate=str(rate), tenure_months=tenure, interest_policy=fields, collateral=collateral),
         monitoring=dict(selected_on=timezone.localdate().isoformat(), valuation_method=policy.valuation_method,
@@ -314,14 +320,14 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
 
 def _admit(workspace, actor, data, key, *, archive=None):
     for reference in m.PawnLoanEvent.objects.filter(loan__workspace=workspace,
-            event_kind="DISBURSAL", payload__recording__collection_profile__in=(PROFILE, "recorded-anniversary/2")).values_list(
+            event_kind="DISBURSAL", payload__recording__collection_profile__in=(PROFILE, "recorded-anniversary/2", RECORDED_PROFILE)).values_list(
                 "payload__recording__source_reference", flat=True):
         if isinstance(reference, str) and identity(reference) == identity(data["source_reference"]):
             raise ValueError("This paper loan source reference is already recorded; open its existing loan.")
     before = dict(m.LoanNumberSequence.objects.filter(workspace=workspace).values_list("pk", "next_number"))
     principal, rate = Decimal(data["principal"]), Decimal(data["rate"])
     from .recorded_items import monthly_interest, contract_items
-    monthly = monthly_interest(contract_items(data))
+    monthly = monthly_interest(contract_items(data), Decimal(data.get("currency_quantum", "0.01")))
     advance = monthly * data["advance_months"]
     original, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, data, key,
         number=data["number"], day=date.fromisoformat(data["date"]), principal=principal, rate=rate,
@@ -406,7 +412,7 @@ def _admit(workspace, actor, data, key, *, archive=None):
 
 def _activate(loan, event, actor):
     persist_disbursal_repayment_schedule(loan, source_event=event, disbursed_on=event.effective_date,
-                                       currency_quantum=Decimal("0.01"), actor=actor)
+                                       currency_quantum=loan.policy_snapshot.currency_quantum.normalize(), actor=actor)
     loan.state = "ACTIVE"
     loan.save(update_fields=["state"])
     m.LoanChangeLog.objects.create(loan=loan, event_kind="DISBURSED" if event.event_kind == "DISBURSAL" else "RENEWAL_SUCCESSOR_ACTIVATED", from_state="DRAFT", to_state="ACTIVE",

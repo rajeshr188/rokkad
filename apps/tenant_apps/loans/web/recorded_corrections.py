@@ -109,6 +109,10 @@ def correction(request, pk):
 
 
 class ContractCorrectionForm(CorrectionForm):
+    adopt_shared_interest = forms.BooleanField(required=False,
+        label="Correct this loan to the shared day-after-anniversary interest contract")
+    currency_quantum = forms.ChoiceField(required=False, choices=(("0.01", "Paise"), ("1", "Whole rupees")),
+        label="Confirmed economic policy interest rounding")
     principal = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0.01, label="Correct original agreed principal")
     rate = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, label="Correct original monthly interest (%)")
     cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0.01, label="Correct original proceeds after deductions")
@@ -208,6 +212,8 @@ def contract_correction(request, pk):
     review = None
     if request.method == "POST" and form.is_valid():
         values = {key: value for key, value in form.cleaned_data.items() if key not in ("review_token", "confirmed")}
+        if not values.get("adopt_shared_interest"):
+            values.pop("currency_quantum", None)
         _item_splits(values)
         if len(form.collateral_items) > 1:
             values["items"] = [dict(item_id=item.pk,

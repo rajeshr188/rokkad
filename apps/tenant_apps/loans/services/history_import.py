@@ -220,6 +220,7 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
             latest_appraised_value=money(row["appraised_value"]) if row["appraised_value"] is not None else None)
         for row in source["collateral"]], valuation_method=policy.valuation_method, maximum_ltv_ratio=policy.maximum_ltv_ratio,
         advance_interest_periods=source["disbursal"]["advance_periods"], currency_quantum=policy.currency_quantum,
+        interest_policy_version=policy.policy_version,
         fees=[DisbursalFeeInput(code=f["code"], name=f["name"], calculation_type=f["kind"], value=money(f["value"]), deducted_at_disbursal=f["deducted"]) for f in source["disbursal"]["fees"]])
     _check({k: source["disbursal"][k] for k in ("principal", "monthly_interest", "advance_interest", "deducted_fees", "net_cash")},
         {"principal": economics.gross_principal, "monthly_interest": economics.monthly_interest, "advance_interest": economics.advance_interest,
@@ -263,7 +264,7 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
                 )
             period = previews[0]
             supplied = entry["accrual"]
-            if manifest["profile"] == "loan-history/2":
+            if manifest["profile"] in ("loan-history/2", "loan-history/3"):
                 expected = portable_accrual(period, snapshot, reverse_items,
                     release_catch_up=supplied["release_catch_up"])
                 if supplied != expected:

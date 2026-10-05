@@ -20,9 +20,13 @@ SALT = "loans.recorded-contract-correction.v1"
 
 def _facts(data):
     fields = {"date", "principal", "rate", "cash_paid", "reference", "reason", "request_key"}
-    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {"settlement", "predecessor", "items", "replay_item_splits"}:
+    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {"settlement", "predecessor", "items", "replay_item_splits", "adopt_shared_interest", "currency_quantum"}:
         raise ValueError("Enter corrected original date, principal, monthly rate and proceeds, with supporting reference.")
     value = deepcopy(data)
+    if "adopt_shared_interest" in value and type(value["adopt_shared_interest"]) is not bool:
+        raise ValueError("Explicitly confirm the shared monthly-contract correction.")
+    if "currency_quantum" in value and (not value.get("adopt_shared_interest") or value["currency_quantum"] not in ("0.01", "1")):
+        raise ValueError("Review the actual policy quantum when adopting the shared monthly contract.")
     try:
         day = date.fromisoformat(value["date"])
     except (ValueError, TypeError):
@@ -129,7 +133,8 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
     deducted_fees = original.deducted_fees if original else Decimal(economics["deducted_fees"])
     principal, rate = Decimal(facts["principal"]), Decimal(facts["rate"])
     from .recorded_items import monthly_interest
-    monthly = monthly_interest(facts["items"]) if "items" in facts else (principal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    quantum = Decimal(facts.get("currency_quantum", str(loan.policy_snapshot.currency_quantum))).normalize()
+    monthly = monthly_interest(facts["items"], quantum) if "items" in facts else (principal * rate / 100).quantize(quantum, rounding=ROUND_HALF_UP)
     advance = monthly * advance_periods
     if principal - advance - deducted_fees != Decimal(facts["cash_paid"]):
         raise ValueError("Corrected proceeds must equal principal less advance interest and the retained deducted document charge.")
@@ -155,10 +160,16 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
     previous_policy = original.policy_snapshot if original else loan.policy_snapshot
     policy_values = {field.name: getattr(previous_policy, field.name) for field in m.LoanPolicySnapshot._meta.fields
         if field.name not in ("id", "loan", "workspace", "created_at")}
+    if facts.get("adopt_shared_interest"):
+        policy_values.update(policy_version=2, currency_quantum=quantum)
     policy = m.LoanPolicySnapshot.objects.create(workspace_id=loan.workspace_id, loan=loan, **policy_values)
     loan.policy_snapshot = policy
     loan.save(update_fields=["loan_date", "principal_amount", "monthly_interest_rate", "policy_snapshot", "updated_at"])
     recording = deepcopy(origin.payload["recording"])
+    if facts.get("adopt_shared_interest"):
+        from apps.tenant_apps.loans.domain.monthly_contract import RECORDED_PROFILE
+        recording["collection_profile"] = RECORDED_PROFILE
+        recording["terms"]["interest_policy"]["currency_quantum"] = str(quantum)
     recording.update(occurred_on=facts["date"], advance_interest=str(advance),
         contract_correction=dict(context, source_event_id=origin.pk, reference=facts["reference"]))
     recording["terms"].update(principal_amount=str(principal), monthly_interest_rate=str(rate))
@@ -169,7 +180,7 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
             actual_cash_paid=facts["cash_paid"] if recording["funding"]["basis"] == "CASH" else None)
     tranches = []
     for item in items:
-        charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(quantum, rounding=ROUND_HALF_UP)
         tranches.append(dict(collateral_item_id=item.pk, allocated_principal=str(item.allocated_principal),
             monthly_interest_rate=str(item.monthly_interest_rate), monthly_interest=str(charge), advance_interest=str(charge * advance_periods)))
     if original:
@@ -215,7 +226,8 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
             m.PawnLoanPrincipalOpeningLine.objects.create(loan_event=replacement, collateral_item=item,
                 predecessor_collateral_item_id=item.renewed_from_id, allocation_order=order,
                 monthly_interest_rate=item.monthly_interest_rate, principal_opened=item.allocated_principal)
-    persist_disbursal_repayment_schedule(loan, source_event=replacement, disbursed_on=loan.loan_date, actor=actor)
+    persist_disbursal_repayment_schedule(loan, source_event=replacement, disbursed_on=loan.loan_date,
+        currency_quantum=quantum, actor=actor)
     rows = [paired_review] if paired else []
     for index, source in enumerate(active):
         key = f"contract-correction:{facts['request_key']}:{index}"

@@ -79,7 +79,9 @@ class PaperHistoryForm(forms.Form):
     complete_through = forms.DateField(widget=forms.DateInput(attrs=DAY), label="All paper activity entered through")
     final_state = forms.ChoiceField(label="State after the final transaction", choices=(
         ("ACTIVE","This loan is outstanding"), ("CLOSED","This loan is closed according to its paper record")))
-    confirmed_rule = forms.BooleanField(label="The agreed rule is simple monthly interest: a full month is charged from each loan-date anniversary; principal reductions apply from the following anniversary.")
+    currency_quantum = forms.ChoiceField(label="Agreement interest rounding", initial="0.01",
+        choices=(("0.01", "Paise"), ("1", "Whole rupees")), required=False)
+    confirmed_rule = forms.BooleanField(label="The agreed rule is simple monthly interest: the next month starts the day after the original loan anniversary; principal reductions apply from the next boundary.")
     confirmed_history = forms.BooleanField(label="I checked this loan's paper record through the stated date and checked for duplicates. No earlier or later loan's renewal history is required.")
 
     def __init__(self, *args, workspace, routine=True, **kwargs):
@@ -129,7 +131,9 @@ class PaperHistoryForm(forms.Form):
                             data.update({name: actual[0][name] for name in ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")})
                             data["principal"] = str(sum((Decimal(row["principal"]) for row in actual), Decimal("0")))
                             data["rate"] = str(effective_rate(actual))
-                            self.item_monthly = monthly_interest(actual)
+                            quantum = (defaults["values"].get("currency_quantum", "0.01")
+                                if data.get("exceptions") not in ("on", "true", "True", "1") else data.get("currency_quantum") or "0.01")
+                            self.item_monthly = monthly_interest(actual, Decimal(str(quantum)))
                     except (ValidationError, ValueError, TypeError, ArithmeticError, ObjectDoesNotExist):
                         pass
                 self.data = data
@@ -171,6 +175,7 @@ class PaperHistoryForm(forms.Form):
 
     def clean(self):
         data = super().clean()
+        data["currency_quantum"] = data.get("currency_quantum") or "0.01"
         if not self.routine or self.data.get("action") == "terms":
             return data
         if data.get("exceptions") and not data.get("exception_reason", "").strip():
@@ -194,7 +199,7 @@ class PaperHistoryForm(forms.Form):
             months = int(self["advance_months"].value())
             if not all(value.is_finite() and value >= 0 for value in (principal, rate, fee)) or months not in (0, 1):
                 return None
-            advance = getattr(self, "item_monthly", (principal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) * months
+            advance = getattr(self, "item_monthly", (principal * rate / 100).quantize(Decimal(str(self["currency_quantum"].value() or "0.01")), rounding=ROUND_HALF_UP)) * months
             return dict(advance=advance, proceeds=principal - advance - fee)
         except (InvalidOperation, TypeError, ValueError):
             return None
@@ -256,7 +261,7 @@ def _data(form, rows, collateral=None):
     value["document_charge"] = value["document_charge"] or Decimal("0")
     if value["cash_paid"] is None:
         from decimal import ROUND_HALF_UP
-        advance = getattr(form, "item_monthly", (value["principal"] * value["rate"] / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) * value["advance_months"]
+        advance = getattr(form, "item_monthly", (value["principal"] * value["rate"] / 100).quantize(Decimal(value["currency_quantum"]), rounding=ROUND_HALF_UP)) * value["advance_months"]
         value["cash_paid"] = value["principal"] - advance - value["document_charge"]
     for name in ("borrower_id", "series_id", "product_version_id"):
         value[name] = value[name].pk
@@ -374,7 +379,7 @@ def paper_history_entry(request):
             review, token = preview(workspace=workspace, actor=actor, data=data, intent_token=intent, **extra)
         except (ValueError, ValidationError, ObjectDoesNotExist) as exc:
             form.add_error(None, str(exc))
-    sections = [("Original contract", ("borrower_id", "series_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "document_charge", "payout_basis", "cash_paid")),
+    sections = [("Original contract", ("borrower_id", "series_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "currency_quantum", "document_charge", "payout_basis", "cash_paid")),
         ("Collateral", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")),
         ("Current monitoring", ("monitoring_method", "monitoring_ltv", "monitoring_reason")),
         ("Completeness and agreed calculation", ("complete_through", "final_state", "confirmed_rule", "confirmed_history"))]

@@ -58,7 +58,7 @@ def record_admission_renewal(workspace, actor, data, key, source, row, request_k
     if method == "NET_SETTLEMENT":
         new_principal = Decimal(row["new_principal"])
         paid, advance = max(principal-new_principal, Decimal("0")), max(new_principal-principal, Decimal("0"))
-        new_interest = (new_principal * Decimal(row["rate"]) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) * advance_months
+        new_interest = (new_principal * Decimal(row["rate"]) / 100).quantize(Decimal(data.get("currency_quantum", "0.01")).normalize(), rounding=ROUND_HALF_UP) * advance_months
         required_net = advance - paid - interest - new_interest - document_charge
         cash_out, offset = Decimal(row["cash_paid"]), min(interest, advance)
         if cash != max(-required_net, Decimal("0")) or cash_out != max(required_net, Decimal("0")):
@@ -81,7 +81,7 @@ def record_admission_renewal(workspace, actor, data, key, source, row, request_k
         cash_received=str(cash), cash_paid=str(cash_out), interest_offset=str(offset),
         interest_settled=str(interest), principal_paid=str(paid), principal_carried=str(carried),
         gross_advance=str(advance), successor_principal=str(new_principal),
-        new_advance_interest=str((new_principal * Decimal(row["rate"]) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) * advance_months),
+        new_advance_interest=str((new_principal * Decimal(row["rate"]) / 100).quantize(Decimal(data.get("currency_quantum", "0.01")).normalize(), rounding=ROUND_HALF_UP) * advance_months),
         new_document_charge=str(document_charge),
         recipient=row["recipient"] if custody == "RETURNED_REPLEDGED" else "")
     old_item = source.collateral_items.get()

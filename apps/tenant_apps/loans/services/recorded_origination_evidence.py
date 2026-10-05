@@ -105,7 +105,10 @@ def _validate(snapshot):
                  else _decimal(funding["actual_cash_paid"]) == snapshot.net_disbursed,
                  "Unknown physical cash must remain unknown.")
     quantum = policy.currency_quantum.normalize()
-    _require(quantum == Decimal("0.01"), "This recorded profile uses two-decimal currency amounts.")
+    from apps.tenant_apps.loans.domain.monthly_contract import RECORDED_PROFILE, POLICY_VERSION
+    corrected = recording.get("collection_profile") == RECORDED_PROFILE
+    _require((quantum in (Decimal("0.01"), Decimal("1")) and policy.policy_version == POLICY_VERSION)
+             if corrected else quantum == Decimal("0.01"), "Unsupported captured rounding policy.")
     tranches = snapshot.evidence["tranches"]
     _require(disbursal["tranches"] == tranches, "Event and snapshot allocations must agree.")
     items = {item.pk: item for item in loan.collateral_items.all()}
@@ -119,7 +122,7 @@ def _validate(snapshot):
         principal, rate = _decimal(row["allocated_principal"]), _decimal(row["monthly_interest_rate"])
         _require(principal == item.allocated_principal and rate == item.monthly_interest_rate,
                  "Agreed item principal and rate must match their allocations.")
-        _require(principal == principal.quantize(quantum), "Principal exceeds currency precision.")
+        _require(principal == principal.quantize(Decimal("0.01")), "Principal exceeds currency precision.")
         _, monthly = calculate_period_interest(calculation_base=principal, monthly_interest_rate=rate,
                                                period_fraction=1, currency_quantum=quantum)
         advance = monthly * snapshot.advance_interest_periods

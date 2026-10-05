@@ -28,7 +28,16 @@ def money(value):
         raise OpeningEvidenceError("Invalid opening collection amount.") from exc
 
 
-def baseline(review, actions, on):
+def baseline(review, actions, on, *, item_mapping=None):
+    if review["profile"] == "loan-opening-review/3":
+        from .opening_policy_interest import calculation
+        result = calculation(review, on, actions, item_mapping)
+        monthly = Decimal(result["monthly_interest_unrounded"])
+        for action, _ in actions:
+            if action.event_kind == "REPAYMENT" and action.effective_date <= on:
+                monthly -= sum(money(i["principal_applied"]) * money(i["monthly_interest_rate"]) / 100
+                               for i in action.payload["repayment"]["item_principal_allocations"])
+        return Decimal(result["additional_interest"]), Decimal(result["additional_interest_unrounded"]), monthly
     original = date.fromisoformat(review["terms"]["original_date"])
     count = collection_calendar(original, on)["additional_months"]
     monthly = sum(money(i["original_principal"]) * money(i["monthly_rate"]) / 100 for i in review["collateral"])
@@ -44,10 +53,10 @@ def baseline(review, actions, on):
     return round_rupees(raw), raw, monthly
 
 
-def position(review, actions, on):
+def position(review, actions, on, *, item_mapping=None):
     settled = bool(actions and actions[-1][0].event_kind in {"RELEASE_RECEIPT", "RENEWAL_SETTLEMENT"})
     calculation_date = actions[-1][0].effective_date if settled else on
-    rounded, raw, monthly = baseline(review, actions, calculation_date)
+    rounded, raw, monthly = baseline(review, actions, calculation_date, item_mapping=item_mapping)
     covered = money(review["continuation"]["recognized_interest"])
     posted = sum(money(a.payload["values"]["interest"]) for _, a in actions if a)
     paid = {k: sum(money(e.payload["values"].get(k, "0")) for e, _ in actions)
@@ -146,7 +155,7 @@ def collection_history(opening, origin, events, as_of):
             seen.add((kind, key))
             if detail["profile"] == "opening-release/1":
                 require(not any(k == "repayment" for k, _ in seen), "Legacy release cannot follow payments.")
-            state = position(review, actions, row.effective_date)
+            state = position(review, actions, row.effective_date, item_mapping=opening["item_mapping"])
             require(not state["settled"], "Opening collection follows an active full release.")
             if detail["profile"] == PROFILE:
                 require(detail.get("rule") == RULE and detail.get("operation") == row.event_kind and
@@ -189,4 +198,4 @@ def collection_history(opening, origin, events, as_of):
         if row.effective_date <= as_of:
             snapshot = list(actions)
     require(pending is None and reversing is None, "Opening servicing contains an unpaired catch-up or reversal.")
-    return position(review, snapshot, as_of), snapshot
+    return position(review, snapshot, as_of, item_mapping=opening["item_mapping"]), snapshot

@@ -27,6 +27,7 @@ class PawnEconomicsResolutionTests(SimpleTestCase):
             valuation_method="CALCULATED_METAL_VALUE",
             maximum_ltv_ratio=Decimal("0.80"),
             advance_interest_periods=1,
+            currency_quantum=Decimal("0.01"),
         )
         resolve_rate.return_value = SimpleNamespace(
             monthly_interest_rate=Decimal("2")

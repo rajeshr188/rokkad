@@ -52,7 +52,7 @@ class MultiItemPaperTests(WorkspaceTestCase):
         self.assertEqual(loan.disbursal_snapshot.monthly_interest, Decimal("280"))
         self.assertEqual(collection_balance(loan, self.today).interest_outstanding, Decimal("280"))
         self.assertFalse(loan.approval_snapshots.exists())
-        self.assertEqual(loan.disbursal_snapshot.evidence["recording"]["collection_profile"], "recorded-anniversary/2")
+        self.assertEqual(loan.disbursal_snapshot.evidence["recording"]["collection_profile"], "recorded-anniversary/3")
 
     def test_explicit_split_changes_only_selected_item_next_anniversary(self):
         loan, _ = self.admit()
@@ -60,7 +60,8 @@ class MultiItemPaperTests(WorkspaceTestCase):
         self.receipt(loan, {str(items[0].pk): "1720", str(items[1].pk): "0"})
         bases = get_pawn_principal_tranche_balances(loan)
         self.assertEqual([row.principal_outstanding for row in bases], [Decimal("4280"), Decimal("4000")])
-        self.assertEqual(collection_balance(loan, self.day + relativedelta(months=1)).interest_outstanding, Decimal("245.60"))
+        self.assertEqual(collection_balance(loan, self.day + relativedelta(months=1)).interest_outstanding, 0)
+        self.assertEqual(collection_balance(loan, self.day + relativedelta(months=1) + timedelta(days=1)).interest_outstanding, Decimal("245.60"))
 
     def test_missing_wrong_total_foreign_or_excessive_split_rejected_atomically(self):
         loan, _ = self.admit()
@@ -75,17 +76,17 @@ class MultiItemPaperTests(WorkspaceTestCase):
         self.receipt(loan, amount="200")
         self.assertEqual(collection_balance(loan, self.today).principal_outstanding, Decimal("10000"))
 
-    def test_anniversary_payment_changes_the_following_month_only(self):
+    def test_payment_on_charge_boundary_changes_the_following_month_only(self):
         day = self.today - relativedelta(months=2)
         self.data["date"] = day.isoformat()
         loan, _ = self.admit()
         item = loan.collateral_items.order_by("pk").first()
-        values = dict(amount=Decimal("2000"), received_on=day + relativedelta(months=1),
+        values = dict(amount=Decimal("2000"), received_on=day + relativedelta(months=1) + timedelta(days=1),
             receipt_reference="Anniversary receipt", request_key=uuid4().hex, actor=self.actor,
             item_principal_split={str(item.pk): "1440"})
         review = preview_paper_repayment(loan.pk, **values)
         record_paper_repayment(loan.pk, **values, review_token=review.review_token, confirmed_received=True)
-        state = collection_state(loan, self.today)
+        state = collection_state(loan, self.today + timedelta(days=1))
         self.assertEqual([Decimal(row["interest"]) for row in state["months"]],
                          [Decimal("280"), Decimal("280"), Decimal("251.20")])
 

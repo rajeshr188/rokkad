@@ -30,6 +30,7 @@ class RepaymentScheduleInput:
     currency_quantum: Decimal = Decimal("0.01")
     rate_tranches: tuple[ScheduleRateTranche, ...] = ()
     contract_version: str = RepaymentScheduleContract.V1.value
+    interest_policy_version: int = 1
 
 
 @dataclass(frozen=True)

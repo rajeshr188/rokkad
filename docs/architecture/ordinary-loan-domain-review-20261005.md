@@ -8,6 +8,17 @@ related: [../adr/2026-10-05-unified-loan-admission-and-continuation.md, ../plans
 
 # Review of ordinary loan admission and continuation
 
+**Subsequent owner clarification (5 October):** the timing/rounding differences
+below describe the reviewed code. They do not establish different intended loan
+agreements by entry channel. For a 5 April loan with its first month paid upfront,
+the next charge starts on 6 May for direct, paper and imported loans. Rounding
+follows the standing economic policy captured for the agreement. The
+[updated decision](../adr/2026-10-05-unified-loan-admission-and-continuation.md) and
+[LD-01A plan](../plans/unified-loan-domain-correction.md) govern correction; this
+source audit remains evidence of the pre-correction implementation. Subsequent
+[LD-01A implementation](../implementation/loan-interest-contract-ld01a.md) records
+the corrected contract and compatibility boundary.
+
 ## Diagnosis
 
 Rokkad already has one operational `PawnLoan`, shared financial events, allocation

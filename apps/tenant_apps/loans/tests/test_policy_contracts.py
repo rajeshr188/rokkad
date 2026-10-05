@@ -73,7 +73,9 @@ class LoanPolicyContractTests(SimpleTestCase):
 
         self.assertEqual(DisbursalPolicySnapshot.from_dict(payload), snapshot)
         self.assertEqual(payload["maximum_ltv_ratio"], "0.70")
-        self.assertEqual(payload["policy_version"], 1)
+        self.assertEqual(payload["policy_version"], 2)
+        legacy = dict(payload, policy_version=1)
+        self.assertEqual(DisbursalPolicySnapshot.from_dict(legacy).to_dict(), legacy)
         with self.assertRaises(FrozenInstanceError):
             snapshot.maximum_ltv_ratio = Decimal("0.80")
 

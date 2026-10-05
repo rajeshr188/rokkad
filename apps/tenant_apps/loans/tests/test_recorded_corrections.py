@@ -30,7 +30,8 @@ class RecordedCorrectionTests(fixtures.RecordedOriginationTests):
     def setUp(self):
         super().setUp()
         self.prepare_history()
-        self.day = self.today - relativedelta(months=2)
+        # Exercise the third charge after its inclusive anniversary, not on it.
+        self.day = self.today - relativedelta(months=2) - timedelta(days=1)
         self.later = self.day + relativedelta(months=1) + timedelta(days=2)
         self.series.license.issued_on = self.day
         self.series.license.save()

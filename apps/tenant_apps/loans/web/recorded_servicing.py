@@ -39,6 +39,8 @@ class PaperRenewalForm(forms.Form):
     rate = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, label="New agreed monthly interest (%)")
     tenure = forms.IntegerField(min_value=1, max_value=600, label="New agreed tenure (months)")
     advance_months = forms.TypedChoiceField(coerce=int, label="New loan advance interest", choices=((0,"None"),(1,"One month deducted")))
+    currency_quantum = forms.ChoiceField(label="New agreement interest rounding", required=False,
+        choices=(("0.01", "Paise"), ("1", "Whole rupees")), initial="0.01")
     document_charge = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, label="New document charge deducted", initial=0)
     amount = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, label="Actual net cash received from customer (0 if none)", initial=0)
     cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, label="Actual net cash paid to customer (0 if none)", initial=0)
@@ -46,12 +48,17 @@ class PaperRenewalForm(forms.Form):
 
     def __init__(self, *args, loan=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if loan and loan.policy_snapshot:
+            self.initial.setdefault("currency_quantum", str(loan.policy_snapshot.currency_quantum.normalize()))
         if loan and loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
             from apps.tenant_apps.loans.models import LoanProductVersion
             self.fields["product_version_id"] = forms.ModelChoiceField(
                 queryset=LoanProductVersion.objects.filter(workspace=loan.workspace, status="ACTIVE",
                     repayment_structure__in=("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"), amortisation_method="NONE"),
                 label="Contract version matching the new paper agreement")
+
+    def clean_currency_quantum(self):
+        return self.cleaned_data.get("currency_quantum") or "0.01"
 
 
 class PaperHandoverForm(forms.Form):

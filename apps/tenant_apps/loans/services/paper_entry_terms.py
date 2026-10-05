@@ -19,10 +19,11 @@ def paper_entry_terms(*, workspace, series, day, metal, principal=None):
         policy = resolve_pawn_loan_economic_policy(workspace_id=workspace.pk,
             license_id=series.license_id, series_id=series.pk, as_of_date=day)
         if (policy.interest_method != "SIMPLE" or policy.partial_month_method != "FULL_MONTH"
-                or policy.advance_interest_periods not in (0, 1) or policy.currency_quantum != Decimal("0.01")):
+                or policy.advance_interest_periods not in (0, 1) or policy.currency_quantum not in (Decimal("0.01"), Decimal("1"))):
             messages.append("The dated setup uses calculation rules outside this paper profile. Record the actual supported agreement as an exception; do not substitute these rules.")
         else:
-            values.update(advance_months=policy.advance_interest_periods, tenure=policy.default_tenure_months)
+            values.update(advance_months=policy.advance_interest_periods, tenure=policy.default_tenure_months,
+                          currency_quantum=str(policy.currency_quantum.normalize()))
             sources.append(f"Agreement policy {policy.pk} revision {policy.revision}")
     except PawnEconomicPolicyError:
         messages.append("No dated digital agreement setup covers this loan. Enter its actual standing terms as an exception.")

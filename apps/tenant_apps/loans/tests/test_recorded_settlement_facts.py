@@ -26,7 +26,8 @@ class RecordedSettlementFactsTests(WorkspaceTestCase):
 
     def setUp(self):
         self.prepare_history()
-        self.day = self.today-relativedelta(months=2)
+        # The later correction includes the third charge, after its anniversary.
+        self.day = self.today-relativedelta(months=2)-timedelta(days=1)
         self.series.license.issued_on = self.day
         self.series.license.save()
         self.old_closing = self.day+relativedelta(months=1)+timedelta(days=2)

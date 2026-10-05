@@ -6,6 +6,7 @@ from dateutil.relativedelta import relativedelta
 from apps.tenant_apps.loans.integrations import accrual_payload
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
 from .event_recording import record_loan_event
+from apps.tenant_apps.loans.domain.monthly_contract import RECORDED_PROFILE, POLICY_VERSION, period_dates
 
 PROFILE = "recorded-anniversary/1"
 ZERO = Decimal("0")
@@ -16,7 +17,7 @@ def recording_for(loan):
         return None
     event = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
     recording = event.payload.get("recording", {}) if event else {}
-    return recording if recording.get("collection_profile") in (PROFILE, "recorded-anniversary/2") else None
+    return recording if recording.get("collection_profile") in (PROFILE, "recorded-anniversary/2", RECORDED_PROFILE) else None
 
 
 def collection_state(loan, day, *, known_through=None):
@@ -27,6 +28,10 @@ def collection_state(loan, day, *, known_through=None):
         raise ValueError("This collection history exceeds the supported 100-year calculation bound.")
     from apps.tenant_apps.loans.selectors.balances import calculate_pawn_loan_balance
     from datetime import timedelta
+    corrected = recording["collection_profile"] == RECORDED_PROFILE
+    if corrected and (loan.policy_snapshot.policy_version != POLICY_VERSION or loan.policy_snapshot.rounding_method != "PER_ACCRUAL_PERIOD"):
+        raise ValueError("The inclusive monthly contract requires its captured supported economic policy.")
+    quantum = loan.policy_snapshot.currency_quantum.normalize() if corrected else Decimal("0.01")
     known_through = min(day, known_through or day)
     balance = get_pawn_loan_balance(loan, as_of_date=known_through)
     events = tuple(loan.loan_events.filter(effective_date__lte=known_through).order_by("effective_date", "pk"))
@@ -36,7 +41,7 @@ def collection_state(loan, day, *, known_through=None):
                and e.pk not in reversed_ids), default=day)
     charges, total, month = [], ZERO, 0
     while True:
-        start = loan.loan_date + relativedelta(months=month)
+        start = period_dates(loan.loan_date, month + 1)[0] if corrected else loan.loan_date + relativedelta(months=month)
         if start > end:
             break
         if month == 0:
@@ -46,16 +51,18 @@ def collection_state(loan, day, *, known_through=None):
                 policy_snapshot=loan.policy_snapshot, as_of_date=min(start - timedelta(days=1), known_through),
                 pending_delivery_blocks=False).principal_outstanding
         item_charges = None
-        if recording["collection_profile"] == "recorded-anniversary/2":
+        if recording["collection_profile"] in ("recorded-anniversary/2", RECORDED_PROFILE):
             from .pawn_tranches import get_pawn_principal_tranche_balances
             bases = get_pawn_principal_tranche_balances(loan, as_of_date=loan.loan_date if month == 0 else min(start - timedelta(days=1), known_through))
             if month == 0:
-                snapshot = loan.disbursal_snapshot
-                original = {row["collateral_item_id"]: Decimal(row["allocated_principal"]) for row in snapshot.evidence["tranches"]}
+                origin = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"),
+                    reversed_by_event__isnull=True).order_by("-pk").first()
+                detail = origin.payload["disbursal"] if origin.event_kind == "DISBURSAL" else origin.payload["renewal"]["successor_economics"]
+                original = {row["collateral_item_id"]: Decimal(row["allocated_principal"]) for row in detail["tranches"]}
             else:
                 original = {row.collateral_item_id: row.principal_outstanding for row in bases}
             item_charges = [dict(collateral_item_id=row.collateral_item_id, principal=str(original[row.collateral_item_id]),
-                rate=str(row.monthly_interest_rate), interest=str((original[row.collateral_item_id] * row.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))) for row in bases]
+                rate=str(row.monthly_interest_rate), interest=str((original[row.collateral_item_id] * row.monthly_interest_rate / 100).quantize(quantum, rounding=ROUND_HALF_UP))) for row in bases]
             charge = sum((Decimal(row["interest"]) for row in item_charges), ZERO)
         else:
             charge = (principal * loan.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -106,26 +113,3 @@ def scheduled_interest(loan, day, amount):
     schedule = get_active_repayment_schedule_as_of(loan, day)
     state = calculate_obligation_state_as_of(schedule, day, adjust_recorded=False)
     return min(amount, state.remaining.interest)
-
-
-def recorded_obligation_state(schedule, day, raw):
-    """Read the agreed variable-principal bullet debt without rewriting its schedule.
-
-    The ordinary immutable schedule retains the original maturity and allocation
-    capacity. Its original fixed interest projection is not a debt after receipts.
-    Future projections may use only transactions known at the requested date.
-    """
-    loan = schedule.loan
-    if not recording_for(loan):
-        return raw
-    from apps.tenant_apps.loans.selectors.obligation_state import ObligationAmount, UnpaidObligationState
-    balance = get_pawn_loan_balance(loan, as_of_date=day)
-    horizon = max(day, schedule.maturity_date)
-    extra = Decimal(collection_state(loan, horizon, known_through=day)["additional"])
-    remaining = ObligationAmount(balance.principal_outstanding, balance.interest_outstanding + extra)
-    zero = ObligationAmount(ZERO, ZERO)
-    row = UnpaidObligationState(raw.obligations[0].obligation_id, schedule.maturity_date,
-                               remaining.principal, remaining.interest)
-    return replace(raw, obligations=(row,), remaining=remaining,
-        due_now=remaining if schedule.maturity_date <= day else zero,
-        overdue=remaining if schedule.maturity_date < day else zero)

@@ -14,7 +14,9 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01 is complete locally; later slices are pending.
+storage work stays uncommitted. LD-01 and LD-01A are complete locally; LD-02 and
+later slices are pending.
+The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
 LD-01 verification passes **239 affected tests in 94.193s**, including 16 new
@@ -29,16 +31,25 @@ Prior UR-23 candidate results remain prior delivery evidence, not validation of
 this proposal. The September portability audit is not the current capability list.
 
 The objective is one operational PawnLoan and common operations with factual
-prerequisites. Preserve accepted calculation contracts, source history, admission
-boundaries, authorization, RLS, immutable evidence and chronology. Do not start
-with a model rewrite or switch every loan to paper anniversary interest.
+prerequisites. Preserve source history, admission boundaries, authorization, RLS,
+immutable evidence and chronology. Correct implementation differences against the
+confirmed agreement without overwriting accepted amounts. No model rewrite is
+needed.
+
+**Confirmed business rule (5 October):** for a 5 April loan whose first month is
+paid upfront, no second-month charge is added on 5 May; it starts on 6 May. Direct,
+backdated paper and imported entry share that boundary. Rounding follows the
+standing economic policy captured for the agreement. Today's setup cannot silently
+change an existing contract. The old LD-01 profile differences below describe the
+checkpoint implementation and are superseded as the target by this clarification.
 
 ## Delivery order
 
 | Slice | Status | Coherent result | Schema expectation |
 |---|---|---|---|
 | LD-01 | Complete locally; 239 tests pass | Common read-only servicing contract and position for repayment preview/reminder balance | None |
-| LD-02 | Pending; after LD-01 | Common purpose/eligibility for supported repayment and full release; retain validated writers | Prefer none; additive versioned evidence only if needed |
+| LD-01A | Complete locally; rollout review pending | Shared inclusive anniversary boundary and captured-policy rounding, with explicit financial correction compatibility | Existing evidence plus corrected policy/profile versions; portability migration 0018 |
+| LD-02 | Pending; after LD-01A | Common purpose/eligibility for supported repayment and full release; retain validated writers | Prefer none; additive versioned evidence only if needed |
 | LD-03 | Pending; after LD-02 | General completed-payout admission replacing historical digital-row prerequisites | Prefer existing recorded evidence; narrow SQL guard change may be needed |
 | LD-04 | Pending; after LD-03, actual checkpoint examples | Explicit reduced-principal/period-carry opening continuation | New review/profile version; additive guard changes only if required |
 | LD-05 | Pending; after source-rule examples and LD-04 | Source-faithful supported history allocation and numbering/setup compatibility | New portable contract; alias table only if proven necessary |
@@ -53,6 +64,10 @@ accepted events is scheduled. Existing unsupported cases remain explicit until
 the corresponding slice is implemented and verified.
 
 ## LD-01: exact recommended first implementation
+
+This completed read-only slice deliberately characterized the old calculators.
+Its boundary/rounding parity criteria are historical checkpoint criteria, not
+acceptance of the newly confirmed common business contract. LD-01A addresses that.
 
 ### Boundary
 
@@ -145,9 +160,81 @@ financial changes. Deploy only after parity passes. No automatic production
 conversion or new feature-flag infrastructure is needed. This first slice does
 not depend on resolving new external calculation rules or reduced cutover history.
 
+## LD-01A: shared monthly boundary and policy rounding
+
+### Scope and implementation order
+
+1. Add a small shared original-date anniversary helper using the existing inclusive
+   opening calendar as the reference. For the confirmed upfront monthly agreement,
+   month one is covered through the first anniversary; the next charge starts the
+   following day. Preserve the original anchor across short months; never chain
+   clamped dates into a drifting anniversary. Retain actual partial-month product
+   conventions where applicable, separately from entry channel.
+2. Resolve quantum and rounding aggregation from the agreement's saved economic
+   policy. Existing policy represents quantum and aggregation; arithmetic uses
+   HALF_UP. Check actual supported fields before proposing any additional setting.
+   Replace paper/opening channel-hardcoded rounding for the corrected contract.
+   For an imported loan without a policy mapping, review its evidenced agreement
+   and freeze a supported mapping without claiming that local setup existed then.
+3. Integrate the helper and saved-policy rounding with native period/advance
+   handling, paper collection and opening continuation. Align schedules, exposure,
+   notices and repayment/full-release/renewal/auction settlement where they depend
+   on those calculations. Distinguish charge eligibility from posting recognition.
+   A one-day shift in a preview alone cannot establish consistent servicing.
+4. Verify period principal bases against the settled next-anniversary reduction
+   rule, including payments on 5 May and 6 May. Do not accidentally defer a valid
+   reduction by another month or change actual staff-specified item allocations.
+5. Inventory affected loan evidence before activation. Separate unposted forecasts
+   from accepted accruals, receipts, concessions and dependent settlements. Retain
+   exact old wire readers and reproduce accepted amounts. Use supported immutable
+   correction/reversal and dependency review for financial errors; never edit
+   earlier events, silently reallocate a paper receipt or reissue saved documents.
+   Document compatible export/restore and rollback for corrected rule evidence.
+
+The historical checkpoint should remain reproducible, but observed early charging
+must not become a permanent entry-channel contract. A software correction does
+not imply a new agreement with the customer. Preserve opening recognized/unpaid
+baselines and unavailable pre-cutover history; do not add an extra financial origin
+or reconstruct pre-cutover activity to implement this change.
+
+### Acceptance and release evidence
+
+- Equivalent 10,000 principal / 2% monthly agreements, with month one paid upfront,
+  show no additional charge through 5 May and 200 starting 6 May in all three
+  channels. Repeat later anniversaries, advance-month counts and closure dates.
+- Original 31 January anchors clamp February individually and return to 31 March;
+  test leap years and day-after boundaries without date drift.
+- Captured economic policy produces equal rounded charges for equivalent item
+  facts across channels. Test paise/whole-rupee ties, aggregation and cumulative
+  recognition; later standing-policy edits leave saved terms unchanged.
+- Mid-month and boundary-day principal reductions, staff item splits, reversals,
+  full settlement and closure/reopening preserve principal and interest conservation.
+- Opening cutover recognition is subtracted exactly once; unsupported mappings
+  remain explicit. No pre-cutover replay, fabricated history or duplicate origin.
+- Native advance coverage, partial-period calculation, schedule/risk/reminder debt
+  and settlement quotes agree with the shared eligible charge dates. Posted and
+  projected debt remain distinguishable.
+- Old evidence/export/restore stays readable; corrected evidence round-trips.
+  Restricted-role isolation, review fingerprints, authorization, retries and
+  correction dependencies retain their existing protections.
+
+Run targeted calendar/policy tests and affected collection, accrual, schedule,
+settlement, opening, correction, risk and notice regressions under test settings.
+Characterization tests intentionally asserting the old early boundary must be
+identified as old-version tests or updated for the correction, not presented as
+proof that the new contract already works. The owner subsequently authorized LD-01A;
+its shared calendar, captured-policy arithmetic, native atomic recognition, reviewed
+paper correction, inventory and versioned portability are now implemented locally.
+The final affected-module verification passes 159 tests (216.110s), after the
+1,753-test broad run identified stale anniversary fixtures and five independently
+confirmed checkpoint failures/errors. The broad run is not claimed wholly green.
+Verification details and rollout limits are tracked in
+[the implementation note](../implementation/loan-interest-contract-ld01a.md).
+Existing cohorts are not converted and deployment remains separate.
+
 ## LD-02: supported common repayment and full release
 
-Build shared prerequisite results on LD-01: operation purpose, effective date,
+Build shared prerequisite results on LD-01 and LD-01A: operation purpose, effective date,
 known position, supported allocation, coverage, lifecycle, custody and later
 dependencies. Reuse `pawn_repayment`, `paper_repayments`, `opening_servicing`,
 `pawn_release`, `paper_closures` and `recorded_closures`; views/templates display
@@ -363,14 +450,17 @@ while repairing it through approved correction semantics.
 
 ## Material business decisions
 
-LD-01 can start without new business answers: characterize and preserve current
-supported behavior. Do not re-ask the settled Lakshmi tenure, next-anniversary
-principal treatment, actual item principal or completed-paper item split rules.
+LD-01 is complete. The owner has settled the common day-after-anniversary boundary
+and captured-economic-policy rounding for direct, paper and imported entry.
+Do not re-ask those choices, Lakshmi tenure, next-anniversary principal treatment,
+actual item principal or completed-paper item split rules. LD-01A implements the
+clarified agreement before common writer eligibility expands in LD-02.
 
 The following decisions affect later extensions and require actual evidence:
 
-1. **External continuation rules:** which imported source contracts really need
-   support beyond existing profiles? Obtain verified examples of period boundary,
+1. **Exceptional external agreements:** which verified source agreements actually
+   differ from the confirmed shared contract? Entry channel alone is not such an
+   exception. Obtain source examples of any genuinely different period boundary,
    rounding, advance coverage, fee priority and actual allocation. Prefer one
    named supported rule over generic configurability.
 2. **Reduced-principal checkpoints:** for affected legacy loans, what current-period

@@ -54,7 +54,7 @@ def opening_release_accrual_preview(loan, *, as_of_date):
         state, actions = collection_history(opening, origin, tuple(loan.loan_events.all()), as_of_date)
         accrued_actions = [(e, a) for e, a in actions if a]
         previous_date = accrued_actions[-1][0].effective_date if accrued_actions else collection.cutover_date
-        unrounded = state["raw"] - baseline(review, actions, previous_date)[1]
+        unrounded = state["raw"] - baseline(review, actions, previous_date, item_mapping=opening["item_mapping"])[1]
         start = min(previous_date + timedelta(days=1), as_of_date)
     return AccrualPeriodPreview(
         period_number=number, period_start=start, period_end=as_of_date,

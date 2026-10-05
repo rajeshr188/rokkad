@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import F, Prefetch, prefetch_related_objects
+from django.db.models import F, Prefetch, prefetch_related_objects, Case, When, Value, BooleanField
 
 from apps.tenant_apps.loans.models import (
     ObligationAllocation,
@@ -15,6 +15,14 @@ from apps.tenant_apps.loans.models import (
 
 
 ZERO = Decimal("0")
+
+
+def _native_monthly_marker():
+    return Case(When(loan__state="ACTIVE", loan__policy_snapshot__policy_version=2,
+        loan__policy_snapshot__interest_method="SIMPLE", loan__policy_snapshot__partial_month_method="FULL_MONTH",
+        loan__product_version__repayment_structure__in=("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"),
+        schedule_version__source_event__event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), then=Value(True)),
+        default=Value(False), output_field=BooleanField())
 
 
 @dataclass(frozen=True)
@@ -100,7 +108,8 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
     prefetch_related_objects(list(selected.values()), Prefetch(
         "obligations",
         queryset=RepaymentObligation.objects.filter(workspace=workspace).annotate(
-            recorded_profile=F("schedule_version__source_event__payload__recording__collection_profile")
+            recorded_profile=F("schedule_version__source_event__payload__recording__collection_profile"),
+            monthly_native=_native_monthly_marker(),
         ).order_by("due_date", "sequence").prefetch_related(Prefetch(
             "allocations",
             queryset=ObligationAllocation.objects.filter(
@@ -123,7 +132,8 @@ def calculate_obligation_state_as_of(schedule, as_of_date, *, adjust_recorded=Tr
     return _fold_obligation_state(
         schedule, as_of_date,
         schedule.obligations.annotate(
-            recorded_profile=F("schedule_version__source_event__payload__recording__collection_profile")
+            recorded_profile=F("schedule_version__source_event__payload__recording__collection_profile"),
+            monthly_native=_native_monthly_marker(),
         ).order_by("due_date", "sequence").prefetch_related(Prefetch(
             "allocations",
             queryset=ObligationAllocation.objects.filter(source_event__effective_date__lte=as_of_date),
@@ -144,8 +154,10 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *
     rows = []
     findings = []
     recorded_profile = None
+    monthly_native = False
     for obligation in obligations:
         recorded_profile = getattr(obligation, "recorded_profile", None)
+        monthly_native = getattr(obligation, "monthly_native", False)
         allocated = {"PRINCIPAL": ZERO, "INTEREST": ZERO}
         for allocation in allocations_for(obligation):
             allocated[allocation.component] += allocation.amount
@@ -180,8 +192,42 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *
         remaining=ObligationAmount(remaining_principal, remaining_interest),
         integrity_findings=tuple(findings),
     )
-    if adjust_recorded and recorded_profile in ("recorded-anniversary/1", "recorded-anniversary/2"):
-        from apps.tenant_apps.loans.services.recorded_collections import recorded_obligation_state
-        return recorded_obligation_state(schedule, as_of_date, result)
+    if adjust_recorded and (recorded_profile in ("recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3")
+            or monthly_native):
+        return _monthly_obligation_state(schedule, as_of_date, result)
     return result
 
+
+def _monthly_obligation_state(schedule, day, raw):
+    """Read the agreed variable-principal bullet debt without rewriting its schedule.
+
+    The ordinary immutable schedule retains the original maturity and allocation
+    capacity. Its original fixed interest projection is not a debt after receipts.
+    Future projections may use only transactions known at the requested date.
+    """
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for, collection_state
+    from .balances import get_pawn_loan_balance
+    loan = schedule.loan
+    recorded = recording_for(loan)
+    if not recorded:
+        from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed
+        if (schedule.source_event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING")
+                or loan.state != "ACTIVE" or not started_month_charge_allowed(loan.policy_snapshot)
+                or loan.policy_snapshot.basis == "RECORDED_CONTRACT" or loan.product_version.repayment_structure not in (
+                "SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT")):
+            return raw
+    balance = get_pawn_loan_balance(loan, as_of_date=day)
+    horizon = max(day, schedule.maturity_date)
+    if recorded:
+        extra = Decimal(collection_state(loan, horizon, known_through=day)["additional"])
+    else:
+        from apps.tenant_apps.loans.services.pawn_interest import preview_pawn_loan_accruals
+        extra = sum((row.recognized_interest for row in preview_pawn_loan_accruals(
+            loan.pk, as_of_date=horizon, known_through=day)), ZERO)
+    remaining = ObligationAmount(balance.principal_outstanding, balance.interest_outstanding + extra)
+    zero = ObligationAmount(ZERO, ZERO)
+    row = UnpaidObligationState(raw.obligations[0].obligation_id, schedule.maturity_date,
+                               remaining.principal, remaining.interest)
+    return replace(raw, obligations=(row,), remaining=remaining,
+        due_now=remaining if schedule.maturity_date <= day else zero,
+        overdue=remaining if schedule.maturity_date < day else zero)

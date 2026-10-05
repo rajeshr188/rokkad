@@ -58,6 +58,8 @@ def resolve_servicing_contract(loan, *, as_of_date):
     if len(openings) > 1 or (openings and originals) or len(active_originals) > 1:
         raise ServicingContractError("Servicing requires exactly one supported financial origin.")
     policy = loan.policy_snapshot if loan.policy_snapshot_id else None
+    if policy and policy.policy_version not in (1, 2):
+        raise ServicingContractError("This loan has an unsupported frozen interest policy version.")
     common = dict(original_date=loan.loan_date, policy_snapshot_id=loan.policy_snapshot_id,
                   interest_method=getattr(policy, "interest_method", None),
                   partial_month_method=getattr(policy, "partial_month_method", None))
@@ -68,11 +70,16 @@ def resolve_servicing_contract(loan, *, as_of_date):
         review = read_opening_evidence(loan, origin)["review"]
         if as_of_date < origin.effective_date:
             raise ServicingContractError("Servicing history before the migration cutover is unavailable.")
-        if review["profile"] != COLLECTION_PROFILE:
+        if review["profile"] not in (COLLECTION_PROFILE, "loan-opening-review/3"):
             raise ServicingContractError("This opening has no supported collection continuation checkpoint.")
         if policy and policy.basis == "RECORDED_CONTRACT":
             raise ServicingContractError("Opening and recorded-disbursal contract evidence conflict.")
         terms = review["terms"]
+        if review["profile"] == "loan-opening-review/3" and (
+            policy is None or policy.policy_version != 2 or policy.interest_method != "SIMPLE"
+            or policy.partial_month_method != "FULL_MONTH"
+            or policy.currency_quantum.normalize() != Decimal(terms["interest_quantum"])):
+            raise ServicingContractError("The reviewed opening must match its captured shared monthly policy.")
         return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,
             profile=terms["rule_id"], financial_history_from=origin.effective_date,
             currency_quantum=Decimal(terms["interest_quantum"]), rounding_scope=terms["rounding_scope"],
@@ -88,24 +95,26 @@ def resolve_servicing_contract(loan, *, as_of_date):
         if not isinstance(recording, dict):
             raise ServicingContractError("This recorded contract has malformed collection evidence.")
         profile = recording.get("collection_profile")
-        if profile not in {"recorded-anniversary/1", "recorded-anniversary/2"}:
+        if profile == "recorded-anniversary/3" and (policy.policy_version != 2 or policy.currency_quantum.normalize() not in (Decimal("0.01"), Decimal("1"))):
+            raise ServicingContractError("The shared monthly contract requires its captured supported economic policy.")
+        if profile not in {"recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3"}:
             raise ServicingContractError("This recorded contract has no supported collection profile.")
         return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,
-            profile=profile, financial_history_from=loan.loan_date, currency_quantum=Decimal("0.01"),
-            rounding_scope="PER_ITEM_PER_ANNIVERSARY" if profile.endswith("/2") else "PER_ANNIVERSARY",
-            rounding_mode="HALF_UP", anniversary_rule="ON_ORIGINAL_ANNIVERSARY",
-            principal_reduction_rule="FOLLOWING_ANNIVERSARY_EXCLUDING_SAME_DAY_PAYMENT")
+            profile=profile, financial_history_from=loan.loan_date, currency_quantum=policy.currency_quantum.normalize() if profile.endswith("/3") else Decimal("0.01"),
+            rounding_scope="PER_ITEM_PER_ANNIVERSARY" if profile.endswith(("/2", "/3")) else "PER_ANNIVERSARY",
+            rounding_mode="HALF_UP", anniversary_rule="DAY_AFTER_ORIGINAL_ANNIVERSARY" if profile.endswith("/3") else "ON_ORIGINAL_ANNIVERSARY",
+            principal_reduction_rule="NEXT_ANNIVERSARY_COLLECTION_BOUNDARY" if profile.endswith("/3") else "FOLLOWING_ANNIVERSARY_EXCLUDING_SAME_DAY_PAYMENT")
     if origin and origin.payload.get("recording", {}).get("collection_profile"):
         raise ServicingContractError("Recorded collection evidence requires its frozen recorded policy.")
     return ServicingContract(**common, origin_event_id=origin.pk if origin else None,
-        origin_kind=origin.event_kind if origin else None, profile="native-event-fold/1",
+        origin_kind=origin.event_kind if origin else None, profile="native-monthly-policy/2" if policy and policy.policy_version == 2 else "native-event-fold/1",
         financial_history_from=loan.loan_date, currency_quantum=getattr(policy, "currency_quantum", None),
         rounding_scope=getattr(policy, "rounding_method", None), rounding_mode="HALF_UP",
-        anniversary_rule="FROZEN_NATIVE_PERIODS", principal_reduction_rule="FROZEN_NATIVE_CONTRACT")
+        anniversary_rule="DAY_AFTER_ORIGINAL_ANNIVERSARY" if policy and policy.policy_version == 2 else "FROZEN_NATIVE_PERIODS", principal_reduction_rule="FROZEN_NATIVE_CONTRACT")
 
 
 def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_coverage=False):
-    """Return the existing operation's balance, not a projected exposure.
+    """Return supported collection debt, including eligible monthly charges.
 
     Closed opening reminders use only the recorded fold, as before. Active opening
     quotes retain dedicated after-cutover/chronology/schedule validation. Coverage
@@ -119,11 +128,15 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
         from apps.tenant_apps.loans.services.opening_servicing import opening_payment_balance
         balance, _ = opening_payment_balance(loan, as_of_date=as_of_date)
         basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
-    elif contract.profile in {"recorded-anniversary/1", "recorded-anniversary/2"}:
+    elif contract.profile in {"recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3"}:
         from apps.tenant_apps.loans.services.recorded_collections import collection_balance
         balance = collection_balance(loan, as_of_date)
         basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
     else:
         balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+        from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed, monthly_collection_balance
+        if loan.state == "ACTIVE" and started_month_charge_allowed(loan.policy_snapshot):
+            balance = monthly_collection_balance(loan, as_of_date)
+            basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
     coverage = transaction_completeness(loan, as_of_date) if include_coverage else None
     return ServicingPosition(contract, balance, basis, coverage)

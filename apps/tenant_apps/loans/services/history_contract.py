@@ -106,8 +106,26 @@ LOAN_V2 = obj(**{**LOAN["properties"], "policy": POLICY_V2, "events": array(EVEN
 SCHEMA_V2 = {"$schema": SCHEMA["$schema"], **obj(
     manifest=obj(**{**MANIFEST["properties"], "profile": {"const": PROFILE_V2}}), loan=LOAN_V2)}
 
+# Old wire contracts remain sealed. Version 3 explicitly selects the corrected
+# original-anniversary calendar and captured-policy item/period rounding.
+PROFILE_V3 = "loan-history/3"
+PROFILES = (*PROFILES, PROFILE_V3)
+POLICY_V3 = obj(**{**POLICY_V2["properties"], "policy_version": {"const": 2},
+                  "currency_quantum": {"enum": ["0.01", "1"]}})
+ACCRUAL_V3 = obj(**{**ACCRUAL_V2["properties"],
+    "period_days": {"type": "integer", "minimum": 28, "maximum": 32},
+    "elapsed_days": {"type": "integer", "minimum": 1, "maximum": 32},
+    "chargeable_days": nullable({"type": "integer", "minimum": 1, "maximum": 32})})
+EVENT_V3 = obj(**{**EVENT_V2["properties"], "accrual": nullable(ACCRUAL_V3)})
+LOAN_V3 = obj(**{**LOAN_V2["properties"], "policy": POLICY_V3,
+                 "events": array(EVENT_V3, 240, 1)})
+SCHEMA_V3 = {"$schema": SCHEMA["$schema"], **obj(
+    manifest=obj(**{**MANIFEST["properties"], "profile": {"const": PROFILE_V3}}), loan=LOAN_V3)}
+
 
 def schema_for(value):
+    if isinstance(value, dict) and isinstance(value.get("manifest"), dict) and value["manifest"].get("profile") == PROFILE_V3:
+        return SCHEMA_V3
     if isinstance(value, dict) and isinstance(value.get("manifest"), dict) and value["manifest"].get("profile") == PROFILE_V2:
         return SCHEMA_V2
     return SCHEMA

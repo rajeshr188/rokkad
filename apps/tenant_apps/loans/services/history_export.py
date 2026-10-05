@@ -119,7 +119,9 @@ def _export_history(*, workspace_id, actor, loan_id):
         if item.description!=row["description"] or item.metal!=row["metal"] or any(money(row[k])!=getattr(item,f) for k,f in (("gross_weight","gross_weight"),("net_weight","net_weight"),("purity","purity_percentage"),("principal","allocated_principal"),("monthly_rate","monthly_interest_rate"))):
             raise HistoryError("Collateral changed from frozen history.")
     accruals=list(loan.interest_accruals.order_by("period_number"))
-    v2 = document["manifest"]["profile"] == "loan-history/2"
+    if loan.policy_snapshot.policy_version == 2:
+        document["manifest"]["profile"] = "loan-history/3"
+    v2 = document["manifest"]["profile"] in ("loan-history/2", "loan-history/3")
     if not v2 and any(a.loan_event_id is None for a in accruals):
         document["manifest"]["profile"] = "loan-history/2"
         source["product"] = {key: getattr(product, key) for key in PRODUCT_FIELDS}

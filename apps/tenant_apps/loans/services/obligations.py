@@ -72,6 +72,7 @@ def persist_disbursal_repayment_schedule(
         currency_quantum=currency_quantum,
         rate_tranches=rate_tranches,
         contract_version=product_version.calculation_contract_version,
+        interest_policy_version=getattr(loan.policy_snapshot, "policy_version", 1),
     ))
     existing = RepaymentScheduleVersion.objects.filter(source_event=source_event).first()
     if existing:
@@ -251,6 +252,7 @@ def supersede_installment_schedule(
         tenure_months=loan.tenure_months,
         currency_quantum=Decimal(str(currency_quantum)),
         contract_version=product.calculation_contract_version,
+        interest_policy_version=getattr(loan.policy_snapshot, "policy_version", 1),
     )
     if product.amortisation_method == LoanAmortisationMethod.EMI.value:
         schedule = generate_shortened_installment_schedule(

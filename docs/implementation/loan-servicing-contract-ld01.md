@@ -8,6 +8,10 @@ related: [../plans/unified-loan-domain-correction.md, ../adr/2026-10-05-unified-
 
 # LD-01 read-only servicing contract and position
 
+LD-01 remains the read-only checkpoint. The subsequently authorized
+[LD-01A implementation](loan-interest-contract-ld01a.md) introduces the shared
+calendar, captured-policy rounding and versioned correction compatibility.
+
 ## Change and boundary
 
 Checkpoint `89f7321e` on `work/loan-servicing-contract-ld01` preserves completed
@@ -43,6 +47,14 @@ eligibility and native approval/quotes remain unchanged. This slice does not adm
 reduced-principal checkpoints, new source allocation rules or new action purposes.
 
 ## Interest differences preserved
+
+**Business clarification after this checkpoint:** the owner confirmed that the
+next charge for a 5 April loan with its first month paid upfront starts on 6 May
+across direct, paper and imported entry. Rounding follows the agreement's captured
+standing economic policy. The table and examples below characterize current code;
+they are not the desired channel-specific borrower contracts. LD-01A will align
+the calculations. The 239 passing tests establish checkpoint behavior, not
+acceptance of that pending correction.
 
 | Existing contract | Boundary | Rounding |
 |---|---|---|
@@ -98,6 +110,8 @@ admission-independent, not a claim of end-to-end import for new unsupported rule
 
 Restore the previous three read consumers to roll back this slice; it creates no
 new financial evidence or schema. Keep accepted source contracts and issued files.
-LD-02 remains next: common operation purpose/eligibility with existing validated
+LD-01A is next: common interest boundary and captured-policy rounding, with explicit
+handling of existing financial evidence. LD-02 then adds common operation
+purpose/eligibility with existing validated
 repayment/full-release writers. Broader admission, source rules, checkpoint profiles,
 coverage transitions and export changes remain pending in the plan.

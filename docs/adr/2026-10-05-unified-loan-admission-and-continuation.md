@@ -12,9 +12,12 @@ related: [../architecture/ordinary-loan-domain-review-20261005.md, ../plans/unif
 
 The owner selected the recommended direction and requested a checkpoint/start on
 LD-01 on 5 October, after the analysis-only review. Acceptance authorizes that
-read-only slice; later writer/admission extensions remain separately planned.
-It does not change existing calculation contracts or supersede earlier ADRs before
-their corresponding implementation is delivered. The
+read-only slice; the owner subsequently authorized LD-01A calculation alignment.
+Later writer/admission extensions remain separately planned.
+The owner subsequently clarified the shared interest boundary and policy rounding
+below. LD-01A implements it through the
+[shared monthly contract decision](2026-10-05-shared-monthly-interest-contract.md). LD-01 itself does not change calculations or supersede earlier implemented
+profiles before the corresponding correction is delivered. The
 [source review](../architecture/ordinary-loan-domain-review-20261005.md) identifies
 the reviewed checkout, evidence and limitations. The
 [plan](../plans/unified-loan-domain-correction.md) tracks implementation.
@@ -29,11 +32,30 @@ operations require a specific origin even when their real prerequisites could be
 known. The earlier-payout adapter and strict history/opening import profiles impose
 additional admission boundaries.
 
-Existing calculation profiles are not interchangeable. Native periodic interest,
-paper anniversary recognition and imported opening continuation differ in timing,
-recognition, rounding and item allocation. The opening profile also has a reviewed
-recognition baseline and an unavailable pre-cutover history. Unification must
-preserve those facts rather than choose one formula for every existing loan.
+Existing calculation profiles differ in timing, recognition, rounding and item
+allocation. Those observed code differences do not establish different intended
+agreements based on entry channel. The opening profile also has a reviewed
+recognition baseline and unavailable pre-cutover history. Those evidenced amounts
+and limits must survive alignment of the shared borrower contract.
+
+### Owner-confirmed shared interest contract
+
+For a monthly loan dated 5 April with its first month paid upfront, the first
+month remains covered through 5 May; the next monthly charge starts on 6 May.
+This boundary applies to direct entry, backdated paper recording and imported
+loans. Use the original loan date as the anniversary anchor, clamping each short
+month independently. Rounding follows the standing economic policy captured for
+the agreement, including supported quantum and aggregation convention. Current
+policy edits cannot silently recalculate an existing agreement.
+
+The earlier recommendation to preserve all differing boundary/rounding behavior
+as separate ongoing business contracts is amended by this clarification. Preserve
+immutable evidence and reproducibility of old calculations; correct implementation
+discrepancies deliberately. Source channel cannot create different borrower terms.
+Where an imported agreement lacks an evidenced policy mapping, explicitly review
+the supported mapping rather than invent a historical destination policy row or
+substitute today's policy. Recognition at cutover remains separate from charge
+eligibility, and no pre-cutover charge is replayed.
 
 ## Decision
 
@@ -98,8 +120,9 @@ whether additional database exclusivity enforcement is needed.
 Use a small Loans-owned read-only resolver over existing frozen evidence first.
 It returns the facts required by a specific operation and explicit blockers when
 they are missing. It is not a configurable formula engine or a replacement
-calculator. Existing native, recorded and opening calculators remain named
-implementations of their accepted contracts.
+calculator. Existing native, recorded and opening calculators remain identifiable
+for historical reproducibility and will be aligned with the confirmed contract in
+LD-01A. Recognition and opening-baseline handling can retain factual differences.
 
 The resolved contract distinguishes:
 
@@ -125,12 +148,15 @@ actors may be unknown. Date-only evidence must not acquire an invented exact tim
 or operator. Existing timestamp fields may encode a calculation convention;
 documents must not portray that convention as a source fact.
 
-Preserve `recorded-anniversary/1`, `recorded-anniversary/2` and existing opening wire
-and continuation conventions exactly, including their different anniversary and
-rounding behavior. Broader reduced-principal or period-carry admission uses a new
-explicitly supported version. Existing snapshots/events are not rewritten to
-normalize old calculations. A future continuation agreement, if needed, is a
-reviewed effective-dated amendment, not a retroactive redefinition.
+Retain exact readers for `recorded-anniversary/1`, `recorded-anniversary/2` and
+published opening wire evidence so accepted source amounts remain reproducible.
+Align ongoing charge eligibility and rounding through a documented compatible
+correction, with supported versioning where needed. Inventory affected loans and
+dependent receipts/settlements before changing their financial results. Correct
+accepted postings through existing compensation/reversal workflows; do not rewrite
+snapshots/events or disguise a software correction as a new borrower agreement.
+Broader reduced-principal or period-carry admission remains a separately supported
+version. Genuine future agreement changes require an effective-dated amendment.
 
 ### 5. Expose common operations with factual prerequisites
 
@@ -253,8 +279,9 @@ stops deciding every later operation, while genuine financial differences remain
 Rejected: removing quote/LTV controls globally; copying today's approval into past
 transactions; generic postings around opening guards; replaying full old history
 on top of an opening; imposing native allocation on verified foreign receipts;
-duplicating servicing engines; broad nullable schema changes; switching every
-loan to one anniversary formula; silently inserting transactions behind dependencies.
+duplicating servicing engines; broad nullable schema changes; overwriting accepted
+amounts while aligning the shared contract; silently inserting transactions behind
+dependencies.
 
 The first change is deliberately read-only. Schema work and new eligibility come
 later, with characterization, versioned evidence, restricted-role tests and a

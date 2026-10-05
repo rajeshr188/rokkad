@@ -47,8 +47,8 @@ class ServicingPositionTests(WorkspaceTestCase):
         schedules = list(loan.repayment_schedules.values_list("pk", "source_event_id"))
         with CaptureQueriesContext(connection) as queries:
             position = get_servicing_position(loan, as_of_date=self.today, include_coverage=True)
-        self.assertEqual(position.contract.profile, "recorded-anniversary/1")
-        self.assertEqual(position.contract.anniversary_rule, "ON_ORIGINAL_ANNIVERSARY")
+        self.assertEqual(position.contract.profile, "recorded-anniversary/3")
+        self.assertEqual(position.contract.anniversary_rule, "DAY_AFTER_ORIGINAL_ANNIVERSARY")
         self.assertEqual(position.contract.currency_quantum, Decimal("0.01"))
         self.assertEqual(position.balance.total_due, Decimal("10200"))
         self.assertTrue(position.transaction_coverage.complete)
@@ -63,7 +63,7 @@ class ServicingPositionTests(WorkspaceTestCase):
         # A position resolves facts once, not separately for each displayed amount.
         self.assertLess(len(queries), 35)
 
-    def test_item_profile_two_rounds_each_item_and_changes_on_anniversary(self):
+    def test_item_profile_three_rounds_each_item_and_changes_after_anniversary(self):
         first = {key: self.data[key] for key in (
             "description", "metal", "quantity", "gross_weight", "net_weight", "purity", "principal", "rate")}
         first.update(principal="0.25", rate="2")
@@ -73,10 +73,11 @@ class ServicingPositionTests(WorkspaceTestCase):
         anniversary = loan.loan_date + relativedelta(months=1)
         before = get_servicing_position(loan, as_of_date=anniversary-timedelta(days=1))
         on_day = get_servicing_position(loan, as_of_date=anniversary)
-        self.assertEqual(on_day.contract.profile, "recorded-anniversary/2")
+        self.assertEqual(on_day.contract.profile, "recorded-anniversary/3")
         self.assertEqual(on_day.contract.rounding_scope, "PER_ITEM_PER_ANNIVERSARY")
         self.assertEqual(before.balance.interest_outstanding, Decimal("0"))
-        self.assertEqual(on_day.balance.interest_outstanding, Decimal("0.02"))
+        self.assertEqual(on_day.balance.interest_outstanding, 0)
+        self.assertEqual(get_servicing_position(loan, as_of_date=anniversary+timedelta(days=1)).balance.interest_outstanding, Decimal("0.02"))
 
     def test_native_unitemized_fold_does_not_collect_projected_interest(self):
         loan = m.PawnLoan.objects.create(workspace=self.tenant, license=self.series.license,

@@ -307,6 +307,8 @@ def preview_pawn_loan_renewal_plan(
         )
     balance = source_preview.balance
     quantum = Decimal(str(source.policy_snapshot.currency_quantum)).normalize()
+    if source.policy_snapshot.policy_version == 2:
+        quantum = Decimal("0.01")
     successor_principal = (
         balance.principal_outstanding - principal_paid + top_up_amount
     ).quantize(quantum)
@@ -546,6 +548,8 @@ def renew_pawn_loan(
         currency_quantum = Decimal(
             str(source.policy_snapshot.currency_quantum)
         ).normalize()
+        if source.policy_snapshot.policy_version == 2:
+            currency_quantum = Decimal("0.01")
         successor_principal = (
             balance.principal_outstanding - principal_paid + top_up_amount
         ).quantize(currency_quantum)
@@ -793,6 +797,7 @@ def renew_pawn_loan(
         payload=opening_payload,
         actor=actor,
     )
+    successor.policy_snapshot = successor_policy
     persist_disbursal_repayment_schedule(
         successor,
         source_event=opening_event,
@@ -1277,9 +1282,12 @@ def _successor_policy_from_approval(successor, economics):
             "Renewal successor approval is missing frozen policy evidence."
         )
     try:
+        version = evidence.get("policy_version", 1)
+        if type(version) is not int or version not in (1, 2):
+            raise ValueError("Unsupported frozen interest policy version.")
         return LoanPolicySnapshot.objects.create(
             loan=successor,
-            policy_version=1,
+            policy_version=version,
             minimum_first_month=evidence.get("minimum_first_month", False),
             interest_method=evidence["interest_method"],
             partial_month_method=evidence["partial_month_method"],
@@ -1467,6 +1475,8 @@ def _money(value, loan):
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnRenewalError("Renewal amount must be a valid number.") from exc
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
+    if loan.policy_snapshot.policy_version == 2:
+        quantum = Decimal("0.01")
     if amount < 0 or amount != amount.quantize(quantum):
         raise PawnRenewalError(
             f"Renewal amount must be non-negative and use precision {quantum}."

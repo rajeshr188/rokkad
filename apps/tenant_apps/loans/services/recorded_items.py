@@ -5,9 +5,9 @@ ITEM_PROFILE = "recorded-anniversary/2"
 MONEY = Decimal("0.01")
 
 
-def monthly_interest(items):
+def monthly_interest(items, quantum=MONEY):
     return sum(((Decimal(row["principal"]) * Decimal(row["rate"]) / 100).quantize(
-        MONEY, rounding=ROUND_HALF_UP) for row in items), Decimal("0"))
+        Decimal(quantum).normalize(), rounding=ROUND_HALF_UP) for row in items), Decimal("0"))
 
 
 def effective_rate(items):

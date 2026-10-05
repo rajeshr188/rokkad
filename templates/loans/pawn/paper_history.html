@@ -30,7 +30,7 @@
       <button class="btn btn-outline-secondary mb-2" type="submit" name="action" value="terms" formnovalidate data-load-terms>Load standing terms</button>
       {% if form.terms %}
         <p>Monthly interest {{ form.rate.value|floatformat:"-6" }}%{% if formset %} (effective rate; each item retains its own rate){% endif %} · Tenure {{ form.tenure.value|default_if_none:"—" }} months · Advance {{ form.advance_months.value|default_if_none:"—" }} month(s) · Document charge {{ form.document_charge.value|default_if_none:"—" }}</p>
-        <p>Simple monthly interest: full months from the original loan anniversary; principal reductions apply from the next anniversary.</p>
+        <p>Simple monthly interest: the next charge starts the day after the original loan anniversary. Principal reductions apply from the next monthly charge.</p>
         <p>Total principal: <strong>{{ form.principal.value|indian_money }}</strong></p>{% if form.deductions %}<p>Advance interest deducted: {{ form.deductions.advance|indian_money }} · Proceeds after interest and document charge: <strong>{{ form.deductions.proceeds|indian_money }}</strong>.</p>{% endif %}
         <p class="small">Current monitoring: {% for value, label in form.fields.monitoring_method.choices %}{% if value == form.monitoring_method.value %}{{ label }}{% endif %}{% endfor %} · Maximum LTV {{ form.monitoring_ltv.value }}. This does not reapprove the original advance.</p>
         {% for message in form.terms.messages %}<p class="text-warning">{{ message }}</p>{% endfor %}
@@ -40,7 +40,7 @@
         <div class="form-check my-3">{{ form.exceptions }}<label class="form-check-label" for="{{ form.exceptions.id_for_label }}">{{ form.exceptions.label }}</label></div>
         <p class="small">Use actual supported terms when this agreement differs or dated digital setup is unavailable. Paper proceeds do not automatically establish physical cash paid.</p>
         <div class="row g-3">
-          {% for field in form %}{% if field.name in "rate tenure advance_months document_charge payout_basis cash_paid monitoring_method monitoring_ltv monitoring_reason exception_reason" %}
+          {% for field in form %}{% if field.name in "rate tenure advance_months currency_quantum document_charge payout_basis cash_paid monitoring_method monitoring_ltv monitoring_reason exception_reason" %}
           <div class="col-12 col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
           {% endif %}{% endfor %}
         </div>
@@ -52,7 +52,7 @@
     {% endif %}
     <section class="mb-3" aria-labelledby="timeline-title"><h2 class="h5" id="timeline-title">Transactions after the payout</h2>
 {% if not archive %}      <p class="small">Renewal details are optional. Record each loan separately when its paper record does not identify a predecessor. For a known renewal after this loan has been entered, use Renew on its detail page. A paper closure does not require identifying another loan.</p>{% endif %}
-      <p class="small text-body-secondary">Leave unused rows blank. Keep same-day transactions in paper order. Each full month starts on the original loan-date anniversary, clamped to month end; a payment on that anniversary reduces the following month’s base. This includes a receipt or closure on the maturity anniversary. A renewal starts its own anniversary. Original historical valuation and digital approval are not required.</p>
+      <p class="small text-body-secondary">Leave unused rows blank. Keep same-day transactions in paper order. Each month remains covered through the original loan-date anniversary, clamped to month end; the next charge starts the following day. A payment on the anniversary reduces the next charge’s principal base. A renewal starts its own anniversary. Original historical valuation and digital approval are not required.</p>
       {{ rows.management_form }}{{ rows.non_form_errors }}
       {% for row in rows %}<fieldset class="border rounded p-3 mb-3"><legend class="float-none w-auto px-2 h6">Transaction {{ forloop.counter }}</legend>
         {{ row.non_field_errors }}<div class="row g-3">{% for field in row %}{% if field.name in "rate tenure renewal_method new_principal cash_paid interest_offset custody" %}{% elif field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="col-12 col-md-6">

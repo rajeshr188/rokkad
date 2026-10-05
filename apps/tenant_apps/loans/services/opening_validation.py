@@ -12,6 +12,8 @@ from .portability_validation import (
 
 PROFILE = "loan-opening-review/1"
 COLLECTION_PROFILE = "loan-opening-review/2"
+POLICY_COLLECTION_PROFILE = "loan-opening-review/3"
+COLLECTION_PROFILES = (COLLECTION_PROFILE, POLICY_COLLECTION_PROFILE)
 MAX_ITEMS = 20
 MAX_OBLIGATIONS = 240
 DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,6})?\Z")
@@ -127,10 +129,10 @@ def validate_opening(document, *, today=None):
     doc = check.object(document, "profile source cutover mapping balances terms collateral obligations continuation review_reference", "document")
     if doc is None:
         return result
-    collection_profile = doc["profile"] == COLLECTION_PROFILE
+    collection_profile = doc["profile"] in COLLECTION_PROFILES
     if collection_profile:
-        result["profile"] = COLLECTION_PROFILE
-    if doc["profile"] not in (PROFILE, COLLECTION_PROFILE):
+        result["profile"] = doc["profile"]
+    if doc["profile"] not in (PROFILE, *COLLECTION_PROFILES):
         check.issue("PROFILE", "profile", "Only an opening review document is supported.")
     check.text(doc["review_reference"], "review_reference")
     source = check.object(doc["source"], "namespace schema loan_id number loan_timestamp borrower_id item_ids archive_sha256 selection_sha256 loan_sha256 state excluded errors", "source")
@@ -391,8 +393,12 @@ def _validate_collection_checkpoint(check, doc, items, amounts, original, cutoff
     required = {"rule_id": AGGREGATE_RULE, "period_rule": "ORIGINAL_ANNIVERSARY",
                 "interest_basis": "ORIGINAL_PRINCIPAL", "partial_rule": "INCLUSIVE_UPFRONT",
                 "rounding_scope": "AGGREGATE", "rounding_mode": "HALF_EVEN", "interest_quantum": "1"}
+    if doc["profile"] == POLICY_COLLECTION_PROFILE:
+        from apps.tenant_apps.loans.domain.monthly_contract import RULE
+        required.update(rule_id=RULE, rounding_scope="PER_ITEM", rounding_mode="HALF_UP")
+        required.pop("interest_quantum")
     if not isinstance(terms, dict) or any(terms.get(k) != v for k, v in required.items()):
-        check.issue("COLLECTION_RULE", "terms", "Version 2 requires the named inclusive upfront aggregate rule without overrides.")
+        check.issue("COLLECTION_RULE", "terms", "Use the named collection rule and rounding for this reviewed profile without overrides.")
     carry = check.object(doc["continuation"], "covered_through additional_months recognized_interest recognized_unpaid_interest first_month_paid evidence_reference", "continuation")
     if not carry:
         return
@@ -413,7 +419,11 @@ def _validate_collection_checkpoint(check, doc, items, amounts, original, cutoff
     if original and cutoff and items and all(i["original"] is not None and i["rate"] is not None for i in items.values()):
         monthly = sum(i["original"] * i["rate"] / 100 for i in items.values())
         try:
-            calculation = aggregate_collection_interest(original, cutoff, monthly)
+            if doc["profile"] == POLICY_COLLECTION_PROFILE:
+                from .opening_policy_interest import calculation as policy_calculation
+                calculation = policy_calculation(doc, cutoff)
+            else:
+                calculation = aggregate_collection_interest(original, cutoff, monthly)
         except ValueError:
             check.issue("COLLECTION_RANGE", "continuation", "Collection dates or amounts exceed the supported bounds.")
             return
@@ -421,4 +431,4 @@ def _validate_collection_checkpoint(check, doc, items, amounts, original, cutoff
         if months is not None and months != calculation["additional_months"]:
             check.issue("COLLECTION_MONTHS", "continuation.additional_months", "Preserve the inclusive original anniversary count.")
         if recognized is not None and recognized != Decimal(calculation["additional_interest"]):
-            check.issue("COLLECTION_RECOGNITION", "continuation.recognized_interest", "Recognized baseline must include every charge through cutover, rounded once in aggregate.")
+            check.issue("COLLECTION_RECOGNITION", "continuation.recognized_interest", "Recognized baseline must include every charge through cutover using the reviewed profile's rounding.")

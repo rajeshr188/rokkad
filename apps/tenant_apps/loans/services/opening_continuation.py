@@ -6,18 +6,19 @@ from dateutil.relativedelta import relativedelta
 
 from .legacy_interest import AGGREGATE_RULE, aggregate_collection_interest
 from .opening_evidence import OpeningEvidenceError, read_opening_evidence
-from .opening_validation import COLLECTION_PROFILE
+from .opening_validation import COLLECTION_PROFILES
+from .opening_policy_interest import reviewed_calculation
 
 
 def opening_interest_breakdown(review, *, as_of_date, loan=None):
     """Explain a validated active opening's collection rule without posting."""
     original = date.fromisoformat(review["terms"]["original_date"])
     cutover = date.fromisoformat(review["cutover"]["date"])
-    if review["profile"] != COLLECTION_PROFILE or as_of_date < cutover:
+    if review["profile"] not in COLLECTION_PROFILES or as_of_date < cutover:
         raise OpeningEvidenceError("Interest breakdown requires a collection opening on or after cutover.")
     monthly = sum(Decimal(item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
                   for item in review["collateral"])
-    calculated = aggregate_collection_interest(original, as_of_date, monthly)
+    calculated = reviewed_calculation(review, as_of_date)
     elapsed = relativedelta(as_of_date, original)
     baseline = Decimal(review["continuation"]["recognized_interest"])
     unpaid = Decimal(review["balances"]["interest"])
@@ -72,7 +73,7 @@ def preview_opening_collection(loan, *, events, as_of_date):
     event = origins[0]
     opening = read_opening_evidence(loan, event)
     review = opening["review"]
-    if review["profile"] != COLLECTION_PROFILE:
+    if review["profile"] not in COLLECTION_PROFILES:
         raise OpeningEvidenceError("This opening does not have the supported collection continuation checkpoint.")
     if type(as_of_date) is not date or as_of_date < event.effective_date:
         raise OpeningEvidenceError("Collection history before the migration cutover is unavailable.")
@@ -90,7 +91,7 @@ def preview_opening_collection(loan, *, events, as_of_date):
                   for item in review["collateral"])
     release_date = _settled_release_date(events, event, as_of_date, loan.loan_date, monthly, review)
     try:
-        calculated = aggregate_collection_interest(loan.loan_date, release_date or as_of_date, monthly)
+        calculated = reviewed_calculation(review, release_date or as_of_date)
     except ValueError as exc:
         raise OpeningEvidenceError(str(exc)) from exc
     baseline = Decimal(calculated["additional_interest"])
@@ -99,7 +100,7 @@ def preview_opening_collection(loan, *, events, as_of_date):
         opening_event_id=event.pk, cutover_date=event.effective_date, as_of_date=as_of_date,
         monthly_interest_unrounded=monthly, baseline_at_cutover=covered,
         baseline_as_of=baseline, additional_interest=Decimal("0") if release_date else baseline - covered,
-        next_increase_on=date.fromisoformat(calculated["next_increase_on"]),
+        next_increase_on=date.fromisoformat(calculated["next_increase_on"]), rule=calculated["rule"],
     )
 
 
@@ -132,7 +133,7 @@ def _settled_release_date(events, origin, as_of, original_date, monthly, review)
                 raise OpeningEvidenceError("Duplicate opening release request.")
             releases[request_key] = row
         elif row.event_kind == "INTEREST_ACCRUAL":
-            expected = Decimal(aggregate_collection_interest(original_date, row.effective_date, monthly)["additional_interest"]) - Decimal(review["continuation"]["recognized_interest"])
+            expected = Decimal(reviewed_calculation(review, row.effective_date)["additional_interest"]) - Decimal(review["continuation"]["recognized_interest"])
             if (request_key in accruals or expected <= 0 or row.payload.get("values", {}).get("interest") != str(expected) or
                     detail.get("baseline_at_cutover") != review["continuation"]["recognized_interest"] or
                     detail.get("rule") != review["terms"]["rule_id"] or
@@ -144,7 +145,7 @@ def _settled_release_date(events, origin, as_of, original_date, monthly, review)
             raise OpeningEvidenceError("Unsupported subsequent servicing for this opening.")
     active_releases = []
     for key, release in releases.items():
-        expected = Decimal(aggregate_collection_interest(original_date, release.effective_date, monthly)["additional_interest"]) - Decimal(review["continuation"]["recognized_interest"])
+        expected = Decimal(reviewed_calculation(review, release.effective_date)["additional_interest"]) - Decimal(review["continuation"]["recognized_interest"])
         values = release.payload.get("values") or {}
         try:
             paid = {k: Decimal(str(values.get(k, "0"))) for k in ("principal", "interest", "fees", "interest_concession")}

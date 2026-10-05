@@ -6,6 +6,7 @@ original-date anniversary, clamping only the individual short month.
 from calendar import monthrange
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_EVEN, localcontext
+from apps.tenant_apps.loans.domain.monthly_contract import anniversary, charge_count
 
 RULE = "original-anniversary-upfront-inclusive/1"
 AGGREGATE_RULE = "original-anniversary-upfront-inclusive/2"
@@ -27,13 +28,9 @@ def collection_calendar(original, as_of):
     if months > 1200:
         raise ValueError("Legacy collection review supports at most 100 years.")
 
-    def anniversary(offset):
-        year, month = divmod(original.year * 12 + original.month - 1 + offset, 12)
-        return date(year, month + 1, min(original.day, monthrange(year, month + 1)[1]))
-
-    additional = max(0, months - (as_of <= anniversary(months)))
+    additional = charge_count(original, as_of)
     try:
-        next_increase = anniversary(additional + 1) + timedelta(days=1)
+        next_increase = anniversary(original, additional + 1) + timedelta(days=1)
     except (ValueError, OverflowError) as exc:
         raise ValueError("Next collection boundary is outside supported dates.") from exc
     return {"rule": RULE, "original_date": original.isoformat(), "as_of": as_of.isoformat(),

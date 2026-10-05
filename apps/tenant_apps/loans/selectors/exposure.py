@@ -108,7 +108,8 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         findings.append("Recorded total due does not equal its balance components.")
     provenance = (
         "recorded:event-fold-v1",
-        f"projection:{recorded['collection_profile']}" if recorded else (f"projection:{continuation.rule}" if continuation else "projection:actual-outstanding-daily-v1"),
+        f"projection:{recorded['collection_profile']}" if recorded else (f"projection:{continuation.rule}" if continuation else
+            "projection:original-anniversary-policy/1" if loan.policy_snapshot and loan.policy_snapshot.policy_version == 2 else "projection:actual-outstanding-daily-v1"),
         f"contract:{loan.product_version.calculation_contract_version}",
         "due:active-obligation-fold-v1",
         f"schedule:{obligation_state.schedule_fingerprint or 'none'}",
@@ -137,6 +138,10 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
 
 
 def _project_interest_periods(loan, as_of_date):
+    if loan.policy_snapshot and loan.policy_snapshot.policy_version == 2 and loan.policy_snapshot.basis != "RECORDED_CONTRACT":
+        from apps.tenant_apps.loans.services.pawn_interest import preview_pawn_loan_accruals
+        return tuple((row.period_start, row.period_end, row.recognized_interest)
+                     for row in preview_pawn_loan_accruals(loan.pk, as_of_date=as_of_date))
     from apps.tenant_apps.loans.services.recorded_collections import recording_for, collection_state
     if recording_for(loan):
         extra = Decimal(collection_state(loan, as_of_date)["additional"])

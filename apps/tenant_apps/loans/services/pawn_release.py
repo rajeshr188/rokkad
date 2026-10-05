@@ -623,6 +623,8 @@ def _money_amount(value, loan):
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnReleaseError("Settlement amount must be a valid number.") from exc
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
+    if loan.policy_snapshot.policy_version == 2:
+        quantum = Decimal("0.01")
     if not amount.is_finite() or not 0 <= amount < Decimal("1e14"):
         raise PawnReleaseError("Settlement and concession amounts must be finite, non-negative and below 1e14.")
     if amount != amount.quantize(quantum):

@@ -31,9 +31,26 @@ The paper adapter already admits supported terms without historical destination
 Rates/policies. The older earlier-payout path and strict native-compatible history
 import are narrower workflows, not universal historical evidence requirements.
 
-Existing native, recorded-anniversary/1 and /2, and opening continuation are not
-identical: calendar boundaries, recognition and rounding differ. Unification must
-preserve them as named contracts. Existing opening commit rejects reduced principal
+**Owner clarification (5 October):** direct, backdated paper and imported loans
+share the monthly interest boundary. With a loan dated 5 April and the first month
+paid upfront, no second-month charge is due through 5 May; it starts on 6 May.
+Use the original-date anniversary anchor, with individual short-month clamping.
+Rounding follows the standing economic policy captured for the agreement, across
+entry channels; later setup changes must not silently change that agreement.
+The older frozen native/paper/opening code differs. These differences are observed
+implementation behavior, not evidence of different intended borrower contracts.
+LD-01 preserved them for a read-only checkpoint. LD-01A now implements the shared
+calendar and captured-policy arithmetic with versioned correction evidence before LD-02. Retain accepted source amounts and immutable events, and explicitly
+correct affected financial evidence rather than perpetuate a calculation defect.
+New itemized approvals freeze policy version 2; new recorded admissions use
+recorded-anniversary/3. Reviewed policy-based opening/portable history use version 3.
+Old approvals and profiles retain exact interpretation, requiring reviewed correction
+before adoption. Native simple/full-month receipts recognize eligible charges and
+allocate atomically; previews/notices and risk use the same monthly eligibility.
+Interest rounds HALF_UP per item per period at the saved quantum; cash/principal
+remain paise. See the shared-interest ADR and LD-01A implementation note.
+
+Existing opening commit rejects reduced principal
 at cutover despite supporting later reductions; broader validation descriptors do
 not establish operational support. Never replay pre-cutover charges, add an opening
 over an existing disbursal or invent unknown history/allocations/actors/timestamps.
@@ -73,9 +90,11 @@ Every paper collateral item has its actual principal. Do not add total-only
 origination, equal/weight allocations or reconstructed original allocations. Paper
 principal receipts require the staff-specified item split after calculated interest;
 direct receipts retain their highest-monthly-rate-first rule. Itemized paper
-agreements use recorded-anniversary/2 and individually rounded item charges;
-recorded-anniversary/1 keeps its existing semantics. Principal reductions change
-interest from the next loan anniversary, including a payment on an anniversary.
+agreements currently use recorded-anniversary/2 and individually rounded item
+charges; recorded-anniversary/1 keeps its checkpoint semantics. The 5 October
+common-boundary/policy-rounding decision above is the correction target.
+Principal reductions change interest from the next loan anniversary; boundary-day
+tests must reconcile that rule with the inclusive monthly charge boundary.
 Full paper closure and supported corrections retain all item evidence. Independent
 paper agreements need no predecessor; optional already-completed linked paper
 renewal remains a single-group shortcut. Ordinary Renew performed now supports

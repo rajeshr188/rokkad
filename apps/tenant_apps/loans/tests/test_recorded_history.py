@@ -77,7 +77,8 @@ class RecordedHistoryTests(fixtures.RecordedOriginationTests):
         self.assertEqual(Decimal(review["rows"][2]["interest"]), 0)
         self.assertEqual(collection_balance(loan, self.today).principal_outstanding, 7200)
         from dateutil.relativedelta import relativedelta
-        self.assertEqual(collection_balance(loan, self.day+relativedelta(months=1)).interest_outstanding, 144)
+        self.assertEqual(collection_balance(loan, self.day+relativedelta(months=1)).interest_outstanding, 0)
+        self.assertEqual(collection_balance(loan, self.day+relativedelta(months=1)+timedelta(days=1)).interest_outstanding, 144)
 
     def test_same_day_original_and_multiple_receipts_preserve_order(self):
         self.data.update(date=self.today.isoformat())
@@ -480,25 +481,27 @@ class RecordedHistoryTests(fixtures.RecordedOriginationTests):
         loan, _, _ = self.admit()
         now = get_pawn_loan_exposure(loan.pk, as_of_date=self.today)
         self.assertEqual(now.total_economic_exposure, 8200)
-        # Four charged months through the maturity anniversary; first month's 200 was paid.
-        self.assertEqual(now.maturity_payoff, 8200 + 164 * 3)
+        # Three covered monthly periods through maturity; first month's 200 was paid.
+        self.assertEqual(now.maturity_payoff, 8200 + 164 * 2)
         before_receipt = get_pawn_loan_exposure(loan.pk, as_of_date=self.day)
         self.assertEqual(before_receipt.total_economic_exposure, 10200)
-        self.assertEqual(before_receipt.maturity_payoff, 10800)
+        self.assertEqual(before_receipt.maturity_payoff, 10600)
         maturity = self.day + relativedelta(months=3)
         state = calculate_obligation_state_as_of(get_active_repayment_schedule_as_of(loan, maturity), maturity)
-        self.assertEqual(state.due_now.total, 8692)
+        self.assertEqual(state.due_now.total, 8528)
         self.assertEqual(state.overdue.total, 0)
 
-    def test_receipt_on_anniversary_changes_only_next_month_and_month_end_clamps(self):
+    def test_receipt_on_last_covered_day_changes_next_charge_and_month_end_clamps(self):
         from datetime import date
         from dateutil.relativedelta import relativedelta
         original = date(2026, 1, 31)
         self.data.update(date=original.isoformat(), events=[self.row(date="2026-02-28", amount="2400")])
         loan, review, _ = self.admit()
-        self.assertEqual(Decimal(review["rows"][1]["interest"]), 400)
+        self.assertEqual(Decimal(review["rows"][1]["interest"]), 200)
         self.assertEqual(collection_balance(loan, date(2026, 2, 28)).interest_outstanding, 0)
-        self.assertEqual(collection_balance(loan, date(2026, 3, 31)).interest_outstanding, 160)
+        self.assertEqual(collection_balance(loan, date(2026, 3, 1)).interest_outstanding, 156)
+        self.assertEqual(collection_balance(loan, date(2026, 3, 31)).interest_outstanding, 156)
+        self.assertEqual(collection_balance(loan, date(2026, 4, 1)).interest_outstanding, 312)
 
     def test_restricted_role_can_admit_complete_renewed_history_and_hides_other_workspace(self):
         import uuid

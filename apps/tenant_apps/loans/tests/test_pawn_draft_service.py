@@ -671,7 +671,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             )
 
         previews = preview_pawn_loan_accruals(
-            loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
+            loan.pk, as_of_date=date(2026, 9, 18), include_partial=False
         )
         self.assertEqual(len(previews), 2)
         self.assertEqual(previews[0].calculated_interest, Decimal("2800.00"))
@@ -749,7 +749,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         )
 
         second_preview = preview_pawn_loan_accruals(
-            loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
+            loan.pk, as_of_date=date(2026, 9, 18), include_partial=False
         )[0]
         self.assertEqual(second_preview.period_number, 2)
         self.assertEqual(second_preview.calculation_base, Decimal("97000.0000"))
@@ -766,7 +766,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                     actor=self.tenant.owner,
                 )
         restored_preview = preview_pawn_loan_accruals(
-            loan.pk, as_of_date=date(2026, 9, 17), include_partial=False
+            loan.pk, as_of_date=date(2026, 9, 18), include_partial=False
         )[0]
         self.assertEqual(restored_preview.calculation_base, Decimal("100000.0000"))
         self.assertEqual(restored_preview.recognized_interest, Decimal("2800.00"))

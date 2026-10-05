@@ -333,6 +333,8 @@ def _reverse_opening_payment_catch_up(payment, *, effective_date, reason, actor)
         return None
     payload = reversal_payload(payment.loan, effective_date=effective_date, original_event_id=accrual.pk,
         original_event_kind=accrual.event_kind, values=accrual.payload["values"], reason=reason).to_dict()
+    # Retain the exact monetary spelling required by the immutable pairing guard.
+    payload["values"] = dict(accrual.payload["values"])
     event, _ = _record_opening_servicing_event(payment.loan_id, event_kind=TransactionKind.REVERSAL,
         effective_date=effective_date, payload=payload, actor=actor, reversal_of=accrual)
     return event
@@ -405,6 +407,7 @@ def _reverse_release_catch_up(
         reason=reason,
     ).to_dict()
     payload["reversal"]["release_id"] = release.pk
+    payload["values"] = dict(original.payload.get("values") or {})
     writer = record_loan_event
     if release.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
         from .opening_servicing import _record_opening_servicing_event

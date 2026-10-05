@@ -132,6 +132,8 @@ def resolve_pawn_draft_economics(
         maximum_ltv_ratio=policy.maximum_ltv_ratio,
         advance_interest_periods=policy.advance_interest_periods,
         fees=fee_inputs,
+        currency_quantum=policy.currency_quantum,
+        interest_policy_version=2,
     )
     return ResolvedPawnDraftEconomics(
         economics=economics,

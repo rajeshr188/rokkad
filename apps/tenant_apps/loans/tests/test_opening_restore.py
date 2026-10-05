@@ -38,7 +38,7 @@ class OpeningRestoreTests(OpeningImportFixture):
             origin = self.write()
             args = dict(amount="215", received_on=date(2021, 2, 2), receipt_reference="Items 17",
                         request_key="items-17", actor=self.actor)
-            with self.assertRaisesMessage(ValueError, "agreed item allocation rule"):
+            with self.assertRaisesMessage(ValueError, "specify the item allocation"):
                 paper.preview_paper_repayment(origin.loan_id, **args)
             self.assertEqual(origin.loan.loan_events.count(), 1)
             args["amount"] = "15"

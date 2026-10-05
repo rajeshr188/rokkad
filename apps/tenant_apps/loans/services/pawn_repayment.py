@@ -151,6 +151,9 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
             from .recorded_collections import recording_for, recognize_collection_interest
             if recording_for(loan):
                 recognize_collection_interest(loan, effective_date, actor=actor, request_key=request_key, correction_evidence=correction_evidence)
+            else:
+                from .pawn_interest import recognize_due_monthly_interest
+                recognize_due_monthly_interest(loan, effective_date, actor=actor)
             balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         allocation = allocate_repayment(balance, amount)
     except PawnRepaymentError:
@@ -484,6 +487,9 @@ def _money_amount(value, loan):
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnRepaymentError("Repayment amount must be a valid number.") from exc
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum)).normalize()
+    if loan.policy_snapshot.policy_version == 2:
+        # Interest rounding is an agreement term, not the precision of cash/principal.
+        quantum = Decimal("0.01")
     if not amount.is_finite() or amount <= 0 or amount >= Decimal("1e16"):
         raise PawnRepaymentError("Repayment amount must be a positive finite amount below 10,000,000,000,000,000.")
     try:

@@ -7,6 +7,59 @@ tags: [status, architecture]
 
 # Status
 
+## LD-01A shared monthly contract complete locally (5 October)
+
+The owner authorized the shared-calendar/policy-rounding slice. Corrected direct
+snapshots use policy version 2; new paper contracts use recorded-anniversary/3;
+reviewed policy-based openings and complete history use explicit version 3 profiles.
+The common original-date calendar keeps 5 May covered for a 5 April upfront loan
+and starts the next charge on 6 May. Captured policy quantum rounds each item per
+monthly period, and first-period principal stays original. Compatibility,
+schedule/settlement/monitoring checks and reviewed paper correction are implemented.
+
+Native full-month charges can be finalized when their period starts. Ordinary
+repayment now recognizes the due charge atomically before allocating the receipt,
+preventing skipped interest and overstated principal repayment. Preview, notice and
+risk calculations use the same eligible monthly charge. Active supported bullet
+maturity forecasts exclude advance already paid and use dated principal bases;
+original schedules remain immutable allocation capacity. Failed writes roll back
+recognition; retries cannot duplicate it. Existing frozen profiles are
+retained for exact historical reproduction and require reviewed adoption; the
+read-only `check_loan_interest_contracts --workspace-id ...` command inventories
+them. No existing Workspace or production financial rows have been converted.
+
+Additive portability migration 0018 enables v3 staging while retaining profile
+immutability and exact result binding. It was exercised only in isolated QA with
+test settings; production and running candidates remain unchanged.
+
+The broad run exercised **1,753 tests in 1,270.230s**. It found 35 stale calendar
+fixtures/policy assertions and five unrelated failures/errors. After correcting
+only those stale tests, the final affected-module run passes **159 tests in
+216.110s**. All five unrelated cases reproduce at unchanged checkpoint
+`c1c34d4e` (four failures and one error in five tests); the broad suite is not
+claimed wholly green and was not repeated. System, migration-drift, Python parsing
+and scoped whitespace checks pass. See the [implementation and verification
+record](implementation/loan-interest-contract-ld01a.md) for the failure inventory,
+reviewed-adoption limits and compatible rollback. LD-02 remains pending; wider
+opening admission and correction/operation integration are later slices.
+
+## Shared interest contract clarified (5 October)
+
+The owner confirmed one monthly boundary for direct, backdated paper and imported
+loans: a 5 April loan with its first month paid upfront incurs its next charge on
+**6 May**, with no new charge on 5 May. Rounding follows the standing economic
+policy captured for the agreement. Source channel does not select another calendar
+or rounding convention. Existing source amounts and cutover recognition remain
+evidence; calculation errors require explicit correction of affected postings.
+
+The plan now inserts **LD-01A before LD-02** to align calendar, policy rounding,
+principal-period bases and affected collection/schedule/settlement/risk paths.
+LD-01's 239 passing tests characterize the old implementations; they do not
+verify this newly confirmed common contract. At that clarification checkpoint,
+only documentation changed; the implementation is recorded above. Deployments
+remain unchanged.
+See the [correction plan](plans/unified-loan-domain-correction.md).
+
 ## LD-01 shared servicing reads complete (5 October)
 
 The owner selected the correction direction and requested a checkpoint/start.

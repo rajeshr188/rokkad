@@ -20,9 +20,12 @@ SALT = "loans.existing-paper-renewal.v1"
 def _facts(data):
     fields = {"date", "number", "rate", "tenure", "new_principal", "advance_months", "document_charge",
         "amount", "cash_paid", "reference", "request_key"}
-    if not isinstance(data, dict) or set(data) not in (fields, fields | {"product_version_id"}):
+    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {"product_version_id", "currency_quantum"}:
         raise ValueError("Enter the known renewal's actual terms, deductions and net cash.")
     facts = dict(data)
+    quantum = facts.get("currency_quantum", "0.01")
+    if quantum not in ("0.01", "1"):
+        raise ValueError("Enter the new agreement's supported interest rounding quantum.")
     if "product_version_id" in facts and (type(facts["product_version_id"]) is not int or facts["product_version_id"] <= 0):
         raise ValueError("Select the contract version matching the new paper agreement.")
     facts["request_key"] = str(UUID(facts["request_key"]))
@@ -37,7 +40,7 @@ def _facts(data):
     if (type(facts["tenure"]) is not int or not 1 <= facts["tenure"] <= 600 or Decimal(facts["rate"]) > 999
             or type(facts["advance_months"]) is not int or facts["advance_months"] not in (0, 1)):
         raise ValueError("Use a supported rate, tenure and zero or one advance month.")
-    advance = (Decimal(facts["new_principal"])*Decimal(facts["rate"])/100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)*facts["advance_months"]
+    advance = (Decimal(facts["new_principal"])*Decimal(facts["rate"])/100).quantize(Decimal(quantum), rounding=ROUND_HALF_UP)*facts["advance_months"]
     if advance + Decimal(facts["document_charge"]) >= Decimal(facts["new_principal"]):
         raise ValueError("Deductions must leave positive new loan proceeds.")
     return facts
@@ -97,6 +100,7 @@ def _write(source, actor, facts):
         monitoring_method=policy.valuation_method, monitoring_ltv=str(policy.maximum_ltv_ratio),
         monitoring_reason="Continue the existing current monitoring selection", complete_through=facts["date"],
         confirmed_history=True)
+    data["currency_quantum"] = facts.get("currency_quantum", "0.01")
     row = dict(facts, renewal_method="NET_SETTLEMENT", custody="HELD", recipient="", request_sha256=_digest(facts))
     successor, review = record_admission_renewal(source.workspace, actor, data, UUID(facts["request_key"]), source,
         row, f"paper-renewal:{facts['request_key']}")

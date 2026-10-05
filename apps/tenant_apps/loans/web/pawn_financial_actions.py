@@ -224,7 +224,9 @@ def pawn_loan_repay(request, pk):
 @loans_action_required("loan.accrue")
 def pawn_loan_accrue(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
-    previews = _safe_accrual_previews(loan, include_partial=False)
+    from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed
+    started = started_month_charge_allowed(loan.policy_snapshot)
+    previews = _safe_accrual_previews(loan, include_partial=started)
     initial = {"period_number": previews[0].period_number} if previews else None
     form = PawnAccrualForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
@@ -247,7 +249,7 @@ def pawn_loan_accrue(request, pk):
         loan,
         form,
         "Finalize interest accrual",
-        "Only the next eligible completed monthly period can be finalized.",
+        "Finalize the next eligible monthly charge." if started else "Only the next eligible completed monthly period can be finalized.",
         {
             "previews": previews,
             "accrual_preview_rows": _accrual_preview_rows(loan, previews),

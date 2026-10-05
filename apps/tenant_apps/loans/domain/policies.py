@@ -110,7 +110,7 @@ class ResolvedLoanPolicy:
 
 @dataclass(frozen=True)
 class DisbursalPolicySnapshot(ResolvedLoanPolicy):
-    policy_version: int = 1
+    policy_version: int = 2
 
     def __post_init__(self):
         super().__post_init__()

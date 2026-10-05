@@ -16,7 +16,7 @@ SALT = "loan-history-approval-v1"
 
 def get_batch(*, workspace_id, actor, batch_id, lock=False):
     require_history_setup_access(workspace_id, actor)
-    query = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, profile__in=("loan-history/1", "loan-history/2"))
+    query = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, profile__in=("loan-history/1", "loan-history/2", "loan-history/3"))
     if lock: query = query.select_for_update()
     try: return query.get(public_id=batch_id)
     except (LoanHistoryBatch.DoesNotExist, ValueError, ValidationError) as exc:
