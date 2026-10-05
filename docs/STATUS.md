@@ -45,6 +45,12 @@ actual target recovery/operator acceptance, final candidate release checks and
 controlled production rollout remain pending. See the
 [delivery and runbook](implementation/unified-browsing-and-ld08.md).
 
+The owner's screen-review preview is now exposed only on localhost **8079**, using
+the exact committed candidate and restored fictional database. Authenticated direct
+and paper New loan forms, both import entry screens and Loans directory load; all
+27 local paper-screen assets pass. Existing previews on 8077/8078 and production
+remain unchanged. Private pilot credentials are reused without publishing them.
+
 ## LD-07 portability complete locally (5 October)
 
 The owner authorized LD-07. New `loan-servicing-bundle/1` preserves supported

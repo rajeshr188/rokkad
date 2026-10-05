@@ -147,6 +147,28 @@ are absent from the runtime environment. `committed-candidate.json` retains the
 source ZIP checksum and `committed-startup.log` retains the local-settings warnings.
 This verifies the committed local candidate, not production configuration.
 
+## Local screen review (5 October)
+
+At the owner's request, the exact committed candidate is also available through
+a credential-free, loopback-only relay at `http://127.0.0.1:8079`. The web process
+uses the restored fictional database, not production or the original rehearsal.
+Workspace `khata-2777349a` retains the original fictional pilot login (private
+credentials remain in `.tmp/joint-loan-pilot-20261003-v1/pilot-login.txt`).
+Authenticated HTTP checks pass for both ordinary New loan purposes, existing-loan
+import, complete-history import and the combined Loans directory. All 27 local
+assets used by the paper entry screen return successfully. Opening these forms
+does not post a loan; saving/submitting would change only this fictional clone.
+
+- Direct: `/w/khata-2777349a/loans/internal/create/?entry=direct`
+- Paper: `/w/khata-2777349a/loans/internal/create/?entry=paper`
+- Opening import: `/w/khata-2777349a/data-tools/existing-loans/`
+- History import: `/w/khata-2777349a/data-tools/loans/`
+
+Both ordinary forms share the New loan action, setup-based purpose, customer/series
+selection and collateral editor. They still use purpose-specific form layouts and
+review steps. Imports retain supported upload/review screens; they are not a third
+manual New loan mode. Private HTTP evidence is in `.tmp/ld08/preview-checks.json`.
+
 ## Remaining production steps
 
 1. Run a current read-only inventory on the named production target under its
