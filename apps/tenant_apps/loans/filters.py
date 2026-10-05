@@ -150,6 +150,7 @@ class PawnLoanFilter(django_filters.FilterSet):
             | Q(series__code__icontains=value)
             | Q(historical_import__document__loan__number__icontains=value)
             | Q(historical_import__document__loan__book_reference__icontains=value)
+            | Q(historical_import__document__source_loan__loan_number__icontains=value)
             | Q(historical_import__document__review__source__number__icontains=value)
         )
 

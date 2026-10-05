@@ -16,7 +16,7 @@ def transaction_fingerprint(loan, *, events=None, state=None):
     return hashlib.sha256(json.dumps(material, sort_keys=True, default=str).encode()).hexdigest()
 
 
-def capture_contract_fingerprint(loan):
+def capture_contract_fingerprint(loan, *, items=None):
     """Extra agreement/collateral bindings for a newly selected capture transition.
 
     Keep earlier coverage fingerprint meanings intact. Current appraisals, custody,
@@ -26,7 +26,7 @@ def capture_contract_fingerprint(loan):
         ("product_version_id", "license_id", "license_revision_id", "series_id")},
         items=[{key: str(getattr(item, key)) for key in ("pk", "allocated_principal", "monthly_interest_rate",
             "description", "metal", "quantity", "gross_weight", "net_weight", "purity_percentage")}
-            for item in loan.collateral_items.order_by("pk")])
+            for item in (loan.collateral_items.order_by("pk") if items is None else sorted(items, key=lambda row:row.pk))])
     for item in material["items"]:
         for key in ("allocated_principal", "monthly_interest_rate", "gross_weight", "net_weight", "purity_percentage"):
             if item[key] != "None":

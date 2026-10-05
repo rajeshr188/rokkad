@@ -14,8 +14,8 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03, LD-04, LD-05 and LD-06
-are complete locally; LD-07 and LD-08 remain pending.
+storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03, LD-04, LD-05, LD-06
+and LD-07 are complete locally; LD-08 remains pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
@@ -54,7 +54,7 @@ checkpoint implementation and are superseded as the target by this clarification
 | LD-04 | Complete locally; source/staff rollout acceptance pending | Explicit reduced-principal/current-period/advance checkpoint and supported continuation | Review/4, opening export/3; additive mixed-origin guard 0059 |
 | LD-05 | Complete locally; source preparation/staff acceptance pending | Source-faithful supported history allocation and numbering/setup compatibility | Recorded history/4; immutable source JSON aliases, batch guard migration 0019; no new table |
 | LD-06 | Complete locally; rollout pending | Supported opening auctions, common renewal/correction dependencies, explicit per-loan future capture and monitoring/reminder checks | Additive review/notice guard migration 0060; no new table |
-| LD-07 | Pending; compatibility substeps accompany each writer slice | Portable documents/export/restore for new supported semantics | Profile/reader versions and recovery fingerprint as needed |
+| LD-07 | Complete locally; 645 affected and 53 focused tests pass | Bounded connected servicing ZIP, original source documents, fresh-ID runtime admission and separate exact recovery | loan-servicing-bundle/1; no schema/guard changes |
 | LD-08 | Pending | Staff acceptance, staging and controlled production rollout | Owner migration only for actual additive changes |
 
 Each slice is reviewable and useful independently. LD-07's compatibility checks
@@ -455,6 +455,19 @@ amount/review rejection and cross-Workspace boundaries. Migration 0060 retains
 direct Workspace ownership and forced-RLS coverage on the existing review model.
 
 ## LD-07: documents and portable compatibility
+
+**Complete locally (5 October).** The new frozen 35-model servicing bundle preserves
+supported connected loans, original source evidence/files and exact issued PDFs.
+Runtime admission requires explicit per-loan destination mapping, exact preview
+confirmation, full financial/custody reconciliation and immutable source retention.
+Earlier wires remain readable; unsupported graphs are held. Original approval labels
+distinguish source time from import time. Destination future capture stays paper/mixed.
+The affected regression passes 645 tests and final focused verification passes 53,
+including all 23 new cases and separate exact recovery of retained source packets.
+No new model/migration or application/candidate/production change is made. Operator
+ZIP admission is available; browser upload remains JSONL. See the
+[delivery](../implementation/portable-servicing-ld07.md) for bounds and evidence.
+The acceptance requirements below remain the contract for this completed slice.
 
 Keep source labels, original date precision, true recording actors and prior issued
 bytes. Audit imported approval snapshot `approved_at` labels: its row is created

@@ -28,10 +28,12 @@ from apps.tenant_apps.loans.web import khata_series
 from apps.tenant_apps.loans.web import khata_reports, recorded_corrections, recorded_batch_corrections
 from apps.tenant_apps.loans.web import recorded_servicing
 from apps.tenant_apps.loans.web import transaction_reviews
+from apps.tenant_apps.loans.web import portable_documents
 
 app_name = "loans"
 
 urlpatterns = [
+    path("pawn/<int:pk>/source-documents/<int:index>.pdf", portable_documents.source_document, name="pawn_source_document"),
     path("khata/", khata_views.index, name="khata_list"),
     path("khata/collections/", khata_views.collections, name="khata_collections"),
     path("khata/reports/", khata_reports.reports, name="khata_reports"),

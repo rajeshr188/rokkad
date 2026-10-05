@@ -5,6 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.orgs.access import resolve_workspace_access
@@ -54,6 +55,25 @@ def export_loan_data(*, workspace_id, actor, loan_id):
     Company.all_objects.select_for_update().get(pk=workspace_id)
     _access(workspace_id, actor)
     loan = m.PawnLoan.objects.select_for_update().get(workspace_id=workspace_id, pk=loan_id)
+    wider = (loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists()
+        or loan.loan_events.filter(event_kind__in=["RENEWAL_OPENING", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY", "REVERSAL"]).exists()
+        or loan.loan_events.filter(payload__history_correction__isnull=False).exists()
+        or loan.loan_events.filter(payload__repayment__recording__isnull=False).exists()
+        or (loan.policy_snapshot_id and loan.policy_snapshot.basis == 'RECORDED_CONTRACT'
+            and loan.loan_events.filter(event_kind='INTEREST_ACCRUAL').exists())
+        or loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists()
+        or loan.auctions.exists()
+        or m.PawnLoanRenewal.objects.filter(Q(source_loan=loan) | Q(successor_loan=loan)).exists()
+        or m.PawnCollateralPhoto.objects.filter(collateral_item__loan=loan).exists()
+        or m.LoanDocumentIssue.objects.filter(workspace_id=workspace_id).filter(
+            Q(source_type="PawnLoan", source_id=str(loan.pk))
+            | Q(source_type="PawnLoanEvent", source_id__in=[str(pk) for pk in loan.loan_events.values_list("pk", flat=True)])
+            | Q(source_type="PawnLoanRelease", source_id__in=[str(pk) for pk in loan.releases.values_list("pk", flat=True)])).exists()
+        or m.PawnReleaseBatchLine.objects.filter(release__loan=loan).exists()
+        or (hasattr(loan, "historical_import") and "portable" in loan.historical_import.references))
+    if wider:
+        from .servicing_bundle import export_servicing_bundle
+        return export_servicing_bundle(workspace_id=workspace_id, actor=actor, loan_id=loan_id), "loan-servicing.zip"
     if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
         return export_opening(workspace_id=workspace_id, actor=actor, loan_id=loan_id), "loan-opening.jsonl"
     from .history_export import export_history
@@ -90,6 +110,8 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
         raise HistoryError("One reviewed migration opening is required.")
     opening = read_opening_evidence(loan, openings[0])
     origin = m.HistoricalLoanImport.objects.get(workspace_id=workspace_id, loan=loan)
+    if 'portable' in origin.references:
+        raise HistoryError('Retained servicing bundles require loan-servicing-bundle/1; use Export loan records.')
     if (origin.document.get("profile") != COMMIT_PROFILE or
             origin.source_sha256 != digest(origin.document) or
             origin.document.get("review") != opening["review"] or

@@ -123,6 +123,8 @@ def pawn_loan_detail(request, pk):
     context["renewals"] = [restated_renewal(row) for row in context["renewals"]]
     context["releases"] = [restated_release(row) for row in loan.releases.all()]
     context["latest_approval"] = approval
+    from .portable_documents import source_copies
+    context['source_document_copies'] = source_copies(loan)
     from apps.tenant_apps.loans.services.valuation_review import valuation_refresh_reason
     context["valuation_refresh_reason"] = valuation_refresh_reason(loan, approval)
     context["can_record_earlier_payout"] = (loan.state == "DRAFT" and not opening

@@ -80,6 +80,9 @@ class DocumentPayload:
 class PawnLoanDocumentProjectionBuilder:
     SCHEMA_VERSION = 1
     FIELD_KEYS = {
+        "Original approval time (source claim)": "provenance.original_approval_time",
+        "Original approval actor reference": "provenance.original_approval_actor",
+        "Evidence imported at": "provenance.approval_evidence_imported_at",
         "Release batch": "release.batch_id", "Paid by": "release.paid_by",
         "Paper reference": "release.paper_reference", "Entry source": "release.entry_source",
         "Later handover confirmation": "release.handover_confirmation",
@@ -160,7 +163,20 @@ class PawnLoanDocumentProjectionBuilder:
             raise DocumentProjectionError(
                 "Loan ticket is available only after the loan has an approval snapshot."
             )
-        source = approval.payload
+        source = dict(approval.payload)
+        historical = source.get('historical_approval')
+        if historical and hasattr(loan, 'historical_import') and 'collateral' not in source:
+            # Older approved-history admission freezes economics and source
+            # claims rather than a prospective approval form. Project those
+            # accepted facts without changing the immutable approval row.
+            original = loan.historical_import.document.get('loan', {})
+            references = loan.historical_import.references.get('items', {})
+            if not original.get('collateral'):
+                raise DocumentProjectionError('Imported approval is missing its retained original agreement.')
+            source.update(loan_number=loan.loan_number, loan_date=original['disbursed_on'], borrower_id=loan.borrower_id,
+                monthly_interest_rate=str(loan.monthly_interest_rate), tenure_months=original['tenure_months'],
+                collateral=[dict(item_id=references[r['id']], description=r['description'], metal=r['metal'],
+                    net_weight=r['net_weight'], purity_percentage=r['purity'], latest_appraised_value=r['appraised_value']) for r in original['collateral']])
         verification = cls._verification(
             loan, f"approval:{approval.pk}:v{approval.version}:{approval.fingerprint}"
         )
@@ -179,6 +195,11 @@ class PawnLoanDocumentProjectionBuilder:
             ("Borrower source ID", f"Party:{source['borrower_id']}"),
             ("Approval fingerprint", approval.fingerprint),
         )
+        if historical:
+            details += (("Document status", "Imported source agreement; this copy does not attest to a new retrospective lending approval"),
+                ("Original approval time (source claim)", historical.get('at') or 'Unknown'),
+                ("Original approval actor reference", historical.get('actor') or 'Unknown'),
+                ("Evidence imported at", approval.approved_at.isoformat()))
         rows = [("Item ID", "Description", "Metal", "Net weight", "Purity", "Appraisal", "Custody")]
         rows.extend(
             (

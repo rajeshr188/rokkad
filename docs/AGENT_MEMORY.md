@@ -29,6 +29,8 @@ explicit reviewed reduced-principal opening checkpoint; LD-05 adds supported
 recorded source history/4 with source-faithful item allocations and scoped aliases.
 LD-06 extends current opening auctions, common renewal/dependency prerequisites and
 owner-selected explicit per-loan future capture; local verification is complete.
+LD-07 adds bounded connected servicing portability and exact source-copy retention;
+LD-08 actual source/staff acceptance and rollout remain pending.
 PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
@@ -112,8 +114,9 @@ searchable immutable JSON aliases with unique generated local numbers; changed
 source IDs for the same book/number and conflicting retries are held. No alias
 model is needed. Export retains original source claims, original action purpose
 and known handover time separately from local completed recording. Verified
-transaction coverage must match; corrections, standalone recognition, linked
-renewals/auctions and additional custody/funding/storage need wider portability.
+transaction coverage must match; corrections, standalone recognition and linked
+renewals/auctions use LD-07's broader servicing bundle. Funding/storage remain outside
+that bounded portable profile and require exact recovery or a future reviewed profile.
 See [LD-05](implementation/recorded-source-history-ld05.md).
 
 LD-06 reuses immutable LoanTransactionReview for PAPER_MIXED versus explicitly
@@ -127,6 +130,23 @@ capture evidence they cannot retain; exact Workspace recovery preserves it. Curr
 notices bind the checked-source and current financial fingerprints, reject stale
 amounts at dispatch and can issue a distinct replacement for a reviewed new position.
 See [LD-06](implementation/servicing-operations-ld06.md).
+
+LD-07 uses loan-servicing-bundle/1 with a frozen row inventory, source-local financial/
+custody graph, accepted source archives and exact media/issued PDF bytes. Ordinary
+export selects it for supported broader evidence; older JSONL wires stay fixed.
+The operator restore command admits fresh local identities under runtime RLS,
+explicit per-loan Party/licence/series/product mapping, rollback preview and exact
+checksum confirmation. It reconciles canonical readers and cannot overwrite/augment
+an accepted source loan. Original actors/times, unknown facts, source future-capture
+choice and original issue records stay immutable claims; local actors/times describe
+import. Original approval labels and authenticated PDF downloads distinguish source
+evidence from newly issued destination documents. Destination capture stays paper/
+mixed pending an explicit staff transition. Cancelled successors retain reversal
+history without a new servicing review. Monitoring recalculates locally; source risk
+and queued notifications do not travel. ZIP restore is currently operator-only;
+browser upload remains JSONL. No schema/guard change is needed; exact Workspace
+recovery remains independently tested offline same-identity recovery. See
+[LD-07](implementation/portable-servicing-ld07.md) for bounds and exclusions.
 
 ## Shared loan entry and actual paper item agreements (3 October)
 

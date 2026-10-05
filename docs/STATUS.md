@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## LD-07 portability complete locally (5 October)
+
+The owner authorized LD-07. New `loan-servicing-bundle/1` preserves supported
+connected financial/custody records, accepted archives, source reviews, photographs,
+statutory evidence and exact original issued PDFs. Ordinary export selects it when
+broader semantics are needed; earlier JSONL wires/readers retain their meaning.
+Restricted-role admission creates fresh local identities after explicit per-loan
+Party/licence/series/product mapping and full financial/custody reconciliation.
+Preview rolls back records and provisional files; commit binds its exact checksum.
+Changed bundles cannot overwrite an accepted source loan. Original approval labels
+distinguish source claims from local imported evidence, and original PDFs remain
+authenticated source-copy downloads. Destination future capture stays paper/mixed.
+
+The affected regression passes **645 tests in 589.278s**; final focused verification
+passes **53 tests in 88.501s**, including all **23 new LD-07 cases**. Current linked
+renewal/reversal and cancelled successors, corrected/closed recorded loans, shared
+paper closure, checkpoint auction/reversal, original file bytes, runtime RLS and
+separate exact Workspace recovery pass. System checks, migration-history/model drift,
+Loans Python parsing and scoped whitespace checks pass. No schema change is needed.
+
+ZIP admission currently uses the operator command; the browser upload remains JSONL.
+Funding/storage/capitalization and oversized or unknown graphs are explicitly held.
+LD-08 actual source inventory, staff acceptance, staging and controlled rollout remain
+pending. No application/candidate/production migration, conversion or deployment is
+performed. See the [delivery record](implementation/portable-servicing-ld07.md) and
+[contract](contracts/loan-servicing-bundle-v1.md).
+
 ## LD-06 servicing and future capture complete locally (5 October)
 
 The owner authorized LD-06 and selected an optional per-loan transition to future

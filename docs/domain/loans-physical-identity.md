@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-08-09
+updated: 2026-10-05
 tags: [loans, ticket, collateral, label, qr, signature]
 related:
   - ../adr/2026-08-09-loans-collateral-identity-media-and-labels.md
@@ -11,6 +11,17 @@ related:
 ---
 
 # Loans Physical Identity
+
+## Portable source copies (5 October 2026)
+
+An imported servicing bundle preserves original issued PDF bytes, source issue
+metadata and original identifiers as source copies. Loan details offer authenticated
+Workspace-scoped downloads; they are not new local approvals or reissued originals.
+Local loan/item identities and import numbers are fresh, while original source
+numbers remain retained aliases. A newly imported approval snapshot's row time is
+the import time; original approval time/actor are separately labelled source claims.
+Date-only paper facts remain date-only. Later local documents use the ordinary issue
+workflow. See [LD-07](../implementation/portable-servicing-ld07.md).
 
 ## Khata identity boundary (2 October 2026)
 

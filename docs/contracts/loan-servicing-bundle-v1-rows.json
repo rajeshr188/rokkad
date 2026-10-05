@@ -1,0 +1,2155 @@
+{
+  "PawnLoan": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "creation_submission_id": {
+      "type": "UUIDField",
+      "nullable": true
+    },
+    "policy_snapshot_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.LoanPolicySnapshot"
+    },
+    "disbursal_snapshot_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanDisbursalSnapshot"
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.LoanLicense"
+    },
+    "license_revision_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.LoanLicenseRevision"
+    },
+    "series_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.LoanSeries"
+    },
+    "borrower_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "party.Party"
+    },
+    "product_version_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.LoanProductVersion"
+    },
+    "loan_number": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "DRAFT",
+        "APPROVED",
+        "ACTIVE",
+        "CANCELLED",
+        "CLOSED"
+      ]
+    },
+    "principal_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "loan_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "tenure_months": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "updated_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    }
+  },
+  "PawnCollateralItem": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "quantity": {
+      "type": "PositiveIntegerField",
+      "nullable": true
+    },
+    "interest_rate_override": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "interest_override_reason": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "public_id": {
+      "type": "UUIDField",
+      "nullable": false
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "description": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "metal": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "GOLD",
+        "SILVER",
+        "BRONZE",
+        "OTHER"
+      ]
+    },
+    "gross_weight": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "net_weight": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "purity_percentage": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "latest_appraised_value": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "allocated_principal": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "interest_rate_policy_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnMetalInterestRatePolicy"
+    },
+    "custody_state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "IN_VAULT",
+        "WITH_CUSTOMER",
+        "WITH_FUNDING_LENDER",
+        "AUCTION_DISPOSED",
+        "RENEWAL_TRANSFERRED",
+        "RENEWAL_REVERSED",
+        "PAPER_CLOSED"
+      ]
+    },
+    "current_storage_location_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnStorageLocation"
+    },
+    "renewed_from_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "LoanPolicySnapshot": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "basis": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "ORIGINATION",
+        "RECORDED_CONTRACT"
+      ]
+    },
+    "minimum_first_month": {
+      "type": "BooleanField",
+      "nullable": false
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "policy_version": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "interest_method": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "SIMPLE",
+        "COMPOUND"
+      ]
+    },
+    "partial_month_method": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "FULL_MONTH",
+        "SLAB",
+        "STARTED_WEEKS",
+        "ACTUAL_DAYS"
+      ]
+    },
+    "partial_month_cutoff_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "partial_month_lower_fraction": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "capitalization_interval_periods": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "valuation_method": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "CALCULATED_METAL_VALUE",
+        "LATEST_APPRAISAL",
+        "LOWER_OF_CALCULATED_AND_APPRAISAL"
+      ]
+    },
+    "maximum_ltv_ratio": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "rounding_method": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "PER_ACCRUAL_PERIOD"
+      ]
+    },
+    "currency_quantum": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanApprovalSnapshot": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "payload": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "fingerprint": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "approved_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "approved_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanEvent": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "event_kind": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "MIGRATION_OPENING",
+        "DISBURSAL",
+        "REPAYMENT",
+        "INTEREST_ACCRUAL",
+        "INTEREST_CAPITALIZATION",
+        "RELEASE_RECEIPT",
+        "AUCTION_RECOVERY",
+        "RENEWAL_SETTLEMENT",
+        "RENEWAL_OPENING",
+        "REVERSAL"
+      ]
+    },
+    "effective_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "payload": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "payload_fingerprint": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "idempotency_key": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "reversal_of_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanDisbursalSnapshot": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "basis": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "APPROVED",
+        "RECORDED"
+      ]
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "approval_snapshot_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanApprovalSnapshot"
+    },
+    "policy_snapshot_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.LoanPolicySnapshot"
+    },
+    "loan_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "gross_principal": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "monthly_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "advance_interest_periods": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "advance_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "deducted_fees": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "net_disbursed": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "evidence": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanInterestAccrual": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "period_number": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "period_start": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "period_end": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "period_fraction": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "calculation_base": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "unrounded_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "recognized_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "loan_event_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "finalized_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "finalized_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanInterestAccrualLine": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "accrual_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanInterestAccrual"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "principal_base": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "period_fraction": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "unrounded_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "calculated_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "advance_interest_applied": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "recognized_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    }
+  },
+  "PawnLoanRepaymentAllocationLine": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_event_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "allocation_order": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "balance_before": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "principal_applied": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "balance_after": {
+      "type": "DecimalField",
+      "nullable": false
+    }
+  },
+  "PawnLoanPrincipalClosingLine": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_event_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "allocation_order": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "balance_before": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "principal_settled": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "balance_after": {
+      "type": "DecimalField",
+      "nullable": false
+    }
+  },
+  "PawnLoanPrincipalOpeningLine": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_event_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "predecessor_collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "allocation_order": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "principal_opened": {
+      "type": "DecimalField",
+      "nullable": false
+    }
+  },
+  "PawnLoanRelease": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "release_number": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "request_key": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "effective_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "is_full_release": {
+      "type": "BooleanField",
+      "nullable": false
+    },
+    "settlement_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "principal_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "interest_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "fee_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "valuation_snapshot": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "loan_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "catch_up_accrual_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanInterestAccrual"
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanReleaseItem": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "release_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanRelease"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "valuation_snapshot": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "returned_at": {
+      "type": "DateTimeField",
+      "nullable": true
+    }
+  },
+  "PawnCollateralCustodyEvent": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "release_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanRelease"
+    },
+    "auction_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanAuction"
+    },
+    "renewal_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanRenewal"
+    },
+    "funding_pledge_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.FundingPledge"
+    },
+    "funding_return_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.FundingReturn"
+    },
+    "funding_pledge_reversal_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.FundingPledgeReversal"
+    },
+    "funding_return_reversal_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.FundingReturnReversal"
+    },
+    "release_reversal_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanReleaseReversal"
+    },
+    "auction_reversal_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanAuctionReversal"
+    },
+    "renewal_reversal_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnLoanRenewalReversal"
+    },
+    "from_state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "IN_VAULT",
+        "WITH_CUSTOMER",
+        "WITH_FUNDING_LENDER",
+        "AUCTION_DISPOSED",
+        "RENEWAL_TRANSFERRED",
+        "RENEWAL_REVERSED",
+        "PAPER_CLOSED"
+      ]
+    },
+    "to_state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "IN_VAULT",
+        "WITH_CUSTOMER",
+        "WITH_FUNDING_LENDER",
+        "AUCTION_DISPOSED",
+        "RENEWAL_TRANSFERRED",
+        "RENEWAL_REVERSED",
+        "PAPER_CLOSED"
+      ]
+    },
+    "restatement_of_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnCollateralCustodyEvent"
+    },
+    "effective_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "actor_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanReleaseReversal": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "release_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanRelease"
+    },
+    "loan_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "catch_up_reversal_event_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "reason": {
+      "type": "TextField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanAuction": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "auction_number": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "attempt_number": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "request_key": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "INITIATED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "CANCELLED"
+      ]
+    },
+    "notice_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "scheduled_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "started_at": {
+      "type": "DateTimeField",
+      "nullable": true
+    },
+    "completed_at": {
+      "type": "DateTimeField",
+      "nullable": true
+    },
+    "cancelled_at": {
+      "type": "DateTimeField",
+      "nullable": true
+    },
+    "cancellation_reason": {
+      "type": "TextField",
+      "nullable": false
+    },
+    "buyer_name": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "buyer_reference": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "recovery_amount": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "principal_amount": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "interest_amount": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "fee_amount": {
+      "type": "DecimalField",
+      "nullable": true
+    },
+    "loan_event_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "catch_up_accrual_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanInterestAccrual"
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanAuctionItem": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "auction_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanAuction"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "snapshot": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "disposed_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanAuctionReversal": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "auction_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanAuction"
+    },
+    "loan_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "catch_up_reversal_event_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "reason": {
+      "type": "TextField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanRenewal": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "source_loan_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "successor_loan_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "renewal_number": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "request_key": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "mode": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "PAY_AND_RENEW",
+        "TOP_UP_RENEW"
+      ]
+    },
+    "renewal_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "source_principal_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "source_capitalized_principal_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "interest_settled": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "fees_settled": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "principal_paid": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "top_up_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "successor_principal_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "successor_capitalized_principal_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "successor_advance_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "successor_deducted_fees": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "valuation_snapshot": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "settlement_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "opening_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "catch_up_accrual_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanInterestAccrual"
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnLoanRenewalReversal": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "renewal_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanRenewal"
+    },
+    "settlement_reversal_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "opening_reversal_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "catch_up_reversal_event_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "reason": {
+      "type": "TextField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "RepaymentScheduleVersion": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "source_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "contract_version": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "fingerprint": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "disbursed_on": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "maturity_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "principal": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "contractual_interest": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "rounding_adjustment": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "supersedes_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.RepaymentScheduleVersion"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    }
+  },
+  "RepaymentObligation": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "schedule_version_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.RepaymentScheduleVersion"
+    },
+    "sequence": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "due_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "principal_due": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "interest_due": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "opening_principal": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "closing_principal": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "RepaymentScheduleChange": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "schedule_version_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.RepaymentScheduleVersion"
+    },
+    "source_event_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "kind": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "TERMINATE",
+        "REACTIVATE"
+      ]
+    },
+    "effective_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "reason": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "reversal_of_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.RepaymentScheduleChange"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    }
+  },
+  "ObligationAllocation": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "source_event_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoanEvent"
+    },
+    "obligation_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.RepaymentObligation"
+    },
+    "component": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "PRINCIPAL",
+        "INTEREST"
+      ]
+    },
+    "amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "allocation_order": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "reversal_of_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.ObligationAllocation"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    }
+  },
+  "CollateralAppraisal": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false
+    },
+    "effective_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "appraised_value": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "status": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "APPROVED",
+        "REJECTED",
+        "DISPUTED"
+      ]
+    },
+    "method": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "evidence_reference": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "review_notes": {
+      "type": "TextField",
+      "nullable": false
+    },
+    "valuation_context": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "supersedes_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.CollateralAppraisal"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    }
+  },
+  "PawnReleaseBatch": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "mode": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "COUNTER",
+        "PAPER"
+      ]
+    },
+    "paper_reference": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "exception_reason": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "request_key": {
+      "type": "UUIDField",
+      "nullable": false
+    },
+    "request_fingerprint": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "effective_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "total_amount": {
+      "type": "DecimalField",
+      "nullable": false
+    },
+    "paid_by": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "payment_reference": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnReleaseBatchLine": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "paid_by": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "paper_reference": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "batch_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnReleaseBatch"
+    },
+    "release_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanRelease"
+    },
+    "borrower_name": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "collector_name": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "collector_is_borrower": {
+      "type": "BooleanField",
+      "nullable": false
+    },
+    "relationship": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "authorization_note": {
+      "type": "CharField",
+      "nullable": false
+    }
+  },
+  "StatutoryAuctionNotice": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "auction_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoanAuction"
+    },
+    "snapshot": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "snapshot_sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "artifact": {
+      "type": "FileField",
+      "nullable": false
+    },
+    "artifact_sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "template_version": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "request_key": {
+      "type": "CharField",
+      "nullable": false
+    }
+  },
+  "StatutoryNoticeEvidence": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "created_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "notice_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.StatutoryAuctionNotice"
+    },
+    "kind": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "PRINTED",
+        "POSTED",
+        "ACKNOWLEDGED",
+        "RETURNED",
+        "REFERRED",
+        "OFFICER_RECEIVED",
+        "CERTIFIED",
+        "REVIEWED",
+        "WITHDRAWN"
+      ]
+    },
+    "occurred_on": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "details": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "attachment": {
+      "type": "FileField",
+      "nullable": false
+    },
+    "attachment_sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "request_key": {
+      "type": "CharField",
+      "nullable": false
+    }
+  },
+  "HistoricalLoanImport": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "public_id": {
+      "type": "UUIDField",
+      "nullable": false
+    },
+    "loan_id": {
+      "type": "OneToOneField",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "archive_evidence_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "reference": "loans.HistoricalLoanEvidence"
+    },
+    "source_namespace": {
+      "type": "UUIDField",
+      "nullable": false
+    },
+    "source_id": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "source_sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "document": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "references": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "imported_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "imported_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "HistoricalLoanEvidence": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "public_id": {
+      "type": "UUIDField",
+      "nullable": false
+    },
+    "source_namespace": {
+      "type": "UUIDField",
+      "nullable": false
+    },
+    "source_system": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "source_id": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "source_sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "document": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "review": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "accepted_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "accepted_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "HistoricalLoanAttachment": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "evidence_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.HistoricalLoanEvidence"
+    },
+    "file": {
+      "type": "FileField",
+      "nullable": false
+    },
+    "original_filename": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "mime_type": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "byte_size": {
+      "type": "PositiveBigIntegerField",
+      "nullable": false
+    },
+    "source_evidence": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "imported_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "imported_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "LoanChangeLog": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "event_kind": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "DRAFT_CREATED",
+        "DRAFT_UPDATED",
+        "LICENSE_TRANSFERRED",
+        "APPROVED",
+        "RETURNED_TO_DRAFT",
+        "CANCELLED",
+        "DISBURSED",
+        "REPAYMENT_RECORDED",
+        "ACCRUAL_FINALIZED",
+        "INTEREST_CAPITALIZED",
+        "RELEASE_COMPLETED",
+        "AUCTION_INITIATED",
+        "AUCTION_STARTED",
+        "AUCTION_CANCELLED",
+        "AUCTION_COMPLETED",
+        "AUCTION_REVERSED",
+        "RENEWAL_COMPLETED",
+        "RENEWAL_SUCCESSOR_ACTIVATED",
+        "RENEWAL_REVERSED",
+        "CLOSED",
+        "REVERSAL_RECORDED"
+      ]
+    },
+    "from_state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "DRAFT",
+        "APPROVED",
+        "ACTIVE",
+        "CANCELLED",
+        "CLOSED",
+        ""
+      ]
+    },
+    "to_state": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "DRAFT",
+        "APPROVED",
+        "ACTIVE",
+        "CANCELLED",
+        "CLOSED",
+        ""
+      ]
+    },
+    "reason": {
+      "type": "TextField",
+      "nullable": false
+    },
+    "metadata": {
+      "type": "JSONField",
+      "nullable": false
+    },
+    "actor_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "LoanTransactionReview": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "loan_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnLoan"
+    },
+    "through_date": {
+      "type": "DateField",
+      "nullable": false
+    },
+    "confirmed_complete": {
+      "type": "BooleanField",
+      "nullable": false
+    },
+    "source_reference": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "source_fingerprint": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "future_capture": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "PAPER_MIXED",
+        "ROKKAD_ONLY"
+      ]
+    },
+    "capture_contract_fingerprint": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "capture_state": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "capture_event_id": {
+      "type": "PositiveBigIntegerField",
+      "nullable": true
+    },
+    "request_key": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "reviewed_by_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "accounts.CustomUser"
+    },
+    "reviewed_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    }
+  },
+  "PawnCollateralPhoto": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false
+    },
+    "workspace_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "orgs.Company"
+    },
+    "collateral_item_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "reference": "loans.PawnCollateralItem"
+    },
+    "file": {
+      "type": "FileField",
+      "nullable": false
+    },
+    "original_filename": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "mime_type": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "sha256": {
+      "type": "CharField",
+      "nullable": false
+    },
+    "byte_size": {
+      "type": "PositiveBigIntegerField",
+      "nullable": false
+    },
+    "workflow_source": {
+      "type": "CharField",
+      "nullable": false,
+      "choices": [
+        "DRAFT",
+        "RENEWAL",
+        "POST_APPROVAL",
+        "LEGACY_IMPORT"
+      ]
+    },
+    "inherited_from_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "loans.PawnCollateralPhoto"
+    },
+    "captured_by_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "reference": "accounts.CustomUser"
+    },
+    "captured_at": {
+      "type": "DateTimeField",
+      "nullable": false
+    },
+    "source_evidence": {
+      "type": "JSONField",
+      "nullable": false
+    }
+  }
+}

@@ -36,6 +36,8 @@ def _export_history(*, workspace_id, actor, loan_id):
     workspace=require_history_setup_access(workspace_id,actor,read_only=True)
     resolve_workspace_access(actor=actor,workspace=workspace).require("data.export")
     loan=m.PawnLoan.objects.select_for_update(of=("self",)).select_related("product_version","license_revision","policy_snapshot","disbursal_snapshot__approval_snapshot").get(workspace_id=workspace_id,pk=loan_id)
+    if hasattr(loan, 'historical_import') and 'portable' in loan.historical_import.references:
+        raise HistoryError('Retained servicing bundles require loan-servicing-bundle/1; use Export loan records.')
     if loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists():
         raise HistoryError("Future-capture transition evidence requires a wider portability profile. Use exact Workspace recovery backup until that profile is available.")
     if loan.state not in {"ACTIVE","CLOSED"}: raise HistoryError("Only active or fully released histories are supported.")
@@ -105,7 +107,7 @@ def _export_history(*, workspace_id, actor, loan_id):
         source=dict(id=identity("loan",loan.pk),number=loan.loan_number,state=loan.state,
             borrower=dict(source_system="rokkad:"+str(namespace.public_id),id=str(party.public_id)),licence_number=loan.license_revision.license_number,
             disbursed_on=loan.loan_date.isoformat(),tenure_months=loan.tenure_months,calculation_contract=product.calculation_contract_version,
-            grace_days=product.operational_grace_days,approval=dict(at=approval.approved_at.isoformat(),actor=source_actor(approval.approved_by_id),reference="approval:"+approval.fingerprint),
+            grace_days=product.operational_grace_days,approval=approval.payload.get("historical_approval") or dict(at=approval.approved_at.isoformat(),actor=source_actor(approval.approved_by_id),reference="approval:"+approval.fingerprint),
             policy=policy_values,collateral=collateral,
             disbursal=dict(advance_periods=snapshot.advance_interest_periods,
                 fees=[dict(code=f["code"],name=f["name"],kind=f["calculation_type"],value=f["policy_value"],deducted=f["deducted_at_disbursal"]) for f in snapshot.evidence.get("fees",[])],
