@@ -135,6 +135,20 @@ def get_pawn_principal_tranche_balances(
             current,
             key=lambda item_id: (-rates[item_id], item_id),
         )
+        repayment = event.payload.get("repayment", {})
+        if repayment.get("item_principal_allocation_order") == "STAFF_SPECIFIED":
+            from .paper_repayments import validate_paper_repayment_evidence
+            evidence = repayment.get("recording")
+            try:
+                validate_paper_repayment_evidence(evidence, effective_date=event.effective_date,
+                    amount=Decimal(repayment["amount_received"]))
+            except (ValueError, KeyError) as exc:
+                raise PawnTrancheBalanceError("Invalid staff-specified paper receipt evidence.") from exc
+            split = evidence.get("item_principal_split")
+            if split is None or set(split) - {str(item_id) for item_id in current} or any(
+                line.principal_applied != Decimal(split.get(str(line.collateral_item_id), "0")) for line in event_lines):
+                raise PawnTrancheBalanceError("Paper allocation lines differ from the retained staff split.")
+            expected_order = sorted(current)
         if [line.allocation_order for line in event_lines] != list(
             range(1, len(event_lines) + 1)
         ) or [line.collateral_item_id for line in event_lines] != expected_order:

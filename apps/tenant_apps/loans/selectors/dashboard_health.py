@@ -38,7 +38,7 @@ def get_dashboard_health_summary(*, workspace):
         shortfall=_evidence_amount("coverage__shortfall"),
     )
     current = Q(assessment_status="CURRENT")
-    financial = (current & Q(risk_snapshot__source_provenance__transactions__complete=True, projected__isnull=False, recorded__isnull=False,
+    financial = (current & Q(projected__isnull=False, recorded__isnull=False,
         risk_snapshot__source_provenance__financial__integrity_findings=[],
         risk_snapshot__exposure=F("recorded") + F("projected")))
     coverage = (financial & Q(coverage_exposure__isnull=False, shortfall__isnull=False,
@@ -61,10 +61,12 @@ def get_dashboard_health_summary(*, workspace):
         full_shortfall=Sum("shortfall", filter=coverage),
         oldest_assessed_at=Min("risk_snapshot__assessed_at", filter=current),
     )
-    totals["financial_complete"] = totals["financial_count"] == totals["loan_count"]
-    totals["coverage_complete"] = totals["coverage_count"] == totals["loan_count"]
+    totals["financial_complete"] = totals["financial_count"] == totals["loan_count"] and totals["provisional_count"] == 0
+    totals["coverage_complete"] = totals["coverage_count"] == totals["loan_count"] and totals["provisional_count"] == 0
     for field in ("projected_interest", "economic_exposure"):
-        totals[field] = (totals[field] or Decimal("0")) if totals["financial_complete"] else None
+        if totals["loan_count"] == 0:
+            totals[field] = Decimal("0")
     for field in ("collateral_value", "full_shortfall"):
-        totals[field] = (totals[field] or Decimal("0")) if totals["coverage_complete"] else None
+        if totals["loan_count"] == 0:
+            totals[field] = Decimal("0")
     return {"as_of_date": today, **totals}

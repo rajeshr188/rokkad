@@ -56,6 +56,6 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquenc
     if not completeness.complete:
         assessment = replace(assessment, flags=assessment.flags + ("TRANSACTIONS_UNCONFIRMED",),
             explanations=assessment.explanations + (completeness.message,),
-            action_hint="RECONCILE_PAPER_RECORDS",
+            action_hint="RECONCILE_PAPER_RECORDS" if completeness.status == "INCOMPLETE" else assessment.action_hint,
             fingerprint=hashlib.sha256((assessment.fingerprint + str(completeness.evidence())).encode()).hexdigest())
     return assessment

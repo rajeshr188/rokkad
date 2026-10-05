@@ -39,6 +39,7 @@ ECONOMIC_LABELS = {
     "license": _("Policy scope"), "effective_from": _("Applies from"),
     "valuation_method": _("How collateral value is chosen"), "maximum_ltv_ratio": _("Maximum loan-to-value ratio"),
     "advance_interest_periods": _("Months of interest collected upfront"), "interest_method": _("Interest calculation"),
+    "default_tenure_months": _("Standard loan tenure (months)"),
     "gold_monthly_interest_rate": _("Gold: monthly interest (%)"), "silver_monthly_interest_rate": _("Silver: monthly interest (%)"),
     "partial_month_method": _("Charging for part of a month"), "partial_month_cutoff_days": _("Part-month cutoff (days)"),
     "partial_month_lower_fraction": _("Month fraction through the cutoff"),
@@ -57,8 +58,8 @@ ECONOMIC_LABELS = {
 
 class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     groups = (
-        (_("1. Scope and dates"), ("license", "series", "effective_from", "effective_until")),
-        (_("2. Monthly interest"), ("gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods")),
+        (_("1. Scope and dates"), ("license", "series", "effective_from", "effective_until", "default_entry_purpose")),
+        (_("2. Monthly interest and tenure"), ("gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods", "default_tenure_months")),
         (_("3. Part-month and compound rules"), ("partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction", "capitalization_interval_periods")),
         (_("4. Collateral value and rounding"), ("valuation_method", "maximum_ltv_ratio", "rounding_method", "currency_quantum")),
     )
@@ -86,6 +87,12 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         help_text=_("Enter 0.80 for 80%, or 0.95 for 95%."),
     )
     advance_interest_periods = forms.IntegerField(min_value=0, max_value=12, initial=1)
+    default_entry_purpose = forms.ChoiceField(required=False, initial="INHERIT",
+        label=_("Default loan entry purpose"), choices=(("INHERIT", "Inherit broader default"),
+        ("DIRECT", "Create and pay now"), ("PAPER", "Record from paper")),
+        help_text=_("Series overrides license, then business default. Staff may switch purpose for a transaction. Existing loans and approval rules remain unchanged."))
+    default_tenure_months = forms.IntegerField(min_value=1, max_value=600, required=False,
+        help_text=_("Used for new loan entry in this scope. Leave blank to choose tenure per agreement. Existing loans keep their saved tenure."))
     interest_method = forms.ChoiceField(
         choices=[(InterestMethod.SIMPLE.value, _("Simple")), (InterestMethod.COMPOUND.value, _("Compound"))],
         initial=InterestMethod.SIMPLE.value,

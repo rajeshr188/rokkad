@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
 
-SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V4"
+SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V5"
 
 
 def snapshot_is_current(snapshot, as_of_date):
@@ -53,6 +53,7 @@ class RiskPortfolioSummary:
     by_severity: tuple[dict, ...]
     by_product: tuple[dict, ...]
     provisional_count: int = 0
+    unavailable_count: int = 0
 
 
 def get_risk_portfolio(*, page=1, page_size=50, status=None, severity=None,
@@ -93,13 +94,14 @@ def get_risk_portfolio_summary(*, as_of_date=None):
         error_count=Count("pk", filter=Q(assessment_status="ERROR")),
         unknown_coverage_count=Count("pk", filter=current & Q(risk_snapshot__ltv_ratio__isnull=True)),
         provisional_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__complete=False)),
-        incomplete_money=Count("pk", filter=~current | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True) | Q(risk_snapshot__source_provenance__transactions__complete=False)),
+        unavailable_count=Count("pk", filter=~current | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True)),
         total_exposure=Sum("risk_snapshot__exposure", filter=current),
         total_overdue=Sum("risk_snapshot__overdue", filter=current),
     )
-    complete = totals.pop("incomplete_money") == 0
+    complete = totals["unavailable_count"] == 0 and totals["provisional_count"] == 0
     for field in ("total_exposure", "total_overdue"):
-        totals[field] = (totals[field] or Decimal("0")) if complete else None
+        if totals["loan_count"] == 0:
+            totals[field] = Decimal("0")
     assessed = queryset.filter(current)
     return RiskPortfolioSummary(
         **totals, totals_complete=complete,

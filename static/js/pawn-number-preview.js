@@ -1,4 +1,4 @@
-(() => {
+function initPawnNumberPreview() {
   const series = document.getElementById('id_series');
   const output = document.getElementById('expected-loan-number');
   const data = document.getElementById('loan-number-previews');
@@ -18,4 +18,6 @@
   if (window.jQuery) window.jQuery(series).on('change', update);
   window.addEventListener('pageshow', update);
   update();
-})();
+}
+document.addEventListener("DOMContentLoaded", initPawnNumberPreview);
+document.addEventListener("loan-entry:ready", initPawnNumberPreview);

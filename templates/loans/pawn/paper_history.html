@@ -1,19 +1,16 @@
 {% extends "base_tenant.html" %}
-{% load loans_display %}
+{% load loans_display static %}
 {% block title %}Record paper loan history{% endblock %}
 {% block workspace_content %}
-<div class="container-fluid py-3" style="max-width:1100px">
+<div {% if not archive %}data-new-loan-entry{% endif %} class="container-fluid py-3" style="max-width:1100px">
   <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">← Loans</a>
-  <h1 class="h3 mt-3">Record paper loan history</h1>
+  {% if archive %}<h2 class="h4 mt-3">Reconcile paper loan history</h2>{% endif %}
   {% if archive %}<div class="alert alert-info"><h2 class="h5">Reconcile historical loan {{ archive.document.facts.loan_number|default:archive.source_id }}</h2><p>Review the <a href="{% url 'workspace_portability:archive_detail' request.workspace.slug archive.public_id %}">retained archive and attachments</a>. Enter supported missing facts and check every receipt. Use each archived payment ID as its transaction reference; select whether it was a receipt or the final closure. This review admits one closed loan, without renewals. The original evidence remains accessible.</p><p class="mb-0">No original approval or metal price is invented. Admission records past financial history and the custody facts established by the paper. Cash method and customer handover may remain unspecified. Entry does not perform a new payout, collection or handover.</p></div>{% endif %}
-  <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Loan entry purpose">
-    <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}">Approve and pay now</a>
-    <span class="btn btn-primary" aria-current="page">Already completed on paper</span>
-  </nav>
-  <p>Record this paper loan and the activity you have checked through the stated date. You do not need its earlier or later renewal sequence. Known receipts and closure can be entered here or recorded from the loan later.</p>
-{% if not archive %}  <div class="alert alert-info">Enter agreed principal separately from proceeds after advance interest and document charge. Paper proceeds may have settled another loan; they do not automatically mean physical cash paid. No predecessor loan is required. This profile supports one collateral group and simple monthly interest; concessions and interest capitalization require further review.</div>{% endif %}
-  <form method="post" action="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}" novalidate>
-    {% csrf_token %}<input type="hidden" name="entry_mode" value="paper">
+  {% if not archive %}{% include "loans/pawn/_entry_purpose.html" %}{% endif %}
+  <p>Enter the original loan facts. Standing terms are populated from setup; payments and closure can be recorded here or later.</p>
+  <form id="new-loan-form" method="post" action="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}" novalidate {% if form.routine %}data-paper-entry{% endif %}>
+    {% csrf_token %}<input type="hidden" name="entry_mode" value="paper"><input type="hidden" name="entry_values" value="{{ entry_values|default:'{}' }}">
+    {% if form.routine %}{{ form.routine_entry }}{% endif %}
     {% if archive %}<input type="hidden" name="archive_evidence_id" value="{{ archive.public_id }}">{% endif %}
     <input type="hidden" name="intent_token" value="{{ intent_token }}">
     {{ form.non_field_errors }}
@@ -26,6 +23,33 @@
         </div>{% endfor %}</div>
       </fieldset>
     {% endfor %}
+    {% if formset %}<section class="border rounded p-3 mb-3"><h2 class="h5">Collateral</h2><p class="small">Enter each item's actual principal. Rokkad adds the amounts and calculates deductions from the recorded terms.</p>{% include "loans/pawn/_collateral_editor.html" %}</section>{% endif %}
+    {% if form.routine %}
+    <section class="border rounded p-3 mb-3" id="standing-terms">
+      <h2 class="h5">Standing agreement</h2>
+      <button class="btn btn-outline-secondary mb-2" type="submit" name="action" value="terms" formnovalidate data-load-terms>Load standing terms</button>
+      {% if form.terms %}
+        <p>Monthly interest {{ form.rate.value|floatformat:"-6" }}%{% if formset %} (effective rate; each item retains its own rate){% endif %} · Tenure {{ form.tenure.value|default_if_none:"—" }} months · Advance {{ form.advance_months.value|default_if_none:"—" }} month(s) · Document charge {{ form.document_charge.value|default_if_none:"—" }}</p>
+        <p>Simple monthly interest: full months from the original loan anniversary; principal reductions apply from the next anniversary.</p>
+        <p>Total principal: <strong>{{ form.principal.value|indian_money }}</strong></p>{% if form.deductions %}<p>Advance interest deducted: {{ form.deductions.advance|indian_money }} · Proceeds after interest and document charge: <strong>{{ form.deductions.proceeds|indian_money }}</strong>.</p>{% endif %}
+        <p class="small">Current monitoring: {% for value, label in form.fields.monitoring_method.choices %}{% if value == form.monitoring_method.value %}{{ label }}{% endif %}{% endfor %} · Maximum LTV {{ form.monitoring_ltv.value }}. This does not reapprove the original advance.</p>
+        {% for message in form.terms.messages %}<p class="text-warning">{{ message }}</p>{% endfor %}
+      {% else %}<p class="text-body-secondary">Choose the series, original date and metal to load their terms.</p>{% endif %}
+      <details {% if form.exceptions.value or form.errors %}open{% endif %}>
+        <summary>Different paper terms or additional payout details</summary>
+        <div class="form-check my-3">{{ form.exceptions }}<label class="form-check-label" for="{{ form.exceptions.id_for_label }}">{{ form.exceptions.label }}</label></div>
+        <p class="small">Use actual supported terms when this agreement differs or dated digital setup is unavailable. Paper proceeds do not automatically establish physical cash paid.</p>
+        <div class="row g-3">
+          {% for field in form %}{% if field.name in "rate tenure advance_months document_charge payout_basis cash_paid monitoring_method monitoring_ltv monitoring_reason exception_reason" %}
+          <div class="col-12 col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
+          {% endif %}{% endfor %}
+        </div>
+      </details>
+    </section>
+    <details class="border rounded p-3 mb-3" id="paper-activity" {% if rows.total_error_count or form.final_state.value == 'CLOSED' %}open{% endif %}>
+      <summary>This loan already has payments or is closed</summary>
+      <label class="form-label mt-3" for="{{ form.final_state.id_for_label }}">{{ form.final_state.label }}</label>{{ form.final_state }}{{ form.final_state.errors }}
+    {% endif %}
     <section class="mb-3" aria-labelledby="timeline-title"><h2 class="h5" id="timeline-title">Transactions after the payout</h2>
 {% if not archive %}      <p class="small">Renewal details are optional. Record each loan separately when its paper record does not identify a predecessor. For a known renewal after this loan has been entered, use Renew on its detail page. A paper closure does not require identifying another loan.</p>{% endif %}
       <p class="small text-body-secondary">Leave unused rows blank. Keep same-day transactions in paper order. Each full month starts on the original loan-date anniversary, clamped to month end; a payment on that anniversary reduces the following month’s base. This includes a receipt or closure on the maturity anniversary. A renewal starts its own anniversary. Original historical valuation and digital approval are not required.</p>
@@ -37,7 +61,14 @@
       </fieldset>{% endfor %}
       <button class="btn btn-outline-secondary" name="action" value="add" formnovalidate>Add another transaction</button>
     </section>
-    <button class="btn btn-primary" name="action" value="preview">Preview complete history</button>
+    {% if form.routine %}</details>
+    <details class="border rounded p-3 mb-3" {% if form.confirmed_history.value %}open{% endif %}>
+      <summary>Optional paper-book verification</summary>
+      <p class="small mt-2">Recording a transaction does not certify that every paper transaction has been entered. Verification is available for reconciliation, reminders and recovery actions.</p>
+      <div class="form-check">{{ form.confirmed_history }}<label class="form-check-label" for="{{ form.confirmed_history.id_for_label }}">{{ form.confirmed_history.label }}</label></div>{{ form.confirmed_history.errors }}
+      <label class="form-label" for="{{ form.complete_through.id_for_label }}">{{ form.complete_through.label }}</label>{{ form.complete_through }}{{ form.complete_through.errors }}
+    </details>{% endif %}
+    <button class="btn btn-primary" name="action" value="preview">Review loan record</button>
     {% if review %}<section class="border rounded p-3 mt-4" aria-labelledby="history-review-title">
       <h2 class="h4" id="history-review-title">Review before recording</h2>
       {% if review.archive %}<p><strong>Archive admission:</strong> checked source snapshots {% for source in archive_snapshots %}<a href="{% url 'workspace_portability:archive_detail' request.workspace.slug source.public_id %}" target="_blank" rel="noopener">{{ source.document.source.snapshot_reference }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}. Supporting records: {{ review.archive.reconciliation }}. Original archive records and attachments will remain available.</p>{% endif %}
@@ -48,14 +79,16 @@
       <p>Original principal is the agreed debt. Advance interest and document charge are already deducted. Paper proceeds and closing settlement amounts do not confirm physical cash unless that meaning was selected. Unknown customer handover remains unknown. Carried principal is not an additional cash payout.</p>
       <ul>{% for row in review.loans %}<li><strong>{{ row.number }}</strong>: {% if row.state == "ACTIVE" %}Active{% else %}Closed{% endif %} · principal {{ row.principal|indian_money }} · interest due {{ row.interest|indian_money }} · custody {% if row.custody == "IN_VAULT" %}Held in vault{% elif row.custody == "PAPER_CLOSED" %}Paper closed; customer handover unconfirmed{% elif row.custody == "RENEWAL_TRANSFERRED" %}Carried to successor loan{% else %}Returned to customer{% endif %}</li>{% endfor %}</ul>
       {% for row in review.rows %}{% if row.closing_number %}<p>Closing number {{ row.closing_number }}: {% if row.number_basis == 'SYSTEM_ASSIGNED' %}system recording number; no original paper number supplied{% else %}original paper number{% endif %}.</p>{% endif %}{% endfor %}
-      <p>History confirmed complete through {{ review.complete_through }}. Current price/appraisal freshness is assessed separately; missing current evidence leaves coverage unknown.</p>
+      {% if review.confirmed_complete %}<p>History confirmed complete through {{ review.complete_through }}.</p>{% else %}<p>Recorded transactions shown through {{ review.complete_through }}; complete paper-book verification has not been claimed.</p>{% endif %}
+      <p>Current price/appraisal freshness is assessed separately.</p>
       {% if review.counters %}<div class="alert alert-warning">Recording these original numbers advances the live counters:
         <ul class="mb-0">{% for counter in review.counters %}<li>{% if counter.kind == "PAWN_LOAN" %}Loan numbers{% else %}Release numbers{% endif %}: {{ counter.before }} → {{ counter.after }}</li>{% endfor %}</ul>
       </div>{% endif %}
       <input type="hidden" name="review_token" value="{{ review_token }}">
-      <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="confirm_review" id="confirm-history"><label class="form-check-label" for="confirm-history">I checked this loan’s terms, amounts, original numbers and the stated closing evidence against its paper record through the selected date.</label></div>
+      <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="confirm_review" id="confirm-history"><label class="form-check-label" for="confirm-history">I checked the displayed agreement, amounts, original numbers and any closing facts against the paper record.</label></div>
       <button class="btn btn-success" name="action" value="confirm">Record reviewed history</button>
     </section>{% endif %}
   </form>
 </div>
 {% endblock %}
+{% block extra_js %}{{ block.super }}{% if form.routine %}{% include "loans/pawn/_entry_scripts.html" %}{% endif %}{% endblock %}

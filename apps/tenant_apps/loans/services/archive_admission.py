@@ -91,6 +91,8 @@ def _claims(evidence, data):
 def _prepare(workspace, actor, evidence_id, data, intent_token, reconciliation):
     require_history_setup_access(workspace.pk, actor)
     data = validate_input(data)
+    if not data["confirmed_history"]:
+        raise ValueError("Archive admission requires checked complete financial history.")
     _authorize(workspace, actor, data)
     key = _intent(intent_token, workspace, actor)
     reconciliation = _text(reconciliation, "the checked sources supporting original terms, financial history and known custody", 1000)

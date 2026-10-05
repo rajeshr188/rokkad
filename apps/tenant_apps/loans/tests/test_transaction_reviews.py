@@ -118,7 +118,10 @@ class TransactionReviewTests(RecordedOriginationTests):
         self.assertIn("TRANSACTIONS_UNCONFIRMED", snapshot.flags)
         self.assertEqual(get_risk_portfolio_summary().provisional_count, 1)
         self.assertFalse(get_risk_portfolio_summary().totals_complete)
-        self.assertFalse(get_dashboard_health_summary(workspace=self.tenant)["financial_complete"])
+        self.assertEqual(get_risk_portfolio_summary().total_exposure, value)
+        health = get_dashboard_health_summary(workspace=self.tenant)
+        self.assertFalse(health["financial_complete"])
+        self.assertEqual(health["economic_exposure"], value)
 
     def test_unprivileged_actor_and_concurrent_review_invalidate_preview(self):
         from django.contrib.auth import get_user_model
@@ -287,7 +290,7 @@ class TransactionReviewTests(RecordedOriginationTests):
         post.update(action="confirm", acknowledged="on", review_token=response.context["form"].data["review_token"])
         response = client.post(url, post)
         self.assertEqual(response.status_code, 302)
-        self.assertContains(client.get(response.url), "Transaction coverage: CONFIRMED")
+        self.assertContains(client.get(response.url), "Paper-book verification: CONFIRMED")
         self.assertEqual(client.post(url, post).status_code, 302)
 
 

@@ -85,7 +85,9 @@ def record_admission_renewal(workspace, actor, data, key, source, row, request_k
         new_document_charge=str(document_charge),
         recipient=row["recipient"] if custody == "RETURNED_REPLEDGED" else "")
     old_item = source.collateral_items.get()
-    successor, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, data, key,
+    successor_data = dict(data)
+    successor_data.pop("collateral", None)
+    successor, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, successor_data, key,
         number=row["number"], day=day, principal=new_principal, rate=Decimal(row["rate"]), tenure=row["tenure"],
         advance=Decimal(evidence["new_advance_interest"]), predecessor=old_item,
         custody_state="WITH_CUSTOMER" if custody == "RETURNED_REPLEDGED" else "IN_VAULT")

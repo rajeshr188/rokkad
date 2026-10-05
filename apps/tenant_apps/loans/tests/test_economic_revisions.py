@@ -17,6 +17,7 @@ from apps.tenant_apps.loans.services import create_pawn_economic_configuration
 
 
 class EconomicRevisionDatabaseTests(TransactionTestCase):
+    maxDiff = None
     def setUp(self):
         self.actor = get_user_model().objects.create_user(username=uuid.uuid4().hex)
         self.workspace = Company.objects.create(name="Policy revisions", schema_name=uuid.uuid4().hex,
@@ -67,6 +68,11 @@ class EconomicRevisionDatabaseTests(TransactionTestCase):
                 for model in (PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy):
                     rows = list(model.objects.order_by("pk").values())
                     self.assertTrue(all(row.pop("revision") == 1 for row in rows))
+                    if model is PawnLoanEconomicPolicy:
+                        self.assertTrue(all(row.pop("default_tenure_months") is None for row in rows))
+                        self.assertTrue(all(row.pop("default_entry_purpose") == "INHERIT" for row in rows))
+                        self.assertTrue(all(row.pop("series_id") is None for row in rows))
+                        self.assertTrue(all(row.pop("minimum_first_month") is False for row in rows))
                     self.assertEqual(rows, originals[model.__name__])
                 self.assertEqual(self.configure("0.95").economic_policy.revision, 2)
         finally:

@@ -1,5 +1,5 @@
 /* Display entered facts only. Economic calculations and validation remain server-owned. */
-document.addEventListener('DOMContentLoaded', () => {
+function initPawnDraftSummary() {
   const summary = document.getElementById('draft-loan-summary');
   const container = document.getElementById('collateral-formset');
   if (!summary || !container) return;
@@ -59,4 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
   new MutationObserver(changed).observe(container, {childList:true});
   if (window.jQuery) jQuery(form).on('change', 'select', changed);
   update();
-});
+}
+document.addEventListener("DOMContentLoaded", initPawnDraftSummary);
+document.addEventListener("loan-entry:ready", initPawnDraftSummary);

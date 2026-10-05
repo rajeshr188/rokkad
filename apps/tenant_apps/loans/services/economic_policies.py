@@ -81,6 +81,8 @@ def create_pawn_economic_configuration(
               "series_id": economic_policy.series_id,
               "partial_month_method": economic_policy.partial_month_method,
               "minimum_first_month": economic_policy.minimum_first_month,
+              "default_tenure_months": economic_policy.default_tenure_months,
+              "default_entry_purpose": economic_policy.default_entry_purpose,
               "maximum_ltv_ratio": str(economic_policy.maximum_ltv_ratio),
               "gold_rate_policy_id": gold_rate_policy.pk, "silver_rate_policy_id": silver_rate_policy.pk})
     return PawnEconomicConfiguration(
@@ -97,6 +99,8 @@ def create_pawn_loan_economic_policy(
     valuation_method: ValuationMethod | str,
     maximum_ltv_ratio: Decimal,
     advance_interest_periods: int = 1,
+    default_tenure_months: int | None = None,
+    default_entry_purpose: str = "INHERIT",
     interest_method: InterestMethod | str = InterestMethod.SIMPLE,
     partial_month_method: PartialMonthMethod | str = PartialMonthMethod.FULL_MONTH,
     partial_month_cutoff_days: int = 15,
@@ -124,6 +128,8 @@ def create_pawn_loan_economic_policy(
         valuation_method=ValuationMethod(valuation_method).value,
         maximum_ltv_ratio=maximum_ltv_ratio,
         advance_interest_periods=advance_interest_periods,
+        default_tenure_months=default_tenure_months,
+        default_entry_purpose=default_entry_purpose or "INHERIT",
         interest_method=InterestMethod(interest_method).value,
         partial_month_method=PartialMonthMethod(partial_month_method).value,
         partial_month_cutoff_days=partial_month_cutoff_days,

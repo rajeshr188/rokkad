@@ -123,10 +123,14 @@ def pawn_loan_repay(request, pk):
     is_opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
     from apps.tenant_apps.loans.services.recorded_collections import recording_for
     paper_available = is_opening or bool(recording_for(loan))
+    from apps.tenant_apps.loans.services.entry_purpose import default_entry_purpose
+    purpose = default_entry_purpose(workspace=request.loans_workspace, series_id=loan.series_id)
     form = PawnRepaymentForm(
         request.POST if request.method == "POST" else None,
-        initial={"request_key": uuid.uuid4().hex, "received_on": timezone.localdate()},
+        initial={"request_key": uuid.uuid4().hex, "received_on": timezone.localdate(),
+                 "recording_purpose": "PAPER" if paper_available and purpose == "PAPER" else "CURRENT"},
         allow_paper=paper_available,
+        collateral_items=list(loan.collateral_items.order_by("pk")) if paper_available else [],
     )
     if request.method == "POST" and form.is_valid():
         try:
@@ -137,6 +141,7 @@ def pawn_loan_repay(request, pk):
                 values = {name: form.cleaned_data[name] for name in (
                     "amount", "received_on", "receipt_reference", "request_key",
                 )}
+                values["item_principal_split"] = form.paper_item_split
                 if request.POST.get("action") == "preview":
                     review = preview_paper_repayment(loan.pk, actor=request.user, **values)
                     repayment_preview = review.preview
@@ -205,6 +210,7 @@ def pawn_loan_repay(request, pk):
             "paper_entry_available": paper_available,
             "paper_correction_available": bool(recording_for(loan)) and _can_administer(request),
             "paper_receipt_preview": bool(repayment_preview and form.cleaned_data.get("recording_purpose") == "PAPER"),
+            "staff_item_split": bool(repayment_preview and form.cleaned_data.get("recording_purpose") == "PAPER" and form.paper_item_split is not None),
             "is_repayment": True,
             "supports_preview": True,
             "preview_action_label": _("Preview allocation"),

@@ -187,6 +187,10 @@ class PawnLoanEconomicPolicy(models.Model):
         default=Decimal("0.800000"),
     )
     advance_interest_periods = models.PositiveSmallIntegerField(default=1)
+    default_tenure_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    default_entry_purpose = models.CharField(max_length=12, default="INHERIT",
+        choices=(("INHERIT", "Inherit broader default"), ("DIRECT", "Create and pay now"),
+                 ("PAPER", "Record from paper")))
     interest_method = models.CharField(
         max_length=16,
         choices=enum_choices(InterestMethod),
@@ -253,6 +257,12 @@ class PawnLoanEconomicPolicy(models.Model):
                 condition=Q(advance_interest_periods__lte=12),
                 name="loans_econ_advance_range",
             ),
+            models.CheckConstraint(
+                condition=Q(default_tenure_months__isnull=True) | Q(default_tenure_months__gte=1, default_tenure_months__lte=600),
+                name="loans_econ_default_tenure_range",
+            ),
+            models.CheckConstraint(condition=Q(default_entry_purpose__in=("INHERIT", "DIRECT", "PAPER")),
+                name="loans_econ_entry_purpose_valid"),
             models.CheckConstraint(
                 condition=Q(partial_month_cutoff_days__gte=1)
                 & Q(partial_month_cutoff_days__lte=30),

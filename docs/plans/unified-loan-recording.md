@@ -16,6 +16,105 @@ are separate from local implementation.
 
 ## Tracking
 
+## UR-23: finish the familiar New loan presentation
+
+Authorized 3 October after the owner identified the duplicate series chooser and
+prominent mode buttons. **Complete locally:** the ordinary Series field applies
+the configured purpose, a compact Entry/Change control allows an exception, and
+switching retains common facts plus purpose-specific details. The duplicate chooser
+and prominent navigation are removed. Read-only changes never post a loan, retain
+a stale signed review or waive direct approval/valuation. Financial UR-19–22 remains
+the completed foundation; the two appropriate backend validators are retained.
+
+142 affected tests pass in 78.846s, including native draft save/validation and
+paper admission regressions. Actual desktop/mobile/no-JavaScript checks confirm
+single-series routing, fact retention, editor reinitialization and signed review;
+desktop admits P-0056. JavaScript retains selected photographs across switches.
+The direct browser preflight continues to reject an earlier-date metal-priced
+decision; existing saved PDF hashes match. Without JavaScript, files need explicit
+reselection after a purpose change, with a visible explanation. Candidate 8078 is
+`rokkad:entry-refined-20261003-a80e473e`, with 1,529 runtime files matched, schema
+0057 unchanged and existing loan rows/file bytes unchanged during update.
+Real staff/paper/hardware and hosted release acceptance remain pending. See the
+[candidate evidence](../implementation/joint-loan-candidate-20261003.md).
+
+## Shared multi-item entry authorized (3 October)
+
+The owner authorized a shared loan-entry experience with a standing entry-purpose
+default at Workspace/license/series scope and an explicit per-action override.
+Preserve all direct origination checks and existing frozen contracts. Every actual
+paper collateral row has its own principal: no total-only origination or invented
+historical allocation is needed. For paper principal receipts, staff specify the
+item split; interest remains calculated from actual dated item agreements.
+
+| Slice | Scope | State |
+|---|---|---|
+| UR-19 | Multi-item recorded origination and anniversary interest; staff-directed paper principal receipts | Complete locally |
+| UR-20 | Multi-item closure, correction and servicing integration with immutable item evidence | Complete locally |
+| UR-21 | Shared collateral editor and creation-purpose navigation; scoped standing default with per-action override | Complete locally |
+| UR-22 | Native/paper regressions, scope/retry checks and browser acceptance; update local release evidence | Complete locally |
+
+UR-19–22 are complete locally. Verification passes 502 regressions (445.006s)
+and 105 overlapping final receipt/draft checks (61.683s). Actual desktop/mobile
+admission and later receipt/closure, no-JavaScript add/review and exact saved-PDF
+checks pass. That checkpoint used `rokkad:shared-entry-20261003-d91d4ea3`
+through migration 0057, with verified database/media backups and all existing loan
+rows/file hashes unchanged during update. Production and the 8077 pilot are
+unchanged. See the [candidate evidence](../implementation/joint-loan-candidate-20261003.md).
+Optional already-completed linked paper renewal remains the older single-group
+shortcut; multi-item paper agreements are entered independently. Ordinary Renew
+performed now supports multi-item recorded sources with current approval.
+Real paper/staff/hardware and hosted production acceptance remain release work.
+
+Do not default or infer a paper receipt's principal split from direct entry's
+highest-rate-first rule. Existing recorded-anniversary/1 loans keep their original
+calculation semantics; itemized agreements need explicit versioned evidence.
+
+## Routine entry simplification agreed (3 October)
+
+The owner tried the local form and accepted standing-term defaults with explicit
+exceptions, automatic proceeds and lighter completeness presentation for ordinary
+entry/payment/closure/monitoring. Imported and Lakshmi paper-origin loans primarily
+use Flexible Partial Payment. Lakshmi's standard tenure is confirmed as 12 months.
+UR-15–18 are complete locally and included in the updated fictional candidate on
+8078. Production is unchanged. Broader exceptional profiles are deferred
+until actual business cases establish their rules.
+
+| ID | Implementation order | Acceptance |
+| --- | --- | --- |
+| UR-15 | Resolve standing terms from existing series/license/Workspace selectors, the original agreement date and metal. Prefer an unambiguous eligible Flexible Partial Payment version. Add the missing configurable standard tenure at the existing setup boundary. Resolve current monitoring separately. | Applicable rate, deductions, tenor and monitoring are displayed without repeated entry; supported actual exceptions and missing historical digital setup remain recordable; existing contracts keep their saved terms. |
+| UR-16 | Simplify paper entry and ordinary receipt/closure presentation: transaction facts, calculated agreement summary, collapsed exceptions and optional already-recorded paper activity. | Server recalculates and binds final review; principal/proceeds/actual cash remain distinct; no renewal ancestry prerequisite or guessed physical return; two-decimal money, duplicates, scope and chronology remain enforced. |
+| UR-17 | Make routine monitoring/reporting useful from entered records while separating transaction confirmation, optional checked-through evidence and known missing activity. | No daily per-loan certification for ordinary viewing; known exposure totals display with provisional/unavailable counts; last transaction date does not claim book completeness; reminder/auction gates retain explicit coverage checks. |
+| UR-18 | Verify the simplified paths and update the local candidate/release record. | Scoped policy/default/date/exception tests, receipt/closure accounting and retry tests, monitoring/reminder boundaries, desktop/mobile/no-JS and native JCL/JSK regression checks pass before release preparation. |
+
+Keep existing immutable loan snapshots/events and services. A default is resolved
+and frozen for the individual agreement; later setup changes never reprice it.
+If several eligible product versions exist, use an explicit selection instead of
+an arbitrary choice. A missing dated digital policy does not justify inventing
+historical prices or refusing supported actual paper terms. Existing fee resolution
+is Workspace/license scoped; do not invent series fee overrides. The paper profile
+supports simple FULL_MONTH, one collateral group and zero/one advance month with
+an identified deducted document charge; unsupported configured rules must be
+explained rather than silently converted or omitted.
+
+Ordinary confirmation covers the transaction being recorded. Any claim that all
+paper activity is entered through a date requires an actual scoped attestation;
+book-progress notes alone cannot confer it. Displayed risk/exposure uses entered
+records with its limits visible. This pass preserves reminder/auction protections.
+Standard-tenure values are business setup, not assumed from an illustrative example.
+
+**Completion evidence:** 422 final regressions pass in 369.684 seconds; the 156-case
+affected rerun overlaps that selection. It covers new defaults/date/exception/retry
+cases, native lending, total-only receipts and closure, known linked renewal,
+corrections, monitoring/reminder/auction boundaries, both recovery families and
+tenant isolation. Actual desktop/mobile/no-JavaScript entry and signed review pass;
+browser-posted receipt/closure figures and provisional exposure reconcile under the
+restricted runtime role. Existing joint-loan navigation, saved PDF hashes and viewer
+restrictions pass. 1,519 runtime files match the scoped image; migration 0056,
+owner refusal and restricted startup pass. Prior image/container and verified
+physical database/media backups are retained. See the
+[candidate update](../implementation/joint-loan-candidate-20261003.md).
+
 ## Completion programme authorized (3 October)
 
 The owner authorized the remaining recommendations in this order. Completion
@@ -30,7 +129,7 @@ fixtures cannot stand in for that business sign-off.
 | UR-10 | Ordinary renewal of imported opening loans, preserving opening obligations and current successor approval | Implemented locally; current/paper successors, approval, paired reversal and reduced-principal checks passed; real-record acceptance/rollout pending |
 | UR-11 | Versioned restorable recorded-origin export, including identities, corrections, renewals, coverage and custody evidence | Native original-identity archive implemented with exact rows, file bytes and financial/coverage/custody reconciliation; ordinary download and offline restore verified; cross-Workspace remapping is a separate unsupported importer |
 | UR-12 | Recorded-origin auction/recovery through ordinary services and agreed collection balances | Implemented locally; completeness/statutory gates, agreed debt, disposal, exact retry, paired reversal and archive recovery verified in 125 integration tests |
-| UR-13 | Additional actual paper profiles established from representative evidence; no assumed waivers, capitalization or item-allocation rules | Awaiting business examples; supported baseline remains available |
+| UR-13 | Additional actual paper profiles established from representative evidence; no assumed waivers, capitalization or item-allocation rules | Deferred by owner until actual business cases arise; supported baseline remains available |
 | UR-14 | Representative acceptance, release checks, migration/rollout and operational verification | Local migration, regression, UI/PDF and recovery checks complete for the implemented profile; real Lakshmi records and rollout target requested; staff acceptance and rollout pending |
 
 Initial renewal-chain reconstruction remains optional and deprioritized. Progress

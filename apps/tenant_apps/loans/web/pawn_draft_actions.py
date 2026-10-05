@@ -47,12 +47,15 @@ def _pawn_loan_for_workspace(request, pk):
 @loans_action_required("data.create")
 @never_cache
 def pawn_loan_create(request):
-    if request.GET.get("entry") == "paper" or request.POST.get("entry_mode") == "paper":
+    from .entry_presentation import entry_presentation, presentation_errors
+    selected, presentation = entry_presentation(request)
+    request.loan_entry_presentation = presentation
+    if selected == "paper":
         from .recorded_history import paper_history_entry
         return paper_history_entry(request)
     token = request.POST.get("submission_token", "") if request.method == "POST" else None
     token_error = None
-    if request.method == "POST":
+    if request.method == "POST" and not presentation["entry_changing"]:
         try:
             saved = saved_draft_submission(workspace=request.loans_workspace, actor=request.user, token=token)
         except ValueError as exc:
@@ -69,21 +72,32 @@ def pawn_loan_create(request):
     initial = {"loan_date": timezone.localdate()}
     if request.method == "GET" and request.GET.get("party"):
         initial["borrower"] = request.GET["party"]
+    if request.method == "GET" and request.GET.get("series"):
+        initial["series"] = request.GET["series"]
     form = PawnDraftForm(
         request.POST if request.method == "POST" else None,
         workspace=request.loans_workspace,
         initial=initial,
     )
+    collateral_post = request.POST.copy() if request.method == "POST" else None
+    adding = collateral_post is not None and collateral_post.get("action") == "add_collateral"
+    if adding:
+        try:
+            collateral_post["collateral-TOTAL_FORMS"] = str(min(100, int(collateral_post.get("collateral-TOTAL_FORMS", "1")) + 1))
+        except ValueError:
+            pass
     formset = PawnCollateralDraftFormSet(
-        request.POST or None, request.FILES or None, prefix="collateral",
+        collateral_post, request.FILES or None, prefix="collateral",
         form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")}
     )
     economics_preview = None
-    if request.method == "GET":
+    if request.method == "GET" or not token:
         token = new_draft_submission(workspace=request.loans_workspace, actor=request.user)
     if token_error:
         form.add_error(None, token_error)
-    if request.method == "POST" and form.is_valid() and formset.is_valid():
+    if presentation["entry_changing"]:
+        presentation_errors(form, formset)
+    if request.method == "POST" and not adding and not presentation["entry_changing"] and form.is_valid() and formset.is_valid():
         command = _create_command(request.loans_workspace.pk, form, formset)
         try:
             if request.POST.get("action") == "preview":
@@ -120,6 +134,8 @@ def pawn_loan_create(request):
             **_pawn_number_preview_context(form),
             "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
+            "entry_purpose": "direct",
+            **presentation,
         },
     )
 

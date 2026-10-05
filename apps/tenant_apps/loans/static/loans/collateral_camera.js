@@ -1,4 +1,4 @@
-(() => {
+function initCollateralCamera() {
   const dialog = document.getElementById("collateral-camera-dialog");
   if (!dialog || dialog.dataset.initialized === "true") return;
   dialog.dataset.initialized = "true";
@@ -26,6 +26,7 @@
     previews.set(input, {url, element});
   };
   document.addEventListener("change", (event) => {
+    if (!dialog.isConnected) return;
     if (event.target.matches(".js-collateral-photo-input")) previewSelection(event.target);
   });
   document.addEventListener("reset", (event) => setTimeout(() => {
@@ -85,6 +86,7 @@
     }
   };
   document.addEventListener("click", event => {
+    if (!dialog.isConnected) return;
     const trigger = event.target.closest(".js-collateral-camera");
     if (!trigger) return;
     closeCamera();
@@ -145,4 +147,6 @@
       }
     }, "image/jpeg", 0.9);
   });
-})();
+}
+document.addEventListener("DOMContentLoaded", initCollateralCamera);
+document.addEventListener("loan-entry:ready", initCollateralCamera);

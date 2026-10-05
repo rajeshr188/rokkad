@@ -30,8 +30,22 @@ class CorrectionForm(forms.Form):
     review_token = forms.CharField(required=False, widget=forms.HiddenInput())
     confirmed = forms.BooleanField(required=False, label="I checked the original paper facts and every affected allocation. This records a correction, not another cash collection or refund.")
 
-    def __init__(self, *args, receipts, settlement=None, **kwargs):
+    def __init__(self, *args, receipts, settlement=None, collateral_items=(), replay_receipts=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if len(collateral_items) > 1:
+            for item in collateral_items:
+                self.fields[f"item_principal_{item.pk}"] = forms.DecimalField(required=False,
+                    max_digits=14, decimal_places=2, min_value=0, label=f"Corrected receipt principal: {item.description}")
+            for receipt in (receipts if replay_receipts is None else replay_receipts):
+                if hasattr(receipt, "reversed_by_event"):
+                    continue
+                split = receipt.payload["repayment"].get("recording", {}).get("item_principal_split", {})
+                for item in collateral_items:
+                    name = f"replay_{receipt.pk}_{item.pk}"
+                    self.fields[name] = forms.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0,
+                        label=f"Retained receipt #{receipt.pk} ({receipt.effective_date}): principal for {item.description}",
+                        help_text="Keep the actual split, or enter its corrected allocation if this review changes the principal portion.")
+                    self.initial[name] = split.get(str(item.pk))
         if settlement is None:
             for key in list(self.fields):
                 if key.startswith("settlement_"):
@@ -67,10 +81,12 @@ def correction(request, pk):
     events, active, blockers = dependencies(loan)
     form = CorrectionForm(request.POST if request.method == "POST" else None,
         initial={"request_key": uuid4().hex}, receipts=[e for e in events if e.event_kind == "REPAYMENT"],
-        settlement=next((e for e in active if e.event_kind in ("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT")), None))
+        settlement=next((e for e in active if e.event_kind in ("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT")), None),
+        collateral_items=list(loan.collateral_items.order_by("pk")))
     review = None
     if request.method == "POST" and form.is_valid():
         values = {key: value for key, value in form.cleaned_data.items() if key not in ("review_token", "confirmed")}
+        _item_splits(values)
         values["date"] = values["date"].isoformat() if values["date"] else None
         values["amount"] = str(values["amount"]) if values["amount"] is not None else None
         settlement = {key.removeprefix("settlement_"): values.pop(key) for key in list(values) if key.startswith("settlement_")}
@@ -97,8 +113,25 @@ class ContractCorrectionForm(CorrectionForm):
     rate = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, label="Correct original monthly interest (%)")
     cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0.01, label="Correct original proceeds after deductions")
 
-    def __init__(self, *args, predecessor=None, **kwargs):
+    def __init__(self, *args, predecessor=None, collateral_items=(), **kwargs):
+        self.collateral_items = collateral_items
+        kwargs["collateral_items"] = collateral_items
         super().__init__(*args, receipts=[], **kwargs)
+        for key in list(self.fields):
+            if key.startswith("item_principal_"):
+                del self.fields[key]
+        if len(collateral_items) > 1:
+            for item in collateral_items:
+                for name, value in (("principal", item.allocated_principal), ("rate", item.monthly_interest_rate)):
+                    key = f"contract_item_{item.pk}_{name}"
+                    self.fields[key] = forms.DecimalField(required=True, max_digits=14 if name == "principal" else 9,
+                        decimal_places=2 if name == "principal" else 6, min_value=0.01 if name == "principal" else 0,
+                        max_value=None if name == "principal" else 100, label=f"Correct original {name}: {item.description}")
+                    self.initial[key] = value
+                    self.fields[key].widget.attrs["class"] = "form-control"
+            for name in ("principal", "rate"):
+                self.fields[name].required = False
+                self.fields[name].widget = forms.HiddenInput()
         for key in ("operation", "target", "amount", "before"):
             del self.fields[key]
         self.fields["date"].required = True
@@ -121,6 +154,37 @@ class ContractCorrectionForm(CorrectionForm):
                 field.widget.attrs["class"] = "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else "form-select" if isinstance(field.widget, forms.Select) else "form-control"
 
 
+    def clean(self):
+        values = super().clean()
+        if len(self.collateral_items) > 1:
+            rows = [dict(principal=values.get(f"contract_item_{item.pk}_principal"),
+                         rate=values.get(f"contract_item_{item.pk}_rate")) for item in self.collateral_items]
+            if all(row["principal"] is not None and row["rate"] is not None for row in rows):
+                from decimal import Decimal
+                from apps.tenant_apps.loans.services.recorded_items import effective_rate
+                values["principal"] = sum((row["principal"] for row in rows), Decimal("0"))
+                values["rate"] = effective_rate(rows)
+        return values
+
+
+def _item_splits(values):
+    split, replay = {}, {}
+    for name in list(values):
+        if name.startswith("item_principal_"):
+            amount = values.pop(name)
+            if amount is not None:
+                split[name.removeprefix("item_principal_")] = str(amount)
+        elif name.startswith("replay_"):
+            _, event, item = name.split("_")
+            amount = values.pop(name)
+            if amount is not None:
+                replay.setdefault(event, {})[item] = str(amount)
+    if split:
+        values["item_principal_split"] = split
+    if replay:
+        values["replay_item_splits"] = replay
+
+
 @loans_action_required(LOANS_ADMIN_ACTION)
 @never_cache
 def contract_correction(request, pk):
@@ -139,10 +203,16 @@ def contract_correction(request, pk):
         initial=dict(request_key=uuid4().hex, date=loan.loan_date, principal=loan.principal_amount,
             rate=loan.monthly_interest_rate, cash_paid=proceeds),
         settlement=next((event for event in active if event.event_kind in ("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT")), None),
-        predecessor=predecessor)
+        predecessor=predecessor, collateral_items=list(loan.collateral_items.order_by("pk")),
+        replay_receipts=[event for event in active if event.event_kind == "REPAYMENT"])
     review = None
     if request.method == "POST" and form.is_valid():
         values = {key: value for key, value in form.cleaned_data.items() if key not in ("review_token", "confirmed")}
+        _item_splits(values)
+        if len(form.collateral_items) > 1:
+            values["items"] = [dict(item_id=item.pk,
+                principal=str(values.pop(f"contract_item_{item.pk}_principal")),
+                rate=str(values.pop(f"contract_item_{item.pk}_rate"))) for item in form.collateral_items]
         values["date"] = values["date"].isoformat()
         for key in ("principal", "rate", "cash_paid"):
             values[key] = str(values[key])

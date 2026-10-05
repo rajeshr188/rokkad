@@ -8,6 +8,129 @@ related: [../plans/unified-loan-recording.md, ../adr/2026-10-02-unified-loan-rec
 
 # Unified loan recording implementation
 
+## UR-23: compact purpose and retained entry facts
+
+`web/entry_presentation.py` resolves GET defaults and handles explicit read-only
+`action=entry_change` POSTs. The ordinary Series field is the only selector; an
+explicit purpose exception remains under Entry/Change. Scope validation rejects
+foreign series. Common customer/date/product/series and physical item facts cross
+between adapters; paper number/reference/exceptions/activity and native appraisal,
+override and submission identity are retained per purpose. The bounded JSON form
+cache carries untrusted strings only and is never canonical evidence. Review tokens
+and confirmation are excluded. Normal financial POSTs keep their explicit purpose.
+
+Both views bypass preview/admission/draft submission on a presentation change.
+Incomplete typed facts are rendered without claiming financial validity; the next
+normal POST creates fresh forms and runs normal validation/services. No accounting,
+valuation, financial service, lifecycle or schema rule changes in this slice.
+
+`loan-entry.js` replaces only the shared entry root using the ordinary POST response,
+keeps actual file input nodes locally and excludes files from change requests.
+Abort/revision checks discard stale responses or retry with newly edited facts.
+Existing native widgets, price checks, add/remove controls and camera initialize
+on `loan-entry:ready`; edit-draft controls remain supported. Removed rows stay hidden
+across switches. Failure retains the original form/photos and offers retry.
+Without JavaScript the same read-only POST retains strings; file inputs need
+reselection, with an explicit warning.
+
+Final 142 affected tests pass (78.846s), covering native draft save/validation,
+paper admission and four new scope/no-posting/retention cases. Actual desktop,
+mobile and no-JavaScript checks pass; desktop admits P-0056 after a round trip.
+Selected photos survive JavaScript round trips; changing purpose after review
+discards its signature. Native earlier-date metal-price preflight remains blocked.
+Saved PDFs retain exact bytes. Private evidence is
+`.tmp/loan-entry-refinement-20261003`; candidate 8078 and all 1,529 runtime files
+match `rokkad:entry-refined-20261003-a80e473e`, through existing migration 0057.
+Existing loan rows and file bytes were unchanged during update; production is
+unchanged. Real staff/hardware and hosted release acceptance remain pending.
+
+## UR-19–22: shared collateral entry and scoped purpose defaults
+
+Migration 0057 adds `default_entry_purpose` to existing economic configuration,
+with INHERIT/DIRECT/PAPER choices and a database constraint. Resolution uses today's
+latest revision per scope; inheritance moves to license then Workspace, and the
+system fallback is DIRECT. GET entry selection may use the default; POST purpose
+is explicit so preferences cannot reinterpret submitted facts. The common purpose
+navigation and collateral template are reused by native and paper creation. Native
+approval/rate/photo services remain unchanged. No new Workspace-owned table is added.
+
+Paper creation preserves backward-compatible flat requests while the new editor
+uses bounded Django formsets and canonical item agreements. Server-side standing
+terms resolve each item's original-date metal rate and aggregate principal, rounded
+monthly/advance interest and fees. The recorded item profile is versioned as
+`recorded-anniversary/2`; existing version 1 contracts keep their calculation.
+Signed review binds all item amounts/rates, source facts and derived totals.
+
+Typed receipt fields capture staff-specified principal per item, with exact-total,
+balance, membership, precision and review/retry validation. The ordinary writer
+persists canonical allocation lines and labels the retained split STAFF_SPECIFIED;
+direct repayment's highest-rate-first path remains unchanged. Full closure covers
+all items. Original-term and receipt corrections/replay retain old snapshots and
+require explicit reviewed replacement splits when earlier changes alter principal.
+Current ordinary renewal supports the new recorded source through existing current
+approval; optional already-completed linked paper renewal still retains its older
+one-group boundary. Independent multi-item paper entry/closure needs no ancestry.
+
+UR-19-22 verification: 502 regressions pass in 445.006s; 105 overlapping final
+receipt/draft checks pass in 61.683s. The browser confirmed actual desktop/mobile
+admission, explicit item receipt splits, full closure, no-JavaScript add/review,
+series-default routing/direct override and unchanged saved PDFs. Confirmation
+checkbox events are excluded from review invalidation; changing transaction facts
+still removes stale review. Independent runtime checks reproduce 10,000 principal,
+280 advance interest, 10 document charge, 9,710 proceeds, a 1,500/500 item principal
+payment, remaining 4,500/3,500 and next-anniversary interest 230. Current monitoring
+retains the known 8,000 exposure with unconfirmed-book provenance. Schema-matched
+native export includes all item agreements/allocations.
+
+Private QA evidence is `.tmp/multi-item-paper-20261003`. The first broad run's
+single recovery deadlock was against autovacuum, established in PostgreSQL logs;
+the isolated rerun disables vacuum on disposable QA tables only. Product recovery
+locking and restricted-role restoration checks remain unchanged. Python parsing
+(540 Loans files), migration consistency and scoped whitespace checks pass. The
+global import guard retains eight baseline billing-import findings in four Loans
+test files; no new finding is introduced. The fictional local candidate is updated,
+with verified backups; real staff/hardware and hosted deployment remain pending.
+
+## UR-15–18: standing defaults and routine entry
+
+Migration 0056 adds optional standard tenure to the existing Workspace-owned
+economic policy, with a 1–600 month constraint and ordinary setup field. No old
+policy or loan tenure is seeded or rewritten. Lakshmi's accepted setup value is
+12 months. Original-date defaults reuse existing series/license/Workspace policy,
+metal-rate and license fee resolution; current monitoring resolves separately.
+An unambiguous eligible Flexible Partial Payment version is preferred.
+
+The ordinary paper form now shows transaction facts and jewellery, loads its
+standing agreement and calculates advance interest and net proceeds. A native
+submit fallback works without JavaScript. Actual supported exceptions and their
+source reason are expanded only when needed; old activity and complete-book
+verification are optional sections. Server-side re-resolution binds final signed
+review and preserves original financial snapshots, dates, source references and
+physical-cash meaning. Unsupported setup is explained instead of silently omitted.
+
+Routine confirmation records displayed facts without fabricating a whole-book
+review. Archive admission retains complete reconciliation. Unverified paper closure
+does not assert complete history. Receipt entry still uses ordinary total-only
+allocation. Snapshot V5 retains usable known monitoring amounts and provisional/
+unavailable counts; detail verification is passive except explicitly missing
+activity. Borrower reminders and auction readiness keep their coverage gates.
+
+UR-18 is complete locally: 422 final regressions pass in 369.684 seconds, and a
+156-case affected rerun passes (overlapping). Actual desktop/mobile/no-JavaScript
+entry and review pass, including preservation of typed facts during automatic
+refresh. The browser caught action-button names shadowing the form action property;
+fetch now reads the explicit HTML action attribute. Browser-posted dated receipt
+and paper closure reconcile under runtime RLS. All 1,519 runtime source files match
+the scoped candidate image `rokkad:paper-simple-20261003-c5462662` at localhost 8078,
+with migration 0056, owner refusal and restricted production startup verified.
+Old loan contracts are unchanged. A verified physical database backup, media copy,
+prior containers/images and a fresh matching-schema ordinary-Loans native ZIP are
+retained privately in `.tmp/paper-simplification-20261003/`. Production is unchanged.
+The final template keeps unused activity collapsed after a successful review and
+uses the readable monitoring label. Its 18 focused form/monitoring checks pass,
+and actual desktop/mobile/no-JavaScript acceptance was repeated successfully.
+See the [decision](../adr/2026-10-03-standing-terms-and-routine-paper-entry.md).
+
 ## UR-08–UR-10: operational completion slices
 
 The local completion programme adds ordinary paper-book checkpoints and atomic

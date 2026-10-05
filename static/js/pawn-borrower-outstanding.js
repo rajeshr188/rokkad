@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initPawnBorrowerOutstanding() {
   const select = document.getElementById('id_borrower');
   const panel = document.getElementById('borrower-outstanding');
   if (!select || !panel) return;
@@ -29,4 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.jQuery) window.jQuery(select).on('change', refresh);
   else select.addEventListener('change', refresh);
   refresh();
-});
+}
+document.addEventListener("DOMContentLoaded", initPawnBorrowerOutstanding);
+document.addEventListener("loan-entry:ready", initPawnBorrowerOutstanding);

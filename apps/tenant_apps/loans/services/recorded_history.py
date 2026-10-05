@@ -59,11 +59,21 @@ def validate_input(data):
     if not isinstance(data, dict) or len(_canonical(data)) > 40000:
         raise ValueError("Paper history is missing or exceeds the supported size.")
     value = deepcopy(data)
+    from .recorded_items import validate_items, monthly_interest, effective_rate
+    collateral = value.pop("collateral", None)
+    if collateral is not None:
+        collateral = validate_items(collateral, _amount, _text)
+    entry_note = value.pop("entry_note", None)
+    if entry_note is not None:
+        entry_note = _text(entry_note, "entry source explanation", 255)
     extra_fields = {"document_charge", "payout_basis"}
     required = {"borrower_id", "series_id", "product_version_id", "number", "date", "principal", "rate", "tenure",
         "advance_months", "cash_paid", "source_reference", "description", "metal", "quantity", "gross_weight",
         "net_weight", "purity", "monitoring_method", "monitoring_ltv", "monitoring_reason", "complete_through",
         "final_state", "confirmed_history", "confirmed_rule", "events"}
+    routine = value.pop("recording_mode", None)
+    if routine not in (None, "TRANSACTION_ENTRY"):
+        raise ValueError("Unsupported paper recording mode.")
     if set(value) not in (required, required | extra_fields):
         raise ValueError("The paper history fields are incomplete or unsupported.")
     if extra_fields <= set(value):
@@ -73,7 +83,7 @@ def validate_input(data):
     for name in ("borrower_id", "series_id", "product_version_id", "tenure", "quantity"):
         if type(value[name]) is not int or value[name] <= 0:
             raise ValueError(f"Select a valid {name.replace('_', ' ')}.")
-    if value["tenure"] > 600 or value["quantity"] > 999 or type(value["advance_months"]) is not int or value["advance_months"] not in (0, 1):
+    if value["tenure"] > 600 or value["quantity"] > (10000 if collateral is not None else 999) or type(value["advance_months"]) is not int or value["advance_months"] not in (0, 1):
         raise ValueError("Use a supported tenure, quantity and zero or one advance month.")
     for field, limit in (("number",64), ("source_reference",160), ("description",255), ("monitoring_reason",255)):
         value[field] = _text(value[field], field.replace("_", " "), limit)
@@ -89,20 +99,32 @@ def validate_input(data):
     if value["metal"] not in ("GOLD", "SILVER") or value["monitoring_method"] not in (
             "CALCULATED_METAL_VALUE", "LATEST_APPRAISAL", "LOWER_OF_CALCULATED_AND_APPRAISAL"):
         raise ValueError("Select a supported metal and monitoring method.")
-    value["monitoring_ltv"] = _amount(value["monitoring_ltv"], "monitoring LTV ratio", places=4, positive=True)
+    value["monitoring_ltv"] = _amount(value["monitoring_ltv"], "monitoring LTV ratio", places=6, positive=True)
     if Decimal(value["monitoring_ltv"]) > 1:
         raise ValueError("Monitoring LTV cannot exceed 100%.")
     day, through = date.fromisoformat(value["date"]), date.fromisoformat(value["complete_through"])
     if not day <= through <= timezone.localdate() or (through - day).days > 3660:
         raise ValueError("History must run from the actual loan date through a date no later than today, within ten years.")
-    if value["confirmed_history"] is not True or value["confirmed_rule"] is not True:
+    if (type(value["confirmed_history"]) is not bool or value["confirmed_rule"] is not True
+            or (routine is None and value["confirmed_history"] is not True)):
         raise ValueError("Confirm the complete paper history and the exact agreed anniversary-interest rule.")
+    if routine:
+        value["recording_mode"] = routine
+    if entry_note is not None:
+        value["entry_note"] = entry_note
+    if collateral is not None:
+        if sum((Decimal(row["principal"]) for row in collateral), Decimal("0")) != Decimal(value["principal"]):
+            raise ValueError("Loan principal must equal the actual item amounts.")
+        if effective_rate(collateral) != Decimal(value["rate"]):
+            raise ValueError("The display rate must reconcile to actual item rates.")
+        value["collateral"] = collateral
     if value["final_state"] not in ("ACTIVE", "CLOSED"):
         raise ValueError("Confirm whether the last loan is still held or fully returned.")
     if type(value["events"]) is not list or len(value["events"]) > 30:
         raise ValueError("Enter at most 30 dated transactions in their original order.")
     previous, refs, renewals = day, set(), 0
     for index, row in enumerate(value["events"]):
+        item_split = row.pop("item_principal_split", None) if isinstance(row, dict) else None
         base_fields = {"kind", "date", "amount", "reference", "number", "rate", "tenure", "recipient"}
         renewal_fields = {"renewal_method", "new_principal", "cash_paid", "interest_offset", "custody"}
         if not isinstance(row, dict) or set(row) not in (base_fields, base_fields | renewal_fields,
@@ -122,6 +144,11 @@ def validate_input(data):
                 del row[name]
         if row["kind"] not in ("PAYMENT", "RENEW", "CLOSE"):
             raise ValueError("Only receipts, renewals and full closures are supported.")
+        if item_split is not None:
+            from .paper_repayments import normalize_item_split
+            if row["kind"] != "PAYMENT":
+                raise ValueError("Item receipt splits apply only to payments.")
+            row["item_principal_split"] = normalize_item_split(item_split)
         actual = date.fromisoformat(row["date"])
         if not previous <= actual <= through:
             raise ValueError("Enter transactions chronologically, no later than the records-complete-through date.")
@@ -132,6 +159,8 @@ def validate_input(data):
             raise ValueError("Each paper transaction needs its own distinct receipt or book/page reference.")
         refs.add(identity(row["reference"]))
         if row["kind"] == "RENEW":
+            if collateral is not None and len(collateral) > 1:
+                raise ValueError("Record multi-item paper loans independently. This optional linked-history shortcut requires separate successor item agreements.")
             renewals += 1
             if explicit_renewal:
                 if row["renewal_method"] not in ("CARRY", "REPAY_REDRAW") or row["custody"] not in ("HELD", "RETURNED_REPLEDGED"):
@@ -154,7 +183,7 @@ def validate_input(data):
                 raise ValueError("Full return must be the final transaction.")
     if renewals > 5 or (value["final_state"] == "CLOSED") != bool(value["events"] and value["events"][-1]["kind"] == "CLOSE"):
         raise ValueError("A closed history needs a final full return; at most five renewals are supported.")
-    monthly = (Decimal(value["principal"]) * Decimal(value["rate"]) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    monthly = monthly_interest(collateral) if collateral is not None else (Decimal(value["principal"]) * Decimal(value["rate"]) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     if Decimal(value["cash_paid"]) != Decimal(value["principal"]) - monthly * value["advance_months"] - Decimal(value.get("document_charge", "0")):
         raise ValueError("Original proceeds must equal principal less agreed advance interest and document charge.")
     return value
@@ -240,43 +269,59 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
         creation_submission_id=key if predecessor is None else None)
     loan.full_clean()
     loan.save()
-    item = m.PawnCollateralItem(loan=loan, quantity=data["quantity"], description=data["description"], metal=data["metal"],
-        gross_weight=Decimal(data["gross_weight"]), net_weight=Decimal(data["net_weight"]), purity_percentage=Decimal(data["purity"]),
-        allocated_principal=principal, monthly_interest_rate=rate, renewed_from=predecessor, custody_state=custody_state)
-    item.full_clean()
-    item.save()
+    from .recorded_items import contract_items, ITEM_PROFILE
+    items = []
+    for facts in contract_items(dict(data, principal=str(principal), rate=str(rate))):
+        item = m.PawnCollateralItem(loan=loan, quantity=facts["quantity"], description=facts["description"], metal=facts["metal"],
+            gross_weight=Decimal(facts["gross_weight"]), net_weight=Decimal(facts["net_weight"]), purity_percentage=Decimal(facts["purity"]),
+            allocated_principal=Decimal(facts["principal"]) if data.get("collateral") else principal,
+            monthly_interest_rate=Decimal(facts["rate"]) if data.get("collateral") else rate,
+            renewed_from=predecessor, custody_state=custody_state)
+        item.full_clean()
+        item.save()
+        items.append(item)
     policy = m.LoanPolicySnapshot.objects.create(loan=loan, basis="RECORDED_CONTRACT", interest_method="SIMPLE",
         partial_month_method="FULL_MONTH", valuation_method=data["monitoring_method"], maximum_ltv_ratio=Decimal(data["monitoring_ltv"]),
         rounding_method="PER_ACCRUAL_PERIOD", currency_quantum=Decimal("0.01"))
-    monthly = (principal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    tranches = [dict(collateral_item_id=item.pk, allocated_principal=str(principal), monthly_interest_rate=str(rate),
-                    monthly_interest=str(monthly), advance_interest=str(advance))]
+    tranches = []
+    for item in items:
+        charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        tranches.append(dict(collateral_item_id=item.pk, allocated_principal=str(item.allocated_principal),
+            monthly_interest_rate=str(item.monthly_interest_rate), monthly_interest=str(charge),
+            advance_interest=str(charge * data.get("advance_months", 0))))
+    monthly = sum((Decimal(row["monthly_interest"]) for row in tranches), Decimal("0"))
+    # Legacy renewal callers supply an already calculated advance, with no itemized data.
+    if not data.get("collateral"):
+        tranches[0]["advance_interest"] = str(advance)
     fields = {name: str(getattr(policy, name)) if isinstance(getattr(policy, name), Decimal) else getattr(policy, name)
               for name in CONTRACT_POLICY_FIELDS}
-    collateral = dict(item_id=item.pk, description=item.description, metal=item.metal, quantity=item.quantity,
+    collateral = [dict(item_id=item.pk, description=item.description, metal=item.metal, quantity=item.quantity,
         gross_weight=str(item.gross_weight), net_weight=str(item.net_weight), purity_percentage=str(item.purity_percentage),
-        monthly_interest_rate=str(rate), latest_appraised_value=None)
+        monthly_interest_rate=str(item.monthly_interest_rate), latest_appraised_value=None) for item in items]
     recording = dict(schema="recorded-origination/1" if predecessor is None else "recorded-renewal/1",
         source_reference=data["source_reference"], payout_already_occurred=predecessor is None,
-        original_actor=None, date_precision="DAY", occurred_on=day.isoformat(), collection_profile=PROFILE,
+        original_actor=None, date_precision="DAY", occurred_on=day.isoformat(), collection_profile=ITEM_PROFILE if data.get("collateral") else PROFILE,
         advance_interest=str(advance), terms=dict(loan_number=number, principal_amount=str(principal),
-            monthly_interest_rate=str(rate), tenure_months=tenure, interest_policy=fields, collateral=[collateral]),
+            monthly_interest_rate=str(rate), tenure_months=tenure, interest_policy=fields, collateral=collateral),
         monitoring=dict(selected_on=timezone.localdate().isoformat(), valuation_method=policy.valuation_method,
             maximum_ltv_ratio=str(policy.maximum_ltv_ratio), reason=data["monitoring_reason"]),
         admission=dict(key=str(key), request_sha256=_digest(data), complete_through=data["complete_through"],
-                       entered_by=actor.pk, confirmed_complete=True))
-    return loan, item, policy, recording, tranches, monthly
+                       entered_by=actor.pk, confirmed_complete=data["confirmed_history"]))
+    if data.get("entry_note"):
+        recording["entry_note"] = data["entry_note"]
+    return loan, items[0], policy, recording, tranches, monthly
 
 
 def _admit(workspace, actor, data, key, *, archive=None):
     for reference in m.PawnLoanEvent.objects.filter(loan__workspace=workspace,
-            event_kind="DISBURSAL", payload__recording__collection_profile=PROFILE).values_list(
+            event_kind="DISBURSAL", payload__recording__collection_profile__in=(PROFILE, "recorded-anniversary/2")).values_list(
                 "payload__recording__source_reference", flat=True):
         if isinstance(reference, str) and identity(reference) == identity(data["source_reference"]):
             raise ValueError("This paper loan source reference is already recorded; open its existing loan.")
     before = dict(m.LoanNumberSequence.objects.filter(workspace=workspace).values_list("pk", "next_number"))
     principal, rate = Decimal(data["principal"]), Decimal(data["rate"])
-    monthly = (principal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    from .recorded_items import monthly_interest, contract_items
+    monthly = monthly_interest(contract_items(data))
     advance = monthly * data["advance_months"]
     original, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, data, key,
         number=data["number"], day=date.fromisoformat(data["date"]), principal=principal, rate=rate,
@@ -309,8 +354,14 @@ def _admit(workspace, actor, data, key, *, archive=None):
         if row["kind"] == "PAYMENT":
             from .paper_repayments import _evidence
             from .pawn_repayment import _record_pawn_loan_repayment_at
+            split = row.get("item_principal_split")
+            if split is not None:
+                item_ids = list(current.collateral_items.order_by("pk").values_list("pk", flat=True))
+                if any(int(position) < 1 or int(position) > len(item_ids) for position in split):
+                    raise ValueError("Receipt split references an unknown collateral row.")
+                split = {str(item_ids[int(position) - 1]): amount for position, amount in split.items()}
             result = _record_pawn_loan_repayment_at(current.pk, amount=amount, request_key=request_key, actor=actor,
-                effective_date=day, recording_evidence=_evidence(received_on=day, receipt_reference=row["reference"], amount=amount),
+                effective_date=day, recording_evidence=_evidence(received_on=day, receipt_reference=row["reference"], amount=amount, item_principal_split=split),
                 admission_key=str(key))
             rows.append(dict(kind="Receipt", date=row["date"], number=current.loan_number, cash=str(amount),
                 cash_received=str(amount), cash_paid="0",
@@ -341,14 +392,16 @@ def _admit(workspace, actor, data, key, *, archive=None):
     for loan in loans:
         loan.refresh_from_db()
         from .transaction_reviews import _store
-        _store(loan, actor, through_date=date.fromisoformat(data["complete_through"]), confirmed_complete=True,
-               source_reference=data["source_reference"], request_key=f"admission:{key}")
+        if data["confirmed_history"]:
+            _store(loan, actor, through_date=date.fromisoformat(data["complete_through"]), confirmed_complete=True,
+                   source_reference=data["source_reference"], request_key=f"admission:{key}")
         balance = collection_balance(loan, date.fromisoformat(data["complete_through"])) if loan.state == "ACTIVE" else get_pawn_loan_balance(loan, as_of_date=date.fromisoformat(data["complete_through"]))
         summaries.append(dict(number=loan.loan_number, state=loan.state, principal=str(balance.principal_outstanding),
-                              interest=str(balance.interest_outstanding), custody=loan.collateral_items.get().custody_state))
+                              interest=str(balance.interest_outstanding), custody=loan.collateral_items.order_by("pk").first().custody_state))
     counters = [dict(series=s.series_id, kind=s.document_kind, before=before[s.pk], after=s.next_number)
                 for s in m.LoanNumberSequence.objects.filter(workspace=workspace).order_by("pk") if before[s.pk] != s.next_number]
-    return original, dict(rows=rows, loans=summaries, counters=counters, complete_through=data["complete_through"])
+    return original, dict(rows=rows, loans=summaries, counters=counters,
+        complete_through=data["complete_through"], confirmed_complete=data["confirmed_history"])
 
 
 def _activate(loan, event, actor):

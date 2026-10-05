@@ -7,18 +7,39 @@ tags: [loans, paper-entry, acceptance, release]
 
 # Operate and accept the paper-first workflow
 
-Use ordinary **New loan → Already completed on paper** for each original numbered
-paper agreement. Record the borrower, original date/number, actual principal/rate,
-tenure, collateral and checked book/page reference. Enter original advance-interest
-and document-charge deductions. Confirm physical cash only when established; paper
+Use ordinary **New loan** for each original numbered paper agreement. Select the
+series and check **Entry: From paper**; use the compact Change control for an
+exception. The ordinary Series field supplies the entry default, without another
+series chooser. Switching retains typed facts and purpose-specific details; with
+JavaScript, selected photographs are retained when returning to direct entry.
+Without JavaScript, use Apply entry choice after selecting the series and reselect
+photographs after a purpose change. Changing purpose saves no loan and removes
+any old paper review, so review the final facts again.
+
+A standing purpose default can be selected in economic setup at
+Workspace, license or series scope; the most specific explicit choice wins. Staff
+can switch to Create and pay now for this action. Record the borrower, original
+date/number and book/page reference. Add each collateral item with its actual
+principal; Rokkad adds these amounts to the loan total. Each item retains its own
+agreed monthly rate. Select the series to load its dated standing
+monthly rate, tenure, advance interest and document charge. Lakshmi's confirmed
+standard tenure is 12 months; configure it in ordinary economic setup, with the
+effective date when that agreement actually applied. Review the
+calculated deductions and proceeds. Use Different paper terms for a supported actual
+exception or absent dated digital setup, with a source explanation. Confirm physical
+cash only when established; paper
 proceeds alone do not establish how money moved. Current monitoring selection
 assesses held collateral separately from the original decision. Do not reconstruct
 an unknown predecessor or apply today's prices to an already agreed principal.
 
-Review and confirm the supported history. The ordinary Loans list then contains
+Review and confirm the displayed transaction facts. Optional paper-book verification
+records a separate checked-through claim; routine entry does not require it. The ordinary Loans list then contains
 the active or reconciled closed loan. Use Repayment for a later total-only receipt,
 keeping its actual date and source reference. Interest is applied first, principal
-second. A mid-month principal reduction changes interest from the next loan
+second. For multiple items, enter the principal paid against each item; the split
+must match the principal remaining after interest, without exceeding any item's
+balance. An interest-only receipt needs no principal split. Rokkad does not apply
+direct entry's highest-rate-first allocation to a paper receipt. A mid-month principal reduction changes interest from the next loan
 anniversary; that month's charge uses its earlier principal. Missing earlier
 receipts affecting existing later activity require Review paper history correction.
 
@@ -33,8 +54,9 @@ remain available; a new copy includes the later confirmation.
 If a paper loan's relationship to another agreement is unknown, enter each loan
 independently. If the source loan is already entered and the relationship is known,
 use ordinary Renew: choose a decision performed now or an already completed paper
-renewal. A current decision requires current approval. A known paper renewal uses
-its actual successor principal/terms, deductions and net cash. For example,
+renewal. A current decision requires current approval. The optional already-completed linked paper renewal is currently limited to one
+collateral group; enter multi-item paper agreements independently. A supported
+known paper renewal uses its actual successor principal/terms, deductions and net cash. For example,
 12,000 − 240 − 10 − 10,000 − 200 = **1,550 paid to the customer**. Retained jewellery
 is linked and relabelled. Imported opening loans also support these two renewal
 purposes, preserving the accepted opening balance and unavailable earlier history.
@@ -44,7 +66,9 @@ balance certification. Review selected loans together only after checking each
 against its source. Each receives its own dated completeness confirmation. Later
 activity, corrections or an active loan's later date can require another review.
 Risk monitoring continues to show current valuation and calculated exposure, with
-provisional debt where paper activity may be missing. A current price cannot make
+known totals and provisional/unavailable counts. Ordinary viewing, receipt entry and
+closure do not require daily per-loan book certification. Explicit missing activity
+still needs reconciliation; reminders and recovery retain coverage checks. A current price cannot make
 an incomplete transaction history complete.
 
 Correct transcription errors through the original-term or closing-fact review,

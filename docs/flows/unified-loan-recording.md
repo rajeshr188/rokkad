@@ -7,6 +7,30 @@ tags: [loans, paper-entry, workflow, historical-evidence, risk]
 
 # Record business when it happens or enter it afterward
 
+The shared-entry extension (UR-19–22) uses a current standing entry-purpose default
+in Calculation policies: Workspace business default, optional license override,
+then optional series override. Inherit uses the broader default; absent setup stays
+direct. The ordinary New loan screen allows an explicit per-transaction switch.
+Changing this preference does not change any saved agreement or native approval.
+
+UR-23 applies that preference through the ordinary Series field. The compact
+**Entry: From paper / Direct in Rokkad — Change** control shows the result; use
+Change only when this transaction needs a different purpose. There is no second
+series selector. Switching retains entered facts and each purpose's details; with
+JavaScript it also retains selected photographs. Without JavaScript, open Change
+and use Apply entry choice after selecting the series; select photographs again
+after a switch. A purpose change saves no loan and requires a fresh paper review.
+
+Both entry modes use the shared Add collateral editor. Each paper row records its
+actual item principal and dated/actual rate; Rokkad sums principal and item-rounded
+interest/deductions. The owner confirmed that every paper item has its own amount,
+so no total-only origination or invented allocation is included. Paper principal
+receipts ask staff for the item split after calculated interest. Interest-only
+receipts need no split. Direct repayments retain their highest-rate-first rule.
+The original paper date and source remain separate from recording time and current
+monitoring. Optional known-chain shortcuts remain bounded; independent paper-loan
+entry, receipts and full closure are the primary routine workflow.
+
 The current local UR-08–12 completion slices and remaining real-record/release
 checks are documented in the [operator and acceptance guide](paper-first-operator-and-release.md).
 Earlier dated slices below preserve their original checkpoint boundaries.
@@ -16,17 +40,30 @@ The numbered sections describe the overall target, not a claim that every path i
 See the [decision](../adr/2026-10-02-unified-loan-recording.md) and
 [delivery plan](../plans/unified-loan-recording.md).
 
-## Current routine paper workflow (UR-07, local)
+The owner's current business clarification is that imported loans and Lakshmi's
+paper-first operation primarily use **Flexible Partial Payment**. Routine paper
+entry prefers an unambiguous eligible Workspace product version and
+populate standing agreement terms from setup. The product describes repayment
+structure; interest, advance months, charges and monitoring remain separate rules.
+Existing contracts retain their saved versions. Lakshmi's confirmed standard tenure
+is 12 months, configurable in economic setup. UR-15–18 implement this local
+simplification; production rollout remains separate.
 
-1. Choose **New loan → Already completed on paper**. Record this loan's original
-   number, date, agreed terms and collateral. Deducted advance interest and document
-   charge determine its proceeds; confirm physical cash only when known.
+## Current routine paper workflow (UR-15–18, local)
+
+1. Open **New loan**, select the series and check **Entry: From paper**. Use Change
+   if needed. Record this loan's original
+   number, date, principal and collateral. Select the series and review its dated
+   standing agreement and calculated proceeds. Expand Different paper terms when
+   needed; confirm physical cash only when known.
 2. Add known dated total receipts. Choose outstanding or financially closed. A
    closing settlement does not require identifying a later loan or claiming customer
-   handover. Review the reconciled figures and confirm the paper record was checked.
+   handover. Review and confirm the displayed facts. Complete-book verification
+   is an optional separate claim with an actual checked-through date.
 3. Find the admitted loan in the ordinary active/closed lists. Later paper receipts
-   and paper closure are available from its detail page. Recheck transaction coverage
-   as more paper activity becomes available; monitoring distinguishes provisional data.
+   and paper closure are available from its detail page. Monitoring shows usable
+   calculated amounts with provisional/unavailable counts. Explicit paper-book
+   verification remains available for reconciliation and guarded reminders/recovery.
 4. If an entered active loan is actually renewed through Rokkad, use ordinary **Renew**
    for approval now. If a known linked renewal already happened on paper, choose
    **Record a completed paper renewal**, enter its date/number/terms and actual net cash.

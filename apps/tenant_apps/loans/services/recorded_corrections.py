@@ -29,9 +29,16 @@ SALT = "loans.recorded-correction.review.v1"
 
 def correction_input(data):
     fields = {"operation", "target", "date", "amount", "reference", "before", "reason", "request_key"}
-    if not isinstance(data, dict) or set(data) not in (fields, fields | {"settlement"}):
+    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {"settlement", "item_principal_split", "replay_item_splits"}:
         raise ValueError("Correction fields are incomplete or unsupported.")
     value = dict(data)
+    from .paper_repayments import normalize_item_split
+    if "item_principal_split" in value:
+        value["item_principal_split"] = normalize_item_split(value["item_principal_split"])
+    if "replay_item_splits" in value:
+        if not isinstance(value["replay_item_splits"], dict) or len(value["replay_item_splits"]) > 120:
+            raise ValueError("Enter reviewed item splits for retained receipts.")
+        value["replay_item_splits"] = {str(key): normalize_item_split(split) for key, split in value["replay_item_splits"].items()}
     if value["operation"] not in ("ADD", "REPLACE", "VOID"):
         raise ValueError("Choose a missing receipt, replacement or void.")
     for key in ("target", "before"):
@@ -99,8 +106,6 @@ def dependencies(loan, *, batch_id=None):
         blockers.append("Existing corrections outside this historical-restatement profile require separate reconciliation.")
     if len(events) > 1000 or len(active) > 121:
         blockers.append("This history exceeds the supported review limit of 120 collection events and 1,000 retained events.")
-    if loan.collateral_items.count() != 1:
-        blockers.append("This correction profile supports one collateral group.")
     if terminal is None and loan.collateral_items.exclude(custody_state="IN_VAULT").exists():
         blockers.append("Collateral is not currently held in the vault; review its custody dependencies first.")
     return events, active, blockers
@@ -119,6 +124,8 @@ def _facts(event):
 
 def _plan(loan, data, events, active):
     receipts = {e.pk: e for e in active if e.event_kind == "REPAYMENT"}
+    if set(data.get("replay_item_splits", {})) - {str(key) for key in receipts}:
+        raise ValueError("A replay item split references a receipt outside this active history.")
     target = receipts.get(data["target"])
     if data["target"] is not None and target is None:
         raise ValueError("The selected receipt is not an active receipt on this loan. Reload the correction review.")
@@ -197,7 +204,11 @@ def _run(loan, actor, data, events, active, *, batch_context=None):
             continue
         facts = _facts(source) if source else data
         evidence = source.payload["repayment"].get("recording") if source else _evidence(
-            received_on=date.fromisoformat(day), receipt_reference=data["reference"], amount=Decimal(data["amount"]))
+            received_on=date.fromisoformat(day), receipt_reference=data["reference"], amount=Decimal(data["amount"]),
+            item_principal_split=data.get("item_principal_split"))
+        if source and str(source.pk) in data.get("replay_item_splits", {}):
+            evidence = _evidence(received_on=source.effective_date, receipt_reference=facts["reference"],
+                amount=Decimal(facts["amount"]), item_principal_split=data["replay_item_splits"][str(source.pk)])
         result = _record_pawn_loan_repayment_at(loan.pk, amount=facts["amount"], request_key=key, actor=actor,
             effective_date=date.fromisoformat(day), recording_evidence=evidence, correction_evidence=meta,
             replay_closed=terminal is not None)

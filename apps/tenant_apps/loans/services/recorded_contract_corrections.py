@@ -20,7 +20,7 @@ SALT = "loans.recorded-contract-correction.v1"
 
 def _facts(data):
     fields = {"date", "principal", "rate", "cash_paid", "reference", "reason", "request_key"}
-    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {"settlement", "predecessor"}:
+    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {"settlement", "predecessor", "items", "replay_item_splits"}:
         raise ValueError("Enter corrected original date, principal, monthly rate and proceeds, with supporting reference.")
     value = deepcopy(data)
     try:
@@ -34,6 +34,26 @@ def _facts(data):
         value[name] = _amount(value[name], name, places=places, positive=name != "rate")
     if Decimal(value["rate"]) > 999:
         raise ValueError("Monthly rate exceeds the supported range.")
+    if "items" in value:
+        items = value["items"]
+        if not isinstance(items, list) or not 1 <= len(items) <= 100 or any(
+            not isinstance(row, dict) or set(row) != {"item_id", "principal", "rate"} for row in items):
+            raise ValueError("Enter corrected original principal and rate for every retained item.")
+        for row in items:
+            if type(row["item_id"]) is not int or row["item_id"] < 1:
+                raise ValueError("Select the retained collateral item.")
+            row["principal"] = _amount(row["principal"], "item principal", positive=True)
+            row["rate"] = _amount(row["rate"], "item rate", places=6)
+            if Decimal(row["rate"]) > 100:
+                raise ValueError("Item rate exceeds the supported range.")
+        from .recorded_items import effective_rate
+        if sum((Decimal(row["principal"]) for row in items), Decimal("0")) != Decimal(value["principal"]) or effective_rate(items) != Decimal(value["rate"]):
+            raise ValueError("Corrected loan totals must reconcile to the corrected item agreements.")
+    if "replay_item_splits" in value:
+        from .paper_repayments import normalize_item_split
+        if not isinstance(value["replay_item_splits"], dict) or len(value["replay_item_splits"]) > 120:
+            raise ValueError("Enter reviewed item splits for retained receipts.")
+        value["replay_item_splits"] = {str(key): normalize_item_split(split) for key, split in value["replay_item_splits"].items()}
     for name, limit in (("reference", 160), ("reason", 500), ("request_key", 80)):
         value[name] = _text(value[name], name, limit)
     if "settlement" in value:
@@ -64,6 +84,13 @@ def _source(loan_id, actor, facts):
     events, active, blockers = dependencies(loan)
     if blockers:
         raise ValueError(" ".join(blockers))
+    items = list(loan.collateral_items.order_by("pk"))
+    if len(items) > 1 and "items" not in facts:
+        raise ValueError("Correct every retained item's original principal and rate explicitly.")
+    if "items" in facts and (len(facts["items"]) != len(items) or {row["item_id"] for row in facts["items"]} != {item.pk for item in items}):
+        raise ValueError("Corrected item agreements must match this loan's collateral exactly.")
+    if set(facts.get("replay_item_splits", {})) - {str(event.pk) for event in active if event.event_kind == "REPAYMENT"}:
+        raise ValueError("A replay split references a receipt outside this active history.")
     origins = [event for event in active if event.event_kind in ("DISBURSAL", "RENEWAL_OPENING")]
     paired = None
     if relation:
@@ -101,7 +128,8 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
     advance_periods = original.advance_interest_periods if original else economics["advance_interest_periods"]
     deducted_fees = original.deducted_fees if original else Decimal(economics["deducted_fees"])
     principal, rate = Decimal(facts["principal"]), Decimal(facts["rate"])
-    monthly = (principal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    from .recorded_items import monthly_interest
+    monthly = monthly_interest(facts["items"]) if "items" in facts else (principal * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     advance = monthly * advance_periods
     if principal - advance - deducted_fees != Decimal(facts["cash_paid"]):
         raise ValueError("Corrected proceeds must equal principal less advance interest and the retained deducted document charge.")
@@ -117,9 +145,12 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
             payload=payload, actor=actor, reversal_of=event)
         reverse_event_obligation_allocations(original_event=event, reversal_event=reverse, actor=actor)
         reverse_event_schedule_change(original_event=event, reversal_event=reverse, actor=actor)
-    item = loan.collateral_items.select_for_update().get()
-    item.allocated_principal, item.monthly_interest_rate = principal, rate
-    item.save(update_fields=["allocated_principal", "monthly_interest_rate", "updated_at"])
+    items = list(loan.collateral_items.select_for_update().order_by("pk"))
+    corrected = {row["item_id"]: row for row in facts.get("items", [])}
+    for item in items:
+        row = corrected.get(item.pk, dict(principal=principal, rate=rate))
+        item.allocated_principal, item.monthly_interest_rate = Decimal(row["principal"]), Decimal(row["rate"])
+        item.save(update_fields=["allocated_principal", "monthly_interest_rate", "updated_at"])
     loan.loan_date, loan.principal_amount, loan.monthly_interest_rate = date.fromisoformat(facts["date"]), principal, rate
     previous_policy = original.policy_snapshot if original else loan.policy_snapshot
     policy_values = {field.name: getattr(previous_policy, field.name) for field in m.LoanPolicySnapshot._meta.fields
@@ -131,12 +162,16 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
     recording.update(occurred_on=facts["date"], advance_interest=str(advance),
         contract_correction=dict(context, source_event_id=origin.pk, reference=facts["reference"]))
     recording["terms"].update(principal_amount=str(principal), monthly_interest_rate=str(rate))
-    recording["terms"]["collateral"][0]["monthly_interest_rate"] = str(rate)
+    for row in recording["terms"]["collateral"]:
+        row["monthly_interest_rate"] = str(next(item.monthly_interest_rate for item in items if item.pk == row["item_id"]))
     if recording.get("funding"):
         recording["funding"].update(proceeds_after_deductions=facts["cash_paid"],
             actual_cash_paid=facts["cash_paid"] if recording["funding"]["basis"] == "CASH" else None)
-    tranches = [dict(collateral_item_id=item.pk, allocated_principal=str(principal), monthly_interest_rate=str(rate),
-        monthly_interest=str(monthly), advance_interest=str(advance))]
+    tranches = []
+    for item in items:
+        charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        tranches.append(dict(collateral_item_id=item.pk, allocated_principal=str(item.allocated_principal),
+            monthly_interest_rate=str(item.monthly_interest_rate), monthly_interest=str(charge), advance_interest=str(charge * advance_periods)))
     if original:
         payload = disbursal_payload(loan, effective_date=loan.loan_date, principal_amount=principal,
             net_cash_amount=Decimal(facts["cash_paid"]), advance_interest_amount=advance, deducted_fee_amount=deducted_fees).to_dict()
@@ -176,8 +211,10 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
         loan.disbursal_snapshot = snapshot
         loan.save(update_fields=["disbursal_snapshot", "updated_at"])
     else:
-        m.PawnLoanPrincipalOpeningLine.objects.create(loan_event=replacement, collateral_item=item,
-            predecessor_collateral_item_id=item.renewed_from_id, allocation_order=1, monthly_interest_rate=rate, principal_opened=principal)
+        for order, item in enumerate(items, start=1):
+            m.PawnLoanPrincipalOpeningLine.objects.create(loan_event=replacement, collateral_item=item,
+                predecessor_collateral_item_id=item.renewed_from_id, allocation_order=order,
+                monthly_interest_rate=item.monthly_interest_rate, principal_opened=item.allocated_principal)
     persist_disbursal_repayment_schedule(loan, source_event=replacement, disbursed_on=loan.loan_date, actor=actor)
     rows = [paired_review] if paired else []
     for index, source in enumerate(active):
@@ -185,8 +222,13 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
         meta = dict(context, role="REPLAY", root_event_id=_source_id(source), source_event_id=source.pk)
         if source.event_kind == "REPAYMENT":
             receipt = receipt_facts(source)
+            evidence = source.payload["repayment"].get("recording")
+            if str(source.pk) in facts.get("replay_item_splits", {}):
+                from .paper_repayments import _evidence
+                evidence = _evidence(received_on=source.effective_date, receipt_reference=receipt["reference"],
+                    amount=Decimal(receipt["amount"]), item_principal_split=facts["replay_item_splits"][str(source.pk)])
             result = _record_pawn_loan_repayment_at(loan.pk, amount=receipt["amount"], request_key=key, actor=actor,
-                effective_date=source.effective_date, recording_evidence=source.payload["repayment"].get("recording"),
+                effective_date=source.effective_date, recording_evidence=evidence,
                 correction_evidence=meta, replay_closed=terminal is not None)
             rows.append(dict(receipt, principal=str(result.allocation.principal), interest=str(result.allocation.interest)))
         elif source.event_kind == "INTEREST_ACCRUAL":

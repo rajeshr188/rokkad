@@ -1,11 +1,109 @@
 ---
 status: active
 owner: project
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [status, architecture]
 ---
 
 # Status
+
+## Loan-domain correction review (5 October)
+
+The requested current-checkout analysis is complete; the architecture correction
+is **proposed, not implemented**. The review covers release HEAD
+`4b93f67fe9412f6f401db97707e78d7ffaca9566` and the dirty UR-15--23 work, with
+source/protected-file fingerprints. Direct, recorded-paper and imported loans
+already share PawnLoan. Remaining friction is fragmented continuation/eligibility,
+strict supported import profiles and the older earlier-payout historical-row gate.
+The current paper path already accepts supported past agreements without historical
+destination quotes or a fabricated approval.
+
+The [review](architecture/ordinary-loan-domain-review-20261005.md) distinguishes
+invariants, current lending controls, source evidence, servicing prerequisites and
+implementation limits. The [proposed ADR](adr/2026-10-05-unified-loan-admission-and-continuation.md)
+and [incremental plan](plans/unified-loan-domain-correction.md) preserve frozen
+calendar/rounding differences, one financial origin, cutover coverage and existing
+posting/RLS safeguards. Recommended first slice **LD-01** centralizes read-only
+contract/position resolution for repayment preview and reminder balances, with no
+schema or posting change. Later work needs verified source/checkpoint examples and
+an explicit future-capture transition; it must not silently convert old contracts.
+
+This task changed documentation only. Application bytes and prior dirty work are
+preserved; no database-backed tests, migration, production inspection, deployment
+or accepted-event rewrite occurred. Prior candidate verification below remains
+prior evidence and does not establish acceptance of the proposed correction.
+
+## UR-23 local delivery checkpoint (3 October)
+
+UR-23 New loan refinement is complete locally. The ordinary Series field applies
+the configured entry purpose; the duplicate selector and prominent mode navigation
+are removed. A compact **Entry: From paper / Direct in Rokkad — Change** control
+allows an exception. Switching retains common facts, paper references/activity,
+native appraisals/overrides and, with JavaScript, selected photographs. These
+read-only changes cannot save a loan or carry forward an old signed paper review.
+Ordinary financial submissions retain their explicit purpose and existing checks.
+
+Final verification passes **142 affected tests in 78.846s**, actual desktop/mobile
+and no-JavaScript round trips, ordinary paper admission, direct price/date preflight
+and exact saved-PDF hashes. Candidate 8078 runs
+`rokkad:entry-refined-20261003-a80e473e` through migration 0057; all **1,529** runtime
+source files match. Existing loan rows and saved-file bytes were unchanged during
+the update. No new migration or financial service change was needed. Without
+JavaScript, typed facts are retained but photographs need reselection after a
+purpose change; the screen explains this. Production and candidate 8077 are
+unchanged. See the [plan](plans/unified-loan-recording.md) and
+[candidate evidence](implementation/joint-loan-candidate-20261003.md).
+
+## Previous UR-19–22 checkpoint (3 October)
+
+UR-19–22 shared loan entry is complete locally. New loan reuses purpose navigation
+and the collateral editor; standing purpose defaults follow series -> license ->
+Workspace -> DIRECT with an explicit per-action switch. Every paper item keeps its
+actual principal/rate; the server sums principal and individually rounded charges.
+Staff specify multi-item paper principal payments. Full closure, supported
+corrections/replay, recovery and ordinary Renew performed now work across items.
+Existing direct approval/valuation and highest-rate-first repayment remain intact.
+
+Verification passes **502 regressions in 445.006s** and **105 overlapping final
+receipt/draft checks in 61.683s**. Actual desktop/mobile admission, paper receipt
+and closure, no-JavaScript add/review, signed confirmation and exact saved-PDF
+checks pass. That checkpoint used `rokkad:shared-entry-20261003-d91d4ea3`
+through migration 0057; all 1,525 runtime files match the scoped source. Existing
+loan rows and saved files were fingerprinted before/after update and unchanged;
+verified physical database/media backups and previous containers are retained.
+Production and candidate 8077 are unchanged. Optional completed linked paper
+renewal retains its single-group boundary; independent multi-item entry is supported.
+Real staff/paper/hardware and hosted release acceptance remain pending. See the
+[plan](plans/unified-loan-recording.md), [decision](adr/2026-10-03-shared-collateral-entry.md)
+and [candidate evidence](implementation/joint-loan-candidate-20261003.md).
+
+The first 502-case run had one recovery-export deadlock against QA autovacuum.
+PostgreSQL logs identify the vacuum process; the final isolated run suppresses
+vacuum only on disposable QA test tables. No production recovery lock or guard
+was changed. The static import guard still reports four preexisting Loans test
+files importing billing internals (eight findings, present in baseline 22db74f8);
+there are no new findings from this delivery. Track that existing test-boundary
+cleanup separately; this checkpoint does not claim the global guard is clean.
+
+
+## Previous UR-15-18 checkpoint (3 October)
+
+Business clarification (3 October): imported loans and Lakshmi paper-first loans
+primarily use Flexible Partial Payment. This is recorded as the preferred product
+for the agreed entry simplification: populated standing terms, calculated deductions
+and exceptions when needed. UR-15–17 implementation now adds configurable standing
+tenure (Lakshmi: 12 months), dated agreement defaults, calculated deductions and
+collapsed exceptions; routine confirmation is separate from optional whole-book
+verification. Monitoring retains calculated known amounts with provisional and
+unavailable counts. UR-15–18 are complete locally: 422 regressions pass (369.684
+seconds), with 156 overlapping affected cases, 18 final form/monitoring checks
+after visual polish, and desktop/mobile/no-JavaScript
+acceptance. Candidate 8078 now uses `rokkad:paper-simple-20261003-c5462662` through
+migration 0056; 1,519 runtime files match the scoped source. Existing loan contracts,
+including the local trial loan 1234, remain unchanged. Production is unchanged.
+Previous image/container and verified database/media backups are retained. See the
+[tracking plan](plans/unified-loan-recording.md) and
+[standing-terms decision](adr/2026-10-03-standing-terms-and-routine-paper-entry.md).
 
 ## Combined loan candidate and recovery verified locally (2026-10-03)
 

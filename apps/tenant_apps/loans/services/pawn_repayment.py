@@ -165,7 +165,8 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
     except Exception as exc:
         raise PawnRepaymentError(str(exc)) from exc
 
-    preview = _repayment_preview(loan, balance, allocation)
+    preview = _repayment_preview(loan, balance, allocation,
+        item_principal_split=(recording_evidence or {}).get("item_principal_split"), paper=recording_evidence is not None)
     capitalized_principal = preview.capitalized_principal
     original_principal = preview.original_principal
     item_allocations = preview.item_allocations
@@ -189,7 +190,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
             "current_interest",
             "principal",
         ],
-        "item_principal_allocation_order": "HIGHEST_MONTHLY_RATE_FIRST",
+        "item_principal_allocation_order": "STAFF_SPECIFIED" if (recording_evidence or {}).get("item_principal_split") is not None else "HIGHEST_MONTHLY_RATE_FIRST",
         "item_principal_allocations": [
             {
                 "collateral_item_id": item.collateral_item_id,
@@ -291,7 +292,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
     )
 
 
-def _repayment_preview(loan, balance, allocation):
+def _repayment_preview(loan, balance, allocation, *, item_principal_split=None, paper=False):
     capitalized_principal = min(
         allocation.principal,
         balance.capitalized_interest_principal_outstanding,
@@ -301,6 +302,8 @@ def _repayment_preview(loan, balance, allocation):
         loan,
         original_principal,
         expected_outstanding=balance.original_principal_outstanding,
+        item_principal_split=item_principal_split,
+        require_explicit=paper,
     )
     return PawnRepaymentPreview(
         allocation=allocation,
@@ -315,6 +318,8 @@ def allocate_repayment_principal_to_tranches(
     principal_amount,
     *,
     expected_outstanding,
+    item_principal_split=None,
+    require_explicit=False,
 ) -> tuple[ItemPrincipalAllocation, ...]:
     """Allocate original principal to highest-rate collateral first."""
     amount = Decimal(str(principal_amount))
@@ -333,8 +338,32 @@ def allocate_repayment_principal_to_tranches(
         raise PawnRepaymentError(
             "Item principal balances do not reconcile to original principal outstanding."
         )
+    if item_principal_split is not None:
+        from .paper_repayments import normalize_item_split
+        item_principal_split = normalize_item_split(item_principal_split)
+        if set(item_principal_split) - {str(item.collateral_item_id) for item in balances}:
+            raise PawnRepaymentError("The principal split references collateral outside this loan.")
     if amount == 0:
+        if item_principal_split and any(Decimal(value) != 0 for value in item_principal_split.values()):
+            raise PawnRepaymentError("This receipt pays no principal; remove the item principal amounts.")
         return ()
+    if item_principal_split is not None:
+        from .paper_repayments import normalize_item_split
+        split = normalize_item_split(item_principal_split)
+        if set(split) - {str(item.collateral_item_id) for item in balances}:
+            raise PawnRepaymentError("The principal split references collateral outside this loan.")
+        if sum((Decimal(value) for value in split.values()), Decimal("0")) != amount:
+            raise PawnRepaymentError(f"Item principal amounts must total {amount:.2f}, the principal portion of this receipt.")
+        results = []
+        for order, item in enumerate(sorted(balances, key=lambda row: row.collateral_item_id), start=1):
+            applied = Decimal(split.get(str(item.collateral_item_id), "0"))
+            if applied > item.principal_outstanding:
+                raise PawnRepaymentError("An item principal amount exceeds that item's outstanding balance.")
+            results.append(ItemPrincipalAllocation(item.collateral_item_id, order, item.monthly_interest_rate,
+                item.principal_outstanding, applied, item.principal_outstanding - applied))
+        return tuple(results)
+    if require_explicit and sum(item.principal_outstanding > 0 for item in balances) > 1:
+        raise PawnRepaymentError("Paper principal payments across multiple items need staff to specify the item allocation.")
     remaining = amount
     results = []
     ordered = sorted(

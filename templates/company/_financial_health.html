@@ -12,7 +12,7 @@
     <span>Unassessed: <strong>{{ health.unassessed_count|intcomma }}</strong></span>
     <span>Failed: <strong>{{ health.error_count|intcomma }}</strong></span>
   </div>
-  {% if not health.financial_complete %}<div class="alert alert-warning" role="status">Financial totals are incomplete: {{ health.financial_count|intcomma }} of {{ health.loan_count|intcomma }} active loans have usable current financial assessments. {% if can_manage_health %}Use Loan health to review and refresh them.{% else %}Ask your workspace administrator to review and refresh them.{% endif %}</div>{% endif %}
+  {% if not health.financial_complete %}<p class="small text-muted" role="status">Amounts below use entered records for {{ health.financial_count|intcomma }} of {{ health.loan_count|intcomma }} active loans with usable current financial assessments. Paper-book verification remains provisional for {{ health.provisional_count|intcomma }} loans; unavailable assessments are excluded.</p>{% endif %}
   <div class="row g-3">
     <div class="col-sm-6"><div class="small text-muted">Estimated unfinalized interest</div><div class="h3 mb-1">{% if health.projected_interest != None %}₹{{ health.projected_interest|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><p class="small text-muted mb-0">Additional interest through today at assessment time, separate from recorded unpaid interest.</p></div>
     <div class="col-sm-6"><div class="small text-muted">Total economic exposure</div><div class="h3 mb-1">{% if health.economic_exposure != None %}₹{{ health.economic_exposure|floatformat:2|intcomma }}{% else %}Unavailable{% endif %}</div><p class="small text-muted mb-0">Recorded principal, interest and fees plus estimated unfinalized interest, from the same assessments.</p></div>
@@ -21,7 +21,6 @@
   </div>
   {% if not health.coverage_complete %}<p class="text-warning mt-3 mb-0" role="status">Coverage is incomplete. {{ health.unknown_coverage_count|intcomma }} current assessment{{ health.unknown_coverage_count|pluralize }} lack usable coverage; stale, failed and unassessed loans are also excluded. Refreshing alone cannot fix outdated prices or appraisals.</p>{% endif %}
   <p class="small text-muted mt-3 mb-0">Coverage is assessed loan by loan: maturity payoff for bullet/flexible loans, economic exposure for amortizing loans. Surplus collateral on one loan does not cancel another loan's shortfall.{% if health.oldest_assessed_at %} Oldest current assessment: {{ health.oldest_assessed_at|date:"d M Y H:i" }}.{% endif %}</p>
+{% if health.provisional_count %}<p class="small text-muted">{{ health.provisional_count }} loan(s) have provisional paper-book verification. Calculated balances and collateral monitoring remain available from entered records.</p>{% endif %}
 </div></section>
 {% endwith %}
-
-{% if health.provisional_count %}<p class="text-warning">{{ health.provisional_count }} loan(s) require a paper transaction check. Calculated balances and risk remain provisional.</p>{% endif %}

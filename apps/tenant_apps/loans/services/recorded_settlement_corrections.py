@@ -48,8 +48,8 @@ def terminal_for(loan, active, *, batch_id=None):
     if len(terminals) != 1 or loan.state != "CLOSED":
         raise ValueError("Exactly one completed full closure or renewal is required.")
     items = list(loan.collateral_items.all())
-    if len(items) != 1:
-        raise ValueError("Settlement correction requires one unchanged collateral group.")
+    if not items:
+        raise ValueError("Settlement correction requires retained collateral.")
     event = terminals[0]
     if any((e.effective_date, e.pk) > (event.effective_date, event.pk) for e in active if e is not event):
         raise ValueError("Activity after this loan's settlement needs separate reconciliation.")
@@ -65,8 +65,8 @@ def terminal_for(loan, active, *, batch_id=None):
         handover = confirmation_for(document) if expected == "PAPER_CLOSED" else None
         restated = event.payload.get("history_correction", {}).get("custody_restatement", {})
         superseded = set(restated.get("superseded", []))
-        expected_count = (2 if handover else 1) + len(superseded)
-        if document.items.count() != 1 or document.custody_events.count() != expected_count:
+        expected_count = len(items) * (2 if handover else 1) + len(superseded)
+        if set(document.items.values_list("collateral_item_id", flat=True)) != {item.pk for item in items} or document.custody_events.count() != expected_count:
             raise ValueError("The original full-return custody evidence is incomplete.")
     else:
         document = m.PawnLoanRenewal.objects.get(source_loan=loan, settlement_event_id=root)
@@ -78,27 +78,28 @@ def terminal_for(loan, active, *, batch_id=None):
         if not opening or Decimal(cash["successor_principal"]) != Decimal(opening.payload["values"]["principal"]):
             raise ValueError("The successor opening has changed; its agreement requires separate reconciliation.")
         successor_items = list(document.successor_loan.collateral_items.all())
-        if len(successor_items) != 1 or successor_items[0].renewed_from_id != items[0].pk:
+        if len(successor_items) != len(items) or {item.renewed_from_id for item in successor_items} != {item.pk for item in items}:
             raise ValueError("The successor collateral no longer matches the recorded agreement.")
     if Decimal(event.payload["values"].get("fees", "0")) or Decimal(event.payload["values"].get("interest_concession", "0")):
         raise ValueError("Settlement fees or concessions require a wider correction profile.")
     if current_settlement(document.loan_event if event.event_kind == "RELEASE_RECEIPT" else document.settlement_event).pk != event.pk:
         raise ValueError("The active settlement does not match its retained document.")
     current_expected = "WITH_CUSTOMER" if event.event_kind == "RELEASE_RECEIPT" and handover else expected
-    if len(items) != 1 or items[0].custody_state != current_expected:
+    if any(item.custody_state != current_expected for item in items):
         raise ValueError("Collateral custody differs from the recorded settlement; reconcile the physical history first.")
-    custody = document.custody_events.filter(collateral_item=items[0], from_state="IN_VAULT", to_state=expected)
-    restated = event.payload.get("history_correction", {}).get("custody_restatement", {})
-    if restated:
-        custody = custody.exclude(pk__in=restated["superseded"])
-    custody = custody.first()
-    if not custody or custody.from_state != "IN_VAULT" or custody.to_state != expected or custody.effective_date != event.effective_date:
-        raise ValueError("The original custody handover does not match this settlement.")
-    if event.event_kind == "RELEASE_RECEIPT" and handover:
-        confirmation = document.custody_events.filter(pk__in=handover["custody_event_ids"], collateral_item=items[0],
-            from_state="PAPER_CLOSED", to_state="WITH_CUSTOMER", effective_date=handover["facts"]["date"]).first()
-        if confirmation is None:
-            raise ValueError("The later handover confirmation does not match custody evidence.")
+    for item in items:
+        custody = document.custody_events.filter(collateral_item=item, from_state="IN_VAULT", to_state=expected)
+        restated = event.payload.get("history_correction", {}).get("custody_restatement", {})
+        if restated:
+            custody = custody.exclude(pk__in=restated["superseded"])
+        custody = custody.first()
+        if not custody or custody.effective_date != event.effective_date:
+            raise ValueError("The original custody handover does not match this settlement.")
+        if event.event_kind == "RELEASE_RECEIPT" and handover:
+            confirmation = document.custody_events.filter(pk__in=handover["custody_event_ids"], collateral_item=item,
+                from_state="PAPER_CLOSED", to_state="WITH_CUSTOMER", effective_date=handover["facts"]["date"]).first()
+            if confirmation is None:
+                raise ValueError("The later handover confirmation does not match custody evidence.")
     return event
 
 
@@ -146,6 +147,7 @@ def dependent_state(loan, *, actor, batch_id=None):
 
 
 def restate_settlement(loan, source, *, actor, facts, context, successor_terms=None, custody_restatement=None):
+    from .pawn_tranches import get_pawn_principal_tranche_balances
     from datetime import date
     day = date.fromisoformat(facts["date"]) if facts.get("date") else source.effective_date
     meta = dict(context, role="SETTLEMENT", description="Corrected historical settlement; agreement and custody retained",
@@ -158,6 +160,9 @@ def restate_settlement(loan, source, *, actor, facts, context, successor_terms=N
                                   correction_evidence=dict(meta, role="REPLAY", description="Recalculated settlement interest"))
     balance = get_pawn_loan_balance(loan, as_of_date=day)
     principal, interest = balance.principal_outstanding, balance.interest_outstanding
+    item_balances = get_pawn_principal_tranche_balances(loan, as_of_date=day)
+    if sum((item.principal_outstanding for item in item_balances), Decimal("0")) != principal:
+        raise ValueError("Settlement item balances do not reconcile to principal.")
     if balance.fees_outstanding or balance.capitalized_interest_principal_outstanding:
         raise ValueError("Fees and capitalized interest require a wider correction profile.")
     received, paid_out, offset = (Decimal(facts[key]) for key in ("cash_received", "cash_paid", "interest_offset"))
@@ -214,9 +219,10 @@ def restate_settlement(loan, source, *, actor, facts, context, successor_terms=N
     allocate_event_to_obligations(source_event=event, principal_amount=principal,
         interest_amount=scheduled_interest(loan, day, interest), actor=actor)
     terminate_active_repayment_schedule(loan=loan, source_event=event, reason=termination, actor=actor)
-    item = loan.collateral_items.get()
-    m.PawnLoanPrincipalClosingLine.objects.create(loan_event=event, collateral_item=item, allocation_order=1,
-        monthly_interest_rate=item.monthly_interest_rate, balance_before=principal, principal_settled=principal, balance_after=0)
+    for order, item in enumerate(item_balances, start=1):
+        m.PawnLoanPrincipalClosingLine.objects.create(loan_event=event, collateral_item_id=item.collateral_item_id, allocation_order=order,
+            monthly_interest_rate=item.monthly_interest_rate, balance_before=item.principal_outstanding,
+            principal_settled=item.principal_outstanding, balance_after=0)
     if collection_balance(loan, day).total_due:
         raise ValueError("The corrected settlement did not reconcile to zero.")
     return dict(source=source.pk, action="Restate settlement; no physical movement", date=day.isoformat(),

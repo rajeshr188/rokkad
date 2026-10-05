@@ -96,10 +96,13 @@ def record_paper_closure(*, loan_id, actor, data, review_token, confirmed=False)
         facts=_digest(facts), fingerprint=transaction_fingerprint(loan))
     if any(expected.get(key) != value for key, value in values.items()):
         raise ValueError("Loan activity or closure facts changed. Review again.")
+    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+    covered = transaction_completeness(loan, date.fromisoformat(facts["date"])).complete
     result = _write(loan, facts, actor)
     if expected["review"] != _review(result, facts):
         raise ValueError("The closure calculation changed. Review again.")
     from .transaction_reviews import _store
-    _store(result.loan, actor, through_date=date.fromisoformat(facts["date"]), confirmed_complete=True,
-        source_reference=facts["reference"], request_key=f"closure:{facts['request_key']}")
+    if covered:
+        _store(result.loan, actor, through_date=date.fromisoformat(facts["date"]), confirmed_complete=True,
+            source_reference=facts["reference"], request_key=f"closure:{facts['request_key']}")
     return result.release, True

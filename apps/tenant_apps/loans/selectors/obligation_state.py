@@ -180,7 +180,7 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *
         remaining=ObligationAmount(remaining_principal, remaining_interest),
         integrity_findings=tuple(findings),
     )
-    if adjust_recorded and recorded_profile == "recorded-anniversary/1":
+    if adjust_recorded and recorded_profile in ("recorded-anniversary/1", "recorded-anniversary/2"):
         from apps.tenant_apps.loans.services.recorded_collections import recorded_obligation_state
         return recorded_obligation_state(schedule, as_of_date, result)
     return result

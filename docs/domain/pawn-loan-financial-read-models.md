@@ -10,6 +10,18 @@ related:
 
 # PawnLoan Financial Read Models
 
+Itemized recorded contracts use `recorded-anniversary/2`: principal is the exact
+sum of actual item amounts, and each anniversary charge is the sum of item-rounded
+interest on the applicable item balances/rates. A principal payment on an
+anniversary still changes the following anniversary's base. The loan-level
+effective rate is display data. Existing `recorded-anniversary/1` evidence retains
+its previous aggregate calculation; adding entry defaults never rewrites contracts.
+Paper receipts may freeze `STAFF_SPECIFIED` item principal allocation and retain
+the exact confirmed split in recording evidence. The tranche reader checks its
+membership, amounts and source against immutable allocation lines. Native ordinary
+payments keep `HIGHEST_MONTHLY_RATE_FIRST`. Corrections must retain or explicitly
+review affected item splits; no later principal allocation is silently invented.
+
 **Current local completion slices (3 October):** original and recorded-successor
 term corrections compensate/replay canonical debt while retaining earlier policy,
 disbursal and opening-line revisions. Current settlement projections read active
@@ -317,15 +329,18 @@ not zero facts: staff supply original contract, cash and return evidence for rev
 
 LoanTransactionReview confirms entered records through a date for one loan and
 one financial fingerprint. It can explicitly report incomplete records. New paper
-admission records a review for each member; subsequent activity/correction requires
-rechecking. An opening loan's review begins at its accepted checkpoint and makes no
+entry confirms its transaction facts; an optional complete-book claim records a
+review for each member. Subsequent activity/correction invalidates an existing
+review. Routine entry, receipts and closure need no daily whole-book attestation.
+An opening loan's review begins at its accepted checkpoint and makes no
 claim to reconstruct older receipts. Date rollover affects active coverage; a closed
 loan only needs coverage through its final activity. The current read represents
 restated knowledge, not what staff knew at a historical date.
 
-Risk snapshot V4 freezes transaction provenance separately from valuation evidence.
+Risk snapshot V5 freezes transaction provenance separately from valuation evidence.
 Missing/stale paper coverage preserves individual calculated exposure and risk with
-a provisional explanation. Dashboard/portfolio definitive totals are unavailable
+a provisional explanation. Dashboard/portfolio show usable known calculated totals
+with provisional and unavailable counts; completeness remains explicitly false
 until all included loans have suitable coverage. Report rows and borrower statement
 exports include coverage status and date. Supported reviewed reminders use the
 agreed collection amount, including unrecognized collection interest; they require

@@ -95,7 +95,8 @@ def _write(source, actor, facts):
         source_reference=facts["reference"], quantity=item.quantity, description=item.description,
         metal=item.metal, gross_weight=str(item.gross_weight), net_weight=str(item.net_weight), purity=str(item.purity_percentage),
         monitoring_method=policy.valuation_method, monitoring_ltv=str(policy.maximum_ltv_ratio),
-        monitoring_reason="Continue the existing current monitoring selection", complete_through=facts["date"])
+        monitoring_reason="Continue the existing current monitoring selection", complete_through=facts["date"],
+        confirmed_history=True)
     row = dict(facts, renewal_method="NET_SETTLEMENT", custody="HELD", recipient="", request_sha256=_digest(facts))
     successor, review = record_admission_renewal(source.workspace, actor, data, UUID(facts["request_key"]), source,
         row, f"paper-renewal:{facts['request_key']}")

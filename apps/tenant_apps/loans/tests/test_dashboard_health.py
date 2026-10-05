@@ -52,7 +52,7 @@ class DashboardHealthTests(TestCase):
             self.assertEqual(result["full_shortfall"], Decimal("300"))
             self.assertEqual(result["undercovered_count"], 1)
 
-    def test_incomplete_assessments_exclude_closed_and_never_report_partial_totals(self):
+    def test_incomplete_assessments_exclude_closed_and_label_available_totals(self):
         with workspace_context(self.workspace.pk):
             self.snapshot()
             closed = self.snapshot()
@@ -71,8 +71,12 @@ class DashboardHealthTests(TestCase):
             self.assertEqual(result["error_count"], 1)
             self.assertEqual(result["unassessed_count"], 1)
             self.assertEqual(result["undercovered_count"], 1)
-            for field in ("economic_exposure", "projected_interest", "collateral_value", "full_shortfall"):
-                self.assertIsNone(result[field])
+            self.assertFalse(result["financial_complete"])
+            self.assertFalse(result["coverage_complete"])
+            self.assertEqual(result["economic_exposure"], Decimal("1100"))
+            self.assertEqual(result["projected_interest"], Decimal("100"))
+            self.assertEqual(result["collateral_value"], Decimal("800"))
+            self.assertEqual(result["full_shortfall"], Decimal("300"))
 
     def test_unknown_coverage_keeps_valid_financial_totals(self):
         with workspace_context(self.workspace.pk):

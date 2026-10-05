@@ -1,5 +1,5 @@
 /* Price preflight leaves the form and File inputs in place when setup is missing. */
-document.addEventListener('DOMContentLoaded', () => {
+function initPawnRateReadiness() {
   const form = document.querySelector('[data-valuation-preflight]');
   if (!form || !window.htmx) return;
   const panel = form.querySelector('[data-rate-readiness-panel]');
@@ -127,4 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   check();
-});
+}
+document.addEventListener("DOMContentLoaded", initPawnRateReadiness);
+document.addEventListener("loan-entry:ready", initPawnRateReadiness);

@@ -1,5 +1,5 @@
 /* Server submission identity is authoritative; this makes the pending save clear. */
-document.addEventListener('DOMContentLoaded', () => {
+function initPawnDraftSubmit() {
   const form = document.querySelector('[data-draft-save-form]');
   if (!form) return;
   const status = form.querySelector('[data-draft-save-status]');
@@ -43,4 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Returning from a network error or Back/Forward cache must permit a retry
   // with the same hidden submission token, never issue a new form identity.
   window.addEventListener('pageshow', reset);
-});
+}
+document.addEventListener("DOMContentLoaded", initPawnDraftSubmit);
+document.addEventListener("loan-entry:ready", initPawnDraftSubmit);

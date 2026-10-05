@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [agents, context, architecture]
 ---
 
@@ -12,7 +12,84 @@ selected work in [the hardening plan](plans/project-hardening.md), and shelved i
 in [Future work](plans/future-work.md). Prior notes, including superseded decisions,
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
+## Proposed loan-domain correction (5 October)
+
+The owner requested analysis/planning only for one operational loan domain across
+direct, paper and imported entry. The [review](architecture/ordinary-loan-domain-review-20261005.md),
+[proposed ADR](adr/2026-10-05-unified-loan-admission-and-continuation.md) and
+[plan](plans/unified-loan-domain-correction.md) are not accepted implementation or
+deployment. The current dirty release checkout, rather than the September audit,
+is the baseline. PawnLoan is already canonical; no parallel servicing model is needed.
+
+Keep entry provenance distinct from prospective approval, retrospective verification,
+frozen continuation semantics, checked transaction coverage and each action's purpose.
+The paper adapter already admits supported terms without historical destination
+Rates/policies. The older earlier-payout path and strict native-compatible history
+import are narrower workflows, not universal historical evidence requirements.
+
+Existing native, recorded-anniversary/1 and /2, and opening continuation are not
+identical: calendar boundaries, recognition and rounding differ. Unification must
+preserve them as named contracts. Existing opening commit rejects reduced principal
+at cutover despite supporting later reductions; broader validation descriptors do
+not establish operational support. Never replay pre-cutover charges, add an opening
+over an existing disbursal or invent unknown history/allocations/actors/timestamps.
+
+Recommended first slice LD-01 is a read-only frozen-contract/position resolver,
+reusing current calculators for repayment preview and reminder balance. No new
+model, migration or writer eligibility is needed. Later common operations should
+depend on evidenced position, semantics, chronology, custody and authority rather
+than original channel. Missing original LTV can coexist with verified current debt;
+current monitoring needs eligible current evidence. Historical-only closed records
+remain archived until supported settlement is evidenced. An explicit reviewed
+future-capture transition is proposed; it is not current implemented behavior.
+
+## Shared loan entry and actual paper item agreements (3 October)
+
+The owner selected one familiar New loan experience. Standing entry purpose follows
+series, license, Workspace, then DIRECT; INHERIT falls through to the broader scope.
+An explicit per-action choice remains available. This preference uses current setup;
+original paper agreement defaults still resolve at the actual loan date. Neither
+changes existing frozen terms or grants approval to an already completed payout.
+
+New loan uses its ordinary Series field to apply that default and a compact
+Entry/Change control for an exception; do not reintroduce a second series chooser.
+Purpose changes are read-only presentation requests. Preserve common typed facts,
+mode-specific details and JavaScript file inputs, while discarding signed reviews.
+The small submitted form-state cache is untrusted presentation data, never financial
+evidence or authorization. Normal submissions validate their explicit purpose
+through the existing native/paper adapters. No-JavaScript switches retain typed
+facts but require photograph reselection with a visible explanation.
+
+Every paper collateral item has its actual principal. Do not add total-only
+origination, equal/weight allocations or reconstructed original allocations. Paper
+principal receipts require the staff-specified item split after calculated interest;
+direct receipts retain their highest-monthly-rate-first rule. Itemized paper
+agreements use recorded-anniversary/2 and individually rounded item charges;
+recorded-anniversary/1 keeps its existing semantics. Principal reductions change
+interest from the next loan anniversary, including a payment on an anniversary.
+Full paper closure and supported corrections retain all item evidence. Independent
+paper agreements need no predecessor; optional already-completed linked paper
+renewal remains a single-group shortcut. Ordinary Renew performed now supports
+multi-item recorded sources with current approval. See the
+[shared-entry decision](adr/2026-10-03-shared-collateral-entry.md).
+
 ## Unified loan recording accepted (2 October)
+
+**Current product clarification (3 October):** imported loans and Lakshmi's
+paper-first loans primarily use Flexible Partial Payment. Use that as the preferred
+product assumption for standing-terms entry simplification. Lakshmi's configured
+standard tenure is 12 months, confirmed by the owner. Interest,
+advance deductions, fees and monitoring remain separately resolved agreement rules;
+existing loans retain their recorded product versions. Other products remain possible.
+The owner accepted routine-entry simplification: populate standing terms, calculate
+proceeds, expose actual exceptions when needed and reduce daily completeness friction
+for entry/payment/closure/monitoring. UR-15–18 track that usability pass;
+explicit checked-through claims and reminder/auction protection remain distinct.
+Agreement defaults follow the original date; current monitoring resolves separately.
+Routine transaction confirmation is not a complete-book claim. Snapshot V5 shows
+usable known amounts with provisional/unavailable counts; saved contracts stay frozen.
+See the [standing-terms decision](adr/2026-10-03-standing-terms-and-routine-paper-entry.md).
+Broader exceptional profiles are deferred until actual business cases arise.
 
 **Completion programme authorized (3 October):** the owner selected the ordered
 remaining recommendations in the existing tracking plan. UR-08 adds ordinary

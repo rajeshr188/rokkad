@@ -16,7 +16,7 @@ def recording_for(loan):
         return None
     event = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
     recording = event.payload.get("recording", {}) if event else {}
-    return recording if recording.get("collection_profile") == PROFILE else None
+    return recording if recording.get("collection_profile") in (PROFILE, "recorded-anniversary/2") else None
 
 
 def collection_state(loan, day, *, known_through=None):
@@ -45,16 +45,31 @@ def collection_state(loan, day, *, known_through=None):
             principal = calculate_pawn_loan_balance(loan, events=events, collateral_items=items,
                 policy_snapshot=loan.policy_snapshot, as_of_date=min(start - timedelta(days=1), known_through),
                 pending_delivery_blocks=False).principal_outstanding
-        charge = (principal * loan.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        item_charges = None
+        if recording["collection_profile"] == "recorded-anniversary/2":
+            from .pawn_tranches import get_pawn_principal_tranche_balances
+            bases = get_pawn_principal_tranche_balances(loan, as_of_date=loan.loan_date if month == 0 else min(start - timedelta(days=1), known_through))
+            if month == 0:
+                snapshot = loan.disbursal_snapshot
+                original = {row["collateral_item_id"]: Decimal(row["allocated_principal"]) for row in snapshot.evidence["tranches"]}
+            else:
+                original = {row.collateral_item_id: row.principal_outstanding for row in bases}
+            item_charges = [dict(collateral_item_id=row.collateral_item_id, principal=str(original[row.collateral_item_id]),
+                rate=str(row.monthly_interest_rate), interest=str((original[row.collateral_item_id] * row.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))) for row in bases]
+            charge = sum((Decimal(row["interest"]) for row in item_charges), ZERO)
+        else:
+            charge = (principal * loan.monthly_interest_rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         total += charge
         charges.append(dict(start=start.isoformat(), principal=str(principal), interest=str(charge)))
+        if item_charges is not None:
+            charges[-1]["items"] = item_charges
         month += 1
     advance = Decimal(recording["advance_interest"])
     recognized = balance.interest_accrued
     additional = max(ZERO, total - advance) - recognized
     if additional < 0:
         raise ValueError("Recorded interest exceeds the agreed anniversary calculation; review corrections first.")
-    return dict(profile=PROFILE, as_of=day.isoformat(), months=charges, calculated=str(total),
+    return dict(profile=recording["collection_profile"], as_of=day.isoformat(), months=charges, calculated=str(total),
                 advance=str(advance), already_recognized=str(recognized), additional=str(additional))
 
 

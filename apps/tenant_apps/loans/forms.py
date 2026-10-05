@@ -187,6 +187,16 @@ class PawnDraftForm(forms.Form):
             if len(candidates) == 1:
                 self.initial["product_version"] = candidates[0]
                 self.fields["product_version"].help_text = "The only product available for this date is selected. Review its terms and tenure."
+        if self.initial.get("series") and "tenure_months" not in self.initial:
+            from .services.economic_policies import resolve_pawn_loan_economic_policy, PawnEconomicPolicyError
+            series = self.fields["series"].queryset.get(pk=self.initial["series"])
+            try:
+                policy = resolve_pawn_loan_economic_policy(workspace_id=series.workspace_id,
+                    license_id=series.license_id, series_id=series.pk, as_of_date=loan_date)
+            except PawnEconomicPolicyError:
+                return
+            if policy.default_tenure_months:
+                self.initial["tenure_months"] = policy.default_tenure_months
 
 
 class PawnCollateralDraftForm(forms.ModelForm):
@@ -380,8 +390,14 @@ class PawnRepaymentForm(forms.Form):
     review_token = forms.CharField(required=False, widget=forms.HiddenInput())
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
 
-    def __init__(self, *args, allow_paper=False, **kwargs):
+    def __init__(self, *args, allow_paper=False, collateral_items=(), **kwargs):
         super().__init__(*args, **kwargs)
+        if allow_paper and len(collateral_items) > 1:
+            for item in collateral_items:
+                self.fields[f"item_principal_{item.pk}"] = forms.DecimalField(required=False,
+                    max_digits=18, decimal_places=2, min_value=0,
+                    label=_("Paper principal applied: %(item)s") % {"item": item.description},
+                    help_text=_("For paper receipts only. Enter principal paid against this item, after interest. Leave blank for an interest-only receipt."))
         if not allow_paper:
             self.fields["recording_purpose"].choices = (("CURRENT", _("Receive and record now")),)
             self.fields["recording_purpose"].widget = forms.HiddenInput()
@@ -400,6 +416,17 @@ class PawnRepaymentForm(forms.Form):
                 if not cleaned.get(name):
                     self.add_error(name, _("This is required when recording a paper payment."))
         return cleaned
+
+    @property
+    def paper_item_split(self):
+        values = {name.removeprefix("item_principal_"): value for name, value in self.cleaned_data.items()
+                  if name.startswith("item_principal_")}
+        return {key: str(value or Decimal("0")) for key, value in values.items()} if any(
+            value is not None for value in values.values()) else None
+
+    @property
+    def paper_item_fields(self):
+        return [self[name] for name in self.fields if name.startswith("item_principal_")]
 
 
 class PawnAccrualForm(forms.Form):

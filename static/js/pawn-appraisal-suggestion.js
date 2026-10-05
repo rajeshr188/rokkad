@@ -1,5 +1,5 @@
 /* HTMX retrieves suggestions; the server owns valuation arithmetic. */
-document.addEventListener('DOMContentLoaded', () => {
+function initPawnAppraisalSuggestion() {
   const container = document.getElementById('collateral-formset');
   const date = document.getElementById('id_loan_date');
   const series = document.getElementById('id_series');
@@ -88,4 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = initialise(row);
     request(row, true);
   });
-});
+}
+document.addEventListener("DOMContentLoaded", initPawnAppraisalSuggestion);
+document.addEventListener("loan-entry:ready", initPawnAppraisalSuggestion);
