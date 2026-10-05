@@ -7,6 +7,39 @@ tags: [status, architecture]
 
 # Status
 
+## LD-03 completed-payout admission complete locally (5 October)
+
+The owner authorized LD-03. General completed-payout recording now reuses the
+shared paper editor and recorded-history writer for an unpaid DRAFT/APPROVED loan,
+preserving its identity, number reservation, original date, item IDs, genuine
+approvals, photos and issued copies. Supported actual unapproved terms can be
+reviewed without historical destination Rates/economic-policy rows or a fabricated
+approval. Posted/reversed origins and frozen approval discrepancies need explicit
+correction. Direct current lending keeps its existing checks.
+
+Signed source review and locked admission protect against stale facts, duplicate
+source/number and concurrent double payout; retries return the same financial
+origin. Known receipts/closure reconcile on that same loan. Missing complete-book
+verification stays provisional. Monitoring uses current eligible valuation,
+independently of original evidence. Migration 0058 narrowly permits evidenced
+completed payouts under legacy references, requiring a validated matching recorded
+snapshot before commit; references stay inactive and cannot authorize new lending.
+
+Final affected regression passes **303 tests in 202.897s**, including **24 new
+LD-03 tests**, genuine native evidence, multiple retained items, photo/document
+retention, editor/retry, concurrent admission, restricted-role guards/immutability/
+isolation, current monitoring and exact recovery. System and migration-drift checks,
+553-file Python parsing and scoped whitespace checks pass. The earlier broad run's
+only error was an invalid launcher module name; its functional cases passed and the
+corrected final list is green. The full repository suite was not repeated; prior
+unrelated baseline failures remain outside this scope.
+
+Migration 0058 was exercised only in disposable QA's dedicated test database.
+No application/candidate/production database change, existing-contract conversion
+or deployment is included. LD-04 reduced-principal opening continuation is next;
+wider profiles, operations/correction, capture transition and portable export remain
+later slices. See the [implementation record](implementation/completed-payout-admission-ld03.md).
+
 ## LD-02 common repayment and full release complete locally (5 October)
 
 The owner authorized LD-02. Shared factual eligibility now separates action purpose

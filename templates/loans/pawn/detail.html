@@ -16,6 +16,8 @@
 <p class="small" data-loan-block="overview"><a href="{% url 'workspace_loans:loan_journey_guide' request.workspace.slug %}">Loan journey &amp; staff guide</a></p>
 {% include "loans/pawn/_draft_split_discovery.html" %}
 {% include "loans/pawn/_recorded_by.html" %}
+{% if can_record_completed_payout %}<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_record_completed_payout' request.workspace.slug loan.pk %}">Record completed payout</a> <span class="small">Use when the money was already paid; keep this draft's identity.</span></p>{% endif %}
+{% if can_record_earlier_payout %}<details class="mb-3"><summary>Retained native approval evidence</summary><p class="small">For a payout matching genuine earlier native approval/valuation evidence, <a href="{% url 'workspace_loans:pawn_loan_record_earlier_payout' request.workspace.slug loan.pk %}">review retained native payout evidence</a>. General completed recording above uses actual agreement facts.</p></details>{% endif %}
 {% if recorded_history and can_administer %}<p><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_correct_paper_history' request.workspace.slug loan.pk %}">Review paper history correction</a> <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_correct_paper_contract' request.workspace.slug loan.pk %}">Correct original paper terms</a> {% if can_correct_paper_closing %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_correct_paper_closing' request.workspace.slug loan.pk %}">Correct paper closing facts</a>{% endif %}</p>{% endif %}
 
 {% if can_preview_imported_ticket %}

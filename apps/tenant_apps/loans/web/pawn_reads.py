@@ -128,17 +128,15 @@ def pawn_loan_detail(request, pk):
     context["can_record_earlier_payout"] = (loan.state == "DRAFT" and not opening
         and loan.loan_date < context["today"] and all(request.loans_workspace_access.can(action)
             for action in ("workspace.settings.manage", "data.edit", "loan.approve", "loan.disburse")))
+    context["can_record_completed_payout"] = (loan.state in ("DRAFT", "APPROVED") and not loan.loan_events.exists()
+        and all(request.loans_workspace_access.can(action) for action in ("data.create", "data.edit", "loan.disburse")))
     context["can_print_ticket"] = loan.state != "DRAFT" and approval is not None
     context["can_preview_imported_ticket"] = opening is not None and approval is None
     context["can_print_schedule"] = loan.repayment_schedules.exists()
     if loan.state in {"DRAFT", "APPROVED"}:
         try:
             if loan.state == "DRAFT":
-                if context["can_record_earlier_payout"]:
-                    context["is_earlier_payout_review"] = True
-                    from apps.tenant_apps.loans.services.loan_workflow import make_earlier_payout_review
-                    context["economics"], _token, _quotes, _basis = make_earlier_payout_review(loan, actor=request.user)
-                else:
+                if not (context["can_record_completed_payout"] and loan.loan_date < context["today"]):
                     context["economics"], _token = make_review(loan)
             else:
                 context["economics"] = preview_approved_disbursal(loan)
@@ -266,10 +264,10 @@ def pawn_loan_detail(request, pk):
 
 def _primary_action(loan, context):
     if loan.state == PawnLoanState.DRAFT.value:
-        if context.get("can_record_earlier_payout"):
-            return {"label": "Record an earlier payout", "url": reverse(
-                "workspace_loans:pawn_loan_record_earlier_payout", args=[loan.workspace.slug, loan.pk]),
-                "message": "If the money was already paid on the loan date, review and record that earlier payout. If still unpaid, edit the draft to the intended payment date."}
+        if context.get("can_record_completed_payout") and loan.loan_date < context["today"]:
+            return {"label": "Record completed payout", "url": reverse(
+                "workspace_loans:pawn_loan_record_completed_payout", args=[loan.workspace.slug, loan.pk]),
+                "message": "If the money was already paid, record the actual agreement against this draft. If still unpaid, correct the intended payment date before approval."}
         if context.get("simple_owner"):
             return {"label": "Review and disburse", "url": reverse('workspace_loans:pawn_loan_review_disburse', args=[loan.workspace.slug, loan.pk]), "message": "Review the summary and confirm payment in one action."}
         if not context.get("can_approve", False):

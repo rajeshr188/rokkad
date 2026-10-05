@@ -204,29 +204,31 @@ def _authorize(workspace, actor, data=None):
             require_workspace_action(workspace, actor, "loan.release")
 
 
-def new_recording_intent(*, workspace, actor):
+def new_recording_intent(*, workspace, actor, draft_id=None):
     _authorize(workspace, actor)
-    return signing.dumps(dict(workspace=workspace.pk, actor=actor.pk, key=str(uuid4())), salt=INTENT_SALT)
+    return signing.dumps(dict(workspace=workspace.pk, actor=actor.pk, key=str(uuid4()), draft_id=draft_id), salt=INTENT_SALT)
 
 
-def _intent(token, workspace, actor):
+def _intent(token, workspace, actor, draft_id=None):
     try:
         intent = signing.loads(token or "", salt=INTENT_SALT)
         if (intent["workspace"], intent["actor"]) != (workspace.pk, actor.pk):
             raise PermissionDenied("This paper-entry form belongs to another Workspace or user.")
+        if intent.get("draft_id") != draft_id:
+            raise ValueError("This submission belongs to a different draft or entry purpose.")
         return UUID(intent["key"])
     except (signing.BadSignature, KeyError, TypeError, ValueError) as exc:
         raise ValueError("Open a fresh paper-entry form; its submission reference is invalid.") from exc
 
 
 @transaction.atomic
-def preview_recorded_history(*, workspace, actor, data, intent_token):
+def preview_recorded_history(*, workspace, actor, data, intent_token, draft_id=None):
     data = validate_input(data)
     _authorize(workspace, actor, data)
-    key = _intent(intent_token, workspace, actor)
+    key = _intent(intent_token, workspace, actor, draft_id)
     Company.all_objects.select_for_update().get(pk=workspace.pk)
     with transaction.atomic():
-        _, review = _admit(workspace, actor, data, key)
+        _, review = _admit(workspace, actor, data, key, draft_id=draft_id)
         transaction.set_rollback(True)
     token = signing.dumps(dict(workspace=workspace.pk, actor=actor.pk, key=str(key),
         data=_digest(data), review=review), salt=SALT, compress=True)
@@ -234,12 +236,19 @@ def preview_recorded_history(*, workspace, actor, data, intent_token):
 
 
 @transaction.atomic
-def admit_recorded_history(*, workspace, actor, data, intent_token, review_token, confirmed=False):
+def admit_recorded_history(*, workspace, actor, data, intent_token, review_token, confirmed=False, draft_id=None):
     data = validate_input(data)
     _authorize(workspace, actor, data)
-    key = _intent(intent_token, workspace, actor)
+    key = _intent(intent_token, workspace, actor, draft_id)
     Company.all_objects.select_for_update().get(pk=workspace.pk)
-    existing = m.PawnLoan.objects.filter(workspace=workspace, creation_submission_id=key).first()
+    if draft_id is not None:
+        from .completed_payouts import draft_source
+        candidate = draft_source(workspace, actor, draft_id)
+        existing = candidate if candidate.disbursal_snapshots.exists() else None
+        if existing and (not existing.disbursal_snapshot or existing.disbursal_snapshot.evidence.get("recording", {}).get("admission", {}).get("key") != str(key)):
+            raise ValueError("Another payout has already been recorded for this draft. Open its existing loan.")
+    else:
+        existing = m.PawnLoan.objects.filter(workspace=workspace, creation_submission_id=key).first()
     if existing:
         admission = existing.disbursal_snapshot.evidence["recording"]["admission"]
         if admission["request_sha256"] != _digest(data):
@@ -253,30 +262,36 @@ def admit_recorded_history(*, workspace, actor, data, intent_token, review_token
         raise ValueError("Preview the history again; its review is missing or expired.") from exc
     if any(signed.get(k) != v for k, v in dict(workspace=workspace.pk, actor=actor.pk, key=str(key), data=_digest(data)).items()):
         raise ValueError("The history or recording context changed. Preview again.")
-    loan, review = _admit(workspace, actor, data, key)
+    loan, review = _admit(workspace, actor, data, key, draft_id=draft_id)
     if signed["review"] != review:
         raise ValueError("Numbering or calculated results changed since review. Preview again.")
     return loan, True
 
 
-def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=()):
+def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None):
     series = m.LoanSeries.objects.select_related("license").get(pk=data["series_id"], workspace=workspace)
     product = m.LoanProductVersion.objects.select_related("product").get(pk=data["product_version_id"], workspace=workspace)
-    if product.status != "ACTIVE" or product.repayment_structure not in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT") or product.amortisation_method != "NONE":
+    if (product.status != "ACTIVE" and not draft) or product.repayment_structure not in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT") or product.amortisation_method != "NONE":
         raise ValueError("Select a non-amortising monthly bullet/flexible contract matching the paper agreement.")
     if not product.minimum_tenor_months <= tenure <= product.maximum_tenor_months:
         raise ValueError("The original tenure does not match the selected contract version.")
-    claim_number(series, number, kind="PAWN_LOAN", actor=actor, archive_ids=archive_ids)
-    borrower = Party.objects.get(pk=data["borrower_id"], workspace=workspace, status="ACTIVE")
-    loan = m.PawnLoan(workspace=workspace, borrower=borrower, license=series.license,
+    claim_number(series, number, kind="PAWN_LOAN", actor=actor, archive_ids=archive_ids,
+        existing_loan_id=draft.pk if draft else None)
+    borrower = Party.objects.get(pk=data["borrower_id"], workspace=workspace, **({} if draft else {"status": "ACTIVE"}))
+    loan = draft or m.PawnLoan(workspace=workspace, borrower=borrower, license=series.license,
         series=series, product_version=product, loan_number=number, loan_date=day, principal_amount=principal,
         monthly_interest_rate=rate, tenure_months=tenure, created_by=actor, updated_by=actor,
         creation_submission_id=key if predecessor is None else None)
-    loan.full_clean()
-    loan.save()
+    if not draft:
+        loan.full_clean()
+        loan.save()
     from .recorded_items import contract_items, ITEM_PROFILE
-    items = []
-    for facts in contract_items(dict(data, principal=str(principal), rate=str(rate))):
+    if draft:
+        from .completed_payouts import apply_actual_contract
+        items = apply_actual_contract(draft, data, actor=actor)
+    else:
+        items = []
+    for facts in (() if draft else contract_items(dict(data, principal=str(principal), rate=str(rate)))):
         item = m.PawnCollateralItem(loan=loan, quantity=facts["quantity"], description=facts["description"], metal=facts["metal"],
             gross_weight=Decimal(facts["gross_weight"]), net_weight=Decimal(facts["net_weight"]), purity_percentage=Decimal(facts["purity"]),
             allocated_principal=Decimal(facts["principal"]) if data.get("collateral") else principal,
@@ -289,6 +304,9 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
     policy = m.LoanPolicySnapshot.objects.create(loan=loan, policy_version=POLICY_VERSION, basis="RECORDED_CONTRACT", interest_method="SIMPLE",
         partial_month_method="FULL_MONTH", valuation_method=data["monitoring_method"], maximum_ltv_ratio=Decimal(data["monitoring_ltv"]),
         rounding_method="PER_ACCRUAL_PERIOD", currency_quantum=quantum)
+    if draft:
+        loan.policy_snapshot = policy
+        loan.save(update_fields=["policy_snapshot"])
     tranches = []
     for item in items:
         charge = (item.allocated_principal * item.monthly_interest_rate / 100).quantize(quantum, rounding=ROUND_HALF_UP)
@@ -318,7 +336,13 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
     return loan, items[0], policy, recording, tranches, monthly
 
 
-def _admit(workspace, actor, data, key, *, archive=None):
+def _admit(workspace, actor, data, key, *, archive=None, draft_id=None):
+    draft = source = None
+    if draft_id is not None:
+        from .completed_payouts import draft_source, require_unpaid_draft, source_evidence
+        draft = draft_source(workspace, actor, draft_id)
+        require_unpaid_draft(draft)
+        source = source_evidence(draft)
     for reference in m.PawnLoanEvent.objects.filter(loan__workspace=workspace,
             event_kind="DISBURSAL", payload__recording__collection_profile__in=(PROFILE, "recorded-anniversary/2", RECORDED_PROFILE)).values_list(
                 "payload__recording__source_reference", flat=True):
@@ -331,7 +355,9 @@ def _admit(workspace, actor, data, key, *, archive=None):
     advance = monthly * data["advance_months"]
     original, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, data, key,
         number=data["number"], day=date.fromisoformat(data["date"]), principal=principal, rate=rate,
-        tenure=data["tenure"], advance=advance, archive_ids=archive["snapshot_ids"] if archive else ())
+        tenure=data["tenure"], advance=advance, archive_ids=archive["snapshot_ids"] if archive else (), draft=draft)
+    if source:
+        recording["draft_source"] = source
     fees = Decimal(data.get("document_charge", "0"))
     fee_rows = [dict(kind="DOCUMENT_CHARGE", amount=str(fees), deducted=True)] if fees else []
     if "payout_basis" in data:
@@ -406,14 +432,18 @@ def _admit(workspace, actor, data, key, *, archive=None):
                               interest=str(balance.interest_outstanding), custody=loan.collateral_items.order_by("pk").first().custody_state))
     counters = [dict(series=s.series_id, kind=s.document_kind, before=before[s.pk], after=s.next_number)
                 for s in m.LoanNumberSequence.objects.filter(workspace=workspace).order_by("pk") if before[s.pk] != s.next_number]
-    return original, dict(rows=rows, loans=summaries, counters=counters,
+    review = dict(rows=rows, loans=summaries, counters=counters,
         complete_through=data["complete_through"], confirmed_complete=data["confirmed_history"])
+    if source:
+        review["draft_source"] = source
+    return original, review
 
 
 def _activate(loan, event, actor):
+    previous_state = loan.state
     persist_disbursal_repayment_schedule(loan, source_event=event, disbursed_on=event.effective_date,
                                        currency_quantum=loan.policy_snapshot.currency_quantum.normalize(), actor=actor)
     loan.state = "ACTIVE"
     loan.save(update_fields=["state"])
-    m.LoanChangeLog.objects.create(loan=loan, event_kind="DISBURSED" if event.event_kind == "DISBURSAL" else "RENEWAL_SUCCESSOR_ACTIVATED", from_state="DRAFT", to_state="ACTIVE",
-        actor=actor, reason="Recorded complete paper history", metadata=dict(source_event_id=event.pk, recorded_history=True))
+    m.LoanChangeLog.objects.create(loan=loan, event_kind="DISBURSED" if event.event_kind == "DISBURSAL" else "RENEWAL_SUCCESSOR_ACTIVATED", from_state=previous_state, to_state="ACTIVE",
+        actor=actor, reason="Recorded completed payout and supported paper activity", metadata=dict(source_event_id=event.pk, recorded_history=True))

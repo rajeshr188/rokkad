@@ -22,8 +22,10 @@ unrelated billing/platform/storage work is preserved separately. The
 [review](architecture/ordinary-loan-domain-review-20261005.md),
 [accepted direction](adr/2026-10-05-unified-loan-admission-and-continuation.md) and
 [plan](plans/unified-loan-domain-correction.md) use that working implementation,
-rather than the September audit, as baseline. LD-02 now shares supported repayment/
-full-release prerequisites; wider admission and operation extensions remain pending.
+rather than the September audit, as baseline. LD-02 shares supported repayment/
+full-release prerequisites; LD-03 adds general completed-payout admission for an
+unpaid ordinary draft through the existing recorded-history writer. Wider opening
+continuation and operation extensions remain pending.
 PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
@@ -31,6 +33,20 @@ frozen continuation semantics, checked transaction coverage and each action's pu
 The paper adapter already admits supported terms without historical destination
 Rates/policies. The older earlier-payout path and strict native-compatible history
 import are narrower workflows, not universal historical evidence requirements.
+
+An existing unpaid draft's number, creation submission ID, original date, customer,
+product, series and item identities remain preserved during completed admission.
+Signed source review binds saved facts and retained approvals/photos/issued copies;
+actual supported unapproved terms can be reviewed, but frozen genuine approval
+facts cannot be silently changed. Already posted/reversed origins require correction.
+General admission creates RECORDED evidence, not a fabricated original Rokkad
+approval or historical Rates/policy catalog rows. Ordinary direct lending remains
+prospective and guarded. Migration 0058 permits only evidenced completed payouts
+under legacy references with a validated matching snapshot required at commit;
+references remain inactive with unknown validity and cannot authorize new lending.
+Exact-identity recovery retains the source extension and guard fingerprint;
+approval-based bounded history export still rejects recorded origins. See the
+[LD-03 boundary](implementation/completed-payout-admission-ld03.md).
 
 **Owner clarification (5 October):** direct, backdated paper and imported loans
 share the monthly interest boundary. With a loan dated 5 April and the first month

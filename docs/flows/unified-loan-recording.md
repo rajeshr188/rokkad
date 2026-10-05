@@ -1,11 +1,34 @@
 ---
 status: accepted-design
 owner: project
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [loans, paper-entry, workflow, historical-evidence, risk]
 ---
 
 # Record business when it happens or enter it afterward
+
+## An unpaid draft whose payout already happened (LD-03, local)
+
+Open the existing draft and select **Record completed payout**. The same paper
+entry editor shows its saved customer, series, product, number, original date and
+collateral. These identity fields and item membership stay fixed; correct them
+explicitly on the draft first if needed. Review dated standing terms or enter a
+supported actual agreement exception, the original source reference and deductions.
+Record known receipts or closure only when supported by the source.
+
+Preview and confirm records the payout against the same loan and collateral IDs.
+It preserves the reserved number, photos, genuine approvals and issued copies.
+It needs no original-day digital Rates or economic-policy rows. Genuine retained
+approval facts cannot be silently changed, and the recorded payout does not create
+a retrospective Rokkad approval. The advanced retained-native earlier-payout route
+remains available separately. Current lending continues its current approval checks.
+
+Missing complete-book attestation remains disclosed; recording a loan does not
+certify absent payments. Monitoring uses current eligible evidence, separately
+from original terms. An evidenced completed payout can use an inactive legacy
+license reference without authorizing new lending. Migration 0058 and controlled
+rollout are still required outside isolated QA; see the
+[delivery record](../implementation/completed-payout-admission-ld03.md).
 
 The shared-entry extension (UR-19–22) uses a current standing entry-purpose default
 in Calculation policies: Workspace business default, optional license override,

@@ -13,7 +13,8 @@ related: [../architecture/ordinary-loan-domain-review-20261005.md, ../plans/unif
 The owner selected the recommended direction and requested a checkpoint/start on
 LD-01 on 5 October, after the analysis-only review. Acceptance authorizes that
 read-only slice; the owner subsequently authorized LD-01A calculation alignment
-and LD-02 common repayment/full release. These slices are complete locally;
+and LD-02 common repayment/full release, then LD-03 completed-payout admission.
+These slices are complete locally;
 later admission/operation extensions and rollout remain separately planned.
 The owner subsequently clarified the shared interest boundary and policy rounding
 below. LD-01A implements it through the
@@ -97,6 +98,14 @@ An earlier native draft must retain its identity. A new retrospective adapter
 cannot duplicate it or overwrite a frozen approval. A genuinely approved native
 transaction may still be validated against its retained approval evidence;
 otherwise use the supported retrospective contract after explicit review.
+
+LD-03 implements that adapter through the existing recorded-history writer and
+shared paper editor. Saved draft/item identities and genuine frozen evidence are
+retained. Current legacy license references remain unable to authorize lending;
+migration 0058 permits only owned evidenced completed payouts with a validated
+recorded snapshot required before commit. The older retained-native earlier-payout
+route remains bounded and separate from this general admission purpose. See the
+[implementation](../implementation/completed-payout-admission-ld03.md).
 
 ### 3. Admit exactly one financial origin
 

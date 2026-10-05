@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-30
+updated: 2026-10-05
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -19,6 +19,14 @@ The loan directory's borrower picker includes inactive customers with existing l
 whereas new-loan borrower selection continues to require an active Party.
 
 ## Extracted Business Rules
+
+LD-03 distinguishes license authority for lending now from a retained reference
+for recording a supported completed payout. A legacy reference stays inactive
+with unknown validity. Recorded admission can retain that original grouping when
+owned policy and actual-date/source evidence reconcile with a validated RECORDED
+snapshot at commit; it supplies no retrospective prospective approval. New lending
+continues to require a verified eligible license. See
+[migration 0058 and the admission boundary](../implementation/completed-payout-admission-ld03.md).
 
 P1 classifies the mature Girvi outcomes as follows:
 

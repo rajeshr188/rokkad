@@ -1,17 +1,20 @@
 ---
 status: accepted
 owner: loans
-updated: 2026-10-02
+updated: 2026-10-05
 tags: [loans, rates, origination, audit]
 ---
 
 # Earlier payout recording and explicit daily price confirmation
 
 **2 October design update:** [unified loan recording](2026-10-02-unified-loan-recording.md)
-accepts a broader future path for supported paper facts without requiring original
-digital origination evidence. That path is not implemented. The restrictions below
-describe the existing bounded workflow until its replacement is verified; daily
-price confirmation for real-time lending remains applicable.
+accepts a broader path for supported paper facts without requiring original
+digital origination evidence. General paper admission is implemented, and LD-03
+extends it to an unpaid native draft while retaining its identity and genuine
+evidence. The restrictions below now describe only the advanced retained-native
+earlier-payout workflow. They are not compulsory for general completed-payout
+recording. Daily price confirmation for real-time lending remains applicable.
+See the [LD-03 delivery boundary](../implementation/completed-payout-admission-ld03.md).
 
 The owner approved a separate earlier-payout/correction workflow, followed by
 unchanged-price confirmation, and requested correct signed-in user attribution.
@@ -62,7 +65,8 @@ continues to require a same-day quote for metal-valued policies.
 ## Boundaries
 
 No automatic multi-day quote reuse, price feed or configurable freshness window
-is introduced. Broader historical admission with missing records and guided
-paper/Excel imports remain future work. No historical cash timestamp is invented
+is introduced. Supported recorded-paper admission exists independently of this
+bounded native-evidence route; wider opening/profile compatibility remains planned.
+No historical cash timestamp is invented
 from a date-only record. Servicing, subscription rules and tenant isolation stay
 under their existing contracts.

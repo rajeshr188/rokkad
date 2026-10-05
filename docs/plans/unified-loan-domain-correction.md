@@ -14,8 +14,8 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01, LD-01A and LD-02 are complete locally;
-LD-03 and later slices are pending.
+storage work stays uncommitted. LD-01, LD-01A, LD-02 and LD-03 are complete locally;
+LD-04 and later slices are pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
@@ -50,7 +50,7 @@ checkpoint implementation and are superseded as the target by this clarification
 | LD-01 | Complete locally; 239 tests pass | Common read-only servicing contract and position for repayment preview/reminder balance | None |
 | LD-01A | Complete locally; rollout review pending | Shared inclusive anniversary boundary and captured-policy rounding, with explicit financial correction compatibility | Existing evidence plus corrected policy/profile versions; portability migration 0018 |
 | LD-02 | Complete locally; rollout pending | Common purpose/eligibility for supported repayment and full release; retain validated writers | None |
-| LD-03 | Pending; after LD-02 | General completed-payout admission replacing historical digital-row prerequisites | Prefer existing recorded evidence; narrow SQL guard change may be needed |
+| LD-03 | Complete locally; rollout pending | General completed-payout admission, including retained unpaid draft identity, without historical digital-row prerequisites | Existing recorded evidence; narrow forward-only legacy guard migration 0058 |
 | LD-04 | Pending; after LD-03, actual checkpoint examples | Explicit reduced-principal/period-carry opening continuation | New review/profile version; additive guard changes only if required |
 | LD-05 | Pending; after source-rule examples and LD-04 | Source-faithful supported history allocation and numbering/setup compatibility | New portable contract; alias table only if proven necessary |
 | LD-06 | Pending; after relevant profiles in LD-02/04/05 | Remaining operations, correction dependencies, coverage transition, risk/schedule parity | Additive capture-transition evidence may require a migration |
@@ -285,6 +285,15 @@ purposes rather than undo accepted payments. A binary unable to read a newly wri
 profile is not a safe rollback; supply a compatible reader first.
 
 ## LD-03: one completed-payout admission purpose
+
+Implemented locally after the owner's authorization. An unpaid DRAFT/APPROVED loan
+uses the shared editor and recorded-history writer while retaining its saved
+identity, collateral, genuine approvals, photos and issued copies. Posted or
+reversed origins require correction. Migration 0058 narrowly permits legacy
+completed-payout evidence with a validated matching snapshot required before commit;
+new-lending authority is unchanged. See the
+[implementation and verification record](../implementation/completed-payout-admission-ld03.md).
+Application/candidate/production migrations and rollout remain pending. LD-04 is next.
 
 Reuse the shared New loan editor, standing terms, per-item agreed amounts,
 `recorded_history`, `recorded_origination_evidence`, recorded numbering and signed

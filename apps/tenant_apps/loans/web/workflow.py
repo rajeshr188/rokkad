@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 
-from apps.tenant_apps.loans.access import loans_owner_required, loans_setup_required
+from apps.tenant_apps.loans.access import loans_owner_required, loans_setup_required, loans_action_required
 from apps.tenant_apps.loans.forms import PawnDisbursalForm
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.services.loan_workflow import make_review, review_and_disburse, set_loan_workflow
@@ -74,6 +74,25 @@ class EarlierPayoutForm(forms.Form):
         help_text="Include a paper ticket or other reference where available.")
     confirmed = forms.BooleanField(label="I confirm the money was already paid on the actual payout date shown, and these are the correct terms.",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
+
+
+@loans_action_required("data.create")
+@loans_action_required("data.edit")
+@loans_action_required("loan.disburse")
+@never_cache
+def pawn_loan_record_completed_payout(request, pk):
+    from apps.tenant_apps.loans.services.completed_payouts import require_unpaid_draft
+    from .recorded_history import paper_history_entry
+    loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"),
+        pk=pk, workspace=request.loans_workspace)
+    # A same-form POST retry must reach the command's existing-result check.
+    if request.method != "POST" or loan.state in ("DRAFT", "APPROVED"):
+        try:
+            require_unpaid_draft(loan)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("workspace_loans:pawn_loan_detail", workspace_slug=request.workspace.slug, pk=pk)
+    return paper_history_entry(request, draft=loan)
 
 
 @loans_setup_required

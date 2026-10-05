@@ -1,11 +1,18 @@
 ---
 status: accepted
 owner: project
-updated: 2026-09-22
+updated: 2026-10-05
 tags: [loans, portability, licensing, numbering]
 ---
 
 # Verify an imported license without replacing its series
+
+**5 October amendment:** LD-03 migration 0058 permits an evidenced completed
+payout under a legacy reference, with owned recorded contract and a validated
+matching RECORDED snapshot required before commit. It does not authorize lending
+or verify/activate the reference. The prohibition below remains for prospective
+disbursal, including after verification when the loan retains a legacy revision.
+See the [admission boundary](../implementation/completed-payout-admission-ld03.md).
 
 The owner needs to originate new loans in the existing licenses and series after
 the final Linode import. The September 12 unknown-evidence decision deliberately
