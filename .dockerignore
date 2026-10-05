@@ -11,6 +11,7 @@
 !templates/**
 !static/**
 !locale/**
+!docs/contracts/**
 !scripts/start_web.py
 !scripts/provision_runtime_role.py
 !scripts/install_cutover_ticket_templates.py

@@ -2,7 +2,7 @@
 {% block title %}Historical loans{% endblock %}
 {% block workspace_content %}
 <div class="app-heading"><div><h1 class="h3">Historical loans</h1><p>Closed loans retained from the previous system. Open a loan number to read its recorded details.</p></div></div>
-<p class="small text-body-secondary">Loans closed after being carried forward into Rokkad remain in the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?state=CLOSED">Loans list</a>.</p>
+<p class="small text-body-secondary">Browse ordinary closed loans and retained historical records together in the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?state=CLOSED">Loans list</a>. This evidence page retains every source snapshot, including records already linked to an ordinary loan.</p>
 <form method="get" class="card card-body mb-3">
   <label class="form-label" for="archive-search">Find a loan number, customer name or source ID</label>
   <div class="d-flex flex-wrap gap-2"><input class="form-control flex-grow-1 w-auto" id="archive-search" name="q" value="{{ query }}" maxlength="255"><button class="btn btn-primary">Search</button><a class="btn btn-outline-secondary" href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Clear</a></div>

@@ -1,7 +1,7 @@
 ---
 status: implemented
 owner: project
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [loans, portability, archive, flow]
 ---
 
@@ -15,9 +15,20 @@ links the ordinary closed loan to retained source evidence; list/detail show the
 relationship. Original records and media remain. Deployment is pending. Archive
 acceptance alone still does not create an operational loan.
 
-Open **Historical loans** in the Workspace sidebar. Accepted evidence has its own
-searchable, paginated list and never appears as a new operational loan. Loans
-carried forward for servicing remain in the ordinary Loans list after closure.
+Open **Loans** to browse ordinary loans and retained historical closed records
+together. Select **Historical records**, or search the original number, source ID
+or customer name; CLOSED includes both ordinary closures and historical source
+claims. Historical cards link to retained details and disclose unknown financial
+and handover facts. This does not create operational loans or affect monitoring.
+Local borrower/licence/series filters need established mappings; clear them to
+search unadmitted evidence. Unknown original dates do not match date-range filters.
+
+**Historical loans** in the Workspace sidebar remains the complete source-snapshot
+list. The common Loans directory shows the latest retained snapshot per exact
+source identity; the archive preserves all versions. After reconciled admission,
+the ordinary loan replaces its historical card. Loans carried forward for servicing
+remain ordinary after closure. See the
+[browsing decision](../adr/2026-10-05-unified-loan-browsing-with-retained-evidence.md).
 
 The locally implemented readable browser (2 October; production activation pending)
 searches by loan number, customer name or source ID, and lists customer, loan date

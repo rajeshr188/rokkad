@@ -1,11 +1,21 @@
 ---
 status: active
 owner: project
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [plans, active]
 ---
 
 # Active work
+
+**Loan-domain correction (owner decision, 5 October):** LD-01 through LD-07 are
+verified locally under the [current plan](unified-loan-domain-correction.md).
+The owner selected unified ordinary/historical browsing and presentation cleanup,
+followed by LD-08. Browsing and generated ordinary-entry/monitoring acceptance are
+verified; fictional local database/media recovery and clean restricted staging
+pass. Live production inventory/recovery/operator acceptance and controlled
+rollout remain. Bulk closed-history financial reconstruction is deferred rather
+than inferred from source release rows. See the
+[current delivery](../implementation/unified-browsing-and-ld08.md).
 
 **Unified loan recording (owner decision, 2 October):** the owner selected one
 ordinary Loans workflow for actions performed now and recorded afterward, including

@@ -56,6 +56,9 @@ class PawnLoanSearchForm(forms.Form):
 
 
 class PawnLoanFilter(django_filters.FilterSet):
+    records = django_filters.ChoiceFilter(method='filter_records',label=_("Records"),
+        choices=[('ordinary',_("Ordinary loans")),('historical',_("Historical records"))],empty_label=_("All records"),
+        widget=forms.Select(attrs={'class':'form-select'}))
     borrower = django_filters.ModelChoiceFilter(
         queryset=Party.objects.none(), label=_("Borrower"),
         widget=LoanBorrowerAutocompleteWidget(attrs={"data-placeholder": _("Search borrower by name, code or phone"),
@@ -136,6 +139,11 @@ class PawnLoanFilter(django_filters.FilterSet):
             | Q(borrower__party_code__icontains=value)
             | Q(borrower__primary_phone__icontains=value)
         ) if value else queryset
+
+    def filter_records(self, queryset, name, value):
+        # The directory combines retained evidence with ordinary loans after
+        # validating the shared form. This is not a financial model predicate.
+        return queryset
 
     def filter_search(self, queryset, name, value):
         value = value.strip()

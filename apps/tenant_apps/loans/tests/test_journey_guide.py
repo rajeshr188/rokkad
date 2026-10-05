@@ -63,7 +63,7 @@ class DraftSplitDiscoveryTests(SimpleTestCase):
         body = self.render("DRAFT", 1)
         self.assertIn("Quantity within a single row", body)
         self.assertNotIn("/split/", body)
-        self.assertIn("Correct draft", body)
+        self.assertIn("Edit this draft", body)
 
     def test_finalized_or_unauthorized_records_never_offer_split(self):
         for state in ("APPROVED", "ACTIVE", "CLOSED", "CANCELLED"):

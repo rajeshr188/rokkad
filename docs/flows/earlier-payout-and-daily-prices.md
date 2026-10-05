@@ -1,18 +1,25 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-02
+updated: 2026-10-05
 tags: [staff-guide, loans, rates]
 ---
 
 # Earlier payouts and daily prices
 
-The [accepted unified-recording design](unified-loan-recording.md) will extend
-ordinary Loans to supported mixed paper histories without requiring original
-digital pricing/policy evidence. Implementation is pending; this guide describes
-the existing, narrower earlier-payout workflow and its current checks.
+General completed entry is implemented locally through ordinary **New loan**
+and **Record completed payout** on an unpaid saved draft. Preserve actual dates,
+item amounts, agreed terms and receipts without inventing an original digital
+approval or requiring historical destination price/policy rows. Genuine retained
+approvals and issued copies remain evidence; conflicting facts need explicit
+correction. Current lending still uses current approval/valuation checks.
+See [completed admission](../implementation/completed-payout-admission-ld03.md).
 
-## Money was paid yesterday but the loan is a draft
+The retained-native approval disclosure remains a specialist route for genuine
+earlier native evidence. The narrower instructions below apply to that route;
+they are not universal conditions for recording a completed paper transaction.
+
+## Specialist retained-native payout evidence
 
 1. Keep the actual loan date matching the customer's ticket. Do not move it to
    today to get past a price warning.

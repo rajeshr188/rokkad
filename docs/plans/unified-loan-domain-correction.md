@@ -15,9 +15,11 @@ review is complete. The owner subsequently selected the direction and requested 
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
 storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03, LD-04, LD-05, LD-06
-and LD-07 are complete locally; LD-08 remains pending.
+and LD-07 are complete locally. LD-08 local technical preparation and unified
+historical browsing are verified; live production acceptance and rollout remain pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
-Production and the running candidates are unchanged.
+Production and the existing candidates are unchanged. LD-08 adds a separate
+disposable local staging clone, as described below.
 
 LD-01 verification passes **239 affected tests in 94.193s**, including 16 new
 contract tests and restricted-role isolation. See the
@@ -55,7 +57,7 @@ checkpoint implementation and are superseded as the target by this clarification
 | LD-05 | Complete locally; source preparation/staff acceptance pending | Source-faithful supported history allocation and numbering/setup compatibility | Recorded history/4; immutable source JSON aliases, batch guard migration 0019; no new table |
 | LD-06 | Complete locally; rollout pending | Supported opening auctions, common renewal/correction dependencies, explicit per-loan future capture and monitoring/reminder checks | Additive review/notice guard migration 0060; no new table |
 | LD-07 | Complete locally; 645 affected and 53 focused tests pass | Bounded connected servicing ZIP, original source documents, fresh-ID runtime admission and separate exact recovery | loan-servicing-bundle/1; no schema/guard changes |
-| LD-08 | Pending | Staff acceptance, staging and controlled production rollout | Owner migration only for actual additive changes |
+| LD-08 | Local technical preparation verified; production acceptance pending | Unified browsing, generated HTTP acceptance and isolated recovery/staging; live inventory and controlled rollout remain | No new schema in browsing; owner-only existing additive migrations |
 
 Each slice is reviewable and useful independently. LD-07's compatibility checks
 are prerequisites for activating new writer profiles in earlier slices, not work
@@ -490,6 +492,18 @@ Reader support must precede writer activation and old consumers must reject new
 versions clearly. A backward reader-compatible deployment remains available.
 
 ## LD-08: acceptance and production protections
+
+**Local technical preparation verified (5 October); production gates pending.**
+The owner selected presentation cleanup/unified browsing rather than speculative
+automatic archive reconstruction, then requested a generated Lakshmi example.
+The affected 106-test regression, final 14 boundary/identity/generated HTTP monitoring tests pass. The old source snapshot is inventoried; it is not a live
+cohort census. Fictional full database/media restore matches 202 tables and nine
+files. The clean candidate exposed and fixed omitted runtime contract resources;
+restricted startup and additive clone migration/model checks pass. No archive is
+financially admitted, old contract converted or production service deployed.
+The final clean release, live scoped inventory/recovery, operator acceptance and
+approved controlled rollout remain. See the
+[delivery and concrete runbook](../implementation/unified-browsing-and-ld08.md).
 
 Inventory actual profile cohorts through authorized read-only selectors before
 rollout; do not derive them solely from entry labels. Preserve dirty work by

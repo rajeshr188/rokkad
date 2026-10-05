@@ -12,6 +12,19 @@ selected work in [the hardening plan](plans/project-hardening.md), and shelved i
 in [Future work](plans/future-work.md). Prior notes, including superseded decisions,
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
 
+The Loans directory now reads ordinary loans and retained historical closed claims
+together; browsing never admits finance, supplies an unknown balance or certifies
+handover. Exact source scope deduplicates snapshots; admitted identities use the
+ordinary loan card. Local Party/licence/series filters require established mappings.
+Source archives remain immutable and separately browsable with every snapshot.
+Bulk reconstruction needs complete reconciled evidence and explicit batch review;
+the September source snapshot alone cannot establish it. The owner selected this
+read-only fallback and requested generated fictional LD-08 acceptance instead of
+providing a real Lakshmi document. Local technical staging/recovery passes; actual
+production inventory/acceptance/rollout remains separate. Runtime portability JSON
+contracts under docs/contracts must be included in clean Docker images. See the
+[browsing decision](adr/2026-10-05-unified-loan-browsing-with-retained-evidence.md).
+
 ## Loan-domain correction selected (5 October)
 
 The owner first requested analysis/planning for one operational loan domain across
@@ -30,7 +43,8 @@ recorded source history/4 with source-faithful item allocations and scoped alias
 LD-06 extends current opening auctions, common renewal/dependency prerequisites and
 owner-selected explicit per-loan future capture; local verification is complete.
 LD-07 adds bounded connected servicing portability and exact source-copy retention;
-LD-08 actual source/staff acceptance and rollout remain pending.
+LD-08 source-snapshot review, generated HTTP acceptance and local technical staging
+are verified; actual live source/staff acceptance and rollout remain pending.
 PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,

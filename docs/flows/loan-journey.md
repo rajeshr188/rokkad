@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-10-05
 tags: [loans, journey, product, operators, developers]
 ---
 
@@ -104,12 +104,14 @@ An unpaid draft prepared yesterday retains yesterday's loan date until an editor
 explicitly changes and saves it. To lend today, correct that date and review the
 recalculated terms. Adding today's rate alone cannot fix a prior-date draft.
 Review validates the date before quote freshness and identifies both dates in
-DD/MM/YYYY. Never move an actual historical payout date just to pass approval;
-an administrator with edit/approve/disburse access uses **Record an earlier
-payout**, reviews historical terms and confirms with a reason. The actual date
-and recording time remain separate; earlier approvals and tickets are preserved.
-Missing historical evidence cannot be replaced by today's price. See the
-[staff instructions](earlier-payout-and-daily-prices.md). The Overview identifies
+DD/MM/YYYY. Never move an actual historical payout date just to pass approval.
+Use **Record completed payout** on an unpaid saved draft, or the completed-entry
+purpose on **New loan**, to record actual agreed terms and dates. General completed
+admission does not require old digital quotes or invent a native approval. Genuine
+retained approvals/tickets remain evidence; conflicts need explicit correction.
+The specialist retained-native payout route keeps its narrower historical evidence
+requirements. See the [payout distinction](earlier-payout-and-daily-prices.md).
+The Overview identifies
 creator, approver and payout recorder; the history identifies correction actors.
 
 Draft split moves whole rows into a new draft; it does not divide a row's piece
@@ -231,29 +233,36 @@ loan number. Cash and physical movement must also be reconciled in the real worl
 Supported complete-history profiles, reviewed opening balances and historical
 archive evidence are distinct admission paths. Openings preserve original terms
 and source cutover evidence rather than pretending the loan was just disbursed.
-Dedicated payments, full release and their reversals are available for eligible
-opening loans. Ordinary native accrual, capitalization, renewal, auction and
-partial release are not automatically available. Imported monthly interest
-continues on its reviewed original anniversary rules; principal reduction affects
-subsequent monthly charges rather than rewriting already-earned interest.
+Eligible loans share repayment/full release, supported renewal and supported
+auction recovery using their evidenced position, transaction coverage, custody
+and action purpose. A new lending decision retains current approval and valuation
+checks; auction requires ordinary statutory and custody evidence. Unsupported old
+contracts/correction graphs remain explicitly held. Shared monthly contracts charge
+the next month on the day after the original anniversary, using captured-policy
+rounding; reductions change the next period's basis. Openings do not replay unknown
+pre-cutover receipts. Capitalization and partial release retain their separate limits.
 
-Imported ticket copies identify themselves as reconstructed from imported
-records. They combine source financial/collateral evidence with permitted current
-presentation details; they do not invent a native approval or original issued PDF.
-Archive records are searchable reference evidence, not active balances.
+A newly rendered imported ticket copy identifies itself as reconstructed; it does
+not invent an original approval or issued PDF. Supported servicing bundles can
+also retain exact original PDFs, downloaded as authenticated source copies.
+Archive records are searchable alongside ordinary loans with a Historical record
+label. They retain source closure claims and unknown facts, not active balances.
 
 Customers may start new lending in a new series while leaving existing paper
 loans outside Rokkad. Then portfolio totals describe the digitized portion only.
-Gradually adding old paper loans manually or uploading general Excel loan sheets
-requires the planned guided admission/reconciliation workflow. This already exists
-as [FW-007](../plans/future-work.md#fw-007-guided-customer-facing-legacy-migration);
-it is not shipped. Do not simulate it with new-loan disbursals. Party imports alone
-do not import financial loan history.
+Old paper loans can be entered through the ordinary New loan screen with the
+series standing purpose and terms, actual item amounts, dates and later receipts
+or closure. Different-rate principal receipts need the staff's actual item split.
+A complete supported closed history can become an ordinary closed loan after
+reconciliation. General arbitrary Excel loan uploads remain separately bounded;
+Party imports alone do not import financial loan history. Do not record an already
+completed payout as a second current payout.
 
-Strict portability profiles are not universal backups. Some newer evidence,
-including date-only paper handovers and collateral metadata, has profile limits;
-full database backups retain the database records. See
-[collateral portability follow-up](../plans/collateral-portability-metadata.md).
+Strict older portability profiles retain their original limits. The supported
+servicing bundle preserves wider connected financial/custody history, unknown
+handover times and original files, with explicit mapping and reconciliation.
+Unsupported graphs are held. Full database/private-media backups remain necessary
+for exact Workspace recovery. See [LD-07](../implementation/portable-servicing-ld07.md).
 
 ## 8. Implementation map and maintenance
 

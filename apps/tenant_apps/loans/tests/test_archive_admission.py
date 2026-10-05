@@ -92,6 +92,42 @@ class ArchiveAdmissionTests(fixtures.RecordedOriginationTests):
         with self.assertRaisesMessage(ValueError, "already has"):
             self.admit(token)
 
+    def test_unified_directory_replaces_all_admitted_snapshots_with_ordinary_loan(self):
+        from apps.tenant_apps.loans.filters import PawnLoanFilter
+        from apps.tenant_apps.loans.selectors.directory import loan_directory_page, unadmitted_historical_records
+        self.document["source"]["snapshot_reference"] = "Second scan"
+        self.accept()
+        _, token = self.preview()
+        loan, _ = self.admit(token)
+        self.assertFalse(unadmitted_historical_records(self.tenant.pk).exists())
+        filtered = PawnLoanFilter({'q':'P-0010','state':'CLOSED'},
+            queryset=m.PawnLoan.objects.filter(workspace=self.tenant),workspace=self.tenant)
+        page, _ = loan_directory_page(workspace_id=self.tenant.pk,loan_filter=filtered,page=1)
+        self.assertEqual(page.paginator.count,1)
+        self.assertEqual(page.object_list,[dict(kind='ordinary',loan=loan)])
+        self.assertEqual(m.HistoricalLoanEvidence.objects.count(),2)
+
+    def test_invalid_legacy_scope_cannot_hide_archive_using_an_unscoped_match(self):
+        from apps.tenant_apps.loans.selectors.directory import unadmitted_historical_records
+        _, token = self.preview()
+        loan, _ = self.admit(token)
+        self.document['source'].update(system=f'legacy:{uuid4().hex}:jcl',
+                                       loan_id=loan.historical_import.source_id)
+        self.document['facts'].update(borrower_reference=None,payments=None)
+        unmatched = self.accept()
+        self.assertEqual(list(unadmitted_historical_records(self.tenant.pk)),[unmatched])
+
+    def test_older_unscoped_import_hides_only_its_evidenced_legacy_schema(self):
+        from apps.tenant_apps.loans.selectors.directory import unadmitted_historical_records
+        snapshot = self.make_snapshot()
+        m.HistoricalLoanImport.objects.create(workspace=self.tenant,loan=snapshot.loan,
+            source_namespace=self.evidence.source_namespace,source_id=self.evidence.source_id,source_sha256='a'*64,
+            document={'profile':'old-history','loan':{'id':self.evidence.source_id,
+                'borrower':{'source_system':self.evidence.source_system}}},references={},imported_by=self.actor)
+        self.document['source']['system'] = self.evidence.source_system.replace(':jcl',':jsk')
+        other = self.accept()
+        self.assertEqual(list(unadmitted_historical_records(self.tenant.pk)),[other])
+
     def test_snapshot_added_after_preview_requires_new_review(self):
         _, token = self.preview()
         self.document["source"]["snapshot_reference"] = "New source page"

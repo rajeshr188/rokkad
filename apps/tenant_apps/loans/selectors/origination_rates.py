@@ -80,7 +80,7 @@ def require_current_origination_date(value, *, label="Loan", at=None):
             "If the money is being handed over today, edit the draft's loan date, "
             "save it and review the recalculated terms. If the money was already "
             "handed over on the original date, keep that date and contact your "
-            "administrator to use Record an earlier payout."
+            "administrator to use Record completed payout."
         )
 
 

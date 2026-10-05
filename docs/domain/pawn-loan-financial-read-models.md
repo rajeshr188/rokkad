@@ -10,6 +10,14 @@ related:
 
 # PawnLoan Financial Read Models
 
+The common Loans directory can also display retained historical closed claims,
+clearly labelled and linked to source details. These cards are not operational
+financial origins and do not enter balances, collections, exposure or risk totals.
+Unknown settlement and physical handover remain unknown. Reconciled financial
+admission creates an ordinary loan; its source card is then replaced in the
+directory, while immutable evidence remains. See the
+[browsing decision](../adr/2026-10-05-unified-loan-browsing-with-retained-evidence.md).
+
 ## Shared monthly interest contract: owner clarification, 5 October
 
 Direct, backdated paper and imported entry use the same agreed interest boundary.

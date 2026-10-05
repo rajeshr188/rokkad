@@ -7,6 +7,41 @@ tags: [status, architecture]
 
 # Status
 
+## Unified historical browsing delivered; LD-08 technical preparation verified locally (5 October)
+
+The owner selected unified browsing instead of speculative bulk reconstruction,
+then authorized presentation cleanup and LD-08. Loans now pages/searches ordinary
+loans and retained closed source claims together, with clear Historical record
+labels and private detail links. Unknown principal/dates/settlement remain unknown;
+admitted identities replace archive cards with ordinary loans. Snapshot and legacy
+source scoping, invalid-filter rejection, mapped-filter disclosure and restricted
+Workspace isolation are tested. Financial monitoring/reports remain ordinary-only.
+One New loan action stays prominent; stale payout, opening-auction, completeness,
+portability and journey guidance is corrected without changing financial writers.
+
+The affected regression passes **106 tests in 68.314s**, followed by **14 final
+boundary tests in 7.756s** covering unknown dates, Workspace scope, old import
+identities and generated current risk/valuation. Four JavaScript tests pass.
+At the owner's request, a fictional two-item Lakshmi example goes through ordinary
+New loan with standing terms, actual item splits, advance/fees, both saved rounding
+choices and ordinary closure. This is not a real source document or staff signoff.
+An older artificial ACTIVE-without-origin UI assertion reproduces on unchanged
+LD-07 and remains outside the affected suite; no whole-repository green claim.
+
+The retained September 21 review has 38,943 closed candidates, all with unknown
+normalized original principal; 16,156 have unknown normalized payments. No archive
+is financially admitted. A separate reviewed batch reconstruction project remains
+deferred. These counts are old snapshot evidence, not current production inventory.
+
+An isolated clone of the fictional local rehearsal restores **202 public tables**
+and **9 private media files** exactly before owner-only additive migrations. Clean
+image startup caught and fixed `.dockerignore` excluding runtime portability
+contracts. Restricted startup and model/migration consistency pass. Original local
+rehearsal and production data/schema remain unchanged. Live target inventory,
+actual target recovery/operator acceptance, final candidate release checks and
+controlled production rollout remain pending. See the
+[delivery and runbook](implementation/unified-browsing-and-ld08.md).
+
 ## LD-07 portability complete locally (5 October)
 
 The owner authorized LD-07. New `loan-servicing-bundle/1` preserves supported

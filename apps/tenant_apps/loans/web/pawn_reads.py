@@ -6,7 +6,6 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import render
 from django.urls import reverse
@@ -25,6 +24,7 @@ from apps.tenant_apps.loans.domain import (
     TransactionKind,
 )
 from apps.tenant_apps.loans.filters import PawnLoanFilter
+from apps.tenant_apps.loans.selectors.directory import loan_directory_page
 from apps.tenant_apps.loans.models import (
     CollateralAppraisal,
     PawnLoan,
@@ -65,7 +65,8 @@ def pawn_loan_list(request):
         workspace=request.loans_workspace,
     )
     valid = loan_filter.is_valid()
-    page_obj = Paginator(loan_filter.qs if valid else loans.none(), 25).get_page(request.GET.get("page"))
+    page_obj, historical_mapping_filter = loan_directory_page(workspace_id=request.loans_workspace.pk,
+        loan_filter=loan_filter,page=request.GET.get('page'))
     readiness = get_pawn_draft_readiness(request.loans_workspace)
     fragment = (
         request.headers.get("HX-Request") == "true"
@@ -77,7 +78,9 @@ def pawn_loan_list(request):
         request,
         "loans/pawn/list.html#results" if fragment else "loans/pawn/list.html",
         {
-            "loans": page_obj.object_list,
+            "loans": [r['loan'] for r in page_obj.object_list if r['kind']=='ordinary'],
+            "directory_rows": page_obj.object_list,
+            "historical_mapping_filter": historical_mapping_filter,
             "loan_filter": loan_filter,
             "selected_borrower": loan_filter.form.cleaned_data.get("borrower") if valid else None,
             "page_obj": page_obj,
@@ -292,7 +295,7 @@ def _primary_action(loan, context):
         if context.get("valuation_refresh_reason") and (context.get("can_approve") or context.get("can_disburse")):
             return {"label": "Review updated valuation", "url": reverse(
                 "workspace_loans:pawn_loan_review_updated_valuation", args=[loan.workspace.slug, loan.pk]),
-                "message": "Cash not yet paid? Compare the approved prices with today's prices and review the terms before payment. If cash was already paid earlier, keep the actual date and use the earlier-payout workflow."}
+                "message": "Cash not yet paid? Compare the approved prices with today's prices and review the terms before payment. If cash was already paid earlier, keep the actual date and use Record completed payout."}
         if not context.get("can_disburse", False):
             return None
         return {
