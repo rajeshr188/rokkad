@@ -24,8 +24,9 @@ unrelated billing/platform/storage work is preserved separately. The
 [plan](plans/unified-loan-domain-correction.md) use that working implementation,
 rather than the September audit, as baseline. LD-02 shares supported repayment/
 full-release prerequisites; LD-03 adds general completed-payout admission for an
-unpaid ordinary draft through the existing recorded-history writer. Wider opening
-continuation and operation extensions remain pending.
+unpaid ordinary draft through the existing recorded-history writer. LD-04 adds an
+explicit reviewed reduced-principal opening checkpoint; wider operation extensions
+remain pending.
 PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
@@ -67,10 +68,20 @@ allocate atomically; previews/notices and risk use the same monthly eligibility.
 Interest rounds HALF_UP per item per period at the saved quantum; cash/principal
 remain paise. See the shared-interest ADR and LD-01A implementation note.
 
-Existing opening commit rejects reduced principal
-at cutover despite supporting later reductions; broader validation descriptors do
-not establish operational support. Never replay pre-cutover charges, add an opening
-over an existing disbursal or invent unknown history/allocations/actors/timestamps.
+Older opening review/2 and /3 require unchanged principal at cutover. LD-04's
+review/4 explicitly supports remaining item principal, evidenced current-period
+bases, cumulative/current recognized and unpaid interest, current/future advance
+coverage and the original next charge boundary. No earlier receipts or paid
+amounts are inferred. Shared policy/calendar continuation starts after cutover;
+original maturity/grace remains. Future advance over-coverage from a principal
+reduction requires explicit resolution, not an invented refund or credit move.
+Opening export/3 preserves this checkpoint and its supported later actions;
+old wire meanings remain intact. Migration 0059 rejects mixed opening/payout/
+renewal origins in either insertion order and is exercised only in disposable QA.
+Actual source/staff acceptance and rollout remain pending. See the
+[LD-04 decision](adr/2026-10-05-reduced-principal-opening-checkpoint.md).
+Never replay pre-cutover charges, add an opening over an existing disbursal or
+invent unknown history/allocations/actors/timestamps.
 
 LD-01 implements a read-only frozen-contract/position resolver, reusing current
 calculators for repayment preview, reminder balance and repayment form context.

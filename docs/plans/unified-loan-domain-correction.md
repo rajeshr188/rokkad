@@ -14,8 +14,8 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01, LD-01A, LD-02 and LD-03 are complete locally;
-LD-04 and later slices are pending.
+storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03 and LD-04 are complete
+locally; LD-05 and later slices are pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
@@ -51,7 +51,7 @@ checkpoint implementation and are superseded as the target by this clarification
 | LD-01A | Complete locally; rollout review pending | Shared inclusive anniversary boundary and captured-policy rounding, with explicit financial correction compatibility | Existing evidence plus corrected policy/profile versions; portability migration 0018 |
 | LD-02 | Complete locally; rollout pending | Common purpose/eligibility for supported repayment and full release; retain validated writers | None |
 | LD-03 | Complete locally; rollout pending | General completed-payout admission, including retained unpaid draft identity, without historical digital-row prerequisites | Existing recorded evidence; narrow forward-only legacy guard migration 0058 |
-| LD-04 | Pending; after LD-03, actual checkpoint examples | Explicit reduced-principal/period-carry opening continuation | New review/profile version; additive guard changes only if required |
+| LD-04 | Complete locally; source/staff rollout acceptance pending | Explicit reduced-principal/current-period/advance checkpoint and supported continuation | Review/4, opening export/3; additive mixed-origin guard 0059 |
 | LD-05 | Pending; after source-rule examples and LD-04 | Source-faithful supported history allocation and numbering/setup compatibility | New portable contract; alias table only if proven necessary |
 | LD-06 | Pending; after relevant profiles in LD-02/04/05 | Remaining operations, correction dependencies, coverage transition, risk/schedule parity | Additive capture-transition evidence may require a migration |
 | LD-07 | Pending; compatibility substeps accompany each writer slice | Portable documents/export/restore for new supported semantics | Profile/reader versions and recovery fingerprint as needed |
@@ -326,6 +326,22 @@ loans readable by the old compatible profile. Do not erase them or restore an
 old database backup over later legitimate business transactions.
 
 ## LD-04: reviewed opening with reduced principal and period coverage
+
+Local implementation adds review/4, explicit remaining item principal/current
+period bases, separate cumulative/current recognized/unpaid amounts, actual
+current/future advance coverage and original boundary/maturity. The owner supplied
+the 1 January 2026 / 10,000 principal / 1,000 principal paid 20 January example:
+the next charge on 2 February uses 9,000. Test rate/advance assumptions are labeled
+as illustrative; a full actual source checkpoint is still required for rollout.
+
+The existing writer, common read/servicing path, detail explanation, export/3 and
+restore/recovery now preserve this evidence without earlier financial replay.
+Migration 0059 protects one origin in either insertion order. Earlier profiles
+are not converted or reinterpreted; future advance over-coverage needs explicit
+resolution. No application/candidate/production migration is included. Final
+verification evidence is in STATUS and the
+[LD-04 implementation record](../implementation/reduced-principal-opening-ld04.md).
+LD-05 is next.
 
 Use verified source examples to add one named continuation version at a time.
 Reuse `opening_validation`, `_document/_write`, `opening_obligations`, opening

@@ -312,6 +312,12 @@ def _repayment_preview(loan, balance, allocation, *, item_principal_split=None, 
         item_principal_split=item_principal_split,
         require_explicit=paper,
     )
+    if item_allocations and balance.financial_history_from is not None:
+        origin = loan.loan_events.filter(event_kind="MIGRATION_OPENING").first()
+        if origin:
+            from .opening_checkpoint import validate_future_payment
+            validate_future_payment(origin.payload["opening"]["review"], on=balance.as_of_date,
+                allocations=[dict(balance_after=row.balance_after, monthly_interest_rate=row.monthly_interest_rate) for row in item_allocations])
     return PawnRepaymentPreview(
         allocation=allocation,
         original_principal=original_principal,

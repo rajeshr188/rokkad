@@ -17,7 +17,7 @@ def interest_contract_inventory():
         recording = origin.payload.get("recording", {}) if origin else {}
         profile = (origin.payload.get("opening", {}).get("review", {}).get("profile")
                    if origin and origin.event_kind == "MIGRATION_OPENING" else recording.get("collection_profile"))
-        shared = (profile == "loan-opening-review/3" if origin and origin.event_kind == "MIGRATION_OPENING"
+        shared = (profile in ("loan-opening-review/3", "loan-opening-review/4") if origin and origin.event_kind == "MIGRATION_OPENING"
                   else profile == "recorded-anniversary/3" if policy and policy.basis == "RECORDED_CONTRACT"
                   else bool(policy and policy.policy_version == 2))
         financial = [event for event in events if event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING")]

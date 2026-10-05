@@ -7,6 +7,48 @@ tags: [status, architecture]
 
 # Status
 
+## LD-04 reduced-principal opening continuation complete locally (5 October)
+
+The owner authorized LD-04 and confirmed the January example: a 1,000 principal
+payment on 20 January reduces a 10,000 loan's next interest base to 9,000 from
+2 February. New review/4 records explicit remaining item principal, current-period
+bases, cumulative/current recognized and unpaid interest, and current/future
+advance coverage. Shared calendar and captured-policy rounding continue from
+that verified cutover; original maturity/grace stays unchanged. No earlier
+payments, approvals, payouts or digital historical catalog rows are fabricated.
+
+The existing writer, common servicing reads, receipt/full-release/reversal,
+opening detail, export/3 and restore/exact recovery retain those facts. Earlier
+review/2 and /3 and published export contracts keep their meaning. Unknown or
+inconsistent checkpoint facts remain held. Advance over-coverage from a future
+principal reduction needs explicit resolution; zero remaining principal is
+explicitly outside this opening admission profile. Wider source allocations,
+operations/capture transition and portability remain later slices.
+
+The final affected regression passes **299 tests in 192.437s**.
+Final admission/validation follow-up passes **55 tests in 15.139s**, including
+all **26 new LD-04 tests** and the existing positive-principal blocker. The initial
+299-test broader run had one failure: the old pilot UI test expects the renewal
+link to be absent. It fails identically on prior LD-03 source `a8605f3e`; no
+LD-04 renewal-link change is involved. That exact assertion was retained and
+excluded from the successful final list, while the other pilot and opening
+renewal cases remain included. The whole repository suite is not claimed green;
+previous unrelated baseline failures remain outside this scope.
+
+System checks, migration drift/history consistency against the dedicated test
+database, 556-file Python parsing and scoped whitespace checks pass. Migration
+0059 adds a Workspace-scoped locked guard rejecting mixed opening/payout/renewal
+origins in either insertion order; restricted-role DML, immutability and isolation
+are checked. All schema exercise is confined to disposable QA's
+`test_rokkad_ld04_20261005`. No application/candidate/production migration,
+existing-cohort conversion or deployment is included.
+
+The supplied January rule example is tested; its test rate/advance assumptions
+are labeled explicitly. Representative actual checkpoint evidence and staff
+acceptance remain required before rollout. LD-05 is next. See the
+[implementation record](implementation/reduced-principal-opening-ld04.md) and
+[checkpoint decision](adr/2026-10-05-reduced-principal-opening-checkpoint.md).
+
 ## LD-03 completed-payout admission complete locally (5 October)
 
 The owner authorized LD-03. General completed-payout recording now reuses the

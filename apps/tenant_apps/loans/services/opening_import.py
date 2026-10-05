@@ -1,4 +1,4 @@
-"""Owner-authorized, per-loan commit of explicitly reviewed v2 opening evidence.
+"""Owner-authorized, per-loan commit of supported reviewed opening evidence.
 
 Source extraction/approval UI is a separate boundary. This command never infers
 missing balances, dates, custody or mappings from a raw dump.
@@ -24,7 +24,7 @@ from .history_setup import preview_history_setup, require_history_setup_access
 from .import_identity import find_source_origin, source_binding_id
 from .opening_evidence import OpeningEvidenceError, opening_event_payload
 from .opening_obligations import persist_opening_repayment_schedule
-from .opening_validation import COLLECTION_PROFILE, COLLECTION_PROFILES, POLICY_COLLECTION_PROFILE, validate_opening
+from .opening_validation import COLLECTION_PROFILE, COLLECTION_PROFILES, POLICY_COLLECTION_PROFILES, validate_opening
 
 PROFILE = "loan-opening-commit/1"
 
@@ -32,7 +32,7 @@ PROFILE = "loan-opening-commit/1"
 def _document(review, setup):
     result = validate_opening(review)
     if result["profile"] not in COLLECTION_PROFILES or not result["document_reconciled"]:
-        raise OpeningEvidenceError("A reconciled v2 review is required; unresolved loans remain held.")
+        raise OpeningEvidenceError("A reconciled supported collection review is required; unresolved loans remain held.")
     required_setup = {"tenure_months", "source_license_number", "policy"}
     if (type(setup) is not dict or not required_setup <= set(setup)
             or set(setup) - required_setup - {"legacy_license_evidence", "local_loan_number"}):
@@ -44,12 +44,12 @@ def _document(review, setup):
         from .history_setup import _text
         _text(setup["legacy_license_evidence"], "Legacy licence evidence", 255)
     from .history_contract import POLICY_V3
-    validate(setup["policy"], schema=POLICY_V3 if review["profile"] == POLICY_COLLECTION_PROFILE else POLICY, path="setup.policy")
+    validate(setup["policy"], schema=POLICY_V3 if review["profile"] in POLICY_COLLECTION_PROFILES else POLICY, path="setup.policy")
     policy = DisbursalPolicySnapshot.from_dict(setup["policy"])
-    if review["profile"] == POLICY_COLLECTION_PROFILE and (
+    if review["profile"] in POLICY_COLLECTION_PROFILES and (
             policy.policy_version != 2 or policy.interest_method.value != "SIMPLE" or
             policy.partial_month_method.value != "FULL_MONTH" or policy.currency_quantum != Decimal(review["terms"]["interest_quantum"])):
-        raise OpeningEvidenceError("Version 3 continuation must match its reviewed, captured economic policy.")
+        raise OpeningEvidenceError("Shared monthly continuation must match its reviewed, captured economic policy.")
     if policy.valuation_method.value != "LATEST_APPRAISAL":
         raise OpeningEvidenceError("Opening commit currently requires reviewed appraisals.")
     tenure = setup["tenure_months"]
@@ -121,7 +121,7 @@ def _write(*, workspace_id, actor, document, restoration=None):
     if parent is None or parent.party_id != borrower.pk:
         raise OpeningEvidenceError("Borrower must resolve the exact source Party identity.")
     principal = Decimal(review["balances"]["principal"])
-    monthly = sum(Decimal(row["original_principal"]) * Decimal(row["monthly_rate"]) / 100 for row in review["collateral"])
+    monthly = sum(Decimal(row["remaining_principal"] if review["profile"] == "loan-opening-review/4" else row["original_principal"]) * Decimal(row["monthly_rate"]) / 100 for row in review["collateral"])
     loan = _create(m.PawnLoan, workspace=workspace, license=setup["revision"].license,
         license_revision=setup["revision"], series=setup["series"], product_version=setup["product"], borrower=borrower,
         loan_number=setup["numbers"][0]["local_number"], state="ACTIVE", loan_date=date.fromisoformat(terms["original_date"]),
@@ -130,7 +130,7 @@ def _write(*, workspace_id, actor, document, restoration=None):
     items = {}
     zone = ZoneInfo(review["cutover"]["timezone"])
     for row in review["collateral"]:
-        # Only v2 review validation authorizes excluding this unknown field.
+        # Supported collection reviews explicitly preserve this unknown field.
         item = _create(m.PawnCollateralItem, exclude={"gross_weight"} if row["gross_weight"] is None else (),
             workspace=workspace, loan=loan, description=row["description"], metal=row["metal"], quantity=row["quantity"],
             gross_weight=Decimal(row["gross_weight"]) if row["gross_weight"] is not None else None,

@@ -26,7 +26,7 @@ from .opening_continuation import preview_opening_collection
 from .opening_import import _document, _write
 from .opening_export import _export_opening
 from .opening_contract import (
-    FIELDS, FIELDS_V2, PAYMENT_PROFILE, MAX_RECORDS, PROFILE as EXPORT_PROFILE, MANIFEST_FIELDS, EXTRA_FIELDS, decode_row,
+    FIELDS, FIELDS_V2, PAYMENT_PROFILE, CHECKPOINT_PROFILE, MAX_RECORDS, PROFILE as EXPORT_PROFILE, MANIFEST_FIELDS, EXTRA_FIELDS, decode_row,
 )
 
 PROFILE = "loan-opening-restore/1"
@@ -50,12 +50,12 @@ def parse_opening_export(content):
             raise HistoryError("Non-finite JSON is not supported.")
         manifest, evidence = [json.loads(line, object_pairs_hook=_pairs, parse_constant=invalid_number) for line in lines]
         _require(type(manifest) is dict and set(manifest) == MANIFEST_FIELDS, "Unexpected opening manifest fields.")
-        _require(manifest["profile"] in {EXPORT_PROFILE, PAYMENT_PROFILE} and manifest["coverage"] == "OPENING_AND_SUPPORTED_SERVICING" and
+        _require(manifest["profile"] in {EXPORT_PROFILE, PAYMENT_PROFILE, CHECKPOINT_PROFILE} and manifest["coverage"] == "OPENING_AND_SUPPORTED_SERVICING" and
             manifest["history_before_cutover"] == "UNAVAILABLE" and type(manifest["restore_supported"]) is bool,
             "Use the supported opening evidence profile.")
         _require(manifest["exclusions"] == ["pre_cutover_transactions", "binary_files", "workspace_configuration", "party_master"],
             "Opening export coverage must be explicit.")
-        fields = FIELDS_V2 if manifest["profile"] == PAYMENT_PROFILE else FIELDS
+        fields = FIELDS_V2 if manifest["profile"] in (PAYMENT_PROFILE, CHECKPOINT_PROFILE) else FIELDS
         _require(type(evidence) is dict and set(evidence) == set(fields) | EXTRA_FIELDS, "Unexpected opening evidence sections.")
         _require(manifest["sha256"] == digest(evidence), "Opening export checksum does not match.")
         count = 0
@@ -80,10 +80,12 @@ def parse_opening_export(content):
         doc = origin.document
         _require(doc == _document(doc["review"], doc["setup"]) and origin.source_sha256 == digest(doc), "Accepted opening provenance is invalid.")
         review = doc["review"]
+        _require((manifest["profile"] == CHECKPOINT_PROFILE) == (review["profile"] == "loan-opening-review/4"),
+            "Checkpoint review requires its explicit version 3 opening export contract.")
         _require(str(origin.source_namespace) == review["source"]["namespace"] and origin.source_id == source_binding_id(
             origin.source_namespace, review["source"]["loan_id"], review["mapping"]["borrower_source_system"]), "Opening source identity does not match.")
         events = objects["events"]
-        _require((manifest["profile"] == PAYMENT_PROFILE) == any(e.event_kind == "REPAYMENT" for e in events),
+        _require(manifest["profile"] == CHECKPOINT_PROFILE or (manifest["profile"] == PAYMENT_PROFILE) == any(e.event_kind == "REPAYMENT" for e in events),
                  "Opening payment history requires the version 2 row contract.")
         _require(events == sorted(events, key=lambda row: (row.effective_date, row.pk)), "Opening events are not chronological.")
         opening = read_opening_evidence(loan, events[0])
@@ -269,7 +271,7 @@ def _request(*, workspace_id, actor, content, mapping):
     _require(type(mapping) is dict and set(mapping) == MAPPING and all(type(value) is int and value > 0 for value in mapping.values()),
         "Select explicit destination borrower, licence revision, series and product version.")
     document = parse_opening_export(content)
-    if document["manifest"]["profile"] == PAYMENT_PROFILE:
+    if any(row["event_kind"] == "REPAYMENT" for row in document["evidence"]["events"]):
         resolve_workspace_access(actor=actor, workspace=workspace).require("loan.repay")
     request = {"profile": PROFILE, "document": document, "mapping": mapping, "workspace_id": workspace_id}
     return request

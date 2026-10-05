@@ -248,6 +248,7 @@ FIELDS = {kind: " ".join(fields) for kind, fields in ROW_FIELDS.items()}
 
 # Version 1 remains frozen. Version 2 adds the actual per-item payment evidence.
 PAYMENT_PROFILE = "loan-opening-export/2"
+CHECKPOINT_PROFILE = "loan-opening-export/3"
 ROW_FIELDS_V2 = {**ROW_FIELDS, "repayment_lines": {
     "id": ("reference", False), "loan_event_id": ("reference", False),
     "collateral_item_id": ("reference", False), "allocation_order": ("integer", False),
@@ -263,9 +264,9 @@ def _decode_row(kind, row, *, profile=PROFILE):
     Preserve v1's existing date/UUID spellings and decimal precision. In particular,
     this does not apply today's model validators, defaults, choices or nullability.
     """
-    if profile not in {PROFILE, PAYMENT_PROFILE}:
+    if profile not in {PROFILE, PAYMENT_PROFILE, CHECKPOINT_PROFILE}:
         raise HistoryError("Unsupported opening row profile.")
-    fields = (ROW_FIELDS_V2 if profile == PAYMENT_PROFILE else ROW_FIELDS)[kind]
+    fields = (ROW_FIELDS_V2 if profile in (PAYMENT_PROFILE, CHECKPOINT_PROFILE) else ROW_FIELDS)[kind]
     if type(row) is not dict or set(row) != set(fields):
         raise HistoryError("Unexpected opening evidence fields: " + kind)
     result = {}

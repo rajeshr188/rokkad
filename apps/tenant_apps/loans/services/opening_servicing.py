@@ -48,6 +48,9 @@ def opening_release_accrual_preview(loan, *, as_of_date):
     months = collection_calendar(loan.loan_date, as_of_date)["additional_months"] - review["continuation"]["additional_months"]
     unrounded = collection.monthly_interest_unrounded * months
     start = collection.cutover_date + timedelta(days=1)
+    if review["profile"] == "loan-opening-review/4":
+        from .opening_checkpoint import calculation
+        unrounded = Decimal(calculation(review, as_of_date)["additional_interest_unrounded"]) - Decimal(calculation(review, collection.cutover_date)["additional_interest_unrounded"])
     if loan.loan_events.filter(event_kind="REPAYMENT").exists():
         from .opening_payment_evidence import collection_history, baseline
         opening = read_opening_evidence(loan, origin)
@@ -58,7 +61,7 @@ def opening_release_accrual_preview(loan, *, as_of_date):
         start = min(previous_date + timedelta(days=1), as_of_date)
     return AccrualPeriodPreview(
         period_number=number, period_start=start, period_end=as_of_date,
-        period_fraction=Decimal("1"), calculation_base=sum(Decimal(item["original_principal"]) for item in review["collateral"]),
+        period_fraction=Decimal("1"), calculation_base=sum(Decimal(item["remaining_principal"] if review["profile"] == "loan-opening-review/4" else item["original_principal"]) for item in review["collateral"]),
         unrounded_interest=unrounded, recognized_interest=collection.additional_interest,
         calculated_interest=collection.additional_interest, is_partial=True,
     )

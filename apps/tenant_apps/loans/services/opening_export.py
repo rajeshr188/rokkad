@@ -18,7 +18,7 @@ from .opening_continuation import preview_opening_collection
 from .opening_evidence import read_opening_evidence
 from .opening_import import PROFILE as COMMIT_PROFILE
 
-from .opening_contract import FIELDS, FIELDS_V2, MAX_RECORDS, PROFILE, PAYMENT_PROFILE
+from .opening_contract import FIELDS, FIELDS_V2, MAX_RECORDS, PROFILE, PAYMENT_PROFILE, CHECKPOINT_PROFILE
 
 
 def _json(value):
@@ -148,7 +148,8 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     evidence["release_reversals"] = rows("release_reversals", m.PawnLoanReleaseReversal, release_id__in=release_ids)
     evidence["closing_lines"] = rows("closing_lines", m.PawnLoanPrincipalClosingLine, loan_event_id__in=[event.pk for event in events])
     has_payments = any(event.event_kind == "REPAYMENT" for event in events)
-    if has_payments:
+    checkpoint = review["profile"] == "loan-opening-review/4"
+    if has_payments or checkpoint:
         evidence["repayment_lines"] = rows("repayment_lines", m.PawnLoanRepaymentAllocationLine, loan_event_id__in=[event.pk for event in events])
     if (len(evidence["schedules"]) != 1 or evidence["schedules"][0]["id"] != origin.references["schedule_id"] or
             evidence["schedules"][0]["source_event_id"] != openings[0].pk):
@@ -178,7 +179,7 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     evidence["recorded_balance"] = {name: decimal(getattr(balance, name + "_outstanding")) for name in ("principal", "interest", "fees")}
     evidence["interest_conceded"] = decimal(balance.interest_conceded)
     evidence["collection_preview"] = _json(asdict(continuation))
-    profile = PAYMENT_PROFILE if has_payments else PROFILE
+    profile = CHECKPOINT_PROFILE if checkpoint else PAYMENT_PROFILE if has_payments else PROFILE
     manifest = {"profile": profile, "coverage": "OPENING_AND_SUPPORTED_SERVICING",
         "financial_history_from": openings[0].effective_date.isoformat(), "as_of": as_of.isoformat(),
         "history_before_cutover": "UNAVAILABLE", "restore_supported": True,

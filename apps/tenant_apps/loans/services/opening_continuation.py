@@ -16,7 +16,7 @@ def opening_interest_breakdown(review, *, as_of_date, loan=None):
     cutover = date.fromisoformat(review["cutover"]["date"])
     if review["profile"] not in COLLECTION_PROFILES or as_of_date < cutover:
         raise OpeningEvidenceError("Interest breakdown requires a collection opening on or after cutover.")
-    monthly = sum(Decimal(item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
+    monthly = sum(Decimal(item["remaining_principal"] if review["profile"] == "loan-opening-review/4" else item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
                   for item in review["collateral"])
     calculated = reviewed_calculation(review, as_of_date)
     elapsed = relativedelta(as_of_date, original)
@@ -36,6 +36,14 @@ def opening_interest_breakdown(review, *, as_of_date, loan=None):
         "total_interest": unpaid + additional,
         "next_increase_on": date.fromisoformat(calculated["next_increase_on"]),
     }
+    if review["profile"] == "loan-opening-review/4":
+        carry = review["continuation"]
+        result.update(is_checkpoint=True, recognized_at_cutover=baseline,
+            current_period_start=date.fromisoformat(carry["period_start"]),
+            current_period_end=date.fromisoformat(carry["period_end"]),
+            current_period_interest=Decimal(carry["expected_period_interest"]),
+            current_period_unpaid=Decimal(carry["current_period_unpaid_interest"]),
+            advance_coverage=carry["advance_coverage"])
     if loan is not None and loan.loan_events.filter(event_kind="REPAYMENT").exists():
         from .opening_payment_evidence import collection_history
         events = tuple(loan.loan_events.all())
@@ -87,7 +95,7 @@ def preview_opening_collection(loan, *, events, as_of_date):
             baseline_as_of=state["baseline"], additional_interest=state["additional"],
             next_increase_on=date.fromisoformat(collection_calendar(loan.loan_date, state["calculation_date"])["next_increase_on"]), rule=RULE,
         )
-    monthly = sum(Decimal(item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
+    monthly = sum(Decimal(item["remaining_principal"] if review["profile"] == "loan-opening-review/4" else item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
                   for item in review["collateral"])
     release_date = _settled_release_date(events, event, as_of_date, loan.loan_date, monthly, review)
     try:

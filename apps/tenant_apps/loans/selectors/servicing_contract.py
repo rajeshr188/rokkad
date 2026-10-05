@@ -29,6 +29,12 @@ class ServicingContract:
     principal_reduction_rule: str
     recognized_interest_at_cutover: Decimal | None = None
     unpaid_interest_at_cutover: Decimal | None = None
+    checkpoint_period_number: int | None = None
+    checkpoint_item_bases: tuple[tuple[int, Decimal], ...] = ()
+    checkpoint_current_recognized_interest: Decimal | None = None
+    checkpoint_current_unpaid_interest: Decimal | None = None
+    checkpoint_advance_coverage: tuple[tuple[int, Decimal], ...] = ()
+    checkpoint_next_increase_on: date | None = None
 
 
 @dataclass(frozen=True)
@@ -65,22 +71,32 @@ def resolve_servicing_contract(loan, *, as_of_date):
                   partial_month_method=getattr(policy, "partial_month_method", None))
     if openings:
         from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
-        from apps.tenant_apps.loans.services.opening_validation import COLLECTION_PROFILE
+        from apps.tenant_apps.loans.services.opening_validation import COLLECTION_PROFILES, POLICY_COLLECTION_PROFILES
         origin = openings[0]
-        review = read_opening_evidence(loan, origin)["review"]
+        opening = read_opening_evidence(loan, origin)
+        review = opening["review"]
         if as_of_date < origin.effective_date:
             raise ServicingContractError("Servicing history before the migration cutover is unavailable.")
-        if review["profile"] not in (COLLECTION_PROFILE, "loan-opening-review/3"):
+        if review["profile"] not in COLLECTION_PROFILES:
             raise ServicingContractError("This opening has no supported collection continuation checkpoint.")
         if policy and policy.basis == "RECORDED_CONTRACT":
             raise ServicingContractError("Opening and recorded-disbursal contract evidence conflict.")
         terms = review["terms"]
-        if review["profile"] == "loan-opening-review/3" and (
+        if review["profile"] in POLICY_COLLECTION_PROFILES and (
             policy is None or policy.policy_version != 2 or policy.interest_method != "SIMPLE"
             or policy.partial_month_method != "FULL_MONTH"
             or policy.currency_quantum.normalize() != Decimal(terms["interest_quantum"])):
             raise ServicingContractError("The reviewed opening must match its captured shared monthly policy.")
-        return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,
+        checkpoint = {}
+        if review["profile"] == "loan-opening-review/4":
+            carry = review["continuation"]
+            checkpoint = dict(checkpoint_period_number=carry["period_number"],
+                checkpoint_item_bases=tuple((opening["item_mapping"][row["item_id"]], Decimal(row["principal_base"])) for row in carry["bases"]),
+                checkpoint_current_recognized_interest=Decimal(carry["current_period_recognized_interest"]),
+                checkpoint_current_unpaid_interest=Decimal(carry["current_period_unpaid_interest"]),
+                checkpoint_advance_coverage=tuple((row["period_number"], Decimal(row["interest"])) for row in carry["advance_coverage"]),
+                checkpoint_next_increase_on=date.fromisoformat(carry["next_increase_on"]))
+        return ServicingContract(**common, **checkpoint, origin_event_id=origin.pk, origin_kind=origin.event_kind,
             profile=terms["rule_id"], financial_history_from=origin.effective_date,
             currency_quantum=Decimal(terms["interest_quantum"]), rounding_scope=terms["rounding_scope"],
             rounding_mode=terms["rounding_mode"], anniversary_rule="DAY_AFTER_ORIGINAL_ANNIVERSARY",
@@ -132,7 +148,11 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
         raise ServicingContractError("Unsupported servicing position operation.")
     contract = resolve_servicing_contract(loan, as_of_date=as_of_date)
     basis = "RECORDED_DEBT"
-    if contract.origin_kind == "MIGRATION_OPENING" and (operation == "REPAYMENT" or loan.state == "ACTIVE"):
+    if (contract.checkpoint_period_number is not None and as_of_date == contract.financial_history_from):
+        # The verified checkpoint itself has no post-cutover catch-up. This is
+        # a read, not authorization to insert an action on the cutover day.
+        balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+    elif contract.origin_kind == "MIGRATION_OPENING" and (operation == "REPAYMENT" or loan.state == "ACTIVE"):
         from apps.tenant_apps.loans.services.opening_servicing import opening_payment_balance
         balance, _ = opening_payment_balance(loan, as_of_date=as_of_date)
         basis = "COLLECTION_WITH_UNPOSTED_INTEREST"

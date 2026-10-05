@@ -1,11 +1,34 @@
 ---
 status: active
 owner: project
-updated: 2026-09-21
+updated: 2026-10-05
 tags: [loans, portability, migration, approval]
 ---
 
 # Review and import one prepared legacy opening
+
+## Reduced-principal preparations (LD-04, local implementation)
+
+For a reconciled reduced-principal loan, an authorized operator can now prepare
+review/4 for the existing opening preview/confirmed commit. Supply each item's
+original and remaining principal and actual current-period base, total/current
+recognized and unpaid interest, explicit current/future advance coverage, original
+maturity/grace and next anniversary charge boundary. Unknown charge-affecting
+facts remain held. No pre-cutover receipts need to be recreated.
+
+Review these facts against the book before admission. The existing dump bridge
+does not infer the new checkpoint from one outstanding balance or convert older
+prepared source profiles automatically. Representative source preparations and
+staff acceptance remain required before rollout. Details of the new contract and
+supported service/restore boundaries are in
+[LD-04](../implementation/reduced-principal-opening-ld04.md).
+
+After admission, inspect the ordinary loan detail and debt quote. The checkpoint
+explanation separates recognition from unpaid interest and discloses unavailable
+earlier transactions. Supported later receipts, full release and reversals use the
+retained principal and original charge dates. A payment that would over-cover a
+future prepaid period needs explicit review; Rokkad does not move/refund it
+silently. Export/3 preserves review/4 for supported restore.
 
 For the current three-Workspace Linode source, pass the matching
 `--source-profile linode-jcl/1`, `linode-jsk/1` or `linode-lakshmi/1` when staging.

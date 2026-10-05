@@ -13,7 +13,9 @@ from .portability_validation import (
 PROFILE = "loan-opening-review/1"
 COLLECTION_PROFILE = "loan-opening-review/2"
 POLICY_COLLECTION_PROFILE = "loan-opening-review/3"
-COLLECTION_PROFILES = (COLLECTION_PROFILE, POLICY_COLLECTION_PROFILE)
+CHECKPOINT_COLLECTION_PROFILE = "loan-opening-review/4"
+POLICY_COLLECTION_PROFILES = (POLICY_COLLECTION_PROFILE, CHECKPOINT_COLLECTION_PROFILE)
+COLLECTION_PROFILES = (COLLECTION_PROFILE, *POLICY_COLLECTION_PROFILES)
 MAX_ITEMS = 20
 MAX_OBLIGATIONS = 240
 DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,6})?\Z")
@@ -21,7 +23,7 @@ HASH = re.compile(r"[0-9a-f]{64}\Z")
 PENDING = ["Destination authorization and database reference checks",
            "Source evidence and selected-loan approval",
            "Reviewed calculation rule implementation and servicing acceptance",
-           "Explicit owner-authorized opening commit (v2 only)"]
+           "Explicit owner-authorized supported opening commit"]
 
 
 # Explicit rule families: an unsupported contract is not evidence of false history.
@@ -200,7 +202,7 @@ def validate_opening(document, *, today=None):
         check.text(terms["evidence_reference"], "terms.evidence_reference")
         period_rule = check.choice(terms["period_rule"], {"ORIGINAL_ANNIVERSARY", "CLAMPED_CONTIGUOUS"}, "terms.period_rule")
         basis_rule = check.choice(terms["interest_basis"], {"ORIGINAL_PRINCIPAL", "OUTSTANDING_AT_PERIOD_START"}, "terms.interest_basis")
-        partial = check.choice(terms["partial_rule"], {"INCLUSIVE_UPFRONT"} if collection_profile else {"COMPLETED_ONLY", "FULL_MONTH", "SLAB"}, "terms.partial_rule")
+        partial = check.choice(terms["partial_rule"], {"FULL_MONTH"} if doc["profile"] == CHECKPOINT_COLLECTION_PROFILE else {"INCLUSIVE_UPFRONT"} if collection_profile else {"COMPLETED_ONLY", "FULL_MONTH", "SLAB"}, "terms.partial_rule")
         if partial == "SLAB":
             check.integer(terms["partial_cutoff_days"], "terms.partial_cutoff_days", 1, 28)
             fraction = check.amount(terms["partial_lower_fraction"], "terms.partial_lower_fraction", True, 6)
@@ -317,7 +319,11 @@ def validate_opening(document, *, today=None):
         if parts and all(p is not None for p in parts) and amounts.get(field) is not None and sum(parts) != amounts[field]:
             check.issue("OBLIGATION_BALANCE_MISMATCH", "obligations", f"Remaining {field} obligations do not reconcile with the opening.")
     if collection_profile:
-        _validate_collection_checkpoint(check, doc, items, amounts, original, cutoff, result)
+        if doc["profile"] == CHECKPOINT_COLLECTION_PROFILE:
+            from .opening_checkpoint import validate_checkpoint
+            validate_checkpoint(check, doc, items, amounts, original, cutoff, result)
+        else:
+            _validate_collection_checkpoint(check, doc, items, amounts, original, cutoff, result)
         carry = None
     else:
         carry = check.object(doc["continuation"], "period_number period_start period_end bases recognized_interest recognized_unpaid_interest advance_covered_interest expected_period_interest evidence_reference", "continuation")

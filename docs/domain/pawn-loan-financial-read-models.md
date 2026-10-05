@@ -28,6 +28,18 @@ See the [plan](../plans/unified-loan-domain-correction.md).
 
 ## Current read implementation
 
+LD-04 adds review/4 opening checkpoints with reduced remaining item principal,
+explicit current-period bases and separate cumulative/current recognized/unpaid
+interest. Current/future advance coverage is source evidence assigned to actual
+periods. The cutover position is recorded debt with zero catch-up; subsequent
+periods use remaining item principal, captured policy rounding and the original
+anniversary. No original charge history is guessed from today's remaining balance.
+Original maturity/grace stays unchanged. Read models and supported receipt/release
+writers share that continuation; reversal restores it. Earlier transactions remain
+unavailable and transaction coverage/current valuation require their own evidence.
+Older review/2 and /3 retain their frozen meanings and unchanged-principal admission.
+See [LD-04](../implementation/reduced-principal-opening-ld04.md).
+
 LD-02 adds common factual eligibility for REPAYMENT/FULL_RELEASE and CURRENT/PAPER
 purpose, independent of origin. Commands retain their existing authorization,
 locking, signed source review and atomic posting. Shared native monthly bullet

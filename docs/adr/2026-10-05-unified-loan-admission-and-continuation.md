@@ -13,9 +13,12 @@ related: [../architecture/ordinary-loan-domain-review-20261005.md, ../plans/unif
 The owner selected the recommended direction and requested a checkpoint/start on
 LD-01 on 5 October, after the analysis-only review. Acceptance authorizes that
 read-only slice; the owner subsequently authorized LD-01A calculation alignment
-and LD-02 common repayment/full release, then LD-03 completed-payout admission.
+and LD-02 common repayment/full release, then LD-03 completed-payout admission
+and LD-04 reduced-principal opening continuation.
 These slices are complete locally;
 later admission/operation extensions and rollout remain separately planned.
+The [LD-04 checkpoint decision](2026-10-05-reduced-principal-opening-checkpoint.md)
+extends reviewed admission/continuation while retaining the older opening wires.
 The owner subsequently clarified the shared interest boundary and policy rounding
 below. LD-01A implements it through the
 [shared monthly contract decision](2026-10-05-shared-monthly-interest-contract.md). LD-01 itself does not change calculations or supersede earlier implemented

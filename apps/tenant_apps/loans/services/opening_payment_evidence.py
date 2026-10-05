@@ -29,7 +29,7 @@ def money(value):
 
 
 def baseline(review, actions, on, *, item_mapping=None):
-    if review["profile"] == "loan-opening-review/3":
+    if review["profile"] in ("loan-opening-review/3", "loan-opening-review/4"):
         from .opening_policy_interest import calculation
         result = calculation(review, on, actions, item_mapping)
         monthly = Decimal(result["monthly_interest_unrounded"])
@@ -111,6 +111,8 @@ def _validate_payment(opening, actions, row, state):
     actual = [(i["collateral_item_id"], i["allocation_order"], money(i["monthly_interest_rate"]),
                money(i["balance_before"]), money(i["principal_applied"]), money(i["balance_after"])) for i in lines]
     require(not remaining and actual == expected, "Opening payment item allocations do not reconcile.")
+    from .opening_checkpoint import validate_future_payment
+    validate_future_payment(opening["review"], on=row.effective_date, allocations=lines)
 
 
 def collection_history(opening, origin, events, as_of):
