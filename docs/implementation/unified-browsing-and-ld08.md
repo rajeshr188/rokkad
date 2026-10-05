@@ -169,6 +169,15 @@ selection and collateral editor. They still use purpose-specific form layouts an
 review steps. Imports retain supported upload/review screens; they are not a third
 manual New loan mode. Private HTTP evidence is in `.tmp/ld08/preview-checks.json`.
 
+The owner's subsequent default-entry check found workspace Direct policies while
+series P's policy 3 still selected Paper. Through the normal authenticated setup
+form, its settings were copied into a current series-scoped Direct revision;
+all other economic policy fields were verified against the copied source. The
+plain New loan URL now renders Direct in Rokkad (from setup). Financial terms on
+existing loans and production settings are untouched. Explicit `?entry=paper`
+comparison links continue to request Paper regardless of the default. Private
+evidence is `.tmp/ld08/series-direct-result.json`.
+
 ## Remaining production steps
 
 1. Run a current read-only inventory on the named production target under its

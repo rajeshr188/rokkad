@@ -51,6 +51,11 @@ and paper New loan forms, both import entry screens and Loans directory load; al
 27 local paper-screen assets pass. Existing previews on 8077/8078 and production
 remain unchanged. Private pilot credentials are reused without publishing them.
 
+The owner's default-entry issue was traced to workspace-wide Direct saves while
+fictional series P retained its Paper override. The normal setup form now appends
+a Direct policy for P, preserving the other economic values. The plain New loan
+URL verifies Direct in Rokkad (from setup). No code or production settings changed.
+
 ## LD-07 portability complete locally (5 October)
 
 The owner authorized LD-07. New `loan-servicing-bundle/1` preserves supported
