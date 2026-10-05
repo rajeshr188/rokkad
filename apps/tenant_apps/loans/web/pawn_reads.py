@@ -188,6 +188,13 @@ def pawn_loan_detail(request, pk):
         request.loans_workspace_access.can(action)
         for action in ("loan.release", "loan.approve", "loan.disburse")
     )
+    if loan.state == "ACTIVE":
+        from apps.tenant_apps.loans.services.servicing_eligibility import servicing_eligibility
+        context["renewal_eligibility"] = servicing_eligibility(loan, operation="RENEWAL",
+            purpose="CURRENT", effective_date=context["today"])
+        context["auction_eligibility"] = servicing_eligibility(loan, operation="AUCTION",
+            purpose="CURRENT", effective_date=context["today"])
+        context["can_renew"] = context["can_renew"] and context["renewal_eligibility"].ready
     context["can_send_notice"] = request.loans_workspace_access.can("data.edit")
     context["can_edit_loan"] = request.loans_workspace_access.can("data.edit")
     context["can_split_draft"] = context["can_edit_loan"] and request.loans_workspace_access.can("data.create")

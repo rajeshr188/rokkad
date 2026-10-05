@@ -47,7 +47,7 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date):
     the actual date. Internal restoration/correction writers retain their separate
     validation. No result authorizes a caller or permits generic opening posting.
     """
-    if operation not in {"REPAYMENT", "FULL_RELEASE"} or purpose not in {"CURRENT", "PAPER"}:
+    if operation not in {"REPAYMENT", "FULL_RELEASE", "RENEWAL", "AUCTION"} or purpose not in {"CURRENT", "PAPER"}:
         raise ValueError("Unsupported servicing operation or purpose.")
     blockers = []
     def block(code, message):
@@ -63,12 +63,14 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date):
     if contract is None:
         return ServicingEligibility(operation, purpose, effective_date, None, None, tuple(blockers))
     if loan.state != "ACTIVE":
-        block("LOAN_NOT_ACTIVE", "Only an active loan can receive repayment or full settlement.")
-    if loan.loan_events.filter(effective_date__gt=effective_date).exists():
+        block("LOAN_NOT_ACTIVE", "Only an active loan can receive this servicing action.")
+    from apps.tenant_apps.loans.selectors.servicing_dependencies import servicing_dependencies
+    dependencies = servicing_dependencies(loan, effective_date=effective_date)
+    if any(row["date"] > effective_date.isoformat() for row in dependencies.events):
         block("LATER_ACTIVITY", "Later activity is already recorded. Reconcile that activity before entering this earlier transaction.")
-    if loan.interest_accruals.filter(period_end__gt=effective_date).exists():
+    if dependencies.accruals:
         block("LATER_ACCRUAL", "Interest has been finalized beyond this transaction date. Review the later periods first.")
-    if loan.collateral_items.filter(custody_history__effective_date__gt=effective_date).exists():
+    if any(row["date"] > effective_date.isoformat() for row in dependencies.custody):
         block("LATER_CUSTODY", "Later collateral movements exist. Review them before recording this earlier transaction.")
     if contract.origin_kind == "MIGRATION_OPENING" and effective_date <= contract.financial_history_from:
         block("CUTOVER_DATE", "Opening servicing must be strictly after cutover.")
@@ -84,6 +86,8 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date):
         elif not any(item.custody_state != "WITH_CUSTOMER" for item in items):
             block("ALREADY_RETURNED", "Every collateral item has already been returned.")
     coverage = transaction_completeness(loan, effective_date)
+    if operation == "AUCTION" and not coverage.complete:
+        block("TRANSACTION_COVERAGE", "Confirm complete paper transactions through today before auction recovery. " + coverage.message)
     return ServicingEligibility(operation, purpose, effective_date, contract, coverage, tuple(blockers))
 
 

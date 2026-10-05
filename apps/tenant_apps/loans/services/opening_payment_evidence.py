@@ -10,6 +10,7 @@ from .legacy_interest import collection_calendar, round_rupees
 from .opening_evidence import OpeningEvidenceError
 
 PROFILE = "opening-payments/1"
+AUCTION_PROFILE = "opening-auctions/1"
 RULE = "reduced-principal-next-anniversary/1"
 ZERO = Decimal("0")
 
@@ -54,7 +55,7 @@ def baseline(review, actions, on, *, item_mapping=None):
 
 
 def position(review, actions, on, *, item_mapping=None):
-    settled = bool(actions and actions[-1][0].event_kind in {"RELEASE_RECEIPT", "RENEWAL_SETTLEMENT"})
+    settled = bool(actions and actions[-1][0].event_kind in {"RELEASE_RECEIPT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"})
     calculation_date = actions[-1][0].effective_date if settled else on
     rounded, raw, monthly = baseline(review, actions, calculation_date, item_mapping=item_mapping)
     covered = money(review["continuation"]["recognized_interest"])
@@ -144,14 +145,14 @@ def collection_history(opening, origin, events, as_of):
                 reversing = (row, accrual)
         else:
             detail = row.payload.get("opening_collection", {})
-            require(detail.get("opening_event_id") == origin.pk and detail.get("profile") in {PROFILE, "opening-release/1"},
+            require(detail.get("opening_event_id") == origin.pk and detail.get("profile") in {PROFILE, AUCTION_PROFILE, "opening-release/1"},
                     "Unsupported subsequent servicing evidence for this opening.")
             if row.event_kind == "INTEREST_ACCRUAL":
                 require(pending is None, "Opening collection has an unpaired catch-up.")
                 pending = row
                 continue
-            require(row.event_kind in {"REPAYMENT", "RELEASE_RECEIPT", "RENEWAL_SETTLEMENT"}, "Unsupported opening collection event.")
-            kind = "repayment" if row.event_kind == "REPAYMENT" else "renewal" if row.event_kind == "RENEWAL_SETTLEMENT" else "release"
+            require(row.event_kind in {"REPAYMENT", "RELEASE_RECEIPT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"}, "Unsupported opening collection event.")
+            kind = "repayment" if row.event_kind == "REPAYMENT" else "renewal" if row.event_kind == "RENEWAL_SETTLEMENT" else "auction" if row.event_kind == "AUCTION_RECOVERY" else "release"
             key = row.payload.get(kind, {}).get("request_key")
             require(isinstance(key, str) and key and (kind, key) not in seen, "Duplicate or missing opening collection request.")
             seen.add((kind, key))
@@ -159,7 +160,7 @@ def collection_history(opening, origin, events, as_of):
                 require(not any(k == "repayment" for k, _ in seen), "Legacy release cannot follow payments.")
             state = position(review, actions, row.effective_date, item_mapping=opening["item_mapping"])
             require(not state["settled"], "Opening collection follows an active full release.")
-            if detail["profile"] == PROFILE:
+            if detail["profile"] in {PROFILE, AUCTION_PROFILE}:
                 require(detail.get("rule") == RULE and detail.get("operation") == row.event_kind and
                         detail.get("request_key") == key and money(detail.get("baseline_as_of")) == state["baseline"] and
                         money(detail.get("baseline_at_cutover")) == money(review["continuation"]["recognized_interest"]) and
@@ -173,8 +174,8 @@ def collection_history(opening, origin, events, as_of):
                         money(pending.payload["values"]["interest"]) == expected and
                         money(evidence.get("baseline_at_cutover")) == money(review["continuation"]["recognized_interest"]) and
                         money(evidence.get("baseline_as_of")) == state["baseline"], "Opening catch-up checkpoint does not reconcile.")
-                if detail["profile"] == PROFILE:
-                    require(evidence.get("profile") == PROFILE and evidence.get("operation") == row.event_kind and
+                if detail["profile"] in {PROFILE, AUCTION_PROFILE}:
+                    require(evidence.get("profile") == detail["profile"] and evidence.get("operation") == row.event_kind and
                             evidence.get("rule") == RULE and money(evidence.get("recognized_since_cutover")) == state["posted"],
                             "Opening payment catch-up rule does not reconcile.")
                 else:
@@ -189,8 +190,13 @@ def collection_history(opening, origin, events, as_of):
                     require(reference not in paper_references, "Duplicate paper receipt reference.")
                     paper_references.add(reference)
             else:
+                if row.event_kind == "AUCTION_RECOVERY":
+                    require(detail["profile"] == AUCTION_PROFILE and row.payload["auction"].get("full_debt_recovery") is True,
+                            "Unsupported opening auction recovery evidence.")
+                else:
+                    require(detail["profile"] != AUCTION_PROFILE, "Auction continuation cannot evidence another collection kind.")
                 values = row.payload["values"]
-                require((row.event_kind == "RENEWAL_SETTLEMENT" or row.payload["release"].get("is_full_release") is True) and
+                require((row.event_kind in {"RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} or row.payload["release"].get("is_full_release") is True) and
                         money(values.get("principal", "0")) == state["principal"] and
                         money(values.get("fees", "0")) == state["fees"] and
                         money(values.get("interest", "0")) + money(values.get("interest_concession", "0")) == state["interest"],

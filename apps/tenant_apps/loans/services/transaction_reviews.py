@@ -4,7 +4,7 @@ from django.core import signing
 from django.db import transaction
 from django.utils import timezone
 from apps.tenant_apps.loans.models import LoanTransactionReview, PawnLoan, current_tenant_workspace_id
-from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint
+from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint, capture_contract_fingerprint
 from .action_access import require_loan_action
 
 SALT = "loans.transaction-review.v1"
@@ -21,25 +21,35 @@ def _loan(loan_id, actor):
     return loan
 
 
-def _facts(loan, actor, *, through_date, confirmed_complete, source_reference, request_key):
+def _facts(loan, actor, *, through_date, confirmed_complete, source_reference, request_key, future_capture="PAPER_MIXED"):
     opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").first()
     first_day = opening.effective_date if opening else loan.loan_date
     if type(through_date) is not date or not first_day <= through_date <= timezone.localdate():
         raise ValueError("Review date must be between the loan's opening checkpoint (or original date) and today.")
     if type(confirmed_complete) is not bool:
         raise ValueError("Choose whether all paper transactions have been entered.")
+    if future_capture not in ("PAPER_MIXED", "ROKKAD_ONLY"):
+        raise ValueError("Choose paper/mixed or future Rokkad-only capture.")
+    if future_capture == "ROKKAD_ONLY":
+        if not confirmed_complete or loan.state != "ACTIVE" or through_date != timezone.localdate():
+            raise ValueError("Future Rokkad-only capture requires an active loan and complete records checked through today.")
+        if loan.loan_events.filter(effective_date__gt=through_date).exists():
+            raise ValueError("Resolve future-dated activity before changing capture mode.")
+        from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+        get_servicing_position(loan, as_of_date=through_date, include_coverage=False)
     source_reference, request_key = str(source_reference or "").strip(), str(request_key or "").strip()
     if not source_reference or len(source_reference) > 500 or not request_key or len(request_key) > 120:
         raise ValueError("A checked source reference/reason and a review request key are required.")
     return dict(loan=loan.pk, workspace=loan.workspace_id, actor=actor.pk,
         through_date=through_date.isoformat(), confirmed_complete=confirmed_complete,
-        source_reference=source_reference, request_key=request_key)
+        source_reference=source_reference, request_key=request_key, future_capture=future_capture)
 
 
 def _review(loan, facts):
     if loan.loan_events.count() > 1000:
         raise ValueError("This loan exceeds the 1,000-event interactive review limit.")
     return dict(**facts, source_fingerprint=transaction_fingerprint(loan),
+        capture_contract_fingerprint=capture_contract_fingerprint(loan) if facts["future_capture"] == "ROKKAD_ONLY" else "",
         previous_review=loan.transaction_reviews.order_by("-pk").values_list("pk", flat=True).first(),
         state=loan.state, reviewed_on=timezone.localdate().isoformat(),
         events=[dict(id=e.pk, event_kind=e.event_kind, effective_date=e.effective_date,
@@ -71,7 +81,8 @@ def confirm_transaction_review(loan_id, *, actor, review_token, acknowledged, **
     if existing:
         if (existing.source_fingerprint != signed["source_fingerprint"] or existing.reviewed_by_id != actor.pk
             or existing.through_date.isoformat() != facts["through_date"]
-            or existing.confirmed_complete != facts["confirmed_complete"] or existing.source_reference != facts["source_reference"]):
+            or existing.confirmed_complete != facts["confirmed_complete"] or existing.source_reference != facts["source_reference"]
+            or existing.future_capture != facts["future_capture"]):
             raise ValueError("This request key belongs to another review.")
         return existing, False
     current, _ = preview_transaction_review(loan_id, actor=actor, **data)
@@ -80,11 +91,14 @@ def confirm_transaction_review(loan_id, *, actor, review_token, acknowledged, **
     return _store(loan, actor, **data), True
 
 
-def _store(loan, actor, *, through_date, confirmed_complete, source_reference, request_key):
+def _store(loan, actor, *, through_date, confirmed_complete, source_reference, request_key, future_capture="PAPER_MIXED"):
     """Internal: caller owns loan lock, authorization and aggregate reconciliation."""
     result = LoanTransactionReview.objects.create(workspace_id=loan.workspace_id, loan=loan,
         through_date=through_date, confirmed_complete=confirmed_complete, source_reference=source_reference,
-        source_fingerprint=transaction_fingerprint(loan), request_key=request_key, reviewed_by=actor)
+        source_fingerprint=transaction_fingerprint(loan), request_key=request_key, reviewed_by=actor,
+        future_capture=future_capture, capture_contract_fingerprint=capture_contract_fingerprint(loan) if future_capture == "ROKKAD_ONLY" else "",
+        capture_state=loan.state if future_capture == "ROKKAD_ONLY" else "",
+        capture_event_id=loan.loan_events.order_by("-pk").values_list("pk", flat=True).first() if future_capture == "ROKKAD_ONLY" else None)
     from apps.tenant_apps.loans.models import LoanRiskSnapshot
     LoanRiskSnapshot.objects.filter(loan=loan).update(status="STALE", error_message="Transaction review changed; reassess monitoring.")
     return result

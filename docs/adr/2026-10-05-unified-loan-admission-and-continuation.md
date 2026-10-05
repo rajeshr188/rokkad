@@ -16,8 +16,10 @@ read-only slice; the owner subsequently authorized LD-01A calculation alignment
 and LD-02 common repayment/full release, then LD-03 completed-payout admission
 and LD-04 reduced-principal opening continuation, then LD-05 supported recorded
 source history, setup and aliases.
-These slices are complete locally;
-later admission/operation extensions and rollout remain separately planned.
+These slices are complete locally. The owner subsequently authorized LD-06 and
+selected optional explicit per-loan future capture; operation/coverage verification
+is complete locally. Further portability and rollout remain separately planned. See
+[LD-06](2026-10-05-servicing-operations-and-future-capture.md).
 The [LD-04 checkpoint decision](2026-10-05-reduced-principal-opening-checkpoint.md)
 extends reviewed admission/continuation while retaining the older opening wires.
 The owner subsequently clarified the shared interest boundary and policy rounding

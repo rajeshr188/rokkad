@@ -85,7 +85,7 @@ def preview_opening_collection(loan, *, events, as_of_date):
         raise OpeningEvidenceError("This opening does not have the supported collection continuation checkpoint.")
     if type(as_of_date) is not date or as_of_date < event.effective_date:
         raise OpeningEvidenceError("Collection history before the migration cutover is unavailable.")
-    if any(row.event_kind in {"REPAYMENT", "RENEWAL_SETTLEMENT"} for row in events):
+    if any(row.event_kind in {"REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} for row in events):
         from .opening_payment_evidence import collection_history, RULE
         from .legacy_interest import collection_calendar
         state, _ = collection_history(opening, event, events, as_of_date)

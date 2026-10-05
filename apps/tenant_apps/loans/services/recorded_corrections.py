@@ -245,6 +245,8 @@ def preview_correction(loan_id, *, actor, data):
     loan = _locked_loan(loan_id)
     _authorize(loan, actor)
     events, active, blockers = dependencies(loan)
+    from apps.tenant_apps.loans.selectors.servicing_dependencies import servicing_dependencies
+    dependency_snapshot = servicing_dependencies(loan, effective_date=loan.loan_date).evidence()
     dependency_rows = [dict(id=e.pk, kind=e.event_kind, date=e.effective_date.isoformat()) for e in active]
     if blockers:
         return dict(blockers=blockers, dependencies=dependency_rows), ""
@@ -257,7 +259,7 @@ def preview_correction(loan_id, *, actor, data):
         transaction.set_rollback(True)
     review.update(blockers=[], dependencies=dependency_rows, downstream=downstream)
     token = signing.dumps(dict(workspace=loan.workspace_id, loan=loan.pk, actor=actor.pk, data=_digest(data),
-                               state=_state(events), lineage=lineage, review=review), salt=SALT, compress=True)
+                               state=_state(events), lineage=lineage, dependency_snapshot=dependency_snapshot, review=review), salt=SALT, compress=True)
     return review, token
 
 
@@ -287,6 +289,9 @@ def record_correction(loan_id, *, actor, data, review_token, confirmed=False):
     if (signed.get("workspace"), signed.get("loan"), signed.get("actor"), signed.get("data"), signed.get("state")) != (
             loan.workspace_id, loan.pk, actor.pk, _digest(data), _state(events)):
         raise ValueError("The loan, receipt or recording context changed. Preview the correction again.")
+    from apps.tenant_apps.loans.selectors.servicing_dependencies import servicing_dependencies
+    if signed.get("dependency_snapshot") != servicing_dependencies(loan, effective_date=loan.loan_date).evidence():
+        raise ValueError("Financial, accrual or collateral dependencies changed. Preview the correction again.")
     if signed.get("lineage") != lineage:
         raise ValueError("Dependent loan activity or custody changed. Preview the correction again.")
     review = _run(loan, actor, data, events, active)

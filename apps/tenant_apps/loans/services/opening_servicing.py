@@ -80,29 +80,29 @@ def _record_opening_servicing_event(loan_id, *, event_kind, effective_date, payl
     kind = TransactionKind(event_kind).value
     detail = payload.get("opening_collection", {})
     operation = detail.get("operation", "RELEASE_RECEIPT") if kind == "INTEREST_ACCRUAL" else kind
-    if kind in {"REPAYMENT", "RENEWAL_SETTLEMENT"} or (kind == "INTEREST_ACCRUAL" and operation in {"REPAYMENT", "RENEWAL_SETTLEMENT"}):
-        from .opening_payment_evidence import PROFILE, RULE
-        if detail.get("profile") != PROFILE or detail.get("rule") != RULE or detail.get("operation") != operation:
+    if kind in {"REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} or (kind == "INTEREST_ACCRUAL" and operation in {"REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"}):
+        from .opening_payment_evidence import PROFILE, AUCTION_PROFILE, RULE
+        if detail.get("profile") != (AUCTION_PROFILE if operation == "AUCTION_RECOVERY" else PROFILE) or detail.get("rule") != RULE or detail.get("operation") != operation:
             raise OpeningEvidenceError("Unsupported opening repayment evidence.")
     require_loan_action(loan, actor, "workspace.settings.manage" if kind == "REVERSAL" else
-                       "loan.repay" if operation == "REPAYMENT" else "loan.release")
+                       "loan.repay" if operation == "REPAYMENT" else "workspace.settings.manage" if operation == "AUCTION_RECOVERY" else "loan.release")
     origin = loan.loan_events.get(event_kind="MIGRATION_OPENING")
     if effective_date <= origin.effective_date:
         raise OpeningEvidenceError("Opening servicing must be strictly after cutover.")
     if kind == "REVERSAL":
         if (reversal_of is None or reversal_of.loan_id != loan.pk or
-                reversal_of.event_kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT", "RENEWAL_SETTLEMENT"} or
+                reversal_of.event_kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} or
                 payload.get("values") != reversal_of.payload.get("values")):
             raise OpeningEvidenceError("Unsupported opening reversal.")
-    elif kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT", "RENEWAL_SETTLEMENT"} or payload.get("opening_collection", {}).get("opening_event_id") != origin.pk:
+    elif kind not in {"INTEREST_ACCRUAL", "RELEASE_RECEIPT", "REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} or payload.get("opening_collection", {}).get("opening_event_id") != origin.pk:
         raise OpeningEvidenceError("Unsupported opening servicing event.")
     return _persist_locked_event(loan, kind=kind, effective_date=effective_date, payload=payload, actor=actor, reversal_of=reversal_of)
 
 
 def payment_collection_detail(loan, *, as_of_date, request_key, operation):
-    from .opening_payment_evidence import PROFILE, RULE
+    from .opening_payment_evidence import PROFILE, AUCTION_PROFILE, RULE
     preview, _ = opening_release_context(loan, as_of_date=as_of_date)
-    return {"profile": PROFILE, "rule": RULE, "opening_event_id": preview.opening_event_id,
+    return {"profile": AUCTION_PROFILE if operation == "AUCTION_RECOVERY" else PROFILE, "rule": RULE, "opening_event_id": preview.opening_event_id,
             "operation": operation, "request_key": request_key,
             "baseline_at_cutover": str(preview.baseline_at_cutover), "baseline_as_of": str(preview.baseline_as_of),
             "recognized_since_cutover": str(preview.baseline_as_of - preview.baseline_at_cutover - preview.additional_interest),

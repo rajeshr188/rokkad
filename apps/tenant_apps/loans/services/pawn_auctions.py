@@ -96,11 +96,15 @@ def initiate_pawn_loan_auction(
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnAuctionError("Only an active PawnLoan can enter auction recovery.")
     notice_date = timezone.localdate()
-    _recorded_coverage(loan, notice_date)
+    _servicing_coverage(loan, notice_date)
     if scheduled_date <= notice_date:
         raise PawnAuctionError("Auction date must be after the notice date.")
     try:
-        assert_pawn_loan_financial_actions_allowed(loan.pk)
+        if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+            from .opening_servicing import opening_release_context
+            opening_release_context(loan, as_of_date=notice_date)
+        else:
+            assert_pawn_loan_financial_actions_allowed(loan.pk)
         balance = get_pawn_loan_balance(loan.pk, as_of_date=notice_date)
     except ObjectDoesNotExist as exc:
         raise PawnAuctionError(str(exc)) from exc
@@ -161,7 +165,7 @@ def initiate_pawn_loan_auction(
 def start_pawn_loan_auction(auction_id: int, *, actor) -> PawnLoanAuction:
     auction = _locked_auction(auction_id)
     _require_administrator(actor, auction.workspace)
-    _recorded_coverage(auction.loan, timezone.localdate())
+    _servicing_coverage(auction.loan, timezone.localdate())
     from .statutory_notices import require_statutory_readiness
     if auction.state == PawnLoanAuctionState.IN_PROGRESS.value:
         require_statutory_readiness(auction)
@@ -230,25 +234,38 @@ def complete_pawn_loan_auction(
     from .statutory_notices import require_statutory_readiness
     require_statutory_readiness(auction)
     effective_date = timezone.localdate()
-    coverage = _recorded_coverage(loan, effective_date)
+    coverage = _servicing_coverage(loan, effective_date)
+    from .recorded_collections import recording_for
+    recorded = recording_for(loan)
+    opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
+    collection_detail = opening_obligations = None
     collateral = tuple(PawnCollateralItem.objects.select_for_update().filter(loan=loan))
     if not collateral or any(item.custody_state != CollateralCustodyState.IN_VAULT.value for item in collateral):
         raise PawnAuctionError("Every collateral item must remain in the vault until completion.")
     try:
-        assert_pawn_loan_financial_actions_allowed(loan.pk)
+        if opening:
+            from .opening_servicing import opening_release_context, payment_collection_detail
+            _, opening_obligations = opening_release_context(loan, as_of_date=effective_date)
+            collection_detail = payment_collection_detail(loan, as_of_date=effective_date,
+                request_key=f"auction:{auction.pk}", operation="AUCTION_RECOVERY")
+        else:
+            assert_pawn_loan_financial_actions_allowed(loan.pk)
         from .recorded_collections import recognize_collection_interest
         recognition = recognize_collection_interest(loan, effective_date, actor=actor,
-            request_key=f"auction:{auction.pk}") if coverage else None
-        missing = [] if coverage else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=False)
+            request_key=f"auction:{auction.pk}") if recorded else None
+        missing = [] if recorded or opening else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=False)
         if missing:
             raise PawnAuctionError("Finalize every completed interest period before auction completion.")
-        partials = [] if coverage else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=True)
+        partials = [] if recorded or opening else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=True)
         partial = partials[0] if partials and partials[0].is_partial else None
-        catch_up = _record_auction_accrual(
-            loan,
-            preview=partial,
-            actor=actor,
-        ) if partial else None
+        if opening:
+            from .opening_servicing import opening_release_accrual_preview
+            from .pawn_release import _record_release_accrual
+            partial = opening_release_accrual_preview(loan, as_of_date=effective_date)
+            catch_up = _record_release_accrual(loan, preview=partial, actor=actor,
+                request_key=f"auction:{auction.pk}", collection_detail=collection_detail) if partial else None
+        else:
+            catch_up = _record_auction_accrual(loan, preview=partial, actor=actor) if partial else None
         balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
         if amount != balance.total_due:
             raise PawnAuctionError(
@@ -279,12 +296,18 @@ def complete_pawn_loan_auction(
         "buyer_reference": str(buyer_reference or "").strip(),
         "full_debt_recovery": True,
     }
-    if coverage:
+    if recorded:
         from .recorded_collections import PROFILE
         payload["auction"]["recorded_collection"] = dict(profile=PROFILE,
             coverage=coverage.evidence(), recognition_event_id=recognition.pk if recognition else None,
             request_key=f"auction:{auction.pk}")
-    event, _ = record_loan_event(
+    writer = record_loan_event
+    if opening:
+        from .opening_servicing import _record_opening_servicing_event
+        writer = _record_opening_servicing_event
+        payload["opening_collection"] = collection_detail
+    payload["auction"]["request_key"] = f"auction:{auction.pk}"
+    event, _ = writer(
         loan.pk,
         event_kind=TransactionKind.AUCTION_RECOVERY,
         effective_date=effective_date,
@@ -295,7 +318,8 @@ def complete_pawn_loan_auction(
     allocate_event_to_obligations(
         source_event=event,
         principal_amount=balance.principal_outstanding,
-        interest_amount=scheduled_interest(loan, effective_date, balance.interest_outstanding) if coverage else balance.interest_outstanding,
+        interest_amount=(min(opening_obligations.remaining.interest, balance.interest_outstanding) if opening else
+            scheduled_interest(loan, effective_date, balance.interest_outstanding) if recorded else balance.interest_outstanding),
         actor=actor,
     )
     terminate_active_repayment_schedule(
@@ -349,7 +373,7 @@ def complete_pawn_loan_auction(
     loan.state = PawnLoanState.CLOSED.value
     loan.updated_by = actor
     loan.save(update_fields=["state", "updated_by", "updated_at"])
-    if coverage:
+    if coverage and coverage.status != "ROKKAD_ONLY":
         from .transaction_reviews import _store
         _store(loan, actor, through_date=effective_date, confirmed_complete=True,
             source_reference=f"Current auction {auction.auction_number}; paper review {coverage.review_id}",
@@ -435,7 +459,13 @@ def reverse_pawn_loan_auction(
             reason=reason,
         ).to_dict()
         payload["reversal"]["auction_id"] = auction.pk
-        catch_up_reversal_event, _ = record_loan_event(
+        writer = record_loan_event
+        if auction.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+            from .opening_servicing import _record_opening_servicing_event
+            writer = _record_opening_servicing_event
+            # The immutable opening pairing guard retains the source spelling.
+            payload["values"] = dict(original.payload["values"])
+        catch_up_reversal_event, _ = writer(
             auction.loan_id,
             event_kind=TransactionKind.REVERSAL,
             effective_date=timezone.localdate(),
@@ -561,15 +591,15 @@ def _locked_auction(auction_id):
         raise PawnAuctionError("PawnLoan auction was not found in the active workspace.") from exc
 
 
-def _recorded_coverage(loan, day):
-    from .recorded_collections import recording_for
-    if not recording_for(loan):
-        return None
-    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
-    coverage = transaction_completeness(loan, day)
-    if not coverage.complete:
-        raise PawnAuctionError("Confirm complete paper transactions through today before auction recovery. " + coverage.message)
-    return coverage
+def _servicing_coverage(loan, day):
+    from .servicing_eligibility import servicing_eligibility
+    readiness = servicing_eligibility(loan, operation="AUCTION", purpose="CURRENT", effective_date=day)
+    try:
+        readiness.require()
+    except ValueError as exc:
+        raise PawnAuctionError(str(exc)) from exc
+    coverage = readiness.transaction_coverage
+    return coverage if coverage.required else None
 
 
 def _request_key(value):

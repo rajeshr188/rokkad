@@ -56,6 +56,8 @@ def _source(loan_id, actor):
 
 def _write(source, actor, facts):
     day = date.fromisoformat(facts["date"])
+    from .servicing_eligibility import servicing_eligibility
+    servicing_eligibility(source, operation="RENEWAL", purpose="PAPER", effective_date=day).require()
     if source.state != "ACTIVE" or hasattr(source, "renewal_as_source"):
         raise ValueError("Only an outstanding loan without a successor can be renewed.")
     if day < source.loan_date or source.loan_events.filter(effective_date__gt=day).exists():

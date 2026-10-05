@@ -155,7 +155,7 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.loans.services.risk_communication_readiness.PawnLoanCommunicationPolicy.objects.filter",
             return_value=policy_query,
-        ), patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness", return_value=SimpleNamespace(complete=True, required=False, review_id=None)):
+        ), patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness", return_value=SimpleNamespace(complete=True, required=False, review_id=None, status="SYSTEM_RECORDED")):
 
             result = assess_risk_alert_communication_readiness(alert.pk)
             snapshot.as_of_date -= timedelta(days=1)
@@ -190,7 +190,7 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
         ), patch(
             "apps.tenant_apps.loans.services.risk_communication_readiness.PawnLoanCommunicationPolicy.objects.filter",
             return_value=policy_query,
-        ), patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness", return_value=SimpleNamespace(complete=True, required=False, review_id=None)):
+        ), patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness", return_value=SimpleNamespace(complete=True, required=False, review_id=None, status="SYSTEM_RECORDED")):
 
             result = assess_risk_alert_communication_readiness(alert.pk)
         self.assertFalse(result.eligible)

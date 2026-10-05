@@ -73,6 +73,10 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     Company.all_objects.select_for_update().get(pk=workspace_id)
     workspace = _access(workspace_id, actor)
     loan = m.PawnLoan.objects.select_for_update().get(workspace_id=workspace_id, pk=loan_id)
+    if loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists():
+        raise HistoryError("Future-capture transition evidence requires a wider opening portability profile. Use exact Workspace recovery backup until that profile is available.")
+    if loan.auctions.exists():
+        raise HistoryError("Auction and statutory evidence require a wider opening portability profile. Use exact Workspace recovery backup until that profile is available.")
     if loan.state not in {"ACTIVE", "CLOSED"}:
         raise HistoryError("Only active or fully released opening loans are supported.")
     items = list(loan.collateral_items.select_for_update().order_by("pk")[:21])

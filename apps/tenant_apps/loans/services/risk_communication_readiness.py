@@ -141,14 +141,14 @@ def _assess_channel(alert, mapping, channel, locale, policy, coverage):
         created_at__gte=timezone.now() - timedelta(days=policy.cooldown_days),
     ).exclude(source_risk_event=alert.source_event).exists():
         blockers.append(_block("COOLDOWN_ACTIVE", f"A {channel.lower()} {notice_kind.lower().replace('_', ' ')} was created for this borrower within the {policy.cooldown_days}-day cooldown."))
-    if template and PawnLoanNotice.objects.filter(
-        source_risk_event=alert.source_event,
-        notice_kind=notice_kind,
-        channel=channel,
-        notification_template_version=template.version,
-        transaction_review_id=coverage.review_id,
-    ).exists():
-        blockers.append(_block("NOTICE_ALREADY_EXISTS", "This risk event already has the same notice, channel, and template version."))
+    existing = PawnLoanNotice.objects.filter(
+        source_risk_event=alert.source_event, notice_kind=notice_kind, channel=channel,
+        notification_template_version=template.version if template else None, transaction_review_id=coverage.review_id)
+    if coverage.status == "ROKKAD_ONLY":
+        from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint
+        existing = existing.filter(payload_snapshot__transaction_review__source_fingerprint=transaction_fingerprint(alert.loan))
+    if template and existing.exists():
+        blockers.append(_block("NOTICE_ALREADY_EXISTS", "This risk event already has the same notice, channel, template and financial position."))
     return RiskCommunicationChannelReadiness(channel, not blockers, tuple(blockers), recipient or "", template)
 
 

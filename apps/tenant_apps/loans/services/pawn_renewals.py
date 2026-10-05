@@ -196,6 +196,8 @@ def preview_pawn_loan_renewal_source(
 ) -> PawnRenewalSourcePreview:
     """Return current source settlement facts without locks or writes."""
     source = _tenant_loan(source_loan_id)
+    from .servicing_eligibility import servicing_eligibility
+    servicing_eligibility(source, operation="RENEWAL", purpose="CURRENT", effective_date=timezone.localdate()).require()
     from .recorded_collections import recording_for, collection_balance
     recorded = recording_for(source)
     opening = source.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
@@ -458,6 +460,8 @@ def renew_pawn_loan(
         raise PawnRenewalError("Unknown PawnLoan renewal mode.") from exc
     if renewal_date != timezone.localdate():
         raise PawnRenewalError("MVP renewal must use the current business date.")
+    from .servicing_eligibility import servicing_eligibility
+    servicing_eligibility(source, operation="RENEWAL", purpose="CURRENT", effective_date=renewal_date).require()
     if source.state != PawnLoanState.ACTIVE.value:
         raise PawnRenewalError("Only an active PawnLoan can be renewed.")
     if hasattr(source, "renewal_as_source"):

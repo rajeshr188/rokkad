@@ -14,7 +14,12 @@ def notice_transaction_evidence(loan, day):
     coverage = transaction_completeness(loan, day)
     if not coverage.complete:
         raise ValueError(coverage.message)
-    return dict(**coverage.evidence(), source_fingerprint=transaction_fingerprint(loan)) if coverage.required else None
+    if not coverage.required:
+        return None
+    evidence = dict(**coverage.evidence(), source_fingerprint=transaction_fingerprint(loan))
+    if coverage.status == "ROKKAD_ONLY":
+        evidence["checked_source_fingerprint"] = loan.transaction_reviews.get(pk=coverage.review_id).source_fingerprint
+    return evidence
 
 
 @transaction.atomic

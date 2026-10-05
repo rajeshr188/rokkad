@@ -26,6 +26,24 @@ affected posted amounts through supported compensating actions. Charge eligibili
 recorded recognition and remaining unpaid interest stay separate read concepts.
 See the [plan](../plans/unified-loan-domain-correction.md).
 
+## LD-06 servicing and future capture
+
+Renewal and current auction use common factual prerequisites, with existing
+operation-specific approval, statutory and custody controls. Reviewed openings use
+`opening-auctions/1` for exact full recovery and coupled catch-up/reversal. Opening
+renewal retains its existing preview-plus-catch-up arithmetic. Unsupported correction
+graphs remain held; accepted financial evidence and issued bytes are unchanged.
+
+An explicit per-loan complete review through today can select future Rokkad-only
+capture. This is a future operating choice, separate from original source and
+checked-through history. Existing and fresh ordinary book reviews default to
+paper/mixed. The original prefix and agreement remain exact; supported current
+activity can maintain coverage, while paper facts/history corrections require review.
+Original LTV can remain unknown while current monitoring uses fresh eligible
+appraisal/prices and verified current debt. Coverage cannot substitute for valuation.
+Current notices freeze checked and current fingerprints and recheck amount/date/risk
+at dispatch. See [LD-06](../implementation/servicing-operations-ld06.md).
+
 ## Current read implementation
 
 LD-04 adds review/4 opening checkpoints with reduced remaining item principal,
@@ -395,10 +413,13 @@ not zero facts: staff supply original contract, cash and return evidence for rev
 LoanTransactionReview confirms entered records through a date for one loan and
 one financial fingerprint. It can explicitly report incomplete records. New paper
 entry confirms its transaction facts; an optional complete-book claim records a
-review for each member. Subsequent activity/correction invalidates an existing
-review. Routine entry, receipts and closure need no daily whole-book attestation.
+review for each member. Under paper/mixed capture, subsequent activity/correction
+invalidates an existing review. An explicit reviewed Rokkad-only transition can
+retain coverage for supported current actions, as described above; paper facts or
+historical corrections require a fresh review. Routine entry, receipts and closure
+need no daily whole-book attestation.
 An opening loan's review begins at its accepted checkpoint and makes no
-claim to reconstruct older receipts. Date rollover affects active coverage; a closed
+claim to reconstruct older receipts. Date rollover affects active paper/mixed coverage; a closed
 loan only needs coverage through its final activity. The current read represents
 restated knowledge, not what staff knew at a historical date.
 

@@ -80,6 +80,8 @@ def create_risk_borrower_notice(alert_id, *, actor, expected_fingerprint, channe
     request_key = f"risk-{alert.source_event_id}-{preview.readiness.notice_kind}-{preview.channel.channel.lower()}-v{preview.channel.template.version}"
     if preview.payload.get("transaction_review"):
         request_key += f"-review{preview.payload['transaction_review']['review_id']}"
+    if preview.payload.get("transaction_review", {}).get("status") == "ROKKAD_ONLY":
+        request_key = request_key[:95] + "-position" + preview.payload["transaction_review"]["source_fingerprint"][:16]
     return create_pawn_loan_notice(
         alert.loan_id,
         notice_kind=preview.readiness.notice_kind,

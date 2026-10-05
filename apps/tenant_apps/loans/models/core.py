@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Q
+from django.db.models.fields.json import KeyTextTransform, KeyTransform
 from django.utils import timezone
 
 from apps.tenancy.context import current_workspace_id
@@ -2119,7 +2120,8 @@ class PawnLoanNotice(models.Model):
                 name="loans_risk_notice_intent_uniq",
             ),
             models.UniqueConstraint(
-                fields=("source_risk_event", "notice_kind", "channel", "notification_template_version", "transaction_review"),
+                F("source_risk_event"), F("notice_kind"), F("channel"), F("notification_template_version"), F("transaction_review"),
+                KeyTextTransform("source_fingerprint", KeyTransform("transaction_review", "payload_snapshot")),
                 condition=Q(source_risk_event__isnull=False, transaction_review__isnull=False),
                 name="loans_review_notice_intent_uniq",
             ),

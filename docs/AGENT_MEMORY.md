@@ -27,7 +27,8 @@ full-release prerequisites; LD-03 adds general completed-payout admission for an
 unpaid ordinary draft through the existing recorded-history writer. LD-04 adds an
 explicit reviewed reduced-principal opening checkpoint; LD-05 adds supported
 recorded source history/4 with source-faithful item allocations and scoped aliases.
-Wider operation extensions remain pending.
+LD-06 extends current opening auctions, common renewal/dependency prerequisites and
+owner-selected explicit per-loan future capture; local verification is complete.
 PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
@@ -98,7 +99,7 @@ depend on evidenced position, semantics, chronology, custody and authority rathe
 than original channel. Missing original LTV can coexist with verified current debt;
 current monitoring needs eligible current evidence. Historical-only closed records
 remain archived until supported settlement is evidenced. An explicit reviewed
-future-capture transition is proposed; it is not current implemented behavior.
+future-capture transition is implemented in LD-06; it is never inferred from origin.
 
 Recorded source history/4 reuses ordinary recorded financial writers without an
 old digital approval, price or appraisal requirement. Actual per-item receipt
@@ -114,6 +115,18 @@ and known handover time separately from local completed recording. Verified
 transaction coverage must match; corrections, standalone recognition, linked
 renewals/auctions and additional custody/funding/storage need wider portability.
 See [LD-05](implementation/recorded-source-history-ld05.md).
+
+LD-06 reuses immutable LoanTransactionReview for PAPER_MIXED versus explicitly
+selected ROKKAD_ONLY future capture. Complete facts through today, a signed review,
+exact event prefix and agreement/collateral binding are required. Current supported
+actions maintain coverage; paper activity/history corrections require another check.
+Capture does not authorize a writer or certify unavailable pre-cutover facts.
+Opening-auctions/1 couples current full recovery to checkpoint catch-up and reversal,
+with statutory/custody gates retained. Old per-loan portable wires reject auction or
+capture evidence they cannot retain; exact Workspace recovery preserves it. Current
+notices bind the checked-source and current financial fingerprints, reject stale
+amounts at dispatch and can issue a distinct replacement for a reviewed new position.
+See [LD-06](implementation/servicing-operations-ld06.md).
 
 ## Shared loan entry and actual paper item agreements (3 October)
 
@@ -217,8 +230,8 @@ Party, Rates, actors and portability prerequisites must match. Runtime export is
 allowed; restore is table-owner only. It is not a cross-Workspace import/merge.
 UR-12 uses current transaction coverage and existing statutory readiness for
 recorded-origin auctions, with agreed anniversary debt and coupled recognition/
-custody reversal. Exact full recovery only; imported-opening auctions remain
-outside this profile. Focused integration and broad regressions passed locally;
+custody reversal. Exact full recovery only; LD-06 adds imported-opening auctions
+under the distinct opening-auctions/1 checkpoint profile. Focused integration and broad regressions passed locally;
 local technical verification is complete for the implemented profile. Real-paper acceptance
 and the selected release environment are still needed before rollout/completion.
 
@@ -267,8 +280,9 @@ independent fact. UR-07 later supports new-contract advance-interest/document-ch
 deductions for known subsequent net-settlement renewals. Current collection
 and monitoring readers use anniversary interest; original fixed schedule interest
 must not overstate the revised debt. UR-05 supplies bounded archive admission and
-UR-07 routine recorded-origin renewal. Broader contract/custody amendments,
-restorable exports, imported-opening renewal and auction integration remain pending; see the
+UR-07 routine recorded-origin renewal. UR-10 adds imported-opening renewal;
+LD-05 adds supported recorded-history exports and LD-06 adds opening auctions.
+Broader contract/custody amendments and portable operation graphs remain separate; see the
 [implementation checkpoint](implementation/unified-loan-recording.md).
 UR-04 has receipt/accrual correction and now extends the same command to reconcile
 an unchanged renewal agreement or single-loan full return. Signed review,
@@ -295,15 +309,17 @@ adds the nullable relation and database binding guard; no new financial table.
 See the [archive admission decision](adr/2026-10-03-archive-admission.md).
 UR-06 now adds immutable loan-scoped transaction reviews: checked-through date,
 complete/incomplete result, source reference, actor/time and financial fingerprint.
-Admission creates the initial review; later activity/corrections require a fresh
-check. An opening confirmation covers its checkpoint onward. Current monitoring
+Admission creates the initial review; under paper/mixed capture, later activity/
+corrections require a fresh check. LD-06 adds the explicit per-loan future-capture
+choice described above. An opening confirmation covers its checkpoint onward. Current monitoring
 still calculates provisional risk, separately from price freshness, and definitive
 portfolio totals require transaction coverage. Reviewed repayment/overdue reminders
 freeze the review and recheck at the common Notify provider boundary. Old intents
 remain; a new review permits a new intent. No admission/review automatically sends.
 UR-07 supplies recorded contract/interest-position documents and routine subsequent
-renewal. Restorable recorded-history exports, imported-opening renewal and auction
-integration remain pending. See the
+renewal. UR-10 adds imported-opening renewal, LD-05 supplies supported recorded
+history/4 export/restore and LD-06 adds opening auctions. Wider portable operation
+graphs remain LD-07 work. See the
 [coverage decision](adr/2026-10-03-loan-transaction-completeness.md).
 Lakshmi's backlog starts 24 September 2026 and includes
 later payments, renewals and closures. Its paper receipts record total received;

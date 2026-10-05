@@ -7,6 +7,38 @@ tags: [status, architecture]
 
 # Status
 
+## LD-06 servicing and future capture complete locally (5 October)
+
+The owner authorized LD-06 and selected an optional per-loan transition to future
+Rokkad-only capture, after complete records are checked through today. Existing
+immutable transaction reviews retain the reviewed prefix, agreement/collateral
+binding and explicit future choice. Paper/mixed remains the default. Current
+supported actions can maintain coverage; paper activity/history corrections require
+another review. No financial agreement, maturity or origin is changed by this choice.
+
+Current opening auctions now use dedicated checkpoint catch-up, whole-debt recovery,
+statutory service and custody. Coupled reversal restores recovery, recognition,
+obligations and custody without reversing the opening. Common renewal/auction
+prerequisites and signed correction dependency inventories use dated financial,
+accrual and collateral facts. Existing successor approval and bounded replay remain.
+
+Reminders retain original checked-source and current financial fingerprints. Stale
+amounts reject at dispatch even under complete Rokkad-only capture; a freshly
+reviewed new position can have a distinct immutable notice intent. Old per-loan
+portable wires explicitly hold auction/capture graphs until wider LD-07 profiles;
+exact Workspace recovery retains the complete records and statutory files.
+
+The final affected regression passes **627 tests in 748.276s**, including 17 new
+LD-06 cases. The focused follow-up passes **27 tests in 19.254s**; system checks,
+migration drift and Loans Python parsing also pass. Coverage includes signed HTTP
+review, restricted-role immutability/isolation, exact recovery, reduced checkpoint
+auction/reversal, current valuation freshness and stale-message rejection.
+Migration 0060 is additive on existing forced-RLS models, with no new
+table. All schema exercise is confined to disposable QA. No application/candidate/
+production migration, conversion or deployment is performed. See the
+[delivery record](implementation/servicing-operations-ld06.md) and
+[decision](adr/2026-10-05-servicing-operations-and-future-capture.md).
+
 ## LD-05 recorded source history complete locally (5 October)
 
 The owner authorized explanation and implementation of LD-05. New loan-history/4

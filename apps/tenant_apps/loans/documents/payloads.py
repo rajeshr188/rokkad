@@ -469,6 +469,10 @@ class PawnLoanDocumentProjectionBuilder:
         if collection:
             details += (("Collection basis", "Agreed paper anniversary interest; actual principal history"),
                         ("Paper coverage review", str(collection["coverage"]["review_id"])))
+        opening_collection = event.payload.get("opening_collection")
+        if opening_collection:
+            details += (("Collection basis", "Reviewed opening checkpoint; original anniversary and post-cutover principal history"),
+                        ("Opening source event", str(opening_collection["opening_event_id"])))
         rows = [("Item ID", "Description", "Metal", "Net weight", "Purity")]
         for item in auction.items.select_related("collateral_item"):
             snapshot = item.snapshot or {}

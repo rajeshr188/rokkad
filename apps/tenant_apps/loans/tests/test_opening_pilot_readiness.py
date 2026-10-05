@@ -103,7 +103,8 @@ class OpeningPilotReadinessTests(OpeningImportFixture):
             self.assertNotIn("Accrual preview unavailable", html)
             self.assertNotIn(">Repayment</a>", html)
             self.assertNotIn(">Accrue interest</a>", html)
-            self.assertNotIn(">Release and renew</a>", html)
+            # Reviewed openings use the common renewal action; its successor still needs current approval.
+            self.assertIn(">Release and renew</a>", html)
 
     def test_readable_number_survives_release_concession_and_reversal(self):
         self.review["collateral"][0]["valuation"] = dict(status="UNVERIFIED",

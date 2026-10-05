@@ -14,9 +14,16 @@ class TransactionReviewForm(forms.Form):
     confirmed_complete = forms.TypedChoiceField(label="Result of checking the records", coerce=lambda value: value == "complete",
         choices=(("complete", "All transactions through this date are entered"), ("incomplete", "Activity is missing or unresolved")))
     source_reference = forms.CharField(max_length=500, label="Paper book / receipts checked, or missing activity", widget=forms.Textarea(attrs={"rows": 3}))
+    future_capture = forms.ChoiceField(required=False, label="How will future transactions for this loan be recorded?",
+        choices=(("PAPER_MIXED", "Continue paper or mixed capture; check the book when needed"),
+                 ("ROKKAD_ONLY", "From now on, every transaction will be entered directly in Rokkad")),
+        initial="PAPER_MIXED")
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
     review_token = forms.CharField(required=False, widget=forms.HiddenInput())
     acknowledged = forms.BooleanField(required=False, label="I checked the source records and the displayed loan activity.")
+
+    def clean_future_capture(self):
+        return self.cleaned_data.get("future_capture") or "PAPER_MIXED"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

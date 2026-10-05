@@ -14,8 +14,8 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03, LD-04 and LD-05 are complete
-locally; LD-06 and later slices are pending.
+storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03, LD-04, LD-05 and LD-06
+are complete locally; LD-07 and LD-08 remain pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
@@ -53,7 +53,7 @@ checkpoint implementation and are superseded as the target by this clarification
 | LD-03 | Complete locally; rollout pending | General completed-payout admission, including retained unpaid draft identity, without historical digital-row prerequisites | Existing recorded evidence; narrow forward-only legacy guard migration 0058 |
 | LD-04 | Complete locally; source/staff rollout acceptance pending | Explicit reduced-principal/current-period/advance checkpoint and supported continuation | Review/4, opening export/3; additive mixed-origin guard 0059 |
 | LD-05 | Complete locally; source preparation/staff acceptance pending | Source-faithful supported history allocation and numbering/setup compatibility | Recorded history/4; immutable source JSON aliases, batch guard migration 0019; no new table |
-| LD-06 | Pending; after relevant profiles in LD-02/04/05 | Remaining operations, correction dependencies, coverage transition, risk/schedule parity | Additive capture-transition evidence may require a migration |
+| LD-06 | Complete locally; rollout pending | Supported opening auctions, common renewal/correction dependencies, explicit per-loan future capture and monitoring/reminder checks | Additive review/notice guard migration 0060; no new table |
 | LD-07 | Pending; compatibility substeps accompany each writer slice | Portable documents/export/restore for new supported semantics | Profile/reader versions and recovery fingerprint as needed |
 | LD-08 | Pending | Staff acceptance, staging and controlled production rollout | Owner migration only for actual additive changes |
 
@@ -410,6 +410,15 @@ writer must have truthful export/restore support before activation.
 
 ## LD-06: remaining operations, coverage and risk
 
+**5 October delivery:** common renewal/auction prerequisites, dated correction
+dependencies, current opening-auctions/1 catch-up/paired reversal and owner-selected
+explicit per-loan future capture are implemented. Current notices bind original
+checked and current financial fingerprints. Old portable wires explicitly reject
+unsupported new graphs; exact recovery retains them. Local verification passes
+627 affected tests, including 17 new LD-06 cases; see
+[delivery](../implementation/servicing-operations-ld06.md).
+
+
 Extend common prerequisites and resolved position into renewal, auction, correction,
 obligations/delinquency/exposure and action presentation. Reuse `pawn_renewals`,
 `recorded_renewal_actions`, `pawn_auctions`, `pawn_reversal`, recorded correction
@@ -419,7 +428,8 @@ this work; removing its general financial-action guard alone is not sufficient.
 
 Linked Renew now still approves new lending against current evidence. Unknown
 paper ancestry remains optional independent entry. Opening renewal preview versus
-writer catch-up is an unverified parity concern to characterize before refactoring.
+writer catch-up is now characterized: the existing preview includes the catch-up,
+so its amount/formula is retained.
 
 Backdated insertion with later activity goes through a shared dependency preview
 and supported compensation/replay. Unsupported dependency graphs remain blocked;
@@ -427,7 +437,7 @@ old accepted events/PDFs are untouched. Keep final closure/renewal/auction and
 physical custody evidence coupled to its financial settlement.
 
 Separate checked-through history from future capture mode. Add the smallest
-immutable reviewed transition to Rokkad-only capture if the owner selects it;
+immutable reviewed transition to Rokkad-only capture, as selected by the owner;
 do not infer transition from origin or quietly attest missing past transactions.
 Read models, borrower statements and reminder dispatch retain amount/coverage
 fingerprints. Dashboard known totals continue to disclose provisional/unavailable
@@ -441,8 +451,8 @@ Tests: native/paper/opening operation matrix, exact linked/net-cash renewal,
 statutory auction/paired reverse, correction dependencies and locks, no original
 formula change, unchanged original maturity with partial payments, coverage rollover
 and explicit capture transition, current risk freshness/unknowns, send-time stale
-amount/review rejection and cross-Workspace races. Additive capture evidence, if
-required, needs direct Workspace ownership and RLS coverage.
+amount/review rejection and cross-Workspace boundaries. Migration 0060 retains
+direct Workspace ownership and forced-RLS coverage on the existing review model.
 
 ## LD-07: documents and portable compatibility
 
@@ -527,7 +537,8 @@ The following decisions affect later extensions and require actual evidence:
    principal base and paid/recognized/advance coverage can be evidenced? Do not
    infer them from a principal/interest balance alone. A review must distinguish
    unknown facts from genuinely absent charges.
-3. **Future capture transition:** will each admitted book continue paper-first,
+3. **Future capture transition (owner selected, LD-06):** optional per-loan reviewed
+   Rokkad-only capture is selected; paper/mixed remains the default. Will each admitted book continue paper-first,
    switch entirely to Rokkad, or remain mixed? Who attests the verified transition
    date/position? Recommended default is explicit reviewed transition, never an
    automatic origin-based assumption.

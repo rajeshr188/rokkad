@@ -153,7 +153,8 @@ def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_d
     _require_administrator(actor, original.loan.workspace)
     is_opening = original.loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
     if is_opening and original.event_kind not in {TransactionKind.RELEASE_RECEIPT.value, TransactionKind.REPAYMENT.value} and not (
-            allow_renewal and original.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value):
+            allow_renewal and original.event_kind == TransactionKind.RENEWAL_SETTLEMENT.value) and not (
+            allow_auction_recovery and original.event_kind == TransactionKind.AUCTION_RECOVERY.value):
         raise PawnReversalError("Opening interest catch-up can only be reversed with its collection; the opening itself cannot be reversed here.")
     reason = str(reason or "").strip()
     if not reason:

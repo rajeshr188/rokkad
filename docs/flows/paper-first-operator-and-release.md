@@ -98,13 +98,38 @@ Original evidence survives. These commands do not represent a renegotiation,
 invented waiver, capitalized unpaid interest or physical reversal. Unsupported
 shared-batch date/custody changes need separate reconciliation.
 
-For a current auction of an overdue recorded-origin loan, confirm paper activity
-through today and use ordinary Initiate auction. Existing statutory readiness,
+For a current auction of an overdue recorded-origin loan or supported reviewed
+opening, confirm complete activity through today and use ordinary Initiate auction.
+An explicit Rokkad-only transition can retain that coverage as described below.
+Existing statutory readiness,
 authority, actual service and vault-custody checks still apply. Completion uses
 agreed anniversary debt and requires exact full recovery. Coupled reversal restores
-that debt and custody; recheck the active paper book afterward. Imported-opening
-auctions, historical sales, shortfall/write-off and surplus distribution are not
+that debt and custody; paper/mixed recording requires a fresh active-book check.
+Reviewed openings retain their checkpoint and coupled interest catch-up.
+Historical sales, shortfall/write-off and surplus distribution are not
 enabled by this adaptation.
+
+## Optional move to future Rokkad-only capture (LD-06)
+
+Open the individual loan's **Check paper transactions** screen. Verify every
+transaction through today against the source records (from cutover for an opening).
+Choose **All transactions through this date are entered**. If all future activity
+for this loan will be entered directly in Rokkad, select the corresponding future
+recording choice, preview and confirm the signed review. This requires an active
+supported loan and today's review; it changes no money, interest or collateral.
+
+Leave **Paper or mixed capture** selected while business still happens on paper.
+The ordinary batch book check continues checking coverage only. Nothing switches
+because a loan was imported, originated on paper or received a recent current payment.
+
+After the explicit transition, supported current transactions keep coverage current
+without repeated book checks. Entering another completed paper transaction,
+correcting historical activity or changing the agreement requires another check.
+Review starts with paper/mixed as the default; choose the future mode deliberately.
+Monitoring still needs fresh current valuation and risk assessment. A reminder queued
+before a payment remains stale even though capture is complete: reassess/review its
+current amount to prepare a replacement. Old portable exports hold capture/auction
+evidence until wider profiles exist; retain exact Workspace recovery backups.
 
 ## Real-record acceptance
 

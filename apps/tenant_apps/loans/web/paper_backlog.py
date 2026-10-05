@@ -45,6 +45,10 @@ def backlog(request):
 
 
 class BatchReviewForm(TransactionReviewForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("future_capture")
+
     numbers = forms.CharField(max_length=4000, label="Loan numbers (one per line)", widget=forms.Textarea(attrs={"rows": 6}),
         help_text="Enter at most 50 numbers. If a number exists in multiple series, review those loans individually.")
 
