@@ -217,6 +217,7 @@ def pawn_loan_detail(request, pk):
     if recorded:
         context["recorded_history"] = recorded
         context["can_correct_paper_closing"] = loan.state == "CLOSED" and loan.releases.exists()
+        context["source_history"] = loan.historical_import.document.get("loan") if hasattr(loan, "historical_import") else None
         context["archive_admission"] = loan.historical_import if hasattr(loan, "historical_import") and loan.historical_import.archive_evidence_id else None
         context["can_print_schedule"] = True
         context["can_print_ticket"] = True

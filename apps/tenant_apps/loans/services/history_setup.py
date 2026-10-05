@@ -88,12 +88,12 @@ def preview_history_setup(*, workspace_id, actor, revision_id, series_id, produc
                           source_namespace, source_loan_id, source_loan_number, source_license_number,
                           disbursed_on, tenure_months, calculation_contract_version, operational_grace_days,
                           source_release_id="", source_release_number="", legacy_license_evidence=None,
-                          local_loan_number=None, source_product=None):
+                          local_loan_number=None, source_product=None, historical_servicing=False):
     require_history_setup_access(workspace_id, actor)
     from .recorded_numbers import identity
     recorded_numbers = PawnLoan.objects.filter(workspace_id=workspace_id,
         policy_snapshot__basis="RECORDED_CONTRACT").values_list("loan_number", flat=True)
-    if identity(source_loan_number) in {identity(value) for value in recorded_numbers}:
+    if not historical_servicing and identity(source_loan_number) in {identity(value) for value in recorded_numbers}:
         raise HistorySetupError("This original number already belongs to admitted paper history. Reconcile source identity before import.")
     try:
         namespace = uuid.UUID(str(source_namespace))
@@ -185,7 +185,7 @@ def preview_history_setup(*, workspace_id, actor, revision_id, series_id, produc
             category=OPERATIONAL_READINESS,
             code="PRODUCT_CONTRACT",
         )
-    if (product.available_from and disbursed_on < product.available_from) or (product.available_until and disbursed_on > product.available_until):
+    if not historical_servicing and ((product.available_from and disbursed_on < product.available_from) or (product.available_until and disbursed_on > product.available_until)):
         raise HistorySetupError(
             "The product version was unavailable on the original disbursal date.",
             category=OPERATIONAL_READINESS,

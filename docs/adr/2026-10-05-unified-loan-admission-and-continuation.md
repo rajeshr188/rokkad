@@ -14,7 +14,8 @@ The owner selected the recommended direction and requested a checkpoint/start on
 LD-01 on 5 October, after the analysis-only review. Acceptance authorizes that
 read-only slice; the owner subsequently authorized LD-01A calculation alignment
 and LD-02 common repayment/full release, then LD-03 completed-payout admission
-and LD-04 reduced-principal opening continuation.
+and LD-04 reduced-principal opening continuation, then LD-05 supported recorded
+source history, setup and aliases.
 These slices are complete locally;
 later admission/operation extensions and rollout remain separately planned.
 The [LD-04 checkpoint decision](2026-10-05-reduced-principal-opening-checkpoint.md)

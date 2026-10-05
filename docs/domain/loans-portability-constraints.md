@@ -167,3 +167,19 @@ constraint. Generated inventory rows describe declarations; migration guards and
 actual command paths determine enforcement. This distinction explains why tightening
 an importer and protecting evidence tables do not automatically secure the legacy
 generic aggregate writer.
+
+## LD-05 recorded source agreement extension (5 October)
+
+The inventory describes the older strict native/opening contracts. New
+[loan-history/4](../contracts/loan-history-v4.md) separately admits supported shared
+simple full-month flexible agreements through recorded financial writers. It
+retains actual item reductions rather than imposing native highest-rate-first,
+accepts compatible retired/later-created local servicing products, and preserves
+unknown original valuation without fabricating approval evidence. Original book
+and number are immutable searchable aliases with namespace/scoped-ID binding;
+local numbers and live reservations remain distinct. Exact Party, licence mapping,
+source chronology, amount conservation, frozen continuation and owner/RLS checks
+remain compulsory. Export/restore supports original and later receipts/closure;
+unknown handover and original actor remain unknown. Verified coverage is required,
+and compensated, linked or connected custody/funding graphs remain outside this
+bounded full-history replay. Earlier profile semantics are unchanged.

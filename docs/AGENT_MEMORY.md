@@ -25,8 +25,9 @@ unrelated billing/platform/storage work is preserved separately. The
 rather than the September audit, as baseline. LD-02 shares supported repayment/
 full-release prerequisites; LD-03 adds general completed-payout admission for an
 unpaid ordinary draft through the existing recorded-history writer. LD-04 adds an
-explicit reviewed reduced-principal opening checkpoint; wider operation extensions
-remain pending.
+explicit reviewed reduced-principal opening checkpoint; LD-05 adds supported
+recorded source history/4 with source-faithful item allocations and scoped aliases.
+Wider operation extensions remain pending.
 PawnLoan is already canonical; no parallel servicing model is needed.
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
@@ -45,8 +46,10 @@ approval or historical Rates/policy catalog rows. Ordinary direct lending remain
 prospective and guarded. Migration 0058 permits only evidenced completed payouts
 under legacy references with a validated matching snapshot required at commit;
 references remain inactive with unknown validity and cannot authorize new lending.
-Exact-identity recovery retains the source extension and guard fingerprint;
-approval-based bounded history export still rejects recorded origins. See the
+Exact-identity recovery retains the source extension and guard fingerprint.
+Approval-based history profiles still reject recorded origins; LD-05 supplies a
+separate recorded history/4 export/restore for supported shared flexible agreements.
+See the
 [LD-03 boundary](implementation/completed-payout-admission-ld03.md).
 
 **Owner clarification (5 October):** direct, backdated paper and imported loans
@@ -96,6 +99,21 @@ than original channel. Missing original LTV can coexist with verified current de
 current monitoring needs eligible current evidence. Historical-only closed records
 remain archived until supported settlement is evidenced. An explicit reviewed
 future-capture transition is proposed; it is not current implemented behavior.
+
+Recorded source history/4 reuses ordinary recorded financial writers without an
+old digital approval, price or appraisal requirement. Actual per-item receipt
+allocations and eligible cutover balances must reconcile to the captured shared
+monthly contract. Compatible retired/later-configured local products supply
+continuation, not past approval. Source validity is verified or explicitly unknown
+under an inactive legacy licence reference; current issuance stays guarded.
+Namespace/scoped source ID remains shared with openings. Original book/number are
+searchable immutable JSON aliases with unique generated local numbers; changed
+source IDs for the same book/number and conflicting retries are held. No alias
+model is needed. Export retains original source claims, original action purpose
+and known handover time separately from local completed recording. Verified
+transaction coverage must match; corrections, standalone recognition, linked
+renewals/auctions and additional custody/funding/storage need wider portability.
+See [LD-05](implementation/recorded-source-history-ld05.md).
 
 ## Shared loan entry and actual paper item agreements (3 October)
 

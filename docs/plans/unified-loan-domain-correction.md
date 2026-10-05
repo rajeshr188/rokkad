@@ -14,8 +14,8 @@ The initial 5 October request was **analysis and documentation only** and that
 review is complete. The owner subsequently selected the direction and requested a
 checkpoint/start on LD-01. Checkpoint `89f7321e` records completed shared-entry work
 and the review on `work/loan-servicing-contract-ld01`; unrelated billing/platform/
-storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03 and LD-04 are complete
-locally; LD-05 and later slices are pending.
+storage work stays uncommitted. LD-01, LD-01A, LD-02, LD-03, LD-04 and LD-05 are complete
+locally; LD-06 and later slices are pending.
 The owner's subsequent shared-interest clarification inserts LD-01A before LD-02.
 Production and the running candidates are unchanged.
 
@@ -52,7 +52,7 @@ checkpoint implementation and are superseded as the target by this clarification
 | LD-02 | Complete locally; rollout pending | Common purpose/eligibility for supported repayment and full release; retain validated writers | None |
 | LD-03 | Complete locally; rollout pending | General completed-payout admission, including retained unpaid draft identity, without historical digital-row prerequisites | Existing recorded evidence; narrow forward-only legacy guard migration 0058 |
 | LD-04 | Complete locally; source/staff rollout acceptance pending | Explicit reduced-principal/current-period/advance checkpoint and supported continuation | Review/4, opening export/3; additive mixed-origin guard 0059 |
-| LD-05 | Pending; after source-rule examples and LD-04 | Source-faithful supported history allocation and numbering/setup compatibility | New portable contract; alias table only if proven necessary |
+| LD-05 | Complete locally; source preparation/staff acceptance pending | Source-faithful supported history allocation and numbering/setup compatibility | Recorded history/4; immutable source JSON aliases, batch guard migration 0019; no new table |
 | LD-06 | Pending; after relevant profiles in LD-02/04/05 | Remaining operations, correction dependencies, coverage transition, risk/schedule parity | Additive capture-transition evidence may require a migration |
 | LD-07 | Pending; compatibility substeps accompany each writer slice | Portable documents/export/restore for new supported semantics | Profile/reader versions and recovery fingerprint as needed |
 | LD-08 | Pending | Staff acceptance, staging and controlled production rollout | Owner migration only for actual additive changes |
@@ -369,6 +369,21 @@ admission until fixed. Do not revert checkpoints to the old unchanged-principal
 rule or reinterpret their accepted events.
 
 ## LD-05: supported source history, setup and aliases
+
+**Complete locally (5 October).** New history/4 reuses recorded origination,
+receipt and full-release writers for supported shared flexible-payment agreements.
+Actual source item allocations and monetary checkpoints reconcile without old
+Rokkad approval/valuation catalog evidence. Compatible retired/later-created
+servicing products, explicit inactive legacy references, source-book aliases,
+exact Party identity and live number reservations are supported. Full export/restore
+accompanies this writer, including later paper/current receipts and closure;
+unknown source actors/time/physical cash remain unknown. Verified book coverage
+is required; corrections and wider operation/custody graphs remain explicit
+blockers. Native v1/v2/v3 contracts and ordinary issuance are unchanged. See the
+[delivery record](../implementation/recorded-source-history-ld05.md) and
+[contract decision](../adr/2026-10-05-recorded-source-history-v4.md).
+
+Original scope and acceptance criteria follow.
 
 Keep strict `history_contract`, `history_accrual`, `history_import` v1/v2 behavior.
 Add a separate version for verified source rules that are needed now. Validate

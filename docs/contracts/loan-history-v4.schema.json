@@ -1,0 +1,525 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "loan-history/4"
+        },
+        "namespace": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date"
+        },
+        "coverage": {
+          "const": "PARTIAL"
+        },
+        "exclusions": {
+          "const": [
+            "binary_files",
+            "workspace_configuration",
+            "renewals",
+            "auctions",
+            "opening_positions"
+          ]
+        }
+      },
+      "required": [
+        "profile",
+        "namespace",
+        "as_of",
+        "coverage",
+        "exclusions"
+      ],
+      "additionalProperties": false
+    },
+    "loan": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "book_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "source_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "state": {
+          "enum": [
+            "ACTIVE",
+            "CLOSED"
+          ]
+        },
+        "borrower": {
+          "type": "object",
+          "properties": {
+            "source_system": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+            }
+          },
+          "required": [
+            "source_system",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "licence_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "legacy_license_evidence": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disbursed_on": {
+          "type": "string",
+          "format": "date"
+        },
+        "tenure_months": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "calculation_contract": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+        },
+        "grace_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "contract": {
+          "const": "recorded-anniversary/3"
+        },
+        "currency_quantum": {
+          "enum": [
+            "0.01",
+            "1"
+          ]
+        },
+        "original_actor": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collateral": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+              },
+              "metal": {
+                "enum": [
+                  "GOLD",
+                  "SILVER"
+                ]
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 999
+              },
+              "gross_weight": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "net_weight": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "purity": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "principal": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "monthly_rate": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              }
+            },
+            "required": [
+              "id",
+              "description",
+              "metal",
+              "quantity",
+              "gross_weight",
+              "net_weight",
+              "purity",
+              "principal",
+              "monthly_rate"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "payout": {
+          "type": "object",
+          "properties": {
+            "advance_months": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "document_charge": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+              "maxLength": 19
+            },
+            "proceeds": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+              "maxLength": 19
+            },
+            "basis": {
+              "enum": [
+                "CASH",
+                "PROCEEDS"
+              ]
+            }
+          },
+          "required": [
+            "advance_months",
+            "document_charge",
+            "proceeds",
+            "basis"
+          ],
+          "additionalProperties": false
+        },
+        "monitoring": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "enum": [
+                "CALCULATED_METAL_VALUE",
+                "LATEST_APPRAISAL",
+                "LOWER_OF_CALCULATED_AND_APPRAISAL"
+              ]
+            },
+            "ltv": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+              "maxLength": 19
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+            }
+          },
+          "required": [
+            "method",
+            "ltv",
+            "reason"
+          ],
+          "additionalProperties": false
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+              },
+              "kind": {
+                "enum": [
+                  "PAYMENT",
+                  "CLOSE"
+                ]
+              },
+              "date": {
+                "type": "string",
+                "format": "date"
+              },
+              "reference": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+              },
+              "original_actor": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "capture_purpose": {
+                "enum": [
+                  "RECORD_COMPLETED",
+                  "PERFORM_NOW"
+                ]
+              },
+              "amount": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "principal": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "interest": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "fees": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                "maxLength": 19
+              },
+              "allocations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "item": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120,
+                      "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+                    },
+                    "before": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                      "maxLength": 19
+                    },
+                    "principal": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                      "maxLength": 19
+                    },
+                    "after": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+                      "maxLength": 19
+                    }
+                  },
+                  "required": [
+                    "item",
+                    "before",
+                    "principal",
+                    "after"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 20
+              },
+              "closure": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "number": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120,
+                        "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+                      },
+                      "collector": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "pattern": "^[^\\x00-\\x1f\\x7f]+$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "returned_at": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "basis": {
+                        "enum": [
+                          "RETURNED",
+                          "PAPER_SETTLEMENT"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "number",
+                      "collector",
+                      "returned_at",
+                      "basis"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "date",
+              "reference",
+              "original_actor",
+              "capture_purpose",
+              "amount",
+              "principal",
+              "interest",
+              "fees",
+              "allocations",
+              "closure"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 30
+        },
+        "cutover": {
+          "type": "object",
+          "properties": {
+            "principal": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+              "maxLength": 19
+            },
+            "interest": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+              "maxLength": 19
+            },
+            "fees": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$",
+              "maxLength": 19
+            }
+          },
+          "required": [
+            "principal",
+            "interest",
+            "fees"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "book_reference",
+        "source_reference",
+        "state",
+        "borrower",
+        "licence_number",
+        "legacy_license_evidence",
+        "disbursed_on",
+        "tenure_months",
+        "calculation_contract",
+        "grace_days",
+        "contract",
+        "currency_quantum",
+        "original_actor",
+        "collateral",
+        "payout",
+        "monitoring",
+        "events",
+        "cutover"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "manifest",
+    "loan"
+  ],
+  "additionalProperties": false
+}

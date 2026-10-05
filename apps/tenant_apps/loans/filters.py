@@ -148,6 +148,9 @@ class PawnLoanFilter(django_filters.FilterSet):
             | Q(borrower__primary_phone__icontains=value)
             | Q(license__license_number__icontains=value)
             | Q(series__code__icontains=value)
+            | Q(historical_import__document__loan__number__icontains=value)
+            | Q(historical_import__document__loan__book_reference__icontains=value)
+            | Q(historical_import__document__review__source__number__icontains=value)
         )
 
 

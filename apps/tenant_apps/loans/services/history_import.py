@@ -31,11 +31,14 @@ from .history_accrual import portable_accrual
 def require_history_access(workspace_id, actor, document):
     workspace = require_history_setup_access(workspace_id, actor)
     access = resolve_workspace_access(actor=actor, workspace=workspace)
-    for action in ("loan.approve", "loan.disburse"):
+    recorded = document["manifest"]["profile"] == "loan-history/4"
+    for action in (("loan.disburse",) if recorded else ("loan.approve", "loan.disburse")):
         access.require(action)
     for event in document["loan"]["events"]:
-        action = {"REPAYMENT": "loan.repay", "INTEREST_ACCRUAL": "loan.accrue", "RELEASE_RECEIPT": "loan.release"}.get(event["kind"])
+        action = {"REPAYMENT": "loan.repay", "PAYMENT": "loan.repay", "CLOSE": "loan.release", "INTEREST_ACCRUAL": "loan.accrue", "RELEASE_RECEIPT": "loan.release"}.get(event["kind"])
         if action: access.require(action)
+        if recorded:
+            access.require("loan.accrue")
     return workspace
 
 
@@ -179,6 +182,9 @@ def import_complete_history(*, workspace_id, actor, document, mapping):
     workspace = Company.all_objects.select_for_update().get(pk=workspace_id)
     require_history_access(workspace_id, actor, document)
     source, manifest = document["loan"], document["manifest"]
+    if manifest["profile"] == "loan-history/4":
+        from .recorded_history_portability import import_recorded_history
+        return import_recorded_history(workspace=workspace, actor=actor, document=document, mapping=mapping)
     binding_id = source_binding_id(manifest["namespace"], source["id"], source["borrower"]["source_system"])
     cutoff = _chronology(document)
     checksum = digest(document)

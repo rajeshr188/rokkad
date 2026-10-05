@@ -3,6 +3,7 @@
 {% block title %}{{ loan.loan_number }}{% endblock %}
 {% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/loan-detail-layouts.css' %}">{% endblock %}
 {% block workspace_content %}
+{% if source_history %}<p class="alert alert-info">Original loan {{ source_history.number }} in source book {{ source_history.book_reference }} (licence {{ source_history.licence_number }}). Local loan number: {{ loan.loan_number }}. Original source reference: {{ source_history.source_reference }}.</p>{% endif %}
 {% if archive_admission %}<p class="alert alert-info">Admitted from <a href="{% url 'workspace_portability:archive_detail' request.workspace.slug archive_admission.archive_evidence.public_id %}">retained historical evidence and attachments</a>. Source records remain unchanged. {{ archive_admission.document.archive.reconciliation }}</p>{% endif %}
 <div data-loan-detail data-loan-layout="classic" data-layout-key="rokkad.loanDetailLayout.v1:{{ request.user.pk }}:{{ request.workspace.pk }}">
 {% include "loans/pawn/_layout_controls.html" %}

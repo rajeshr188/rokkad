@@ -55,7 +55,7 @@ def _amount(value, label, *, places=2, positive=False):
     return str(result.quantize(Decimal(1).scaleb(-places)))
 
 
-def validate_input(data):
+def validate_input(data, *, historical_source=False):
     """Validate again in the command; a valid browser form is not authority."""
     if not isinstance(data, dict) or len(_canonical(data)) > 40000:
         raise ValueError("Paper history is missing or exceeds the supported size.")
@@ -181,7 +181,7 @@ def validate_input(data):
                 raise ValueError("Enter the successor's agreed rate and tenure.")
         elif row["kind"] == "CLOSE":
             row["number"] = _text(row["number"], "the original release number", 64) if row["number"] else ""
-            row["recipient"] = (_text(row["recipient"], "who actually received the collateral", 255)
+            row["recipient"] = (None if historical_source and row["recipient"] is None else _text(row["recipient"], "who actually received the collateral", 255)
                 if row.get("closure_basis", "RETURNED") == "RETURNED" else "")
             if index != len(value["events"]) - 1:
                 raise ValueError("Full return must be the final transaction.")
@@ -268,21 +268,23 @@ def admit_recorded_history(*, workspace, actor, data, intent_token, review_token
     return loan, True
 
 
-def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None):
+def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None, historical_setup=None):
     series = m.LoanSeries.objects.select_related("license").get(pk=data["series_id"], workspace=workspace)
     product = m.LoanProductVersion.objects.select_related("product").get(pk=data["product_version_id"], workspace=workspace)
-    if (product.status != "ACTIVE" and not draft) or product.repayment_structure not in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT") or product.amortisation_method != "NONE":
+    if (product.status != "ACTIVE" and not draft and not historical_setup) or product.repayment_structure not in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT") or product.amortisation_method != "NONE":
         raise ValueError("Select a non-amortising monthly bullet/flexible contract matching the paper agreement.")
     if not product.minimum_tenor_months <= tenure <= product.maximum_tenor_months:
         raise ValueError("The original tenure does not match the selected contract version.")
     claim_number(series, number, kind="PAWN_LOAN", actor=actor, archive_ids=archive_ids,
         existing_loan_id=draft.pk if draft else None)
-    borrower = Party.objects.get(pk=data["borrower_id"], workspace=workspace, **({} if draft else {"status": "ACTIVE"}))
+    borrower = Party.objects.get(pk=data["borrower_id"], workspace=workspace, **({} if draft or historical_setup else {"status": "ACTIVE"}))
     loan = draft or m.PawnLoan(workspace=workspace, borrower=borrower, license=series.license,
         series=series, product_version=product, loan_number=number, loan_date=day, principal_amount=principal,
         monthly_interest_rate=rate, tenure_months=tenure, created_by=actor, updated_by=actor,
         creation_submission_id=key if predecessor is None else None)
     if not draft:
+        if historical_setup:
+            loan.license_revision = historical_setup["revision"]
         loan.full_clean()
         loan.save()
     from .recorded_items import contract_items, ITEM_PROFILE
@@ -333,19 +335,23 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
                        entered_by=actor.pk, confirmed_complete=data["confirmed_history"]))
     if data.get("entry_note"):
         recording["entry_note"] = data["entry_note"]
+    if historical_setup:
+        recording["source_claims"] = historical_setup["source_claims"]
+        recording["original_actor"] = historical_setup["source_claims"]["original_actor"]
     return loan, items[0], policy, recording, tranches, monthly
 
 
-def _admit(workspace, actor, data, key, *, archive=None, draft_id=None):
+def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historical_setup=None):
     draft = source = None
     if draft_id is not None:
         from .completed_payouts import draft_source, require_unpaid_draft, source_evidence
         draft = draft_source(workspace, actor, draft_id)
         require_unpaid_draft(draft)
         source = source_evidence(draft)
-    for reference in m.PawnLoanEvent.objects.filter(loan__workspace=workspace,
+    references = () if historical_setup else m.PawnLoanEvent.objects.filter(loan__workspace=workspace,
             event_kind="DISBURSAL", payload__recording__collection_profile__in=(PROFILE, "recorded-anniversary/2", RECORDED_PROFILE)).values_list(
-                "payload__recording__source_reference", flat=True):
+                "payload__recording__source_reference", flat=True)
+    for reference in references:
         if isinstance(reference, str) and identity(reference) == identity(data["source_reference"]):
             raise ValueError("This paper loan source reference is already recorded; open its existing loan.")
     before = dict(m.LoanNumberSequence.objects.filter(workspace=workspace).values_list("pk", "next_number"))
@@ -355,7 +361,8 @@ def _admit(workspace, actor, data, key, *, archive=None, draft_id=None):
     advance = monthly * data["advance_months"]
     original, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, data, key,
         number=data["number"], day=date.fromisoformat(data["date"]), principal=principal, rate=rate,
-        tenure=data["tenure"], advance=advance, archive_ids=archive["snapshot_ids"] if archive else (), draft=draft)
+        tenure=data["tenure"], advance=advance, archive_ids=archive["snapshot_ids"] if archive else (), draft=draft,
+        historical_setup=historical_setup)
     if source:
         recording["draft_source"] = source
     fees = Decimal(data.get("document_charge", "0"))

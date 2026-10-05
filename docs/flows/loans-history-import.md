@@ -1,4 +1,4 @@
-﻿---
+---
 status: active
 owner: project
 updated: 2026-09-12
@@ -54,3 +54,25 @@ create fresh valuation verification. Closed loans have zero settlement, complete
 custody return and terminated obligations. Importing does not send messages or issue
 new official loan documents. The source includes private borrower and loan values;
 use the documented cancellation path for an abandoned staged attempt.
+
+## Recorded source agreement history/4 (LD-05)
+
+1. Prepare the actual original item amounts/rates, captured monthly rounding,
+   proceeds/deductions, stable source namespace/ID and book reference.
+2. Import the exact Party first. Stage v4 through the existing complete-history
+   upload; choose matching licence revision, series and compatible serving product.
+   Unknown original licence validity requires an explicitly evidenced inactive
+   legacy reference. This does not authorize current lending.
+3. Review actual dated receipts and item before/applied/after splits and eligible
+   cutover debt. No old digital price/approval row is manufactured. Preview rolls
+   back all loan writes; signed confirmation repeats checks and commits atomically.
+4. Open the ordinary active/closed loan. Search by original book/number or unique
+   local number. Ordinary paper/direct servicing uses the shared captured contract.
+5. Check the source book after further transactions before full-history export.
+   Supported later receipts/closure are included with original purpose/claims;
+   unsupported correction or connected graphs fail explicitly. Use retained
+   evidence/reviewed opening or exact recovery for wider histories.
+
+The dedicated approval-based setup checker retains its older date/approval
+semantics; recorded v4 setup is checked as part of its mapping preview. The archive
+retains closed source claims independently and is not automatically converted.

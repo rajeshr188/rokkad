@@ -174,7 +174,7 @@ class ImportBundle(WorkspaceOwnedModel):
 class LoanHistoryBatch(WorkspaceOwnedModel):
     profile = models.CharField(max_length=32, default="loan-history/1",
         choices=[("loan-history/1", "Complete history v1"), ("loan-history/2", "Complete history v2"),
-                 ("loan-history/3", "Complete history v3 (inclusive monthly contract)"), ("legacy-opening/1", "Legacy opening")])
+                 ("loan-history/3", "Complete history v3 (inclusive monthly contract)"), ("loan-history/4", "Recorded source history v4"), ("legacy-opening/1", "Legacy opening")])
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     source_sha256 = models.CharField(max_length=64)
     document = models.JSONField()

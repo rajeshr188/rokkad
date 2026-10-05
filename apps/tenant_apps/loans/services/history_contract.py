@@ -122,8 +122,36 @@ LOAN_V3 = obj(**{**LOAN_V2["properties"], "policy": POLICY_V3,
 SCHEMA_V3 = {"$schema": SCHEMA["$schema"], **obj(
     manifest=obj(**{**MANIFEST["properties"], "profile": {"const": PROFILE_V3}}), loan=LOAN_V3)}
 
+PROFILE_V4 = "loan-history/4"
+PROFILES = (*PROFILES, PROFILE_V4)
+# Recorded agreements select the shared contract, not a retrospective approval.
+ITEM_V4 = obj(id=text(), description=text(255), metal={"enum": ["GOLD", "SILVER"]},
+    quantity={"type": "integer", "minimum": 1, "maximum": 999}, gross_weight=DECIMAL,
+    net_weight=DECIMAL, purity=DECIMAL, principal=DECIMAL, monthly_rate=DECIMAL)
+EVENT_V4 = obj(id=text(), kind={"enum": ["PAYMENT", "CLOSE"]}, date=DAY,
+    reference=text(160), original_actor=nullable(text(255)),
+    capture_purpose={"enum": ["RECORD_COMPLETED", "PERFORM_NOW"]}, amount=DECIMAL,
+    principal=DECIMAL, interest=DECIMAL, fees=DECIMAL, allocations=array(ALLOCATION, 20),
+    closure=nullable(obj(number=text(), collector=nullable(text(255)), returned_at=nullable(STAMP),
+        basis={"enum": ["RETURNED", "PAPER_SETTLEMENT"]})))
+LOAN_V4 = obj(id=text(), number=text(), book_reference=text(160), source_reference=text(160),
+    state={"enum": ["ACTIVE", "CLOSED"]}, borrower=LOAN["properties"]["borrower"],
+    licence_number=text(100), legacy_license_evidence=nullable(text(255)), disbursed_on=DAY,
+    tenure_months={"type": "integer", "minimum": 1, "maximum": 600},
+    calculation_contract=text(40), grace_days={"type": "integer", "minimum": 0, "maximum": 30},
+    contract={"const": "recorded-anniversary/3"}, currency_quantum={"enum": ["0.01", "1"]},
+    original_actor=nullable(text(255)), collateral=array(ITEM_V4, 20, 1),
+    payout=obj(advance_months={"type": "integer", "minimum": 0, "maximum": 1},
+        document_charge=DECIMAL, proceeds=DECIMAL, basis={"enum": ["CASH", "PROCEEDS"]}),
+    monitoring=obj(method=POLICY["properties"]["valuation_method"], ltv=DECIMAL, reason=text(255)),
+    events=array(EVENT_V4, 30), cutover=BALANCE)
+SCHEMA_V4 = {"$schema": SCHEMA["$schema"], **obj(
+    manifest=obj(**{**MANIFEST["properties"], "profile": {"const": PROFILE_V4}}), loan=LOAN_V4)}
+
 
 def schema_for(value):
+    if isinstance(value, dict) and isinstance(value.get("manifest"), dict) and value["manifest"].get("profile") == PROFILE_V4:
+        return SCHEMA_V4
     if isinstance(value, dict) and isinstance(value.get("manifest"), dict) and value["manifest"].get("profile") == PROFILE_V3:
         return SCHEMA_V3
     if isinstance(value, dict) and isinstance(value.get("manifest"), dict) and value["manifest"].get("profile") == PROFILE_V2:

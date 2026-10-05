@@ -7,6 +7,54 @@ tags: [status, architecture]
 
 # Status
 
+## LD-05 recorded source history complete locally (5 October)
+
+The owner authorized explanation and implementation of LD-05. New loan-history/4
+admits supported complete flexible monthly source agreements through the existing
+recorded origination, receipt and full-release writers. Actual source item
+allocations, receipt splits and eligible cutover debt reconcile without replacing
+a lower-rate-item reduction with native highest-rate-first. No old digital
+approval, price/appraisal row, extra cash origin or separate loan model is created.
+Earlier native history/1, /2 and /3 and ordinary direct/paper entry keep their rules.
+
+Compatible ACTIVE/RETIRED servicing products may have been configured after the
+original transaction. Original validity is verified or explicitly unknown under
+an inactive legacy licence reference; current issuance stays guarded. Original
+book/number remain searchable immutable source aliases with unique local numbers.
+Same-book duplicate identities, conflicting retries, ambiguous Party mappings and
+future number reservations are held. Existing namespace/legacy-schema scoping and
+shared opening/history identity remain intact. No alias table is added.
+
+V4 export/restore includes supported original and later paper/current receipts
+and closure. Source actors, original action purpose and known handover time remain
+source claims separate from local completed recording. Unknown actor/time/cash
+remain unknown. Export verifies frozen contract, item balances, derived recognition,
+state/custody and reviewed transaction coverage. Corrections, standalone recognition,
+linked renewal/auction and additional custody/funding/storage need wider portability;
+no such operations are silently omitted. Source archive/opening retention stays
+separate; no existing archive or old calculation cohort is automatically converted.
+
+The affected regression passes **450 tests in 267.804s**, including all **22 new
+LD-05 tests**, real upload/review/schema/commit/detail HTTP coverage, changed-source
+retries, restricted-role immutability/isolation, active/closed and continued
+paper/current servicing round trips, and restoration into another Workspace.
+Final conservation/normalized-alias and ordinary paper-writer follow-up passes
+**100 tests in 69.320s**, including all 22 new LD-05 tests.
+The affected list retains LD-04's exclusion of the old pilot renewal-link assertion,
+independently proven failing on LD-03. The whole repository suite is not claimed
+green; previously reported unrelated baseline failures remain outside this scope.
+
+System checks, migration drift/history consistency against the dedicated test DB,
+672-file Python parsing and scoped whitespace checks pass. Migration 0019 extends
+the immutable portability batch profile guard and refuses downgrade with v4
+batches. Only disposable QA's test_rokkad_ld04_20261005 was migrated. No application,
+candidate or production schema migration, live-data conversion or deployment was
+performed. Source preparation/staff acceptance is still required for rollout.
+LD-06 is next: remaining operations, correction dependencies, coverage transition
+and risk/schedule parity. See the
+[delivery record](implementation/recorded-source-history-ld05.md) and
+[contract](contracts/loan-history-v4.md).
+
 ## LD-04 reduced-principal opening continuation complete locally (5 October)
 
 The owner authorized LD-04 and confirmed the January example: a 1,000 principal

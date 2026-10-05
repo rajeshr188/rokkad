@@ -38,7 +38,8 @@ def _export_history(*, workspace_id, actor, loan_id):
     loan=m.PawnLoan.objects.select_for_update(of=("self",)).select_related("product_version","license_revision","policy_snapshot","disbursal_snapshot__approval_snapshot").get(workspace_id=workspace_id,pk=loan_id)
     if loan.state not in {"ACTIVE","CLOSED"}: raise HistoryError("Only active or fully released histories are supported.")
     if loan.policy_snapshot is not None and loan.policy_snapshot.basis == "RECORDED_CONTRACT":
-        raise HistoryError("Paper-origin contract export requires a recorded-origination profile; the approval-based history export cannot represent it. Use Loans recovery backup for the original-identity archive, with matching database/media backups for its prerequisites.")
+        from .recorded_history_portability import export_recorded_history
+        return export_recorded_history(workspace_id=workspace_id, actor=actor, loan=loan)
     product=loan.product_version
     if tuple(getattr(product, key) for key in PRODUCT_FIELDS) not in SUPPORTED_PRODUCTS:
         raise HistoryError("This product structure is outside the supported loan-history profiles.")
