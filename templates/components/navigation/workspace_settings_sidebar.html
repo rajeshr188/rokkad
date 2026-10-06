@@ -12,6 +12,8 @@
 {% if 'billing.view' in nav_actions %}{% url 'workspace_subscriptions:dashboard' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Billing" %}</a>{% endif %}
 {% if 'workspace.settings.manage' in nav_actions %}
+{% url 'workspace_storage' workspace_slug=ew.slug as settings_href %}
+<a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Storage usage" %}</a>
 {% url 'workspace_slug_settings_numbering' workspace_slug=ew.slug as settings_href %}
 <a class="nav-link mgmt-nav-link {% if request.path == settings_href %}active{% endif %}" href="{{ settings_href }}">{% translate "Loan setup" %}</a>
 {% if 'workspace.transfer' in nav_actions %}

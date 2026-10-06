@@ -1,0 +1,22 @@
+{% extends 'platform_console/base.html' %}
+{% block console_content %}
+<h2 class="h4">Workspace directory</h2>
+<form method="get" class="card card-body mb-4"><div class="row g-3 align-items-end">
+ {% for field in filters.visible_fields %}<div class="col-lg-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small" role="alert">{{ error }}</div>{% endfor %}</div>{% endfor %}
+ <div class="col-lg-3 d-flex gap-2"><button class="btn btn-primary" type="submit">Search</button><a class="btn btn-outline-secondary" href="{% url 'platform_workspaces' %}">Reset</a></div>
+</div>{% for error in filters.page.errors %}<p class="text-danger mt-2" role="alert">{{ error }}</p>{% endfor %}</form>
+{% if checked_at %}
+<p class="text-muted small">{{ page.paginator.count }} matching workspaces. Current access includes subscription policy and administrator decisions.</p>
+<div class="table-responsive card"><table class="table table-hover align-middle mb-0"><caption class="visually-hidden">Workspace lifecycle and current access</caption><thead><tr><th>Workspace / owner</th><th>Lifecycle</th><th>Current access</th><th>Subscription</th><th>Members</th></tr></thead><tbody>
+{% for row in rows %}<tr>
+ <td><a class="fw-semibold" href="{% url 'platform_workspace' slug=row.workspace.slug %}">{{ row.workspace.name }}</a><div class="small text-muted text-break">{{ row.workspace.owner.email }}</div><div class="small text-muted">{{ row.workspace.slug }}</div></td>
+ <td>{{ row.workspace.get_lifecycle_state_display }}</td><td><span class="badge {% if row.activity.can_write %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ row.access_label }}</span>{% if row.activity.until %}<div class="small text-muted mt-1">Until {{ row.activity.until|date:'d/m/Y H:i' }}</div>{% endif %}</td>
+ <td>{{ row.subscription_label }}{% if row.subscription.status == 'trial' %}<div class="small text-muted">Trial ends {{ row.subscription.trial_end_date|date:'d/m/Y' }}</div>{% endif %}</td><td>{{ row.workspace.member_count }}</td>
+</tr>{% empty %}<tr><td colspan="5" class="p-4 text-center">No workspaces match these filters.</td></tr>{% endfor %}
+</tbody></table></div>
+<nav class="d-flex justify-content-between align-items-center my-3" aria-label="Workspace pages"><span class="small">Page {{ page.number }} of {{ page.paginator.num_pages }}</span><div class="d-flex gap-2">
+{% if page.has_previous %}<a class="btn btn-outline-secondary btn-sm" href="{% querystring page=page.previous_page_number %}">Previous</a>{% endif %}
+{% if page.has_next %}<a class="btn btn-outline-secondary btn-sm" href="{% querystring page=page.next_page_number %}">Next</a>{% endif %}
+</div></nav>
+{% endif %}
+{% endblock %}

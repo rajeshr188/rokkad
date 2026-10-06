@@ -1,0 +1,18 @@
+{% extends 'layouts/base.html' %}
+{% block title %}Platform console | Rokkad{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
+  <div><p class="text-uppercase small text-muted mb-1">Rokkad operations</p><h1 class="h3 fw-bold mb-1">Platform console</h1><p class="text-muted mb-0">Workspace oversight and customer onboarding.</p></div>
+  <div class="text-lg-end small"><span class="badge text-bg-dark">Platform administrator</span><div class="text-break mt-2">{{ request.user.email }}</div><a href="{% url 'app_workspaces' %}">Leave console</a></div>
+</div>
+<nav class="nav nav-pills gap-2 flex-wrap mb-4" aria-label="Platform navigation">
+  <a class="nav-link {% if section == 'overview' %}active{% endif %}" {% if section == 'overview' %}aria-current="page"{% endif %} href="{% url 'platform_console' %}">Overview</a>
+  <a class="nav-link {% if section == 'directory' %}active{% endif %}" {% if section == 'directory' %}aria-current="page"{% endif %} href="{% url 'platform_workspaces' %}">Workspaces</a>
+  {% if user.is_staff %}<a class="nav-link" href="{% url 'admin:onboarding_progress_report' %}">Onboarding report</a>{% endif %}
+  <a class="nav-link {% if section == 'storage' %}active{% endif %}" href="{% url 'platform_storage' %}">Storage</a>
+  <a class="nav-link {% if section == 'guide' %}active{% endif %}" {% if section == 'guide' %}aria-current="page"{% endif %} href="{% url 'platform_guide' %}">Operator guide</a>
+  {% if user.is_staff %}<a class="nav-link" href="{% url 'admin:index' %}">Advanced admin</a>{% endif %}
+</nav>
+{% block console_content %}{% endblock %}
+{% if checked_at %}<p class="small text-muted mt-4">Checked {{ checked_at|date:'d/m/Y H:i T' }}. Refresh to see new activity.</p>{% endif %}
+{% endblock %}

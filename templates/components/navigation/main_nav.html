@@ -57,6 +57,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                 {% if user.is_authenticated %}
+                    {% if user.is_active and user.is_superuser %}<li class="nav-item"><a class="nav-link nav-pill" href="{% url 'platform_console' %}">Platform console</a></li>{% endif %}
                     {% include 'components/navigation/workspace_switcher.html' with workspace_switcher_variant="navbar" %}
 
                     <li class="nav-item dropdown">

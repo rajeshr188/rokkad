@@ -113,8 +113,30 @@
 </details>
 {% endif %}
 {% else %}
+{% if monthly_offer %}
+<div class="card mb-4"><div class="card-body">
+  <h2 class="h4">Rokkad monthly subscription</h2>
+  {% include 'subscriptions/_seller.html' with seller=monthly_offer.snapshot.seller %}
+  <p><strong>₹1,499 per month</strong> for this Workspace, including the owner and up to five staff.</p>
+  <p>GST not charged. Up to 12 monthly collections, beginning when you authorize payment with Razorpay.
+    Your free trial never converts automatically. Preparing an agreement does not charge you or grant paid access.</p>
+  <p>You can stop future renewals from this page. Already-paid time remains available; cancelling does not request a refund.
+    A payment already in progress may still settle. After the final paid period, normal grace and read-only access apply.</p>
+  <p>Read the <a href="{% url 'cancellation_and_refund' %}">cancellation and refund policy</a>.</p>
+  {% if monthly_offer.mode == 'test' %}<p><strong>TEST MODE — no real payment.</strong></p>{% endif %}
+  {% if monthly_consent %}
+  <form method="post" action="{% url 'public-recurring-start' %}">
+    {% csrf_token %}<input type="hidden" name="offer_token" value="{{ monthly_consent }}">
+    <label><input type="checkbox" name="accepted_terms" value="{{ monthly_terms }}" required>
+      I accept ₹1,499/month for up to 12 monthly collections for this Workspace.</label><br>
+    <button class="btn btn-primary mt-3" type="submit">Prepare monthly subscription</button>
+  </form>
+  {% else %}<p class="alert alert-info">{{ monthly_unavailable_reason }}</p>{% endif %}
+</div></div>
+{% else %}
 <div class="alert alert-info">No recurring payment agreement has been prepared for this Workspace.
   Contact support to arrange recurring payments. Existing paid time remains unchanged.</div>
+{% endif %}
 {% endif %}
 {% if can_authorize %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

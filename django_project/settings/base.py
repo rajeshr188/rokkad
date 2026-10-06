@@ -405,6 +405,8 @@ SUBSCRIPTION_GRACE_DAYS = 7
 BILLING_CHECKOUT_ENABLED = env.bool("BILLING_CHECKOUT_ENABLED", default=False)
 # Explicit new agreement/authorization gate; configured recovery remains available when paused.
 BILLING_RECURRING_ENABLED = env.bool("BILLING_RECURRING_ENABLED", default=False)
+# Selecting one reviewed binding publishes owner self-service; zero keeps the pilot private.
+BILLING_PUBLIC_RECURRING_BINDING_ID = env.int("BILLING_PUBLIC_RECURRING_BINDING_ID", default=0)
 
 THOUSAND_SEPARATOR = ","
 DECIMAL_SEPARATOR = "."

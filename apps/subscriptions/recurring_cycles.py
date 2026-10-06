@@ -18,7 +18,8 @@ from .notifications import send_checkout_receipt
 from .razorpay_service import RazorpayService
 from .recurring import (_identity, _verify_plan, recurring_provider_mode, verify_agreement,
                         verify_agreement_observation)
-from .services import build_billing_account_defaults, ensure_entitlements_for_subscription
+from .services import (build_billing_account_defaults, ensure_entitlements_for_subscription,
+                       get_workspace_member_usage)
 
 
 def _timestamp(value):
@@ -152,20 +153,39 @@ def record_paid_cycle(*, agreement_id, provider_invoice_id, payment_id=None, act
             not Invoice.objects.filter(subscription=subscription, status="paid").exclude(
                 recurring_cycle__agreement__closed_at__isnull=False, payment__status="refunded",
                 billing_resolution__action__in=["end_access", "retain_access"]).exists())
+        # A trial's model-default end_date is not paid time. Its first due capture
+        # can adopt the agreed paid plan only after natural trial expiry, with no
+        # previous financial history or overlapping mandate to reinterpret.
+        trial_pending = not created and subscription.status == "trial"
+        trial_conversion = bool(trial_pending and subscription.trial_end_date and
+            subscription.trial_end_date <= agreement.created_at and
+            subscription.trial_end_date <= start <= timezone.now() < end and
+            company.lifecycle_state == Company.LifecycleState.ACTIVE and
+            not subscription.razorpay_subscription_id and
+            not Invoice.objects.filter(subscription=subscription).exists() and
+            not RecurringCycle.objects.filter(agreement__workspace=company).exists() and
+            get_workspace_member_usage(workspace=company, include_pending_invitations=True) <= int(next(
+                item["value"] for item in snapshot["entitlements"] if item["feature_code"] == "workspace.max_members")))
+        trial_evidence = ({"previous_plan_id": subscription.plan_id,
+                           "previous_end_date": subscription.end_date.isoformat(),
+                           "trial_end_date": subscription.trial_end_date.isoformat()}
+                          if trial_conversion else None)
         if (future_period or not current or current.pk != agreement.pk or
                 company.lifecycle_state in {Company.LifecycleState.ARCHIVED, Company.LifecycleState.DELETION_PENDING} or
-                (not created and not replacement and subscription.plan_id != snapshot["plan_id"]) or
+                (trial_pending and not trial_conversion) or
+                (not created and not replacement and not trial_conversion and subscription.plan_id != snapshot["plan_id"]) or
                 (not created and not replacement and not previous_cycle and (
                     ((subscription.status == "active" or has_paid_evidence) and previous_end > start) or
                     (subscription.status == "trial" and subscription.trial_end_date and subscription.trial_end_date > start)))):
             action = "review"
-        elif (replacement or created or (not has_paid_evidence and subscription.status == "past_due") or end > previous_end):
+        elif (trial_conversion or replacement or created or (not has_paid_evidence and subscription.status == "past_due") or end > previous_end):
             # Use the verified period, never now + a duration or the mutable agreement.current_end.
             subscription.plan_id = snapshot["plan_id"]
             subscription.end_date = max(end, previous_end) if has_paid_evidence and previous_end and not replacement else end
             subscription.save(update_fields=["plan", "end_date", "updated_at"])
             subscription, _ = transition_subscription(subscription=subscription, target_status="active",
-                event_type="recurring.payment", payload={"provider_invoice_id": provider_invoice_id})
+                event_type="recurring.payment", payload={"provider_invoice_id": provider_invoice_id,
+                    **({"trial_conversion": trial_evidence} if trial_conversion else {})})
             ensure_entitlements_for_subscription(subscription, projection=snapshot["entitlements"])
             action = "applied"
         if created and action == "review":

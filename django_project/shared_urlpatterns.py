@@ -4,6 +4,9 @@ from django.views.generic import RedirectView
 
 from apps.configuration import views as configuration_views
 from apps.orgs import views as org_views
+from apps.orgs.web import platform_console
+from apps.orgs.web import storage as storage_views
+from apps.subscriptions.recurring_views import PublicRecurringStartView
 
 
 # Cross-plane service routes used by both public and tenant URLConfs.
@@ -61,8 +64,16 @@ AUTH_URLPATTERNS = [
 # Canonical SaaS control-plane aliases. These are additive aliases for the
 # current orgs routes; old /orgs/... paths remain the compatibility surface.
 CANONICAL_CONTROL_PLANE_URLPATTERNS = [
+    path("app/platform/", platform_console.overview, name="platform_console"),
+    path("app/platform/storage/", storage_views.platform_storage, name="platform_storage"),
+    path("w/<str:workspace_slug>/settings/storage/", storage_views.workspace_storage, name="workspace_storage"),
+    path("app/platform/workspaces/", platform_console.directory, name="platform_workspaces"),
+    path("app/platform/workspaces/<slug:slug>/", platform_console.workspace, name="platform_workspace"),
+    path("app/platform/workspaces/<slug:slug>/<str:action>/", platform_console.lifecycle, name="platform_workspace_lifecycle"),
+    path("app/platform/guide/", platform_console.guide, name="platform_guide"),
     path("app/", org_views.workspace_selector, name="app_dashboard"),
     path("app/workspaces/", org_views.workspace_selector, name="app_workspaces"),
+    path("app/workspaces/archived/", org_views.archived_workspaces, name="app_archived_workspaces"),
     path("app/workspaces/new/", org_views.workspace_create, name="app_workspace_create"),
     path("app/invitations/", org_views.team_invitations, name="app_invitations"),
     path("app/memberships/", org_views.my_memberships, name="app_memberships"),
@@ -614,6 +625,7 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
 # Authenticated global/control-plane routes. These are still included in tenant
 # URLConf for compatibility until Phase 2 route separation is completed.
 GLOBAL_AUTHENTICATED_URLPATTERNS = [
+    path("app/billing/recurring/start/", PublicRecurringStartView.as_view(), name="public-recurring-start"),
     *CANONICAL_CONTROL_PLANE_URLPATTERNS,
     *CANONICAL_WORKSPACE_SLUG_URLPATTERNS,
     path("onboarding/", include("apps.onboarding.urls")),

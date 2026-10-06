@@ -71,6 +71,11 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
         context["public_trial_used"] = bool(
             context["public_trial_plan"] and owner_has_public_trial(self.request.user)
         )
+        from .public_recurring import selected_binding
+        try:
+            context["public_monthly_offer"] = selected_binding()
+        except (ValidationError, PermissionDenied):
+            context["public_monthly_offer"] = None
 
         return context
 

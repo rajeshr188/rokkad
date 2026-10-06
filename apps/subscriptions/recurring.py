@@ -192,7 +192,8 @@ def _locked_owner(workspace_id, actor):
     return workspace
 
 
-def create_agreement(*, workspace_id, actor, binding_id, total_count, request_key, start_at=None):
+def create_agreement(*, workspace_id, actor, binding_id, total_count, request_key, start_at=None,
+                     public_consent=None):
     """Commit exactly one attempt before one POST. Unknown outcomes never repost."""
     _outside_transaction()
     mode = _creation_mode()
@@ -213,6 +214,12 @@ def create_agreement(*, workspace_id, actor, binding_id, total_count, request_ke
             raise ValidationError("Scheduled start is outside the supported date range.") from exc
     with workspace_context(workspace_id):
         workspace = _locked_owner(workspace_id, actor)
+        consent_detail = {}
+        if public_consent is not None:
+            from .public_recurring import validate_consent
+            consent_detail = {"accepted_terms": validate_consent(
+                workspace=workspace, actor=actor, consent=public_consent, binding_id=binding_id,
+                total_count=total_count, request_key=key, start_at=start_at)}
         existing = RecurringAgreement.objects.filter(request_key=key).first()
         if existing:
             if (existing.workspace_id != workspace.pk or existing.binding_id != binding_id or
@@ -222,6 +229,9 @@ def create_agreement(*, workspace_id, actor, binding_id, total_count, request_ke
             if existing.state != RecurringAgreement.State.VERIFIED:
                 raise ValidationError("This agreement creation needs provider reconciliation; do not create another.")
             return existing
+        if public_consent is not None:
+            from .public_recurring import require_eligible
+            require_eligible(workspace)
         if start_at is not None and start_at <= timezone.now().timestamp():
             raise ValidationError("A new scheduled agreement must start in the future.")
         if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
@@ -251,7 +261,8 @@ def create_agreement(*, workspace_id, actor, binding_id, total_count, request_ke
         agreement = RecurringAgreement.objects.create(
             workspace=workspace, binding=binding, request_key=key, request_snapshot=payload, actor=actor,
         )
-        RecurringAgreementEvent.objects.create(agreement=agreement, actor=actor, event_type="creation.requested")
+        RecurringAgreementEvent.objects.create(agreement=agreement, actor=actor, event_type="creation.requested",
+                                              detail=consent_detail)
     # The Workspace transaction has COMMITTED here, including the exclusive reservation.
     try:
         _verify_plan(RazorpayService.get_plan(binding.provider_plan_id), binding.provider_plan_id, binding.snapshot)

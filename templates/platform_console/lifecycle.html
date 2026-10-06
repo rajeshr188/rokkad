@@ -1,0 +1,30 @@
+{% extends 'platform_console/base.html' %}
+{% block console_content %}
+{% if unavailable %}
+<div class="alert alert-warning" role="alert">{% for error in unavailable %}<p class="mb-1">{{ error }}</p>{% endfor %}</div>
+<a href="{% url 'platform_workspace' slug=slug %}">Return to workspace overview</a>
+{% else %}
+<a href="{% url 'platform_workspace' slug=workspace.slug %}">← {{ workspace.name }}</a>
+<div class="row justify-content-center mt-3"><div class="col-lg-9 col-xl-8">
+<h2 class="h3 fw-bold">{% if action == 'suspend' %}Suspend workspace{% else %}Restore workspace{% endif %}</h2>
+<p class="text-muted">Review this deliberate access change before confirming.</p>
+{% if review_errors %}<div class="alert alert-warning" role="alert">{% for error in review_errors %}<p class="mb-1">{{ error }}</p>{% endfor %}</div>{% endif %}
+<div class="card mb-3"><div class="card-body"><dl class="row mb-0">
+<dt class="col-sm-4">Workspace</dt><dd class="col-sm-8 text-break"><strong>{{ workspace.name }}</strong><br><code>{{ workspace.slug }}</code></dd>
+<dt class="col-sm-4">Owner</dt><dd class="col-sm-8 text-break">{{ workspace.owner.email }}</dd>
+<dt class="col-sm-4">Current state</dt><dd class="col-sm-8">{{ workspace.get_lifecycle_state_display }}</dd>
+<dt class="col-sm-4">Recorded by</dt><dd class="col-sm-8 text-break">{{ user.email }}</dd>
+{% if workspace.lifecycle_reason %}<dt class="col-sm-4">Previous reason</dt><dd class="col-sm-8 text-break">{{ workspace.lifecycle_reason }}</dd>{% endif %}
+</dl></div></div>
+<div class="alert {% if action == 'suspend' %}alert-danger{% else %}alert-info{% endif %}">
+{% if action == 'suspend' %}<h3 class="h5">Business workspace access will be blocked</h3><p>All members, including the owner, lose access to the workspace's business screens. Existing loans, payments and files are retained. A platform administrator can restore access later.</p>
+{% else %}<h3 class="h5">If restored now: {{ access_label }}</h3><p>{{ activity.reason }}</p>{% if activity.until %}<p>This access period ends {{ activity.until|date:'d/m/Y H:i T' }}.</p>{% endif %}{% endif %}
+<p class="mb-0">This action does not change subscription dates, grant paid access, extend a trial or cancel billing. Access is evaluated using the existing subscription and administrator decisions.</p></div>
+<form method="post" class="card card-body">{% csrf_token %}{{ form.token }}
+{% if form.errors %}<div class="alert alert-danger" role="alert">Correct the highlighted details. {{ form.non_field_errors }}{{ form.token.errors }}</div>{% endif %}
+{% for field in form.visible_fields %}<div class="mb-3">{% if field.name == 'acknowledged' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{% if field.name == 'confirmation' %}<div class="form-text">Enter <strong>{{ workspace.slug }}</strong>. Confirmation expires after 15 minutes.</div>{% endif %}{% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>{% endfor %}
+<div class="d-flex flex-wrap gap-2"><button class="btn {% if action == 'suspend' %}btn-danger{% else %}btn-primary{% endif %}" type="submit">{% if action == 'suspend' %}Confirm suspension{% else %}Confirm restoration{% endif %}</button><a class="btn btn-outline-secondary" href="{% url 'platform_workspace' slug=workspace.slug %}">Cancel</a></div>
+<p class="small text-muted mt-3 mb-0">Your identity, the time and this reason will be recorded in the workspace's lifecycle history. No notification email is sent by this action.</p>
+</form></div></div>
+{% endif %}
+{% endblock %}

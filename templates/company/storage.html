@@ -1,0 +1,6 @@
+{% extends 'base_workspace_settings.html' %}
+{% block title %}Storage | {{ workspace.name }}{% endblock %}
+{% block mgmt_content %}
+<h1 class="h3 fw-bold">Storage usage</h1><p class="text-muted">Media stored for {{ workspace.name }}.</p>
+{% include 'company/_storage_usage.html' %}
+{% endblock %}

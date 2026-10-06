@@ -1,11 +1,34 @@
 ---
 status: active
 owner: project
-updated: 2026-10-05
+updated: 2026-10-06
 tags: [status, architecture]
 ---
 
 # Status
+
+## Complete repository checkpoint verified (6 October)
+
+The owner authorized committing all remaining changes and pushing the current
+`work/loan-servicing-contract-ld01` branch to GitHub. This checkpoint includes the
+previously separate platform console/lifecycle, storage inventory/usage/recoverable
+cleanup, media-retention tests, owner monthly self-service and expired-trial paid
+conversion code, the read-only import-media audit helper, and five fictional Form E
+and Khata sample PDFs. Existing architecture decisions and runbooks remain the
+contracts; this checkpoint does not enable public billing or execute live cleanup.
+
+Focused validation passes **188 tests in 379.476s**, covering console authority,
+lifecycle, storage inventory/recovery/retention, public recurring consent, expired
+trials and recurring provider/cycle behavior in isolated QA with mocked providers.
+All 24 pending Python files parse, 11 changed/new page templates compile, staged
+whitespace checks pass, and model/migration checks report no changes. Credential
+pattern checks are clean; PDF contents are fictional. Private verification logs and
+temporary dependencies remain ignored under `.tmp/commit-all-20261006/`.
+
+This is source publication, not a production deployment, full-repository regression
+claim or live-provider acceptance. Earlier loan delivery and remaining LD-08
+production gates below retain their meaning. Local preview database configuration
+is separate from Git; no database or private-media backup is committed.
 
 ## Unified historical browsing delivered; LD-08 technical preparation verified locally (5 October)
 

@@ -27,6 +27,9 @@ class RecurringDashboardView(LoginRequiredMixin, BillingPermissionMixin, Templat
         agreement = RecurringAgreement.objects.filter(workspace=self.request.workspace).select_related(
             "binding").order_by("-created_at", "-pk").first()
         context["agreement"] = agreement
+        if not agreement:
+            from .public_recurring import offer_context
+            context.update(offer_context(workspace=self.request.workspace, actor=self.request.user))
         if agreement:
             try:
                 matching_mode = recurring_provider_mode() == agreement.binding.mode
@@ -100,3 +103,35 @@ class RecurringActionView(LoginRequiredMixin, BillingPermissionMixin, View):
                 return JsonResponse({"error": message}, status=400)
             messages.error(request, message)
         return redirect("workspace_subscriptions:recurring", workspace_slug=request.workspace.slug)
+
+
+class PublicRecurringStartView(LoginRequiredMixin, View):
+    """Global POST adapter: the service commits intent before contacting Razorpay.
+
+    /app/ is already a global control-plane entrypoint. No Workspace middleware
+    transaction is bypassed or manually committed, and CSRF remains mandatory.
+    """
+
+    def post(self, request):
+        from django.http import HttpResponseBadRequest
+        from apps.orgs.models import Company
+        from .public_recurring import TERMS, read_consent
+        from .recurring import create_agreement
+
+        try:
+            consent = read_consent(request.POST.get("offer_token"), request.user)
+            if request.POST.get("accepted_terms") != TERMS:
+                raise ValidationError("Review and accept the monthly subscription terms before continuing.")
+        except ValidationError as exc:
+            return HttpResponseBadRequest(exc.messages[0])
+        workspace = Company.all_objects.filter(pk=consent["workspace_id"]).first()
+        if workspace is None:
+            return HttpResponseBadRequest("This Workspace is unavailable.")
+        try:
+            create_agreement(workspace_id=workspace.pk, actor=request.user,
+                binding_id=consent["binding_id"], total_count=12,
+                request_key=consent["request_key"], public_consent=consent)
+            messages.success(request, "Agreement prepared. Review it and authorize payments with Razorpay to continue.")
+        except (ValidationError, BillingProviderError) as exc:
+            messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else str(exc))
+        return redirect("workspace_subscriptions:recurring", workspace_slug=workspace.slug)

@@ -85,6 +85,9 @@
             <h1 class="mb-2">Subscription plans</h1>
             {% if billing_checkout_enabled %}
             <p class="text-muted">One subscription per Workspace. Prices shown before applicable tax.</p>
+            {% elif public_monthly_offer %}
+            <p>₹1,499/month per Workspace for the owner plus five staff. Paid billing requires your explicit consent after any free trial ends.</p>
+            <a class="btn btn-primary" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review monthly subscription</a>
             {% else %}
             <p>Subscriptions are arranged with Rokkad support. Review any agreement prepared for your Workspace in Recurring payments.</p>
             <a class="btn btn-primary" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review recurring payments</a>

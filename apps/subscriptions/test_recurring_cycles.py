@@ -45,7 +45,8 @@ class CycleFixture:
             self.now = timezone.now().replace(microsecond=0)
             self.agreement = RecurringAgreement.objects.create(workspace=self.workspace, binding=self.binding,
                 actor=self.owner, request_key=uuid4(), state="verified", provider_subscription_id="sub_cycle",
-                provider_status="active", verified_at=self.now, created_at=self.now-timedelta(days=100),
+                provider_status="active", verified_at=self.now,
+                created_at=self.now-getattr(self, "agreement_age", timedelta(days=100)),
                 request_snapshot={"plan_id": "plan_cycle", "quantity": 1, "total_count": 12, "customer_notify": False,
                                   "notes": {"workspace_id": str(self.workspace.pk), "rokkad_attempt": "fixture"}})
         self.provider_agreement = {**self.agreement.request_snapshot, "id": "sub_cycle", "entity": "subscription",

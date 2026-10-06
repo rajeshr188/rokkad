@@ -1,0 +1,21 @@
+{% extends 'platform_console/base.html' %}
+{% block console_content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><a class="card card-body h-100 text-decoration-none" href="{% url 'platform_workspaces' %}"><span class="text-muted">All workspaces</span><strong class="display-6">{{ counts.total }}</strong><span class="small">Includes archived and suspended</span></a></div>
+  <div class="col-md-4"><a class="card card-body h-100 text-decoration-none" href="{% url 'platform_workspaces' %}?lifecycle=ACTIVE"><span class="text-muted">Operationally active</span><strong class="display-6">{{ counts.active }}</strong><span class="small">Subscription access is evaluated separately</span></a></div>
+  <div class="col-md-4"><a class="card card-body h-100 text-decoration-none" href="{% url 'platform_workspaces' %}?lifecycle=SUSPENDED"><span class="text-muted">Suspended</span><strong class="display-6">{{ counts.suspended }}</strong><span class="small">Deliberate operational restrictions</span></a></div>
+</div>
+<div class="row g-4">
+ <section class="col-lg-7" aria-labelledby="attention-title"><div class="card h-100"><div class="card-body">
+ <h2 class="h5" id="attention-title">Review queue</h2><p class="text-muted small">Use these signals to investigate; they do not trigger changes.</p>
+ <div class="list-group list-group-flush">
+ <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'platform_workspaces' %}?attention=trial_ending"><span>Trials ending within 7 days</span><span class="badge text-bg-warning align-self-start">{{ counts.trial_ending }}</span></a>
+ <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'platform_workspaces' %}?attention=no_subscription"><span>No subscription record <small class="d-block text-muted">May have temporary administrator-approved access</small></span><span class="badge text-bg-secondary align-self-start">{{ counts.no_subscription }}</span></a>
+ <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'platform_workspaces' %}?attention=mail"><span>Invitation email needs review <small class="d-block text-muted">Failed, uncertain, bounced, complained or suppressed; includes historical outcomes</small></span><span class="badge text-bg-secondary align-self-start">{{ counts.mail }}</span></a>
+ </div></div></div></section>
+ <section class="col-lg-5" aria-labelledby="recent-title"><div class="card h-100"><div class="card-body"><h2 class="h5" id="recent-title">Recently created workspaces</h2>
+ {% for workspace in recent %}<div class="border-bottom py-3"><a class="fw-semibold text-break" href="{% url 'platform_workspace' slug=workspace.slug %}">{{ workspace.name }}</a><div class="small text-muted text-break">{{ workspace.owner.email }} · {{ workspace.created_at|date:'d/m/Y' }}</div></div>{% empty %}<p class="text-muted">No workspaces yet.</p>{% endfor %}
+ </div></div></section>
+</div>
+<p class="small text-muted mt-3">Counts include test workspaces unless they are the system's public placeholder. They are not a count of paying customers.</p>
+{% endblock %}

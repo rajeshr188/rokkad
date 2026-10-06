@@ -1,0 +1,17 @@
+{% extends 'platform_console/base.html' %}
+{% block console_content %}
+<h2 class="h3 fw-bold">Storage inventory</h2>
+<p class="text-muted">Measured application media. No files are deleted and no storage charges are calculated.</p>
+{% if latest and latest.state != 'complete' %}<div class="alert alert-warning">Latest reconciliation: {{ latest.get_state_display }} (started {{ latest.started_at|date:'d/m/Y H:i T' }}).{% if run %} The last complete result remains below.{% endif %}</div>{% endif %}
+{% if run %}
+{% if stale %}<div class="alert alert-warning">This inventory is more than two days old. Usage may have changed.</div>{% endif %}
+<div class="card card-body mb-3"><div class="row g-3"><div class="col-md-6"><div class="small text-muted">Stored in the scanned application prefix</div><strong class="fs-3">{{ total_bytes|filesizeformat }}</strong><div>{{ total_objects }} objects</div></div><div class="col-md-6"><div>Reconciled {{ run.completed_at|date:'d/m/Y H:i T' }}</div><div class="small text-muted">{{ run.coverage.workspace_count }} workspaces · two reference passes</div><code class="text-break">{{ run.scope }}</code></div></div></div>
+<div class="table-responsive"><table class="table align-middle"><caption>Physical objects are counted once. Missing references have unknown size.</caption><thead><tr><th>Classification</th><th>Objects</th><th>Stored size</th></tr></thead><tbody>{% for row in totals %}<tr><td><a href="?state={{ row.state }}">{{ row.label }}</a></td><td>{{ row.objects }}</td><td>{% if row.state == 'missing' %}Unknown{% else %}{{ row.bytes|filesizeformat }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="alert alert-info"><strong>Review candidates are not confirmed orphans.</strong> Old unreferenced objects may belong to uploads, imports or retained evidence. Ownership is never inferred from filenames. Seven days is a review threshold, not a deletion rule. Rehearsal, original migration archives, backups and other prefixes are excluded.</div>
+<h3 class="h5 mt-4">{{ state_label }}</h3>
+<p class="small text-muted">Object fingerprints identify inventory entries without exposing customer filenames or download links. Use the private operator process for investigation.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Object fingerprint</th><th>Size</th><th>Last modified</th><th>Workspace references</th></tr></thead><tbody>{% for obj in page %}<tr><td><code>{{ obj.key_digest|slice:':16' }}</code></td><td>{% if obj.state == 'missing' %}Unknown{% else %}{{ obj.byte_size|filesizeformat }}{% endif %}</td><td>{{ obj.modified_at|date:'d/m/Y H:i'|default:'Unknown' }}</td><td>{{ obj.workspace_count }}</td></tr>{% empty %}<tr><td colspan="4">No objects in this classification.</td></tr>{% endfor %}</tbody></table></div>
+<nav aria-label="Inventory pages" class="d-flex flex-wrap gap-3"><span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_previous %}<a href="{% querystring page=page.previous_page_number %}">Previous</a>{% endif %}{% if page.has_next %}<a href="{% querystring page=page.next_page_number %}">Next</a>{% endif %}</nav>
+<p class="small text-muted mt-4">Background reconciliation updates this page; refreshing does not scan R2. These are current object bytes, not transfer costs, historical object versions or a whole-bucket bill.</p>
+{% else %}<div class="alert alert-secondary">No completed storage inventory yet. Usage will appear after the first background reconciliation.</div>{% endif %}
+{% endblock %}
