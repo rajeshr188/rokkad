@@ -40,6 +40,33 @@ The release CI job allowance is raised from 25 to 45 minutes because the Loans
 suite now contains over 1,800 test methods, besides foundation, recurring/mail,
 quote/isolation and image gates. No checks are removed. A new exact-head run is
 required after this workflow change.
+
+CI on `dce0d00a` completed the 277-check billing/mail stage with one error in the
+static invitation-flow assertion (not a billing/provider runtime failure).
+CI on `422763d5` reproduces that same error. The old assertion expected invitation
+mutation immediately after opening the transaction, omitting the current Company
+lock, policy and capacity checks. It is corrected to compare policy/mutation order
+within each function and retain the transaction-before-mutation assertion.
+All **15 invitation static checks pass** locally (0.009s), after the runtime-image
+QA harness was supplied with the required repository docs fixture. Publication
+and exact-head CI await the corrected full Loans-suite run. The first local run
+completed **1,296 tests in 821.602s**, with three failures and 82 errors. Its
+namespace-package discovery imported many files without package context. An
+explicit repository top level discovers **2,089 tests and zero import errors**;
+the CI Loans command now specifies it. Three historical migration tests also
+downgraded the shared database across an irreversible migration and left later
+tests on an older schema. Separate empty migration-test databases now
+copy only explicitly supplied generated fixtures and their
+prerequisites, never production/customer records. The shared QA schema is restored.
+The missing-submission-reference runtime correction preserves invalid POST
+references instead of silently replacing them; explicit entry-purpose changes
+still receive a new form reference. Quote-policy and receipt-format unit fixes
+pass **three checks** (0.041s). All **41 migration/submission/opening/paper-entry/
+recovery regressions pass** (215.625s), including all three isolated populated
+upgrades and exact recovery. PostgreSQL's earlier deadlock log identifies
+autovacuum competing with the test fixture transaction; the isolated recovery
+rerun passes. No recovery lock is weakened and autovacuum is not disabled.
+The correctly discovered full suite and exact-head CI remain pending.
 CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
 production-copy migration rehearsal are additional gates; a branch push does not

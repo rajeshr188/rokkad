@@ -19,7 +19,7 @@ class PaymentReceiptNavigationTests(SimpleTestCase):
         for event_id in (31, 30):
             self.assertIn(reverse("workspace_loans:pawn_repayment_receipt_pdf", args=["receipt-test", 7, event_id]), html)
         self.assertIn("this payment was reversed", html)
-        self.assertIn("24 Sep 2026", html)
+        self.assertIn("24/09/2026", html)
         self.assertEqual(html.count("Print payment receipt"), 2)
 
     def test_no_receipts_section_without_a_payment(self):

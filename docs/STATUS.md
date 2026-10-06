@@ -38,6 +38,28 @@ and the complete check passed. The CI allowance is raised from 25 to 45 minutes
 for the expanded suite (over 1,800 Loans test methods plus other release gates),
 without removing checks. Full exact-head CI remains pending.
 
+The second CI run executed 277 billing/mail checks with one obsolete static
+invitation assertion: it expected `form.save()` immediately after entering the
+transaction, before the current Company lock, role policy and capacity checks.
+The static check now compares policy and mutation within each relevant function
+and still verifies the transaction begins before mutation. All **15 invitation
+checks pass** (0.009s) after supplying the documentation fixture omitted from the
+local runtime image. The 422763d5 rerun reproduces the same unfixed static check;
+the correction awaits publication together with full Loans-suite findings. The
+first local Loans run finished: **1,296 tests**, three assertion failures and
+82 errors. Package discovery omitted relative-import modules; explicitly setting
+the repository top level discovers **2,089 tests with no failed imports**.
+Three historical migration tests also attempted to downgrade the shared suite
+database across irreversible migrations, poisoning later checks. They now use
+separately created empty test databases with only their generated fixture graphs;
+legacy default-alias migration reads stay inside the isolated database. The shared
+QA schema is restored. All **41 migration/submission/opening/paper-entry/recovery
+regressions pass** (215.625s); the quote-policy/receipt unit subset also passes
+three checks (0.041s). The earlier recovery deadlock log identifies autovacuum
+competing with the test's long transaction; the isolated exact-recovery rerun
+passes. The missing-submission-reference runtime bug is corrected without
+weakening retry identity. Correctly discovered full exact-head CI remains pending.
+
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
 to fictional local recovery. No candidate migrations or financial writes have

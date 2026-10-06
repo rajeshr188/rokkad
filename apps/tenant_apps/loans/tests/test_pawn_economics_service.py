@@ -12,6 +12,7 @@ from apps.tenant_apps.loans.services.pawn_economics import (
 
 
 class PawnEconomicsResolutionTests(SimpleTestCase):
+    @patch("apps.tenant_apps.loans.services.pawn_economics.maximum_quote_age_days", return_value=7)
     @patch("apps.tenant_apps.loans.services.pawn_economics.resolve_pawn_loan_fee_policies", return_value=())
     @patch("apps.tenant_apps.loans.services.pawn_economics.get_origination_quote_rows")
     @patch("apps.tenant_apps.loans.services.pawn_economics.resolve_pawn_metal_interest_rate_policy")
@@ -22,6 +23,7 @@ class PawnEconomicsResolutionTests(SimpleTestCase):
         resolve_rate,
         valuation_rate,
         _resolve_fees,
+        quote_age,
     ):
         resolve_policy.return_value = SimpleNamespace(
             valuation_method="CALCULATED_METAL_VALUE",
@@ -55,4 +57,6 @@ class PawnEconomicsResolutionTests(SimpleTestCase):
         self.assertEqual(resolved.economics.net_disbursed, Decimal("49000.00"))
         valuation_rate.assert_called_once_with(
             workspace_id=1, loan_date=date(2026, 8, 5), metals=("GOLD",), at=ANY,
+            maximum_age_days=7,
         )
+        quote_age.assert_called_once_with(1)

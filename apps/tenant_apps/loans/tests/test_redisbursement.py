@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, connection, connections, transaction
 from django.test import TransactionTestCase, override_settings
 
-from apps.tenancy.testing import WorkspaceTestCase
+from apps.tenancy.testing import WorkspaceTestCase, historical_migration_database
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
 from apps.tenant_apps.loans.services import (
@@ -239,15 +239,22 @@ class DisbursalMigrationTests(TransactionTestCase):
                 original_policy = self.loan.policy_snapshot_id
                 original_disbursal = self.loan.disbursal_snapshot_id
                 events = list(self.loan.loan_events.values())
-            latest = MigrationExecutor(connection).loader.graph.leaf_nodes()
-            MigrationExecutor(connection).migrate([("loans", "0022_paper_closure_transition")])
-            try:
-                MigrationExecutor(connection).migrate([("loans", "0024_disbursal_schedule_identity")])
-                with workspace_context(self.tenant.pk):
-                    apps = MigrationExecutor(connection).loader.project_state([("loans", "0024_disbursal_schedule_identity")]).apps
-                    migrated = apps.get_model("loans", "PawnLoan").objects.get(pk=self.loan.pk)
-                    self.assertEqual(migrated.policy_snapshot_id, original_policy)
-                    self.assertEqual(migrated.disbursal_snapshot_id, original_disbursal)
-                    self.assertEqual(list(self.loan.loan_events.values()), events)
-            finally:
-                MigrationExecutor(connection).migrate(latest)
+                sources = [Membership.objects.get(company=self.tenant, user=self.actor),
+                    self.loan, *self.loan.collateral_items.all(), self.loan.policy_snapshot,
+                    self.loan.disbursal_snapshot, *self.loan.loan_events.all()]
+            with historical_migration_database(
+                self,
+                [("loans", "0022_paper_closure_transition")], sources,
+            ) as (target, old_apps):
+                event_model = old_apps.get_model("loans", "PawnLoanEvent")
+                original_events = list(event_model.objects.using(target.alias).order_by("pk").values())
+                after = [("loans", "0024_disbursal_schedule_identity")]
+                executor = MigrationExecutor(target)
+                executor.migrate(after)
+                apps = executor.loader.project_state(after).apps
+                migrated = apps.get_model("loans", "PawnLoan").objects.using(target.alias).get(pk=self.loan.pk)
+                self.assertEqual(migrated.policy_snapshot_id, original_policy)
+                self.assertEqual(migrated.disbursal_snapshot_id, original_disbursal)
+                self.assertEqual(list(apps.get_model("loans", "PawnLoanEvent").objects.using(target.alias).order_by("pk").values()), original_events)
+            with workspace_context(self.tenant.pk):
+                self.assertEqual(list(self.loan.loan_events.values()), events)

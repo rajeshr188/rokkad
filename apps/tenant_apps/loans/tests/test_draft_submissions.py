@@ -16,7 +16,7 @@ from django.urls import reverse
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context
-from apps.tenancy.testing import WorkspaceTestCase
+from apps.tenancy.testing import WorkspaceTestCase, historical_migration_database
 from apps.tenant_apps.loans.models import PawnLoan, LoanNumberSequence
 from apps.tenant_apps.loans.services.draft_submissions import (
     new_draft_submission, saved_draft_submission, submit_new_draft,
@@ -293,17 +293,28 @@ class DraftSubmissionConcurrencyTests(TransactionTestCase):
             loan = create_pawn_draft(command(self), actor=self.owner)
             before = PawnLoan.objects.values().get()
             numbers = list(LoanNumberSequence.objects.order_by("pk").values())
-        latest = MigrationExecutor(connection).loader.graph.leaf_nodes()
-        try:
-            MigrationExecutor(connection).migrate([("loans", "0026_collateral_quantity_and_interest_override")])
-            MigrationExecutor(connection).migrate(latest)
-            with workspace_context(self.tenant.pk):
-                self.assertEqual(PawnLoan.objects.values().get(), before)
-                self.assertEqual(list(LoanNumberSequence.objects.order_by("pk").values()), numbers)
-                loan.refresh_from_db()
-                self.assertIsNone(loan.creation_submission_id)
-        finally:
-            MigrationExecutor(connection).migrate(latest)
+            sequences = list(LoanNumberSequence.objects.all())
+        membership = Membership.objects.get(company=self.tenant, user=self.owner)
+        with historical_migration_database(
+            self,
+            [("loans", "0026_collateral_quantity_and_interest_override")],
+            [membership, loan, *sequences],
+        ) as (target, old_apps):
+            old_loan = old_apps.get_model("loans", "PawnLoan")
+            old_numbers = old_apps.get_model("loans", "LoanNumberSequence")
+            originals = list(old_loan.objects.using(target.alias).values())
+            original_numbers = list(old_numbers.objects.using(target.alias).order_by("pk").values())
+            after = [("loans", "0027_draft_submission_identity")]
+            executor = MigrationExecutor(target)
+            executor.migrate(after)
+            apps = executor.loader.project_state(after).apps
+            rows = list(apps.get_model("loans", "PawnLoan").objects.using(target.alias).values())
+            self.assertTrue(all(row.pop("creation_submission_id") is None for row in rows))
+            self.assertEqual(rows, originals)
+            self.assertEqual(list(apps.get_model("loans", "LoanNumberSequence").objects.using(target.alias).order_by("pk").values()), original_numbers)
+        with workspace_context(self.tenant.pk):
+            self.assertEqual(PawnLoan.objects.values().get(), before)
+            self.assertEqual(list(LoanNumberSequence.objects.order_by("pk").values()), numbers)
 
     def test_simultaneous_submissions_create_one_loan_and_photo(self):
         from apps.tenant_apps.party.models import Party

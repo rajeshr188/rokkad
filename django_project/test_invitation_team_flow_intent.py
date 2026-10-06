@@ -353,23 +353,33 @@ class InvitationTeamFlowIntentTests(SimpleTestCase):
 
         policy_before_mutation_pairs = (
             (
+                "send_team_invitation",
                 "role_policy.assert_can_invite_role(",
-                "with _control_plane_transaction():\n        invitation = form.save()",
+                "invitation = form.save()",
             ),
             (
+                "remove_membership",
                 "role_policy.assert_can_remove_membership(",
-                "with _control_plane_transaction():\n        membership.delete()",
+                "membership.delete()",
             ),
             (
+                "change_membership_role",
                 "role_policy.assert_can_change_role(",
-                "with _control_plane_transaction():\n        membership.role = new_role",
+                "membership.role = new_role",
             ),
         )
-        for policy_call, mutation_start in policy_before_mutation_pairs:
+        for function_name, policy_call, mutation_start in policy_before_mutation_pairs:
             with self.subTest(policy_call=policy_call):
+                function_content = control_plane_content.split(
+                    f"\ndef {function_name}(", 1,
+                )[1].split("\ndef ", 1)[0]
                 self.assertLess(
-                    control_plane_content.index(policy_call),
-                    control_plane_content.index(mutation_start),
+                    function_content.index(policy_call),
+                    function_content.index(mutation_start),
+                )
+                self.assertLess(
+                    function_content.index("with _control_plane_transaction():"),
+                    function_content.index(mutation_start),
                 )
 
         for expected in (

@@ -91,7 +91,7 @@ def pawn_loan_create(request):
         form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")}
     )
     economics_preview = None
-    if request.method == "GET" or not token:
+    if request.method == "GET" or presentation["entry_changing"]:
         token = new_draft_submission(workspace=request.loans_workspace, actor=request.user)
     if token_error:
         form.add_error(None, token_error)

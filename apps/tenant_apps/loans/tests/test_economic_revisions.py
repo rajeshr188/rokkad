@@ -12,6 +12,7 @@ from django.test import TransactionTestCase
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context
+from apps.tenancy.testing import historical_migration_database
 from apps.tenant_apps.loans.models import PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy
 from apps.tenant_apps.loans.services import create_pawn_economic_configuration
 
@@ -53,27 +54,20 @@ class EconomicRevisionDatabaseTests(TransactionTestCase):
 
     def test_populated_upgrade_preserves_policy_values_and_ids(self):
         with workspace_context(self.workspace.pk):
-            self.configure("0.80")
-        latest = MigrationExecutor(connection).loader.graph.leaf_nodes()
+            configuration = self.configure("0.80")
         old = [("loans", "0024_disbursal_schedule_identity")]
-        MigrationExecutor(connection).migrate(old)
-        try:
-            old_apps = MigrationExecutor(connection).loader.project_state(old).apps
-            originals = {}
-            with workspace_context(self.workspace.pk):
-                for name in ("PawnLoanEconomicPolicy", "PawnMetalInterestRatePolicy"):
-                    originals[name] = list(old_apps.get_model("loans", name).objects.order_by("pk").values())
-            MigrationExecutor(connection).migrate(latest)
-            with workspace_context(self.workspace.pk):
-                for model in (PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy):
-                    rows = list(model.objects.order_by("pk").values())
-                    self.assertTrue(all(row.pop("revision") == 1 for row in rows))
-                    if model is PawnLoanEconomicPolicy:
-                        self.assertTrue(all(row.pop("default_tenure_months") is None for row in rows))
-                        self.assertTrue(all(row.pop("default_entry_purpose") == "INHERIT" for row in rows))
-                        self.assertTrue(all(row.pop("series_id") is None for row in rows))
-                        self.assertTrue(all(row.pop("minimum_first_month") is False for row in rows))
-                    self.assertEqual(rows, originals[model.__name__])
-                self.assertEqual(self.configure("0.95").economic_policy.revision, 2)
-        finally:
-            MigrationExecutor(connection).migrate(latest)
+        membership = Membership.objects.get(company=self.workspace, user=self.actor)
+        with historical_migration_database(self, old, [membership, configuration.economic_policy,
+            configuration.gold_rate_policy, configuration.silver_rate_policy]) as (target, old_apps):
+            names = ("PawnLoanEconomicPolicy", "PawnMetalInterestRatePolicy")
+            originals = {name: list(old_apps.get_model("loans", name).objects.using(target.alias).order_by("pk").values()) for name in names}
+            after = [("loans", "0025_same_day_economic_policy_revisions")]
+            executor = MigrationExecutor(target)
+            executor.migrate(after)
+            apps = executor.loader.project_state(after).apps
+            for name in names:
+                rows = list(apps.get_model("loans", name).objects.using(target.alias).order_by("pk").values())
+                self.assertTrue(all(row.pop("revision") == 1 for row in rows))
+                self.assertEqual(rows, originals[name])
+        with workspace_context(self.workspace.pk):
+            self.assertEqual(self.configure("0.95").economic_policy.revision, 2)

@@ -8,6 +8,105 @@ from apps.orgs.models import Company, Domain
 from .context import workspace_context
 
 
+def historical_migration_database(test_case, before, sources):
+    """Rehearse populated upgrades in a new test DB, never downgrade the suite DB."""
+    from contextlib import contextmanager
+    from copy import deepcopy
+    from uuid import uuid4
+    from django.db import connection, connections, transaction
+    from django.db.migrations.executor import MigrationExecutor
+    from django.db.models import JSONField
+    from psycopg2 import sql
+    from psycopg2.extras import Json
+
+    @contextmanager
+    def isolated():
+        if connection.vendor != "postgresql" or connection.in_atomic_block:
+            raise ValueError("Historical migration rehearsal requires an owner test connection outside a transaction.")
+        if not connection.settings_dict["NAME"].startswith("test_"):
+            raise ValueError("Historical migration rehearsal is confined to Django test databases.")
+        alias = "migration_rehearsal_" + uuid4().hex
+        database = "test_" + alias
+        configuration = deepcopy(connection.settings_dict)
+        configuration["NAME"] = database
+        with connection.cursor() as cursor:
+            cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(database)))
+        connections.databases[alias] = configuration
+        target = connections[alias]
+        case_class = type(test_case)
+        allowed = case_class.databases
+        case_class.databases = allowed | {alias}
+        try:
+            executor = MigrationExecutor(target)
+            # Older RunPython migrations predate multi-database support and use
+            # the default alias. Confine those reads/writes to this new DB too.
+            source_connection = connections["default"]
+            connections["default"] = target
+            try:
+                executor.migrate(before)
+            finally:
+                connections["default"] = source_connection
+            historical_apps = executor.loader.project_state(before).apps
+            ordered, mapped = [], {}
+
+            def collect(model, pk):
+                key = (model._meta.label_lower, pk)
+                if key in mapped:
+                    return mapped[key]
+                mapped[key] = pk
+                fields = list(model._meta.concrete_fields)
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=%s", [model._meta.db_table])
+                    available = {row[0] for row in cursor.fetchall()}
+                present = [field for field in fields if field.column in available]
+                columns = [field.column for field in present]
+                query = sql.SQL("SELECT {} FROM {} WHERE {}=%s").format(
+                    sql.SQL(",").join(map(sql.Identifier, columns)),
+                    sql.Identifier(model._meta.db_table), sql.Identifier(model._meta.pk.column),
+                )
+                with connection.cursor() as cursor:
+                    cursor.execute(query, [pk])
+                    values = cursor.fetchone()
+                if values is None:
+                    raise ValueError("Historical fixture prerequisite is missing.")
+                retained = dict(zip(columns, values, strict=True))
+                values = [retained[field.column] if field.column in retained else field.get_default() for field in fields]
+                if model._meta.label_lower == "orgs.role":
+                    # Ownership migrations seed global roles in the empty DB.
+                    existing = model.objects.using(alias).filter(name=retained["name"]).first()
+                    if existing is not None:
+                        mapped[key] = existing.pk
+                        return existing.pk
+                for index, (field, value) in enumerate(zip(fields, values, strict=True)):
+                    if field.is_relation and value is not None:
+                        values[index] = collect(field.related_model, value)
+                ordered.append((model, fields, values))
+                return pk
+
+            for source in sources:
+                collect(historical_apps.get_model(source._meta.app_label, source._meta.model_name), source.pk)
+            with transaction.atomic(using=alias), target.cursor() as cursor:
+                for model, fields, values in ordered:
+                    query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                        sql.Identifier(model._meta.db_table),
+                        sql.SQL(",").join(sql.Identifier(field.column) for field in fields),
+                        sql.SQL(",").join(sql.Placeholder() for field in fields),
+                    )
+                    cursor.execute(query, [Json(value) if isinstance(field, JSONField) and value is not None else value
+                        for field, value in zip(fields, values, strict=True)])
+            yield target, historical_apps
+        finally:
+            target.close()
+            del connections[alias]
+            del connections.databases[alias]
+            case_class.databases = allowed
+            # Only the uniquely named database created above is ever removed.
+            with connection.cursor() as cursor:
+                cursor.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(database)))
+
+    return isolated()
+
+
 def start_workspace_trial(workspace):
     """Create real commercial access for HTTP and rendered-action tests."""
     from apps.subscriptions.models import Plan, Subscription

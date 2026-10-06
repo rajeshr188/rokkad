@@ -57,8 +57,9 @@ class OpeningEvidenceTests(SimpleTestCase):
     def test_earlier_history_and_overlapping_events_are_rejected(self):
         with self.assertRaisesMessage(PawnLoanBalanceSelectorError, "before the migration cutover"):
             self.balance(day=date(2021, 1, 19))
-        for day in (date(2021, 1, 19), date(2021, 1, 20)):
-            with self.subTest(day=day), self.assertRaisesMessage(PawnLoanBalanceSelectorError, "strictly after"):
+        for day, message in ((date(2021, 1, 19), "cannot precede"),
+                             (date(2021, 1, 20), "strictly after")):
+            with self.subTest(day=day), self.assertRaisesMessage(PawnLoanBalanceSelectorError, message):
                 self.balance([self.origin, self.event(2, "REPAYMENT", day, principal="1")])
 
     def test_duplicate_mixed_or_reversed_opening_is_not_a_valid_origin(self):
