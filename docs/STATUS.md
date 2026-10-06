@@ -87,6 +87,15 @@ The e3c95ba4 image passes the same restricted production-settings checks on both
 fictional recovery databases, with all 202 tables unchanged. Final corrected
 exact-head CI remains pending; production-copy staging is still awaiting approval.
 
+Final test/ordering correction **59f62107** is committed/pushed. Its
+[full rerun](https://github.com/rajeshr188/rokkad/actions/runs/37473199386) is in
+progress. Its clean committed image passes restricted production-settings startup,
+schema/cohort reads and owner-role rejection on both fictional recovery databases;
+all **202 public tables remain unchanged**. The runtime loan behavior is unchanged
+from e3c95ba4, whose entire Loans suite passed. This final update records execution
+evidence only; the candidate artifact and CI identity remain pinned to 59f62107.
+No production copy, migration, financial admission or deployment was performed.
+
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
 to fictional local recovery. No candidate migrations or financial writes have

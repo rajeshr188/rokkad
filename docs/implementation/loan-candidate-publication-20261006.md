@@ -111,6 +111,20 @@ Production-settings restricted startup, schema/cohort reads and owner-role start
 rejection again pass on both fictional recovery databases. All **202 public
 tables remain unchanged**. Production-copy approval and actual acceptance remain
 separate pending gates.
+
+Final test/ordering correction `59f62107067c6311cbaed77d4761a78c8f4a9b6e` is
+committed and pushed. Its [full rerun](https://github.com/rajeshr188/rokkad/actions/runs/37473199386)
+is in progress. Runtime loan code is unchanged from the fully passing Loans
+candidate e3c95ba4; the final changes concern Rates test isolation/grants, workflow
+ordering and execution documentation. Every release check remains enabled.
+The clean final image is
+`sha256:18bd706e4a176ef65997944e18191a61bc9c823cff7d05876b2e5243d4a99069`.
+Production-settings restricted startup, schema/cohort reads and owner-role startup
+rejection pass on both fictional recovery databases; all **202 public tables
+remain unchanged**. The later documentation-only evidence commit does not replace
+the pinned candidate image/source/CI identity. Full CI, private production-copy
+approval, actual source acceptance and the D01623 correction remain open; no
+production deployment or financial admission is claimed.
 CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
 production-copy migration rehearsal are additional gates; a branch push does not
