@@ -20,8 +20,7 @@ from PIL import Image
 from apps.orgs.models import Company, Role, Membership
 from apps.orgs.services.storage_references import collect_references, validate_coverage
 from apps.tenancy.context import workspace_context
-from apps.tenancy.testing import workspace_role_permissions
-from apps.subscriptions.models import Subscription
+from apps.tenancy.testing import workspace_role_permissions, set_workspace_trial_end
 from apps.tenant_apps.loans.models import (
     KhataAccount, KhataOperation, KhataCollateralItem, KhataCollateralValuation,
     KhataCollateralPhoto, KhataPolicyRevision, PawnLoan,
@@ -86,6 +85,32 @@ class OpeningFixture:
 
 @override_settings(STORAGES=STORAGES)
 class KhataOpeningTests(OpeningFixture, TestCase):
+    def test_seven_day_quote_can_back_new_opening_and_payout(self):
+        from apps.tenant_apps.rates.models import Rate
+        from apps.tenant_apps.rates.services import withdraw_quote
+        self.deposit()
+        with workspace_context(self.workspace.pk):
+            quote = Rate.objects.get(rate_source=self.source)
+            withdraw_quote(workspace=self.workspace, actor=self.actor, quote_id=quote.pk, reason="Replace test quote")
+            older = record_quote(workspace=self.workspace, actor=self.actor, values=dict(rate_source=self.source,
+                metal="Gold", purity="24k", currency="INR", buying_rate=Decimal("10000"), selling_rate=Decimal("10000"),
+                effective_at=timezone.now() - timedelta(days=7)))
+        approval = self.approve()
+        self.assertEqual(approval.evidence["maximum_quote_age_days"], 7)
+        self.assertEqual(approval.evidence["valuations"][0]["rate_id"], older.pk)
+        self.assertEqual(self.payout().approval_id, approval.pk)
+
+    def test_pending_first_payout_needs_new_review_after_owner_limit_change(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_maximum_quote_age
+        self.deposit(); self.approve()
+        with workspace_context(self.workspace.pk):
+            set_maximum_quote_age(workspace=self.workspace, actor=self.actor, days=8)
+        with self.assertRaisesMessage(ValueError, "stale"):
+            opening.preview_withdrawal(**self.args(), value="100000")
+        approval = self.approve()
+        self.assertEqual(approval.evidence["maximum_quote_age_days"], 8)
+        self.assertEqual(self.payout().approval_id, approval.pk)
+
     def test_deposit_approval_and_actual_first_payout_are_distinct(self):
         item = self.deposit()
         self.assertFalse(self.balance()["opened"])
@@ -199,7 +224,7 @@ class KhataOpeningTests(OpeningFixture, TestCase):
     def test_overdue_warn_block_and_deposits_remain_allowed(self):
         self.deposit(); self.approve(); self.payout()
         later = timezone.now() + timedelta(days=40)
-        Subscription.objects.filter(company=self.workspace).update(trial_end_date=later + timedelta(days=20))
+        set_workspace_trial_end(self.workspace, ends_at=later + timedelta(days=20))
         with patch("django.utils.timezone.now", return_value=later):
             self.quote()
             preview = opening.preview_withdrawal(**self.args(), value="1")
@@ -227,6 +252,9 @@ class KhataOpeningTests(OpeningFixture, TestCase):
             opening.set_policies(workspace=self.workspace, actor=staff, exchange="BLOCK", overdue="BLOCK", reason="No", request_key=uuid.uuid4())
 
     def test_missing_stale_and_future_prices_fail_closed(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_maximum_quote_age
+        with workspace_context(self.workspace.pk):
+            set_maximum_quote_age(workspace=self.workspace, actor=self.actor, days=0)
         self.deposit()
         tomorrow = timezone.now() + timedelta(days=1)
         with patch("django.utils.timezone.now", return_value=tomorrow):

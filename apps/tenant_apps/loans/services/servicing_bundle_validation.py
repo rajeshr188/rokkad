@@ -23,6 +23,17 @@ def reconcile(loan, events):
         if event.event_kind == 'REPAYMENT':
             if 'repayment' in event.payload:
                 require(Decimal(str(event.payload['repayment']['amount_received'])) == sum((amount(k) for k in ('principal', 'interest', 'fees')), Decimal(0)), 'Portable receipt amount differs from its allocation.')
+                recording = event.payload['repayment'].get('recording')
+                if recording:
+                    from .paper_repayments import validate_paper_repayment_evidence
+                    validate_paper_repayment_evidence(recording, effective_date=event.effective_date, amount=Decimal(event.payload['repayment']['amount_received']))
+                    if 'fees_paid' in recording:
+                        require(Decimal(recording['fees_paid']) == amount('fees'), 'Explicit paper fee evidence differs from its financial allocation.')
+                    if 'item_principal_split' in recording:
+                        applied = {str(row['collateral_item_id']): Decimal(row['principal_applied']) for row in event.payload['repayment']['item_principal_allocations']}
+                        expected = {key: Decimal(value) for key, value in recording['item_principal_split'].items()}
+                        require(all(applied.get(key, Decimal(0)) == value for key, value in expected.items()) and
+                            sum(expected.values(), Decimal(0)) == amount('principal'), 'Explicit paper item split differs from its financial allocation.')
             else:
                 require(hasattr(loan, 'historical_import') and loan.historical_import.document.get('loan', {}).get('events'), 'Portable receipt lacks its original accepted source amounts.')
             if amount('principal'):

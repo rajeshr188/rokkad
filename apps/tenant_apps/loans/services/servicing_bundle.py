@@ -397,6 +397,13 @@ def _adapt(value, *, refs, external, numbers, event_keys, opaque=False):
             result[key] = event_keys[val]
         else:
             result[key] = _adapt(val, refs=refs, external=external, numbers=numbers, event_keys=event_keys)
+    if result.get("profile") in {"loan-terminal-admission/1", "archive-terminal-admission/1", "loan-terminal-review/1"}:
+        data = result["data"]
+        data["number"] = numbers.get(("loan_number", value["data"]["number"]), data["number"])
+        if result["profile"] == "loan-terminal-review/1":
+            from .terminal_admission import PROFILE as TERMINAL_PROFILE, ARCHIVE_PROFILE
+            result["admission_sha256"] = digest(dict(profile=ARCHIVE_PROFILE if result["archive"] else TERMINAL_PROFILE,
+                data=data, archive=result["archive"]))
     return result
 
 
@@ -475,6 +482,7 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
     event_keys, deferred_loans, deferred_auctions = {}, {}, {}
     objects = {kind:{} for kind in KINDS}
     source_origins = {r["loan_id"]:r for r in tables["HistoricalLoanImport"]}
+    terminal_loans = {r["loan_id"] for r in tables["PawnLoanEvent"] if r["payload"].get("opening", {}).get("profile") == "loan-terminal-evidence/1"}
     source_file_keys = {name:key for key, claim in document["files"].items() for name in claim["source_names"]}
     for kind in ORDER:
         for source in tables[kind]:
@@ -506,7 +514,7 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                 deferred_loans[source["id"]] = {k:values[k] for k in ("policy_snapshot_id", "disbursal_snapshot_id", "state")}
                 values.update(policy_snapshot_id=None, disbursal_snapshot_id=None, state="ACTIVE", creation_submission_id=uuid4())
             if kind == "PawnCollateralItem":
-                values["custody_state"] = "IN_VAULT"
+                values["custody_state"] = source["custody_state"] if source["loan_id"] in terminal_loans else "IN_VAULT"
                 # The frozen per-item agreement travels; the source's standing
                 # setup row is retained as a claim, not a destination FK.
                 values['interest_rate_policy_id'] = None
@@ -519,6 +527,10 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                 values.update(state="INITIATED", loan_event_id=None, catch_up_accrual_id=None,
                     recovery_amount=0, principal_amount=0, interest_amount=0, fee_amount=0, completed_at=None, started_at=None, cancelled_at=None, cancellation_reason="")
             if kind == "PawnLoanEvent":
+                if source["loan_id"] in terminal_loans:
+                    terminal = objects["PawnLoan"][source["loan_id"]]
+                    terminal.state = "CLOSED"
+                    terminal.save(update_fields=["state"])
                 from .event_recording import _fingerprint
                 values["payload_fingerprint"] = _fingerprint(values["payload"])
                 values["idempotency_key"] = f"loans:{values['loan_id']}:{values['event_kind']}:{values['payload_fingerprint']}"

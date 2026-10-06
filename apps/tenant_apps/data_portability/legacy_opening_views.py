@@ -6,7 +6,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.loans.services.history_contract import HistoryError
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
 from . import legacy_opening
 from .models import LoanHistoryBatch
 
@@ -15,7 +15,7 @@ from .models import LoanHistoryBatch
 @never_cache
 @require_http_methods(["GET"])
 def listing(request):
-    require_history_setup_access(request.workspace.pk, request.user)
+    require_history_preparation_access(request.workspace.pk, request.user, read_only=True)
     batches = LoanHistoryBatch.objects.filter(workspace_id=request.workspace.pk, profile=legacy_opening.PROFILE).order_by("-created_at", "-pk")[:20]
     return render(request, "data_portability/legacy_openings.html", {"batches": batches})
 
@@ -55,4 +55,5 @@ def review(request, batch_id):
         }
     return render(request, "data_portability/legacy_opening_review.html", {
         "batch": batch, "review": source_review, "destination": destination,
+        "owner_review": request.workspace.owner_id == request.user.pk or request.user.is_superuser,
         "approval": approval, "error": error, "unfinished": batch.state in {"STAGED", "READY"}})

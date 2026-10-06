@@ -3,7 +3,7 @@
 {% block workspace_content %}
 <a href="{% url 'workspace_loans:khata_detail' request.workspace.slug account.pk %}?tab={{ account_return_tab }}">&larr; Khata {{ account.account_number }} &middot; {{ account_return_label }}</a>
 <h1 class="h3 mt-3">Exchange collateral</h1>
-<p class="text-muted">Select the outgoing group and the exact received items replacing it. Values are suggestions; the final review checks today's prices, same-metal replacement, account cover and workspace policies. Confirmation reserves a return; actual handover is separate.</p>
+<p class="text-muted">Select the outgoing group and the exact received items replacing it. Values are suggestions; the final review checks the latest applicable prices within the Workspace lending age limit, same-metal replacement, account cover and workspace policies. Confirmation reserves a return; actual handover is separate.</p>
 <p><a class="btn btn-outline-primary" data-receive-replacement href="{% url 'workspace_loans:khata_action' request.workspace.slug account.pk 'deposit' %}?return_to=exchange">Receive replacement collateral</a> <a href="{% url 'workspace_loans:khata_collateral' request.workspace.slug account.pk %}" target="_blank" rel="noopener">Browse all collateral</a></p>
 <form method="post" data-khata-exchange>
 {% csrf_token %}{{ form.non_field_errors }}{{ form.request_key }}{{ form.request_key.errors }}

@@ -1,5 +1,6 @@
 """Owner-reviewed workbook staging, atomic admission and safe replay."""
 from decimal import Decimal
+from datetime import date
 import hashlib
 import re
 
@@ -14,7 +15,7 @@ from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.party.services.creation import create_party_from_form
 from apps.tenant_apps.loans import models as loans
 from apps.tenant_apps.loans.services.history_contract import digest
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access, validate_preparation_mapping
 from apps.tenant_apps.loans.services.opening_import import commit_opening_import, PROFILE as OPENING_PROFILE
 from apps.tenant_apps.loans.services.product_catalog import create_product_version_draft, activate_product_version, retire_product_version
 from .contracts import party_form, semantic, source_digest
@@ -26,7 +27,7 @@ SALT = 'guided-outstanding-register-v1'
 
 
 def get_batch(*, workspace_id, actor, batch_id, lock=False):
-    require_history_setup_access(workspace_id, actor, read_only=True)
+    require_history_preparation_access(workspace_id, actor, read_only=not lock)
     query = GuidedOpeningBatch.objects.filter(workspace_id=workspace_id)
     if lock:
         query = query.select_for_update()
@@ -38,7 +39,7 @@ def get_batch(*, workspace_id, actor, batch_id, lock=False):
 
 @transaction.atomic
 def stage(*, workspace_id, actor, source_key, content, filename):
-    workspace = require_history_setup_access(workspace_id, actor)
+    workspace = require_history_preparation_access(workspace_id, actor)
     Company.all_objects.select_for_update().get(pk=workspace_id)
     if not isinstance(source_key, str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,47}', source_key):
         raise PortabilityError('Use a stable register key of lowercase letters, numbers and hyphens (up to 48 characters).')
@@ -114,8 +115,7 @@ def _bind_borrower(batch, ref, values, choice, workspace_id, actor):
     return party, binding
 
 
-def _evaluate(batch, mapping, workspace_id, actor):
-    """Caller either rolls back every write or commits the complete reviewed graph."""
+def _prepared_settings(mapping, workspace_id):
     if not isinstance(mapping, dict) or not isinstance(mapping.get('settings'), dict) or not isinstance(mapping.get('borrowers'), dict):
         raise PortabilityError('Review destination settings and customer matches before importing.')
     settings, choices = mapping['settings'], mapping['borrowers']
@@ -136,9 +136,36 @@ def _evaluate(batch, mapping, workspace_id, actor):
         raise PortabilityError('Supply a valid handover date.') from None
     if cutoff >= timezone.localdate():
         raise PortabilityError('Use a completed handover date before today. Rokkad servicing starts on the following day.')
-    revision = loans.LoanLicenseRevision.objects.get(pk=settings['revision_id'], workspace_id=workspace_id)
-    loans.LoanSeries.objects.get(pk=settings['series_id'], workspace_id=workspace_id, license_id=revision.license_id)
+    revision = validate_preparation_mapping(workspace_id, revision_id=settings['revision_id'], series_id=settings['series_id'])
     settings = {**settings, 'license_number': revision.license_number, 'legacy_reference': revision.kind == 'LEGACY_REFERENCE'}
+    return settings, choices
+
+
+@transaction.atomic
+def prepare(*, workspace_id, actor, batch_id, mapping):
+    require_history_preparation_access(workspace_id, actor)
+    Company.all_objects.select_for_update().get(pk=workspace_id)
+    batch = get_batch(workspace_id=workspace_id, actor=actor, batch_id=batch_id, lock=True)
+    if batch.state not in {'STAGED', 'READY'}:
+        raise PortabilityError('Only unfinished imports can be prepared.')
+    settings, choices = _prepared_settings(mapping, workspace_id)
+    customers = register.borrowers(batch.document['rows'])
+    if set(choices) != set(customers):
+        raise PortabilityError('Match every source borrower before preparing the loans.')
+    for choice in choices.values():
+        if choice != 'NEW' and not Party.objects.filter(workspace_id=workspace_id, party_code=choice, status='ACTIVE').exists():
+            raise PortabilityError('Choose NEW or an existing active customer in this Workspace.')
+    batch.mapping, batch.state, batch.approval_digest = mapping, 'STAGED', ''
+    batch.preview = {'profile': 'loan-import-preparation/1', 'prepared_by': actor.pk,
+        'financial_admission_reviewed': False, 'source_sha256': batch.source_sha256,
+        'loans': len(register.groups(batch.document['rows'])), 'borrowers': len(customers)}
+    batch.save(update_fields=['mapping', 'preview', 'state', 'approval_digest'])
+    return batch
+
+
+def _evaluate(batch, mapping, workspace_id, actor):
+    """Caller either rolls back every write or commits the complete reviewed graph."""
+    settings, choices = _prepared_settings(mapping, workspace_id)
     product = _product(workspace_id, actor, settings['grace_days'])
     customers = register.borrowers(batch.document['rows'])
     if set(choices) != set(customers):

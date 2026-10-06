@@ -53,6 +53,8 @@ def review_values(loan, *, historical_context=None):
         "photos": [list(item.photos.order_by("pk").values()) for item in items],
         "economics": asdict(economics) if economics else None,
         "valuation_quotes": quotes["quotes"],
+        "quote_age_rule": {"rule": quotes["rule"],
+            "maximum_quote_age_days": quotes.get("maximum_quote_age_days")},
         "policy_ids": ([resolved.economic_policy.pk, [p.pk for p in resolved.rate_policies],
                         [p.pk for p in resolved.fee_policies]] if resolved else None),
         "basis_approval_id": (historical_context["approval"].pk

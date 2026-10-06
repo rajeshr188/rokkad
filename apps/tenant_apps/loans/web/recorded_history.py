@@ -49,6 +49,9 @@ class PaperHistoryForm(forms.Form):
     exception_reason = forms.CharField(required=False, max_length=160, label="Source explanation for different terms")
     borrower_id = forms.ModelChoiceField(queryset=Party.objects.none(), label="Customer")
     series_id = forms.ModelChoiceField(queryset=m.LoanSeries.objects.none(), label="Series (license / register)")
+    license_revision_id = forms.ModelChoiceField(queryset=m.LoanLicenseRevision.objects.none(), required=False,
+        label="Source licence evidence (optional)",
+        help_text="Select retained evidence for this series' licence and original date when known. Leave blank if unknown; portable history export requires this mapping. A saved draft keeps its original mapping.")
     product_version_id = forms.ModelChoiceField(queryset=m.LoanProductVersion.objects.none(), label="Loan product")
     number = forms.CharField(max_length=64, label="Original loan number")
     date = forms.DateField(widget=forms.DateInput(attrs=DAY), label="Loan date")
@@ -84,14 +87,15 @@ class PaperHistoryForm(forms.Form):
     confirmed_rule = forms.BooleanField(label="The agreed rule is simple monthly interest: the next month starts the day after the original loan anniversary; principal reductions apply from the next boundary.")
     confirmed_history = forms.BooleanField(label="I checked this loan's paper record through the stated date and checked for duplicates. No earlier or later loan's renewal history is required.")
 
-    def __init__(self, *args, workspace, routine=True, **kwargs):
+    def __init__(self, *args, workspace, routine=True, itemized_archive=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.routine = routine and (not self.is_bound or self.data.get("routine_entry") in ("on", "true", "True", "1"))
         self.terms = None
         item_sources, item_messages = [], []
-        self.itemized = self.routine and (not self.is_bound or "collateral-TOTAL_FORMS" in self.data)
+        self.itemized = (self.routine or itemized_archive) and (not self.is_bound or "collateral-TOTAL_FORMS" in self.data)
         self.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, status="ACTIVE")
         self.fields["series_id"].queryset = m.LoanSeries.objects.filter(workspace=workspace).select_related("license")
+        self.fields["license_revision_id"].queryset = m.LoanLicenseRevision.objects.filter(workspace=workspace)
         self.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace,
             status="ACTIVE", repayment_structure__in=("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"), amortisation_method="NONE").select_related("product")
         if self.routine:
@@ -167,6 +171,27 @@ class PaperHistoryForm(forms.Form):
             if self.is_bound and self.data.get("action") == "terms":
                 for name, field in self.fields.items():
                     field.required = name in ("series_id", "date", "metal")
+        if self.itemized and itemized_archive and self.is_bound:
+            data = self.data.copy()
+            try:
+                count = min(100, int(data.get("collateral-TOTAL_FORMS", 0)))
+                actual = []
+                for index in range(count):
+                    prefix = f"collateral-{index}-"
+                    if data.get(prefix + "DELETE") in ("on", "1", "true"):
+                        continue
+                    actual.append({**{name: data.get(prefix + name) for name in ("description", "metal", "quantity", "gross_weight", "net_weight")},
+                        "purity": data.get(prefix + "purity_percentage"), "principal": data.get(prefix + "allocated_principal"),
+                        "rate": data.get(prefix + "interest_rate_override")})
+                if actual:
+                    from apps.tenant_apps.loans.services.recorded_items import effective_rate, monthly_interest
+                    data.update({name: actual[0][name] for name in ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")})
+                    data["principal"] = str(sum((Decimal(row["principal"]) for row in actual), Decimal(0)))
+                    data["rate"] = str(effective_rate(actual))
+                    self.item_monthly = monthly_interest(actual, Decimal(data.get("currency_quantum") or "0.01"))
+                    self.data = data
+            except (ValueError, TypeError, ArithmeticError):
+                pass  # Item form errors remain visible; no financial admission.
         if self.itemized:
             for name in ("description", "metal", "quantity", "gross_weight", "net_weight", "purity"):
                 self.fields[name].required = False
@@ -266,6 +291,9 @@ def _data(form, rows, collateral=None):
         value["cash_paid"] = value["principal"] - advance - value["document_charge"]
     for name in ("borrower_id", "series_id", "product_version_id"):
         value[name] = value[name].pk
+    revision = value.pop("license_revision_id", None)
+    if revision and not getattr(form, "saved_draft", False):
+        value["license_revision_id"] = revision.pk
     value["events"] = [{key: val for key, val in row.cleaned_data.items() if key != "DELETE"}
                        for row in rows if row.cleaned_data and not row.cleaned_data.get("DELETE")]
     # Values crossing the signed review/storage boundary use canonical JSON types.
@@ -304,7 +332,8 @@ def paper_history_entry(request, *, draft=None):
     if draft:
         initial = dict(borrower_id=draft.borrower_id, series_id=draft.series_id,
             product_version_id=draft.product_version_id, number=draft.loan_number, date=draft.loan_date,
-            principal=draft.principal_amount, rate=draft.monthly_interest_rate, tenure=draft.tenure_months)
+            principal=draft.principal_amount, rate=draft.monthly_interest_rate, tenure=draft.tenure_months,
+            license_revision_id=draft.license_revision_id)
         draft_items = list(draft.collateral_items.prefetch_related("photos").order_by("pk"))
         initial_collateral = [dict(description=item.description, quantity=item.quantity, metal=item.metal,
             gross_weight=item.gross_weight, net_weight=item.net_weight, purity_percentage=item.purity_percentage,
@@ -337,6 +366,8 @@ def paper_history_entry(request, *, draft=None):
             source_reference=f"Archive {archive.source_system} / {archive.source_id}"[:160])
         if facts["collateral"] and len(facts["collateral"]) == 1:
             initial.update(facts["collateral"][0])
+        elif facts["collateral"]:
+            initial_collateral = facts["collateral"]
         initial_rows = [dict(date=row["date"], amount=row["amount"], reference=row["id"])
                         for row in facts["payments"] or []]
     intent = (post.get("intent_token", "") if post is not None else "") or new_recording_intent(
@@ -351,15 +382,17 @@ def paper_history_entry(request, *, draft=None):
             post["collateral-TOTAL_FORMS"] = str(min(100, int(post.get("collateral-TOTAL_FORMS", "1")) + 1))
         except ValueError:
             pass
-    form = PaperHistoryForm(post, workspace=workspace, initial=initial, routine=not archive)
+    form = PaperHistoryForm(post, workspace=workspace, initial=initial, routine=not archive,
+        itemized_archive=bool(archive and len(archive.document["facts"]["collateral"] or []) > 1))
+    form.saved_draft = draft is not None
     if draft:
         form.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, pk=draft.borrower_id)
         form.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace, pk=draft.product_version_id)
-        for name in ("borrower_id", "series_id", "product_version_id", "number", "date"):
+        for name in ("borrower_id", "series_id", "product_version_id", "number", "date", "license_revision_id"):
             form.fields[name].disabled = True
     collateral = PaperCollateralFormSet(form.data if post is not None else None, prefix="collateral",
         initial=initial_collateral,
-        form_kwargs={"exceptions": bool(form["exceptions"].value())}) if form.itemized else None
+        form_kwargs={"exceptions": bool(archive) or bool(form["exceptions"].value())}) if form.itemized else None
     if draft and collateral is not None:
         for row, item in zip(collateral, draft_items):
             row.existing_collateral_item = item
@@ -409,7 +442,7 @@ def paper_history_entry(request, *, draft=None):
             review, token = preview(workspace=workspace, actor=actor, data=data, intent_token=intent, **extra)
         except (ValueError, ValidationError, ObjectDoesNotExist) as exc:
             form.add_error(None, str(exc))
-    sections = [("Original contract", ("borrower_id", "series_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "currency_quantum", "document_charge", "payout_basis", "cash_paid")),
+    sections = [("Original contract", ("borrower_id", "series_id", "license_revision_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "currency_quantum", "document_charge", "payout_basis", "cash_paid")),
         ("Collateral", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")),
         ("Current monitoring", ("monitoring_method", "monitoring_ltv", "monitoring_reason")),
         ("Completeness and agreed calculation", ("complete_through", "final_state", "confirmed_rule", "confirmed_history"))]

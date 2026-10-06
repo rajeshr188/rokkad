@@ -137,7 +137,7 @@ class UpdatedValuationTests(WorkspaceTestCase):
             self.assertContains(page, "No amount is reduced automatically")
             self.assertNotContains(page, "Confirm updated approval")
         with patch("django.utils.timezone.now", return_value=self.now + timedelta(days=1)):
-            self.assertIn("same-day", self.review()["error"])
+            self.assertIn("maximum 800.00", self.review()["error"])
         self.loan.refresh_from_db()
         self.assertEqual(self.loan.state, "APPROVED")
         self.assertEqual(self.loan.loan_date, self.previous_date)

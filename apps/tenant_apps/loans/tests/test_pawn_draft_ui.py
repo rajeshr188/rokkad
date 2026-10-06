@@ -1839,7 +1839,13 @@ class PawnDraftUiTests(WorkspaceTestCase):
         license, series = self._configured_setup()
         self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
         loan = PawnLoan.objects.get()
-        PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        from apps.tenant_apps.loans.services import approve_pawn_loan, disburse_pawn_loan
+        # Servicing eligibility requires an actual financial origin, not a
+        # manually changed state with no approval, contract or payout evidence.
+        approve_pawn_loan(loan.pk, actor=self.owner)
+        disburse_pawn_loan(loan.pk, actor=self.owner, effective_date=loan.loan_date)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "ACTIVE")
         balance = SimpleNamespace(
             principal_outstanding=Decimal("10000.00"),
             interest_outstanding=Decimal("200.00"),

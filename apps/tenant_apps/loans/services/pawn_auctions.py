@@ -42,7 +42,6 @@ from apps.tenant_apps.loans.services.pawn_disbursal import assert_pawn_loan_fina
 from apps.tenant_apps.loans.services.pawn_interest import (
     build_pawn_accrual_detail,
     persist_pawn_accrual_lines,
-    preview_pawn_loan_accruals,
     should_record_pawn_accrual_event,
 )
 from apps.tenant_apps.loans.services.pawn_notices import create_pawn_loan_notice
@@ -243,25 +242,16 @@ def complete_pawn_loan_auction(
     if not collateral or any(item.custody_state != CollateralCustodyState.IN_VAULT.value for item in collateral):
         raise PawnAuctionError("Every collateral item must remain in the vault until completion.")
     try:
+        from .settlement_preparation import _recognize_settlement_interest
+        preparation, recognition = _recognize_settlement_interest(loan, operation="AUCTION", effective_date=effective_date,
+            actor=actor, request_key=f"auction:{auction.pk}")
+        opening_obligations = preparation.opening_obligations
+        partial = preparation.catch_up_accrual
         if opening:
-            from .opening_servicing import opening_release_context, payment_collection_detail
-            _, opening_obligations = opening_release_context(loan, as_of_date=effective_date)
+            from .opening_servicing import payment_collection_detail
+            from .pawn_release import _record_release_accrual
             collection_detail = payment_collection_detail(loan, as_of_date=effective_date,
                 request_key=f"auction:{auction.pk}", operation="AUCTION_RECOVERY")
-        else:
-            assert_pawn_loan_financial_actions_allowed(loan.pk)
-        from .recorded_collections import recognize_collection_interest
-        recognition = recognize_collection_interest(loan, effective_date, actor=actor,
-            request_key=f"auction:{auction.pk}") if recorded else None
-        missing = [] if recorded or opening else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=False)
-        if missing:
-            raise PawnAuctionError("Finalize every completed interest period before auction completion.")
-        partials = [] if recorded or opening else preview_pawn_loan_accruals(loan.pk, as_of_date=effective_date, include_partial=True)
-        partial = partials[0] if partials and partials[0].is_partial else None
-        if opening:
-            from .opening_servicing import opening_release_accrual_preview
-            from .pawn_release import _record_release_accrual
-            partial = opening_release_accrual_preview(loan, as_of_date=effective_date)
             catch_up = _record_release_accrual(loan, preview=partial, actor=actor,
                 request_key=f"auction:{auction.pk}", collection_detail=collection_detail) if partial else None
         else:
@@ -314,12 +304,12 @@ def complete_pawn_loan_auction(
         payload=payload,
         actor=actor,
     )
-    from .recorded_collections import scheduled_interest
+    from .settlement_preparation import settlement_scheduled_interest
     allocate_event_to_obligations(
         source_event=event,
         principal_amount=balance.principal_outstanding,
-        interest_amount=(min(opening_obligations.remaining.interest, balance.interest_outstanding) if opening else
-            scheduled_interest(loan, effective_date, balance.interest_outstanding) if recorded else balance.interest_outstanding),
+        interest_amount=settlement_scheduled_interest(loan, effective_date=effective_date,
+            amount=balance.interest_outstanding, opening_obligations=opening_obligations),
         actor=actor,
     )
     terminate_active_repayment_schedule(
@@ -615,6 +605,8 @@ def _money(value, loan):
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise PawnAuctionError("Recovery amount must be a valid number.") from exc
     quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
+    if loan.policy_snapshot.policy_version == 2:
+        quantum = Decimal("0.01")
     if not amount.is_finite() or amount <= 0 or amount != amount.quantize(quantum):
         raise PawnAuctionError(f"Recovery amount must be positive and use precision {quantum}.")
     return amount

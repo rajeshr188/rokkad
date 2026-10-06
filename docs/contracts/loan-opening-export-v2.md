@@ -7,6 +7,11 @@ tags: [loans, portability, contracts]
 
 # Opening evidence with payments: loan-opening-export/2
 
+LC-05 uses export/4 for new explicit receipt evidence or precisely timed review/5
+checkpoints; earlier export/1–3 meanings remain unchanged. See the
+[bounded evidence contracts](bounded-loan-evidence-lc05.md) and
+[v4 row inventory](loan-opening-export-v4-rows.json).
+
 Version 2 extends the [v1 contract](loan-opening-export-v1.md) with one required
 `repayment_lines` evidence section. All v1 row fields, manifest fields, limits,
 source-local reference semantics and exclusions remain the same. The

@@ -383,6 +383,12 @@ class PawnRepaymentForm(forms.Form):
         label=_("Paper receipt or book/page reference"), max_length=255, required=False,
         help_text=_("Identify this receipt within this loan. A scan is not required."),
     )
+    fees_paid = forms.DecimalField(label=_("Actual paper payment toward fees"), required=False,
+        max_digits=18, decimal_places=2, min_value=0,
+        help_text=_("Required if fees are outstanding. Enter the actual fee component, including zero; the remaining receipt pays interest, then principal."))
+    received_at = forms.DateTimeField(label=_("Actual receipt time, if known"), required=False,
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        help_text=_("Required for a receipt on a precise checkpoint's cutover day. Use the actual source time; do not estimate it."))
     confirmed_received = forms.BooleanField(
         label=_("I confirm this total was already received on the stated paper date and have checked the allocation."),
         required=False,
@@ -401,7 +407,7 @@ class PawnRepaymentForm(forms.Form):
         if not allow_paper:
             self.fields["recording_purpose"].choices = (("CURRENT", _("Receive and record now")),)
             self.fields["recording_purpose"].widget = forms.HiddenInput()
-            for name in ("received_on", "receipt_reference", "confirmed_received", "review_token"):
+            for name in ("received_on", "receipt_reference", "fees_paid", "received_at", "confirmed_received", "review_token"):
                 self.fields.pop(name)
         for field in self.fields.values():
             field.widget.attrs["class"] = (

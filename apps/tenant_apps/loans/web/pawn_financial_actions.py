@@ -122,7 +122,7 @@ def pawn_loan_repay(request, pk):
     repayment_preview = None
     from apps.tenant_apps.loans.services.recorded_collections import recording_for
     from apps.tenant_apps.loans.services.servicing_eligibility import servicing_eligibility
-    paper_eligibility = servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER", effective_date=timezone.localdate())
+    paper_eligibility = servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER", effective_date=timezone.localdate(), occurred_at=timezone.now().isoformat())
     paper_available = paper_eligibility.ready
     from apps.tenant_apps.loans.services.entry_purpose import default_entry_purpose
     purpose = default_entry_purpose(workspace=request.loans_workspace, series_id=loan.series_id)
@@ -143,6 +143,8 @@ def pawn_loan_repay(request, pk):
                     "amount", "received_on", "receipt_reference", "request_key",
                 )}
                 values["item_principal_split"] = form.paper_item_split
+                values["fees_paid"] = form.cleaned_data["fees_paid"]
+                values["received_at"] = form.cleaned_data["received_at"]
                 if request.POST.get("action") == "preview":
                     review = preview_paper_repayment(loan.pk, actor=request.user, **values)
                     repayment_preview = review.preview
@@ -184,12 +186,21 @@ def pawn_loan_repay(request, pk):
             and form.cleaned_data.get("received_on")):
         balance_date = form.cleaned_data["received_on"]
     from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+    position = None
     try:
-        balance = get_servicing_position(loan, as_of_date=balance_date).balance
+        position = get_servicing_position(loan, as_of_date=balance_date)
+        balance = position.balance
     except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
         balance = None
         form.add_error(None, str(exc))
     item_by_id = {item.pk: item for item in loan.collateral_items.all()}
+    from apps.tenant_apps.loans.selectors.evidence_quality import loan_evidence_quality
+    quality = loan_evidence_quality(loan, as_of_date=balance_date,
+        calculation_status="SUPPORTED" if position else "UNAVAILABLE",
+        calculation_message="Collection balance at the payment date, including eligible unposted interest." if position else
+            "Resolve the calculation error before collecting payment.",
+        financial_history_from=position.contract.financial_history_from if position else None,
+        principal_history_basis="OPENING_CHECKPOINT" if position and position.contract.origin_kind == "MIGRATION_OPENING" else "ORIGINAL_PAYOUT")
     return _render_action(
         request,
         loan,
@@ -199,6 +210,7 @@ def pawn_loan_repay(request, pk):
         {
             "balance": balance,
             "balance_date": balance_date,
+            "evidence_quality": quality,
             "paper_entry_available": paper_available,
             "paper_entry_blockers": paper_eligibility.blockers,
             "paper_correction_available": bool(recording_for(loan)) and _can_administer(request),

@@ -21,6 +21,39 @@ class HistorySetupError(PortabilityValidationError):
     pass
 
 
+def require_history_preparation_access(workspace_id, actor, *, read_only=False):
+    """Importers can prepare evidence; this never grants financial admission."""
+    if current_workspace_id() != workspace_id or not workspace_id:
+        raise PermissionDenied("Historical preparation requires the matching Workspace context.")
+    workspace = Company.all_objects.get(pk=workspace_id)
+    access = resolve_workspace_access(actor=actor, workspace=workspace)
+    if not access.platform_override and not access.membership:
+        raise PermissionDenied("Historical preparation requires active Workspace membership.")
+    for action in ("data.view", "data.import"):
+        access.require(action)
+    if not read_only:
+        from apps.subscriptions.access_policy import require_business_write
+        require_business_write(workspace)
+    if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
+        raise PermissionDenied("Historical preparation requires an active Workspace.")
+    return workspace
+
+
+def validate_preparation_mapping(workspace_id, *, revision_id, series_id, product_version_id=None, borrower_id=None):
+    """Existing destination references only; owner review checks admission readiness."""
+    revision = LoanLicenseRevision.objects.filter(workspace_id=workspace_id, pk=revision_id).first()
+    series = LoanSeries.objects.filter(workspace_id=workspace_id, pk=series_id).first()
+    if not revision or not series or revision.license_id != series.license_id:
+        raise HistorySetupError("Choose existing compatible licence and series in this Workspace.")
+    if product_version_id is not None and not LoanProductVersion.objects.filter(workspace_id=workspace_id, pk=product_version_id).exists():
+        raise HistorySetupError("Choose an existing product version in this Workspace.")
+    if borrower_id is not None:
+        from apps.tenant_apps.party.models import Party
+        if not Party.objects.filter(workspace_id=workspace_id, pk=borrower_id).exists():
+            raise HistorySetupError("Choose an existing borrower in this Workspace.")
+    return revision
+
+
 def require_history_setup_access(workspace_id, actor, *, read_only=False):
     if current_workspace_id() != workspace_id or not workspace_id:
         raise PermissionDenied("Historical setup requires the matching Workspace context.")

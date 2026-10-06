@@ -1,8 +1,31 @@
 """Reuse an unpaid draft's identity for reviewed completed-payout admission."""
 from decimal import Decimal
 
+from django.utils import timezone
+
 from .action_access import require_loan_action
 from apps.tenant_apps.loans import models as m
+
+
+def completed_payout_adapter(loan):
+    """Presentation choice only; each command rechecks its own locked evidence."""
+    if loan.state not in ("DRAFT", "APPROVED"):
+        return None
+    events = loan.loan_events
+    snapshots = loan.disbursal_snapshots
+    if not events.exists() and not snapshots.exists():
+        if loan.state == "DRAFT" and loan.loan_date < timezone.localdate():
+            from .historical_origination import historical_basis
+            if historical_basis(loan)["approval"] is not None:
+                return "RETAINED_NATIVE"
+        return "RECORDED"
+    if (loan.state == "DRAFT" and loan.loan_date < timezone.localdate()
+            and snapshots.exists() and not snapshots.exclude(basis="APPROVED").exists()
+            and events.filter(event_kind="DISBURSAL").exists()
+            and not events.exclude(event_kind__in=("DISBURSAL", "REVERSAL")).exists()
+            and not events.filter(event_kind="DISBURSAL", reversed_by_event__isnull=True).exists()):
+        return "RETAINED_NATIVE"
+    return None
 
 
 def draft_source(workspace, actor, draft_id):

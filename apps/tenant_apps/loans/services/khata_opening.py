@@ -227,7 +227,8 @@ def _review(account, *, workspace, actor, day):
     balances = account_balances(workspace=workspace, actor=actor, account_id=account.pk)
     snapshot = dict(schema="khata-opening/1", account_id=account.pk, date=day.isoformat(), agreement_id=terms.pk,
         last_sequence=account.operations.aggregate(last=Max("sequence"))["last"] or 0,
-        valuations=valuations, photos_required=required, policy_id=policy.pk if policy else None,
+        valuations=valuations, photos_required=required,
+        maximum_quote_age_days=rows[0]["maximum_age_days"], policy_id=policy.pk if policy else None,
         overdue_policy=policy.overdue if policy else "WARN", exchange_policy=policy.exchange if policy else "WARN",
         principal=str(position.principal), unused=str(position.unused), overdue_interest=str(balances["overdue_interest"]),
         drawable=str(available_draw(position, collateral_value=sum((Decimal(v["value"]) for v in valuations), Decimal(0)), ltv=terms.ltv)),
@@ -274,8 +275,8 @@ def _withdrawal_review(account, workspace, actor, day, value):
     if approval is None or approval.agreement_id != terms.pk:
         raise KhataDraftError("Approve the current agreement before withdrawing.")
     if account.opened_on is None:
-        if approval.business_date != day or any(approval.evidence[k] != snapshot[k] for k in (
-            "valuations", "photos_required", "license")):
+        if approval.business_date != day or any(approval.evidence.get(k) != snapshot[k] for k in (
+            "valuations", "photos_required", "license", "maximum_quote_age_days")):
             raise KhataDraftError("Opening approval is stale; review and approve current evidence.")
     if value > Decimal(snapshot["drawable"]):
         raise KhataDraftError("Withdrawal exceeds unused entitlement or current collateral backing.")

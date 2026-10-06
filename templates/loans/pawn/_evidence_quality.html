@@ -1,0 +1,10 @@
+{% if evidence_quality %}
+<details class="border rounded p-3 mb-3"><summary>Evidence behind these amounts</summary>
+<dl class="row small mt-2 mb-0">
+<dt class="col-sm-4">Saved assessment</dt><dd class="col-sm-8">{{ evidence_quality.assessment.status }}{% if evidence_quality.assessment.as_of_date %} · {{ evidence_quality.assessment.as_of_date }}{% endif %}</dd>
+<dt class="col-sm-4">Transaction coverage</dt><dd class="col-sm-8">{{ evidence_quality.transactions.status }}{% if not evidence_quality.transactions.complete %} · Provisional{% endif %}<br>{{ evidence_quality.transactions.message }}</dd>
+<dt class="col-sm-4">Current valuation</dt><dd class="col-sm-8">{{ evidence_quality.valuation.status }}{% for blocker in evidence_quality.valuation.blockers %} · {{ blocker }}{% endfor %}{% for item in evidence_quality.valuation.items %}<div>Item #{{ item.item_id }}: price {{ item.rate_status }} ({{ item.rate_at|default:"not available" }}); appraisal {{ item.appraisal_status }} ({{ item.appraisal_at|default:"not available" }}).</div>{% endfor %}</dd>
+<dt class="col-sm-4">Calculation support</dt><dd class="col-sm-8">{{ evidence_quality.calculation.status }}{% if evidence_quality.calculation.profile %} · {{ evidence_quality.calculation.profile }}{% endif %} {{ evidence_quality.calculation.message }}</dd>
+{% if evidence_quality.history.from_date %}<dt class="col-sm-4">Financial history available from</dt><dd class="col-sm-8">{{ evidence_quality.history.from_date }}{% if evidence_quality.history.principal_basis == 'OPENING_CHECKPOINT' %}. Principal starts at the verified opening balance; earlier repayments are unavailable.{% endif %}</dd>{% endif %}
+</dl><p class="small text-muted mb-0">A supported calculation can use provisional transactions or lack fresh valuation. These are separate checks. This disclosure does not approve reminders, release or recovery.</p></details>
+{% endif %}

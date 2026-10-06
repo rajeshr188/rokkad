@@ -31,6 +31,13 @@ def expire_workspace_trial(workspace, *, days_ago=8):
     )
 
 
+def set_workspace_trial_end(workspace, *, ends_at):
+    """Arrange a test clock without business apps importing billing internals."""
+    from apps.subscriptions.models import Subscription
+
+    Subscription.objects.filter(company=workspace).update(trial_end_date=ends_at)
+
+
 class WorkspaceClient(Client):
     def __init__(self, workspace, **defaults):
         self.workspace = workspace

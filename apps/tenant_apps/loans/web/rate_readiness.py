@@ -10,6 +10,7 @@ from apps.tenant_apps.loans.domain import ValuationMethod
 from apps.tenant_apps.loans.models import LoanSeries
 from apps.tenant_apps.loans.selectors.rate_readiness import get_metal_rate_readiness
 from apps.tenant_apps.loans.selectors.origination_rates import require_current_origination_date
+from apps.tenant_apps.loans.services.origination_settings import maximum_quote_age_days
 from apps.tenant_apps.loans.services.economic_policies import resolve_pawn_loan_economic_policy, resolve_pawn_metal_interest_rate_policy
 
 
@@ -36,6 +37,7 @@ def pawn_valuation_readiness(request):
         "request_key": request.GET.get("request_key", ""), "ready": False,
         "message": "Select a series, loan date and collateral metal to check prices.",
         "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
+        "maximum_quote_age_days": maximum_quote_age_days(request.loans_workspace.pk),
     }
     if form.is_valid():
         values = form.cleaned_data

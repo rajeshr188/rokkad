@@ -113,6 +113,14 @@ recorded snapshot required before commit. The older retained-native earlier-payo
 route remains bounded and separate from this general admission purpose. See the
 [implementation](../implementation/completed-payout-admission-ld03.md).
 
+LC-04 consolidates presentation into one Record completed payout action, selecting
+the appropriate recorded or retained-native review from saved facts. Earlier
+native approval/reversed-origin evidence keeps its correction and authorization
+checks; old GET links redirect and issued POST reviews remain compatible.
+New paper entry can explicitly map retained licence evidence, without inventing
+unknown original validity or changing old mappings. See
+[LC-04](../implementation/completed-payout-presentation-lc04.md).
+
 ### 3. Admit exactly one financial origin
 
 | Admission | Canonical origin | Evidence and operational boundary |

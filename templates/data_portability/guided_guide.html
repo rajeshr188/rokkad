@@ -5,7 +5,7 @@
 <a href="{% url 'workspace_portability:guided_upload' workspace_slug=request.workspace.slug %}">← Import existing loans</a>
 <h1 class="h3 mt-3">Bring an outstanding register into Rokkad</h1>
 <p class="lead">Keep recording new business while bringing supported old loans into the same Workspace in reviewed batches.</p>
-<div class="alert alert-info">Only the Workspace owner (or authorized platform administrator) can approve historical debt. Uploading and previewing do not create customers, loans or payouts.</div>
+<div class="alert alert-info">Importers can upload and prepare customer matches for owner review. Only the Workspace owner (or authorized platform administrator) can review and approve historical debt. Uploading and previewing do not create customers, loans or payouts.</div>
 <h2 class="h5 mt-4">1. Check that the source terms are supported</h2>
 <p>This first profile supports outstanding bullet loans with unchanged principal, collateral currently in your vault, known original date and tenure, and known unpaid interest/fees. The first month must already have been paid upfront. Interest is based on original principal and the original loan-date anniversaries. Later monthly charges are summed across items and rounded once to whole rupees using half-even rounding.</p>
 <p>For example, a loan dated 10 January starts its next charge on 11 February. The anniversary itself does not start another charge. Rokkad shows the opening balance you reviewed; it does not invent receipts to explain prior collections. Unpaid interest cannot exceed the supported total charge through handover.</p>

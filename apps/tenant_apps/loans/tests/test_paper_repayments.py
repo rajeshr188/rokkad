@@ -211,6 +211,9 @@ class PaperRepaymentTests(OpeningReleaseFixture):
         self.assertContains(refused, "Preview this receipt again")
         response = client.post(url, {**data, "action": "preview"})
         self.assertContains(response, "02/02/2021")
+        self.assertContains(response, "Evidence behind these amounts")
+        self.assertEqual(response.context["evidence_quality"]["calculation"]["status"], "SUPPORTED")
+        self.assertFalse(response.context["evidence_quality"]["transactions"]["complete"])
         self.assertContains(response, "was not supplied as a split on paper")
         self.assertEqual(self.loan.loan_events.count(), 1)
         token = response.context["form"]["review_token"].value()
@@ -228,7 +231,7 @@ class PaperRepaymentFeesTests(OpeningReleaseFixture):
         return doc
 
     def test_paper_fee_allocation_refused_but_current_repayment_unchanged(self):
-        with self.assertRaisesMessage(ValueError, "agreed fee rule"):
+        with self.assertRaisesMessage(ValueError, "actual fee component"):
             paper.preview_paper_repayment(self.loan.pk, amount="215", received_on=self.day,
                 receipt_reference="fees-1", request_key="fees-1", actor=self.actor)
         self.assertEqual(self.loan.loan_events.count(), 1)

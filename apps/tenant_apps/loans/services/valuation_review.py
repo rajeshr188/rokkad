@@ -79,7 +79,8 @@ def preview_updated_valuation(loan, *, actor):
     rows = get_origination_quote_rows(workspace_id=loan.workspace_id, loan_date=today,
         metals=tuple(item.metal for item in items))
     quotes = [{"metal": row["metal"], "old": old_quotes.get(row["metal"]),
-        "current": row["evidence"], "fresh": row["fresh"]} for row in rows]
+        "current": row["evidence"], "fresh": row["fresh"], "age_days": row["age_days"],
+        "maximum_age_days": row["maximum_age_days"]} for row in rows]
     for quote in quotes:
         for key in ("old", "current"):
             value = (quote[key] or {}).get("effective_at")
@@ -97,6 +98,7 @@ def preview_updated_valuation(loan, *, actor):
             "items": [_policy_values(item) for item in items],
             "photos": [list(item.photos.order_by("pk").values()) for item in items],
             "economics": asdict(resolved.economics), "quotes": resolved.valuation_quotes,
+            "maximum_quote_age_days": resolved.maximum_quote_age_days,
             "policies": [_policy_values(row) for row in
                 (resolved.economic_policy, *resolved.rate_policies, *resolved.fee_policies)],
             "today": today,

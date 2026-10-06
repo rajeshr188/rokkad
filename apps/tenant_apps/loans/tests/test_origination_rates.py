@@ -61,6 +61,8 @@ class OriginationRateTests(WorkspaceTestCase):
         self.assertEqual(approval.payload["origination_rates"], evidence)
 
     def test_previous_day_quote_blocks_without_creating_evidence(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_maximum_quote_age
+        set_maximum_quote_age(workspace=self.tenant, actor=self.actor, days=0)
         with patch("django.utils.timezone.now", return_value=timezone.now() + timedelta(days=1)):
             self.loan.loan_date = timezone.localdate()
             self.loan.save(update_fields=["loan_date"])
@@ -182,6 +184,8 @@ class OriginationRateTests(WorkspaceTestCase):
             self.approve()
 
     def test_local_midnight_expires_quote(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_maximum_quote_age
+        set_maximum_quote_age(workspace=self.tenant, actor=self.actor, days=0)
         with timezone.override("Asia/Kolkata"):
             midnight = timezone.make_aware(datetime.combine(timezone.localdate(self.quote.effective_at) + timedelta(days=1), datetime.min.time()))
             before = get_origination_quote_rows(workspace_id=self.tenant.pk,

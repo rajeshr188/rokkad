@@ -65,6 +65,9 @@ def _validate(snapshot):
              and disbursal["policy_snapshot_id"] == policy.pk, "Event must identify its recorded contract basis.")
 
     terms = recording["terms"]
+    if "license_revision_id" in terms:
+        _require(terms["license_revision_id"] == loan.license_revision_id,
+                 "Reviewed source licence mapping differs from frozen evidence.")
     _require(terms["loan_number"] == loan.loan_number and terms["tenure_months"] == loan.tenure_months,
              "Original number and tenure must agree with the contract.")
     _require(_decimal(terms["principal_amount"]) == loan.principal_amount == snapshot.gross_principal,

@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 
-from apps.tenant_apps.loans.access import loans_owner_required, loans_setup_required, loans_action_required
+from apps.tenant_apps.loans.access import loans_owner_required, loans_setup_required, loans_action_required, loans_workspace_required
 from apps.tenant_apps.loans.forms import PawnDisbursalForm
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.services.loan_workflow import make_review, review_and_disburse, set_loan_workflow
@@ -76,15 +76,22 @@ class EarlierPayoutForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
 
 
-@loans_action_required("data.create")
 @loans_action_required("data.edit")
 @loans_action_required("loan.disburse")
 @never_cache
 def pawn_loan_record_completed_payout(request, pk):
-    from apps.tenant_apps.loans.services.completed_payouts import require_unpaid_draft
+    from apps.tenant_apps.loans.services.completed_payouts import require_unpaid_draft, completed_payout_adapter
     from .recorded_history import paper_history_entry
     loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"),
         pk=pk, workspace=request.loans_workspace)
+    adapter = completed_payout_adapter(loan)
+    # Native POST retries/stale reviews must reach the native command, including
+    # after it has activated the loan. A recorded intent always keeps its adapter.
+    native_post = (request.method == "POST" and "intent_token" not in request.POST
+        and "review_token" in request.POST)
+    if native_post or (adapter == "RETAINED_NATIVE" and "intent_token" not in request.POST):
+        return _retained_payout_review(request, pk)
+    request.loans_workspace_access.require("data.create")
     # A same-form POST retry must reach the command's existing-result check.
     if request.method != "POST" or loan.state in ("DRAFT", "APPROVED"):
         try:
@@ -95,9 +102,19 @@ def pawn_loan_record_completed_payout(request, pk):
     return paper_history_entry(request, draft=loan)
 
 
-@loans_setup_required
+@loans_workspace_required
 @never_cache
 def pawn_loan_record_earlier_payout(request, pk):
+    get_object_or_404(PawnLoan, pk=pk, workspace=request.loans_workspace)
+    if request.method != "POST":
+        return redirect("workspace_loans:pawn_loan_record_completed_payout",
+            workspace_slug=request.workspace.slug, pk=pk)
+    # An already issued v1 review remains valid at its original POST endpoint.
+    return _retained_payout_review(request, pk)
+
+
+@loans_setup_required
+def _retained_payout_review(request, pk):
     from apps.tenant_apps.loans.services.loan_workflow import make_earlier_payout_review, record_earlier_payout
     loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"),
         pk=pk, workspace=request.loans_workspace)
@@ -109,7 +126,7 @@ def pawn_loan_record_earlier_payout(request, pk):
         except (ValueError, ValidationError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Earlier payout recorded with its actual date. Your signed-in identity and today's recording time are in the loan history.")
+            messages.success(request, "Completed payout recorded with its actual date. Your signed-in identity and today's recording time are in the loan history.")
             return redirect("workspace_loans:pawn_loan_detail", workspace_slug=request.workspace.slug, pk=loan.pk)
     economics, quotes, basis, error = None, {}, None, None
     try:

@@ -10,7 +10,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_GET
 
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
 from . import guided_openings as service, opening_register as register
 from .guided_opening_forms import UploadRegisterForm, ReviewRegisterForm
 from .models import GuidedOpeningBatch
@@ -22,7 +22,7 @@ from .parsers import MAX_BYTES
 @require_http_methods(['GET', 'POST'])
 def upload(request):
     args = {'workspace_id': request.workspace.pk, 'actor': request.user}
-    require_history_setup_access(**args, read_only=request.method == 'GET')
+    require_history_preparation_access(**args, read_only=request.method == "GET")
     form = UploadRegisterForm(request.POST if request.method == 'POST' else None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         file = form.cleaned_data['file']
@@ -43,12 +43,14 @@ def review(request, batch_id):
     batch = service.get_batch(**args)
     form, approval, error = None, None, None
     if batch.state in {'STAGED', 'READY'}:
-        form = ReviewRegisterForm(request.POST if request.method == 'POST' and request.POST.get('action') == 'preview' else None,
+        form = ReviewRegisterForm(request.POST if request.method == 'POST' and request.POST.get('action') in {'preview', 'prepare'} else None,
             workspace=request.workspace, batch=batch)
     if request.method == 'POST':
         try:
             action = request.POST.get('action')
-            if action == 'preview' and form is not None and form.is_valid():
+            if action == 'prepare' and form is not None and form.is_valid():
+                batch = service.prepare(**args, mapping=form.mapping())
+            elif action == 'preview' and form is not None and form.is_valid():
                 batch, approval = service.preview(**args, mapping=form.mapping())
             elif action == 'commit':
                 service.commit(**args, approval=request.POST.get('approval', ''), confirmed=request.POST.get('confirmed') == 'yes')
@@ -56,13 +58,15 @@ def review(request, batch_id):
             elif action == 'cancel':
                 service.cancel(**args, confirmed=request.POST.get('confirmed') == 'yes')
                 return redirect('workspace_portability:guided_batch', workspace_slug=request.workspace.slug, batch_id=batch.public_id)
-            elif action != 'preview':
+            elif action not in {'preview', 'prepare'}:
                 error = 'Choose a supported import action.'
         except (ValueError, ValidationError, ObjectDoesNotExist) as exc:
             error = str(exc)
         except IntegrityError:
             error = 'The destination changed or contains a conflicting record. Nothing was imported; refresh and review again.'
     return render(request, 'data_portability/guided_review.html', {'batch': batch, 'form': form,
+        'owner_review': request.workspace.owner_id == request.user.pk or request.user.is_superuser,
+        'preparation': batch.preview.get('profile') == 'loan-import-preparation/1',
         'approval': approval, 'error': error, 'unfinished': batch.state in {'STAGED', 'READY'},
         'cutover_date': date.fromisoformat(batch.mapping['settings']['cutover']) if batch.mapping else None})
 
@@ -96,7 +100,7 @@ def template_bytes():
 @never_cache
 @require_GET
 def template(request):
-    require_history_setup_access(request.workspace.pk, request.user, read_only=True)
+    require_history_preparation_access(request.workspace.pk, request.user, read_only=True)
     response = HttpResponse(template_bytes(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="rokkad-outstanding-loans.xlsx"'
     return response
@@ -106,5 +110,5 @@ def template(request):
 @never_cache
 @require_GET
 def guide(request):
-    require_history_setup_access(request.workspace.pk, request.user, read_only=True)
+    require_history_preparation_access(request.workspace.pk, request.user, read_only=True)
     return render(request, 'data_portability/guided_guide.html')

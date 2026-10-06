@@ -26,7 +26,7 @@ from .opening_continuation import preview_opening_collection
 from .opening_import import _document, _write
 from .opening_export import _export_opening
 from .opening_contract import (
-    FIELDS, FIELDS_V2, PAYMENT_PROFILE, CHECKPOINT_PROFILE, MAX_RECORDS, PROFILE as EXPORT_PROFILE, MANIFEST_FIELDS, EXTRA_FIELDS, decode_row,
+    FIELDS, FIELDS_V2, PAYMENT_PROFILE, CHECKPOINT_PROFILE, EXPLICIT_PROFILE, MAX_RECORDS, PROFILE as EXPORT_PROFILE, MANIFEST_FIELDS, EXTRA_FIELDS, decode_row,
 )
 
 PROFILE = "loan-opening-restore/1"
@@ -50,12 +50,12 @@ def parse_opening_export(content):
             raise HistoryError("Non-finite JSON is not supported.")
         manifest, evidence = [json.loads(line, object_pairs_hook=_pairs, parse_constant=invalid_number) for line in lines]
         _require(type(manifest) is dict and set(manifest) == MANIFEST_FIELDS, "Unexpected opening manifest fields.")
-        _require(manifest["profile"] in {EXPORT_PROFILE, PAYMENT_PROFILE, CHECKPOINT_PROFILE} and manifest["coverage"] == "OPENING_AND_SUPPORTED_SERVICING" and
+        _require(manifest["profile"] in {EXPORT_PROFILE, PAYMENT_PROFILE, CHECKPOINT_PROFILE, EXPLICIT_PROFILE} and manifest["coverage"] == "OPENING_AND_SUPPORTED_SERVICING" and
             manifest["history_before_cutover"] == "UNAVAILABLE" and type(manifest["restore_supported"]) is bool,
             "Use the supported opening evidence profile.")
         _require(manifest["exclusions"] == ["pre_cutover_transactions", "binary_files", "workspace_configuration", "party_master"],
             "Opening export coverage must be explicit.")
-        fields = FIELDS_V2 if manifest["profile"] in (PAYMENT_PROFILE, CHECKPOINT_PROFILE) else FIELDS
+        fields = FIELDS_V2 if manifest["profile"] in (PAYMENT_PROFILE, CHECKPOINT_PROFILE, EXPLICIT_PROFILE) else FIELDS
         _require(type(evidence) is dict and set(evidence) == set(fields) | EXTRA_FIELDS, "Unexpected opening evidence sections.")
         _require(manifest["sha256"] == digest(evidence), "Opening export checksum does not match.")
         count = 0
@@ -80,15 +80,17 @@ def parse_opening_export(content):
         doc = origin.document
         _require(doc == _document(doc["review"], doc["setup"]) and origin.source_sha256 == digest(doc), "Accepted opening provenance is invalid.")
         review = doc["review"]
-        _require((manifest["profile"] == CHECKPOINT_PROFILE) == (review["profile"] == "loan-opening-review/4"),
+        _require(manifest["profile"] == EXPLICIT_PROFILE or (manifest["profile"] == CHECKPOINT_PROFILE) == (review["profile"] == "loan-opening-review/4"),
             "Checkpoint review requires its explicit version 3 opening export contract.")
         _require(str(origin.source_namespace) == review["source"]["namespace"] and origin.source_id == source_binding_id(
             origin.source_namespace, review["source"]["loan_id"], review["mapping"]["borrower_source_system"]), "Opening source identity does not match.")
         events = objects["events"]
-        _require(manifest["profile"] == CHECKPOINT_PROFILE or (manifest["profile"] == PAYMENT_PROFILE) == any(e.event_kind == "REPAYMENT" for e in events),
+        _require(manifest["profile"] in {CHECKPOINT_PROFILE, EXPLICIT_PROFILE} or (manifest["profile"] == PAYMENT_PROFILE) == any(e.event_kind == "REPAYMENT" for e in events),
                  "Opening payment history requires the version 2 row contract.")
         _require(events == sorted(events, key=lambda row: (row.effective_date, row.pk)), "Opening events are not chronological.")
         opening = read_opening_evidence(loan, events[0])
+        extended = review["profile"] == "loan-opening-review/5" or any(e.payload.get("opening_collection", {}).get("profile") == "opening-payments/2" for e in events)
+        _require((manifest["profile"] == EXPLICIT_PROFILE) == extended, "Extended evidence requires its version 4 opening export contract.")
         _require(events[0].event_kind == "MIGRATION_OPENING" and opening["review"] == review and
             origin.references["mapping"] == review["mapping"] and
             origin.references["items"] == opening["item_mapping"] and
@@ -173,6 +175,8 @@ def semantic_evidence(evidence):
                 out[key] = key
             elif key == "item_mapping":
                 out[key] = {source: ref("items", pk) for source, pk in item.items()}
+            elif key == "item_principal_split":
+                out[key] = {str(ref("items", int(pk))): amount for pk, amount in item.items()}
             elif key == "original_idempotency_key":
                 _require(item in event_keys, "Reversal idempotency reference is missing.")
                 out[key] = event_keys[item]
@@ -234,9 +238,12 @@ def _restore_servicing(loan, *, actor, evidence, item_mapping):
     for event in evidence["events"]:
         if event["event_kind"] == "REPAYMENT":
             detail = event["payload"]["repayment"]
+            recording = deepcopy(detail.get("recording"))
+            if recording and "item_principal_split" in recording:
+                recording["item_principal_split"] = {str(items[int(pk)]): amount for pk, amount in recording["item_principal_split"].items()}
             result = _record_pawn_loan_repayment_at(loan.pk, actor=actor, effective_date=date.fromisoformat(event["effective_date"]),
                 amount=detail["amount_received"], request_key=detail["request_key"],
-                recording_evidence=detail.get("recording"))
+                recording_evidence=recording, occurred_at=event["payload"].get("opening_collection", {}).get("occurred_at"))
             event_map[event["id"]] = result.loan_event.pk
         elif event["event_kind"] == "RELEASE_RECEIPT":
             row = releases[event["id"]]
@@ -248,11 +255,13 @@ def _restore_servicing(loan, *, actor, evidence, item_mapping):
                 settlement_amount=row["settlement_amount"], request_key=row["request_key"],
                 interest_concession=event["payload"]["values"].get("interest_concession", "0"),
                 concession_reason=detail.get("interest_concession_reason", ""),
-                historical_number=number, returned_at=datetime.fromisoformat(next(iter(returns))))
+                historical_number=number, returned_at=datetime.fromisoformat(next(iter(returns))),
+                occurred_at=event["payload"].get("opening_collection", {}).get("occurred_at"))
             event_map[event["id"]] = result.loan_event.pk
         elif event["event_kind"] == "REVERSAL" and event["reversal_of_id"] in event_map:
             _reverse_pawn_loan_event_at(event_map[event["reversal_of_id"]], actor=actor,
-                effective_date=date.fromisoformat(event["effective_date"]), reason=event["payload"]["reversal"]["reason"])
+                effective_date=date.fromisoformat(event["effective_date"]), reason=event["payload"]["reversal"]["reason"],
+                occurred_at=event["payload"]["reversal"].get("occurred_at"))
 
 
 def _access(workspace_id, actor):

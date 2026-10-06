@@ -60,6 +60,9 @@ def validate_input(data, *, historical_source=False):
     if not isinstance(data, dict) or len(_canonical(data)) > 40000:
         raise ValueError("Paper history is missing or exceeds the supported size.")
     value = deepcopy(data)
+    revision_id = value.pop("license_revision_id", None)
+    if revision_id is not None and (type(revision_id) is not int or revision_id <= 0):
+        raise ValueError("Select an existing source licence revision.")
     quantum = Decimal(value.pop("currency_quantum", "0.01"))
     if quantum not in (Decimal("0.01"), Decimal("1")):
         raise ValueError("Select paise or whole-rupee rounding from the actual agreement.")
@@ -191,6 +194,8 @@ def validate_input(data, *, historical_source=False):
     if Decimal(value["cash_paid"]) != Decimal(value["principal"]) - monthly * value["advance_months"] - Decimal(value.get("document_charge", "0")):
         raise ValueError("Original proceeds must equal principal less agreed advance interest and document charge.")
     value["currency_quantum"] = str(quantum.normalize())
+    if revision_id is not None:
+        value["license_revision_id"] = revision_id
     return value
 
 
@@ -268,16 +273,29 @@ def admit_recorded_history(*, workspace, actor, data, intent_token, review_token
     return loan, True
 
 
-def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None, historical_setup=None):
+def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None, historical_setup=None, terminal=False):
     series = m.LoanSeries.objects.select_related("license").get(pk=data["series_id"], workspace=workspace)
+    revision = None
+    if data.get("license_revision_id") is not None:
+        revision = m.LoanLicenseRevision.objects.filter(pk=data["license_revision_id"],
+            workspace=workspace, license_id=series.license_id).first()
+        if revision is None:
+            raise ValueError("Source licence evidence must belong to this Workspace and the selected series' licence.")
+        if draft and draft.license_revision_id != revision.pk:
+            raise ValueError("Keep this draft's original licence evidence mapping.")
+        if revision.kind == "LEGACY_REFERENCE":
+            if not series.license.is_legacy_reference or series.license.is_active:
+                raise ValueError("Unknown original validity requires an inactive legacy licence reference.")
+        elif not revision.issued_on <= day <= revision.expires_on:
+            raise ValueError("Selected source licence evidence must cover the actual payout date.")
     product = m.LoanProductVersion.objects.select_related("product").get(pk=data["product_version_id"], workspace=workspace)
-    if (product.status != "ACTIVE" and not draft and not historical_setup) or product.repayment_structure not in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT") or product.amortisation_method != "NONE":
+    if (product.status != "ACTIVE" and not draft and not historical_setup and not terminal) or product.repayment_structure not in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT") or product.amortisation_method != "NONE":
         raise ValueError("Select a non-amortising monthly bullet/flexible contract matching the paper agreement.")
     if not product.minimum_tenor_months <= tenure <= product.maximum_tenor_months:
         raise ValueError("The original tenure does not match the selected contract version.")
     claim_number(series, number, kind="PAWN_LOAN", actor=actor, archive_ids=archive_ids,
         existing_loan_id=draft.pk if draft else None)
-    borrower = Party.objects.get(pk=data["borrower_id"], workspace=workspace, **({} if draft or historical_setup else {"status": "ACTIVE"}))
+    borrower = Party.objects.get(pk=data["borrower_id"], workspace=workspace, **({} if draft or historical_setup or terminal else {"status": "ACTIVE"}))
     loan = draft or m.PawnLoan(workspace=workspace, borrower=borrower, license=series.license,
         series=series, product_version=product, loan_number=number, loan_date=day, principal_amount=principal,
         monthly_interest_rate=rate, tenure_months=tenure, created_by=actor, updated_by=actor,
@@ -285,6 +303,8 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
     if not draft:
         if historical_setup:
             loan.license_revision = historical_setup["revision"]
+        elif revision:
+            loan.license_revision = revision
         loan.full_clean()
         loan.save()
     from .recorded_items import contract_items, ITEM_PROFILE
@@ -335,6 +355,8 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
                        entered_by=actor.pk, confirmed_complete=data["confirmed_history"]))
     if data.get("entry_note"):
         recording["entry_note"] = data["entry_note"]
+    if revision:
+        recording["terms"]["license_revision_id"] = revision.pk
     if historical_setup:
         recording["source_claims"] = historical_setup["source_claims"]
         recording["original_actor"] = historical_setup["source_claims"]["original_actor"]

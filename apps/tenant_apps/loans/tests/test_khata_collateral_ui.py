@@ -179,7 +179,7 @@ class KhataCollateralUITests(CorrectionFixture, TestCase):
         result = json.loads(self.browse().content)["items"][0]
         self.assertIn(f"/photos/{photo.pk}/", result["photo"])
         self.assertIsNotNone(result["value"])
-        with self.later(0, 1):
+        with self.later(0, 8):
             self.assertIsNone(json.loads(self.browse().content)["items"][0]["value"])
         self.assertIn("no-store", self.browse()["Cache-Control"])
 

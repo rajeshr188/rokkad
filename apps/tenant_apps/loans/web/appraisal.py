@@ -10,6 +10,8 @@ from apps.tenant_apps.rates.facade import RATE_FOUND, get_latest_commodity_valua
 from apps.tenant_apps.loans.selectors.origination_rates import origination_quote_cutoff
 from apps.tenant_apps.loans.models import LoanSeries
 from apps.tenant_apps.loans.domain import ValuationMethod
+from apps.tenant_apps.loans.domain.valuation_freshness import evidence_freshness
+from apps.tenant_apps.loans.services.origination_settings import maximum_quote_age_days
 from apps.tenant_apps.loans.domain.collateral_economics import _selected_value
 from apps.tenant_apps.loans.services.economic_policies import resolve_pawn_loan_economic_policy
 from django.utils import timezone
@@ -61,10 +63,13 @@ def collateral_appraisal_suggestion(request):
                 calculated = None
                 if lookup.status == RATE_FOUND and lookup.rate.buying_rate > 0:
                     calculated = (lookup.rate.buying_rate * data["net_weight"] * data["purity"] / 100).quantize(policy.currency_quantum, rounding=ROUND_DOWN)
-                if method != ValuationMethod.LATEST_APPRAISAL and (
-                    calculated is None or timezone.localdate(lookup.rate.effective_at) != data["as_of"]
-                ):
-                    raise ValueError("A same-day metal price is needed to suggest the maximum loan.")
+                if method != ValuationMethod.LATEST_APPRAISAL:
+                    limit = maximum_quote_age_days(request.loans_workspace.pk)
+                    status, _ = evidence_freshness(value=lookup.rate.buying_rate if calculated is not None else None,
+                        effective_date=timezone.localdate(lookup.rate.effective_at) if calculated is not None else None,
+                        as_of_date=timezone.localdate(), maximum_age_days=limit)
+                    if status != "CURRENT" or lookup.rate.effective_at > timezone.now():
+                        raise ValueError(f"A positive metal price no older than {limit} calendar days is needed to suggest the maximum loan.")
                 appraisal = data.get("appraisal")
                 if appraisal is None and context.get("value"):
                     appraisal = Decimal(context["value"])

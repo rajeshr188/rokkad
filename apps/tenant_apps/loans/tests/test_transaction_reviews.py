@@ -143,13 +143,13 @@ class TransactionReviewTests(RecordedOriginationTests):
         report = get_pawn_loan_reports(as_of_date=self.today)
         dataset = build_pawn_loan_report_dataset(report, "active")
         row = next(row for row in dataset.rows if row[0] == loan.loan_number)
-        self.assertEqual(row[-2:], ("BEHIND", self.day))
+        self.assertEqual(row[8:10], ("BEHIND", self.day))
         self.assertIn("provisional", dataset.notes)
         from apps.tenant_apps.loans.selectors.reports import get_pawn_party_statement
         from apps.tenant_apps.loans.services.report_exports import build_party_statement_dataset, render_report_dataset
         statement = get_pawn_party_statement(party_id=loan.borrower_id, as_of_date=self.today)
         exported = build_party_statement_dataset(statement)
-        self.assertEqual(next(row for row in exported.rows if row[0] == "LOAN POSITION" and row[1] == loan.loan_number)[-2:], ("BEHIND", self.day))
+        self.assertEqual(next(row for row in exported.rows if row[0] == "LOAN POSITION" and row[1] == loan.loan_number)[11:13], ("BEHIND", self.day))
         for name, source in (("coverage-report", dataset), ("coverage-statement", exported)):
             pdf, _ = render_report_dataset(source, "pdf")
             import fitz, os

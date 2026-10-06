@@ -117,7 +117,7 @@ def record_pawn_loan_repayment(
                                          actor=actor, effective_date=timezone.localdate())
 
 
-def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effective_date, recording_evidence=None, admission_key=None, correction_evidence=None, replay_closed=False):
+def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effective_date, recording_evidence=None, admission_key=None, correction_evidence=None, replay_closed=False, occurred_at=None):
     """Atomic caller only; recorded date is also used by opening restoration."""
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.repay")
@@ -146,7 +146,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
     if not replay_closed and not correction_evidence:
         from .servicing_eligibility import servicing_eligibility
         servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER" if recording_evidence else "CURRENT",
-            effective_date=effective_date).require()
+            effective_date=effective_date, occurred_at=(recording_evidence or {}).get("received_at", occurred_at)).require()
 
     opening = loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
     try:
@@ -162,10 +162,10 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
                 from .pawn_interest import recognize_due_monthly_interest
                 recognize_due_monthly_interest(loan, effective_date, actor=actor)
             balance = get_pawn_loan_balance(loan.pk, as_of_date=effective_date)
-        allocation = allocate_repayment(balance, amount)
+        allocation = allocate_repayment(balance, amount, fees_paid=(recording_evidence or {}).get("fees_paid"))
         if recording_evidence:
             from .servicing_eligibility import paper_repayment_allocation_allowed
-            paper_repayment_allocation_allowed(loan, balance, allocation)
+            paper_repayment_allocation_allowed(loan, balance, allocation, evidence=recording_evidence)
     except PawnRepaymentError:
         raise
     except Exception as exc:
@@ -191,7 +191,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
         "request_key": request_key,
         "amount_received": _decimal_string(allocation.amount_received),
         "allocation_order": [
-            "fees",
+            "EXPLICIT_FEE_COMPONENT" if (recording_evidence or {}).get("fees_paid") is not None else "fees",
             "overdue_interest",
             "current_interest",
             "principal",
@@ -224,7 +224,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
         from .opening_servicing import (opening_release_accrual_preview, payment_collection_detail,
                                        _record_opening_servicing_event)
         from .pawn_release import _record_release_accrual
-        detail = payment_collection_detail(loan, as_of_date=effective_date, request_key=request_key, operation="REPAYMENT")
+        detail = payment_collection_detail(loan, as_of_date=effective_date, request_key=request_key, operation="REPAYMENT", recording=recording_evidence, occurred_at=occurred_at)
         catch_up = opening_release_accrual_preview(loan, as_of_date=effective_date)
         if catch_up:
             _record_release_accrual(loan, preview=catch_up, actor=actor, request_key=request_key, collection_detail=detail)
@@ -403,12 +403,20 @@ def allocate_repayment_principal_to_tranches(
     return tuple(results)
 
 
-def allocate_repayment(balance, amount: Decimal) -> RepaymentAllocation:
+def allocate_repayment(balance, amount: Decimal, *, fees_paid=None) -> RepaymentAllocation:
     """Allocate fees, overdue interest, current interest, then principal."""
     remaining = Decimal(amount)
     if remaining <= 0:
         raise PawnRepaymentError("Repayment amount must be positive.")
     fees = min(remaining, balance.fees_outstanding)
+    if fees_paid is not None:
+        try:
+            fees = Decimal(str(fees_paid))
+            valid = fees.is_finite() and 0 <= fees <= min(remaining, balance.fees_outstanding) and fees == fees.quantize(Decimal("0.01"))
+        except (InvalidOperation, TypeError, ValueError):
+            valid = False
+        if not valid:
+            raise PawnRepaymentError("The actual fee payment must be a non-negative paise amount within this receipt and outstanding fees.")
     remaining -= fees
     overdue_interest = min(remaining, balance.overdue_interest_outstanding)
     remaining -= overdue_interest

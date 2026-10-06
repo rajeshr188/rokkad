@@ -16,6 +16,7 @@ from .recorded_numbers import identity
 from .recorded_history import validate_input, _authorize, _intent, _admit, _text, _digest
 
 PROFILE = "archive-admission/1"
+ITEM_PROFILE = "archive-admission/2"
 SALT = "loans.archive-admission.review.v1"
 
 
@@ -39,7 +40,7 @@ def source_snapshots(evidence):
     return rows
 
 
-def _claims(evidence, data):
+def _claims(evidence, data, *, complete_receipts=True):
     if digest(evidence.document) != evidence.source_sha256:
         raise ValueError("The retained archive fingerprint does not match. Reconcile its evidence first.")
     facts = evidence.document["facts"]
@@ -53,16 +54,18 @@ def _claims(evidence, data):
         raise ValueError("The archive reports a nonzero closing balance; resolve that conflict before admission.")
     collateral = facts["collateral"]
     if collateral is not None:
-        if len(collateral) != 1:
-            raise ValueError("Archive admission currently requires one collateral group.")
-        item = collateral[0]
-        for field in ("quantity", "gross_weight", "net_weight"):
-            if item[field] is not None and Decimal(str(item[field])) != Decimal(str(data[field])):
-                raise ValueError(f"Entered collateral {field.replace('_', ' ')} conflicts with the archive.")
-        if identity(item["description"]) != identity(data["description"]):
-            raise ValueError("The collateral description must identify the retained archive item.")
+        from .recorded_items import contract_items
+        entered_items = contract_items(data)
+        if len(collateral) != len(entered_items):
+            raise ValueError("Enter every retained collateral item separately, in its source order.")
+        for item, entered in zip(collateral, entered_items):
+            for field in ("quantity", "gross_weight", "net_weight"):
+                if item[field] is not None and Decimal(str(item[field])) != Decimal(str(entered[field])):
+                    raise ValueError(f"Entered collateral {field.replace('_', ' ')} conflicts with the archive.")
+            if identity(item["description"]) != identity(entered["description"]):
+                raise ValueError("The collateral description and source order must identify each retained archive item.")
     payments = facts["payments"]
-    if payments is not None:
+    if payments is not None and complete_receipts:
         ids = [identity(p["id"]) for p in payments]
         if len(set(ids)) != len(ids):
             raise ValueError("Duplicate archived payment identities require reconciliation.")
@@ -107,7 +110,7 @@ def _prepare(workspace, actor, evidence_id, data, intent_token, reconciliation):
         snapshot_ids=[row.pk for row in snapshots], snapshots=[[row.pk, row.source_sha256] for row in snapshots],
         namespace=str(evidence.source_namespace), system=evidence.source_system, source_id=evidence.source_id,
         reconciliation=reconciliation)
-    document = dict(profile=PROFILE, archive=archive, history=data)
+    document = dict(profile=ITEM_PROFILE if len(data.get("collateral", [])) > 1 else PROFILE, archive=archive, history=data)
     return data, key, evidence, archive, document
 
 

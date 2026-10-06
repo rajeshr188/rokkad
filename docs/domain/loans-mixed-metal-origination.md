@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-30
+updated: 2026-10-06
 tags: [loans, collateral, interest, ltv, disbursal]
 related:
   - ../adr/2026-08-05-pawn-loan-collateral-tranche-economics.md
@@ -39,8 +39,11 @@ the entered appraisal, and approval still validates/freezes the required evidenc
 
 The adjacent LTV hint resolves the selected series' license and loan-date policy.
 It shows the configured percentage, eligible value and per-item maximum, using
-the current entered appraisal. Market-dependent methods require a same-day quote
-for a maximum. Changing appraisal, principal, series or date refreshes the hint;
+the current entered appraisal. Market-dependent methods require a positive
+quote within the Workspace lending age limit (default seven inclusive calendar
+days) for a maximum. The latest applicable quote, source and age are displayed;
+the owner configures the limit under Loans setup > Loan entry. Monitoring freshness
+is a separate policy. Old v1 approvals keep same-day eligibility. Changing appraisal, principal, series or date refreshes the hint;
 it never fills the principal. Preview and approval remain authoritative.
 
 Selecting a borrower shows all active-loan recorded principal, interest, fees and

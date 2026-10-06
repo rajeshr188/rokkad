@@ -831,7 +831,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
             return_value=date(2026, 7, 18),
         ), patch(
-            "apps.tenant_apps.loans.services.pawn_renewals.preview_pawn_loan_accruals",
+            "apps.tenant_apps.loans.services.settlement_preparation.preview_pawn_loan_accruals",
             return_value=(),
         ):
             self._set_actor_grants("loan_release", "loan_approve", "loan_disburse")
@@ -926,7 +926,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
             return_value=date(2027, 1, 20),
         ), patch(
-            "apps.tenant_apps.loans.services.pawn_auctions.preview_pawn_loan_accruals",
+            "apps.tenant_apps.loans.services.settlement_preparation.preview_pawn_loan_accruals",
             return_value=(),
         ):
             auction = start_pawn_loan_auction(

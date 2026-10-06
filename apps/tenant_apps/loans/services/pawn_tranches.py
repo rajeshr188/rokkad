@@ -120,7 +120,11 @@ def get_pawn_principal_tranche_balances(
         event_lines = tuple(event_lines_iter)
         event = event_lines[0].loan_event
         if opening is not None and event.effective_date <= origins[0].effective_date:
-            raise PawnTrancheBalanceError("Repayment allocation cannot overlap the migration cutover.")
+            from .opening_precision import validate_event_order
+            try:
+                validate_event_order(opening["review"], event)
+            except ValueError as exc:
+                raise PawnTrancheBalanceError(str(exc)) from exc
         values = event.payload.get("values") or {}
         expected_principal = Decimal(
             str(values.get("original_principal", values.get("principal", "0")))

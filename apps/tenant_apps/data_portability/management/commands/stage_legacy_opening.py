@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, Validat
 from django.urls import reverse
 
 from apps.tenancy.context import workspace_context
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_preparation_access
 from apps.tenant_apps.loans.services.opening_import import PROFILE
 from apps.tenant_apps.data_portability.opening_review import read_documents
 from apps.tenant_apps.data_portability.legacy_opening import stage
@@ -29,7 +29,7 @@ class Command(BaseCommand):
         try:
             actor = get_user_model().objects.get(pk=options["actor_id"])
             with workspace_context(options["workspace_id"]):
-                workspace = require_history_setup_access(options["workspace_id"], actor)
+                workspace = require_history_preparation_access(options["workspace_id"], actor)
                 rows = read_documents(options["opening_file"])
                 if len(rows) != 1 or not isinstance(rows[0], dict) or set(rows[0]) != {"profile", "review", "setup"} or rows[0]["profile"] != PROFILE:
                     raise ValueError("Supply exactly one prepared opening commit document.")

@@ -1,12 +1,17 @@
 ---
 status: active
 owner: project
-updated: 2026-10-05
+updated: 2026-10-06
 tags: [plan, loans, admission, continuation, compatibility]
 related: [../architecture/ordinary-loan-domain-review-20261005.md, ../adr/2026-10-05-unified-loan-admission-and-continuation.md]
 ---
 
 # Unified loan admission and servicing correction
+
+The 6 October follow-up is tracked in the
+[continuation consolidation plan](loan-continuation-consolidation.md). It builds
+on these LD deliveries; it does not reopen their completed local scope or imply
+that remaining production gates and writer/presentation consolidation are complete.
 
 ## Scope and checkpoint
 

@@ -8,7 +8,7 @@ from django.db import transaction, IntegrityError
 
 from apps.orgs.models import Company
 from apps.tenant_apps.loans.services.history_contract import digest, HistoryError
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
 from apps.tenant_apps.loans.services.opening_import import (
     PROFILE as OPENING_PROFILE, preview_opening_import, commit_opening_import,
 )
@@ -101,7 +101,7 @@ def _source_evidence(review, setup, summary, records, candidates, *, payment_rev
 
 
 def get_batch(*, workspace_id, actor, batch_id, lock=False):
-    require_history_setup_access(workspace_id, actor)
+    require_history_preparation_access(workspace_id, actor, read_only=not lock)
     query = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, profile=PROFILE)
     if lock:
         query = query.select_for_update()
@@ -118,16 +118,27 @@ def _inputs(batch):
     return {"review": opening["review"], "setup": opening["setup"]}
 
 
+def _preparation_document(workspace_id, review, setup):
+    from apps.tenant_apps.loans.services.opening_import import _document
+    from apps.tenant_apps.loans.services.history_setup import validate_preparation_mapping
+    _document(review, setup)
+    mapping = review["mapping"]
+    if mapping["workspace_id"] != workspace_id:
+        raise HistoryError("Opening preparation must target this Workspace.")
+    validate_preparation_mapping(workspace_id, revision_id=mapping["licence_revision_id"],
+        series_id=mapping["series_id"], product_version_id=mapping["product_version_id"], borrower_id=mapping["borrower_id"])
+
+
 def stage(*, workspace_id, actor, archive_path, review, setup, pg_restore="pg_restore", source_profile=None, payment_review=None):
-    require_history_setup_access(workspace_id, actor)
+    require_history_preparation_access(workspace_id, actor)
     # Domain validation precedes expensive source extraction and retains no loans.
-    preview_opening_import(workspace_id=workspace_id, actor=actor, review=review, setup=setup)
+    _preparation_document(workspace_id, review, setup)
     evidence = source_evidence(archive_path=archive_path, review=review, setup=setup, pg_restore=pg_restore,
                                source_profile=source_profile, payment_review=payment_review)
     opening = {"profile": OPENING_PROFILE, "review": deepcopy(review), "setup": deepcopy(setup)}
     with transaction.atomic():
         Company.all_objects.select_for_update().get(pk=workspace_id)
-        require_history_setup_access(workspace_id, actor)
+        require_history_preparation_access(workspace_id, actor)
         if LoanHistoryBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED", "READY"]).count() >= 20:
             raise HistoryError("Finish or cancel an unfinished Loans import before staging another (limit 20).")
         return LoanHistoryBatch.objects.create(workspace_id=workspace_id, created_by=actor, profile=PROFILE,
@@ -140,14 +151,14 @@ def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_re
     Admission still uses each batch's ordinary signed preview and commit. Callers
     supply review/setup pairs, never extracted evidence or a reusable source cache.
     """
-    require_history_setup_access(workspace_id, actor)
+    require_history_preparation_access(workspace_id, actor)
     if not isinstance(openings, (list, tuple)) or not 1 <= len(openings) <= 20:
         raise HistoryError("Supply between one and 20 reviewed openings.")
     openings = deepcopy(openings)
     for inputs in openings:
         if not isinstance(inputs, dict) or set(inputs) != {"review", "setup"}:
             raise HistoryError("Each opening requires exactly review and setup.")
-        preview_opening_import(workspace_id=workspace_id, actor=actor, **inputs)
+        _preparation_document(workspace_id, **inputs)
     sources = [inputs["review"]["source"] for inputs in openings]
     if payment_reviews is None:
         payment_reviews = {}
@@ -169,7 +180,7 @@ def stage_many(*, workspace_id, actor, archive_path, openings, pg_restore="pg_re
         documents.append({"opening": {"profile": OPENING_PROFILE, **inputs}, "source_evidence": evidence})
     with transaction.atomic():
         Company.all_objects.select_for_update().get(pk=workspace_id)
-        require_history_setup_access(workspace_id, actor)
+        require_history_preparation_access(workspace_id, actor)
         unfinished = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED", "READY"]).count()
         if unfinished + len(documents) > 20:
             raise HistoryError("Finish or cancel unfinished Loans imports before staging more (limit 20).")

@@ -21,7 +21,7 @@ def _native_monthly_marker():
     return Case(When(loan__state="ACTIVE", loan__policy_snapshot__policy_version=2,
         loan__policy_snapshot__interest_method="SIMPLE", loan__policy_snapshot__partial_month_method="FULL_MONTH",
         loan__product_version__repayment_structure__in=("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"),
-        schedule_version__source_event__event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), then=Value(True)),
+        schedule_version__source_event__event_kind__in=("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING"), then=Value(True)),
         default=Value(False), output_field=BooleanField())
 
 
@@ -205,25 +205,19 @@ def _monthly_obligation_state(schedule, day, raw):
     capacity. Its original fixed interest projection is not a debt after receipts.
     Future projections may use only transactions known at the requested date.
     """
-    from apps.tenant_apps.loans.services.recorded_collections import recording_for, collection_state
-    from .balances import get_pawn_loan_balance
+    from .continuation import resolve_loan_continuation, RECORDED_PROFILES
     loan = schedule.loan
-    recorded = recording_for(loan)
-    if not recorded:
+    horizon = max(day, schedule.maturity_date)
+    position = resolve_loan_continuation(loan, as_of_date=day, forecast_through=horizon)
+    if position.contract.profile not in RECORDED_PROFILES:
         from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed
-        if (schedule.source_event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING")
+        if (schedule.source_event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING")
                 or loan.state != "ACTIVE" or not started_month_charge_allowed(loan.policy_snapshot)
                 or loan.policy_snapshot.basis == "RECORDED_CONTRACT" or loan.product_version.repayment_structure not in (
                 "SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT")):
             return raw
-    balance = get_pawn_loan_balance(loan, as_of_date=day)
-    horizon = max(day, schedule.maturity_date)
-    if recorded:
-        extra = Decimal(collection_state(loan, horizon, known_through=day)["additional"])
-    else:
-        from apps.tenant_apps.loans.services.pawn_interest import preview_pawn_loan_accruals
-        extra = sum((row.recognized_interest for row in preview_pawn_loan_accruals(
-            loan.pk, as_of_date=horizon, known_through=day)), ZERO)
+    balance = position.recorded_balance
+    extra = position.recognition.additional_interest
     remaining = ObligationAmount(balance.principal_outstanding, balance.interest_outstanding + extra)
     zero = ObligationAmount(ZERO, ZERO)
     row = UnpaidObligationState(raw.obligations[0].obligation_id, schedule.maturity_date,

@@ -59,6 +59,11 @@ class EarlierPayoutTests(WorkspaceTestCase):
         self.assertEqual(approval.payload["earlier_payout"]["recorded_by_id"], recorder.pk)
         self.assertTrue(self.record(token, actor=recorder).already_disbursed)
         self.assertEqual(result.loan.loan_events.count(), 1)
+        from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+        coverage = transaction_completeness(result.loan, timezone.localdate())
+        self.assertTrue(coverage.required)
+        self.assertFalse(coverage.complete)
+        self.assertEqual(coverage.status, "UNCONFIRMED")
         from apps.tenant_apps.loans.web.pawn_reads import pawn_loan_detail
         request = RequestFactory().get("/")
         request.workspace, request.user = self.tenant, self.actor
@@ -139,9 +144,10 @@ class EarlierPayoutTests(WorkspaceTestCase):
         request = RequestFactory().get("/")
         request.workspace, request.user = self.tenant, self.actor
         response = pawn_loan_record_earlier_payout(request, self.loan.pk)
-        self.assertContains(response, "Record an earlier payout")
-        self.assertContains(response, "Recording as")
-        self.assertContains(response, self.actual_date.strftime("%d/%m/%Y"))
+        from django.urls import reverse
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("workspace_loans:pawn_loan_record_completed_payout",
+            args=[self.tenant.slug, self.loan.pk]))
         self.assertFalse(self.loan.loan_events.exists())
 
     def test_corrected_earlier_payout_retains_original_event_and_schedule(self):

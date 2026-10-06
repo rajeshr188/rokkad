@@ -237,6 +237,24 @@ class PartialMonthLifecycleTests(WorkspaceTestCase):
         self.assertEqual(periods[0].recognized_interest, Decimal("20"))
         self.assertEqual(periods[1].recognized_interest, Decimal("4.67"))
 
+    def test_non_full_month_settlement_keeps_explicit_completed_period_finalization(self):
+        from apps.tenant_apps.loans.services import finalize_pawn_loan_accrual
+        from apps.tenant_apps.loans.services.settlement_preparation import prepare_loan_settlement
+        self.originate(method="ACTUAL_DAYS", advance=0)
+        day = date(2026, 9, 8)
+        with patch("django.utils.timezone.now", return_value=timezone.make_aware(datetime(2026, 9, 8, 10))):
+            count = self.loan.loan_events.count()
+            for operation in ("FULL_RELEASE", "RENEWAL", "AUCTION"):
+                with self.assertRaisesMessage(ValueError, "Finalize every completed interest period"):
+                    prepare_loan_settlement(self.loan, operation=operation, effective_date=day)
+            self.assertEqual(self.loan.loan_events.count(), count)
+            self.assertFalse(self.loan.interest_accruals.exists())
+            finalize_pawn_loan_accrual(self.loan.pk, period_number=1, actor=self.actor)
+            for operation in ("FULL_RELEASE", "RENEWAL", "AUCTION"):
+                prepared = prepare_loan_settlement(self.loan, operation=operation, effective_date=day)
+                self.assertEqual(prepared.balance_before_catch_up.interest_outstanding, Decimal("20"))
+                self.assertEqual(prepared.catch_up_accrual.recognized_interest, Decimal("4.67"))
+
     def test_weekly_release_persists_exact_event_and_retries_without_double_charge(self):
         from apps.tenant_apps.loans.models import LoanNumberSequence
         from apps.tenant_apps.loans.services import finalize_pawn_loan_accrual, release_pawn_loan_in_full

@@ -1,11 +1,51 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-05
+updated: 2026-10-06
 tags: [loans, paper-entry, acceptance, release]
 ---
 
 # Operate and accept the paper-first workflow
+
+**LC-05 local extension:** paper receipt preview accepts actual fee components and
+complete staff item principal splits for multi-item openings. Use the actual
+receipt timestamp for a same-day transaction after a precisely timed checkpoint;
+date-only checkpoints still start servicing on the following day. Current payments
+retain their normal allocation priority. Multi-item archive reconciliation compares
+every retained item and known source claim before admission.
+
+An owner can choose **Record a verified closed position** from the completed-payout
+editor when the original agreement and zero closure are established but earlier
+receipts are incomplete. Review and confirm the actual items, dates, terms and
+custody evidence. The result is an ordinary closed loan, with no invented payout,
+receipt or settlement. Unknown handover stays unknown and pre-closure totals stay
+unavailable. Disputed or missing terminal facts stay in the retained archive.
+
+Delegated importers can stage supported evidence and **Save preparation for owner
+review**. Only the owner performs financial preview/commit; changing preparation
+invalidates an old approval. See the
+[delivery record](../implementation/bounded-loan-evidence-lc05.md) for supported
+profiles, entry points and portability checks. There is no automatic archive
+conversion or production rollout.
+
+**LC-04 local extension:** a saved draft has one **Record completed payout** action.
+It selects the paper editor or retained native review from saved evidence. Genuine
+earlier approval and fully reversed native payout corrections retain their quote,
+policy, reason, authority and dependent-reversal checks. Old earlier-payout links
+redirect to the same action; active origins require their correction workflow.
+New paper entry optionally selects **Source licence evidence** under additional
+details, when known. It must match the series/licence and original date. An inactive
+legacy reference preserves unknown validity. Blank evidence does not prevent
+recording, but full portable history still requires that mapping and its other
+coverage/profile checks. Saved drafts keep their original mapping.
+
+**LC-03 local extension:** full release, renewal performed now and current auction
+completion share settlement preparation. Modern shared-monthly native loans no
+longer need a separate completed-period finalization step before renewal/auction;
+eligible charges recognize atomically with the action. Older contracts retain their
+finalization requirement. Renewing now still requires current successor approval;
+recording a renewal already completed on paper still preserves its actual facts.
+Existing book-review, statutory, custody and correction restrictions remain.
 
 **LD-02 local extension:** repayment purpose describes this receipt, independently
 of how the loan began. A supported native shared-monthly flexible/single-payment

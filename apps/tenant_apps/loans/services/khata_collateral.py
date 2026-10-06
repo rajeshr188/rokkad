@@ -30,6 +30,7 @@ def _values(account, workspace, day, items):
     prices = {r["metal"]: r for r in rows}
     required = collateral_photos_required(workspace.pk)
     return [dict(item_id=i.pk, rate_id=prices[i.metal]["rate"].pk,
+        maximum_quote_age_days=prices[i.metal]["maximum_age_days"],
         value=str((prices[i.metal]["rate"].buying_rate*i.net_weight*i.purity/100).quantize(Decimal("0.01"), rounding=ROUND_DOWN)),
         rate_evidence=prices[i.metal]["evidence"], photo=_photo_evidence(i, required)) for i in items]
 

@@ -10,6 +10,8 @@ from .legacy_interest import collection_calendar, round_rupees
 from .opening_evidence import OpeningEvidenceError
 
 PROFILE = "opening-payments/1"
+EXPLICIT_PROFILE = "opening-payments/2"
+PAYMENT_PROFILES = {PROFILE, EXPLICIT_PROFILE}
 AUCTION_PROFILE = "opening-auctions/1"
 RULE = "reduced-principal-next-anniversary/1"
 ZERO = Decimal("0")
@@ -30,7 +32,7 @@ def money(value):
 
 
 def baseline(review, actions, on, *, item_mapping=None):
-    if review["profile"] in ("loan-opening-review/3", "loan-opening-review/4"):
+    if review["profile"] in ("loan-opening-review/3", "loan-opening-review/4", "loan-opening-review/5"):
         from .opening_policy_interest import calculation
         result = calculation(review, on, actions, item_mapping)
         monthly = Decimal(result["monthly_interest_unrounded"])
@@ -87,12 +89,15 @@ def _validate_payment(opening, actions, row, state):
         from .paper_repayments import validate_paper_repayment_evidence
         validate_paper_repayment_evidence(detail["recording"], effective_date=row.effective_date, amount=amount)
     require(0 < amount <= state["principal"] + state["interest"] + state["fees"], "Opening payment exceeds the amount due.")
-    fees = min(amount, state["fees"])
+    recording = detail.get("recording", {})
+    explicit = row.payload["opening_collection"]["profile"] == EXPLICIT_PROFILE
+    fees = money(recording["fees_paid"]) if explicit and "fees_paid" in recording else min(amount, state["fees"])
+    require(fees <= min(amount, state["fees"]), "Explicit fee payment exceeds receipt or outstanding fees.")
     interest = min(amount - fees, state["interest"])
     principal = amount - fees - interest
     if "recording" in detail:
-        require(not state["fees"], "Paper receipt allocation with fees requires an agreed rule.")
-        require(not principal or sum(before > 0 for before, _ in _items(opening, actions).values()) <= 1,
+        require(not state["fees"] or explicit and "fees_paid" in recording, "Paper receipt allocation with fees requires explicit evidence.")
+        require(not principal or sum(before > 0 for before, _ in _items(opening, actions).values()) <= 1 or explicit and "item_principal_split" in recording,
                 "Paper principal allocation across multiple items requires an agreed rule.")
     require(all(money(values.get(k, "0")) == v for k, v in
                 (("fees", fees), ("interest", interest), ("principal", principal),
@@ -103,8 +108,14 @@ def _validate_payment(opening, actions, row, state):
     items = _items(opening, actions)
     expected = []
     remaining = principal
-    for pk, (before, rate) in sorted(items.items(), key=lambda pair: (-pair[1][1], pair[0])):
-        applied = min(before, remaining)
+    split = recording.get("item_principal_split") if explicit else None
+    if split is not None:
+        require(set(split) == {str(pk) for pk in items} and sum(money(v) for v in split.values()) == principal,
+                "Explicit principal split must cover the loan's items and reconcile to principal paid.")
+    ordered = sorted(items.items()) if split is not None else sorted(items.items(), key=lambda pair: (-pair[1][1], pair[0]))
+    for pk, (before, rate) in ordered:
+        applied = money(split[str(pk)]) if split is not None else min(before, remaining)
+        require(applied <= before, "Explicit principal allocation exceeds this item's balance.")
         if principal:
             expected.append((pk, len(expected) + 1, rate, before, applied, before - applied))
             remaining -= applied
@@ -123,10 +134,17 @@ def collection_history(opening, origin, events, as_of):
     seen = set()
     paper_references = set()
     ordered = sorted(events, key=lambda e: (e.effective_date, e.pk))
+    latest_timestamp = None
     for row in ordered:
         if row.pk == origin.pk:
             continue
-        require(row.effective_date > origin.effective_date, "Servicing must be strictly after cutover.")
+        from .opening_precision import validate_event_order
+        occurred = validate_event_order(review, row)
+        if occurred:
+            require(latest_timestamp is None or occurred >= latest_timestamp, "Checkpoint-day activity must preserve its actual chronological order.")
+            require(occurred != latest_timestamp or pending is not None or reversing is not None,
+                    "Independent checkpoint-day actions require distinct actual timestamps.")
+            latest_timestamp = occurred
         if reversing:
             receipt_reversal, accrual = reversing
             require(row.event_kind == "REVERSAL" and row.reversal_of_id == accrual.pk and
@@ -145,7 +163,7 @@ def collection_history(opening, origin, events, as_of):
                 reversing = (row, accrual)
         else:
             detail = row.payload.get("opening_collection", {})
-            require(detail.get("opening_event_id") == origin.pk and detail.get("profile") in {PROFILE, AUCTION_PROFILE, "opening-release/1"},
+            require(detail.get("opening_event_id") == origin.pk and detail.get("profile") in PAYMENT_PROFILES | {AUCTION_PROFILE, "opening-release/1"},
                     "Unsupported subsequent servicing evidence for this opening.")
             if row.event_kind == "INTEREST_ACCRUAL":
                 require(pending is None, "Opening collection has an unpaired catch-up.")
@@ -160,7 +178,7 @@ def collection_history(opening, origin, events, as_of):
                 require(not any(k == "repayment" for k, _ in seen), "Legacy release cannot follow payments.")
             state = position(review, actions, row.effective_date, item_mapping=opening["item_mapping"])
             require(not state["settled"], "Opening collection follows an active full release.")
-            if detail["profile"] in {PROFILE, AUCTION_PROFILE}:
+            if detail["profile"] in PAYMENT_PROFILES | {AUCTION_PROFILE}:
                 require(detail.get("rule") == RULE and detail.get("operation") == row.event_kind and
                         detail.get("request_key") == key and money(detail.get("baseline_as_of")) == state["baseline"] and
                         money(detail.get("baseline_at_cutover")) == money(review["continuation"]["recognized_interest"]) and
@@ -174,7 +192,7 @@ def collection_history(opening, origin, events, as_of):
                         money(pending.payload["values"]["interest"]) == expected and
                         money(evidence.get("baseline_at_cutover")) == money(review["continuation"]["recognized_interest"]) and
                         money(evidence.get("baseline_as_of")) == state["baseline"], "Opening catch-up checkpoint does not reconcile.")
-                if detail["profile"] in {PROFILE, AUCTION_PROFILE}:
+                if detail["profile"] in PAYMENT_PROFILES | {AUCTION_PROFILE}:
                     require(evidence.get("profile") == detail["profile"] and evidence.get("operation") == row.event_kind and
                             evidence.get("rule") == RULE and money(evidence.get("recognized_since_cutover")) == state["posted"],
                             "Opening payment catch-up rule does not reconcile.")
@@ -182,7 +200,7 @@ def collection_history(opening, origin, events, as_of):
                     require(evidence.get("rule") == review["terms"]["rule_id"] and not any(e.event_kind == "REPAYMENT" for e, _ in actions),
                             "Legacy release cannot follow payments.")
             if row.event_kind == "REPAYMENT":
-                require(detail.get("profile") == PROFILE and detail.get("rule") == RULE, "Unsupported opening payment rule.")
+                require(detail.get("profile") in PAYMENT_PROFILES and detail.get("rule") == RULE, "Unsupported opening payment rule.")
                 _validate_payment(opening, actions, row, state)
                 recording = row.payload["repayment"].get("recording")
                 if recording:

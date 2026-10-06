@@ -110,8 +110,13 @@ def calculate_pawn_loan_balance(
             raise PawnLoanBalanceSelectorError(str(exc)) from exc
         if as_of_date < origin.effective_date:
             raise PawnLoanBalanceSelectorError("Financial history before the migration cutover is unavailable.")
-        if any(event is not origin and event.effective_date <= origin.effective_date for event in events):
-            raise PawnLoanBalanceSelectorError("Servicing events must be strictly after the migration cutover.")
+        from apps.tenant_apps.loans.services.opening_precision import validate_event_order
+        for event in events:
+            if event is not origin:
+                try:
+                    validate_event_order(opening["review"], event)
+                except ValueError as exc:
+                    raise PawnLoanBalanceSelectorError(str(exc)) from exc
     totals = {
         "opening_principal": ZERO,
         "opening_interest": ZERO,
@@ -168,6 +173,10 @@ def calculate_pawn_loan_balance(
     total_due = principal_outstanding + interest_outstanding + fees_outstanding
     has_disbursal = totals["principal_disbursed"] + totals["opening_principal"] > ZERO
     financially_settled = has_disbursal and total_due == ZERO
+    if opening and opening["profile"] == "loan-terminal-evidence/1":
+        if len(events) != 1:
+            raise PawnLoanBalanceSelectorError("A terminal checkpoint cannot invent subsequent financial history.")
+        financially_settled = total_due == ZERO
     collateral_items = tuple(collateral_items)
     resolved_custody_states = {
         CollateralCustodyState.WITH_CUSTOMER.value,

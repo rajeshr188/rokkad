@@ -17,7 +17,7 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from apps.orgs.models import Company, Membership, Role
-from apps.subscriptions.models import Subscription
+from apps.tenancy.testing import set_workspace_trial_end, expire_workspace_trial
 from apps.tenancy.context import workspace_context
 from apps.tenancy.testing import workspace_role_permissions
 from apps.tenant_apps.loans.domain.khata import anniversary
@@ -33,7 +33,7 @@ class InterestFixture(opening_tests.OpeningFixture):
         super().setUp()
         self.started_at = timezone.now()
         self.started_on = timezone.localdate()
-        Subscription.objects.filter(company=self.workspace).update(trial_end_date=self.started_at + timedelta(days=1200))
+        set_workspace_trial_end(self.workspace, ends_at=self.started_at + timedelta(days=1200))
 
     def open(self, frequency="MONTHLY", monthly_rate="1"):
         if frequency != "MONTHLY" or monthly_rate != "1":
@@ -263,7 +263,7 @@ class KhataInterestCollectionTests(InterestFixture, TestCase):
         self.open()
         with self.later(1):
             review = servicing.preview_interest_payment(**self.args(), value="1")
-            Subscription.objects.filter(company=self.workspace).update(trial_end_date=timezone.now()-timedelta(days=8))
+            expire_workspace_trial(self.workspace)
             with self.assertRaises(PermissionDenied):
                 servicing.record_interest_payment(**self.command(), value="1", review_hash=review["review_hash"], payment_reference="Cash")
             with workspace_context(self.workspace.pk):
@@ -327,7 +327,7 @@ class KhataInterestRLSTests(TestCase):
         opening.record_withdrawal(**args, value="100000", business_date=timezone.localdate(),
             request_key=uuid.uuid4(), review_hash=preview["review_hash"], payment_reference="Cash")
         later = timezone.now()+timedelta(days=65)
-        Subscription.objects.filter(company=workspace).update(trial_end_date=later+timedelta(days=20))
+        set_workspace_trial_end(workspace, ends_at=later+timedelta(days=20))
         with patch("django.utils.timezone.now", return_value=later):
             preview = servicing.preview_interest_payment(**args, value="100")
             op = servicing.record_interest_payment(**args, value="100", business_date=timezone.localdate(),

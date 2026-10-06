@@ -1,6 +1,6 @@
 """Reviewed opening collection continuation, without financial posting."""
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
@@ -16,7 +16,7 @@ def opening_interest_breakdown(review, *, as_of_date, loan=None):
     cutover = date.fromisoformat(review["cutover"]["date"])
     if review["profile"] not in COLLECTION_PROFILES or as_of_date < cutover:
         raise OpeningEvidenceError("Interest breakdown requires a collection opening on or after cutover.")
-    monthly = sum(Decimal(item["remaining_principal"] if review["profile"] == "loan-opening-review/4" else item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
+    monthly = sum(Decimal(item["remaining_principal"] if review["profile"] in ("loan-opening-review/4", "loan-opening-review/5") else item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
                   for item in review["collateral"])
     calculated = reviewed_calculation(review, as_of_date)
     elapsed = relativedelta(as_of_date, original)
@@ -35,8 +35,10 @@ def opening_interest_breakdown(review, *, as_of_date, loan=None):
         "additional_interest": additional,
         "total_interest": unpaid + additional,
         "next_increase_on": date.fromisoformat(calculated["next_increase_on"]),
+        "policy_rounding": review["profile"] in {"loan-opening-review/3", "loan-opening-review/4", "loan-opening-review/5"},
+        "interest_quantum": review["terms"].get("interest_quantum"),
     }
-    if review["profile"] == "loan-opening-review/4":
+    if review["profile"] in ("loan-opening-review/4", "loan-opening-review/5"):
         carry = review["continuation"]
         result.update(is_checkpoint=True, recognized_at_cutover=baseline,
             current_period_start=date.fromisoformat(carry["period_start"]),
@@ -67,7 +69,7 @@ class OpeningCollectionPreview:
     rule: str = AGGREGATE_RULE
 
 
-def preview_opening_collection(loan, *, events, as_of_date):
+def preview_opening_collection(loan, *, events, as_of_date, known_through=None):
     """Continue the reviewed cumulative baseline without recharging cutover debt.
 
     No receipts or concessions are inferred from the difference between the
@@ -85,19 +87,29 @@ def preview_opening_collection(loan, *, events, as_of_date):
         raise OpeningEvidenceError("This opening does not have the supported collection continuation checkpoint.")
     if type(as_of_date) is not date or as_of_date < event.effective_date:
         raise OpeningEvidenceError("Collection history before the migration cutover is unavailable.")
-    if any(row.event_kind in {"REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} for row in events):
-        from .opening_payment_evidence import collection_history, RULE
-        from .legacy_interest import collection_calendar
-        state, _ = collection_history(opening, event, events, as_of_date)
+    known = as_of_date if known_through is None else known_through
+    if type(known) is not date or not event.effective_date <= known <= as_of_date:
+        raise OpeningEvidenceError("Opening forecast knowledge must be between cutover and its horizon.")
+    if review["profile"] == "loan-opening-review/5" and len(events) > 1 or any(row.event_kind in {"REPAYMENT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY"} for row in events):
+        from .opening_payment_evidence import collection_history, position, RULE
+        state, actions = collection_history(opening, event, events, known)
+        if known < as_of_date:
+            state = position(review, actions, as_of_date, item_mapping=opening["item_mapping"])
+        if review["profile"] in {"loan-opening-review/3", "loan-opening-review/4", "loan-opening-review/5"}:
+            from apps.tenant_apps.loans.domain.monthly_contract import anniversary, charge_count
+            next_day = anniversary(loan.loan_date, charge_count(loan.loan_date, state["calculation_date"]) + 1) + timedelta(days=1)
+        else:
+            from .legacy_interest import collection_calendar
+            next_day = date.fromisoformat(collection_calendar(loan.loan_date, state["calculation_date"])["next_increase_on"])
         return OpeningCollectionPreview(
             opening_event_id=event.pk, cutover_date=event.effective_date, as_of_date=as_of_date,
             monthly_interest_unrounded=state["monthly"], baseline_at_cutover=Decimal(review["continuation"]["recognized_interest"]),
             baseline_as_of=state["baseline"], additional_interest=state["additional"],
-            next_increase_on=date.fromisoformat(collection_calendar(loan.loan_date, state["calculation_date"])["next_increase_on"]), rule=RULE,
+            next_increase_on=next_day, rule=RULE,
         )
-    monthly = sum(Decimal(item["remaining_principal"] if review["profile"] == "loan-opening-review/4" else item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
+    monthly = sum(Decimal(item["remaining_principal"] if review["profile"] in ("loan-opening-review/4", "loan-opening-review/5") else item["original_principal"]) * Decimal(item["monthly_rate"]) / 100
                   for item in review["collateral"])
-    release_date = _settled_release_date(events, event, as_of_date, loan.loan_date, monthly, review)
+    release_date = _settled_release_date(events, event, known, loan.loan_date, monthly, review)
     try:
         calculated = reviewed_calculation(review, release_date or as_of_date)
     except ValueError as exc:

@@ -147,7 +147,7 @@ def reverse_pawn_loan_event(
 
 
 def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_date,
-        allow_auction_recovery=False, allow_renewal=False):
+        allow_auction_recovery=False, allow_renewal=False, occurred_at=None):
     """Shared atomic-caller writer; opening restore supplies the recorded date."""
     original = _locked_original_event(original_event_id)
     _require_administrator(actor, original.loan.workspace)
@@ -232,6 +232,8 @@ def _reverse_pawn_loan_event_at(original_event_id, *, reason, actor, effective_d
     if is_opening:
         from .opening_servicing import _record_opening_servicing_event
         writer = _record_opening_servicing_event
+        if occurred_at is not None:
+            payload["reversal"]["occurred_at"] = occurred_at
     reversal, _ = writer(
         original.loan_id,
         event_kind=TransactionKind.REVERSAL,

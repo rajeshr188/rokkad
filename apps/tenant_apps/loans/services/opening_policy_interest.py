@@ -9,7 +9,7 @@ PROFILE = "loan-opening-review/3"
 
 
 def calculation(review, on, actions=(), item_mapping=None):
-    if review["profile"] == "loan-opening-review/4":
+    if review["profile"] in ("loan-opening-review/4", "loan-opening-review/5"):
         from .opening_checkpoint import calculation as checkpoint_calculation
         return checkpoint_calculation(review, on, actions, item_mapping)
     original = date.fromisoformat(review["terms"]["original_date"])
@@ -39,7 +39,7 @@ def calculation(review, on, actions=(), item_mapping=None):
 
 
 def reviewed_calculation(review, on):
-    if review["profile"] in (PROFILE, "loan-opening-review/4"):
+    if review["profile"] in (PROFILE, "loan-opening-review/4", "loan-opening-review/5"):
         return calculation(review, on)
     from .legacy_interest import aggregate_collection_interest
     monthly = sum(Decimal(item["original_principal"]) * Decimal(item["monthly_rate"]) / 100

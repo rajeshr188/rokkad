@@ -48,6 +48,7 @@ def get_dashboard_health_summary(*, workspace):
     totals = rows.aggregate(
         loan_count=Count("pk"), current_count=Count("pk", filter=current),
         provisional_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__complete=False)),
+        assumed_capture_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__capture_basis="SYSTEM_CAPTURE_ASSUMPTION")),
         stale_count=Count("pk", filter=Q(assessment_status="STALE")),
         error_count=Count("pk", filter=Q(assessment_status="ERROR")),
         unassessed_count=Count("pk", filter=Q(assessment_status="UNASSESSED")),

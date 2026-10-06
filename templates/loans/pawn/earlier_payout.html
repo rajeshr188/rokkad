@@ -1,21 +1,22 @@
 {% extends "base_tenant.html" %}
 {% load loans_display %}
-{% block title %}Record an earlier payout · {{ loan.loan_number }}{% endblock %}
+{% block title %}Record completed payout · {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <section hx-history="false">
 <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
-<h1 class="h3 mt-3">Record an earlier payout</h1>
+<h1 class="h3 mt-3">Record completed payout</h1>
+<p>This loan has retained native approval or reversed-payout evidence. Review it here without replacing the original evidence or creating another loan.</p>
 <div class="alert alert-info"><strong>Actual payout date: {{ loan.loan_date|date:"d/m/Y" }}</strong><p class="mb-0">Use this only when the borrower already received the money on that date. This records the earlier payout; it does not pay again. Today's recording time and your signed-in identity will be retained separately.</p></div>
 <p>Recording as <strong>{{ request.user|actor_label }}</strong>. {% if basis_approval %}Uses the policy and price references from approval #{{ basis_approval.version }}.{% else %}Uses policies and quotes already recorded by the actual payout date.{% endif %} Earlier tickets and approvals remain in the history.</p>
 {% include "components/forms/accessible.html#errors" %}
 {% include "loans/pawn/_origination_review.html#review" %}
 <div class="card card-body mb-3"><h2 class="h5">Collateral terms</h2><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Item</th><th>Net weight</th><th>Purity</th><th>Principal</th><th>Monthly rate</th></tr></thead><tbody>{% for item in loan.collateral_items.all %}<tr><td>{{ item.description }}{% if item.quantity %} · {{ item.quantity }} piece{{ item.quantity|pluralize }}{% endif %}</td><td>{{ item.net_weight|compact_decimal }} g</td><td>{{ item.purity_percentage|compact_decimal }}%</td><td>₹{{ item.allocated_principal|indian_money }}</td><td>{{ item.monthly_interest_rate|compact_decimal }}%</td></tr>{% endfor %}</tbody></table></div></div>
 {% if quotes %}<div class="card card-body mb-3"><h2 class="h5">Historical buying prices reviewed</h2>{% for metal, quote in quotes.items %}<p class="mb-1">{{ metal|title }}: ₹{{ quote.buying_rate|indian_money }}/g · quote #{{ quote.rate_id }}</p>{% endfor %}<p class="small text-muted mb-0">Today's market price is not substituted into this payout.</p></div>{% endif %}
-<form method="post" class="card card-body mb-3">{% csrf_token %}
+<form method="post" action="{% url 'workspace_loans:pawn_loan_record_completed_payout' request.workspace.slug loan.pk %}" class="card card-body mb-3">{% csrf_token %}
 {% for field in form.hidden_fields %}{{ field }}{% endfor %}
 {% for field in form.visible_fields %}{% include "components/forms/accessible.html#field" %}{% endfor %}
-<div class="d-flex gap-2">{% if available %}<button class="btn btn-primary" type="submit">Confirm and record earlier payout</button>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_record_earlier_payout' request.workspace.slug loan.pk %}">Refresh review</a></div>
+<div class="d-flex gap-2">{% if available %}<button class="btn btn-primary" type="submit">Confirm and record completed payout</button>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_record_completed_payout' request.workspace.slug loan.pk %}">Refresh review</a></div>
 </form>
-<p class="small">If cash has not been paid yet, return to the draft and use the intended payment date and ordinary review. Imported legacy loans use their separate migration workflow.</p>
+<p class="small">If cash has not been paid yet, return to the draft and use the intended payment date and ordinary review. Recorded or opening origins require their supported history correction workflow.</p>
 </section>
 {% endblock %}

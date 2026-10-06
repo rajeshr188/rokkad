@@ -11,7 +11,10 @@ from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.access import loans_setup_required, loans_workspace_required
 from apps.tenant_apps.loans.selectors.balances import calculate_pawn_loan_balance, _optional_policy_snapshot
 from apps.tenant_apps.loans.selectors.khata_summary import portfolio_summary
-from apps.tenant_apps.loans.services.origination_settings import collateral_photos_required, set_collateral_photo_requirement
+from apps.tenant_apps.loans.services.origination_settings import (
+    collateral_photos_required, set_collateral_photo_requirement,
+    maximum_quote_age_days, set_maximum_quote_age,
+)
 
 
 class PhotoPolicyForm(forms.Form):
@@ -21,19 +24,39 @@ class PhotoPolicyForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
 
 
+class QuoteAgeForm(forms.Form):
+    maximum_quote_age_days = forms.IntegerField(min_value=0, max_value=32767,
+        label="Maximum buying-quote age in calendar days",
+        widget=forms.NumberInput(attrs={"class": "form-control"}))
+
+
 @loans_setup_required
 @never_cache
 @require_http_methods(["GET", "POST"])
 def origination_settings(request):
     workspace = request.loans_workspace
-    form = PhotoPolicyForm(request.POST if request.method == "POST" else None,
+    quote_action = request.method == "POST" and request.POST.get("action") == "quote_age"
+    can_set_quote_age = request.loans_workspace_access.can("workspace.transfer")
+    if quote_action:
+        request.loans_workspace_access.require("workspace.transfer")
+    limit = maximum_quote_age_days(workspace.pk)
+    quote_form = QuoteAgeForm(request.POST if quote_action else None,
+        initial={"maximum_quote_age_days": limit})
+    form = PhotoPolicyForm(request.POST if request.method == "POST" and not quote_action else None,
         initial={"require_collateral_photos": collateral_photos_required(workspace.pk)})
-    if request.method == "POST" and form.is_valid():
+    if quote_action and quote_form.is_valid():
+        set_maximum_quote_age(workspace=workspace, actor=request.user,
+            days=quote_form.cleaned_data["maximum_quote_age_days"])
+        messages.success(request, "Maximum buying-quote age saved. Pending approvals need a fresh review if the rule changed.")
+        return redirect("workspace_loans:origination_settings", workspace_slug=workspace.slug)
+    if request.method == "POST" and not quote_action and form.is_valid():
         set_collateral_photo_requirement(workspace=workspace, actor=request.user,
             required=form.cleaned_data["require_collateral_photos"])
         messages.success(request, "Collateral photo rule saved.")
         return redirect("workspace_loans:origination_settings", workspace_slug=workspace.slug)
-    return render(request, "loans/setup/origination.html", {"form": form})
+    return render(request, "loans/setup/origination.html", {"form": form,
+        "quote_form": quote_form, "maximum_quote_age_days": limit,
+        "can_set_quote_age": can_set_quote_age})
 
 
 @loans_workspace_required

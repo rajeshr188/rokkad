@@ -127,10 +127,10 @@ class RateReadinessTests(WorkspaceTestCase):
     @patch("apps.tenant_apps.loans.web.rate_readiness.resolve_pawn_loan_economic_policy")
     def test_stale_quote_allows_draft_but_explains_approval_requirement(self, policy):
         policy.return_value = SimpleNamespace(valuation_method="CALCULATED_METAL_VALUE")
-        self.quote(effective_at=timezone.now() - timedelta(days=1))
+        self.quote(effective_at=timezone.now() - timedelta(days=8))
         response = pawn_valuation_readiness(self.request())
         self.assertContains(response, 'data-ready="true"')
-        self.assertContains(response, "approval needs today's loan date and quotes")
+        self.assertContains(response, "approval needs today's loan date and quotes within the configured age limit")
         self.assertContains(response, 'data-attention="true"')
         self.assertContains(response, "Update prices before approval")
 

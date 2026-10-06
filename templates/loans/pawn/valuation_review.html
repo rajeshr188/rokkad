@@ -6,7 +6,7 @@
   <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
   <h1 class="h3 mt-3">Review updated valuation</h1>
   <p class="lead">Review today's prices and terms before paying the borrower.</p>
-  <div class="alert alert-warning"><strong>Has the borrower already received the cash?</strong> Do not use this action. Keep the actual payment date. For an earlier day's payout, return the loan to draft with a reason, then choose <strong>Record an earlier payout</strong>. You do not need to edit correct historical details.</div>
+  <div class="alert alert-warning"><strong>Has the borrower already received the cash?</strong> Keep the actual payment date and choose <strong>Record completed payout</strong> on the loan. It selects the compatible review and retains genuine earlier approvals. You do not need to edit correct historical details.</div>
   {% include "components/forms/accessible.html#errors" %}
   {% if review_error %}<div class="alert alert-danger">{{ review_error }}</div>{% endif %}
   {% if preview %}
@@ -17,9 +17,9 @@
   </div></div>
   <h2 class="h5">Buying prices · INR per gram of pure metal</h2>
   <div class="table-responsive mb-3"><table class="table table-bordered align-middle"><thead><tr><th>Metal</th><th>Previous approval</th><th>Current quote</th></tr></thead><tbody>
-    {% for row in preview.quotes %}<tr><th>{{ row.metal|title }}</th><td>{% if row.old %}₹{{ row.old.buying_rate|indian_money }}<div class="small text-muted">{{ row.old_date|date:"d/m/Y" }}</div>{% else %}Not used / not recorded{% endif %}</td><td>{% if row.current %}₹{{ row.current.buying_rate|indian_money }}<div class="small text-muted">{{ row.current_date|date:"d/m/Y" }}{% if not row.fresh %} · Needs today's confirmation{% endif %}</div>{% else %}Missing{% endif %}</td></tr>{% endfor %}
+    {% for row in preview.quotes %}<tr><th>{{ row.metal|title }}</th><td>{% if row.old %}₹{{ row.old.buying_rate|indian_money }}<div class="small text-muted">{{ row.old_date|date:"d/m/Y" }}</div>{% else %}Not used / not recorded{% endif %}</td><td>{% if row.current %}₹{{ row.current.buying_rate|indian_money }}<div class="small text-muted">{{ row.current_date|date:"d/m/Y" }} · {{ row.age_days }} calendar days old; limit {{ row.maximum_age_days }} · {{ row.current.source_snapshot.name }} · Quote #{{ row.current.rate_id }}{% if not row.fresh %} · Outside the current quote-age limit{% endif %}</div>{% else %}Missing{% endif %}</td></tr>{% endfor %}
   </tbody></table></div>
-  <p class="small">Even if the amount is unchanged, a new dated quote needs review. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates</a> to add or confirm today's prices, then <a href="{% url 'workspace_loans:pawn_loan_review_updated_valuation' request.workspace.slug loan.pk %}">refresh this review</a>.</p>
+  <p class="small">Even if the amount is unchanged, a new dated quote needs review. <a href="{% url 'workspace_rates:rate_list' request.workspace.slug %}" target="_blank" rel="noopener">Open Rates</a> to record a current price if the existing one is missing or expired, then <a href="{% url 'workspace_loans:pawn_loan_review_updated_valuation' request.workspace.slug loan.pk %}">refresh this review</a>.</p>
   {% if preview.error %}<div class="alert alert-danger"><h2 class="h6">Updated approval needs attention</h2>{{ preview.error }}<p class="mt-2 mb-0">The existing approval has not been changed. Fix missing prices and refresh this review. If the principal or collateral needs correction, return to draft, set the date to {{ preview.today|date:"d/m/Y" }} for unpaid lending, then correct and review the terms. No amount is reduced automatically.</p></div>{% endif %}
   <h2 class="h5">Collateral and lending limits</h2>
   <p>Maximum LTV: {{ preview.old_ltv|floatformat:"-2" }}% → {% if preview.resolved %}{{ preview.current_ltv|floatformat:"-2" }}%{% else %}Not yet validated{% endif %}. Each collateral row must fit its own limit.</p>

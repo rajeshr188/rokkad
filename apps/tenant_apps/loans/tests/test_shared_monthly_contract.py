@@ -1,10 +1,11 @@
 from copy import deepcopy
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
+from django.utils import timezone
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.domain.monthly_contract import (
@@ -196,7 +197,8 @@ class SharedNativeContractTests(WorkspaceTestCase):
     make_loan = CollateralReappraisalTests.make_loan
 
     def setUp(self):
-        with patch("django.utils.timezone.localdate", return_value=date(2026, 10, 5)):
+        with patch("django.utils.timezone.localdate", return_value=date(2026, 10, 5)), patch(
+                "django.utils.timezone.now", return_value=timezone.make_aware(datetime(2026, 10, 5, 12))):
             self.make_loan(method="LATEST_APPRAISAL", age_days=183, activate=False)
         from apps.tenant_apps.loans.services.license_series import _record_license_revision
         self.loan.license_revision = _record_license_revision(self.loan.license,

@@ -36,6 +36,8 @@ def require_earlier_native_draft(loan):
         raise ValueError("Record an earlier payout requires a draft with its actual payout date before today.")
     if loan.loan_events.exclude(event_kind__in=("DISBURSAL", "REVERSAL")).exists():
         raise ValueError("Use this action only for native origination or a fully reversed native disbursal.")
+    if loan.disbursal_snapshots.exclude(basis="APPROVED").exists():
+        raise ValueError("Recorded or opening origins require their supported history correction workflow.")
     if loan.loan_events.filter(event_kind="DISBURSAL", reversed_by_event__isnull=True).exists():
         raise ValueError("An unreversed payout is already recorded for this loan.")
 

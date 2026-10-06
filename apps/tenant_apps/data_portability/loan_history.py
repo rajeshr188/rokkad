@@ -7,7 +7,7 @@ from apps.orgs.models import Company
 from apps.tenant_apps.loans.services.portability_validation import PortabilityValidationError
 from apps.tenant_apps.loans.services.history_contract import parse, digest, HistoryError
 from apps.tenant_apps.loans.services.history_import import import_complete_history, require_history_access
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
 from .models import LoanHistoryBatch
 from .children import parent_for
 
@@ -15,7 +15,7 @@ SALT = "loan-history-approval-v1"
 
 
 def get_batch(*, workspace_id, actor, batch_id, lock=False):
-    require_history_setup_access(workspace_id, actor)
+    require_history_preparation_access(workspace_id, actor, read_only=not lock)
     query = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, profile__in=("loan-history/1", "loan-history/2", "loan-history/3", "loan-history/4"))
     if lock: query = query.select_for_update()
     try: return query.get(public_id=batch_id)
@@ -25,11 +25,10 @@ def get_batch(*, workspace_id, actor, batch_id, lock=False):
 
 @transaction.atomic
 def stage(*, workspace_id, actor, content):
-    require_history_setup_access(workspace_id, actor)
+    require_history_preparation_access(workspace_id, actor)
     document = parse(content)
-    require_history_access(workspace_id, actor, document)
     Company.all_objects.select_for_update().get(pk=workspace_id)
-    require_history_access(workspace_id, actor, document)
+    require_history_preparation_access(workspace_id, actor)
     if LoanHistoryBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED","READY"]).count() >= 20:
         raise HistoryError("Finish or cancel an unfinished Loans import before staging another (limit 20).")
     return LoanHistoryBatch.objects.create(workspace_id=workspace_id, created_by=actor,
@@ -42,6 +41,27 @@ def resolve_mapping(document, workspace_id, values):
     parent = parent_for({"party_source_system":reference["source_system"], "party_external_id":reference["id"]}, workspace_id)
     if parent is None: raise HistoryError("Import the referenced Party first; borrower identity could not be resolved exactly.")
     return {**{k:int(v) for k,v in values.items()}, "borrower_id":parent.party_id}
+
+
+@transaction.atomic
+def prepare(*, workspace_id, actor, batch_id, values):
+    """Save checked source mappings without approving or executing finance."""
+    require_history_preparation_access(workspace_id, actor)
+    Company.all_objects.select_for_update().get(pk=workspace_id)
+    batch = get_batch(workspace_id=workspace_id, actor=actor, batch_id=batch_id, lock=True)
+    if batch.state not in {"STAGED", "READY"}:
+        raise HistoryError("Only unfinished imports can be prepared.")
+    if digest(batch.document) != batch.source_sha256:
+        raise HistoryError("Staged source changed; upload the checked source again.")
+    mapping = resolve_mapping(batch.document, workspace_id, values)
+    from apps.tenant_apps.loans.services.history_setup import validate_preparation_mapping
+    validate_preparation_mapping(workspace_id, **mapping)
+    batch.mapping, batch.state, batch.approval_digest = mapping, "STAGED", ""
+    batch.preview = {"profile": "loan-import-preparation/1", "prepared_by": actor.pk,
+        "source_sha256": batch.source_sha256, "mapping": mapping,
+        "financial_admission_reviewed": False}
+    batch.save(update_fields=["mapping", "state", "approval_digest", "preview"])
+    return batch
 
 
 def _execute(batch, actor, mapping):

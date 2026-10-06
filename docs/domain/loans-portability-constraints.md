@@ -7,6 +7,12 @@ tags: [loans, constraints, invariants, portability, audit]
 
 # Loans constraints and applicability
 
+The September audit below retains its original baseline. LC-05 now adds versioned
+actual paper fee/item evidence, multi-item archive admission, delegated preparation,
+precise opening checkpoints and verified terminal positions. Current applicability
+is documented in the [bounded evidence contracts](../contracts/bounded-loan-evidence-lc05.md);
+older profile meanings remain unchanged.
+
 Read with [the audit](../architecture/loans-portability-audit.md) and the
 [complete declared field/constraint inventory](../implementation/loans-portability-schema-inventory.md).
 This inventory classifies important semantic rules; the generated companion lists

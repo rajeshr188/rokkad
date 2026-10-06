@@ -28,6 +28,7 @@ from apps.tenant_apps.loans.web import khata_series
 from apps.tenant_apps.loans.web import khata_reports, recorded_corrections, recorded_batch_corrections
 from apps.tenant_apps.loans.web import recorded_servicing
 from apps.tenant_apps.loans.web import transaction_reviews
+from apps.tenant_apps.loans.web import terminal_admission
 from apps.tenant_apps.loans.web import portable_documents
 
 app_name = "loans"
@@ -68,6 +69,7 @@ urlpatterns = [
     path('internal/auctions/<int:auction_pk>/statutory/evidence/<int:evidence_pk>/', statutory_notices.download, name='statutory_auction_evidence'),
     path("overdue-payments/", overdue_payments, name="overdue_payments"),
     path("setup/loan-entry/", origination_settings, name="origination_settings"),
+    path("record-closed-position/", terminal_admission.record, name="pawn_loan_record_closed_position"),
     path("internal/borrower-outstanding/", borrower_outstanding, name="borrower_outstanding"),
     path("internal/<int:pk>/review-updated-valuation/", review_updated_valuation, name="pawn_loan_review_updated_valuation"),
     path("internal/<int:pk>/record-earlier-payout/", workflow.pawn_loan_record_earlier_payout, name="pawn_loan_record_earlier_payout"),

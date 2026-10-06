@@ -34,6 +34,7 @@ class PawnLoanPortfolioRow:
     balance_error: str
     status: str
     transaction_completeness: object | None = None
+    evidence_quality: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -205,13 +206,14 @@ def get_pawn_loan_reports(*, as_of_date: date) -> PawnLoanReportBundle:
         loans,
         as_of_date=as_of_date,
         license_expiry=license_rows,
+        include_evidence_quality=True,
     )
 
 
 def _report_loans(workspace_id):
     return (
         PawnLoan.objects.filter(workspace_id=workspace_id)
-        .select_related("borrower", "license", "series", "policy_snapshot")
+        .select_related("borrower", "license", "series", "policy_snapshot", "risk_snapshot")
         .prefetch_related(
             "transaction_reviews",
             "collateral_items__custody_history",
@@ -284,7 +286,7 @@ def get_pawn_report_page(*, section, as_of_date, page=None, query=""):
     page_obj = Paginator(queryset, 50).get_page(page)
     records = tuple(page_obj.object_list)
     if section in {"portfolio", "issues"}:
-        bundle = build_pawn_loan_reports(records, as_of_date=as_of_date)
+        bundle = build_pawn_loan_reports(records, as_of_date=as_of_date, include_evidence_quality=True)
         rows = bundle.portfolio if section == "portfolio" else bundle.issues
     elif section == "license_expiry":
         rows = _license_expiry_rows(records, as_of_date)
@@ -301,7 +303,7 @@ def get_pawn_report_page(*, section, as_of_date, page=None, query=""):
     return {"page_obj": page_obj, "report_rows": rows, "as_of_date": as_of_date}
 
 
-def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=()):
+def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=(), include_evidence_quality=False):
     portfolio = []
     accruals = []
     repayments = []
@@ -326,6 +328,7 @@ def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=()):
             balance_error = str(exc)
             issues.append(_issue("BALANCE_DERIVATION_ERROR", loan, balance_error))
         from .transaction_completeness import transaction_completeness
+        from .evidence_quality import loan_evidence_quality
         portfolio.append(
             PawnLoanPortfolioRow(
                 loan=loan,
@@ -333,6 +336,7 @@ def build_pawn_loan_reports(loans, *, as_of_date, license_expiry=()):
                 balance_error=balance_error,
                 status=_portfolio_status(loan, balance),
                 transaction_completeness=transaction_completeness(loan, as_of_date),
+                evidence_quality=loan_evidence_quality(loan, as_of_date=as_of_date) if include_evidence_quality else None,
             )
         )
         accruals.extend(loan.interest_accruals.all())
@@ -366,7 +370,7 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
     party = Party.objects.get(pk=party_id)
     loans = tuple(
         PawnLoan.objects.filter(workspace_id=workspace_id, borrower=party)
-        .select_related("borrower", "license", "series", "policy_snapshot")
+        .select_related("borrower", "license", "series", "policy_snapshot", "risk_snapshot")
         .prefetch_related(
             "transaction_reviews",
             "collateral_items__custody_history",
@@ -382,6 +386,7 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
     report = build_pawn_loan_reports(
         loans,
         as_of_date=as_of_date,
+        include_evidence_quality=True,
     )
     transactions = tuple(sorted(
         (

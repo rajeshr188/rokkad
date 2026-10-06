@@ -130,11 +130,12 @@ def pawn_loan_detail(request, pk):
     context['source_document_copies'] = source_copies(loan)
     from apps.tenant_apps.loans.services.valuation_review import valuation_refresh_reason
     context["valuation_refresh_reason"] = valuation_refresh_reason(loan, approval)
-    context["can_record_earlier_payout"] = (loan.state == "DRAFT" and not opening
-        and loan.loan_date < context["today"] and all(request.loans_workspace_access.can(action)
-            for action in ("workspace.settings.manage", "data.edit", "loan.approve", "loan.disburse")))
-    context["can_record_completed_payout"] = (loan.state in ("DRAFT", "APPROVED") and not loan.loan_events.exists()
-        and all(request.loans_workspace_access.can(action) for action in ("data.create", "data.edit", "loan.disburse")))
+    from apps.tenant_apps.loans.services.completed_payouts import completed_payout_adapter
+    adapter = completed_payout_adapter(loan)
+    actions = (("workspace.settings.manage", "data.edit", "loan.approve", "loan.disburse")
+        if adapter == "RETAINED_NATIVE" else ("data.create", "data.edit", "loan.disburse"))
+    context["can_record_completed_payout"] = (adapter is not None
+        and all(request.loans_workspace_access.can(action) for action in actions))
     context["can_print_ticket"] = loan.state != "DRAFT" and approval is not None
     context["can_preview_imported_ticket"] = opening is not None and approval is None
     context["can_print_schedule"] = loan.repayment_schedules.exists()
@@ -147,11 +148,17 @@ def pawn_loan_detail(request, pk):
                 context["economics"] = preview_approved_disbursal(loan)
         except (ValidationError, ValueError) as exc:
             context["review_error"] = str(exc)
+    from apps.tenant_apps.loans.services.origination_settings import maximum_quote_age_days
+    context["maximum_quote_age_days"] = maximum_quote_age_days(loan.workspace_id)
     if approval:
         evidence = approval.payload.get("origination_rates", {})
+        from apps.tenant_apps.loans.selectors.origination_rates import LEGACY_RULE
+        context["approved_quote_age_limit"] = (0 if evidence.get("rule") == LEGACY_RULE
+            else evidence.get("maximum_quote_age_days"))
         context["approved_quote_rows"] = [dict(quote,
-            effective_time=parse_datetime(quote["effective_at"]))
-            for quote in evidence.get("quotes", {}).values()]
+            effective_time=parse_datetime(quote["effective_at"]),
+            age_at_approval=evidence.get("quote_ages_days", {}).get(metal))
+            for metal, quote in evidence.get("quotes", {}).items()]
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value}:
         try:
             context["balance"] = get_pawn_loan_balance(
@@ -220,6 +227,9 @@ def pawn_loan_detail(request, pk):
     recorded = recording_for(loan)
     from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
     context["transaction_completeness"] = transaction_completeness(loan, context["today"])
+    if loan.state in ("ACTIVE", "CLOSED"):
+        from apps.tenant_apps.loans.selectors.evidence_quality import loan_evidence_quality
+        context["evidence_quality"] = loan_evidence_quality(loan, as_of_date=context["today"])
     context["can_review_transactions"] = request.loans_workspace_access.can("data.edit") and loan.state in ("ACTIVE", "CLOSED")
     context["can_confirm_paper_handover"] = (loan.state == "CLOSED" and request.loans_workspace_access.can("loan.release")
         and loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists())
@@ -245,10 +255,15 @@ def pawn_loan_detail(request, pk):
         try:
             review = read_opening_evidence(loan, opening)["review"]
             context["opening_review"] = review
+            if review["profile"] == "loan-terminal-review/1":
+                context["terminal_position"] = review
+                context["can_confirm_paper_handover"] = False
+                context["can_review_transactions"] = False
+                context["can_print_schedule"] = False
             if loan.state == PawnLoanState.ACTIVE.value:
                 from apps.tenant_apps.loans.services.opening_continuation import opening_interest_breakdown
                 context["opening_interest_breakdown"] = opening_interest_breakdown(review, as_of_date=context["today"], loan=loan)
-            context["opening_source_valuations"] = [row for row in review["collateral"] if row["valuation"].get("status") == "UNVERIFIED"]
+            context["opening_source_valuations"] = [row for row in review["collateral"] if row.get("valuation", {}).get("status") == "UNVERIFIED"]
         except ValueError as exc:
             context["balance_error"] = str(exc)
         if loan.state == PawnLoanState.ACTIVE.value:

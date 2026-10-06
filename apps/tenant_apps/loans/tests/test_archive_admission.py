@@ -80,6 +80,31 @@ class ArchiveAdmissionTests(fixtures.RecordedOriginationTests):
         self.assertEqual(find_source_origin(workspace_id=self.tenant.pk, namespace=self.evidence.source_namespace,
             source_id=self.evidence.source_id, borrower_source_system=self.evidence.source_system).loan_id, loan.pk)
 
+    def test_multiple_source_items_admit_with_actual_item_agreements(self):
+        self.document["source"]["loan_id"] = "girvi_loan:multiple"
+        self.document["facts"]["loan_number"] = "P-0011"
+        self.document["facts"]["collateral"].append(dict(description="Chain", quantity=1, gross_weight="8", net_weight="7"))
+        self.evidence = self.accept()
+        self.archive_args["evidence_id"] = self.evidence.public_id
+        self.data["number"] = "P-0011"
+        self.data["collateral"] = [dict(description="Ring", quantity=1, metal="GOLD", gross_weight="10", net_weight="9",
+            purity="90", principal="6000", rate="2"), dict(description="Chain", quantity=1, metal="GOLD", gross_weight="8", net_weight="7",
+            purity="90", principal="4000", rate="2")]
+        _, token = self.preview()
+        loan, created = self.admit(token)
+        self.assertTrue(created)
+        self.assertEqual(loan.historical_import.document["profile"], "archive-admission/2")
+        self.assertEqual(list(loan.collateral_items.order_by("pk").values_list("allocated_principal", flat=True)), [6000, 4000])
+        self.assertEqual(loan.state, "CLOSED")
+
+    def test_conflicting_item_snapshots_require_source_reconciliation(self):
+        self.document["source"]["snapshot_reference"] = "Two-item original agreement"
+        self.document["facts"]["collateral"].append(dict(description="Chain", quantity=1, gross_weight="8", net_weight="7"))
+        self.evidence = self.accept()
+        self.archive_args["evidence_id"] = self.evidence.public_id
+        with self.assertRaisesMessage(ValueError, "every retained collateral"):
+            self.preview()
+
     def test_other_snapshot_links_existing_loan_and_cannot_duplicate(self):
         self.document["source"]["snapshot_reference"] = "Second scan"
         other = self.accept()

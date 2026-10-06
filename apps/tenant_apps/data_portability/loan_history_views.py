@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 
 from apps.tenant_apps.loans.services.history_contract import HistoryError, MAX_BYTES, dump, SCHEMA, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4
 from apps.tenant_apps.loans.services.opening_export import export_loan_data
-from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
 from . import loan_history
 from .loan_setup import HistorySetupForm
 from .models import LoanHistoryBatch
@@ -43,7 +43,7 @@ class MappingForm(HistorySetupForm):
 @require_http_methods(["GET", "POST"])
 def upload(request):
     args = dict(workspace_id=request.workspace.pk, actor=request.user)
-    require_history_setup_access(**args)
+    require_history_preparation_access(**args, read_only=request.method == "GET")
     form = UploadForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -62,11 +62,14 @@ def review(request, batch_id):
     args = dict(workspace_id=request.workspace.pk, actor=request.user, batch_id=batch_id)
     batch = loan_history.get_batch(**args)
     action = request.POST.get("action") if request.method == "POST" else None
-    form = MappingForm(request.POST if action == "preview" else None,
+    owner_review = request.workspace.owner_id == request.user.pk or request.user.is_superuser
+    form = MappingForm(request.POST if action in {"preview", "prepare"} else None,
         initial=batch.mapping, workspace_id=request.workspace.pk)
     approval, error = None, None
     try:
-        if action == "preview" and form.is_valid():
+        if action == "prepare" and form.is_valid():
+            loan_history.prepare(**args, values={k:v.pk for k,v in form.cleaned_data.items()})
+        elif action == "preview" and form.is_valid():
             approval = loan_history.preview(**args, values={k:v.pk for k,v in form.cleaned_data.items()})
         elif action == "commit":
             loan_history.commit(**args, approval=request.POST.get("approval", ""), confirmed=request.POST.get("confirmed") == "yes")
@@ -74,13 +77,13 @@ def review(request, batch_id):
         elif action == "cancel":
             loan_history.cancel(**args, confirmed=request.POST.get("confirmed") == "yes")
             return redirect("workspace_portability:loan_batch", workspace_slug=request.workspace.slug, batch_id=batch_id)
-        elif action not in {None, "preview"}:
+        elif action not in {None, "preview", "prepare"}:
             raise HistoryError("Choose a supported import action.")
     except HistoryError as exc:
         error = exc.user_message
     batch.refresh_from_db()
     return render(request, "data_portability/loan_history_review.html", dict(batch=batch, form=form,
-        approval=approval, error=error, unfinished=batch.state in {"STAGED", "READY"}))
+        approval=approval, error=error, owner_review=owner_review, preparation=batch.preview.get("profile") == "loan-import-preparation/1", unfinished=batch.state in {"STAGED", "READY"}))
 
 
 @login_required
@@ -102,7 +105,7 @@ def export(request, loan_id):
 @never_cache
 @require_http_methods(["GET"])
 def schema(request):
-    require_history_setup_access(request.workspace.pk, request.user)
+    require_history_preparation_access(request.workspace.pk, request.user, read_only=True)
     version = request.GET.get("version", "2")
     schemas = {"1": SCHEMA, "2": SCHEMA_V2, "3": SCHEMA_V3, "4": SCHEMA_V4}
     if version not in schemas: raise Http404("Unknown history schema.")

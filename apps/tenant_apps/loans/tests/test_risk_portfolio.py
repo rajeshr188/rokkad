@@ -112,6 +112,9 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
             due_now=SimpleNamespace(total=Decimal("300.00")),
             overdue=SimpleNamespace(total=Decimal("125.00")),
             ltv_basis_label="Economic exposure",
+            principal_history_basis="ORIGINAL_PAYOUT",
+            financial_history_from=date(2026, 8, 1),
+            servicing_profile="native-monthly-policy/2",
         )
         delinquency = SimpleNamespace(
             assessment=SimpleNamespace(days_past_due=7)
@@ -161,4 +164,6 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         self.assertEqual(values["source_provenance"]["financial"], {
             "projected_interest": "50.00", "recorded_total_due": "1200.00",
             "integrity_findings": [],
+            "calculation_status": "SUPPORTED", "principal_history_basis": "ORIGINAL_PAYOUT",
+            "history_from": "2026-08-01", "servicing_profile": "native-monthly-policy/2",
         })

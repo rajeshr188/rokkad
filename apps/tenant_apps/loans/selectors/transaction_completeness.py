@@ -46,25 +46,35 @@ class TransactionCompleteness:
     def evidence(self):
         result = asdict(self)
         result["through_date"] = self.through_date.isoformat() if self.through_date else None
+        result["capture_basis"] = ("SYSTEM_CAPTURE_ASSUMPTION" if self.status == "SYSTEM_RECORDED"
+            else "VERIFIED_TERMINAL_POSITION" if self.status == "TERMINAL_POSITION" else "BOOK_REVIEW")
         return result
 
 
 def transaction_completeness(loan, as_of_date):
     cached = getattr(loan, "_prefetched_objects_cache", {})
+    terminal = (next((e for e in cached["loan_events"] if e.payload.get("opening", {}).get("profile") == "loan-terminal-evidence/1"), None)
+        if "loan_events" in cached else loan.loan_events.filter(payload__opening__profile="loan-terminal-evidence/1").first())
+    if terminal:
+        return TransactionCompleteness("TERMINAL_POSITION", True, False, terminal.effective_date, None,
+            "Zero debt verified at closure. Earlier receipts, payout cash and collection totals are unavailable; no complete transaction history is claimed.")
     reviews = cached.get("transaction_reviews")
     review = max(reviews, key=lambda r: r.pk, default=None) if reviews is not None else loan.transaction_reviews.order_by("-pk").first()
     events = cached.get("loan_events")
     opening = (any(e.event_kind == "MIGRATION_OPENING" for e in events) if events is not None
                else loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists())
-    completed_paper = (any(e.payload.get("repayment", {}).get("recording") or e.payload.get("release", {}).get("paper_closure")
+    completed_paper = (any(e.payload.get("earlier_payout") or e.payload.get("recording")
+                           or e.payload.get("repayment", {}).get("recording") or e.payload.get("release", {}).get("paper_closure")
                            for e in events) if events is not None else
-                       loan.loan_events.filter(payload__repayment__recording__isnull=False).exists()
+                       loan.loan_events.filter(payload__earlier_payout__isnull=False).exists()
+                       or loan.loan_events.filter(payload__recording__isnull=False).exists()
+                       or loan.loan_events.filter(payload__repayment__recording__isnull=False).exists()
                        or loan.loan_events.filter(payload__release__paper_closure__isnull=False).exists())
     required = bool(review or (loan.policy_snapshot_id and loan.policy_snapshot.basis == "RECORDED_CONTRACT")
                     or opening or completed_paper)
     if not required:
         return TransactionCompleteness("SYSTEM_RECORDED", False, True, None, None,
-            "Recorded through ordinary system actions; no paper-history confirmation is assigned.")
+            "Assumes all activity is captured through ordinary Rokkad actions. This is not a check of off-system paper records; review this loan if paper activity exists.")
     if review is None:
         return TransactionCompleteness("UNCONFIRMED", True, False, None, None,
             "Confirm this loan's entered transactions against the paper records before borrower reminders.")

@@ -65,6 +65,8 @@ class PawnRecoveryTests(WorkspaceTestCase):
         self.sha = hashlib.sha256(self.content).hexdigest()
 
     def test_recorded_receipts_correction_coverage_and_exact_rows_round_trip(self):
+        from apps.tenant_apps.loans.services.origination_settings import set_maximum_quote_age
+        set_maximum_quote_age(workspace=self.tenant, days=0, actor=self.actor)
         self.data["events"] = [self.row(amount="2000")]
         loan, _, _ = self.admit()
         from apps.tenant_apps.loans.services.recorded_contract_corrections import preview_contract_correction, record_contract_correction
@@ -82,6 +84,7 @@ class PawnRecoveryTests(WorkspaceTestCase):
         for key in ("tables", "files", "reconciliation", "prerequisites", "schema", "guards_sha256"):
             self.assertEqual(original[key], new[key], key)
         loan.refresh_from_db()
+        self.assertEqual(m.LoanOriginationSettings.objects.get(workspace=self.tenant).maximum_quote_age_days, 0)
         self.assertEqual(collection_balance(loan, self.today).total_due, 10360)
         with self.assertRaises(DatabaseError), transaction.atomic():
             m.PawnLoanEvent.objects.filter(loan=loan).delete()

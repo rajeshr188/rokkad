@@ -7,6 +7,253 @@ tags: [status, architecture]
 
 # Status
 
+## LC candidate publication and live verification started (6 October)
+
+The owner requested commit/CI and production/source verification. Established
+production SSH access is available; repeatable-read/read-only probes through the
+restricted app runtime verified the actual JCL, JSK and Lakshmi cohorts. At
+16:43:27 IST, active counts were **2,592 / 1,585 / 2,440**, closed **10 / 73 / 0**,
+and retained archive snapshots **26,664 / 3,840 / 8,711**. Staff are operating the
+live application, so these are dated snapshot counts rather than an unchanged
+production fingerprint claim.
+
+Production is at Loans **0032** / portability **0017**, while the candidate is at
+Loans **0063**. A real production-copy upgrade rehearsal is required in addition
+to fictional local recovery. No candidate migrations or financial writes have
+been applied to production. JCL's exact RA0500 is absent; **RA00500**, active and
+dated 2 September, is the sole leading-zero match. Owner identity confirmation
+and a real Lakshmi paper example have been requested. Publication/CI and isolated
+production staging are being completed; actual staff acceptance remains open.
+See [execution record](implementation/loan-candidate-publication-20261006.md).
+
+## LC-07 release preparation verified locally (6 October)
+
+The new dated Workspace release inventory reads ordinary active/closed contracts,
+balances, common current-action prerequisites, independent book/assessment/valuation
+quality, current draft/approval state counts and unadmitted archive identities.
+PostgreSQL enforces repeatable-read/read-only execution; an attempted DML write
+is rejected and transaction/context cleanup passes. No adoption, monitoring refresh,
+book attestation, archive conversion or servicing authorization is performed.
+
+All **225 release-focused regressions pass** (252.483s). Application boundaries,
+four boundary-unit checks, Python/JSON parsing and current-document links pass.
+Four existing test fixtures now use the tenancy billing-clock helper; statutory
+auction fixtures use a genuine approved/disbursed loan instead of a fake ACTIVE
+row. All **87 final fixture/tenancy/inventory regressions pass** (64.917s), including
+the genuine statutory-auction origin and unavailable pre-cutover position.
+
+Full local recovery restores **202 public tables and nine media files** exactly,
+both before migration and from a migrated cold checkpoint. The source database
+remains unchanged. The clean candidate image starts under restricted runtime;
+owner-role and pending-migration startup are rejected. Schema drift passes. The
+first offline build lacked cached dependency layers; the clean build succeeded
+with downloads enabled, retaining both logs. The frozen candidate is uncommitted.
+
+The local source has 15 supported **legacy** recorded loans across two Workspaces,
+with stale/unassessed monitoring and incomplete/behind paper coverage disclosed;
+none were automatically upgraded. These are fictional acceptance records, not a
+current production JCL/JSK/Lakshmi inventory. Real production cohorts, actual
+staff/source acceptance, committed/CI release identity and production deployment
+remain pending. The owner selected JCL **RA0500**; its source comparison and a
+Lakshmi paper example remain outstanding. See [delivery](implementation/loan-release-acceptance-lc07.md) and
+[operator acceptance gates](flows/loan-continuation-release-acceptance.md).
+
+## LC-06 prospective quote age locally complete (6 October)
+
+New metal-dependent lending uses the latest applicable positive quote within an
+owner-configured maximum, default seven inclusive local calendar days. Owners
+configure it under Loans setup > Loan entry; zero means same-day. Photo setup
+administrators can see the limit but cannot change it. The existing Loans-owned,
+forced-RLS settings table and preference audit are reused.
+
+New approvals freeze `quote-age-origination-v2`, the applied limit and each quote's
+age outside immutable source identity. Current settings/eligibility/identity checks
+and signed simple, renewal and valuation reviews prevent stale pending actions.
+Old v1 approvals retain same-day semantics. Completed retries, actual historical
+dates, paper/imported admission and independent monitoring policies are preserved.
+
+The affected **143-test run passes** (59.478s). The broader **480-test run passes
+477** (431.644s), with one PostgreSQL recovery deadlock and two obsolete fixtures:
+one-day quote expiry and an ACTIVE row without financial origin. Both fixtures
+were corrected without weakening command guards. All **52 follow-up checks pass**
+(33.575s), including the three failures, new Khata cases and exact owner-setting
+recovery. All **25 final presentation/boundary checks pass** (8.314s). Selected
+checks pass across runs; this is not one clean 480-test rerun. Django checks,
+no migration drift, six LC-06 templates, 104 changed/new Python parses, JSON
+inventories and whitespace checks pass. Migration 0063 was generated and applied
+only in disposable QA. Logs are under `.tmp/lc06-20261006/`. See the
+[delivery](implementation/prospective-quote-age-lc06.md) and
+[decision](adr/2026-10-06-configurable-prospective-quote-age.md).
+
+Next: LC-07 release acceptance. No production deployment or bulk archive conversion
+is part of LC-06.
+
+## LC-05 bounded evidence extensions locally complete (6 October)
+
+All six extensions are implemented: supplied multi-item opening paper splits,
+actual paper fee components, multi-item archive reconciliation, delegated import
+preparation with owner admission, precisely timed checkpoints, and verified closed
+positions without invented receipts. Terminal positions are ordinary CLOSED loans,
+with original agreement evidence, zero debt at closure and unavailable earlier
+financial totals. Unknown custody stays unknown. Database guards prevent new
+financial events or reopening through a nonexistent settlement reversal.
+
+Old profile meanings and current allocation priority remain unchanged. Review/5
+same-day paper receipts require actual timestamps; date-only paper closures and
+renewals still cannot use the cutover day. Opening export/4 and servicing bundles
+retain explicit allocations, timestamps and terminal evidence across restoration.
+Delegated preparation creates no finance or customer/catalog definitions; owner
+preview and commit retain source, permission, stale-review and atomicity checks.
+
+All **475 affected regressions pass** (388.162s), followed by **37 final checks**
+(27.232s) covering final validation wording, terminal inventory/HTTP, supplied
+splits, native eligibility, timed restore and delegated staging-command access.
+An earlier recovery deadlock passes in isolation and in the complete final run.
+Django checks, no migration drift, nine template compilations, 81 changed/new Python
+parses, runtime JSON inventories and whitespace checks pass. Migrations 0061/0062
+were verified only in the disposable QA database, including reapplying final 0062
+SQL. Logs are private under `.tmp/lc05-20261006/`. See the
+[delivery record](implementation/bounded-loan-evidence-lc05.md),
+[contracts](contracts/bounded-loan-evidence-lc05.md) and
+[decision](adr/2026-10-06-bounded-loan-evidence-extensions.md).
+
+Next: LC-06, latest applicable prospective quote with seven-day default maximum
+age configurable by the Workspace owner. No production deployment, actual
+source-book acceptance or automatic/bulk archive conversion is included.
+
+## LC-04 completed-payout presentation locally complete (6 October)
+
+Saved loans now expose one **Record completed payout** action. It selects the
+existing general recorded editor or retained-native approval/reversed-origin
+review from saved evidence. Old GET links redirect; issued native POST reviews
+and recorded/native retries remain compatible. Genuine approvals, policy/quote
+identity, source documents, permissions, stale-review and correction guards remain.
+Recorded/opening snapshots cannot enter native reissue. Current lending is unchanged.
+See the [delivery record](implementation/completed-payout-presentation-lc04.md).
+
+New paper entry optionally maps an existing source licence revision, checked for
+Workspace/series ownership and actual-date coverage, and frozen with reviewed
+terms. Legacy reference validity remains unknown. Saved draft mappings and prior
+request shapes remain unchanged. Missing mapping permits admission but still blocks
+bounded portable history; no existing loan is backfilled or archive promoted.
+
+All **257 affected regression tests pass** (293.327s), covering direct lending,
+completed drafts, earlier approval/correction, paper entry, archive admission,
+history/4, exact recovery and real four-path continuation. All **18 final LC-04
+checks pass** (6.514s), including three additional form/mapping/native-exclusion
+boundaries. Django checks, no migration drift, six template compilations,
+41 changed/new Python parses and whitespace checks pass. Private evidence is under
+`.tmp/lc04-20261006/`.
+
+LC-05's extensions are now locally complete above; the selected configurable seven-day
+quote age remains LC-06. Changes remain local and uncommitted. No migration,
+production deployment, historical conversion or staff/source-book acceptance.
+
+## LC-03 settlement preparation locally complete (6 October)
+
+Full release, renew-now and current auction completion now share validated
+continuation preparation. Modern native simple/full-month contracts automatically
+recognize completed monthly periods during settlement, matching repayment/release.
+Legacy/non-full-month finalization prerequisites and specialized posting, custody,
+exact retry, approval, coverage, statutory and reversal guards remain. Completed
+paper renewal still records actual past facts. See the
+[delivery record](implementation/loan-settlement-continuation.md) and
+[plan](plans/loan-continuation-consolidation.md).
+
+Opening servicing uses frozen schedule allocation capacity, separately from the
+dynamic risk forecast. Shared monthly native renewal/auction cap scheduled interest
+without reducing actual collected debt. Policy/2 auction cash precision is paise;
+opening renewal reversal retains exact source amount spelling. No source or schedule
+is rewritten and no migration is needed.
+
+The **541-test affected regression** passes 539 (649.203s); two recovery tests hit
+PostgreSQL deadlocks. Both pass on isolated rerun. All **29 final targeted checks**
+pass (77.446s), including **14 real four-admission settlement tests** with single/
+multiple items and paise/whole-rupee policies, and retained partial-month behavior.
+Selected checks pass across runs, not one clean 541-test rerun. Django checks,
+no migration drift, 34 changed/new Python parses and whitespace checks pass.
+Private evidence is under `.tmp/lc03-20261006/`.
+
+Next is LC-04 admission presentation. Changes remain local and uncommitted;
+production, historical conversion and quote-age behavior are unchanged.
+
+## LC-02 forecasts and evidence presentation locally complete (6 October)
+
+The owner authorized LC-02 and selected **seven-day quote maximum age by default,
+configurable by the Workspace owner** for LC-06. The
+[plan](plans/loan-continuation-consolidation.md) and
+[delivery record](implementation/loan-continuation-forecast-and-quality.md) track
+shared monthly remaining-obligation forecasts and independent evidence disclosure.
+Reporting-date knowledge is separate from maturity horizon. Supported opening
+forecasts use reviewed checkpoints and later known reductions without replaying
+pre-cutover history or rewriting source schedules. Reads do not post interest.
+
+Repayment previews, loan details, Loan health, dashboard, recorded reports/Party
+statements and position exports disclose assessment freshness, book coverage,
+valuation availability/freshness and calculation support separately. V6 snapshots
+include principal/history basis; older V5 projections require ordinary refresh.
+Native-contract earlier-payout evidence now requires paper-book review; ordinary
+current capture is explicitly an assumption, not certification of off-system books.
+Known missing paper activity cannot be overridden by origin. Financially inconsistent
+current projections are excluded from portfolio monetary totals.
+
+Focused **28 real-admission continuation tests** pass (75.488s), including eight
+new single/multiple-item and paise/whole-rupee forecast cases after later reductions.
+All **four real-admission quality integration tests** pass (8.455s). The broader
+**482-test affected run** passed 480 checks (408.385s). Its two failures were test
+expectations: the opening screen's more precise monthly-reference wording, and a
+new aggregate test omitting overdue evidence while expecting a usable assessment.
+Those fixtures are corrected. All **39 final focused checks pass** (15.119s),
+including both cases, final valuation blockers in exports, native/paper repayment
+HTTP disclosure, retained earlier-payout coverage, dashboard totals and all export
+formats. All selected checks are verified across runs, not a claim of a single
+clean 482-test rerun. A final opening-principal sidebar label refinement passes
+all three opening/native/paper HTTP checks (4.269s).
+
+Django checks, model/migration drift and repository whitespace checks pass;
+all **27 changed/new Python files parse** and **nine templates compile**.
+Private evidence is under `.tmp/lc02-20261006/`. Existing posting, idempotency,
+reversal, notice dispatch and isolation guards pass in the affected suite.
+Next is LC-03's release/renewal/auction preparation and orchestration.
+Changes remain local and uncommitted. No production change, migration, deployment,
+historical conversion or quote-workflow change is included.
+
+## LC-01 continuation read consolidation locally complete (6 October)
+
+The owner's new brief selects capture/verification, financial admission and common
+servicing as separate boundaries. The
+[staged continuation plan](plans/loan-continuation-consolidation.md),
+[decision](adr/2026-10-06-loan-continuation-read-boundary.md) and
+[source inventory](implementation/loan-continuation-inventory.md) record the next
+work and remaining compatibility requirements. LC-01 adds real direct,
+completed-paper, history/4 and opening-review/4 admission characterization and a
+small read-only continuation selector for collection and exposure. Existing
+recognition/allocation/reversal writers remain intact. **20 real-admission tests**
+pass against consolidated consumers (53.102s) and restored HEAD consumers (52.121s):
+single/multiple items, paise/whole-rupee policy, advance, reduction, anniversary,
+repayment preview, recorded/collection/risk bases, once-only recognition/retry,
+reversal prerequisites, cutover and restricted-role Workspace boundaries.
+
+The affected **419-test run** passed 418 checks in 356.157s; its sole failure was a
+pre-existing document test fake event missing `payload`. The exact failure was
+reproduced with unchanged HEAD read consumers. That fixture now supplies the real
+event field, and all **9 document tests pass** (0.150s). All selected checks are
+therefore verified across these runs; this is not a claim of a single clean rerun
+of all 419. A pre-existing fixed-date native fixture also now freezes `now` as well
+as `localdate` so its approval/disbursal chronology does not drift with wall time.
+Django checks pass, migrations report no changes, changed Python files parse,
+whitespace checks pass and the moved legacy projection is AST-identical to its
+prior algorithm. Private evidence is under `.tmp/continuation-20261006/`.
+
+Confirmed remaining work includes independent quality presentation, maturity
+forecast/obligation dispatch, release/renewal/auction orchestration, completed-payout
+compatibility/UI consolidation and bounded evidence extensions. Completed-paper
+history admission can omit a licence revision and then cannot export history/4;
+LC-04 must address that mapping without inventing original evidence. Opening
+pre-cutover counters and valuation are not claimed equivalent to full history.
+The [plan](plans/loan-continuation-consolidation.md) records LC-02 as the next slice.
+No production data, deployment, bulk conversion or quote-age threshold is included.
+
 ## Complete repository checkpoint verified (6 October)
 
 The owner authorized committing all remaining changes and pushing the current

@@ -158,6 +158,9 @@ def loan_inputs(*, batch, ref, rows, settings, borrower_id, product_id, workspac
         'review_reference': settings['reference'],
     }
     policy = resolve_policy(license_overrides=LicensePolicyOverrides(valuation_method=ValuationMethod.LATEST_APPRAISAL)).to_disbursal_snapshot().to_dict()
+    # This register explicitly retains the original review/2 calculation rule.
+    # Changing today's defaults must not relabel that older evidence contract.
+    policy['policy_version'] = 1
     setup = {'tenure_months': tenure, 'source_license_number': settings['license_number'],
              'local_loan_number': first['loan_number'].strip(), 'policy': policy}
     if settings.get('legacy_reference'):

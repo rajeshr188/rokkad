@@ -2,6 +2,20 @@
 {% block workspace_content %}
 <div class="app-heading"><div><h1>Loan entry</h1><p class="text-muted">Workspace rules for preparing and approving loans.</p></div></div>
 {% include "loans/setup/_navigation.html" %}
+<div class="card card-body mt-3">
+<h2 class="h5">Buying quotes for new lending</h2>
+<p>Use the latest applicable quote, no older than {{ maximum_quote_age_days }} calendar days. The default is 7 days; 0 requires a quote effective today. The limit includes its final local calendar day.</p>
+<p class="small text-muted">This applies when approving a payout now. Loan health has its own freshness policy. Recording a completed paper payout preserves the original facts. Changing this limit requires new review of pending approvals; completed payouts keep their original evidence.</p>
+{% if can_set_quote_age %}
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="quote_age">
+{{ quote_form.non_field_errors }}
+{{ quote_form.maximum_quote_age_days.errors }}
+<label class="form-label" for="{{ quote_form.maximum_quote_age_days.id_for_label }}">{{ quote_form.maximum_quote_age_days.label }}</label>
+{{ quote_form.maximum_quote_age_days }}
+<button class="btn btn-primary mt-3" type="submit">Save quote-age limit</button>
+</form>
+{% else %}<p class="small mb-0">Only the Workspace owner can change this limit.</p>{% endif %}
+</div>
 <form method="post" class="card card-body mt-3">{% csrf_token %}
 <h2 class="h5">Collateral photographs</h2>
 <p>Photos are optional by default. Enable this rule to require a usable photograph for each item before approving a loan, including renewal collateral.</p>

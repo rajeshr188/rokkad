@@ -28,6 +28,7 @@ from apps.tenant_apps.loans.services.economic_policies import (
 from apps.tenant_apps.loans.selectors.origination_rates import (
     get_origination_quote_rows, require_fresh_quotes, require_current_origination_date,
 )
+from .origination_settings import maximum_quote_age_days
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ class ResolvedPawnDraftEconomics:
     fee_policies: tuple[PawnLoanFeePolicy, ...]
     valuation_quotes: dict
     evaluated_at: datetime
+    maximum_quote_age_days: int | None = None
 
 
 def resolve_pawn_draft_economics(
@@ -63,13 +65,14 @@ def resolve_pawn_draft_economics(
         ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
     }
     evaluated_at = timezone.now()
+    quote_age = maximum_quote_age_days(workspace_id) if historical_context is None and needs_metal_value else None
     if require_fresh_rates and needs_metal_value and historical_context is None:
         # Reject the date before looking up quotes at that date. Today's newly
         # entered quote cannot repair a review that still selects yesterday.
         require_current_origination_date(as_of_date, at=evaluated_at)
     quote_rows = get_origination_quote_rows(workspace_id=workspace_id, loan_date=as_of_date,
         metals=tuple(str(getattr(item.metal, "value", item.metal)).upper() for item in collateral),
-        at=evaluated_at) if needs_metal_value and historical_context is None else []
+        at=evaluated_at, maximum_age_days=quote_age) if needs_metal_value and historical_context is None else []
     if require_fresh_rates and historical_context is None:
         require_fresh_quotes(quote_rows)
     valuation_rates = {row["metal"]: row["rate"].buying_rate if row["usable"] else None for row in quote_rows}
@@ -142,6 +145,7 @@ def resolve_pawn_draft_economics(
         fee_policies=fee_policies,
         valuation_quotes=valuation_quotes,
         evaluated_at=evaluated_at,
+        maximum_quote_age_days=quote_age,
     )
 
 

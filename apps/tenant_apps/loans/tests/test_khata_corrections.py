@@ -237,11 +237,11 @@ class KhataCorrectionTests(CorrectionFixture, TestCase):
         self.correct(source, actor=authorized)
 
     def test_corrections_obey_workspace_write_restriction(self):
-        from apps.subscriptions.models import Subscription
+        from apps.tenancy.testing import expire_workspace_trial
         with self.later(1):
             receipt = self.pay("100000")
             review = corrections.preview_correction(**self.args(), source_id=receipt.pk)
-            Subscription.objects.filter(company=self.workspace).update(trial_end_date=timezone.now()-timedelta(days=8))
+            expire_workspace_trial(self.workspace)
             with self.assertRaises(PermissionDenied):
                 corrections.record_correction(**self.command(), source_id=receipt.pk, review_hash=review["review_hash"],
                     reason="Wrong", resolution_reference="Verified", cash_resolution="NOT_RECEIVED")

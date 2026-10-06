@@ -40,7 +40,7 @@ class ServicingEligibility:
         return self
 
 
-def servicing_eligibility(loan, *, operation, purpose, effective_date):
+def servicing_eligibility(loan, *, operation, purpose, effective_date, occurred_at=None):
     """Read only: supported debt is distinct from a complete-book attestation.
 
     Current wrappers supply today's date. Reviewed completed-action adapters supply
@@ -73,7 +73,15 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date):
     if any(row["date"] > effective_date.isoformat() for row in dependencies.custody):
         block("LATER_CUSTODY", "Later collateral movements exist. Review them before recording this earlier transaction.")
     if contract.origin_kind == "MIGRATION_OPENING" and effective_date <= contract.financial_history_from:
-        block("CUTOVER_DATE", "Opening servicing must be strictly after cutover.")
+        if (operation == "REPAYMENT" or purpose == "CURRENT") and effective_date == contract.financial_history_from:
+            from .opening_precision import require_receipt_order
+            try:
+                kind = {"REPAYMENT": "REPAYMENT", "FULL_RELEASE": "RELEASE_RECEIPT", "RENEWAL": "RENEWAL_SETTLEMENT", "AUCTION": "AUCTION_RECOVERY"}[operation]
+                require_receipt_order(loan, on=effective_date, received_at=occurred_at, paper=purpose == "PAPER", event_kind=kind)
+            except ValueError as exc:
+                block("CUTOVER_DATE", str(exc))
+        else:
+            block("CUTOVER_DATE", "Opening servicing must be strictly after cutover.")
     if purpose == "PAPER" and contract.origin_kind != "MIGRATION_OPENING" and not contract.profile.startswith("recorded-anniversary/"):
         shared_monthly = contract.profile == "native-monthly-policy/2" and shared_monthly_bullet(loan) and loan.disbursal_snapshot_id
         legacy_release = operation == "FULL_RELEASE" and contract.profile == "native-event-fold/1" and contract.policy_snapshot_id
@@ -91,11 +99,12 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date):
     return ServicingEligibility(operation, purpose, effective_date, contract, coverage, tuple(blockers))
 
 
-def paper_repayment_allocation_allowed(loan, balance, allocation):
-    """Retain the opening reader's bounded profile rather than post unreadable facts."""
-    if balance.fees_outstanding:
-        raise ValueError("Paper receipt allocation with outstanding fees needs an agreed fee rule.")
+def paper_repayment_allocation_allowed(loan, balance, allocation, *, evidence=None):
+    """Require actual paper fee/item evidence before posting its allocation."""
+    evidence = evidence or {}
+    if balance.fees_outstanding and evidence.get("fees_paid") is None:
+        raise ValueError("Enter the paper receipt's actual fee component, including zero, when fees are outstanding.")
     if allocation.principal and loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
         from .pawn_tranches import get_pawn_principal_tranche_balances
-        if sum(row.principal_outstanding > 0 for row in get_pawn_principal_tranche_balances(loan)) > 1:
-            raise ValueError("This reviewed opening allocation profile supports paper principal payments on one outstanding item only. Multiple-item paper allocations need a supported reviewed profile; no split will be inferred.")
+        if sum(row.principal_outstanding > 0 for row in get_pawn_principal_tranche_balances(loan)) > 1 and evidence.get("item_principal_split") is None:
+            raise ValueError("Enter the staff item principal split for a paper payment across multiple outstanding opening items; no split will be inferred.")

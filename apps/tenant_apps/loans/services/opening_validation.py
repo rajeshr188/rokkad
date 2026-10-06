@@ -14,7 +14,9 @@ PROFILE = "loan-opening-review/1"
 COLLECTION_PROFILE = "loan-opening-review/2"
 POLICY_COLLECTION_PROFILE = "loan-opening-review/3"
 CHECKPOINT_COLLECTION_PROFILE = "loan-opening-review/4"
-POLICY_COLLECTION_PROFILES = (POLICY_COLLECTION_PROFILE, CHECKPOINT_COLLECTION_PROFILE)
+PRECISE_COLLECTION_PROFILE = "loan-opening-review/5"
+CHECKPOINT_COLLECTION_PROFILES = (CHECKPOINT_COLLECTION_PROFILE, PRECISE_COLLECTION_PROFILE)
+POLICY_COLLECTION_PROFILES = (POLICY_COLLECTION_PROFILE, *CHECKPOINT_COLLECTION_PROFILES)
 COLLECTION_PROFILES = (COLLECTION_PROFILE, *POLICY_COLLECTION_PROFILES)
 MAX_ITEMS = 20
 MAX_OBLIGATIONS = 240
@@ -164,7 +166,7 @@ def validate_opening(document, *, today=None):
         except (ValueError, TypeError):
             check.issue("SOURCE_DATE", "source.loan_timestamp", "Supply the original timezone-aware loan timestamp.")
             original_timestamp = None
-    cutover = check.object(doc["cutover"], "date timezone evidence_reference", "cutover")
+    cutover = check.object(doc["cutover"], "date timezone evidence_reference occurred_at" if doc["profile"] == PRECISE_COLLECTION_PROFILE else "date timezone evidence_reference", "cutover")
     cutoff, zone = None, None
     if cutover:
         cutoff = check.day(cutover["date"], "cutover.date")
@@ -175,6 +177,12 @@ def validate_opening(document, *, today=None):
             check.issue("TIMEZONE", "cutover.timezone", "Supply the agreed business timezone.")
         if cutoff and zone and cutoff > (today or datetime.now(zone).date()):
             check.issue("FUTURE_CUTOVER", "cutover.date", "Cutover cannot be in the future.")
+        if cutoff and zone and doc["profile"] == PRECISE_COLLECTION_PROFILE:
+            from .opening_precision import timestamp
+            try:
+                timestamp(cutover["occurred_at"], day=cutoff, zone=cutover["timezone"])
+            except ValueError as exc:
+                check.issue("SOURCE_DATE", "cutover.occurred_at", str(exc))
     mapping = check.object(doc["mapping"], "workspace_id borrower_id borrower_source_system borrower_external_id licence_revision_id series_id product_version_id evidence_reference", "mapping")
     if mapping:
         for field in ("workspace_id", "borrower_id", "licence_revision_id", "series_id", "product_version_id"):
@@ -202,7 +210,7 @@ def validate_opening(document, *, today=None):
         check.text(terms["evidence_reference"], "terms.evidence_reference")
         period_rule = check.choice(terms["period_rule"], {"ORIGINAL_ANNIVERSARY", "CLAMPED_CONTIGUOUS"}, "terms.period_rule")
         basis_rule = check.choice(terms["interest_basis"], {"ORIGINAL_PRINCIPAL", "OUTSTANDING_AT_PERIOD_START"}, "terms.interest_basis")
-        partial = check.choice(terms["partial_rule"], {"FULL_MONTH"} if doc["profile"] == CHECKPOINT_COLLECTION_PROFILE else {"INCLUSIVE_UPFRONT"} if collection_profile else {"COMPLETED_ONLY", "FULL_MONTH", "SLAB"}, "terms.partial_rule")
+        partial = check.choice(terms["partial_rule"], {"FULL_MONTH"} if doc["profile"] in CHECKPOINT_COLLECTION_PROFILES else {"INCLUSIVE_UPFRONT"} if collection_profile else {"COMPLETED_ONLY", "FULL_MONTH", "SLAB"}, "terms.partial_rule")
         if partial == "SLAB":
             check.integer(terms["partial_cutoff_days"], "terms.partial_cutoff_days", 1, 28)
             fraction = check.amount(terms["partial_lower_fraction"], "terms.partial_lower_fraction", True, 6)
@@ -319,7 +327,7 @@ def validate_opening(document, *, today=None):
         if parts and all(p is not None for p in parts) and amounts.get(field) is not None and sum(parts) != amounts[field]:
             check.issue("OBLIGATION_BALANCE_MISMATCH", "obligations", f"Remaining {field} obligations do not reconcile with the opening.")
     if collection_profile:
-        if doc["profile"] == CHECKPOINT_COLLECTION_PROFILE:
+        if doc["profile"] in CHECKPOINT_COLLECTION_PROFILES:
             from .opening_checkpoint import validate_checkpoint
             validate_checkpoint(check, doc, items, amounts, original, cutoff, result)
         else:

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-05
+updated: 2026-10-06
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -18,7 +18,27 @@ remain stable identifiers; presentation does not rename registers or reset count
 The loan directory's borrower picker includes inactive customers with existing loans,
 whereas new-loan borrower selection continues to require an active Party.
 
+## Prospective buying-quote age
+
+Workspace owners configure the latest-applicable quote maximum under **Loans
+setup > Loan entry**. The default is seven inclusive local calendar days; zero
+requires same-day evidence. This affects new metal-dependent lending decisions
+and item LTV hints, independently of economic interest terms and current
+monitoring freshness. Pending reviews bind the applied limit; changed limits or
+quote identities require review again. Existing same-day v1 approvals retain their
+contract. Completed-paper recording and imports preserve original facts and do
+not acquire a current quote prerequisite. See [the decision](../adr/2026-10-06-configurable-prospective-quote-age.md).
+
 ## Extracted Business Rules
+
+LC-04 lets new completed-paper entry explicitly map an existing source licence
+revision, without making it compulsory for recording supported facts. The command
+checks Workspace/series ownership and original-date coverage; an inactive legacy
+reference retains unknown validity. The reviewed mapping is frozen with the
+origination terms. A saved draft cannot replace its original mapping, and prior
+loans are not backfilled. Missing mapping still prevents bounded history/4 export;
+mapping alone does not establish complete books or authorize new lending. See
+[LC-04](../implementation/completed-payout-presentation-lc04.md).
 
 LD-03 distinguishes license authority for lending now from a retained reference
 for recording a supported completed payout. A legacy reference stays inactive

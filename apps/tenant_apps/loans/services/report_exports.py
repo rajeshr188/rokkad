@@ -25,6 +25,21 @@ class PawnLoanReportDataset:
     notes: str = ""
 
 
+QUALITY_COLUMNS = ("Saved assessment", "Valuation availability", "Calculation support",
+    "Financial history from", "Principal history basis", "Capture basis", "Valuation blockers")
+
+
+def _quality_cells(row):
+    quality = getattr(row, "evidence_quality", None) or {}
+    return (quality.get("assessment", {}).get("status", "UNASSESSED"),
+        quality.get("valuation", {}).get("status", "UNASSESSED"),
+        quality.get("calculation", {}).get("status", "UNASSESSED"),
+        quality.get("history", {}).get("from_date") or "",
+        quality.get("history", {}).get("principal_basis") or "",
+        quality.get("transactions", {}).get("capture_basis") or "",
+        ", ".join(quality.get("valuation", {}).get("blockers", [])))
+
+
 def build_pawn_loan_report_dataset(report, section):
     builders = {
         "active": _active,
@@ -57,7 +72,7 @@ def build_party_statement_dataset(statement):
             balance.total_due if balance else "",
             "", "", "",
             completeness.status if completeness else "", completeness.through_date if completeness else "",
-        ))
+        ) + _quality_cells(loan_row))
     transaction_rows = getattr(statement, "transaction_rows", None)
     if transaction_rows is None:
         transaction_rows = tuple(
@@ -98,7 +113,7 @@ def build_party_statement_dataset(statement):
             getattr(event, "pk", ""),
             correction_status,
             correction_event_id or "",
-            "", "",
+            "", "", *([""] * len(QUALITY_COLUMNS)),
         ))
     return PawnLoanReportDataset(
         "party_statement",
@@ -107,7 +122,7 @@ def build_party_statement_dataset(statement):
             "Row type", "Loan", "Date", "State / kind", "Principal", "Interest",
             "Fees", "Total", "Event ID", "Correction status", "Correction event",
             "Transaction review", "Paper records through",
-        ),
+        ) + QUALITY_COLUMNS,
         tuple(rows),
         notes="Recorded positions exclude collection interest awaiting recognition. Paper coverage is shown separately; unconfirmed histories are provisional.",
     )
@@ -179,7 +194,7 @@ def _overdue(report):
 def _portfolio_dataset(key, title, rows):
     return PawnLoanReportDataset(
         key, title,
-        ("Loan", "Party", "Due date", "Principal", "Interest", "Fees", "Total due", "Status", "Transaction review", "Paper records through"),
+        ("Loan", "Party", "Due date", "Principal", "Interest", "Fees", "Total due", "Status", "Transaction review", "Paper records through") + QUALITY_COLUMNS,
         tuple((
             row.loan.loan_number, row.loan.borrower.display_name,
             row.balance.due_date if row.balance else "",
@@ -190,7 +205,7 @@ def _portfolio_dataset(key, title, rows):
             row.status,
             row.transaction_completeness.status if row.transaction_completeness else "",
             row.transaction_completeness.through_date if row.transaction_completeness else "",
-        ) for row in rows),
+        ) + _quality_cells(row) for row in rows),
         notes="Amounts derive from entered transactions. Unconfirmed paper histories are provisional. Transaction coverage is separate from valuation freshness.",
     )
 

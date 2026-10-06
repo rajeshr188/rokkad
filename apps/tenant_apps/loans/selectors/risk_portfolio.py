@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
 
-SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V5"
+SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V6"
 
 
 def snapshot_is_current(snapshot, as_of_date):
@@ -54,6 +54,8 @@ class RiskPortfolioSummary:
     by_product: tuple[dict, ...]
     provisional_count: int = 0
     unavailable_count: int = 0
+    assumed_capture_count: int = 0
+    inconsistent_calculation_count: int = 0
 
 
 def get_risk_portfolio(*, page=1, page_size=50, status=None, severity=None,
@@ -62,8 +64,8 @@ def get_risk_portfolio(*, page=1, page_size=50, status=None, severity=None,
                        product_version_id=None, maturity_from=None, maturity_to=None,
                        as_of_date=None):
     queryset = _active_portfolio(as_of_date or timezone.localdate()).select_related(
-        "borrower", "product_version__product", "risk_snapshot"
-    )
+        "borrower", "product_version__product", "risk_snapshot", "policy_snapshot"
+    ).prefetch_related("transaction_reviews", "loan_events")
     filters = {}
     if status: filters["assessment_status"] = status
     if severity: filters["risk_snapshot__severity"] = severity
@@ -81,12 +83,18 @@ def get_risk_portfolio(*, page=1, page_size=50, status=None, severity=None,
            (severity, performance_class, min_dpd, max_dpd, min_ltv, max_ltv)):
         queryset = queryset.filter(assessment_status="CURRENT")
     queryset = queryset.filter(**filters).distinct().order_by("assessment_status", "pk")
-    return Paginator(queryset, min(max(int(page_size), 1), 200)).get_page(page)
+    result = Paginator(queryset, min(max(int(page_size), 1), 200)).get_page(page)
+    from .evidence_quality import loan_evidence_quality
+    for loan in result.object_list:
+        loan.evidence_quality = loan_evidence_quality(loan, as_of_date=as_of_date or timezone.localdate())
+    return result
 
 
 def get_risk_portfolio_summary(*, as_of_date=None):
     queryset = _active_portfolio(as_of_date or timezone.localdate())
     current = Q(assessment_status="CURRENT")
+    usable = current & (Q(risk_snapshot__source_provenance__financial__calculation_status="SUPPORTED")
+        | Q(risk_snapshot__source_provenance__financial__calculation_status__isnull=True))
     totals = queryset.aggregate(
         loan_count=Count("pk"), current_count=Count("pk", filter=current),
         unassessed_count=Count("pk", filter=Q(assessment_status="UNASSESSED")),
@@ -94,15 +102,17 @@ def get_risk_portfolio_summary(*, as_of_date=None):
         error_count=Count("pk", filter=Q(assessment_status="ERROR")),
         unknown_coverage_count=Count("pk", filter=current & Q(risk_snapshot__ltv_ratio__isnull=True)),
         provisional_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__complete=False)),
-        unavailable_count=Count("pk", filter=~current | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True)),
-        total_exposure=Sum("risk_snapshot__exposure", filter=current),
-        total_overdue=Sum("risk_snapshot__overdue", filter=current),
+        assumed_capture_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__capture_basis="SYSTEM_CAPTURE_ASSUMPTION")),
+        inconsistent_calculation_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__financial__calculation_status="INCONSISTENT")),
+        unavailable_count=Count("pk", filter=~usable | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True)),
+        total_exposure=Sum("risk_snapshot__exposure", filter=usable),
+        total_overdue=Sum("risk_snapshot__overdue", filter=usable),
     )
-    complete = totals["unavailable_count"] == 0 and totals["provisional_count"] == 0
+    complete = totals["unavailable_count"] == 0 and totals["provisional_count"] == 0 and totals["inconsistent_calculation_count"] == 0
     for field in ("total_exposure", "total_overdue"):
         if totals["loan_count"] == 0:
             totals[field] = Decimal("0")
-    assessed = queryset.filter(current)
+    assessed = queryset.filter(usable)
     return RiskPortfolioSummary(
         **totals, totals_complete=complete,
         by_severity=tuple(assessed.values(severity=F("risk_snapshot__severity")).annotate(count=Count("pk"), exposure=Sum("risk_snapshot__exposure")).order_by("severity")),

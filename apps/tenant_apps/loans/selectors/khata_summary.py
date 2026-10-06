@@ -124,7 +124,7 @@ def collateral_cover(account, summary):
             metals=[item.metal for item in items])
         require_fresh_quotes(rows)
     except ValueError:
-        result["reason"] = "A positive same-day approved price is required for every eligible metal."
+        result["reason"] = "A positive price within the Workspace lending age limit is required for every eligible metal."
         return result
     prices = {row["metal"]: row["rate"].buying_rate for row in rows}
     result["quotes"] = [row["evidence"] for row in rows]

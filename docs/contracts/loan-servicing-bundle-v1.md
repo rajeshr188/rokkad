@@ -7,6 +7,11 @@ tags: [contracts, loans, portability]
 
 # loan-servicing-bundle/1
 
+LC-05 preserves the existing row inventory while validating new nested explicit
+receipt/checkpoint and verified terminal-position profiles. A terminal loan carries
+its sole zero checkpoint, original agreement and retained archive, with no invented
+settlement or handover. See the [bounded evidence contracts](bounded-loan-evidence-lc05.md).
+
 This named ZIP profile preserves an admitted loan's supported financial/custody
 graph and source documents. It is separate from the published JSONL history and
 opening profiles and from exact-identity Workspace recovery.

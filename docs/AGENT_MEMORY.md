@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-05
+updated: 2026-10-06
 tags: [agents, context, architecture]
 ---
 
@@ -27,6 +27,59 @@ contracts under docs/contracts must be included in clean Docker images. See the
 
 ## Loan-domain correction selected (5 October)
 
+LC-07's `check_loan_release_inventory` is a dated, Workspace-scoped PostgreSQL
+repeatable-read/read-only operator report. Common servicing prerequisites are
+descriptive, not action permission. Supported calculation, complete transactions,
+assessment freshness and eligible valuation remain independent. Retained archive
+snapshots/latest unadmitted identities and ordinary terminal positions are separate
+cohorts; legacy profiles are not adopted. Local fictional restore/staff-generated
+examples never certify production books or rollout. The
+[release guide](flows/loan-continuation-release-acceptance.md) tracks those gates.
+
+LC-04 presents one Record completed payout action. Saved unapproved drafts use
+recorded admission; eligible genuine earlier native approvals and fully reversed
+native origins use retained review/correction checks. Old GET links redirect;
+issued reviews keep their POST/retry command. No permission or stale-evidence
+failure selects a weaker adapter. Recorded/opening graphs cannot use native
+reissue. New paper entry optionally maps existing source licence evidence with
+scope/date checks and frozen review; unknown mapping still permits admission but
+blocks history/4 export. Saved draft mapping and existing request shape remain
+unchanged. No old loan/evidence is backfilled.
+
+LC-03 shares release/renew-now/auction settlement preparation through validated
+continuation, while specialized commands retain authority, locks, source events,
+allocation, custody and reversals. Modern native simple/full-month renewal and
+auction recognize completed monthly periods automatically like full release;
+legacy finalization prerequisites remain. Completed charges are independent debt;
+paired terminal catch-up keeps its existing correction semantics. Frozen schedule
+capacity cannot grow to match a dynamic forecast, and policy/2 cash uses paise even
+when interest rounds to whole rupees. Retained native reversed-period and renewal
+successor guards remain explicit; completed paper renewal is still a different
+business action from approving a successor now.
+
+LC-02 extends continuation reads with separate reporting/knowledge and forecast
+dates. Shared monthly remaining-obligation forecasts, including reviewed openings,
+use known item reductions and advances without replaying earlier history or changing
+source schedule capacity. Forecasts cannot become current collection balances.
+Risk V6 and ordinary presentation keep assessment freshness, transaction coverage,
+valuation and calculation support independent; prior V5 assessments need refresh.
+Opening principal/repaid counters start at cutover and remain explicitly labelled.
+Native-contract earlier payouts require paper coverage; ordinary current capture
+is an operating assumption, not proof against off-system transactions. Book reviews
+and known paper activity govern coverage regardless of original admission channel.
+
+For LC-06 the owner selected latest-applicable quote maximum age **seven days by
+default, configurable by the Workspace owner** (6 October). This supersedes the
+earlier same-day requirement for new prospective approvals. LC-06 now freezes
+`quote-age-origination-v2`, the applied maximum, calendar basis and quote ages;
+legacy v1 approvals retain same-day semantics. Owners configure the existing
+Loans-owned settings under Loans setup > Loan entry with audit and business-write
+authorization. Zero is same-day; the final permitted calendar day is included.
+Selected quote/configuration changes require fresh pending review. Current payout
+dates remain explicit. Monitoring freshness and retrospective evidence stay
+separate. No invented daily confirmation or rewriting frozen quotes is authorized.
+See [LC-06](implementation/prospective-quote-age-lc06.md).
+
 The owner first requested analysis/planning for one operational loan domain across
 direct, paper and imported entry, then selected the recommended direction and
 requested a checkpoint/start on LD-01. Checkpoint `89f7321e` on
@@ -46,6 +99,29 @@ LD-07 adds bounded connected servicing portability and exact source-copy retenti
 LD-08 source-snapshot review, generated HTTP acceptance and local technical staging
 are verified; actual live source/staff acceptance and rollout remain pending.
 PawnLoan is already canonical; no parallel servicing model is needed.
+
+The 6 October continuation follow-up keeps capture/verification, financial admission
+and common servicing separate. `selectors/continuation.py` centralizes validated
+recorded position and descriptive unposted-interest evidence for collection and
+exposure reads. Published native periods, recorded cumulative recognition and
+opening catch-up still have different persistence/reversal responsibilities; a
+read plan grants no posting authority. Legacy daily exposure remains forecast-only.
+Real four-admission characterization replaces import-marker-only evidence. See the
+[decision](adr/2026-10-06-loan-continuation-read-boundary.md) and
+[staged plan](plans/loan-continuation-consolidation.md). Admission presentation and
+LC-05 bounded evidence extensions are implemented locally. Quote-age implementation
+and release acceptance remain separate slices, with no production
+conversion/deployment authorized.
+
+LC-05 keeps old evidence contracts immutable. Opening paper principal across
+several outstanding items uses actual supplied splits; outstanding paper fees need
+an explicit actual component, including zero. Review/5 adds a real checkpoint time;
+old review/1–4 remain date-only. Delegated import preparation cannot approve or
+post finance. A verified terminal closed position uses a sole zero opening event
+and preserves the original agreement, while earlier receipts/cash totals remain
+unavailable. It cannot be reopened by reversing a nonexistent settlement. Unknown
+handover remains unknown. No bulk promotion is implied. See the
+[bounded evidence contracts](contracts/bounded-loan-evidence-lc05.md).
 
 Keep entry provenance distinct from prospective approval, retrospective verification,
 frozen continuation semantics, checked transaction coverage and each action's purpose.
@@ -628,7 +704,7 @@ append-only draft proposals, forced RLS/parent guards and pure KHATA-1 math.
 The [opening checkpoint](implementation/khata-opening.md) supersedes the initial
 draft-only boundary. Five more guarded/RLS tables hold operations, owner policies,
 received items, valuations and private photos. Separate approval and withdrawal
-sources drive APPROVED/ACTIVE and first-payout date. Current same-day Rates quotes,
+sources drive APPROVED/ACTIVE and first-payout date. Latest applicable Rates quotes within the owner-configured lending age limit,
 photo policy, entitlement, LTV and overdue policy are rechecked for payouts.
 Saved proposals remain immutable; editing before opening appends a successor and
 requires new approval. The [collection checkpoint](implementation/khata-interest-collection.md)
@@ -1463,7 +1539,8 @@ allow genuine identical loans. Never recycle cancelled numbers or auto-cancel
 suspected duplicates. See the [submission decision](adr/2026-09-26-new-loan-submission-identity.md).
 
 Ordinary market-valued origination requires today's loan/disbursal date and
-applicable same-day quotes. An authorized administrator can instead record an
+applicable quotes within the owner-configured age limit (default seven days).
+Legacy v1 approvals still require same-day quotes. An authorized administrator can instead record an
 actual earlier native payout through a signed, reasoned review, preserving the
 actual date and historical evidence. Never auto-advance or automatically disburse
 a real loan during a software fix. Corrections retain reversal/approval history.
@@ -2942,12 +3019,13 @@ usable quotes; a source alone is not quote readiness. New/edit loan price prefli
 uses the selected series/policy/date/metals and preserves the current form/files
 when missing quotes require a Rates detour. Gold-only and appraisal-only loans
 must not require unrelated quotes. Commands retain final validation. Quote ages
-are displayed. The owner selected same-day quotes at new-loan approval on
-2026-09-12, for methods that consume Rates. Approval/disbursal enforcement and
-frozen quote provenance are implemented locally. The first version uses today's
-loan/disbursal dates as the recommended implementation assumption; historical
-entry has no separately confirmed owner contract. Appraisal-only dates stay
-unchanged. Changed/stale or missing legacy market evidence requires reapproval;
+are displayed. LC-06 supersedes the September same-day quote requirement for
+new approvals with an owner-configured seven-day default, retaining immutable
+provenance and same-day loan/payout dates for actions performed now. Old v1
+approvals keep their own same-day rule. Completed-paper recording preserves the
+actual original date and agreement under its supported admission adapter.
+Appraisal-only dates stay unchanged. Changed/expired quotes, a changed applied
+limit or missing legacy market evidence require reapproval;
 completed replay preserves evidence after authorization. See the
 [decision](adr/2026-09-12-origination-quote-freshness.md) and
 [origination review](implementation/origination-rate-freshness-review.md).

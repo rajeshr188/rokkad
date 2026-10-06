@@ -7,6 +7,8 @@ tags: [loans, rates, origination, evidence]
 
 # New-loan rate freshness review
 
+**LC-06 update (6 October):** the [configurable prospective quote-age decision](../adr/2026-10-06-configurable-prospective-quote-age.md) supersedes the same-day quote-age requirement for new approvals with a seven-day owner-configurable default. Old v1 approvals retain their original semantics. The following records the September implementation; frozen quote provenance and current-action date checks remain applicable.
+
 The owner selected **same-day quotes required at approval** on 2026-09-12 and
 subsequently authorized implementation. The increment is implemented locally;
 see the [accepted contract](../adr/2026-09-12-origination-quote-freshness.md).

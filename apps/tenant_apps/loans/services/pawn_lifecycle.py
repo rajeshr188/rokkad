@@ -297,15 +297,23 @@ def approval_quote_evidence(loan, collateral, resolved):
     method = resolved.economic_policy.valuation_method if resolved else resolve_policy().valuation_method.value
     at = resolved.evaluated_at if resolved else timezone.now()
     quotes = resolved.valuation_quotes if resolved else {}
+    limit = resolved.maximum_quote_age_days if resolved else None
     if resolved is None and requires_quotes(method):
         require_current_origination_date(loan.loan_date, at=at)
         rows = get_origination_quote_rows(workspace_id=loan.workspace_id,
             loan_date=loan.loan_date, metals=tuple(item.metal for item in collateral), at=at)
         require_fresh_quotes(rows)
         quotes = {row["metal"]: row["evidence"] for row in rows}
-    return {"rule": RULE, "valuation_method": str(method),
+        limit = rows[0]["maximum_age_days"] if rows else None
+    evidence = {"rule": RULE, "valuation_method": str(method),
         "loan_date": loan.loan_date.isoformat(), "evaluated_at": at.isoformat(),
         "quotes": quotes}
+    if limit is not None:
+        from django.utils.dateparse import parse_datetime
+        evidence.update(maximum_quote_age_days=limit, age_basis="LOCAL_CALENDAR_DAYS",
+            quote_ages_days={metal: (timezone.localdate(at) - timezone.localdate(
+                parse_datetime(quote["effective_at"]))).days for metal, quote in quotes.items()})
+    return evidence
 
 
 def _freeze_approved_appraisals(loan, collateral, *, actor):

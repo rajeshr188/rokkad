@@ -17,6 +17,7 @@ from .pawn_repayment import (
 
 
 PROFILE = "paper-repayment/1"
+EXPLICIT_PROFILE = "paper-repayment/2"
 SALT = "loans.paper-repayment.review.v1"
 MAX_AGE = 3600
 
@@ -45,7 +46,7 @@ def normalize_item_split(value):
     return result
 
 
-def _evidence(*, received_on, receipt_reference, amount, item_principal_split=None):
+def _evidence(*, received_on, receipt_reference, amount, item_principal_split=None, fees_paid=None, received_at=None):
     if type(received_on) is not date or received_on > timezone.localdate():
         raise PawnRepaymentError("Enter the actual receipt date, no later than today.")
     if not isinstance(receipt_reference, str):
@@ -66,6 +67,13 @@ def _evidence(*, received_on, receipt_reference, amount, item_principal_split=No
     }
     if item_principal_split is not None:
         evidence["item_principal_split"] = normalize_item_split(item_principal_split)
+    if fees_paid is not None:
+        normalized = normalize_item_split({"1": fees_paid})["1"]
+        evidence.update(profile=EXPLICIT_PROFILE, fees_paid=normalized)
+    if received_at is not None:
+        from .opening_precision import timestamp
+        actual = timestamp(received_at, day=received_on)
+        evidence.update(profile=EXPLICIT_PROFILE, date_precision="TIMESTAMP", received_at=actual.isoformat())
     return evidence
 
 
@@ -75,7 +83,7 @@ def validate_paper_repayment_evidence(evidence, *, effective_date, amount):
         raise PawnRepaymentError("Invalid paper receipt evidence.")
     expected = _evidence(received_on=effective_date,
                          receipt_reference=evidence.get("receipt_reference"), amount=amount,
-                         item_principal_split=evidence.get("item_principal_split"))
+                         item_principal_split=evidence.get("item_principal_split"), fees_paid=evidence.get("fees_paid"), received_at=evidence.get("received_at"))
     if evidence != expected or type(evidence.get("confirmed_received")) is not bool:
         raise PawnRepaymentError("Paper receipt evidence does not match its date and amount.")
 
@@ -83,7 +91,7 @@ def validate_paper_repayment_evidence(evidence, *, effective_date, amount):
 def _preview(loan, *, amount, received_on, evidence):
     from .servicing_eligibility import servicing_eligibility, paper_repayment_allocation_allowed
     from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
-    servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER", effective_date=received_on).require()
+    servicing_eligibility(loan, operation="REPAYMENT", purpose="PAPER", effective_date=received_on, occurred_at=evidence.get("received_at")).require()
     if loan.loan_events.filter(
         event_kind="REPAYMENT",
         payload__repayment__recording__reference_key=evidence["reference_key"],
@@ -93,8 +101,8 @@ def _preview(loan, *, amount, received_on, evidence):
         )
     try:
         balance = get_servicing_position(loan, as_of_date=received_on).balance
-        allocation = allocate_repayment(balance, amount)
-        paper_repayment_allocation_allowed(loan, balance, allocation)
+        allocation = allocate_repayment(balance, amount, fees_paid=evidence.get("fees_paid"))
+        paper_repayment_allocation_allowed(loan, balance, allocation, evidence=evidence)
         preview = _repayment_preview(loan, balance, allocation, item_principal_split=evidence.get("item_principal_split"), paper=True)
     except ValueError as exc:
         raise PawnRepaymentError(str(exc)) from exc
@@ -111,11 +119,11 @@ def _review_values(loan, actor, request_key, evidence, preview):
 
 
 @transaction.atomic
-def preview_paper_repayment(loan_id, *, amount, received_on, receipt_reference, request_key, actor, item_principal_split=None):
+def preview_paper_repayment(loan_id, *, amount, received_on, receipt_reference, request_key, actor, item_principal_split=None, fees_paid=None, received_at=None):
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.repay")
     amount, request_key = _money_amount(amount, loan), _request_key(request_key)
-    evidence = _evidence(received_on=received_on, receipt_reference=receipt_reference, amount=amount, item_principal_split=item_principal_split)
+    evidence = _evidence(received_on=received_on, receipt_reference=receipt_reference, amount=amount, item_principal_split=item_principal_split, fees_paid=fees_paid, received_at=received_at)
     preview = _preview(loan, amount=amount, received_on=received_on, evidence=evidence)
     token = signing.dumps(_review_values(loan, actor, request_key, evidence, preview), salt=SALT, compress=True)
     return PaperRepaymentReview(preview, token)
@@ -123,11 +131,11 @@ def preview_paper_repayment(loan_id, *, amount, received_on, receipt_reference, 
 
 @transaction.atomic
 def record_paper_repayment(loan_id, *, amount, received_on, receipt_reference,
-                           request_key, actor, review_token, confirmed_received=False, item_principal_split=None):
+                           request_key, actor, review_token, confirmed_received=False, item_principal_split=None, fees_paid=None, received_at=None):
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.repay")
     amount, request_key = _money_amount(amount, loan), _request_key(request_key)
-    evidence = _evidence(received_on=received_on, receipt_reference=receipt_reference, amount=amount, item_principal_split=item_principal_split)
+    evidence = _evidence(received_on=received_on, receipt_reference=receipt_reference, amount=amount, item_principal_split=item_principal_split, fees_paid=fees_paid, received_at=received_at)
     if confirmed_received is not True:
         raise PawnRepaymentError("Confirm that this amount was already received on the stated date.")
     # Authorize and compare original facts before returning an idempotent result.

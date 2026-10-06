@@ -21,11 +21,11 @@
     {% endif %}
     <p class="mb-2">Additional unposted interest: <strong>{{ interest.additional_interest|indian_money }}</strong>.</p>
     {% elif interest.has_payments %}
-    <p class="mt-3 mb-2">Monthly interest on the remaining principal: <strong>{{ interest.monthly_interest|indian_money }}</strong>. Principal reductions apply to subsequent monthly charges, preserving already-earned interest.</p>
-    <p class="mb-2">Cumulative interest calculated using each month's principal: <strong>{{ interest.cumulative_interest|indian_money }}</strong>, rounded once to whole rupees. Additional unposted interest: <strong>{{ interest.additional_interest|indian_money }}</strong>.</p>
+    <p class="mt-3 mb-2">Monthly reference on the remaining principal before rounding: <strong>{{ interest.monthly_interest|indian_money }}</strong>. Principal reductions apply to subsequent monthly charges, preserving already-earned interest.</p>
+    <p class="mb-2">Cumulative interest calculated using each month's principal: <strong>{{ interest.cumulative_interest|indian_money }}</strong>, {% if interest.policy_rounding %}rounded per item per period using the saved policy (quantum {{ interest.interest_quantum }}).{% else %}rounded once to whole rupees.{% endif %} Additional unposted interest: <strong>{{ interest.additional_interest|indian_money }}</strong>.</p>
     {% else %}
     <p class="mt-3 mb-2">Monthly interest across all items: <strong>{{ interest.monthly_interest|indian_money }}</strong>.
-      {{ interest.monthly_interest|indian_money }} × {{ interest.charge_months }} months = <strong>{{ interest.cumulative_interest|indian_money }}</strong>, rounded once to whole rupees.</p>
+      {% if interest.policy_rounding %}Charges after the upfront month: <strong>{{ interest.cumulative_interest|indian_money }}</strong>, rounded per item per period using the saved policy (quantum {{ interest.interest_quantum }}).{% else %}{{ interest.monthly_interest|indian_money }} × {{ interest.charge_months }} months = <strong>{{ interest.cumulative_interest|indian_money }}</strong>, rounded once to whole rupees.{% endif %}</p>
     <p class="mb-2">At import on {{ opening_review.cutover.date }}: {{ interest.cutover_months }} chargeable months; unpaid interest brought forward <strong>{{ interest.opening_unpaid_interest|indian_money }}</strong>.
       Since import: {{ interest.new_months }} additional months, adding <strong>{{ interest.additional_interest|indian_money }}</strong>.</p>
     {% endif %}

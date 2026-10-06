@@ -227,6 +227,10 @@ class NativeActionPurposeTests(WorkspaceTestCase):
         kwargs = dict(workspace_slug=self.tenant.slug, pk=self.loan.pk)
         response = client.get(reverse("workspace_loans:pawn_loan_repay", kwargs=kwargs))
         self.assertContains(response, "Record a paper receipt")
+        self.assertContains(response, "Evidence behind these amounts")
+        self.assertContains(response, "Collection balance includes eligible unposted interest")
+        self.assertEqual(response.context["evidence_quality"]["calculation"]["status"], "SUPPORTED")
+        self.assertEqual(response.context["evidence_quality"]["transactions"]["capture_basis"], "SYSTEM_CAPTURE_ASSUMPTION")
         self.assertContains(client.get(reverse("workspace_loans:pawn_loan_detail", kwargs=kwargs)), "Record paper closure")
 
 
@@ -315,14 +319,17 @@ class OpeningAllocationLimitTests(monthly.OpeningImportFixture):
         self.review["collateral"].append(second)
         self.review["source"]["item_ids"].append(second["id"])
 
-    def test_completed_multiple_item_principal_is_blocked_before_posting_but_current_collection_works(self):
+    def test_missing_multiple_item_principal_split_is_blocked_but_current_collection_works(self):
         with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
             loan = self.write().loan
             items = list(loan.collateral_items.order_by("pk"))
-            for split in (None, {str(items[0].pk): "200", str(items[1].pk): "0"}):
-                with self.assertRaisesMessage(ValueError, "one outstanding item only"):
-                    paper.preview_paper_repayment(loan.pk, amount=215, received_on=date(2021, 2, 2),
-                        receipt_reference="Multiple items", request_key="split", actor=self.actor, item_principal_split=split)
+            with self.assertRaisesMessage(ValueError, "staff item principal split"):
+                paper.preview_paper_repayment(loan.pk, amount=215, received_on=date(2021, 2, 2),
+                    receipt_reference="Multiple items", request_key="split", actor=self.actor)
+            preview = paper.preview_paper_repayment(loan.pk, amount=215, received_on=date(2021, 2, 2),
+                receipt_reference="Multiple items", request_key="split", actor=self.actor,
+                item_principal_split={str(items[0].pk): "200", str(items[1].pk): "0"})
+            self.assertEqual(preview.preview.allocation.principal, 200)
             self.assertEqual(loan.loan_events.count(), 1)
             self.assertFalse(loan.interest_accruals.exists())
             paid = record_pawn_loan_repayment(loan.pk, amount=215, request_key="current", actor=self.actor)

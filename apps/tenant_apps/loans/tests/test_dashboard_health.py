@@ -89,6 +89,31 @@ class DashboardHealthTests(TestCase):
             self.assertEqual(result["unknown_coverage_count"], 1)
             self.assertIsNone(result["collateral_value"])
 
+    def test_freshness_capture_assumption_and_inconsistent_money_are_independent(self):
+        from apps.tenant_apps.loans.selectors.risk_portfolio import get_risk_portfolio_summary
+        with workspace_context(self.workspace.pk):
+            good = self.snapshot(overdue=Decimal("0"))
+            good.source_provenance["financial"]["calculation_status"] = "SUPPORTED"
+            good.source_provenance["transactions"] = dict(complete=True, capture_basis="SYSTEM_CAPTURE_ASSUMPTION")
+            good.save(update_fields=["source_provenance"])
+            bad = self.snapshot(overdue=Decimal("0"))
+            bad.source_provenance["financial"].update(calculation_status="INCONSISTENT", integrity_findings=["Schedule mismatch"])
+            bad.source_provenance["transactions"] = dict(complete=False, capture_basis="BOOK_REVIEW")
+            bad.save(update_fields=["source_provenance"])
+            health = self.summary()
+            portfolio = get_risk_portfolio_summary()
+            self.assertEqual(health["current_count"], 2)
+            self.assertEqual(health["financial_count"], 1)
+            self.assertEqual(health["assumed_capture_count"], 1)
+            self.assertEqual(health["provisional_count"], 1)
+            self.assertFalse(health["financial_complete"])
+            self.assertEqual(portfolio.current_count, 2)
+            self.assertEqual(portfolio.inconsistent_calculation_count, 1)
+            self.assertEqual(portfolio.assumed_capture_count, 1)
+            self.assertEqual(portfolio.total_exposure, good.exposure)
+            self.assertEqual(portfolio.unavailable_count, 1)
+            self.assertFalse(portfolio.totals_complete)
+
     def test_missing_malformed_or_inconsistent_financial_evidence_is_unavailable(self):
         with workspace_context(self.workspace.pk):
             snapshot = self.snapshot()

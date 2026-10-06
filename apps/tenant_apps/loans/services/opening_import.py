@@ -121,7 +121,7 @@ def _write(*, workspace_id, actor, document, restoration=None):
     if parent is None or parent.party_id != borrower.pk:
         raise OpeningEvidenceError("Borrower must resolve the exact source Party identity.")
     principal = Decimal(review["balances"]["principal"])
-    monthly = sum(Decimal(row["remaining_principal"] if review["profile"] == "loan-opening-review/4" else row["original_principal"]) * Decimal(row["monthly_rate"]) / 100 for row in review["collateral"])
+    monthly = sum(Decimal(row["remaining_principal"] if review["profile"] in ("loan-opening-review/4", "loan-opening-review/5") else row["original_principal"]) * Decimal(row["monthly_rate"]) / 100 for row in review["collateral"])
     loan = _create(m.PawnLoan, workspace=workspace, license=setup["revision"].license,
         license_revision=setup["revision"], series=setup["series"], product_version=setup["product"], borrower=borrower,
         loan_number=setup["numbers"][0]["local_number"], state="ACTIVE", loan_date=date.fromisoformat(terms["original_date"]),

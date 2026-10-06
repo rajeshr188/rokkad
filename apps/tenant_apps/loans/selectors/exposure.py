@@ -1,15 +1,11 @@
 from dataclasses import dataclass
-import calendar
-from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from datetime import date
+from decimal import Decimal
 
 from apps.tenant_apps.loans.domain import (
     LoanRepaymentStructure,
-    PawnLoanState,
 )
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
-from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
-from apps.tenant_apps.loans.domain.interest import calculate_period_interest
 from .obligation_state import (
     ObligationAmount,
     calculate_obligation_state_as_of,
@@ -45,6 +41,9 @@ class PawnLoanExposure:
     provenance: tuple[str, ...]
     integrity_findings: tuple[str, ...]
     ltv_basis_label: str = ""
+    principal_history_basis: str = "ORIGINAL_PAYOUT"
+    financial_history_from: date | None = None
+    servicing_profile: str = ""
 
 
 def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposure:
@@ -58,24 +57,16 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     except PawnLoan.DoesNotExist as exc:
         raise PawnLoanExposureError("PawnLoan was not found in the active workspace.") from exc
 
-    balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
-    previews = ()
-    continuation = None
-    from apps.tenant_apps.loans.services.recorded_collections import recording_for
-    recorded = recording_for(loan)
-    if balance.financial_history_from is not None:
-        from apps.tenant_apps.loans.services.opening_continuation import preview_opening_collection
-        try:
-            continuation = preview_opening_collection(loan, events=loan.loan_events.all(), as_of_date=as_of_date)
-        except ValueError as exc:
-            raise PawnLoanExposureError(str(exc)) from exc
-        if as_of_date > continuation.cutover_date:
-            previews = ((continuation.cutover_date + timedelta(days=1), as_of_date, continuation.additional_interest),)
-    elif (loan.state == PawnLoanState.ACTIVE.value or recorded) and as_of_date >= loan.loan_date:
-        previews = _project_interest_periods(loan, as_of_date)
-    projected_interest = sum(
-        (row[2] for row in previews), Decimal("0")
-    )
+    from .continuation import resolve_loan_continuation
+    try:
+        position = resolve_loan_continuation(loan, as_of_date=as_of_date, include_legacy_projection=True)
+    except ValueError as exc:
+        raise PawnLoanExposureError(str(exc)) from exc
+    balance = position.recorded_balance
+    plan = position.recognition
+    continuation = plan.calculation if plan.adapter == "OPENING_CHECKPOINT" else None
+    previews = plan.projection_periods
+    projected_interest = plan.additional_interest
     active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
     if continuation and not balance.financially_settled and (active_schedule is None or active_schedule.source_event_id != continuation.opening_event_id):
         raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")
@@ -108,8 +99,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         findings.append("Recorded total due does not equal its balance components.")
     provenance = (
         "recorded:event-fold-v1",
-        f"projection:{recorded['collection_profile']}" if recorded else (f"projection:{continuation.rule}" if continuation else
-            "projection:original-anniversary-policy/1" if loan.policy_snapshot and loan.policy_snapshot.policy_version == 2 else "projection:actual-outstanding-daily-v1"),
+        f"projection:{plan.projection_rule}",
         f"contract:{loan.product_version.calculation_contract_version}",
         "due:active-obligation-fold-v1",
         f"schedule:{obligation_state.schedule_fingerprint or 'none'}",
@@ -117,7 +107,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     return PawnLoanExposure(
         loan_id=loan.pk,
         as_of_date=as_of_date,
-        original_principal=balance.opening_principal if continuation else balance.principal_disbursed,
+        original_principal=loan.principal_amount if plan.adapter == "VERIFIED_TERMINAL_POSITION" else balance.opening_principal if continuation else balance.principal_disbursed,
         principal_repaid=balance.principal_paid,
         principal_outstanding=balance.principal_outstanding,
         recorded_interest=balance.interest_outstanding,
@@ -134,80 +124,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         provenance=provenance,
         integrity_findings=tuple(findings),
         ltv_basis_label="Maturity payoff" if is_bullet else "Economic exposure",
+        principal_history_basis="VERIFIED_TERMINAL_POSITION" if plan.adapter == "VERIFIED_TERMINAL_POSITION" else "OPENING_CHECKPOINT" if continuation else "ORIGINAL_PAYOUT",
+        financial_history_from=position.contract.financial_history_from,
+        servicing_profile=position.contract.profile,
     )
-
-
-def _project_interest_periods(loan, as_of_date):
-    if loan.policy_snapshot and loan.policy_snapshot.policy_version == 2 and loan.policy_snapshot.basis != "RECORDED_CONTRACT":
-        from apps.tenant_apps.loans.services.pawn_interest import preview_pawn_loan_accruals
-        return tuple((row.period_start, row.period_end, row.recognized_interest)
-                     for row in preview_pawn_loan_accruals(loan.pk, as_of_date=as_of_date))
-    from apps.tenant_apps.loans.services.recorded_collections import recording_for, collection_state
-    if recording_for(loan):
-        extra = Decimal(collection_state(loan, as_of_date)["additional"])
-        return ((loan.loan_date, as_of_date, extra),) if extra else ()
-    if loan.policy_snapshot is None:
-        raise ValueError("Loan is missing its frozen disbursal policy.")
-    # Import lazily to avoid selectors <-> services package initialization cycles.
-    from apps.tenant_apps.loans.services.pawn_tranches import (
-        get_pawn_principal_tranche_balances,
-    )
-
-    last = loan.interest_accruals.exclude(
-        release_catch_up__reversal__isnull=False
-    ).order_by("-period_number").first()
-    period_start = last.period_end + timedelta(days=1) if last else loan.loan_date
-    quantum = loan.policy_snapshot.currency_quantum
-    if loan.policy_snapshot.basis == "RECORDED_CONTRACT":
-        quantum = quantum.normalize()
-    periods = []
-    while period_start <= as_of_date:
-        full_end = _add_months(period_start, 1) - timedelta(days=1)
-        period_end = min(full_end, as_of_date)
-        full_days = Decimal((full_end - period_start).days + 1)
-        event_dates = tuple(
-            loan.loan_events.filter(
-                effective_date__gt=period_start,
-                effective_date__lte=period_end,
-            ).values_list("effective_date", flat=True).distinct().order_by("effective_date")
-        )
-        boundaries = (period_start, *event_dates, period_end + timedelta(days=1))
-        raw_period = Decimal("0")
-        for segment_start, next_start in zip(boundaries, boundaries[1:]):
-            segment_days = Decimal((next_start - segment_start).days)
-            if segment_days <= 0:
-                continue
-            tranches = get_pawn_principal_tranche_balances(
-                loan, as_of_date=segment_start
-            )
-            if tranches:
-                for tranche in tranches:
-                    raw, _ = calculate_period_interest(
-                        calculation_base=tranche.principal_outstanding,
-                        monthly_interest_rate=tranche.monthly_interest_rate,
-                        period_fraction=segment_days / full_days,
-                        currency_quantum=quantum,
-                    )
-                    raw_period += raw
-            else:
-                balance = get_pawn_loan_balance(loan, as_of_date=segment_start)
-                raw, _ = calculate_period_interest(
-                    calculation_base=balance.principal_outstanding,
-                    monthly_interest_rate=loan.monthly_interest_rate,
-                    period_fraction=segment_days / full_days,
-                    currency_quantum=quantum,
-                )
-                raw_period += raw
-        projected = raw_period.quantize(
-            Decimal(str(quantum)), rounding=ROUND_HALF_UP
-        )
-        periods.append((period_start, period_end, projected))
-        period_start = full_end + timedelta(days=1)
-    return tuple(periods)
-
-
-def _add_months(value, months):
-    month_index = value.month - 1 + months
-    year = value.year + month_index // 12
-    month = month_index % 12 + 1
-    return date(year, month, min(value.day, calendar.monthrange(year, month)[1]))

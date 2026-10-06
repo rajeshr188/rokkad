@@ -17,9 +17,10 @@ def interest_contract_inventory():
         recording = origin.payload.get("recording", {}) if origin else {}
         profile = (origin.payload.get("opening", {}).get("review", {}).get("profile")
                    if origin and origin.event_kind == "MIGRATION_OPENING" else recording.get("collection_profile"))
-        shared = (profile in ("loan-opening-review/3", "loan-opening-review/4") if origin and origin.event_kind == "MIGRATION_OPENING"
+        shared = (profile in ("loan-opening-review/3", "loan-opening-review/4", "loan-opening-review/5") if origin and origin.event_kind == "MIGRATION_OPENING"
                   else profile == "recorded-anniversary/3" if policy and policy.basis == "RECORDED_CONTRACT"
                   else bool(policy and policy.policy_version == 2))
+        terminal = profile == "loan-terminal-review/1"
         financial = [event for event in events if event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING")]
         blocker = None
         if origin:
@@ -29,12 +30,12 @@ def interest_contract_inventory():
                 blocker = str(exc)
         rows.append(dict(loan_id=loan.pk, number=loan.loan_number, state=loan.state,
             profile=profile or (f"native-policy/{policy.policy_version}" if policy else "MISSING"),
-            status="INVALID_ORIGIN" if origin is None else "INVALID_CONTRACT" if blocker else "SHARED_CONTRACT" if shared else "REVIEW_CORRECTION",
+            status="INVALID_ORIGIN" if origin is None else "INVALID_CONTRACT" if blocker else "VERIFIED_TERMINAL_POSITION" if terminal else "SHARED_CONTRACT" if shared else "REVIEW_CORRECTION",
             blocker=blocker,
             currency_quantum=str(policy.currency_quantum.normalize()) if policy else None,
             origin_event_id=origin.pk if origin else None, servicing_events=len(financial),
             saved_accruals=loan.interest_accruals.count(), issued_documents=LoanDocumentIssue.objects.filter(
                 workspace_id=workspace_id, source_type="PawnLoan", source_id=str(loan.pk)).count(),
-            correction="REVIEW_DEPENDENCIES_AND_COMPENSATION" if financial else "REVIEW_FROZEN_ORIGIN",
+            correction="EARLIER_HISTORY_UNAVAILABLE" if terminal else "REVIEW_DEPENDENCIES_AND_COMPENSATION" if financial else "REVIEW_FROZEN_ORIGIN",
             automatic_conversion=False))
     return rows

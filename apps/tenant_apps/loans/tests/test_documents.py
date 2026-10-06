@@ -365,6 +365,7 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
         event = SimpleNamespace(
             effective_date=date(2026, 8, 5),
             payload_fingerprint="auction-recovery-71",
+            payload={},
         )
         auction_item = SimpleNamespace(
             collateral_item_id=collateral.pk,

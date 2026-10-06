@@ -18,14 +18,13 @@ from reportlab.pdfgen import canvas
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context
 from apps.tenancy.testing import WorkspaceTestCase
-from apps.tenant_apps.loans.models import LoanLicense, LoanSeries, PawnLoan, PawnCollateralItem, PawnLoanAuction
+from apps.tenant_apps.loans.models import PawnLoanAuction
 from apps.tenant_apps.loans.models.statutory import StatutoryAuctionNotice, StatutoryNoticeEvidence
 from apps.tenant_apps.loans.services.statutory_notices import (
     StatutoryNoticeError, prepare_catalogue, record_handling, auction_readiness,
 )
 from apps.tenant_apps.loans.services.pawn_auctions import PawnAuctionError, start_pawn_loan_auction, complete_pawn_loan_auction
-from apps.tenant_apps.loans.tests.factories import ensure_test_product_version
-from apps.tenant_apps.party.models import Party
+from . import test_collateral_reappraisal as loan_fixtures
 
 
 @contextmanager
@@ -44,6 +43,8 @@ def upload():
 
 @override_settings(STORAGES={'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'}, 'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}})
 class StatutoryNoticeTests(WorkspaceTestCase):
+    make_loan = loan_fixtures.CollateralReappraisalTests.make_loan
+
     @classmethod
     def setup_tenant(cls, tenant):
         tenant.owner = get_user_model().objects.create_user(username='stat-owner-' + uuid.uuid4().hex[:8])
@@ -56,19 +57,13 @@ class StatutoryNoticeTests(WorkspaceTestCase):
         role, _ = Role.objects.get_or_create(name='Owner')
         Membership.objects.get_or_create(user=self.actor, company=self.tenant, defaults={'role': role})
         self.start_active_trial()
-        from apps.subscriptions.models import Subscription
-        Subscription.objects.filter(company=self.tenant).update(trial_end_date=timezone.now() + timedelta(days=365))
+        from apps.tenancy.testing import set_workspace_trial_end
+        set_workspace_trial_end(self.tenant, ends_at=timezone.now() + timedelta(days=365))
         self.day = timezone.localdate()
-        borrower = Party.objects.create(display_name='Fictional Pawner')
-        licence = LoanLicense.objects.create(workspace=self.tenant, name='Fictional Licence', license_number='TEST-123',
-            issued_on=self.day - timedelta(days=500), expires_on=self.day + timedelta(days=500))
-        series = LoanSeries.objects.create(license=licence, name='Main', code='T')
-        self.loan = PawnLoan.objects.create(workspace=self.tenant, license=licence, series=series,
-            product_version=ensure_test_product_version(self.tenant), borrower=borrower, loan_number='T00001',
-            state='ACTIVE', principal_amount='1000', monthly_interest_rate='2', loan_date=self.day - timedelta(days=400),
-            tenure_months=12, created_by=self.actor, updated_by=self.actor)
-        PawnCollateralItem.objects.create(workspace=self.tenant, loan=self.loan, description='Fictional gold ring', metal='GOLD',
-            quantity=1, gross_weight='2', net_weight='1.9', purity_percentage='75')
+        # Auction servicing now validates the origin: use a real approved payout.
+        self.make_loan(method='LATEST_APPRAISAL', age_days=400)
+        self.loan.borrower.display_name = 'Fictional Pawner'
+        self.loan.borrower.save(update_fields=['display_name'])
         self.auction = PawnLoanAuction.objects.create(workspace=self.tenant, loan=self.loan, auction_number='AUC-T00001-01',
             attempt_number=1, request_key='auction', notice_date=self.day, scheduled_date=self.day + timedelta(days=60), created_by=self.actor)
         self.catalogue = dict(request_key='catalogue', business_name='Fictional lender', business_address='1 Fictional Road, Tamil Nadu',
@@ -113,7 +108,7 @@ class StatutoryNoticeTests(WorkspaceTestCase):
             content = handle.read()
         self.assertEqual(hashlib.sha256(content).hexdigest(), notice.artifact_sha256)
         with fitz.open(stream=content, filetype='pdf') as doc:
-            self.assertIn('T00001', ''.join(page.get_text() for page in doc))
+            self.assertIn(self.loan.loan_number, ''.join(page.get_text() for page in doc))
         with self.assertRaises(StatutoryNoticeError):
             prepare_catalogue(self.auction.pk, data={**self.catalogue, 'sale_place': 'Changed'}, actor=self.actor)
 
@@ -133,12 +128,8 @@ class StatutoryNoticeTests(WorkspaceTestCase):
     def test_digital_sent_cannot_clear_missing_statutory_notice(self):
         from apps.tenant_apps.loans.services.pawn_notices import create_pawn_loan_notice
         from apps.tenant_apps.notify_v2.models import NotificationJob
-        from apps.tenant_apps.loans.models import PawnLoanEvent
         self.loan.borrower.primary_email = 'fictional@example.com'
         self.loan.borrower.save()
-        PawnLoanEvent.objects.create(loan=self.loan, event_kind='DISBURSAL', effective_date=self.loan.loan_date,
-            payload={'values': {'principal': '1000', 'interest': '0', 'fees': '0'}}, payload_fingerprint='d' * 64,
-            idempotency_key='test-disbursal', created_by=self.actor)
         notice = create_pawn_loan_notice(self.loan.pk, notice_kind='AUCTION_NOTICE', channel='EMAIL',
             request_key='digital', source_auction_id=self.auction.pk, actor=self.actor, dispatch_due=False)
         NotificationJob.objects.filter(pk=notice.notification_job_id).update(status='SENT')

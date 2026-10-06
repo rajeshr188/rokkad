@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-05
+updated: 2026-10-06
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -9,6 +9,29 @@ related:
 ---
 
 # PawnLoan Financial Read Models
+
+LC-05 adds a verified terminal position: an ordinary CLOSED loan with its original
+agreement and a sole zero-valued opening at verified closure. At/after closure its
+debt and exposure are zero; before closure financial positions and earlier cash
+totals remain unavailable. No fictional payout, receipt, settlement or complete
+history is supplied. Unknown handover is separate from zero debt. See the
+[bounded evidence contract](../contracts/bounded-loan-evidence-lc05.md).
+
+Explicit opening paper allocations retain actual fee amounts and staff item
+principal splits. Replay checks them against posted allocations. Precisely timed
+review/5 checkpoints permit evidenced later same-day actions; review/1–4 remain
+end-of-day. These extend evidence completeness, not the shared monthly agreement
+or current payment priority.
+
+LC-03 settlement preparation shares these continuation facts across full release,
+renew-now and current auction recovery. Previews include completed eligible modern
+monthly charges; atomic commands recognize them once before settlement. Paired
+terminal catch-up and recorded/opening recognition retain their source-specific
+correction rules. Completed native charges remain owed after settlement reversal.
+Legacy contracts retain explicit completed-period finalization. Frozen schedule
+capacity limits allocation, not the actual debt collected after maturity. Interest
+rounding does not restrict policy/2 cash to whole rupees. A completed paper renewal
+records agreed facts; renewing now still requires current successor approval.
 
 The common Loans directory can also display retained historical closed claims,
 clearly labelled and linked to source details. These cards are not operational
@@ -79,6 +102,37 @@ partial release still requires its valuation/LTV checks. Completed paper activit
 requires explicit coverage review even on a native-origin loan. Coverage describes
 the checked book, separately from calculable debt and current valuation.
 See [LD-02 implementation](../implementation/loan-servicing-eligibility-ld02.md).
+
+LC-01 adds `selectors/continuation.py` as the common read boundary for repayment /
+notice positions and exposure (therefore collateral/risk inputs). It resolves the
+frozen contract and actual reporting date, reads recorded debt, and describes the
+eligible native-period, recorded-cumulative or opening-checkpoint interest through
+existing calculators. The recognition plan retains adapter evidence and periods;
+writers must recompute under their existing authority, locks and atomic commands.
+Legacy daily forecasts remain exposure-only and do not enter collection amounts.
+Opening collections retain after-cutover chronology/schedule checks; closed opening
+notices retain recorded debt. Coverage and valuation are independent of supported
+arithmetic. Native/recorded maturity forecast dispatch and specialized action writers
+remain for later slices. See the
+[inventory](../implementation/loan-continuation-inventory.md).
+
+LC-02 consolidates supported monthly bullet/flexible remaining-obligation forecasts
+through this boundary. The reporting date fixes recorded debt and known activity;
+the forecast horizon extends charges to maturity (or the reporting date if overdue).
+Later database receipts are excluded from earlier forecasts. Shared-policy openings
+continue their checkpoint with later known reductions and actual advance coverage.
+Original schedule rows remain immutable allocation capacity; earlier opening profiles
+retain their established schedule view. Forecasts are not current collection quotes.
+
+Risk V6 carries calculation support, financial-history start and principal-history
+basis. For openings, the existing `original_principal` compatibility field means
+principal brought forward at cutover; `principal_repaid` means payments since that
+checkpoint. Neither asserts original cash advanced or total earlier repayments.
+Presentation/export labels retain this limitation. Assessment freshness, transaction
+coverage, eligible valuation and calculation support are separate dimensions.
+Refreshing cannot certify absent paper activity or repair stale valuation. Recorded
+reports retain their recorded-balance basis and show saved assessment quality
+separately; repayment previews show supported collection amounts.
 
 LD-01 centralizes read-side servicing selection in
 `selectors/servicing_contract.py`. Repayment preview, reminder balance and repayment

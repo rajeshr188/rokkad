@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from apps.tenant_apps.loans.models import current_tenant_workspace_id
-from .balances import PawnLoanBalance, get_pawn_loan_balance
+from .balances import PawnLoanBalance
 from .transaction_completeness import TransactionCompleteness, transaction_completeness
 
 
@@ -43,6 +43,7 @@ class ServicingPosition:
     balance: PawnLoanBalance
     balance_basis: str
     transaction_coverage: TransactionCompleteness | None
+    continuation: object | None = None
 
 
 def resolve_servicing_contract(loan, *, as_of_date):
@@ -77,6 +78,14 @@ def resolve_servicing_contract(loan, *, as_of_date):
         review = opening["review"]
         if as_of_date < origin.effective_date:
             raise ServicingContractError("Servicing history before the migration cutover is unavailable.")
+        if opening["profile"] == "loan-terminal-evidence/1":
+            if len(events) != 1 or policy is None or policy.basis != "RECORDED_CONTRACT" or policy.policy_version != 2:
+                raise ServicingContractError("Terminal position requires its sole checkpoint and frozen recorded agreement.")
+            return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,
+                profile="loan-terminal-position/1", financial_history_from=origin.effective_date,
+                currency_quantum=policy.currency_quantum, rounding_scope="PER_ITEM_PER_ANNIVERSARY",
+                rounding_mode="HALF_UP", anniversary_rule="DAY_AFTER_ORIGINAL_ANNIVERSARY",
+                principal_reduction_rule="EARLIER_TRANSACTIONS_UNAVAILABLE")
         if review["profile"] not in COLLECTION_PROFILES:
             raise ServicingContractError("This opening has no supported collection continuation checkpoint.")
         if policy and policy.basis == "RECORDED_CONTRACT":
@@ -88,7 +97,7 @@ def resolve_servicing_contract(loan, *, as_of_date):
             or policy.currency_quantum.normalize() != Decimal(terms["interest_quantum"])):
             raise ServicingContractError("The reviewed opening must match its captured shared monthly policy.")
         checkpoint = {}
-        if review["profile"] == "loan-opening-review/4":
+        if review["profile"] in ("loan-opening-review/4", "loan-opening-review/5"):
             carry = review["continuation"]
             checkpoint = dict(checkpoint_period_number=carry["period_number"],
                 checkpoint_item_bases=tuple((opening["item_mapping"][row["item_id"]], Decimal(row["principal_base"])) for row in carry["bases"]),
@@ -146,25 +155,30 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
     """
     if operation not in {"REPAYMENT", "NOTICE"}:
         raise ServicingContractError("Unsupported servicing position operation.")
-    contract = resolve_servicing_contract(loan, as_of_date=as_of_date)
+    from .continuation import resolve_loan_continuation
+    continuation = resolve_loan_continuation(loan, as_of_date=as_of_date)
+    contract = continuation.contract
     basis = "RECORDED_DEBT"
+    if contract.profile == "loan-terminal-position/1":
+        return ServicingPosition(contract, continuation.recorded_balance, "VERIFIED_TERMINAL_POSITION",
+            transaction_completeness(loan, as_of_date) if include_coverage else None, continuation)
     if (contract.checkpoint_period_number is not None and as_of_date == contract.financial_history_from):
         # The verified checkpoint itself has no post-cutover catch-up. This is
         # a read, not authorization to insert an action on the cutover day.
-        balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+        balance = continuation.recorded_balance
     elif contract.origin_kind == "MIGRATION_OPENING" and (operation == "REPAYMENT" or loan.state == "ACTIVE"):
-        from apps.tenant_apps.loans.services.opening_servicing import opening_payment_balance
-        balance, _ = opening_payment_balance(loan, as_of_date=as_of_date)
+        from apps.tenant_apps.loans.services.opening_servicing import opening_release_context
+        opening_release_context(loan, as_of_date=as_of_date)
+        balance = continuation.collection_balance
         basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
+    elif contract.origin_kind == "MIGRATION_OPENING":
+        balance = continuation.recorded_balance
     elif contract.profile in {"recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3"}:
-        from apps.tenant_apps.loans.services.recorded_collections import collection_balance
-        balance = collection_balance(loan, as_of_date)
+        balance = continuation.collection_balance
         basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
     else:
-        balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
-        from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed, monthly_collection_balance
-        if loan.state == "ACTIVE" and started_month_charge_allowed(loan.policy_snapshot):
-            balance = monthly_collection_balance(loan, as_of_date)
+        balance = continuation.collection_balance
+        if continuation.recognition.collection_eligible:
             basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
     coverage = transaction_completeness(loan, as_of_date) if include_coverage else None
-    return ServicingPosition(contract, balance, basis, coverage)
+    return ServicingPosition(contract, balance, basis, coverage, continuation)

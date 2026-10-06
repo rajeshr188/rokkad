@@ -13,6 +13,10 @@ from apps.tenant_apps.loans.web.origination import borrower_outstanding
     "OPTIONS": {"context_processors": ["django.template.context_processors.request"]}}])
 class OriginationGuidanceTests(SimpleTestCase):
     def setUp(self):
+        clock = patch("apps.tenant_apps.loans.web.appraisal.timezone.now", return_value=datetime(2026,9,28,12,tzinfo=timezone.utc))
+        clock.start(); self.addCleanup(clock.stop)
+        limit = patch("apps.tenant_apps.loans.web.appraisal.maximum_quote_age_days", return_value=7)
+        limit.start(); self.addCleanup(limit.stop)
         mock_khata = patch("apps.tenant_apps.loans.web.origination.portfolio_summary", return_value=dict(
             active_count=0, unavailable=0, principal=Decimal(0), interest=Decimal(0)))
         mock_khata.start()
@@ -49,9 +53,9 @@ class OriginationGuidanceTests(SimpleTestCase):
         response = collateral_appraisal_suggestion(self.request(**values))
         self.assertContains(response, "6,000")
         self.assertNotContains(response, "exceeds this limit")
-        lookup.return_value.rate.effective_at = datetime(2026,9,27,tzinfo=timezone.utc)
+        lookup.return_value.rate.effective_at = datetime(2026,9,20,tzinfo=timezone.utc)
         response = collateral_appraisal_suggestion(self.request(**values))
-        self.assertContains(response, "same-day metal price")
+        self.assertContains(response, "no older than 7 calendar days")
         self.assertNotContains(response, "Maximum loan for this item")
 
     @patch("apps.tenant_apps.loans.access._resolve_loans_access")
