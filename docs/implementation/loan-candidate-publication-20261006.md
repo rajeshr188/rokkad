@@ -196,6 +196,76 @@ records were copied off-server. This checkpoint has not copied or verified actua
 R2 media; database recovery and media recovery remain distinct. Production
 migrations, loan financial writes and routing changes were not performed.
 
+## Approved restore upgrade rehearsal
+
+The large local application-image transfer was too slow. Two unfinished loads
+were stopped, without replacing the production image or changing routing.
+Instead, the clean `59f62107` Git archive was uploaded and rebuilt on the server.
+The input archive SHA-256 matches the local committed build:
+`3b63a25890e9e4aec28bc9348d823ecfc26c3bd287be6bd1f6ec2406f4439e94`.
+Staging uses `rokkad:loan-continuation-59f62107-server`, image ID
+`sha256:2357a5c1974c3a3944b6cc301dc025a1056b0297101f2d8719d2f6c21d43adef`.
+This server-built artifact is distinct from the earlier local image; its source
+commit is identical to the green full CI. All server rehearsal reports identify
+this actual artifact, rather than claiming the local image was transferred.
+Neither artifact has been deployed. A later release must select the same tested
+artifact for all readers.
+
+The first owner-runner attempt stopped before migrations because production uses
+`POSTGRES_PASSWORD_FILE`. The corrected runner reads the established secret only
+inside the server and supplies it only to ephemeral owner commands. Runtime
+settings contain no owner credentials. A new restricted non-bypass runtime role
+has grants for staging; provider credentials, production encryption keys and
+shared cache configuration are absent. Mail/providers are disabled; storage/cache
+are private and no public listener or worker is started.
+
+Owner-only migrations, restricted startup, schema drift and owner/pending-migration
+startup rejection pass. All **183** original tables other than Django migration,
+content-type and permission metadata retain every original row/value (new additive
+columns excluded from original projections). These three metadata tables are
+expected to gain migration/model/permission rows. No source loan, approval,
+event, snapshot, document reference or archive has been admitted or rewritten.
+Full Workspace inventories and the migrated cold recovery are still running.
+
+The actual copied cases also pass restricted read-only checks: **RA00500** is
+ACTIVE, principal 60,000, three months at 2%, supported imported opening profile
+`original-anniversary-upfront-inclusive/2`. Its calculated collection amount is
+61,200 on 6 October, against 60,000 recorded debt; this is an internal computed
+position, not a staff-certified receipt/collection claim. **D01623** is still DRAFT,
+24 September, principal 2,100 at 4%, three months and zero recorded debt. Its
+retained-native adapter has no qualifying original-day approval; fresh-draft
+admission correctly refuses posted history. Explicit correction remains required.
+Queries with no Workspace context or targeting Lakshmi inside JCL return zero
+ordinary rows. No case probe posts finance or completes source acceptance.
+
+## Real-data archive-query finding
+
+The approved restore found a performance defect that small generated fixtures did
+not expose. JCL's unadmitted archive count ran for more than **600 seconds**.
+PostgreSQL had already auto-analyzed both restored tables; missing restore
+statistics were ruled out. A masked `EXPLAIN` showed the combined admission
+predicate scanning the Workspace's imports for each retained row.
+
+The read selector now asks whether a newer snapshot with the exact same scoped
+identity exists, and separates ordinary bound-ID and old-document-ID admission
+matches into equivalent `EXISTS` expressions. Existing source-identity indexes
+remain sufficient; PostgreSQL uses hashed admission subplans. Names, original
+number matching, financial origins and tenant-authority rules are unchanged.
+All **14 browsing/inventory regressions pass** (13.424s). The provisional read-only
+module probe on the real restore returns unchanged counts:
+
+| Workspace | Unadmitted archive identities | Query seconds |
+| --- | ---: | ---: |
+| JCL | 26,664 | 3.028 |
+| JSK | 3,840 | 0.727 |
+| Lakshmi | 8,711 | 0.689 |
+
+This bounded diagnostic explicitly mounted the edited selector over the earlier
+image; it is not claimed as a new committed-image acceptance. The old slow
+inventory job was stopped. Publish the corrected source, rebuild its actual
+artifact, rerun full CI and complete normal inventories/cold recovery under that
+artifact before claiming release verification.
+
 ## Selected-source correction finding
 
 A further restricted, repeatable-read/read-only probe at **17:02:26 IST** found

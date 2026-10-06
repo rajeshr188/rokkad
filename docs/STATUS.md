@@ -118,6 +118,27 @@ migration/runtime rehearsal is next; actual media, staff acceptance, D01623's
 correction and production deployment remain open. Production was not migrated
 or financially changed by this copy.
 
+Two unfinished image-load attempts were stopped because the local-to-server
+transfer was too slow. A clean server build uses the same pinned **59f62107**
+source archive, verified by its recorded SHA-256. Staging uses its separately
+identified server image; neither image has been deployed. Owner-only migrations
+and restricted runtime/schema checks pass on the approved restore. All **183
+pre-existing non-migration/permission-metadata table projections** retain every
+source row/value. Selected RA00500/D01623 checks and no-context/cross-Workspace
+RLS checks pass read-only. Full Workspace inventories and cold recovery remain
+in progress; actual media and source-book acceptance remain separate.
+
+The real restore exposed an archive-directory performance defect: the original
+unadmitted-archive count ran for over **600 seconds**, despite existing optimizer
+statistics. The combined scoped admission `OR` caused a repeated Workspace import
+scan. Equivalent separate `EXISTS` predicates permit hashed identity sets; latest
+snapshots use absence of a newer exact-identity row. On the real restore the counts
+are **26,664 / 3,840 / 8,711** in **3.028 / 0.727 / 0.689 seconds**. All **14
+browsing/inventory regressions pass** (13.424s), including scope and RLS checks.
+No index, schema, financial rule or source data is changed by this correction.
+The old slow rehearsal was stopped; the corrected candidate must be published,
+receive full CI and complete inventories/cold recovery before release acceptance.
+
 D01623 exposes an unsupported correction shape: its retained approval freezes
 2 October, and its digital policies were entered after the actual 24 September
 payout. A generated restricted-role reproduction passes (one test, 0.736s),

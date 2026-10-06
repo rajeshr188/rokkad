@@ -1,6 +1,6 @@
 """Paged ordinary loans and retained closed source records, without admission."""
 from django.core.paginator import Paginator
-from django.db.models import BooleanField, Case, CharField, Exists, F, Func, OuterRef, Q, Subquery, Value, When
+from django.db.models import BooleanField, Case, CharField, Exists, F, Func, OuterRef, Q, Value, When
 from django.db.models.fields.json import KT
 from django.db.models.functions import Cast, Concat, Replace
 
@@ -19,8 +19,8 @@ def unadmitted_historical_records(workspace_id):
     if current_tenant_workspace_id() != workspace_id:
         raise ValueError('Loan browsing requires the active Workspace.')
     rows = HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id)
-    latest = rows.filter(source_namespace=OuterRef('source_namespace'),
-        source_system=OuterRef('source_system'), source_id=OuterRef('source_id')).order_by('-pk')
+    newer = rows.filter(source_namespace=OuterRef('source_namespace'),
+        source_system=OuterRef('source_system'), source_id=OuterRef('source_id'), pk__gt=OuterRef('pk'))
     prefix = Concat(Value('legacy:'), Replace(Cast(F('source_namespace'), CharField()), Value('-'), Value('')), Value(':'))
     valid_legacy = (Q(source_system__startswith=prefix)
         & Q(source_system__regex=r'^legacy:[0-9a-f]{32}:[a-z][a-z0-9_]{0,62}$')
@@ -33,9 +33,12 @@ def unadmitted_historical_records(workspace_id):
     origins = HistoricalLoanImport.objects.filter(workspace_id=workspace_id,
         source_namespace=OuterRef('source_namespace')).annotate(
             old_id=KT('document__loan__id'), old_system=KT('document__loan__borrower__source_system'))
-    matches = origins.filter(Q(source_id=OuterRef('binding')) | Q(
-        source_id=OuterRef('source_id'), old_id=OuterRef('source_id'), old_system=OuterRef('source_system')))
-    return rows.filter(pk=Subquery(latest.values('pk')[:1])).annotate(admitted=Exists(matches)).filter(
+    # Separate EXISTS lets PostgreSQL hash the two scoped identity sets instead
+    # of rescanning every Workspace import for each retained archive snapshot.
+    bound_matches = origins.filter(source_id=OuterRef('binding'))
+    old_matches = origins.filter(source_id=OuterRef('source_id'),
+        old_id=OuterRef('source_id'), old_system=OuterRef('source_system'))
+    return rows.filter(~Exists(newer)).annotate(admitted=Exists(bound_matches) | Exists(old_matches)).filter(
         Q(admitted=False) | Q(valid_binding=False))
 
 
