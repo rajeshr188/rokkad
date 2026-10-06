@@ -285,9 +285,16 @@ rejection of owner/pending-migration startup. Full pre-migration and migrated co
 restores match every one of **202 public tables and nine media files**. The fictional
 local source remains unchanged. Migration changes apply only to disposable targets.
 
-**Remaining:** current production inventory and unsupported-case disposition;
-actual source-book/staff acceptance; committed/CI release identity and a current
-production backup/off-device recovery check before separately authorized deployment.
+Candidate **59f62107** is committed/pushed and its full release CI passes. The owner
+explicitly approved the same-server private production copy: all **186 public
+tables** match the consistent 6 October snapshot. No dump/customer records were
+downloaded locally; production migrations and financial writes were not performed.
+See the [execution record](../implementation/loan-candidate-publication-20261006.md).
+
+**Remaining:** production-copy upgrade/recovery, candidate cohort inventory and
+unsupported-case disposition; D01623's explicit reversed-origin correction;
+actual source-book/staff acceptance and current database/media recovery evidence
+before separately authorized deployment.
 The local 15-loan legacy cohort and generated source examples do not fulfill those
 acceptance gates. No automatic contract adoption or archive conversion is proposed.
 See [delivery](../implementation/loan-release-acceptance-lc07.md) and

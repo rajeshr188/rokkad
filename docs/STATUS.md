@@ -88,13 +88,14 @@ fictional recovery databases, with all 202 tables unchanged. Final corrected
 exact-head CI remains pending; production-copy staging is still awaiting approval.
 
 Final test/ordering correction **59f62107** is committed/pushed. Its
-[full rerun](https://github.com/rajeshr188/rokkad/actions/runs/37473199386) is in
-progress. Its clean committed image passes restricted production-settings startup,
+[full rerun](https://github.com/rajeshr188/rokkad/actions/runs/37473199386)
+**passes every release gate**. Its clean committed image passes restricted production-settings startup,
 schema/cohort reads and owner-role rejection on both fictional recovery databases;
 all **202 public tables remain unchanged**. The runtime loan behavior is unchanged
 from e3c95ba4, whose entire Loans suite passed. This final update records execution
 evidence only; the candidate artifact and CI identity remain pinned to 59f62107.
-No production copy, migration, financial admission or deployment was performed.
+The approved production-copy execution is recorded below; production migration,
+financial admission and deployment have not been performed.
 
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
@@ -107,9 +108,15 @@ tenure and no later payment/closure. That confirmation does not post debt.
 
 Automatic approval review rejected the full production-to-staging database copy
 because the general staging authorization did not explicitly cover all sensitive
-customer records and the destination. Specific server-only-copy approval has been
-requested; no staging copy was created. Local checks continue; actual staff
-acceptance, production-copy rehearsal and deployment remain open.
+customer records and the destination. After the purpose and exact destination
+were explained, the owner explicitly approved the server-only copy. At **19:26:18
+IST** a repeatable-read/read-only exported production snapshot was backed up and
+restored into `rokkad_lc07_stage_b69df6ab_20261006` on the same host. All **186
+public tables match exactly**. The 83,215,176-byte backup stays in the private
+server folder; no full dump or customer records were downloaded locally. Candidate
+migration/runtime rehearsal is next; actual media, staff acceptance, D01623's
+correction and production deployment remain open. Production was not migrated
+or financially changed by this copy.
 
 D01623 exposes an unsupported correction shape: its retained approval freezes
 2 October, and its digital policies were entered after the actual 24 September

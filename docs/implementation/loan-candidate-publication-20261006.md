@@ -114,7 +114,7 @@ separate pending gates.
 
 Final test/ordering correction `59f62107067c6311cbaed77d4761a78c8f4a9b6e` is
 committed and pushed. Its [full rerun](https://github.com/rajeshr188/rokkad/actions/runs/37473199386)
-is in progress. Runtime loan code is unchanged from the fully passing Loans
+**passes every release gate**. Runtime loan code is unchanged from the fully passing Loans
 candidate e3c95ba4; the final changes concern Rates test isolation/grants, workflow
 ordering and execution documentation. Every release check remains enabled.
 The clean final image is
@@ -122,8 +122,8 @@ The clean final image is
 Production-settings restricted startup, schema/cohort reads and owner-role startup
 rejection pass on both fictional recovery databases; all **202 public tables
 remain unchanged**. The later documentation-only evidence commit does not replace
-the pinned candidate image/source/CI identity. Full CI, private production-copy
-approval, actual source acceptance and the D01623 correction remain open; no
+the pinned candidate image/source/CI identity. Full CI is green and the approved
+private copy is exact; upgrade/recovery, actual source acceptance and the D01623 correction remain open; no
 production deployment or financial admission is claimed.
 CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
@@ -176,14 +176,25 @@ the sanitized baseline. Private probe evidence is under
 
 Automatic approval review rejected the full server-side production copy because
 the general staging authorization did not explicitly cover the sensitive payload
-and destination. The rejected operation did not execute. Specific approval is
-pending for copying `rokkad_production_20260924` into the new private database
+and destination. The rejected operation did not execute. The owner subsequently
+explicitly approved copying `rokkad_production_20260924` into the new private database
 `rokkad_lc07_stage_b69df6ab_20261006` on the same established server. Full backups
-would remain in its private deployment folder, without a customer-data download
+remain in its private deployment folder, without a customer-data download
 to this local workspace. A separate runtime role, local file storage, disabled
 notifications/provider calls and no public routing are required. Production
 data/application remain unchanged. This duplicates all tenants' sensitive records
-and consumes disk; no workaround or indirect execution is authorized.
+and consumes disk; it was retried only after explicit approval.
+
+The approved copy completed from a consistent **6 October 19:26:18 IST** exported
+read-only snapshot. All **186 public tables** match the new restore by row counts
+and sorted complete-row fingerprints. The compressed backup is **83,215,176
+bytes**, SHA-256
+`f2baf7ade484450a05e975e0cc154993e36e5bb8fc4c7beaa176cd0bb01bb0b2`.
+Backup, source fingerprints and runtime credentials remain inside the server's
+mode-0700 `loan-continuation-20261006-b69df6ab` folder. No full dump/customer
+records were copied off-server. This checkpoint has not copied or verified actual
+R2 media; database recovery and media recovery remain distinct. Production
+migrations, loan financial writes and routing changes were not performed.
 
 ## Selected-source correction finding
 
