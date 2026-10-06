@@ -2,36 +2,30 @@
 from datetime import datetime, timezone
 
 from django.contrib.auth import get_user_model
-from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 
 from apps.orgs.models import Company, Membership, Role
-from apps.tenancy.context import workspace_context
-from apps.tenant_apps.rates.models import Rate
-from apps.tenant_apps.rates.services import withdraw_quote
+from apps.tenancy.testing import historical_migration_database
 
 
 class QuoteMigrationTests(TransactionTestCase):
     def test_existing_values_dates_and_unknown_authors_are_preserved(self):
         before = [("rates", "0002_enable_workspace_rls")]
         after = [("rates", "0004_rate_daily_confirmation")]
-        executor = MigrationExecutor(connection)
-        executor.migrate(before)
-        try:
-            old_apps = executor.loader.project_state(before).apps
-            owner = get_user_model().objects.create_user(username="quote-upgrade-owner")
-            workspace = Company.objects.create(name="Upgrade", schema_name="quote-upgrade", owner=owner, creator=owner)
-            Membership.objects.create(user=owner, company=workspace, role=Role.objects.get_or_create(name="Owner")[0])
+        owner = get_user_model().objects.create_user(username="quote-upgrade-owner")
+        workspace = Company.objects.create(name="Upgrade", schema_name="quote-upgrade", owner=owner, creator=owner)
+        membership = Membership.objects.create(user=owner, company=workspace, role=Role.objects.get_or_create(name="Owner")[0])
+        with historical_migration_database(self, before, [membership]) as (target, old_apps):
             old_time = datetime(2025, 1, 2, 10, 15, tzinfo=timezone.utc)
-            with workspace_context(workspace.pk):
-                source = old_apps.get_model("rates", "RateSource").objects.create(workspace_id=workspace.pk, name="Old market", location="Local", tax_included=True)
-                quote = old_apps.get_model("rates", "Rate").objects.create(workspace_id=workspace.pk, rate_source_id=source.pk, metal="Silver", purity="22k", buying_rate=0, selling_rate=1)
-                old_apps.get_model("rates", "Rate").objects.filter(pk=quote.pk).update(timestamp=old_time)
-        finally:
-            MigrationExecutor(connection).migrate(after)
-        with workspace_context(workspace.pk):
-            current = Rate.objects.get(pk=quote.pk)
+            old_rate = old_apps.get_model("rates", "Rate")
+            source = old_apps.get_model("rates", "RateSource").objects.using(target.alias).create(workspace_id=workspace.pk, name="Old market", location="Local", tax_included=True)
+            quote = old_rate.objects.using(target.alias).create(workspace_id=workspace.pk, rate_source_id=source.pk, metal="Silver", purity="22k", buying_rate=0, selling_rate=1)
+            old_rate.objects.using(target.alias).filter(pk=quote.pk).update(timestamp=old_time)
+            executor = MigrationExecutor(target)
+            executor.migrate(after)
+            rate = executor.loader.project_state(after).apps.get_model("rates", "Rate")
+            current = rate.objects.using(target.alias).get(pk=quote.pk)
             self.assertEqual(current.effective_at, old_time)
             self.assertEqual(current.timestamp, old_time)
             self.assertEqual(current.buying_rate, 0)
@@ -39,6 +33,12 @@ class QuoteMigrationTests(TransactionTestCase):
             self.assertIsNone(current.recorded_by_id)
             self.assertEqual(current.source_snapshot["name"], "Old market")
             self.assertTrue(current.source_snapshot["legacy"])
-            withdrawal = withdraw_quote(workspace=workspace, actor=owner, quote_id=current.pk, reason="Legacy quote has invalid basis")
+            # Verify the upgraded database guard can retain and withdraw an old
+            # invalid quote. Ordinary command permission/RLS tests run separately.
+            withdrawal = rate.objects.using(target.alias).create(workspace_id=workspace.pk,
+                rate_source_id=source.pk, metal=current.metal, currency=current.currency,
+                purity=current.purity, buying_rate=current.buying_rate, selling_rate=current.selling_rate,
+                effective_at=current.effective_at, is_withdrawal=True, supersedes_id=current.pk,
+                recorded_by_id=owner.pk, reason="Legacy quote has invalid basis")
             self.assertTrue(withdrawal.is_withdrawal)
             self.assertEqual(withdrawal.buying_rate, 0)

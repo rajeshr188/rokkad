@@ -74,6 +74,19 @@ The 13be3ae9 clean image passes production-settings restricted startup, schema/
 cohort reads and owner-role rejection on both fictional recovery databases;
 all 202 public tables remain unchanged. Full corrected CI still needs to pass.
 
+Candidate **e3c95ba4** is committed/pushed and its full CI passes all **2,089
+Loans tests** (933.489s), 203 foundation checks and 277 billing/mail checks.
+The subsequent quote gate ran 34 tests with two errors: another old migration
+test downgraded the shared schema across Loans 0058, and the affected RLS reader
+then lacked the quote-age column. The Rates migration test now uses the isolated
+historical database helper; its restricted test role additionally has read-only
+access to the Loans quote-age settings prerequisite. All **34 quote/migration/
+isolation regressions pass locally** (28.279s). Quote checks now run before the
+long Loans suite for earlier failure feedback; every gate is retained.
+The e3c95ba4 image passes the same restricted production-settings checks on both
+fictional recovery databases, with all 202 tables unchanged. Final corrected
+exact-head CI remains pending; production-copy staging is still awaiting approval.
+
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
 to fictional local recovery. No candidate migrations or financial writes have

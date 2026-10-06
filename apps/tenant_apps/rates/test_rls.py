@@ -28,6 +28,7 @@ class RateRLSIsolationTests(TransactionTestCase):
                 f"TO {quoted_role}"
             )
             cursor.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON rates_rate TO {quoted_role}")
+            cursor.execute(f"GRANT SELECT ON loans_loanoriginationsettings TO {quoted_role}")
             cursor.execute(
                 f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public "
                 f"TO {quoted_role}"

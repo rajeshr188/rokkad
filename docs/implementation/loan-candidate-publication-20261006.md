@@ -88,6 +88,29 @@ The 13be3ae9 image is
 Production-settings restricted startup, schema/cohort reads and owner-role startup
 rejection pass on both fictional recovery databases. All **202 public tables remain
 unchanged**. This is still not production-copy recovery or source acceptance.
+
+Commit `e3c95ba4c137f5c83a9d14a872f6b0b41c9aa1d8` is pushed. Its
+[CI run](https://github.com/rajeshr188/rokkad/actions/runs/37467856353) passes
+all **2,089 Loans tests** (933.489s), all **203 foundation checks** and all
+**277 billing/mail checks**. The later 34-test quote gate fails in its old
+migration test, which downgrades the shared database across irreversible Loans
+0058; the following RLS quote reader then sees a missing quote-age column.
+The migration rehearsal now uses its own empty historical database, preserves
+legacy values/dates/unknown authors and checks withdrawal through the upgraded
+database guard. Command permissions and RLS remain covered by the other quote
+tests. Once schema isolation is corrected, the temporary Rates-only test role
+also needs read-only access to Loans quote-age settings; that grant is added
+without superuser, bypass-RLS or settings-write privileges.
+All **34 quote/migration/isolation checks pass locally** (28.279s). The workflow
+runs this shorter gate before Loans for faster migration-failure feedback; no
+check is removed. Final corrected exact-head CI is pending.
+
+The e3c95ba4 image is
+`sha256:6e7589ad269751b37ce818859232fd85ab94a694c9e32a813e64fc6ae2cffd49`.
+Production-settings restricted startup, schema/cohort reads and owner-role startup
+rejection again pass on both fictional recovery databases. All **202 public
+tables remain unchanged**. Production-copy approval and actual acceptance remain
+separate pending gates.
 CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
 production-copy migration rehearsal are additional gates; a branch push does not
