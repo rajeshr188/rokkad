@@ -157,10 +157,11 @@ class LoansAccessTests(SimpleTestCase):
         self.assertTrue(_can_manage_storage(request))
         access.can.assert_called_once_with(LOANS_OWNER_ACTION)
 
+    @patch("apps.tenant_apps.loans.services.action_access.require_workspace_action")
     @patch("apps.tenant_apps.loans.services.pawn_reversal.resolve_workspace_access")
     @patch("apps.tenant_apps.loans.services.pawn_auctions.resolve_workspace_access")
     def test_financial_services_use_workspace_admin_action(
-        self, resolve_auction_access, resolve_reversal_access
+        self, resolve_auction_access, resolve_reversal_access, require_workspace_action
     ):
         denied = self._access(allowed={LOANS_WORKSPACE_ACTION})
         resolve_auction_access.return_value = denied
@@ -170,12 +171,14 @@ class LoansAccessTests(SimpleTestCase):
             require_auction_administrator(self.user, self.workspace)
         with self.assertRaises(PawnReversalError):
             require_reversal_administrator(self.user, self.workspace)
+        require_workspace_action.assert_not_called()
 
         allowed = self._access(allowed={LOANS_ADMIN_ACTION})
         resolve_auction_access.return_value = allowed
         resolve_reversal_access.return_value = allowed
         require_auction_administrator(self.user, self.workspace)
         require_reversal_administrator(self.user, self.workspace)
+        require_workspace_action.assert_called_once_with(self.workspace, self.user, "data.edit")
 
     def test_financial_report_and_view_helpers_consume_cached_access(self):
         admin_access = self._access(allowed={LOANS_ADMIN_ACTION})

@@ -55,11 +55,15 @@ whether it remains guarded, requires supported evidence or needs a later slice.
 
 ## Operator acceptance against source records
 
-The owner selected **JCL RA0500** as the first real example on 6 October. Its
-identification is not acceptance of its balance or confirmation of its entry
-channel. Retrieve its actual agreement/events and compare with the source record;
-the technical fictional database has no verified copy of this loan. A real Lakshmi
-paper example and staff confirmation remain outstanding.
+The owner confirmed **JCL RA00500** on 6 October, correcting RA0500. Live read-only
+inspection identifies an imported opening, not direct lending. It covers the
+opening row below; a real direct-entry source comparison remains outstanding.
+The owner selected **Lakshmi D01623**, a reversed-payout draft, and confirmed the
+actual paper payout and terms: 24 September, 2,100 principal at 4% monthly,
+84 advance interest, 10 document charge, 2,006 proceeds, three months and no later
+receipt/closure. This establishes the owner's source statement, not a posted
+financial origin or completed candidate acceptance. See the
+[publication/source record](../implementation/loan-candidate-publication-20261006.md).
 
 Staff check these examples against an actual paper register, receipt or direct
 transaction; generated examples verify software behavior only. Keep references
@@ -89,7 +93,9 @@ No reminder or collection claim gains certification from an inventory run.
    run application-boundary, documentation, schema-drift and runtime-startup gates.
 3. Restore a full database/media backup into a new isolated target and compare
    every public table and individual media-file fingerprint before migration.
-4. Rehearse migrations 0061–0063 through owner-only migration settings. Verify
+4. Rehearse the actual source-to-candidate migration range through owner-only
+   settings: the 6 October production baseline is Loans 0032 / portability 0017,
+   so Loans 0033–0063 and intervening dependencies are required, not only 0061–0063. Verify
    restricted runtime startup and rejection of pending-migration/owner startup.
 5. Back up the migrated candidate, cold restore into another new target, compare
    all table/media fingerprints and repeat restricted startup and cohort reads.

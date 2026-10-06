@@ -14,7 +14,19 @@ the separately completed LD work already committed on
 restricted runtime and fictional full recovery are recorded in
 [LC-07 delivery](loan-release-acceptance-lc07.md).
 
-Publication is in progress. CI must run against the exact published commit before
+Candidate `b69df6ab71af27a85100cfa59325bd85f097323f` is committed and pushed.
+Its clean committed-source image is `rokkad:loan-continuation-b69df6ab`, digest
+`sha256:2453bbf53a5cd0642138b76d7900a2aad7cd7230638ec556162063e8ae4d629a`.
+The first [exact-commit CI run](https://github.com/rajeshr188/rokkad/actions/runs/37455205020)
+failed in foundation checks: 14 journey fixtures omitted current public-trial
+requirements, and one auction-access mock omitted the command business-write
+prerequisite. The fixtures are corrected without changing runtime policy:
+verified sign-in email, explicitly selected six-member trial and current consent;
+second-Workspace isolation fixtures use separate test commercial access. The
+auction unit fixture verifies delegation to the business-write boundary.
+All **24 journey/access tests pass** (117.532s) in isolated PostgreSQL QA; current
+docs/import boundaries and whitespace checks pass. A new exact-head CI run is required.
+CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
 production-copy migration rehearsal are additional gates; a branch push does not
 deploy the application. No live loan, source archive or risk snapshot is changed
@@ -44,13 +56,35 @@ openings, JSK 145/1,514 and Lakshmi 2/2,439. Counts of source events are not cur
 active-origin counts: reversals and current state must be examined by the candidate
 on an isolated, consistent production restore.
 
-Exact **RA0500** is absent from JCL's ordinary loans and archive numbers. One
-leading-zero match, **RA00500**, is an active loan dated 2 September 2026. The owner
-has been asked to confirm that identity before it is used as the selected case.
-A real Lakshmi paper reference and source/staff confirmation remain outstanding.
+The owner confirmed **JCL RA00500** (correcting RA0500). It is an active loan dated
+2 September 2026, principal 60,000 at 2% monthly, three-month tenure, admitted by
+a 24 September migration opening. It is an opening example, not direct lending.
+Its recorded principal is not proof of collection interest or complete books.
+
+The owner also selected **Lakshmi D01623**. Rokkad stores a DRAFT with an October
+2 disbursal and its reversal, so its current recorded debt is zero. The owner
+confirmed the actual paper facts: 24 September payout, principal 2,100 at 4%
+monthly, 84 advance interest and 10 document charge, net proceeds 2,006,
+three-month tenure and no later receipts or closure. Verification must preserve
+the reversal and test the retained-native correction adapter; no actual source
+event or draft has been changed. The current 12-month standing default must not
+replace the actual three-month agreement.
 Borrower names, documents, attachments and free-text evidence are not included in
 the sanitized baseline. Private probe evidence is under
 `.tmp/lc07-publish-20261006/`.
+
+## Production-copy approval gate
+
+Automatic approval review rejected the full server-side production copy because
+the general staging authorization did not explicitly cover the sensitive payload
+and destination. The rejected operation did not execute. Specific approval is
+pending for copying `rokkad_production_20260924` into the new private database
+`rokkad_lc07_stage_b69df6ab_20261006` on the same established server. Full backups
+would remain in its private deployment folder, without a customer-data download
+to this local workspace. A separate runtime role, local file storage, disabled
+notifications/provider calls and no public routing are required. Production
+data/application remain unchanged. This duplicates all tenants' sensitive records
+and consumes disk; no workaround or indirect execution is authorized.
 
 ## Next verification gates
 

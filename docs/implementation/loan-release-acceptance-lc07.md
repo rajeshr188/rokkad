@@ -7,7 +7,10 @@ tags: [loans, release, verification]
 
 # LC-07 release acceptance
 
-Technical preparation and recovery checks pass locally. Production cohort inventory, actual
+Technical preparation and recovery checks pass locally. This records the fictional
+local rehearsal; the subsequent
+[publication and live-source verification](loan-candidate-publication-20261006.md)
+supersedes its publication/access state. Real production-copy recovery, complete
 source-book/staff acceptance and deployment remain unperformed. The
 [operator release guide](../flows/loan-continuation-release-acceptance.md) records
 the exact gates and current acceptance matrix.

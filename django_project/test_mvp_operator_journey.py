@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from uuid import uuid4
 from unittest.mock import patch
 
+from allauth.account.models import EmailAddress
 from PIL import Image
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -19,7 +20,9 @@ from django.utils import timezone
 
 from apps.orgs.models import Company, Membership, Role
 from apps.subscriptions.models import Plan, Subscription
+from apps.subscriptions.public_trial import PUBLIC_TRIAL_TERMS, owner_has_public_trial
 from apps.tenancy.context import current_workspace_id, workspace_context
+from apps.tenancy.testing import start_workspace_trial
 from apps.tenant_apps.loans.models import (
     LoanDocumentIssue, LoanLicense, LoanProductVersion, LoanSeries, PawnLoan, PawnLoanRelease,
 )
@@ -40,13 +43,19 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         media = TemporaryDirectory()
         self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
-        self.owner = get_user_model().objects.create_user(username="mvp-owner")
+        self.owner = get_user_model().objects.create_user(
+            username="mvp-owner", email="mvp-owner@example.invalid",
+        )
+        EmailAddress.objects.create(
+            user=self.owner, email=self.owner.email, verified=True, primary=True,
+        )
         Role.objects.get_or_create(name="Owner")
         self.member_role, _ = Role.objects.get_or_create(name="Member")
         self.plan = Plan.objects.create(
             name="MVP trial", tier=Plan.PlanTierChoices.STARTER,
-            price=0, description="Acceptance catalog", trial_days=30,
+            price=0, description="Acceptance catalog", trial_days=30, max_users=6,
         )
+        self.enterContext(override_settings(BILLING_PUBLIC_TRIAL_PLAN_ID=self.plan.pk))
         self.client = Client(enforce_csrf_checks=True)
         self.client.force_login(self.owner)
         self.today = timezone.localdate()
@@ -99,9 +108,15 @@ class MVPOperatorJourneyTests(TransactionTestCase):
             destination.request["PATH_INFO"],
             reverse("workspace_subscriptions:plan-list", kwargs={"workspace_slug": workspace.slug}),
         )
-        self._post(reverse("workspace_subscriptions:start-trial", kwargs={
-            "workspace_slug": workspace.slug, "plan_id": self.plan.pk,
-        }), expected_url=reverse("workspace_slug_dashboard", kwargs={"workspace_slug": workspace.slug}))
+        if owner_has_public_trial(self.owner):
+            # A second Workspace is an isolation fixture, not a second public offer.
+            # PublicTrialTests separately enforce one public trial per owner.
+            start_workspace_trial(workspace)
+        else:
+            self._post(reverse("workspace_subscriptions:start-trial", kwargs={
+                "workspace_slug": workspace.slug, "plan_id": self.plan.pk,
+            }), {"accepted_terms": PUBLIC_TRIAL_TERMS},
+                expected_url=reverse("workspace_slug_dashboard", kwargs={"workspace_slug": workspace.slug}))
         self.assertEqual(Subscription.objects.get(company=workspace).status, "trial")
         self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": workspace.slug}))
         return workspace

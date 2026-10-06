@@ -17,13 +17,32 @@ and retained archive snapshots **26,664 / 3,840 / 8,711**. Staff are operating t
 live application, so these are dated snapshot counts rather than an unchanged
 production fingerprint claim.
 
+Candidate **b69df6ab** is committed and pushed on
+`work/loan-servicing-contract-ld01`; its clean committed-source image builds.
+The first exact-commit GitHub CI run failed in the foundation step: 14 first-loan
+journey fixtures omitted the current public-trial consent/catalog/email requirements,
+and one auction-access mock omitted the command's business-write prerequisite.
+The fixtures now use the verified sign-in email, explicitly selected six-member
+public offer and current consent. Additional isolation Workspaces use separate
+test access, not another public signup. The auction unit test verifies delegation
+to the business-write boundary. All **24 corrected journey/access tests pass**
+(117.532s); documentation/import-boundary/whitespace checks pass. A new exact-head
+CI run is required; CI is not yet green.
+
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
 to fictional local recovery. No candidate migrations or financial writes have
-been applied to production. JCL's exact RA0500 is absent; **RA00500**, active and
-dated 2 September, is the sole leading-zero match. Owner identity confirmation
-and a real Lakshmi paper example have been requested. Publication/CI and isolated
-production staging are being completed; actual staff acceptance remains open.
+been applied to production. The owner confirmed **JCL RA00500**, active and dated
+2 September, and **Lakshmi D01623**. D01623 is a reversed-payout draft in Rokkad;
+the owner confirmed its actual 24 September paper payout: 2,100 principal at 4%
+monthly, 84 advance interest, 10 document charge, 2,006 proceeds, three-month
+tenure and no later payment/closure. That confirmation does not post debt.
+
+Automatic approval review rejected the full production-to-staging database copy
+because the general staging authorization did not explicitly cover all sensitive
+customer records and the destination. Specific server-only-copy approval has been
+requested; no staging copy was created. Local checks continue; actual staff
+acceptance, production-copy rehearsal and deployment remain open.
 See [execution record](implementation/loan-candidate-publication-20261006.md).
 
 ## LC-07 release preparation verified locally (6 October)
