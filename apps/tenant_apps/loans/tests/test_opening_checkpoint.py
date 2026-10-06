@@ -174,6 +174,9 @@ class OpeningCheckpointTests(imports.OpeningImportFixture):
     restore = restores.OpeningRestoreTests.restore
 
     def setUp(self):
+        if self._testMethodName == "test_exact_recovery_preserves_checkpoint_rows_and_new_guard_fingerprint":
+            from .recovery_fixtures import lock_recovery_fixture_tables
+            lock_recovery_fixture_tables()
         super().setUp()
         from apps.tenant_apps.data_portability.models import SourceIdentity
         from apps.tenant_apps.loans.services.license_series import create_license

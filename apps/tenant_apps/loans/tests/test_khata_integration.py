@@ -330,7 +330,8 @@ class KhataIntegrationTests(CorrectionFixture, TestCase):
             self.assertEqual(cover["value"], Decimal("10000"))
             self.assertEqual(cover["capacity"], 0)
             self.assertTrue(cover["undercovered"])
-        with self.later(0, 1), workspace_context(self.workspace.pk):
+        # Quotes remain eligible through the configured seven-day lending window.
+        with self.later(0, 8), workspace_context(self.workspace.pk):
             account = summary_accounts(workspace=self.workspace).get(pk=self.account.pk)
             summary = account_summary(account)
             cover = collateral_cover(account, summary)

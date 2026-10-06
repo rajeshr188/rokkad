@@ -60,6 +60,20 @@ competing with the test's long transaction; the isolated exact-recovery rerun
 passes. The missing-submission-reference runtime bug is corrected without
 weakening retry identity. Correctly discovered full exact-head CI remains pending.
 
+Full CI on **13be3ae9** passes migrations/startup, foundation and billing/mail,
+then runs all **2,089 Loans tests** (1397.670s): three failures and four errors.
+Two restore-command tests assumed an untracked `.tmp` directory; two recovery
+tests reproduced the fixture/autovacuum deadlock. The fixtures now acquire the
+unchanged offline archive table locks before writing rows. Stale assertions use
+the current chronology error and day eight beyond the seven-day quote limit.
+Entry-purpose roundtrips exposed reference replacement: switches now retain an
+existing reference and create one only when absent, while ordinary invalid POSTs
+still fail closed. All **eight finding/guard regressions pass** (13.759s).
+All **35 related multi-item entry/submission/quote regressions pass** (18.465s).
+The 13be3ae9 clean image passes production-settings restricted startup, schema/
+cohort reads and owner-role rejection on both fictional recovery databases;
+all 202 public tables remain unchanged. Full corrected CI still needs to pass.
+
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
 to fictional local recovery. No candidate migrations or financial writes have

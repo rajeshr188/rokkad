@@ -369,7 +369,7 @@ class OpeningRestoreTests(OpeningImportFixture):
 
     def test_operator_command_defaults_to_preview_and_requires_exact_confirmation(self):
         content = self.source("closed")
-        with TemporaryDirectory(dir=".tmp") as directory:
+        with TemporaryDirectory() as directory:
             path = Path(directory) / "opening.jsonl"
             path.write_bytes(content)
             options = dict(workspace_id=self.b.pk, actor_id=self.actor.pk, source=str(path), **self.mapping)

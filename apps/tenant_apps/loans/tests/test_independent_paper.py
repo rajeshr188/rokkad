@@ -440,7 +440,7 @@ class IndependentPaperTests(WorkspaceTestCase):
         record_pawn_loan_repayment(source.pk, amount=Decimal("200"), request_key="after-renewal-review", actor=self.actor)
         with self.assertRaisesMessage(ValueError, "changed"):
             record_existing_paper_renewal(loan_id=source.pk, actor=self.actor, data=data, review_token=token, confirmed=True)
-        with self.assertRaisesMessage(ValueError, "later financial activity"):
+        with self.assertRaisesMessage(ValueError, "Later activity is already recorded"):
             preview_existing_paper_renewal(loan_id=source.pk, actor=self.actor, data=dict(data, date=self.day.isoformat()))
         self.assertFalse(m.PawnLoanRenewal.objects.filter(source_loan=source).exists())
 

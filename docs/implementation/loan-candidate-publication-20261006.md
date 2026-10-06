@@ -59,14 +59,35 @@ tests on an older schema. Separate empty migration-test databases now
 copy only explicitly supplied generated fixtures and their
 prerequisites, never production/customer records. The shared QA schema is restored.
 The missing-submission-reference runtime correction preserves invalid POST
-references instead of silently replacing them; explicit entry-purpose changes
-still receive a new form reference. Quote-policy and receipt-format unit fixes
+references instead of silently replacing them. Entry-purpose switches retain an
+existing reference and create one only if absent. Quote-policy and receipt-format unit fixes
 pass **three checks** (0.041s). All **41 migration/submission/opening/paper-entry/
 recovery regressions pass** (215.625s), including all three isolated populated
 upgrades and exact recovery. PostgreSQL's earlier deadlock log identifies
 autovacuum competing with the test fixture transaction; the isolated recovery
 rerun passes. No recovery lock is weakened and autovacuum is not disabled.
 The correctly discovered full suite and exact-head CI remain pending.
+
+Commit `13be3ae90360aa7445fe5c6fdb00924824e333a4` is pushed. Its
+[CI run](https://github.com/rajeshr188/rokkad/actions/runs/37462610675) passes
+migrations/startup, foundation and billing/mail. All **2,089 Loans tests** run
+(1397.670s), with three failures and four errors: two restore tests required an
+untracked `.tmp` folder; two recovery tests deadlocked; three assertions exposed
+chronology wording, a one-day quote incorrectly treated as expired, and a replaced
+entry-purpose roundtrip reference. Standard temporary directories remove the local
+folder assumption. Test recovery fixtures now take the existing archive table
+locks before any fixture writes, matching offline-command ordering and avoiding
+the identified autovacuum cycle. Production locks and autovacuum remain unchanged.
+The chronology assertion uses the current error; quote expiry is checked at day
+eight; entry switching preserves the supplied reference. All **eight finding and
+missing-reference guard regressions pass** (13.759s); full corrected CI is pending.
+All **35 related multi-item entry/submission/quote regressions pass** (18.465s).
+
+The 13be3ae9 image is
+`sha256:a9a50c37778f39356faa5a85a22eef2f09432ec56a6f7c800c83415ecb039878`.
+Production-settings restricted startup, schema/cohort reads and owner-role startup
+rejection pass on both fictional recovery databases. All **202 public tables remain
+unchanged**. This is still not production-copy recovery or source acceptance.
 CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
 production-copy migration rehearsal are additional gates; a branch push does not
