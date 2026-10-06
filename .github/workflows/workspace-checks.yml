@@ -40,7 +40,7 @@ env:
 jobs:
   foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-bookworm

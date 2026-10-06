@@ -29,6 +29,15 @@ to the business-write boundary. All **24 corrected journey/access tests pass**
 (117.532s); documentation/import-boundary/whitespace checks pass. A new exact-head
 CI run is required; CI is not yet green.
 
+Corrected commit **dce0d00a** is pushed. Its CI foundation step passes. The clean
+committed image passes production-settings restricted startup, schema/cohort reads
+and actual owner-role startup rejection on both fictional recovery databases;
+all **202 public tables remain unchanged**. An initial local rejection probe had
+retained runtime credentials and did not exercise the owner role; it was corrected
+and the complete check passed. The CI allowance is raised from 25 to 45 minutes
+for the expanded suite (over 1,800 Loans test methods plus other release gates),
+without removing checks. Full exact-head CI remains pending.
+
 Production is at Loans **0032** / portability **0017**, while the candidate is at
 Loans **0063**. A real production-copy upgrade rehearsal is required in addition
 to fictional local recovery. No candidate migrations or financial writes have
@@ -43,6 +52,15 @@ because the general staging authorization did not explicitly cover all sensitive
 customer records and the destination. Specific server-only-copy approval has been
 requested; no staging copy was created. Local checks continue; actual staff
 acceptance, production-copy rehearsal and deployment remain open.
+
+D01623 exposes an unsupported correction shape: its retained approval freezes
+2 October, and its digital policies were entered after the actual 24 September
+payout. A generated restricted-role reproduction passes (one test, 0.736s),
+confirming retained-native review rejects missing original-day evidence and
+general draft admission rejects posted history. Old events/approval remain
+unchanged; no debt is invented. Explicit reviewed paper correction for a fully
+reversed native origin is required before accepting this example. Merely removing
+the evidence cutoff or falling back after failure is not a supported fix.
 See [execution record](implementation/loan-candidate-publication-20261006.md).
 
 ## LC-07 release preparation verified locally (6 October)

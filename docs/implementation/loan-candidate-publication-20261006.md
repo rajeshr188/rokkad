@@ -26,6 +26,20 @@ second-Workspace isolation fixtures use separate test commercial access. The
 auction unit fixture verifies delegation to the business-write boundary.
 All **24 journey/access tests pass** (117.532s) in isolated PostgreSQL QA; current
 docs/import boundaries and whitespace checks pass. A new exact-head CI run is required.
+The correction commit is `dce0d00a5e9b31979ed6d5ab98d50841cca3f91c`; its
+[rerun](https://github.com/rajeshr188/rokkad/actions/runs/37456878400) passes the
+foundation step. Its clean committed-source image digest is
+`sha256:1b8d27d5f7bb8f8488c788368723973a87027dbe03ebee7b5001e2b8d878c37f`.
+Production-settings restricted runtime, schema/cohort reads and actual owner-role
+rejection pass on both fictional recovery databases, with all 202 public tables
+unchanged. The first local owner-rejection attempt mistakenly retained runtime
+credentials; it did not test owner startup and was corrected before reporting
+the complete successful check. None of these are a production-copy rehearsal.
+
+The release CI job allowance is raised from 25 to 45 minutes because the Loans
+suite now contains over 1,800 test methods, besides foundation, recurring/mail,
+quote/isolation and image gates. No checks are removed. A new exact-head run is
+required after this workflow change.
 CI must pass against the exact published commit before
 the candidate is treated as verified for release. Real-source acceptance and the
 production-copy migration rehearsal are additional gates; a branch push does not
@@ -85,6 +99,35 @@ to this local workspace. A separate runtime role, local file storage, disabled
 notifications/provider calls and no public routing are required. Production
 data/application remain unchanged. This duplicates all tenants' sensitive records
 and consumes disk; no workaround or indirect execution is authorized.
+
+## Selected-source correction finding
+
+A further restricted, repeatable-read/read-only probe at **17:02:26 IST** found
+that D01623's retained approval is dated 2 October and freezes a 2 October loan
+date. It is not an original-day approval for the confirmed 24 September paper
+payout. Lakshmi's digital economic/rate policies were created on 25 September
+and 2 October; even the later backdated-effective policies were entered after
+the actual day's cutoff. The retained-native correction path therefore cannot
+establish the required original-day evidence.
+
+A generated, customer-free reproduction under a restricted non-bypass role
+confirms this boundary (**one test passes**, 0.736s): after a later-dated native
+payout is fully reversed and the draft has its actual earlier paper date, the
+adapter selects retained-native review, finds no qualifying approval/policy,
+and rejects review. General completed-draft admission also rejects existing
+posted history. The original approval/events remain unchanged and debt stays
+zero. This is a guarded unsupported correction, not successful paper admission.
+The reproduction is not a production-copy migration rehearsal.
+
+Before claiming D01623 can be recorded or accepted, add an explicit reviewed
+paper correction for this fully reversed native shape. Retain the same loan,
+number/items, old approval, payout and reversal; validate the actual agreement,
+deductions and proceeds; then establish one supported unreversed recorded origin
+without claiming a historical digital approval. Preserve ordinary unpaid-draft
+admission and the stricter retained-approval path. Do not select a weaker writer
+automatically after a missing/stale evidence or authorization failure. This
+requires targeted command, chronology, retry, reversal, servicing and isolation
+checks; it is not resolved by removing an old price/policy cutoff.
 
 ## Next verification gates
 

@@ -48,6 +48,25 @@ The pasted brief is authoritative; its shared ChatGPT link was unavailable.
    contracts, obtain real source examples/staff acceptance, rehearse recovery and
    deployment gates. Synthetic tests are not source-book or production acceptance.
 
+### Live-source finding during publication
+
+The owner confirmed JCL **RA00500**, an imported opening rather than a direct
+origination, and Lakshmi **D01623**, whose October native payout was reversed.
+The confirmed paper payout occurred on 24 September with a three-month tenure
+and no later receipt/closure. Read-only production metadata plus generated
+restricted-role characterization show that the existing retained-native adapter
+cannot admit this case: its approval is for 2 October, and no digital policy was
+recorded before the actual day ended. General recorded-draft admission also
+correctly excludes an aggregate with posted history.
+
+The proposed follow-up is an explicit reviewed recorded correction for a fully
+reversed native origin, preserving loan/item identities and all original evidence.
+It must establish actual paper terms and one unreversed recorded origin, with
+authorization, chronology, retry/reversal, current servicing/monitoring and
+tenant-isolation acceptance. No automatic fallback or historical approval fiction.
+This follow-up is not implemented or accepted by the current LC-04 adapter.
+See [source and publication evidence](../implementation/loan-candidate-publication-20261006.md).
+
 ## Required continuation facts
 
 Frozen agreement and original anchor; actual effective date and financial-history
