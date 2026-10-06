@@ -7,6 +7,43 @@ tags: [status, architecture]
 
 # Status
 
+## Approved production-copy verification (6 October, latest)
+
+Candidate **ef3c82a5** is committed/pushed and its
+[full release CI](https://github.com/rajeshr188/rokkad/actions/runs/37482671270)
+passes every gate. The approved server-only production snapshot has been upgraded
+from Loans 0032 to 0063 with dependencies through owner migration settings.
+Restricted runtime, schema drift, owner-startup rejection and scoped source reads
+pass. Every original row/value in **183 non-metadata table projections** matches
+the sealed source backup; migration/content-type/permission metadata changes are
+expected. No production migration, financial posting or deployment was performed.
+
+The real-data archive directory finding is fixed in this candidate. All **14**
+browsing/inventory checks and **47** fresh-database archive/admission checks pass.
+Complete inventories under its clean server artifact at **20:43:24 IST** find all
+**6,707 ACTIVE/CLOSED ordinary loans calculable**, without adopting new contracts
+or admitting **39,215** retained archive identities. Book coverage, assessment
+freshness and eligible valuation are independent; these results do not certify
+collections or staff acceptance.
+
+The operator integrity query initially exhausted disk while sorting expanded
+customer JSON. It was stopped and replaced with server-only streaming COPY row
+hashes, compared with the sealed original backup. No raw customer rows were
+downloaded. Identified disposable artifacts of this rehearsal alone were removed:
+the unused superseded staging image and exact staging build-cache IDs. Free space
+rose from **796,966,912** to **1,840,254,976 bytes**; the current candidate,
+production image and backups remain intact. Cold recovery into the same approved
+private staging target **passes at 20:56:11 IST**: all **202 tables and 199 sequence
+positions** restore exactly, with restricted startup, selected contract reads and
+Workspace census repeated successfully. Server capacity remains a rollout concern.
+
+**Still open:** D01623's explicit fully reversed native-to-actual-paper correction;
+real direct-entry/source-book/staff acceptance; book/monitoring cohort disposition;
+actual media recovery, a fresh release checkpoint and separately authorized rollout.
+D01623 remains DRAFT with zero recorded debt, despite confirmed paper terms.
+See the [execution record](implementation/loan-candidate-publication-20261006.md).
+The chronological entries below preserve earlier checks and superseded candidates.
+
 ## LC candidate publication and live verification started (6 October)
 
 The owner requested commit/CI and production/source verification. Established

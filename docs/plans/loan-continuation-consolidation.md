@@ -285,14 +285,26 @@ rejection of owner/pending-migration startup. Full pre-migration and migrated co
 restores match every one of **202 public tables and nine media files**. The fictional
 local source remains unchanged. Migration changes apply only to disposable targets.
 
-Candidate **59f62107** is committed/pushed and its full release CI passes. The owner
+Candidate **ef3c82a5** is committed/pushed and its full release CI passes. The owner
 explicitly approved the same-server private production copy: all **186 public
 tables** match the consistent 6 October snapshot. No dump/customer records were
 downloaded locally; production migrations and financial writes were not performed.
+The private copy upgrades from Loans 0032 to 0063 with dependencies. Restricted
+runtime/schema/source-isolation checks pass and all **183 original non-metadata
+table projections** retain source values. Full inventories under the candidate
+find **6,707 supported ordinary active/closed calculations**; book coverage and
+assessment/valuation remain independent. The real-data archive-query defect is
+fixed; 14 browsing/inventory and 47 fresh archive/admission checks pass. The
+integrity operator now streams row hashes instead of a disk-spilling JSON sort.
+Removing only identified disposable staging artifacts restored 1.84 GB headroom;
+cold recovery into the approved staging target **passes** with all **202 tables
+and 199 sequence positions** exact. Restricted startup, selected contracts and
+Workspace censuses are repeated successfully; unchanged rows/artifact retain the
+full pre-restore cohort results. Actual media has not been copied or recovered.
 See the [execution record](../implementation/loan-candidate-publication-20261006.md).
 
-**Remaining:** production-copy upgrade/recovery, candidate cohort inventory and
-unsupported-case disposition; D01623's explicit reversed-origin correction;
+**Remaining:** server capacity review; book/monitoring
+cohort disposition; D01623's explicit reversed-origin correction;
 actual source-book/staff acceptance and current database/media recovery evidence
 before separately authorized deployment.
 The local 15-loan legacy cohort and generated source examples do not fulfill those

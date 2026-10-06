@@ -99,6 +99,10 @@ No reminder or collection claim gains certification from an inventory run.
    restricted runtime startup and rejection of pending-migration/owner startup.
 5. Back up the migrated candidate, cold restore into another new target, compare
    all table/media fingerprints and repeat restricted startup and cohort reads.
+   A disposable, already approved private staging database may instead be replaced
+   from its validated sealed checkpoint, after checking adequate capacity, backup
+   catalogue and absence of target connections. Never replace production for a
+   rehearsal or create a new sensitive-data destination without authorization.
 6. Before a separately authorized deployment, capture a current production backup,
    verify live cohort/unsupported cases and actual staff acceptance, and confirm
    the named target, candidate digest, migration plan and operational recovery path.
@@ -108,6 +112,19 @@ An older reader may not understand them. Recovery requires the matching reader
 and verified database/media checkpoint, plus reconciliation of any transactions
 after that checkpoint. A fictional local restore does not prove off-device
 production recovery, nor does it authorize deployment.
+
+The approved 6 October production-copy upgrade and current-artifact inventory
+are verified: **6,707** ordinary active/closed calculations are supported, with
+original contracts retained and all **183** original non-metadata projections
+unchanged. **6,404** have unconfirmed transaction coverage; **152** assessments are
+stale and **6,555** unassessed; every valuation is unassessed. Staff must disposition
+these independent flags rather than treating calculation support as collection
+permission. Archives remain browseable evidence. Cold recovery passes all **202
+tables and 199 sequence positions**, repeated restricted startup, selected contract
+reads and Workspace censuses; full pre-restore cohorts are retained based on
+identical restored rows and artifact. Actual media and source-record acceptance
+remain open. The server's observed
+low-disk failure requires a fresh capacity check before release.
 
 See the [delivery record](../implementation/loan-release-acceptance-lc07.md) and
 [accepted slice plan](../plans/loan-continuation-consolidation.md).

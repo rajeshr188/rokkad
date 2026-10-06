@@ -7,6 +7,96 @@ tags: [loans, release, production, verification]
 
 # Loan candidate publication and production acceptance
 
+## Latest verified candidate and copied inventory
+
+The current runtime candidate is **ef3c82a539ef4116b60902be48bf616f2dbf47d8**.
+Its [full release CI](https://github.com/rajeshr188/rokkad/actions/runs/37482671270)
+passes every gate. The separately identified clean server-built image is
+rokkad:loan-continuation-ef3c82a5-server, image ID
+**sha256:24ab73c0732e417e6b5b22b656e0bb6bfdcbb677a4e4e6f4dc61f0fb880ea2a7**.
+The committed source ZIP SHA-256 is
+**c62fa283549dc13472f46647d4034fd28db64275603ca47b2b490a29d0e17585**.
+This is a staging artifact, not a production deployment.
+
+Owner migrations from Loans 0032 to 0063 and dependencies pass on the approved
+same-server restore. Restricted runtime/schema drift, owner-startup rejection
+and original pending-migration rejection are verified. The query correction has
+no migration/startup change. Selected RA00500/D01623 reads and no-context /
+cross-Workspace RLS reads pass under the current committed artifact.
+
+Complete restricted repeatable-read/read-only inventories finished at
+**20:43:24 IST** against the consistent **19:26:18 IST** source snapshot:
+
+| Workspace | Active | Closed | Supported active/closed | Unadmitted archive identities |
+| --- | ---: | ---: | ---: | ---: |
+| JCL | 2,598 | 10 | 2,608 | 26,664 |
+| JSK | 1,580 | 79 | 1,659 | 3,840 |
+| Lakshmi | 2,440 | 0 | 2,440 | 8,711 |
+
+JCL also has one APPROVED loan; JSK one APPROVED and six CANCELLED; Lakshmi two
+DRAFT. All **6,707** ordinary active/closed calculations are supported by their
+retained contracts: **316** native-event-fold/1 and **6,391** opening profile /2.
+No contract is automatically adopted. Transaction coverage is SYSTEM_RECORDED
+for **303**, UNCONFIRMED for **6,404**. Assessment freshness is STALE for **152**
+and UNASSESSED for **6,555**; valuation is UNASSESSED for all **6,707**. These are
+independent cohort flags, not collection authorization or a claim that a refresh
+will succeed without eligible valuation/book evidence.
+
+All **183** original non-metadata table projections preserve every source
+row/value before and after these checks. Only new additive columns are excluded
+from original projections; Django migration/content-type/permission rows are
+expected to change. The 39,215 archives remain retained source claims, not
+automatically admitted ordinary closed financial records.
+
+The final directory fix passes **14** browsing/inventory regressions (13.424s)
+and **47** archive/admission regressions on a fresh generated database (34.112s).
+The first broader reused-QA attempt encountered a pre-existing global-rate fixture
+and failed one global exists assertion; the fresh run passes all 47 and destroys
+its own generated database. The real current-artifact inventory is complete;
+the earlier provisional mounted-module probe below remains historical.
+
+## Integrity-query capacity finding and recovery preparation
+
+A verification-only SQL sort of expanded customer JSON failed with PostgreSQL
+temporary-file **No space left on device**. The failed query stopped; it did not
+post finance. Resource contention on the shared host is a real finding; absence
+of a production availability impact has not been established.
+
+The replacement streams original COPY rows from the sealed custom-format backup
+and original-column COPY rows from staging, hashes each row with SHA-256, and
+sorts only fixed-size hashes in operator memory. Row counts and complete sorted
+row multisets match for all 183 original business/evidence projections.
+No expanded SQL sort or full customer export to this workstation is needed.
+Original backup checksum, column maps and fingerprint evidence remain server-only.
+
+Free disk was **796,966,912 bytes**. Only this rehearsal's unused superseded
+59f62107 server image and exact identified 14:21/14:54 staging cache IDs were
+removed. There was no global image/cache/volume prune. Free space became
+**1,840,254,976 bytes**; current candidate/production image identities and sealed
+backups remain intact. Capacity must be checked again for an eventual release.
+The cold checkpoint/restore uses the same already approved staging database,
+validates the backup catalogue before replacement and streams the backup to
+restore without a redundant container-local dump. Cold recovery **passes at
+20:56:11 IST**: all **202 public tables and 199 sequence positions** restore
+exactly. Restricted startup, RA00500/D01623 reads and all three Workspace censuses
+repeat successfully; the full pre-restore cohort results are retained because
+all restored rows and the reader artifact match. The full all-loan forecast cohort
+calculation was not repeated after restore. Post-read table/sequence comparisons
+remain equal, and the production image is unchanged.
+
+The migrated stage checkpoint is **83,484,273 bytes**, SHA-256
+**67d737d2d1a4ae2073393a0c47a6ca504c0804610f741fc4a5135e03005c25f2**.
+It and the original source backup remain in the approved private server folder.
+This recovery replaces only the disposable staging database; production is not
+migrated, financially posted or deployed. About 1.7 GiB headroom remains after
+recovery, so capacity still needs review before rollout.
+Actual media remains unavailable in this rehearsal; private local media is empty.
+
+**Remaining:** D01623 correction implementation and acceptance; a real direct-entry
+source comparison; actual book/monitoring disposition and staff acceptance; actual
+media recovery and separately authorized production rollout. The following sections
+retain the publication/check history and findings, not a deployment-ready claim.
+
 The owner requested proceeding with commit/CI, live cohort inventory, real source
 examples and staging on 6 October. The accepted local LC-01–07 candidate includes
 the separately completed LD work already committed on
@@ -297,19 +387,22 @@ checks; it is not resolved by removing an old price/policy cutoff.
 
 ## Next verification gates
 
-1. Commit and publish the complete candidate, then dispatch the Workspace CI
-   workflow explicitly because this working branch is outside its push filters.
-2. Prepare a consistent production checkpoint and restore it to a new isolated
-   target on the established host. Keep full database/media/customer artifacts on
-   the server; only sanitized counts, hashes and acceptance results may be copied
-   into this local workspace. Do not apply candidate migrations to production.
-3. Rehearse the actual upgrade from 0032, including intervening LD/Khata changes,
-   through owner-only migration settings. Verify isolated restricted-runtime reads,
-   unsupported cohorts, saved source integrity and exact recovery.
-4. Compare the confirmed JCL reference and a real Lakshmi paper case with actual
+1. Published ef3c82a5 and full exact-commit CI are complete. Keep that verified
+   runtime/source/image identity distinct from later documentation-only commits.
+2. The consistent server-only production checkpoint, original restore, actual
+   owner migration upgrade from 0032, restricted runtime, original-value integrity
+   and full inventories are complete. Migrated cold recovery passes all 202
+   table/199 sequence comparisons and repeated runtime/source/census reads.
+   Review actual capacity/media limitations. Keep full customer artifacts on
+   the server; no production migration is authorized by this rehearsal.
+3. Implement and test D01623's explicit actual-paper correction for its fully
+   reversed native graph, preserving old financial/approval evidence. Then verify
+   the confirmed example in staging; no production posting is implied.
+4. Compare the confirmed JCL reference, a real direct-entry example and Lakshmi case with actual
    books; staff must confirm the source figures, including receipts and remaining
-   principal or closure. Software-generated facts alone do not provide acceptance.
-5. Resolve findings and verify release identity, CI, current backup/recovery and
+   principal or closure. Disposition independent book/monitoring cohorts.
+   Software-generated facts alone do not provide acceptance.
+5. Resolve findings and verify release identity, CI, fresh database/media backup/recovery and
    compatible web/worker readers before deployment.
 
 See the [acceptance matrix](../flows/loan-continuation-release-acceptance.md) and
