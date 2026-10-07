@@ -60,6 +60,10 @@ def validate_input(data, *, historical_source=False):
     if not isinstance(data, dict) or len(_canonical(data)) > 40000:
         raise ValueError("Paper history is missing or exceeds the supported size.")
     value = deepcopy(data)
+    photos = value.pop("entry_photos", None)
+    if photos is not None:
+        from .recorded_entry_photos import validate_manifest
+        photos = validate_manifest(photos)
     revision_id = value.pop("license_revision_id", None)
     if revision_id is not None and (type(revision_id) is not int or revision_id <= 0):
         raise ValueError("Select an existing source licence revision.")
@@ -125,6 +129,10 @@ def validate_input(data, *, historical_source=False):
         if effective_rate(collateral) != Decimal(value["rate"]):
             raise ValueError("The display rate must reconcile to actual item rates.")
         value["collateral"] = collateral
+    if photos:
+        if collateral is None or any(row["item"] > len(collateral) for row in photos):
+            raise ValueError("Photograph selections must identify actual collateral rows.")
+        value["entry_photos"] = photos
     if value["final_state"] not in ("ACTIVE", "CLOSED"):
         raise ValueError("Confirm whether the last loan is still held or fully returned.")
     if type(value["events"]) is not list or len(value["events"]) > 30:
@@ -414,6 +422,8 @@ def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historic
         recording["draft_source"] = source
     if correction is not None:
         recording["origination_correction"] = correction
+    if data.get("entry_photos"):
+        recording["entry_photos"] = data["entry_photos"]
     fees = Decimal(data.get("document_charge", "0"))
     fee_rows = [dict(kind="DOCUMENT_CHARGE", amount=str(fees), deducted=True)] if fees else []
     if "payout_basis" in data:
@@ -497,6 +507,8 @@ def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historic
         review["draft_source"] = source
     if correction is not None:
         review["origination_correction"] = correction
+    if data.get("entry_photos"):
+        review["entry_photos"] = data["entry_photos"]
     return original, review
 
 

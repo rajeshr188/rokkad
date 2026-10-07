@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [loans, journey, product, operators, developers]
 ---
 
@@ -60,6 +60,17 @@ Unused drafts can be cancelled with a reason; numbers remain in history.
 
 ## 2. Prepare a business, identify a borrower, describe the pledge
 
+Routine **New loan** has one editor for direct and paper entry. Existing
+Workspace/licence/series defaults select its purpose, with a per-loan Change
+override. Both purposes share searchable customer, series/product/date/tenure,
+item allocation, add/remove, camera/upload and the entered-facts summary.
+Direct validates proposed lending and saves a draft; paper records the actual
+original agreement/number/source with standing defaults or explained exceptions.
+Known paper receipts/closure are optional. Paper photos are current captures,
+not proof of original-day approval. Changing purpose preserves facts and, with
+JavaScript, selected files; after an uploaded page reload staff select files again.
+Final shared review/confirmation remains the next LO-03 slice.
+
 Setup connects current licences, loan/release numbering series, active product
 versions, economics, metal interest policies, reference buying prices and print
 layouts. Starter products are seeded automatically as drafts for review:
@@ -94,7 +105,8 @@ interest are distinct amounts.
 ## 3. Draft, approve, print and disburse
 
 Calculated-metal and lower-of valuation require positive INR pure-metal buying
-quotes effective today in the same Workspace, for each consumed metal. A price
+quotes within the Workspace's configured maximum age (seven days by default),
+in that same Workspace for each consumed metal. A price
 need not change numerically: use **Confirm price unchanged for today** in Rates
 to append a dated, actor-attributed confirmation without retyping. Appraisal-only policy does not impose this quote requirement;
 repayments/releases do not acquire a daily Rates gate. Monitoring freshness is a

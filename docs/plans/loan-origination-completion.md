@@ -25,8 +25,8 @@ pass; all 6,707 ordinary active/closed loans are calculable under retained contr
 These dated results do not certify source books, current monitoring or changed code.
 
 The remaining deployment items are D01623's correction, actual source/staff
-acceptance, actual media recovery and server capacity. New loan still dispatches
-to direct and paper editors. Existing SIMPLE workflow already combines owner
+acceptance, actual media recovery and server capacity. Before LO-02, New loan dispatched
+to direct and paper editors; the shared editor is now verified below. Existing SIMPLE workflow already combines owner
 approval and disbursal atomically; EXTENDED supports separate actions.
 See the [execution record](../implementation/loan-candidate-publication-20261006.md).
 
@@ -102,7 +102,9 @@ the approved staging case correction without production financial writes.
 
 ### LO-02: one shared routine loan editor
 
-**Status: pending LO-01; form inspection can begin earlier.**
+**Status: complete locally; 168 adjacent and 62 final focused Django checks,
+14 JavaScript checks and desktop/mobile Chromium interactions pass.
+See the [implementation note](../implementation/shared-routine-loan-editor-lo02.md).**
 
 Use ordinary Django forms/formsets and shared template sections for customer,
 series, dates, agreement, collateral rows and economics. Replace routine two-editor
@@ -128,7 +130,7 @@ through an original payout workflow.
 
 ### LO-03: shared review and final confirmation
 
-**Status: pending LO-02.**
+**Status: next; LO-02 editor verified.**
 
 Show one review layout for date, agreement, item principal/rates, advance, charges
 and proceeds. Final actions distinguish Confirm payout and Record completed payout.

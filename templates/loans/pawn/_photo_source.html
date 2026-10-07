@@ -1,0 +1,1 @@
+{% if photo.workflow_source == "POST_APPROVAL" %}Current collateral evidence{% else %}{{ photo.get_workflow_source_display }}{% endif %}

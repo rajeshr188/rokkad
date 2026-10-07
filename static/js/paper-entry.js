@@ -29,6 +29,7 @@ function initPaperEntry() {
     if (form.elements.namedItem('exceptions')?.checked) return;
     const current = revision;
     const data = new FormData(form);
+    form.querySelectorAll('input[type=file]').forEach(input => data.delete(input.name));
     data.set('action', 'terms');
     try {
       const response = await fetch(form.getAttribute('action'), {method: 'POST', body: data, credentials: 'same-origin'});
@@ -46,6 +47,10 @@ function initPaperEntry() {
       }
       const product = form.elements.namedItem('product_version_id');
       if (product && !product.value) product.value = doc.querySelector('[name=product_version_id]')?.value || '';
+      const tenure = form.elements.namedItem('tenure');
+      const updatedTenure = doc.querySelector('[name=tenure]');
+      if (tenure && updatedTenure) tenure.value = updatedTenure.value;
+      form.dispatchEvent(new Event('loan-terms:loaded'));
     } catch (_) {
       // The ordinary terms submit remains available without JavaScript.
     }
@@ -59,6 +64,7 @@ function initPaperEntry() {
     if (event.target.name === 'confirm_review') return;
     invalidate();
     if (event.target.name === 'exceptions') {
+      form.elements.namedItem('tenure').readOnly = !event.target.checked;
       for (const input of form.querySelectorAll('[name$="-interest_rate_override"]')) input.readOnly = !event.target.checked;
     }
     if (!relevant(event.target.name)) return;
@@ -66,21 +72,7 @@ function initPaperEntry() {
     clearTimeout(pending);
     pending = setTimeout(load, 150);
   });
-  form.querySelector('#add-collateral')?.addEventListener('click', () => {
-    const count = form.elements.namedItem('collateral-TOTAL_FORMS');
-    const template = form.querySelector('#empty-collateral-form');
-    if (!count || !template || Number(count.value) >= 100) return;
-    form.querySelector('#collateral-formset').insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__prefix__', count.value));
-    count.value = String(Number(count.value) + 1);
-    invalidate();
-    load();
-  });
-  form.addEventListener('click', event => {
-    const button = event.target.closest('[data-remove-collateral]');
-    if (!button) return;
-    const row = button.closest('[data-collateral-form]');
-    row.querySelector('[name$="-DELETE"]').checked = true;
-    row.hidden = true;
+  form.addEventListener('loan-collateral:changed', () => {
     for (const input of form.querySelectorAll('[name*="-item_principal_"]')) input.value = '';
     invalidate();
     total();

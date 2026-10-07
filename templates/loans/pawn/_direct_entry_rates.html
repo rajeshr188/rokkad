@@ -1,0 +1,12 @@
+{% load i18n %}
+  <div class="border rounded p-3 mb-3 bg-body" tabindex="-1" data-rate-readiness-panel aria-label="{% translate 'Metal price check' %}">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <div class="small flex-grow-1"><strong>{% translate "Metal prices:" %}</strong> <span data-rate-readiness-summary role="status" aria-live="polite">{% translate "Select a series and loan date" %}</span></div>
+      <button type="button" class="btn btn-sm btn-link" data-bs-toggle="collapse" data-bs-target="#rate-readiness-details" aria-expanded="false" aria-controls="rate-readiness-details">{% translate "Details" %} <span aria-hidden="true">▾</span></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-check-rates aria-label="{% translate 'Check prices again' %}">{% translate "Recheck" %}</button>
+    </div>
+    <div class="collapse" id="rate-readiness-details"><div class="border-top pt-3 mt-3">
+      <div data-rate-readiness-content>{% translate "Select a series, loan date and collateral metal to check prices." %}</div>
+      <p class="small text-muted mb-0 mt-2">{% translate "Prices are checked automatically against this workspace’s Rates records. After adding a price in another tab, select Recheck. This does not fetch market prices from the internet." %}</p>
+    </div></div>
+  </div>

@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## LO-02 shared routine editor verified (7 October)
+
+Routine direct and paper New loan now share one template, customer search,
+series/product/date/tenure layout, borrower balances, collateral controller,
+camera/upload and entered-facts summary. Direct retains valuation/price checks,
+automatic numbering and draft submission; paper retains actual terms/number/source,
+dated defaults, explained exceptions and optional known transactions.
+Current paper photos are bound to signed review and attached atomically, with
+successful retry deduplication and failed-upload compensation. Current capture
+labels do not imply original-day photographs or digital approval.
+
+All **168 adjacent Django checks** pass. After final presentation/default/legacy
+compatibility fixes, all **62 focused checks** pass against the finished source,
+including nine LO-02 tests and exact database/media recovery. All **14 JavaScript
+checks** pass, covering both borrower aliases, response races, shared item controls,
+preflight and draft submission. Chromium desktop/mobile checks on actual
+Django-rendered fictional pages pass customer-search initialization, add/remove,
+photo-purpose roundtrip and no-overflow/page-error checks; financial HTTP commands
+are verified separately. Current docs links, supported-app imports and whitespace
+pass. See the [implementation note](implementation/shared-routine-loan-editor-lo02.md).
+
+LO-03's shared review/final confirmation is next. Direct still saves a draft for
+existing approval/payout; specialized saved-draft/archive/import/opening contexts
+remain. No migration or production financial action occurred. Real acceptance,
+clean candidate CI/recovery, actual production media/capacity and rollout remain
+later gates under the [completion plan](plans/loan-origination-completion.md).
+
 ## LO-01 correction implemented and demonstrated (7 October)
 
 Explicit actual-paper correction now reuses the recorded-history writer for an
@@ -19,7 +46,7 @@ opening recovery case pass (18 checks). The broader initial run passed 256
 checks, with an invocation typo and recovery-fixture lock deadlock resolved on
 follow-up. Final presentation/retained-native/correction/dependency regression
 passes all **75 checks** against the final source. Documentation, import boundaries
-and whitespace pass. LO-02's shared routine editor is next; final CI/artifact and
+and whitespace pass. LO-02's shared routine editor is verified above; final CI/artifact and
 production acceptance remain later plan gates.
 
 D01623 is corrected **only in the approved staging copy**, retaining loan/item

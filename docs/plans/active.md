@@ -1,11 +1,20 @@
 ---
 status: active
 owner: project
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [plans, active]
 ---
 
 # Active work
+
+**Loan origination completion (owner decision, 7 October):** follow the
+[LO-00 through LO-07 plan](loan-origination-completion.md). LO-01 implements the
+explicit fully reversed native-to-actual-paper correction, demonstrated only in
+approved staging. LO-02 implements one routine New loan editor and item controller,
+with current paper photographs bound to signed review. LO-03 shares review/final
+confirmation next. Real source/staff acceptance, production media recovery,
+capacity and the final rollout result remain later gates. See [Status](../STATUS.md)
+for current verification evidence.
 
 **Loan-domain correction (owner decision, 5 October):** LD-01 through LD-07 are
 verified locally under the [current plan](unified-loan-domain-correction.md).

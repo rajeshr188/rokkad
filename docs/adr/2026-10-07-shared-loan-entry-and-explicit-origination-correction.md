@@ -69,3 +69,13 @@ existing recorded-history correction commands. Exact Workspace recovery retains
 the graph and files; bounded per-loan export refuses this profile until its embedded
 native source IDs have a supported remapping contract. No schema migration or
 permission expansion is introduced.
+
+## LO-02 presentation and current media
+
+Routine entry shares one template and item controller while retaining ordinary
+Django bound fields and purpose-specific commands. Specialized saved-draft,
+archive/import/opening and legacy POST contexts remain separate. Current paper
+photos use the existing immutable media service, with actual capture time/actor;
+signed review binds selected files before atomic attachment. This neither claims
+original-date photos nor invents an approval. Final review/confirmation remains
+LO-03. See the [implementation note](../implementation/shared-routine-loan-editor-lo02.md).

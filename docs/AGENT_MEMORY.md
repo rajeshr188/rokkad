@@ -31,8 +31,15 @@ or receipt-correction blockers. Native reissue is refused. Different-day reversa
 and changed physical jewellery evidence require broader review. Exact Workspace
 recovery retains the graph; bounded per-loan export explicitly refuses embedded
 native IDs until supported remapping exists. D01623 is demonstrated only in the
-approved staging copy; production remains uncorrected. Shared routine editor and
-final candidate/media/source acceptance remain subsequent slices.
+approved staging copy; production remains uncorrected.
+
+LO-02 gives routine direct/paper entry one New loan template and collateral
+controller, reusing existing forms, scoped search/defaults and financial writers.
+Paper photographs are optional current evidence; signed selections are bound to
+review and attached atomically, never treated as original-day approval/evidence.
+Direct still saves a draft; LO-03 shares final review/confirmation. Specialized
+saved-draft/archive/import/opening and legacy POST contexts retain their interfaces.
+Final candidate/media/source acceptance remain subsequent slices.
 
 The Loans directory now reads ordinary loans and retained historical closed claims
 together; browsing never admits finance, supplies an unknown balance or certifies

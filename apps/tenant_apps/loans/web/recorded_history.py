@@ -1,10 +1,12 @@
 """Paper-first entry within the ordinary New loan route."""
 from decimal import Decimal
+from copy import deepcopy
 from django import forms
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError, PermissionDenied
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.urls import reverse
 
 from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.party.models import Party
@@ -25,9 +27,16 @@ class PaperCollateralForm(forms.Form):
     allocated_principal = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), label="Principal for this item (INR)")
     interest_rate_override = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, max_value=100,
         label="Agreed monthly interest (%)", help_text="Supplied from dated setup. Use Different paper terms to record an actual exception.")
+    photograph = forms.FileField(required=False, label="Item photograph",
+        help_text="Optional current capture. This does not claim the photograph existed on the original paper loan date.",
+        widget=forms.FileInput(attrs={"class": "form-control js-collateral-photo-input", "accept": "image/jpeg,image/png", "capture": "environment"}))
 
-    def __init__(self, *args, exceptions=False, **kwargs):
+    def __init__(self, *args, exceptions=False, allow_photos=True, default_rate=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.is_bound and default_rate is not None:
+            self.initial.setdefault("interest_rate_override", default_rate)
+        if not allow_photos:
+            self.fields.pop("photograph")
         _style(self)
         if not exceptions:
             self.fields["interest_rate_override"].widget.attrs["readonly"] = True
@@ -37,6 +46,16 @@ class PaperCollateralForm(forms.Form):
         if value.get("net_weight") and value.get("gross_weight") and value["net_weight"] > value["gross_weight"]:
             self.add_error("net_weight", "Net weight cannot exceed gross weight.")
         return value
+
+    def clean_photograph(self):
+        photo = self.cleaned_data.get("photograph")
+        if photo:
+            from apps.tenant_apps.loans.services.collateral_media import validate_collateral_photo
+            try:
+                validate_collateral_photo(photo)
+            except ValueError as exc:
+                raise ValidationError(str(exc)) from exc
+        return photo
 
 
 PaperCollateralFormSet = forms.formset_factory(PaperCollateralForm, extra=0, min_num=1,
@@ -93,6 +112,10 @@ class PaperHistoryForm(forms.Form):
         self.terms = None
         item_sources, item_messages = [], []
         self.itemized = (self.routine or itemized_archive) and (not self.is_bound or "collateral-TOTAL_FORMS" in self.data)
+        from apps.tenant_apps.loans.forms import PawnDraftForm
+        for target, source in (("borrower_id", "borrower"), ("series_id", "series")):
+            self.fields[target] = deepcopy(PawnDraftForm.base_fields[source])
+        self.fields["borrower_id"].widget.data_url = reverse("workspace_party:party_autocomplete", args=[workspace.slug])
         self.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, status="ACTIVE")
         self.fields["series_id"].queryset = m.LoanSeries.objects.filter(workspace=workspace).select_related("license")
         self.fields["license_revision_id"].queryset = m.LoanLicenseRevision.objects.filter(workspace=workspace)
@@ -197,6 +220,21 @@ class PaperHistoryForm(forms.Form):
                 self.fields[name].required = False
             self.fields["principal"].widget.attrs["readonly"] = True
             self.fields["rate"].widget = forms.HiddenInput()
+        if self.routine and not self.is_bound and self.initial.get("series_id"):
+            from apps.tenant_apps.loans.services.paper_entry_terms import paper_entry_terms, preferred_paper_product
+            try:
+                series = self.fields["series_id"].clean(self.initial["series_id"])
+                day = self.fields["date"].clean(self.initial["date"])
+                self.terms = paper_entry_terms(workspace=workspace, series=series, day=day, metal="GOLD")
+                for name, value in self.terms["values"].items():
+                    self.initial.setdefault(name, value)
+                preferred = preferred_paper_product(workspace=workspace, day=day)
+                if preferred:
+                    self.initial.setdefault("product_version_id", preferred.pk)
+            except (ValidationError, ValueError, ObjectDoesNotExist):
+                pass
+        if self.routine:
+            self.fields["tenure"].widget.attrs["readonly"] = not bool(self["exceptions"].value())
         _style(self)
 
     def clean(self):
@@ -394,9 +432,11 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
         form.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace, pk=draft.product_version_id)
         for name in ("borrower_id", "series_id", "product_version_id", "number", "date", "license_revision_id"):
             form.fields[name].disabled = True
-    collateral = PaperCollateralFormSet(form.data if post is not None else None, prefix="collateral",
+    routine_editor = form.routine and form.itemized and not archive and not draft
+    collateral = PaperCollateralFormSet(form.data if post is not None else None, request.FILES or None, prefix="collateral",
         initial=initial_collateral,
-        form_kwargs={"exceptions": bool(archive) or bool(form["exceptions"].value())}) if form.itemized else None
+        form_kwargs={"exceptions": bool(archive) or bool(form["exceptions"].value()), "allow_photos": routine_editor,
+            "default_rate": (form.terms or {}).get("values", {}).get("rate") if routine_editor else None}) if form.itemized else None
     if draft and collateral is not None:
         for row, item in zip(collateral, draft_items):
             row.existing_collateral_item = item
@@ -439,6 +479,12 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             else:
                 preview, admit = preview_recorded_history, admit_recorded_history
                 extra = dict(draft_id=draft.pk) if draft else {}
+                if routine_editor and collateral is not None:
+                    from apps.tenant_apps.loans.services.recorded_entry_photos import preview_recorded_entry, admit_recorded_entry
+                    preview, admit = preview_recorded_entry, admit_recorded_entry
+                    actual = [row for row in collateral if row.cleaned_data and not row.cleaned_data.get("DELETE")]
+                    extra["photos"] = tuple((index, row.cleaned_data["photograph"]) for index, row in enumerate(actual, start=1)
+                        if row.cleaned_data.get("photograph"))
                 if origination_correction:
                     extra["correction_reason"] = correction_reason
             if post.get("action") == "confirm":
@@ -460,8 +506,10 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             ("Jewellery", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity"))]
     if collateral is not None:
         sections = [section for section in sections if section[0] != "Jewellery"]
-    return render(request, "loans/pawn/paper_history.html", dict(form=form, rows=rows, review=review,
+    from .routine_entry import routine_entry_context
+    return render(request, "loans/pawn/routine_entry.html" if routine_editor else "loans/pawn/paper_history.html", dict(form=form, rows=rows, review=review,
         formset=collateral, entry_purpose="paper",
         archive=archive, archive_snapshots=snapshots, review_token=token, intent_token=intent,
         completed_draft=draft, origination_correction=origination_correction, loan=draft, form_action=request.path if draft else None,
-        sections=[(title, [form[name] for name in names]) for title, names in sections], **presentation))
+        sections=[(title, [form[name] for name in names]) for title, names in sections],
+        **(routine_entry_context(request, form, purpose="paper") if routine_editor else {}), **presentation))

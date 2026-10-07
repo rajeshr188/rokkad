@@ -32,6 +32,7 @@ from apps.tenant_apps.loans.services.pawn_draft_split import (
 from apps.tenant_apps.loans.services.draft_submissions import (
     new_draft_submission, saved_draft_submission, submit_new_draft,
 )
+from .routine_entry import routine_entry_context
 
 
 def _pawn_loan_for_workspace(request, pk):
@@ -123,18 +124,17 @@ def pawn_loan_create(request):
                 return _draft_submission_redirect(request, loan, created=created)
     return render(
         request,
-        "loans/pawn/form.html",
+        "loans/pawn/routine_entry.html",
         {
             "form": form,
+            "entry_purpose": "direct",
             "formset": formset,
             "economics_preview": economics_preview,
             "submission_token": token,
             "photos_required": collateral_photos_required(request.loans_workspace.pk),
             "submission_reference_error": token_error,
             **_pawn_number_preview_context(form),
-            "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
-            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
-            "entry_purpose": "direct",
+            **routine_entry_context(request, form, purpose="direct"),
             **presentation,
         },
     )

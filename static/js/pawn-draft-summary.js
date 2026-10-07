@@ -11,10 +11,10 @@ function initPawnDraftSummary() {
   };
   const set = (key, text) => { summary.querySelector(`[data-summary-${key}]`).textContent = text; };
   function update() {
-    set('borrower', label('borrower') || 'Choose a borrower');
-    set('series', label('series') || 'Choose a series');
-    set('product', label('product_version') || 'Choose a product');
-    set('tenure', value('tenure_months') ? `${value('tenure_months')} months` : '—');
+    set('borrower', label('borrower') || label('borrower_id') || 'Choose a borrower');
+    set('series', label('series') || label('series_id') || 'Choose a series');
+    set('product', label('product_version') || label('product_version_id') || 'Choose a product');
+    set('tenure', (value('tenure_months') || value('tenure')) ? `${value('tenure_months') || value('tenure')} months` : '—');
     const list = summary.querySelector('[data-summary-items]');
     list.replaceChildren();
     let principal = 0, complete = true, count = 0;
@@ -55,6 +55,8 @@ function initPawnDraftSummary() {
   }
   form.addEventListener('input', changed);
   form.addEventListener('change', changed);
+  form.addEventListener('loan-collateral:changed', changed);
+  form.addEventListener('loan-terms:loaded', changed);
   form.addEventListener('click', event => { if (event.target.closest('[data-remove-collateral]')) changed(); });
   new MutationObserver(changed).observe(container, {childList:true});
   if (window.jQuery) jQuery(form).on('change', 'select', changed);

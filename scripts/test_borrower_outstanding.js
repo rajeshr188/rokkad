@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-(async () => {
+async function check(fieldId) {
   let change;
   const requests = [];
   const select = {value: '1', addEventListener: (_, fn) => { change = fn; }};
@@ -12,8 +12,8 @@ const vm = require('node:vm');
   const context = {
     URL, AbortController,
     window: {location: {origin: 'https://example.test'}},
-    document: {getElementById: id => id === 'id_borrower' ? select : panel,
-      addEventListener: (_, fn) => fn()},
+    document: {getElementById: id => id === fieldId ? select : id === 'borrower-outstanding' ? panel : null,
+      addEventListener: (name, fn) => { if (name === 'DOMContentLoaded') fn(); }},
     fetch: () => new Promise(resolve => requests.push(resolve)),
     DOMParser: class { parseFromString(id) { return {querySelector: () => ({dataset: {borrowerResult: id}})}; }},
   };
@@ -34,5 +34,7 @@ const vm = require('node:vm');
   requests[2]({ok: false});
   await third;
   assert.match(panel.textContent, /unavailable balance does not mean zero/);
-  console.log('Borrower response race, clear and failure states: PASS');
-})().catch(error => { console.error(error); process.exitCode = 1; });
+  console.log(`${fieldId}: borrower response race, clear and failure states: PASS`);
+}
+Promise.all(['id_borrower', 'id_borrower_id'].map(check))
+  .catch(error => { console.error(error); process.exitCode = 1; });

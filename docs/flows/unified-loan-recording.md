@@ -1,7 +1,7 @@
 ---
 status: accepted-design
 owner: project
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [loans, paper-entry, workflow, historical-evidence, risk]
 ---
 
@@ -9,8 +9,8 @@ tags: [loans, paper-entry, workflow, historical-evidence, risk]
 
 ## An unpaid draft whose payout already happened (LD-03, local)
 
-Open the existing draft and select **Record completed payout**. The same paper
-entry editor shows its saved customer, series, product, number, original date and
+Open the existing draft and select **Record completed payout**. The completed-payout
+editor shows its saved customer, series, product, number, original date and
 collateral. These identity fields and item membership stay fixed; correct them
 explicitly on the draft first if needed. Review dated standing terms or enter a
 supported actual agreement exception, the original source reference and deductions.
@@ -43,6 +43,16 @@ series selector. Switching retains entered facts and each purpose's details; wit
 JavaScript it also retains selected photographs. Without JavaScript, open Change
 and use Apply entry choice after selecting the series; select photographs again
 after a switch. A purpose change saves no loan and requires a fresh paper review.
+
+LO-02 now gives routine direct and paper entry one New loan layout: searchable
+customer, series/product/date/tenure, shared item controls and entered-facts summary.
+Standing paper terms supply routine defaults; actual exceptions remain available.
+Paper can attach optional current photographs, bound to review and captured during
+recording. After an uploaded preview/page reload, select the same files again before
+confirmation. These photos do not claim original-day evidence or digital approval.
+Direct still saves a draft for existing approval/payout actions; sharing final
+review/confirmation is LO-03. Specialized archive/import/opening and saved-draft
+correction contexts remain supported separately.
 
 Both entry modes use the shared Add collateral editor. Each paper row records its
 actual item principal and dated/actual rate; Rokkad sums principal and item-rounded

@@ -1,5 +1,5 @@
 function initPawnBorrowerOutstanding() {
-  const select = document.getElementById('id_borrower');
+  const select = document.getElementById('id_borrower') || document.getElementById('id_borrower_id');
   const panel = document.getElementById('borrower-outstanding');
   if (!select || !panel) return;
   let sequence = 0, controller;

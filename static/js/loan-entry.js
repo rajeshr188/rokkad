@@ -63,7 +63,7 @@
     }
   }, true);
   function enhancedSeries() {
-    const select = root()?.querySelector('[name=series]');
+    const select = root()?.querySelector('[name=series], [name=series_id]');
     if (select && window.jQuery) window.jQuery(select).on('select2:select select2:clear', () => { revision += 1; change(); });
   }
   document.addEventListener('DOMContentLoaded', enhancedSeries);

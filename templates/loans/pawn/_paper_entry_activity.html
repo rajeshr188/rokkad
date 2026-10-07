@@ -1,0 +1,23 @@
+{% if form.routine %}
+    <details class="border rounded p-3 mb-3" id="paper-activity" {% if rows.total_error_count or form.final_state.value == 'CLOSED' %}open{% endif %}>
+      <summary>This loan already has payments or is closed</summary>
+      <label class="form-label mt-3" for="{{ form.final_state.id_for_label }}">{{ form.final_state.label }}</label>{{ form.final_state }}{{ form.final_state.errors }}
+    {% endif %}
+    <section class="mb-3" aria-labelledby="timeline-title"><h2 class="h5" id="timeline-title">Transactions after the payout</h2>
+{% if not archive %}      <p class="small">Renewal details are optional. Record each loan separately when its paper record does not identify a predecessor. For a known renewal after this loan has been entered, use Renew on its detail page. A paper closure does not require identifying another loan.</p>{% endif %}
+      <p class="small text-body-secondary">Leave unused rows blank. Keep same-day transactions in paper order. Each month remains covered through the original loan-date anniversary, clamped to month end; the next charge starts the following day. A payment on the anniversary reduces the next charge’s principal base. A renewal starts its own anniversary. Original historical valuation and digital approval are not required.</p>
+      {{ rows.management_form }}{{ rows.non_form_errors }}
+      {% for row in rows %}<fieldset class="border rounded p-3 mb-3"><legend class="float-none w-auto px-2 h6">Transaction {{ forloop.counter }}</legend>
+        {{ row.non_field_errors }}<div class="row g-3">{% for field in row %}{% if field.name in "rate tenure renewal_method new_principal cash_paid interest_offset custody" %}{% elif field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="col-12 col-md-6">
+          {% if field.name == "DELETE" %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">Remove this transaction</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{{ field.errors }}
+        </div>{% endif %}{% endfor %}</div>{% if not archive %}<details class="mt-3"><summary>Optional known linked renewal details</summary><div class="row g-3 mt-1">{% for field in row %}{% if field.name in "rate tenure renewal_method new_principal cash_paid interest_offset custody" %}<div class="col-12 col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}</div></details>{% endif %}
+      </fieldset>{% endfor %}
+      <button class="btn btn-outline-secondary" name="action" value="add" formnovalidate>Add another transaction</button>
+    </section>
+    {% if form.routine %}</details>
+    <details class="border rounded p-3 mb-3" {% if form.confirmed_history.value %}open{% endif %}>
+      <summary>Optional paper-book verification</summary>
+      <p class="small mt-2">Recording a transaction does not certify that every paper transaction has been entered. Verification is available for reconciliation, reminders and recovery actions.</p>
+      <div class="form-check">{{ form.confirmed_history }}<label class="form-check-label" for="{{ form.confirmed_history.id_for_label }}">{{ form.confirmed_history.label }}</label></div>{{ form.confirmed_history.errors }}
+      <label class="form-label" for="{{ form.complete_through.id_for_label }}">{{ form.complete_through.label }}</label>{{ form.complete_through }}{{ form.complete_through.errors }}
+    </details>{% endif %}
