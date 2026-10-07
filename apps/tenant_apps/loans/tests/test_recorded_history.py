@@ -547,7 +547,8 @@ class RecordedHistoryTests(fixtures.RecordedOriginationTests):
         client.force_login(self.actor)
         url = reverse("workspace_loans:pawn_loan_create", kwargs={"workspace_slug": self.tenant.slug})
         response = client.get(url + "?entry=paper")
-        self.assertContains(response, "Record paper loan history")
+        self.assertContains(response, "New loan")
+        self.assertTemplateUsed(response, "loans/pawn/routine_entry.html")
         intent = response.context["intent_token"]
         post = {key: value for key, value in self.data.items() if key != "events"}
         post.update(entry_mode="paper", intent_token=intent, action="preview",

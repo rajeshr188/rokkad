@@ -5,15 +5,17 @@ const {readFileSync} = require('node:fs');
 const vm = require('node:vm');
 const source = readFileSync('static/js/pawn-draft-submit.js', 'utf8');
 
-function harness() {
+function harness(withReview = false) {
   const status = {hidden: true, textContent: ''};
   const save = {name: 'action', value: 'save', textContent: 'Save draft', disabled: false};
   const preview = {name: 'action', value: 'preview', textContent: 'Preview economics', disabled: false};
+  const review = {name: 'action', value: 'review', textContent: 'Review loan', disabled: false};
+  const buttons = withReview ? [review, save, preview] : [save, preview];
   const fields = [{name: 'borrower', value: '4'}, {name: 'submission_token', value: 'same-form-reference'},
     {name: 'photograph', files: ['camera-photo.jpg']}];
   const form = {
-    dataset: {}, attrs: {}, fields, buttons: [save, preview],
-    querySelector: () => status, querySelectorAll: () => [save, preview],
+    dataset: {}, attrs: {}, fields, buttons,
+    querySelector: () => status, querySelectorAll: () => buttons,
     addEventListener(name, callback) { this[name] = callback; },
     append(input) { fields.push(input); input.remove = () => fields.splice(fields.indexOf(input), 1); },
     setAttribute(name, value) { this.attrs[name] = value; }, removeAttribute(name) { delete this.attrs[name]; },
@@ -28,7 +30,7 @@ function harness() {
     form.submit(event);
     return event;
   }
-  return {form, status, save, preview, window, submit};
+  return {form, status, save, preview, review, window, submit};
 }
 
 test('saving locks buttons and preserves action, identity and photograph input', () => {
@@ -77,4 +79,20 @@ test('keyboard submission defaults to save without needing a clicked button', ()
   h.submit(null);
   assert.equal(h.form.fields.find(row => row.name === 'action').value, 'save');
   assert.equal(h.save.textContent, 'Saving…');
+});
+
+test('SIMPLE review survives preflight and keyboard submit; Save draft stays distinct', () => {
+  const h = harness(true);
+  h.submit(h.review, true);
+  assert.equal(h.review.disabled, false);
+  h.submit(h.review);
+  assert.equal(h.form.fields.find(row => row.name === 'action').value, 'review');
+  assert.equal(h.review.textContent, 'Preparing review…');
+  assert.equal(h.save.disabled, true);
+  h.window.pageshow({persisted: true});
+  h.submit(null);
+  assert.equal(h.form.fields.find(row => row.name === 'action').value, 'review');
+  h.window.pageshow({persisted: true});
+  h.submit(h.save);
+  assert.equal(h.form.fields.find(row => row.name === 'action').value, 'save');
 });

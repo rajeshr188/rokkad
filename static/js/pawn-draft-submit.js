@@ -25,15 +25,15 @@ function initPawnDraftSubmit() {
   form.addEventListener('submit', event => {
     if (form.dataset.draftSubmitting === 'true') { event.preventDefault(); return; }
     if (event.defaultPrevented) return;
-    const action = event.submitter?.value === 'preview' ? 'preview' : 'save';
+    const submitter = event.submitter || buttons[0];
+    const action = ['preview', 'review'].includes(submitter?.value) ? submitter.value : 'save';
     actionInput = document.createElement('input');
     actionInput.type = 'hidden'; actionInput.name = 'action'; actionInput.value = action;
     form.append(actionInput);
     form.dataset.draftSubmitting = 'true';
     form.setAttribute('aria-busy', 'true');
     buttons.forEach(button => { button.disabled = true; });
-    const submitter = event.submitter || buttons.find(button => button.value === 'save');
-    if (submitter) submitter.textContent = action === 'preview' ? 'Preparing preview…' : 'Saving…';
+    if (submitter) submitter.textContent = action === 'preview' ? 'Preparing preview…' : action === 'review' ? 'Preparing review…' : 'Saving…';
     status.textContent = action === 'preview'
       ? 'Please wait while the amounts are checked. No loan is created by a preview.'
       : 'Please wait while your draft is saved. Repeated submission of this form will not create another loan.';

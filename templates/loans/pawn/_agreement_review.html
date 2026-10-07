@@ -1,0 +1,14 @@
+{% load loans_display i18n %}
+<div data-origination-agreement>
+<dl class="row">
+ <dt class="col-sm-4">{% translate "Customer" %}</dt><dd class="col-sm-8">{{ agreement.customer.display_name }} &middot; {{ agreement.customer.party_code }}</dd>
+ <dt class="col-sm-4">Series / number</dt><dd class="col-sm-8">{{ agreement.series }} &middot; {{ agreement.number }}</dd>
+ <dt class="col-sm-4">{% translate "Loan date" %}</dt><dd class="col-sm-8">{{ agreement.date|date:"d/m/Y"|default:agreement.date }}</dd>
+ <dt class="col-sm-4">{% translate "Tenure" %}</dt><dd class="col-sm-8">{{ agreement.tenure }} {% translate "months" %}</dd>
+ {% if agreement.source_reference %}<dt class="col-sm-4">Original source</dt><dd class="col-sm-8">{{ agreement.source_reference }}</dd>{% endif %}
+</dl>
+<div class="table-responsive"><table class="table table-sm"><caption class="caption-top">Agreed item principals and monthly rates</caption><thead><tr><th>Collateral</th><th>Metal / quantity</th><th>Net weight</th><th class="text-end">Principal</th><th class="text-end">Monthly rate</th></tr></thead><tbody>
+{% for item in agreement.items %}<tr><td>{{ item.description }}</td><td>{{ item.metal }} / {{ item.quantity }}</td><td>{{ item.net_weight|compact_decimal }} g</td><td class="text-end">{{ item.principal|indian_money }}</td><td class="text-end">{{ item.rate|compact_decimal }}%</td></tr>{% endfor %}
+</tbody></table></div>
+{% with economics=agreement.economics %}{% include "loans/pawn/_origination_review.html#amounts" %}{% if economics %}<p class="small">Monthly interest at origination: {{ economics.monthly_interest|indian_money }}.</p>{% endif %}{% endwith %}
+</div>

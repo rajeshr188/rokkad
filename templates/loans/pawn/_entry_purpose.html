@@ -10,7 +10,8 @@
         <option value="direct" {% if entry_selection == 'direct' %}selected{% endif %}>Create and pay now</option>
         <option value="paper" {% if entry_selection == 'paper' %}selected{% endif %}>Record from paper</option>
       </select>
-      <button type="submit" class="btn btn-sm btn-outline-secondary mt-2" name="action" value="entry_change" form="new-loan-form" formnovalidate>Apply entry choice</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary mt-2" data-apply-entry>Apply entry choice</button>
+      <noscript><button type="submit" class="btn btn-sm btn-outline-secondary mt-2" name="action" value="entry_change" form="new-loan-form" formnovalidate>Apply entry choice</button></noscript>
     </div></details>
   </div>
   <p class="small text-body-secondary mt-2">Choose the series in Loan details. Its setup supplies the entry purpose; you can change it for this loan.</p>

@@ -14,7 +14,7 @@
 <form method="post" novalidate>{% csrf_token %}
 {% for field in form.hidden_fields %}{{ field }}{% endfor %}
 {% for field in form.visible_fields %}{% include "components/forms/accessible.html#field" %}{% endfor %}
-<div class="d-flex flex-wrap gap-2">{% if available %}<button type="submit" class="btn btn-primary">{% translate "Confirm disbursal" %}</button>{% endif %}
+<div class="d-flex flex-wrap gap-2">{% if available %}<button type="submit" class="btn btn-primary">{% translate "Confirm payout" %}</button>{% endif %}
 <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{% translate "Back to loan" %}</a></div>
 </form></div>
 <p class="small">{% translate "If the terms or rates changed, refresh the review and check the amounts again before confirming." %} <a href="{% url 'workspace_loans:pawn_loan_review_disburse' request.workspace.slug loan.pk %}">{% translate "Refresh review" %}</a></p>

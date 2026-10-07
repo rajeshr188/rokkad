@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-22
+updated: 2026-10-07
 tags: [loans, workflow, roles]
 ---
 
@@ -19,15 +19,32 @@ Owner review and disburse for a combined owner action, or Separate approval and
 disbursal for separate operations. Save the choice explicitly. Adding staff does
 not change it. Existing Workspaces retain separate operations until changed.
 
-In owner mode, save a draft, open Review and disburse, check the borrower,
-collateral, principal, advance interest, deducted fees, and net amount to pay.
-Choose the actual disbursal date, confirm payment, and submit Confirm disbursal.
+In owner mode, use **Review loan** from New loan. This saves one draft/number and
+opens its agreement review without creating debt. Check customer, original date,
+series/number, tenure, item principals/rates, advance interest, deducted fees and
+net amount to pay. Confirm the reviewed payment date and actual payment, then use
+**Confirm payout**. Approval and payout are recorded atomically. **Save draft**
+remains available when preparation should stop before payment; a saved draft can
+use its existing Review and disburse action later. A repeated creation form does
+not apply edited inputs; use Correct draft on the saved loan instead.
 This records payment; it does not transfer money. Success opens the active loan;
 Print/PDF remains available separately. A changed review or a review older than
 one hour must be refreshed; repeated submission does not record a second disbursal.
-For valuations using metal quotes, approval requires today's positive quotes and
-today's loan/disbursal dates. A changed quote requires another review even when
+For valuations using metal quotes, approval requires positive quotes within the
+Workspace's maximum age (seven days by default) and today's loan/disbursal dates.
+A changed quote requires another review even when
 its price is unchanged. Appraisal-only loans keep their existing date behavior.
+New reviews also bind the signed-in owner, reviewed payout date and complete
+economic/photo policy. If the payment date changes, refresh the review rather
+than submitting an old confirmation. Previously issued signed reviews remain
+accepted under their original validation contract.
+
+Completed paper entry uses the same agreement/amounts layout, followed by its
+original source and any known transactions, completeness and custody information.
+Its final action is **Record completed payout**: no new payment or retrospective
+digital lending approval is performed. Saved-draft recording and explicit
+origination correction use the same summary, keeping retained attempts visible.
+This does not remove source-specific checks from retained-native reviews.
 
 Both payment forms label the effective date **Payment date** and link validation
 errors to fields. Empty submissions show errors without recording payment. In

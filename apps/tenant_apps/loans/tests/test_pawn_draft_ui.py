@@ -325,7 +325,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         loan = PawnLoan.objects.get()
         url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
         response = self.client.get(url)
-        self.assertContains(response, "Confirm disbursal")
+        self.assertContains(response, "Confirm payout")
         self.assertContains(response, "9,800")
         _, token = make_review(loan)
         data = {"effective_date": "2026-07-18", "review_token": token, "confirmed": "on"}

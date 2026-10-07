@@ -466,7 +466,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             row.fields["closure_basis"].initial = "PAPER_SETTLEMENT"
             for name in ("rate", "tenure", "renewal_method", "new_principal", "cash_paid", "interest_offset", "custody"):
                 row.fields[name].widget = forms.HiddenInput()
-    review, token = None, ""
+    review, token, agreement = None, "", None
     if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
         try:
             data = _data(form, rows, collateral)
@@ -493,6 +493,9 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
                 messages.success(request, "Paper history recorded." if created else "This history was already recorded; no duplicate was created.")
                 return redirect("workspace_loans:pawn_loan_detail", workspace_slug=workspace.slug, pk=loan.pk)
             review, token = preview(workspace=workspace, actor=actor, data=data, intent_token=intent, **extra)
+            from apps.tenant_apps.loans.services.origination_summary import recorded_origination_summary
+            agreement = recorded_origination_summary(data, customer=form.cleaned_data["borrower_id"],
+                series=form.cleaned_data["series_id"], historical_source=bool(archive))
         except (ValueError, ValidationError, ObjectDoesNotExist) as exc:
             form.add_error(None, str(exc))
     sections = [("Original contract", ("borrower_id", "series_id", "license_revision_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "currency_quantum", "document_charge", "payout_basis", "cash_paid")),
@@ -509,7 +512,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
     from .routine_entry import routine_entry_context
     return render(request, "loans/pawn/routine_entry.html" if routine_editor else "loans/pawn/paper_history.html", dict(form=form, rows=rows, review=review,
         formset=collateral, entry_purpose="paper",
-        archive=archive, archive_snapshots=snapshots, review_token=token, intent_token=intent,
+        archive=archive, archive_snapshots=snapshots, review_token=token, intent_token=intent, agreement=agreement,
         completed_draft=draft, origination_correction=origination_correction, loan=draft, form_action=request.path if draft else None,
         sections=[(title, [form[name] for name in names]) for title, names in sections],
         **(routine_entry_context(request, form, purpose="paper") if routine_editor else {}), **presentation))

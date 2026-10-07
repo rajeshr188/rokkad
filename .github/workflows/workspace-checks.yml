@@ -71,6 +71,7 @@ jobs:
       - name: Check loan preflight and payment retry interactions
         run: >-
           node --test scripts/test_pawn_rate_readiness.cjs
+          node --test scripts/test_pawn_draft_submit.cjs
           scripts/test_borrower_outstanding.js
           scripts/test_routine_loan_editor.cjs
           scripts/test_checkout_confirmation.js scripts/test_recurring_checkout.js

@@ -104,6 +104,14 @@ interest are distinct amounts.
 
 ## 3. Draft, approve, print and disburse
 
+In SIMPLE owner mode, routine New loan offers **Review loan** as the primary action.
+It saves one numbered draft and opens the common agreement/amounts review.
+**Confirm payout** records approval and actual payout together, atomically; no debt
+is created by preparing that review. **Save draft** remains available for later
+work. EXTENDED retains separate approval/payout and permissions. Paper entry uses
+the same summary but finishes with **Record completed payout**, preserving actual
+dates, agreed terms and known history without approving or paying again.
+
 Calculated-metal and lower-of valuation require positive INR pure-metal buying
 quotes within the Workspace's configured maximum age (seven days by default),
 in that same Workspace for each consumed metal. A price

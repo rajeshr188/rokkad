@@ -130,7 +130,16 @@ through an original payout workflow.
 
 ### LO-03: shared review and final confirmation
 
-**Status: next; LO-02 editor verified.**
+**Status: complete locally; shared review and atomic SIMPLE confirmation verified.**
+
+Routine SIMPLE owners now use Review loan then Confirm payout; Save draft and
+EXTENDED remain. Paper/saved/correction review shares the agreement/amounts layout
+and Record completed payout action. New signed owner reviews bind actor/date and
+complete economic/photo policy, retaining exact retry proof in immutable approval
+JSON. Issued v1 and recorded review contracts remain accepted. Direct/paper PDFs,
+exact proof/media recovery, adjacent regressions and desktop/mobile keyboard/layout
+checks pass. See the [delivery note](../implementation/shared-origination-review-lo03.md)
+and [Status](../STATUS.md) for check counts and release boundaries.
 
 Show one review layout for date, agreement, item principal/rates, advance, charges
 and proceeds. Final actions distinguish Confirm payout and Record completed payout.

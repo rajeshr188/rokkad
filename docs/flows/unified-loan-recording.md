@@ -50,9 +50,15 @@ Standing paper terms supply routine defaults; actual exceptions remain available
 Paper can attach optional current photographs, bound to review and captured during
 recording. After an uploaded preview/page reload, select the same files again before
 confirmation. These photos do not claim original-day evidence or digital approval.
-Direct still saves a draft for existing approval/payout actions; sharing final
-review/confirmation is LO-03. Specialized archive/import/opening and saved-draft
-correction contexts remain supported separately.
+LO-03 shares the agreement/amounts review for routine direct/paper entry,
+saved-draft completed recording and explicit origination correction. In SIMPLE
+owner mode, **Review loan** saves one draft and opens the review; **Confirm payout**
+records approval and payout atomically. **Save draft** and EXTENDED separate actions
+remain available with existing permissions. Paper confirmation uses **Record
+completed payout**, showing original source, any known receipts/closure and the
+resulting position. Original proceeds do not imply confirmed physical cash.
+Specialized archive/import/opening preparation and legacy review routes remain
+supported. Issued signed reviews keep their original validation contracts.
 
 Both entry modes use the shared Add collateral editor. Each paper row records its
 actual item principal and dated/actual rate; Rokkad sums principal and item-rounded

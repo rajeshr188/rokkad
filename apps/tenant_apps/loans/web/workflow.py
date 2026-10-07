@@ -10,6 +10,7 @@ from apps.tenant_apps.loans.access import loans_owner_required, loans_setup_requ
 from apps.tenant_apps.loans.forms import PawnDisbursalForm
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.services.loan_workflow import make_review, review_and_disburse, set_loan_workflow
+from apps.tenant_apps.loans.services.origination_summary import native_origination_summary
 
 
 class WorkflowForm(forms.Form):
@@ -52,7 +53,7 @@ def pawn_loan_review_disburse(request, pk):
     available = loan.state == "DRAFT" and request.loans_workspace.loan_workflow == "SIMPLE"
     try:
         if available:
-            economics, token = make_review(loan)
+            economics, token = make_review(loan, actor=request.user, effective_date=form.initial["effective_date"])
             if request.method != "POST":
                 form.initial["review_token"] = token
         else:
@@ -64,6 +65,7 @@ def pawn_loan_review_disburse(request, pk):
         "loan": loan, "form": form, "economics": economics,
         "available": available, "review_error": review_error,
         "can_edit_loan": request.loans_workspace_access.can("data.edit"),
+        "agreement": native_origination_summary(loan, economics),
     })
 
 
@@ -158,4 +160,5 @@ def _retained_payout_review(request, pk):
         "economics": economics, "quotes": quotes, "basis_approval": basis,
         "review_error": error, "available": error is None,
         "is_earlier_payout_review": True,
+        "agreement": native_origination_summary(loan, economics),
         "can_edit_loan": request.loans_workspace_access.can("data.edit")})

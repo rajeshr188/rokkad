@@ -7,6 +7,38 @@ tags: [status, architecture]
 
 # Status
 
+## LO-03 shared review and confirmation verified (7 October)
+
+Routine direct/paper entry now shares an agreement/amounts review, including
+saved-draft completed recording and explicit LO-01 correction. SIMPLE owners use
+**Review loan** then **Confirm payout**, recording approval and payout atomically.
+Review preparation saves one draft/number without debt; **Save draft** and EXTENDED
+retain their existing roles/actions. Paper uses **Record completed payout** with
+source, known history and custody/completeness information. Original proceeds are
+distinct from confirmed cash; no historical digital quote or approval is invented.
+
+New SIMPLE reviews bind user/date/full economic and photo policy, comparing the
+complete frozen contract and quotes at final confirmation. Approval retains exact
+retry proof; a superseded review cannot masquerade as the current payout. Issued
+v1 and recorded-review structures remain compatible. Keyboard Enter now uses the
+primary review/save action rather than Apply entry choice, with a no-JavaScript
+purpose-change fallback preserved.
+
+All **130 direct/quote/legacy/draft/document checks** pass. The broader
+paper/saved/correction/archive/terminal/recovery run passed **209 checks** and found
+one outdated assertion for the retired paper-page heading. That assertion was
+updated for shared New loan and rechecked in the final **11 passing focused
+checks**, including ten new LO-03 tests, native/paper PDF truth and exact
+database/media recovery of the new confirmation proof. All **15 JavaScript checks**
+pass. Chromium desktop/mobile checks on Django-rendered fictional pages pass both
+reviews, confirmation checkboxes, stale paper-review removal, actual Enter-key
+submission and no-overflow/page-error checks. Financial HTTP behavior is verified
+separately. See the [implementation note](implementation/shared-origination-review-lo03.md).
+
+LO-04 servicing/monitoring/legacy compatibility is next. No migration, production
+financial correction or deployment occurred; actual source/staff acceptance,
+production media/capacity and final rollout remain later plan gates.
+
 ## LO-02 shared routine editor verified (7 October)
 
 Routine direct and paper New loan now share one template, customer search,

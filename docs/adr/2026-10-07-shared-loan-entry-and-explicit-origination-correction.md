@@ -79,3 +79,21 @@ photos use the existing immutable media service, with actual capture time/actor;
 signed review binds selected files before atomic attachment. This neither claims
 original-date photos nor invents an approval. Final review/confirmation remains
 LO-03. See the [implementation note](../implementation/shared-routine-loan-editor-lo02.md).
+
+## LO-03 review and confirmation
+
+SIMPLE owner Review loan saves one numbered draft and opens the common agreement
+summary; Confirm payout uses the existing atomic approval/payout command. Save
+draft remains available, and EXTENDED/owner authority do not change. Paper, saved
+completed drafts and explicit correction share the summary and Record completed
+payout, retaining source/history/custody differences. Original proceeds do not
+assert physical cash. Preparation and final financial confirmation remain distinct.
+
+New owner tokens add versioned actor/date/full-contract/photo-policy binding using
+the existing salt and unchanged v1 input fingerprint. The existing immutable
+approval JSON retains server-created combined-review proof so active retry can
+identify the actual approval behind the unreversed payout. Full frozen economics
+and quote identities are compared at confirmation. Issued v1 owner/historical
+tokens and recorded-review structures keep their existing contracts; presentation
+metadata is separate from signed paper review data. Exact recovery retains the
+proof, financial graph and photos. No schema or permission expansion is added.

@@ -4,7 +4,7 @@
 {% block workspace_content %}
 <div class="loan-entry" hx-history="false" data-new-loan-entry data-routine-loan-editor>
   {% include "loans/pawn/_entry_purpose.html" %}
-  <p class="text-body-secondary">{% if entry_purpose == 'paper' %}Record the original agreement. Standing setup supplies the terms; add known payments or closure here or later.{% else %}Enter the proposed agreement, check economics and save the draft for payout confirmation.{% endif %}</p>
+  <p class="text-body-secondary">{% if entry_purpose == 'paper' %}Record the original agreement. Standing setup supplies the terms; add known payments or closure here or later.{% else %}Enter the proposed agreement and review the payout. You can also save a draft to finish later.{% endif %}</p>
   <nav class="loan-workflow-nav" aria-label="Loan entry sections"><a href="#loan-details">1 &middot; Customer &amp; terms</a><a href="#collateral-formset">2 &middot; Collateral</a><a href="#loan-review-actions">3 &middot; Review</a></nav>
   <div class="loan-workflow-grid"><div class="loan-workflow-main">
   <form id="new-loan-form" method="post" action="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}" enctype="multipart/form-data" novalidate {% if entry_purpose == 'paper' %}data-paper-entry{% else %}data-draft-save-form data-valuation-preflight="{% url 'workspace_loans:pawn_valuation_readiness' request.workspace.slug %}"{% endif %}>
@@ -29,7 +29,7 @@
     </div></section>
     {% if entry_purpose == 'paper' %}{% include "loans/pawn/_paper_entry_agreement.html" %}{% include "loans/pawn/_paper_entry_activity.html" %}
     {% else %}{% include "loans/pawn/_direct_entry_preview.html" %}{% endif %}
-    <div class="loan-workflow-actions" id="loan-review-actions">{% if entry_purpose == 'paper' %}<button class="btn btn-primary" name="action" value="preview">Review loan record</button>{% else %}<button class="btn btn-primary" type="submit" name="action" value="save">Save draft</button><button class="btn btn-outline-primary" type="submit" name="action" value="preview">Preview economics</button>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">Cancel</a></div>
+    <div class="loan-workflow-actions" id="loan-review-actions">{% if entry_purpose == 'paper' %}<button class="btn btn-primary" name="action" value="preview">Review loan record</button>{% else %}{% if can_review_payout %}<button class="btn btn-primary" type="submit" name="action" value="review">Review loan</button>{% endif %}<button class="btn {% if can_review_payout %}btn-outline-secondary{% else %}btn-primary{% endif %}" type="submit" name="action" value="save">Save draft</button><button class="btn btn-outline-primary" type="submit" name="action" value="preview">Preview economics</button>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">Cancel</a></div>
     {% if entry_purpose == 'paper' %}{% include "loans/pawn/_paper_entry_review.html" %}{% endif %}
   </form></div>{% include "loans/pawn/_draft_summary.html" %}</div>
   {% include "loans/pawn/_camera_capture.html" %}

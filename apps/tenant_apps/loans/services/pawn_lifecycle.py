@@ -39,7 +39,7 @@ class PawnLifecycleError(ValueError):
 
 @transaction.atomic
 def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
-                      earlier_review_digest="", valuation_review=None) -> PawnLoanApprovalSnapshot:
+                      earlier_review_digest="", valuation_review=None, combined_review=None) -> PawnLoanApprovalSnapshot:
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.approve")
     _require_transition(loan, PawnLoanState.APPROVED)
@@ -72,6 +72,8 @@ def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
     payload["collateral_photo_policy"] = {"required": photos_required}
     if valuation_review is not None:
         payload["valuation_review"] = valuation_review
+    if combined_review is not None:
+        payload["combined_review"] = combined_review
     if historical is not None:
         from .historical_origination import RULE as EARLIER_RULE, recording_evidence, assert_historical_approval
         quote_evidence["rule"] = EARLIER_RULE

@@ -132,6 +132,7 @@ def pawn_loan_create(request):
             "economics_preview": economics_preview,
             "submission_token": token,
             "photos_required": collateral_photos_required(request.loans_workspace.pk),
+            "can_review_payout": _can_review_payout(request),
             "submission_reference_error": token_error,
             **_pawn_number_preview_context(form),
             **routine_entry_context(request, form, purpose="direct"),
@@ -141,12 +142,26 @@ def pawn_loan_create(request):
 
 
 def _draft_submission_redirect(request, loan, *, created):
+    if request.POST.get("action") == "review" and loan.state == "DRAFT" and _can_review_payout(request):
+        if created:
+            messages.info(request, f"Draft {loan.loan_number} saved. Check the agreement before confirming payout.")
+        else:
+            messages.info(request, f"Draft {loan.loan_number} was already saved; this repeated form applied no changes. "
+                "Check the saved agreement before confirming payout, or use Correct draft to edit it.")
+        return redirect('workspace_loans:pawn_loan_review_disburse', pk=loan.pk, workspace_slug=request.workspace.slug)
     if created:
         messages.success(request, f"Draft {loan.loan_number} created. Use Correct draft to update this same loan.")
     else:
         messages.info(request, f"This form already saved loan {loan.loan_number} ({loan.get_state_display()}). "
             "No changes were applied and no additional loan was created. Use Correct draft with edit access to change a saved draft.")
     return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+
+
+def _can_review_payout(request):
+    return request.loans_workspace.loan_workflow == "SIMPLE" and all(
+        request.loans_workspace_access.can(action)
+        for action in ("workspace.transfer", "loan.approve", "loan.disburse")
+    )
 
 
 @loans_action_required("data.edit")

@@ -1,6 +1,8 @@
 {% load loans_display %}
     {% if review %}<section class="border rounded p-3 mt-4" aria-labelledby="history-review-title">
       <h2 class="h4" id="history-review-title">Review before recording</h2>
+      {% include "loans/pawn/_agreement_review.html" %}
+      <p>This records an agreement and payout already completed. It does not approve a new advance or pay the customer again.</p>
       {% if review.origination_correction %}<p><strong>Origination correction:</strong> {{ review.origination_correction.reason }}</p><p>These digital attempts remain as reversed evidence:</p><ul>{% for attempt in review.origination_correction.attempts %}<li>Payout #{{ attempt.payout_id }} and reversal #{{ attempt.reversal_id }} dated {{ attempt.date }}.</li>{% endfor %}</ul>{% endif %}
       {% if form.cleaned_data.license_revision_id %}<p><strong>Source licence evidence:</strong> {{ form.cleaned_data.license_revision_id }}. {% if form.cleaned_data.license_revision_id.is_legacy_reference %}Original validity remains unknown.{% else %}Validity {{ form.cleaned_data.license_revision_id.issued_on|date:"d/m/Y" }} to {{ form.cleaned_data.license_revision_id.expires_on|date:"d/m/Y" }}.{% endif %}</p>{% endif %}
       {% if review.archive %}<p><strong>Archive admission:</strong> checked source snapshots {% for source in archive_snapshots %}<a href="{% url 'workspace_portability:archive_detail' request.workspace.slug source.public_id %}" target="_blank" rel="noopener">{{ source.document.source.snapshot_reference }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}. Supporting records: {{ review.archive.reconciliation }}. Original archive records and attachments will remain available.</p>{% endif %}
@@ -19,5 +21,5 @@
       </div>{% endif %}
       <input type="hidden" name="review_token" value="{{ review_token }}">
       <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="confirm_review" id="confirm-history"><label class="form-check-label" for="confirm-history">I checked the displayed agreement, amounts, original numbers and any closing facts against the paper record.</label></div>
-      <button class="btn btn-success" name="action" value="confirm">Record reviewed history</button>
+      <button class="btn btn-success" type="submit" name="action" value="confirm">Record completed payout</button>
     </section>{% endif %}

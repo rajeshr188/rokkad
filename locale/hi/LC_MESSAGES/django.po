@@ -3771,3 +3771,6 @@ msgstr "छोटे किनारे से पलटें"
 #: ticket-template-activation
 msgid "Verify on the physical printer"
 msgstr "प्रिंटर पर छापकर जाँचें"
+
+msgid "Confirm payout"
+msgstr "ऋण वितरण की पुष्टि करें"

@@ -37,8 +37,13 @@ LO-02 gives routine direct/paper entry one New loan template and collateral
 controller, reusing existing forms, scoped search/defaults and financial writers.
 Paper photographs are optional current evidence; signed selections are bound to
 review and attached atomically, never treated as original-day approval/evidence.
-Direct still saves a draft; LO-03 shares final review/confirmation. Specialized
-saved-draft/archive/import/opening and legacy POST contexts retain their interfaces.
+LO-03 shares the agreement/amounts review across direct/paper and saved/corrected
+completed origins. SIMPLE owners go from Review loan (one saved draft, no debt) to
+Confirm payout through the existing atomic command; Save draft and EXTENDED remain.
+New owner reviews bind user/date/full economic and photo policy, with proof retained
+in approval JSON for exact active retry. Issued v1 reviews keep their original
+contract. Paper review data/signatures are unchanged by presentation. Specialized
+archive/import/opening preparation and legacy POST contexts remain supported.
 Final candidate/media/source acceptance remain subsequent slices.
 
 The Loans directory now reads ordinary loans and retained historical closed claims

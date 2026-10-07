@@ -49,6 +49,9 @@
     }
   }
   document.addEventListener('input', event => { if (root()?.contains(event.target)) revision += 1; });
+  document.addEventListener('click', event => {
+    if (root()?.contains(event.target) && event.target.closest('[data-apply-entry]')) change();
+  });
   document.addEventListener('change', event => {
     if (!root()?.contains(event.target)) return;
     revision += 1;

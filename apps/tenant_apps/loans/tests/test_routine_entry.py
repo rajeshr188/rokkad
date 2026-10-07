@@ -124,6 +124,9 @@ class RoutineEntryTests(WorkspaceTestCase):
         count = m.PawnLoan.objects.count()
         preview = client.post(path, data)
         self.assertIsNotNone(preview.context["review"], preview.context["form"].errors)
+        self.assertContains(preview, "data-origination-agreement")
+        self.assertContains(preview, "Record completed payout")
+        self.assertEqual(preview.context["agreement"]["economics"]["monthly_interest"], 280)
         self.assertEqual(preview.context["review"]["entry_photos"][0]["item"], 2)
         self.assertEqual(m.PawnLoan.objects.count(), count)
         data.update(action="confirm", confirm_review="on", review_token=preview.context["review_token"],
@@ -139,6 +142,14 @@ class RoutineEntryTests(WorkspaceTestCase):
         self.assertContains(detail, "Current collateral evidence")
         self.assertNotContains(detail, "Post-approval evidence")
         self.assertEqual(loan.disbursal_snapshot.evidence["recording"]["entry_photos"][0]["sha256"], photo.sha256)
+        from apps.tenant_apps.loans.services.documents import PawnLoanDocumentService
+        from datetime import date
+        import fitz
+        with fitz.open(stream=PawnLoanDocumentService.render_loan_ticket(loan).pdf, filetype="pdf") as document:
+            printed = " ".join(page.get_text() for page in document)
+        self.assertIn("Recorded Paper Loan Contract", printed)
+        self.assertIn(date.fromisoformat(self.data["date"]).strftime("%d/%m/%Y"), printed)
+        self.assertEqual(loan.approval_snapshots.count(), 0)
         data["collateral-2-photograph"] = self.photo()
         self.assertEqual(client.post(path, data).status_code, 302)
         self.assertEqual(m.PawnCollateralPhoto.objects.filter(collateral_item__loan=loan).count(), 1)
