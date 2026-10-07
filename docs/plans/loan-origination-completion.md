@@ -206,11 +206,14 @@ explicit disposition. No second finance engine or automatic conversion.
 
 ### LO-05: real source and staff acceptance
 
-**Status: real-source comparison pack prepared on 7 October; actual owner source
-and workflow review pending.**
+**Status: owner accepted RA00500/C07557/06716 book comparisons on 7 October;
+corrected-paper display and shared workflow screen review pending.**
 
 The owner is the reviewer and confirmed post-25-September JCL/JSK originations
-as direct. Read-only restricted-runtime checks compare RA00500, corrected staging
+as direct. After receiving the comparison sheet, the owner confirmed that the
+RA00500, C07557 and 06716 comparisons match and are correct and satisfactory.
+The dated acceptance record retains the project-chat declaration; no in-app book
+review is posted by this release acceptance. Read-only restricted-runtime checks compare RA00500, corrected staging
 D01623, JCL C07557 and JSK 06716 (direct payout followed by paper closure).
 Authorized GETs, document projections, continuation and current monitoring reads
 pass. Source rows/customer HTML remain server-only. The bounded current-source

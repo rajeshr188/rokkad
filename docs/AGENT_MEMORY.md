@@ -26,9 +26,11 @@ recovery and capacity remain release work. See the
 For LO-05 the owner is the actual source/workflow reviewer and confirmed that
 JCL/JSK loans originated after 25 September are direct. The comparison pack uses
 RA00500 (opening), corrected staging D01623, C07557 (direct) and JSK 06716
-(direct origin with later paper closure). Reviewer nomination and successful
-read-only projections do not establish source/staff acceptance or current book
-coverage. Production D01623 is not corrected. See the
+(direct origin with later paper closure). On 7 October the owner accepted the
+RA00500/C07557/06716 book comparisons as matching, correct and satisfactory.
+Shared screen review and corrected-paper presentation/latest-position review
+remain pending. Release acceptance does not post per-loan coverage reviews or
+certify later activity. Production D01623 is not corrected. See the
 [dated acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
 LO-01 implements explicit administrator review through the existing recorded

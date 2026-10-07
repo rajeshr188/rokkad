@@ -19,8 +19,12 @@ read-only transaction. No-context and cross-Workspace reads remain isolated.
 On 7 October the owner volunteered to review RA00500 and D01623 and confirmed
 that JCL/JSK loans created after 25 September were created and paid in Rokkad.
 That identifies the reviewer and sample cohort; it is **not completed acceptance**.
-Actual book comparisons and staff workflow results remain pending. D01623's
-previously confirmed terms are retained below without requesting them again.
+On 7 October, after receiving the comparison sheet, the owner confirmed:
+"all three RA00500,C07557 and 06716 match and are correct and satisfactory."
+The three displayed book comparisons are accepted. No separate book/page reference
+was supplied; the acceptance source is the owner's project-chat declaration.
+Staff screen review remains pending. D01623's previously confirmed terms are
+retained below without requesting them again.
 
 No production correction, book-review confirmation, risk refresh, document issue,
 financial posting or deployment occurred. This slice currently changes documentation
@@ -187,9 +191,9 @@ The detailed operational guides are [workflow choice](../flows/loan-workflow-cho
 | --- | --- | --- |
 | Sample selection | Workspace owner / 7 October | Owner reviews RA00500/D01623; post-25-September JCL/JSK originations confirmed as direct |
 | D01623 original facts | Workspace owner / 6 October | Paper date/amounts/rate/three-month tenure/no later payment or closure confirmed; matches corrected staging read |
-| RA00500 register and checkpoint comparison | Workspace owner / pending | Source reference, cutover reconciliation, later activity and result needed |
-| C07557 payout/ticket comparison | Workspace owner / pending | Original document/actual payout and result needed |
-| 06716 closure/custody comparison | Workspace owner / pending | Original closing record/actual handover and result needed |
+| RA00500 register and checkpoint comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory; project-chat declaration, no book/page reference supplied |
+| C07557 payout/ticket comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory; project-chat declaration, no separate ticket reference supplied |
+| 06716 closure/custody comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory, including the presented settlement/return; project-chat declaration, no separate closing reference supplied |
 | Corrected D01623 display and latest position | Workspace owner / pending | Presentation review and any post-snapshot activity needed; confirmed terms need not be repeated |
 | Shared workflow, documents and monitoring walkthrough | Workspace owner / pending | Actual UI review date, acceptable/problem result and any required corrections needed |
 
@@ -198,7 +202,10 @@ do not copy customer documents into the shared repository. An owner confirmation
 becomes source acceptance only for the facts actually checked. It does not write
 an in-app transaction review or establish complete books for every loan.
 
-LO-05 remains **awaiting owner review**, not complete. Financial or workflow
+The three book comparisons are accepted; corrected D01623's display/latest position
+and the shared staff screen walkthrough remain pending. No in-app coverage review
+was posted and no current production position is newly certified by this declaration.
+LO-05 remains **awaiting screen review**, not complete. Financial or workflow
 mismatches return to LO-01/02/03/04 as appropriate. LO-06 still needs the exact
 candidate, fresh database/media recovery and measured capacity; LO-07 contains
 the concrete production rollout review. D01623 production correction remains a

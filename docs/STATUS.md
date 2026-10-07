@@ -7,10 +7,16 @@ tags: [status, architecture]
 
 # Status
 
-## LO-05 real-source comparison pack prepared; owner review pending (7 October)
+## LO-05 three book comparisons accepted; screen review pending (7 October)
 
-The owner will review RA00500/D01623 and confirmed that post-25-September JCL/JSK
-loans originated directly in Rokkad. The approved 6 October isolated copy now
+The owner confirmed that RA00500, C07557 and 06716 match and are correct and
+satisfactory after receiving the comparison sheet on 7 October. Those three
+book comparisons are accepted, with the project-chat declaration as the source;
+no separate book/page references were supplied. D01623's original terms were
+already confirmed; its corrected display/latest position and the shared staff
+screen walkthrough remain pending. No in-app transaction review was posted.
+The owner also confirmed that post-25-September JCL/JSK loans originated directly
+in Rokkad. The approved 6 October isolated copy now
 supports a read-only comparison for JCL RA00500 and C07557, staging-corrected
 Lakshmi D01623, and closed JSK 06716. Restricted-runtime continuation, authorized
 GETs and document projections pass; PostgreSQL enforces repeatable-read/read-only
@@ -20,8 +26,9 @@ The 7 October computed positions are 61,200 collection for RA00500, 8,170 for
 C07557, 2,100 for D01623 and zero for 06716. D01623 retains its confirmed
 24 September/three-month/2,006 payout and 25 October next 84 charge. JSK 06716
 demonstrates direct origination followed by recorded paper closure: 600 settlement
-on 6 October and collateral with customer. These are snapshot facts/calculations,
-not source-book or physical-handover attestations. No partial-repayment event
+on 6 October and collateral with customer. The owner accepts the three displayed
+book comparisons; the diagnostic itself remains a snapshot read, not independent
+source-document or physical-handover verification. No partial-repayment event
 exists in this eligible snapshot cohort; real closure plus LO-04 receipt tests
 cover the available acceptance examples without invented receipts.
 
@@ -34,12 +41,12 @@ silently changed to PAPER/SIMPLE. Both purposes render the shared editor.
 Current Loans source is mounted over the earlier pinned image with per-file hash
 checks and a URL-only static-storage override. This bounded probe does not certify
 the exact final build, browser assets, issued PDF bytes or media. Sensitive evidence
-stays at the approved private server destination. **LO-05 remains awaiting actual
-owner source and UI review**; LO-06 exact-candidate CI/media/capacity and LO-07
+stays at the approved private server destination. **LO-05 remains awaiting the
+corrected-paper display and staff screen review**; LO-06 exact-candidate CI/media/capacity and LO-07
 rollout remain pending. See the [review sheet and acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
-Review-access clarification: books can be compared with the sheet and results
-reported in chat now. A browser-accessible LO-05 candidate/URL has not been
+Review-access clarification: the owner reported the three book matches in chat.
+A browser-accessible LO-05 candidate/URL has not been
 provided. The running localhost:8079 preview lacks the shared routine editor;
 staff screen acceptance must wait for an identified current isolated preview.
 Private GET projections do not substitute for that access or actual UI review.

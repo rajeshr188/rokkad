@@ -58,8 +58,10 @@ whether it remains guarded, requires supported evidence or needs a later slice.
 The 7 October [LO-05 comparison pack](../implementation/loan-source-staff-acceptance-lo05.md)
 now selects JCL C07557 for direct payout and JSK 06716 for direct origination with
 later paper closure, alongside RA00500 and staging-corrected D01623. The owner
-volunteered as reviewer. Restricted read-only financial/UI/document projections
-pass; actual source and workflow acceptance still needs that owner's result.
+volunteered as reviewer and subsequently accepted the RA00500/C07557/06716
+comparisons as matching, correct and satisfactory on 7 October. Restricted
+read-only financial/UI/document projections pass; shared screen and corrected
+D01623 display/latest-position review remain pending.
 Use the dated figures, snapshot limits and walkthrough in the pack. No actual
 partial-repayment event exists in this selected source cohort, and none is invented.
 
@@ -79,12 +81,12 @@ and amounts in private evidence, and record the reviewer/date/result below.
 
 | Example | Staff check | Acceptance record |
 | --- | --- | --- |
-| JCL/JSK direct lending | Series terms, item principals, latest eligible quote, payout deductions, document and numbering match; ordinary entry remains familiar. | Pending actual staff/source review |
+| JCL/JSK direct lending | Series terms, item principals, latest eligible quote, payout deductions, document and numbering match; ordinary entry remains familiar. | C07557 displayed payout comparison accepted by owner on 7 October; current entry UI/quote walkthrough pending |
 | Lakshmi delayed paper entry | Original date/number, every item's agreed principal/rate and actual payout survive late entry; no current-price approval is claimed. | Pending actual staff/source review |
 | Partial receipt | Total pays interest first; actual multi-item principal split is supplied; next anniversary uses reduced principal. | Pending actual staff/source review |
 | Shared boundary | A 5 April loan with one month upfront has no additional May charge on 5 May; the next charge starts 6 May in every supported shared contract. | Business rule confirmed; real-record comparison pending |
-| Closed paper loan | Entered receipts reconcile; closure and actual custody agree with source. A terminal-only admission discloses missing earlier history. | Pending actual staff/source review |
-| Opening/imported outstanding loan | Verified cutover position, current-period bases and advance coverage agree; earlier unknown receipts remain unavailable. | Pending actual staff/source review |
+| Closed paper loan | Entered receipts reconcile; closure and actual custody agree with source. A terminal-only admission discloses missing earlier history. | 06716 displayed closure/custody comparison accepted by owner on 7 October; shared closure UI walkthrough pending |
+| Opening/imported outstanding loan | Verified cutover position, current-period bases and advance coverage agree; earlier unknown receipts remain unavailable. | RA00500 displayed opening/collection comparison accepted by owner on 7 October; earlier receipts not reconstructed |
 | Monitoring | Recorded/collection debt, book coverage, valuation availability and assessment freshness are read separately; missing books or prices are visible. | Pending actual staff/source review |
 | Quotes/setup | Owner sees seven-day default, can choose zero or another limit; a changed pending review requires review again. Existing frozen approvals keep their original rule. | Pending actual staff/source review |
 
