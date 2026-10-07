@@ -148,6 +148,7 @@ class SharedPaperContractTests(WorkspaceTestCase):
     def test_legacy_paper_correction_compensates_and_keeps_accepted_amounts(self):
         from apps.tenant_apps.loans.services.recorded_contract_corrections import preview_contract_correction, record_contract_correction
         from apps.tenant_apps.loans.services.recorded_collections import recording_for
+        from apps.tenant_apps.loans.selectors.interest_contract_inventory import interest_contract_inventory
         self.data["events"] = [dict(kind="PAYMENT", date="2026-05-05", amount="2000", reference="Actual receipt",
             number="", rate=None, tenure=None, recipient="")]
         with patch("apps.tenant_apps.loans.services.recorded_history.RECORDED_PROFILE", "recorded-anniversary/1"), \
@@ -157,6 +158,9 @@ class SharedPaperContractTests(WorkspaceTestCase):
         old_payload = deepcopy(old_origin.payload)
         old_receipt = loan.loan_events.get(event_kind="REPAYMENT")
         self.assertEqual(Decimal(old_receipt.payload["values"]["interest"]), 200)
+        row = next(r for r in interest_contract_inventory(as_of_date=date(2026, 5, 5)) if r["loan_id"] == loan.pk)
+        self.assertEqual(row["anniversary_rule"], "ON_ORIGINAL_ANNIVERSARY")
+        self.assertEqual(row["disposition"], "KEEP_FROZEN_TERMS_OR_EXPLICITLY_CORRECT")
         facts = dict(date="2026-04-05", principal="10000", rate="2", cash_paid="9800",
             reference="Checked original agreement", reason="Corrected early-anniversary software calculation",
             request_key="shared-contract-correction", adopt_shared_interest=True, currency_quantum="0.01")
@@ -171,6 +175,9 @@ class SharedPaperContractTests(WorkspaceTestCase):
         self.assertEqual(collection_balance(loan, date(2026, 5, 5)).principal_outstanding, 8000)
         self.assertEqual(collection_balance(loan, date(2026, 5, 6)).interest_outstanding, 160)
         self.assertEqual(old_receipt.reversed_by_event.reversal_of_id, old_receipt.pk)
+        row = next(r for r in interest_contract_inventory(as_of_date=date(2026, 5, 5)) if r["loan_id"] == loan.pk)
+        self.assertEqual(row["status"], "SHARED_CONTRACT")
+        self.assertEqual(row["anniversary_rule"], "DAY_AFTER_ORIGINAL_ANNIVERSARY")
 
     def test_rollout_inventory_is_scoped_read_only_and_does_not_adopt(self):
         from apps.tenant_apps.loans.selectors.interest_contract_inventory import interest_contract_inventory

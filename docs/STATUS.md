@@ -7,6 +7,41 @@ tags: [status, architecture]
 
 # Status
 
+## LO-04 servicing, monitoring and legacy compatibility verified (7 October)
+
+Actual direct, recorded, history/4 and reviewed-opening admissions continue through
+the common monthly servicing/risk path. New mixed 2%/4% item tests verify actual
+paper receipt splits on every origin, current highest-rate-first collections,
+inclusive anniversary boundaries, captured paise/whole-rupee rounding and principal
+reductions. Current appraisal, assessment freshness and transaction review remain
+independent; original paper approval/valuation and pre-checkpoint receipts are not
+invented.
+
+Fixed an opening reader/writer mismatch: a valid staff principal split omitting
+zero-paid items previously posted successfully but broke subsequent collection and
+portable reads. Replay now accepts that exact split, with loan-owned keys, conserved
+totals and matching complete allocation lines; foreign zero keys/missing lines fail.
+The read-only interest inventory now exposes dated continuation holds and saved
+timing/rounding, using the actual collection quantum separately from retained policy
+precision. No financial repricing, automatic contract conversion or migration.
+
+The **112-check broad run passed 110** with two new synthetic export-clock errors.
+The **84-check affected run passed 82**, reproducing only those clock errors. After
+correcting the fixture to retain the real recording clock, **all seven new checks
+pass**, including both previously unsuccessful cases. The other broad checks were
+not rerun: they cover equivalent admissions, collection/retry/reversal, closure,
+renewal, auction, monitoring and legacy contracts; affected checks additionally cover
+explicit fees, future-advance holds, checkpoint/export/recovery and reviewed contract
+correction. Django checks, current-document links and supported-app boundaries pass.
+
+Native reversed monthly recognition still holds continuation pending broader
+correction integration; over-covered opening advances still require explicit
+reconciliation. These are tested, disclosed limitations. LO-04 does not certify
+production books or media. **LO-05 real-source/staff acceptance is next**, followed
+by exact-candidate CI, actual media recovery and capacity gates. See the
+[verification and legacy dispositions](implementation/origination-servicing-compatibility-lo04.md)
+and [completion plan](plans/loan-origination-completion.md).
+
 ## LO-03 shared review and confirmation verified (7 October)
 
 Routine direct/paper entry now shares an agreement/amounts review, including

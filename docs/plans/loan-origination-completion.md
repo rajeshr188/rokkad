@@ -159,7 +159,23 @@ debt. Printed documents show truthful dates and origination basis.
 
 ### LO-04: servicing, monitoring and legacy compatibility
 
-**Status: pending financial/editor integration.**
+**Status: implemented and locally verified, 7 October.**
+
+Actual four-path admission/servicing and settlement matrices pass except two new
+test-clock errors, now corrected and passing in the final seven-check regression
+run. The 112-check broad run passed 110; the 84-check affected run passed 82 and
+reproduced only those same fixture errors. No remaining failed case is unresolved.
+Verification includes mixed item rates, actual paper allocation on every origin,
+captured rounding, repayment/retry/reversal, full release, supported renewal/auction,
+monitoring, checkpoint advances, portable evidence and explicit legacy correction.
+
+Fixed the accepted sparse paper split/opening replay mismatch while retaining exact
+item and monetary conservation checks. Interest inventory now separates dated
+continuation holds from contract compatibility and exposes captured rounding/timing
+and actual collection versus retained policy quantum. Native reversed-charge and
+over-covered future-advance limitations remain explicitly held and documented;
+there is no automatic old-contract adoption or invented history. See the
+[LO-04 implementation and disposition](../implementation/origination-servicing-compatibility-lo04.md).
 
 Exercise actual direct, recorded, complete-history and opening admissions with
 equivalent supported flexible monthly agreements. Compare receipts, anniversary

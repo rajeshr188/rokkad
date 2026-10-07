@@ -40,6 +40,7 @@ class AdmissionFixture(PortabilityFixture):
     principal = Decimal("5025.25")
     reduction = Decimal("100.25")
     multiple_items = False
+    second_rate = Decimal("2")
 
     def setUp(self):
         super().setUp()
@@ -48,8 +49,15 @@ class AdmissionFixture(PortabilityFixture):
         self.advance = item_monthly_interest(self.principal, "2", self.quantum)
         self.monthly = item_monthly_interest(self.remaining, "2", self.quantum)
         if self.multiple_items:
-            self.advance = Decimal("100.52") if self.quantum == Decimal(".01") else Decimal("100")
-            self.monthly = Decimal("98.51") if self.quantum == Decimal(".01") else Decimal("98")
+            self.item_principals = (Decimal("2512.75"), Decimal("2512.75"))
+            self.item_rates = (Decimal("2"), self.second_rate)
+            self.reduced_index = 1 if self.second_rate > 2 else 0
+            self.item_remaining = tuple(value - (self.reduction if i == self.reduced_index else 0)
+                for i, value in enumerate(self.item_principals))
+            self.advance = sum(item_monthly_interest(p, r, self.quantum)
+                for p, r in zip(self.item_principals, self.item_rates))
+            self.monthly = sum(item_monthly_interest(p, r, self.quantum)
+                for p, r in zip(self.item_remaining, self.item_rates))
         with self.scoped():
             system = opening_fixtures.checkpoint()["mapping"]["borrower_source_system"]
             self.commit(self.ready(self.stage(system=system)))
@@ -73,7 +81,10 @@ class AdmissionFixture(PortabilityFixture):
                 allocated_principal=Decimal("2512.75") if self.multiple_items else self.principal,
                 collateral_item_id=self.item.pk)]
             if self.multiple_items:
-                items.append(CollateralDraftInput(description="Second gold ring", metal="GOLD", gross_weight=Decimal(1),
+                from apps.tenant_apps.loans.services.economic_policies import create_pawn_metal_interest_rate_policy
+                create_pawn_metal_interest_rate_policy(workspace=self.a, license=self.loan.license,
+                    metal="SILVER", monthly_interest_rate=self.second_rate, effective_from=self.original, actor=self.actor)
+                items.append(CollateralDraftInput(description="Silver ring", metal="SILVER", gross_weight=Decimal(1),
                     net_weight=Decimal(1), purity_percentage=Decimal(100), latest_appraised_value=Decimal(10000),
                     allocated_principal=Decimal("2512.75")))
             update_pawn_draft(self.loan.pk, UpdatePawnDraftCommand(borrower_id=self.loan.borrower_id,
@@ -113,9 +124,12 @@ class AdmissionFixture(PortabilityFixture):
         args = dict(workspace=self.a, actor=self.actor,
             intent_token=new_recording_intent(workspace=self.a, actor=self.actor))
         if self.multiple_items:
-            values["collateral"] = [dict(description=label, metal="GOLD", quantity=1, gross_weight="1", net_weight="1",
-                purity="100", principal="2512.75", rate="2") for label in ("Gold ring", "Second gold ring")]
-            values["events"][0]["item_principal_split"] = {"1": str(self.reduction), "2": "0"}
+            values["rate"] = str(sum(p*r for p, r in zip(self.item_principals, self.item_rates))/self.principal)
+            values["collateral"] = [dict(description=f"{metal} ring", metal=metal, quantity=1, gross_weight="1", net_weight="1",
+                purity="100", principal=str(principal), rate=str(rate))
+                for metal, principal, rate in zip(("GOLD", "SILVER"), self.item_principals, self.item_rates)]
+            values["events"][0]["item_principal_split"] = {
+                str(i+1): str(self.reduction if i == self.reduced_index else 0) for i in range(2)}
         _, token = preview_recorded_history(**args, data=values)
         loan, created = admit_recorded_history(**args, data=values, review_token=token, confirmed=True)
         self.assertTrue(created)
@@ -142,9 +156,11 @@ class AdmissionFixture(PortabilityFixture):
         if self.multiple_items:
             first = value["loan"]["collateral"][0]
             first["principal"] = "2512.75"
-            value["loan"]["collateral"].append(dict(first, id="ring-2", description="Second gold ring"))
-            receipt["allocations"] = [dict(item="ring", before="2512.75", principal="100.50", after="2412.25"),
-                dict(item="ring-2", before="2512.75", principal="0", after="2512.75")]
+            value["loan"]["collateral"].append(dict(first, id="ring-2", description="Silver ring", metal="SILVER",
+                monthly_rate=str(self.second_rate)))
+            receipt["allocations"] = [dict(item=item_id, before=str(principal),
+                principal=str(principal-remaining), after=str(remaining))
+                for item_id, principal, remaining in zip(("ring", "ring-2"), self.item_principals, self.item_remaining)]
         mapping = dict(revision_id=self.direct.license_revision_id, series_id=self.direct.series_id,
                        product_version_id=self.direct.product_version_id)
         batch = loan_history.stage(**args, content=encode(value))
@@ -167,9 +183,10 @@ class AdmissionFixture(PortabilityFixture):
         review["obligations"][0].update(due=review["terms"]["maturity_date"], interest=str(self.monthly*11))
         if self.multiple_items:
             first = review["collateral"][0]
-            first.update(original_principal="2512.75", remaining_principal="2412.25")
+            first.update(original_principal="2512.75", remaining_principal=str(self.item_remaining[0]))
             second = deepcopy(first)
-            second.update(id="girvi_loanitem:2", description="Second gold ring", remaining_principal="2512.75")
+            second.update(id="girvi_loanitem:2", description="Silver ring", metal="SILVER",
+                monthly_rate=str(self.second_rate), remaining_principal=str(self.item_remaining[1]))
             review["collateral"].append(second)
             review["source"]["item_ids"].append(second["id"])
             review["continuation"].update(bases=[dict(item_id=item["id"], principal_base="2512.75")

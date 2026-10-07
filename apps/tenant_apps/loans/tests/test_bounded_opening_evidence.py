@@ -85,6 +85,25 @@ class ExplicitOpeningTests(ExplicitOpeningFixture):
             self.assertEqual((result.allocation.fees, result.allocation.principal), (0, 100))
             self.assertEqual(get_servicing_position(self.loan, as_of_date=self.on).balance.fees_outstanding, 25)
 
+    def test_sparse_actual_split_replays_zero_items_and_retains_explicit_fee_component(self):
+        with self.scoped():
+            result, _, _ = self.receipt(item_principal_split={str(self.items[0].pk): "100"})
+            self.assertEqual([row.principal_applied for row in result.item_allocations], [100, 0])
+            position = get_servicing_position(self.loan, as_of_date=date(2021, 3, 2))
+            self.assertEqual((position.balance.principal_outstanding, position.balance.interest_outstanding,
+                position.balance.fees_outstanding), (700, Decimal("11.00"), 15))
+            parse_opening_export(export_opening(workspace_id=self.a.pk, actor=self.actor, loan_id=self.loan.pk))
+            for mutation in ("foreign_zero", "missing_zero_line"):
+                events = [SimpleNamespace(pk=e.pk, event_kind=e.event_kind, effective_date=e.effective_date,
+                    payload=deepcopy(e.payload), reversal_of_id=e.reversal_of_id) for e in self.loan.loan_events.all()]
+                row = next(e for e in events if e.pk == result.loan_event.pk)
+                if mutation == "foreign_zero":
+                    row.payload["repayment"]["recording"]["item_principal_split"]["999999999"] = "0.00"
+                else:
+                    row.payload["repayment"]["item_principal_allocations"].pop()
+                with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                    preview_opening_collection(self.loan, events=events, as_of_date=self.on)
+
     def test_tampered_explicit_split_or_profile_fails_replay(self):
         with self.scoped():
             result, _, _ = self.receipt()

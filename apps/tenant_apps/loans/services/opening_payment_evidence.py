@@ -110,11 +110,14 @@ def _validate_payment(opening, actions, row, state):
     remaining = principal
     split = recording.get("item_principal_split") if explicit else None
     if split is not None:
-        require(set(split) == {str(pk) for pk in items} and sum(money(v) for v in split.values()) == principal,
-                "Explicit principal split must cover the loan's items and reconcile to principal paid.")
+        # The ordinary receipt writer permits omitted zero allocations. Preserve
+        # those original supplied facts; its complete allocation lines below must
+        # still match every item, including zeros, without inferring a paid split.
+        require(set(split) <= {str(pk) for pk in items} and sum(money(v) for v in split.values()) == principal,
+                "Explicit principal split must identify this loan's items and reconcile to principal paid.")
     ordered = sorted(items.items()) if split is not None else sorted(items.items(), key=lambda pair: (-pair[1][1], pair[0]))
     for pk, (before, rate) in ordered:
-        applied = money(split[str(pk)]) if split is not None else min(before, remaining)
+        applied = money(split.get(str(pk), "0")) if split is not None else min(before, remaining)
         require(applied <= before, "Explicit principal allocation exceeds this item's balance.")
         if principal:
             expected.append((pk, len(expected) + 1, rate, before, applied, before - applied))

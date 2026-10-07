@@ -46,6 +46,17 @@ contract. Paper review data/signatures are unchanged by presentation. Specialize
 archive/import/opening preparation and legacy POST contexts remain supported.
 Final candidate/media/source acceptance remain subsequent slices.
 
+LO-04 verifies common servicing against actual direct, recorded, history/4 and
+reviewed-opening admissions, including mixed item rates and actual paper receipts
+on direct-origin loans. Omitted zero paper item splits are accepted by the opening
+reader only with exact totals, loan-owned keys and matching complete allocation
+lines. Legacy opening rounding disclosure follows its reviewed mode. The interest
+inventory separates contract compatibility from dated continuation holds; its
+SUPPORTED result is a read result, not action permission or book/valuation proof.
+Native reversed monthly recognition still requires broader correction integration;
+it is surfaced explicitly, never reused silently. See the
+[compatibility record](implementation/origination-servicing-compatibility-lo04.md).
+
 The Loans directory now reads ordinary loans and retained historical closed claims
 together; browsing never admits finance, supplies an unknown balance or certifies
 handover. Exact source scope deduplicates snapshots; admitted identities use the

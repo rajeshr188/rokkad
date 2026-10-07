@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-06
+updated: 2026-10-07
 tags: [loans, continuation, inventory]
 ---
 
@@ -60,6 +60,16 @@ archive claims do not gain ordinary servicing until admitted; closed admission
 with incomplete receipt history is not a generic current settlement; opening
 servicing must be strictly after cutover. These are explicit supported-evidence
 limits, not reasons for another permanent loan lifecycle.
+
+The paragraph above records the LC-01 checkpoint. LC-05 subsequently supports
+explicit actual paper item splits and fee components, and reviewed opening/5
+supports evidenced same-day ordering. LO-04 aligns opening replay with ordinary
+receipt acceptance of omitted zero item amounts, retaining complete allocation
+lines and conservation checks. It also discloses saved legacy rounding and current
+continuation holds separately in the interest-contract inventory. The native
+reversed-monthly-charge hold remains an explicit unresolved correction integration,
+not a reason to silently drop or repost interest. See the
+[LO-04 verification and disposition](origination-servicing-compatibility-lo04.md).
 
 Confirmed while constructing real admission fixtures: completed-paper history
 admission through `admit_recorded_history` can lack a licence revision and its

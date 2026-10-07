@@ -96,6 +96,12 @@ class ServicingPositionTests(WorkspaceTestCase):
         self.assertEqual(position.balance, get_pawn_loan_balance(loan, as_of_date=self.today))
         self.assertEqual(position.balance, notice_balance(loan, self.today))
         self.assertFalse(position.transaction_coverage.required)
+        from apps.tenant_apps.loans.selectors.interest_contract_inventory import interest_contract_inventory
+        row = next(r for r in interest_contract_inventory(as_of_date=self.today) if r["loan_id"] == loan.pk)
+        self.assertEqual(row["status"], "REVIEW_CORRECTION")
+        self.assertIsNone(row["currency_quantum"])
+        self.assertEqual(row["disposition"], "KEEP_FROZEN_TERMS_OR_EXPLICITLY_CORRECT")
+        self.assertFalse(row["automatic_conversion"])
 
     def test_unknown_profile_rejected_by_both_consumers_not_native_fallback(self):
         loan, _, _ = self.admit()

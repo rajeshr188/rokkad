@@ -70,6 +70,17 @@ The original paper date and source remain separate from recording time and curre
 monitoring. Optional known-chain shortcuts remain bounded; independent paper-loan
 entry, receipts and full closure are the primary routine workflow.
 
+LO-04 verifies that receipt purpose applies to the transaction, independently of
+where the loan originated. A direct-origin loan can later have an actual paper
+receipt; a paper/imported loan can receive money directly in Rokkad. Paper principal
+splits retain staff's actual allocation; a current collection uses highest-rate-first.
+Zero-paid items can be omitted from a paper split, while Rokkad retains complete
+allocation lines. Explicit actual fees remain required when fees are outstanding.
+The shared interest boundary and captured rounding remain the same for supported
+agreements. Reviewed openings start at their checkpoint, without fabricated earlier
+history. Older saved contracts retain their terms and disclosed holds; see
+[compatibility and disposition](../implementation/origination-servicing-compatibility-lo04.md).
+
 The current local UR-08–12 completion slices and remaining real-record/release
 checks are documented in the [operator and acceptance guide](paper-first-operator-and-release.md).
 Earlier dated slices below preserve their original checkpoint boundaries.
