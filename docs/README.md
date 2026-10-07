@@ -46,6 +46,7 @@ not an instruction to reintroduce it.
 
 - [Khata account workflow](flows/khata-account-workflow.md): complete staff journey, worked examples, collateral identification and developer source contracts.
 - [Paper-first operator guide](flows/paper-first-operator-and-release.md): independent numbered loans, actual dated receipts/renewal/closure, book review and recovery.
+- [Origination source/staff review](implementation/loan-source-staff-acceptance-lo05.md): real opening, paper, direct and closed-loan comparison sheet with the owner walkthrough and pending acceptance record.
 - [Khata collateral usability](implementation/khata-collateral-usability.md): combined receiving/photos, paginated private browsing and searchable exchange groups.
 - [The complete loan journey](flows/loan-journey.md): developer reference, shared PNG and in-app staff handbook.
 - [Set up your business](flows/business-setup.md) and [first-loan setup](flows/first-loan-setup.md).

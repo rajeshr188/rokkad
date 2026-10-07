@@ -23,6 +23,14 @@ recovery and capacity remain release work. See the
 [completion plan](plans/loan-origination-completion.md) and
 [decision](adr/2026-10-07-shared-loan-entry-and-explicit-origination-correction.md).
 
+For LO-05 the owner is the actual source/workflow reviewer and confirmed that
+JCL/JSK loans originated after 25 September are direct. The comparison pack uses
+RA00500 (opening), corrected staging D01623, C07557 (direct) and JSK 06716
+(direct origin with later paper closure). Reviewer nomination and successful
+read-only projections do not establish source/staff acceptance or current book
+coverage. Production D01623 is not corrected. See the
+[dated acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
+
 LO-01 implements explicit administrator review through the existing recorded
 writer for reopened drafts with fully reversed same-day native attempts. It
 retains physical identity and old evidence, creates one current recorded origin,

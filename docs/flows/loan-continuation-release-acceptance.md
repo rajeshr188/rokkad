@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-06
+updated: 2026-10-07
 tags: [loans, release, acceptance]
 ---
 
@@ -54,6 +54,14 @@ production inventory. Investigate each unavailable cohort and decide explicitly
 whether it remains guarded, requires supported evidence or needs a later slice.
 
 ## Operator acceptance against source records
+
+The 7 October [LO-05 comparison pack](../implementation/loan-source-staff-acceptance-lo05.md)
+now selects JCL C07557 for direct payout and JSK 06716 for direct origination with
+later paper closure, alongside RA00500 and staging-corrected D01623. The owner
+volunteered as reviewer. Restricted read-only financial/UI/document projections
+pass; actual source and workflow acceptance still needs that owner's result.
+Use the dated figures, snapshot limits and walkthrough in the pack. No actual
+partial-repayment event exists in this selected source cohort, and none is invented.
 
 The owner confirmed **JCL RA00500** on 6 October, correcting RA0500. Live read-only
 inspection identifies an imported opening, not direct lending. It covers the

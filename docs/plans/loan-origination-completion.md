@@ -206,7 +206,18 @@ explicit disposition. No second finance engine or automatic conversion.
 
 ### LO-05: real source and staff acceptance
 
-**Status: sample preparation can start early; final acceptance follows LO-04.**
+**Status: real-source comparison pack prepared on 7 October; actual owner source
+and workflow review pending.**
+
+The owner is the reviewer and confirmed post-25-September JCL/JSK originations
+as direct. Read-only restricted-runtime checks compare RA00500, corrected staging
+D01623, JCL C07557 and JSK 06716 (direct payout followed by paper closure).
+Authorized GETs, document projections, continuation and current monitoring reads
+pass. Source rows/customer HTML remain server-only. The bounded current-source
+overlay is not an exact final build, browser/media recovery or staff attestation.
+No real partial-repayment event exists in the selected snapshot cohort; generated
+LO-04 coverage supplements the available real closure. See the
+[comparison sheet and pending acceptance record](../implementation/loan-source-staff-acceptance-lo05.md).
 
 Use RA00500 for opening acceptance and corrected D01623 for paper payout.
 Select a real JCL/JSK direct loan and real receipt/closure examples where available.

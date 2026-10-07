@@ -7,6 +7,37 @@ tags: [status, architecture]
 
 # Status
 
+## LO-05 real-source comparison pack prepared; owner review pending (7 October)
+
+The owner will review RA00500/D01623 and confirmed that post-25-September JCL/JSK
+loans originated directly in Rokkad. The approved 6 October isolated copy now
+supports a read-only comparison for JCL RA00500 and C07557, staging-corrected
+Lakshmi D01623, and closed JSK 06716. Restricted-runtime continuation, authorized
+GETs and document projections pass; PostgreSQL enforces repeatable-read/read-only
+and no-context/cross-Workspace isolation. No financial or production writes.
+
+The 7 October computed positions are 61,200 collection for RA00500, 8,170 for
+C07557, 2,100 for D01623 and zero for 06716. D01623 retains its confirmed
+24 September/three-month/2,006 payout and 25 October next 84 charge. JSK 06716
+demonstrates direct origination followed by recorded paper closure: 600 settlement
+on 6 October and collateral with customer. These are snapshot facts/calculations,
+not source-book or physical-handover attestations. No partial-repayment event
+exists in this eligible snapshot cohort; real closure plus LO-04 receipt tests
+cover the available acceptance examples without invented receipts.
+
+Current read-only monitoring finds missing appraisal on RA00500 and usable value
+on C07557/D01623. Saved assessments remain unassessed and paper book coverage
+unconfirmed where required; an on-demand calculation does not refresh those facts.
+Lakshmi's selected setup resolves DIRECT/EXTENDED in this snapshot; it is not
+silently changed to PAPER/SIMPLE. Both purposes render the shared editor.
+
+Current Loans source is mounted over the earlier pinned image with per-file hash
+checks and a URL-only static-storage override. This bounded probe does not certify
+the exact final build, browser assets, issued PDF bytes or media. Sensitive evidence
+stays at the approved private server destination. **LO-05 remains awaiting actual
+owner source and UI review**; LO-06 exact-candidate CI/media/capacity and LO-07
+rollout remain pending. See the [review sheet and acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
+
 ## LO-04 servicing, monitoring and legacy compatibility verified (7 October)
 
 Actual direct, recorded, history/4 and reviewed-opening admissions continue through
