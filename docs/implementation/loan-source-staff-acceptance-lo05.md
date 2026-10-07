@@ -131,6 +131,22 @@ confirm that physical jewellery was handed back.
 
 ## Owner's workflow walkthrough
 
+### Where to perform and report the review
+
+The **book comparison is available now**: compare the sheet above with the actual
+register/tickets/closing receipts, then report matches or discrepancies in the
+project chat with a short source reference. The agent records those results here.
+This release acceptance is not the in-app Review transactions action, which
+records a separate per-loan coverage attestation.
+
+**A browser-accessible LO-05 candidate has not yet been provided.** The private
+server evidence is a read-only diagnostic, not a running staff preview. The
+existing localhost:8079 preview was checked on 7 October and lacks the shared
+routine editor; it cannot accept the latest LO-02/03 screens. Prepare and identify
+an isolated current candidate and provide its actual URL/login route before asking
+the owner to complete the walkthrough below. Corrected real D01623 remains
+server-only staging data; do not imply it is present in a local fictional preview.
+
 Use the candidate in an isolated test environment. Existing records can be read
 without posting. Any new payout, receipt or closure exercise uses fictional loans
 in a disposable test Workspace; do not use the real comparison loans for trial posts.

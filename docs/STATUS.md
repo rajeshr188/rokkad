@@ -38,6 +38,12 @@ stays at the approved private server destination. **LO-05 remains awaiting actua
 owner source and UI review**; LO-06 exact-candidate CI/media/capacity and LO-07
 rollout remain pending. See the [review sheet and acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
+Review-access clarification: books can be compared with the sheet and results
+reported in chat now. A browser-accessible LO-05 candidate/URL has not been
+provided. The running localhost:8079 preview lacks the shared routine editor;
+staff screen acceptance must wait for an identified current isolated preview.
+Private GET projections do not substitute for that access or actual UI review.
+
 ## LO-04 servicing, monitoring and legacy compatibility verified (7 October)
 
 Actual direct, recorded, history/4 and reviewed-opening admissions continue through
