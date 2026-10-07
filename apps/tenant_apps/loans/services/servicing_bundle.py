@@ -98,6 +98,9 @@ def _collect(workspace_id, ids):
 
 
 def _position(loan, day):
+    require(not any(snapshot.evidence.get("recording", {}).get("origination_correction")
+        for snapshot in loan.disbursal_snapshots.all()),
+        "Origination correction retains native source IDs; use exact Workspace recovery until a remapping profile is supported.")
     from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
     from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
     from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
@@ -150,6 +153,9 @@ def export_servicing_bundle(*, workspace_id, actor, loan_id):
     _access(workspace_id, actor, exporting=True)
     m.PawnLoan.objects.get(pk=loan_id, workspace_id=workspace_id)
     selected = _collect(workspace_id, _connected(workspace_id, loan_id))
+    require(not any(snapshot.evidence.get("recording", {}).get("origination_correction")
+        for snapshot in selected['PawnLoanDisbursalSnapshot'].values()),
+        "Origination correction retains native source IDs; use exact Workspace recovery until a remapping profile is supported.")
     require(not any(item.funding_pledge_items.exists() or item.storage_movements.exists() for item in selected['PawnCollateralItem'].values()), 'Funding or storage history requires exact Workspace recovery; this servicing profile cannot omit it.')
     from apps.tenant_apps.data_portability.models import WorkspaceNamespace, PartyIdentity
     namespace, _ = WorkspaceNamespace.objects.get_or_create(workspace_id=workspace_id)

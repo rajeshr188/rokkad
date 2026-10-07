@@ -19,9 +19,11 @@ def servicing_dependencies(loan, *, effective_date):
     compensate. Include payload hashes and custody facts in the signed review so
     a movement after preview requires another review even without a money event.
     """
+    from apps.tenant_apps.loans.services.origination_corrections import retained_attempt_event_ids
+    retained = retained_attempt_event_ids(loan)
     events = tuple(dict(id=e.pk, kind=e.event_kind, date=e.effective_date.isoformat(),
         fingerprint=e.payload_fingerprint) for e in loan.loan_events.filter(
-            effective_date__gte=effective_date).order_by("effective_date", "pk"))
+            effective_date__gte=effective_date).exclude(pk__in=retained).order_by("effective_date", "pk"))
     accruals = tuple(dict(id=a.pk, event=a.loan_event_id, through=a.period_end.isoformat())
         for a in loan.interest_accruals.filter(period_end__gt=effective_date).order_by("pk"))
     from apps.tenant_apps.loans.models import PawnCollateralCustodyEvent

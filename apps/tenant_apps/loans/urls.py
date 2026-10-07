@@ -74,6 +74,7 @@ urlpatterns = [
     path("internal/<int:pk>/review-updated-valuation/", review_updated_valuation, name="pawn_loan_review_updated_valuation"),
     path("internal/<int:pk>/record-earlier-payout/", workflow.pawn_loan_record_earlier_payout, name="pawn_loan_record_earlier_payout"),
     path("internal/<int:pk>/record-completed-payout/", workflow.pawn_loan_record_completed_payout, name="pawn_loan_record_completed_payout"),
+    path("internal/<int:pk>/correct-origination/", workflow.pawn_loan_correct_origination, name="pawn_loan_correct_origination"),
     path("internal/<int:pk>/correct-paper-history/", recorded_corrections.correction, name="pawn_loan_correct_paper_history"),
     path("internal/<int:pk>/review-transactions/", transaction_reviews.review_transactions, name="pawn_loan_review_transactions"),
     path("guide/", journey.guide, name="loan_journey_guide"),

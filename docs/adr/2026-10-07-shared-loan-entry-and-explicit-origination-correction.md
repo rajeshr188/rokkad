@@ -46,3 +46,26 @@ they matter. Frozen profiles and posted amounts are not silently rewritten.
 Financial correction needs conservation, chronology, retry/reversal, recovery and
 tenant-isolation tests. Changed candidates require their own CI/recovery evidence.
 No new loan model or generic workflow engine is authorized.
+
+## LO-01 correction profile
+
+`recorded-origination-correction/1` is an explicit administrator-reviewed entry,
+using the existing recorded-history writer. Its signed submission is distinct from
+ordinary draft admission. The supported source has one to twenty native approved
+payouts, each exactly reversed on the same effective business date, no other money
+events, accruals, renewal, custody or funding dependencies, and a reopened draft.
+The actual original date, identity and physical collateral facts must already be
+correct; this profile changes agreed financial terms, not jewellery evidence.
+
+Same-day pairs preserve a zero effective-date balance; they remain in financial
+folds and exact recovery. Only validated retained pair IDs are excluded from later
+servicing chronology and unrelated-reversal blockers. Different-day reversals are
+outside this profile because intervening financial history requires broader review.
+
+The new recorded snapshot becomes the current origin; earlier approvals, snapshots,
+schedules, events, photos and issued copies remain. Native reissue is refused once
+recorded origin evidence exists. Subsequent receipt/contract correction uses the
+existing recorded-history correction commands. Exact Workspace recovery retains
+the graph and files; bounded per-loan export refuses this profile until its embedded
+native source IDs have a supported remapping contract. No schema migration or
+permission expansion is introduced.

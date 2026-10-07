@@ -53,7 +53,8 @@ authorization configurability, guessed receipts or automatic contract conversion
 
 ### LO-00: starting behavior and early operational checks
 
-**Status: planning baseline documented; fresh operational checks pending.**
+**Status: baseline documented; fresh capacity/storage discovery performed;
+distinct-object inventory and recovery/headroom remedies pending.**
 
 Characterize direct draft/save, SIMPLE/EXTENDED confirmation, paper entry,
 imports/openings and retained-native corrections before editing. Inspect current
@@ -72,7 +73,9 @@ heavy shared-host rehearsal until measured capacity is adequate.
 
 ### LO-01: explicit correction for a fully reversed native origin
 
-**Status: next financial implementation slice.**
+**Status: correction implemented; financial/recovery/concurrency tests and
+approved D01623 staging demonstration pass. Final 75 adjacent checks pass.
+See the [execution note](../implementation/actual-paper-origination-correction-lo01.md).**
 
 Add a reviewed correction for the demonstrated draft with all native payouts
 reversed, no live origin and no incompatible dependent servicing/custody graph.

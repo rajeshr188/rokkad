@@ -4,6 +4,7 @@ from apps.subscriptions.access_policy import workspace_activity
 
 from django.core.exceptions import (
     ObjectDoesNotExist,
+    PermissionDenied,
     ValidationError,
 )
 from django.db.models import Q
@@ -136,7 +137,21 @@ def pawn_loan_detail(request, pk):
         if adapter == "RETAINED_NATIVE" else ("data.create", "data.edit", "loan.disburse"))
     context["can_record_completed_payout"] = (adapter is not None
         and all(request.loans_workspace_access.can(action) for action in actions))
-    context["can_print_ticket"] = loan.state != "DRAFT" and approval is not None
+    context["can_correct_origination"] = False
+    if loan.state == "DRAFT" and all(request.loans_workspace_access.can(action)
+            for action in ("workspace.settings.manage", "data.create", "data.edit", "loan.disburse")):
+        from apps.tenant_apps.loans.services.origination_corrections import correction_source
+        try:
+            correction_source(loan, actor=request.user)
+        except (ValueError, PermissionDenied):
+            pass
+        else:
+            context["can_correct_origination"] = True
+            context["can_record_completed_payout"] = False
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for
+    recorded_contract = recording_for(loan)
+    context["can_print_ticket"] = loan.state != "DRAFT" and (approval is not None or recorded_contract is not None)
+    context["ticket_is_recorded"] = recorded_contract is not None
     context["can_preview_imported_ticket"] = opening is not None and approval is None
     context["can_print_schedule"] = loan.repayment_schedules.exists()
     if loan.state in {"DRAFT", "APPROVED"}:

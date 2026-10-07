@@ -61,10 +61,14 @@ def source_evidence(loan):
         item_ids=[item.pk for item in items], retained_approvals=material["approvals"])
 
 
-def apply_actual_contract(loan, data, *, actor):
+def apply_actual_contract(loan, data, *, actor, correction=False):
     """No quotes, policy lookup, number reissue, item replacement or fake approval."""
     from .recorded_items import contract_items
-    require_unpaid_draft(loan)
+    if correction:
+        from .origination_corrections import correction_source
+        correction_source(loan, actor=actor)
+    else:
+        require_unpaid_draft(loan)
     if (data["borrower_id"], data["series_id"], data["product_version_id"], data["number"], data["date"]) != (
             loan.borrower_id, loan.series_id, loan.product_version_id, loan.loan_number, loan.loan_date.isoformat()):
         raise ValueError("Keep this draft's customer, series, product, number and original date. Correct its identity explicitly before recording a payout.")
@@ -72,7 +76,7 @@ def apply_actual_contract(loan, data, *, actor):
     items = list(loan.collateral_items.select_for_update().order_by("pk"))
     if not items or len(items) != len(facts):
         raise ValueError("Keep this draft's collateral items; correct item membership explicitly before admission.")
-    frozen = loan.approval_snapshots.exists()
+    frozen = loan.approval_snapshots.exists() and not correction
     actual = dict(principal_amount=Decimal(data["principal"]), monthly_interest_rate=Decimal(data["rate"]), tenure_months=data["tenure"])
     if frozen and any(getattr(loan, name) != value for name, value in actual.items()):
         raise ValueError("Actual terms differ from retained approval evidence. Reconcile the draft explicitly before admission.")
@@ -81,6 +85,9 @@ def apply_actual_contract(loan, data, *, actor):
             gross_weight=Decimal(row["gross_weight"]), net_weight=Decimal(row["net_weight"]),
             purity_percentage=Decimal(row["purity"]), allocated_principal=Decimal(row["principal"]),
             monthly_interest_rate=Decimal(row["rate"]))
+        if correction and any(getattr(item, name) != values[name] for name in (
+                "description", "metal", "quantity", "gross_weight", "net_weight", "purity_percentage")):
+            raise ValueError("Keep the retained physical collateral facts; reconcile changed jewellery evidence separately.")
         if frozen and any(getattr(item, name) != value for name, value in values.items()):
             raise ValueError("Actual collateral terms differ from retained approval evidence. Reconcile that evidence before admission.")
         for name, value in values.items():

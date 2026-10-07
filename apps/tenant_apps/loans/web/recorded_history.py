@@ -319,7 +319,7 @@ def _data(form, rows, collateral=None):
     return json.loads(json.dumps(value, default=lambda obj: obj.isoformat() if hasattr(obj, "isoformat") else str(obj)))
 
 
-def paper_history_entry(request, *, draft=None):
+def paper_history_entry(request, *, draft=None, origination_correction=False):
     workspace, actor = request.loans_workspace, request.user
     presentation = getattr(request, "loan_entry_presentation", {})
     post = request.POST.copy() if request.method == "POST" else None
@@ -371,7 +371,7 @@ def paper_history_entry(request, *, draft=None):
         initial_rows = [dict(date=row["date"], amount=row["amount"], reference=row["id"])
                         for row in facts["payments"] or []]
     intent = (post.get("intent_token", "") if post is not None else "") or new_recording_intent(
-        workspace=workspace, actor=actor, draft_id=draft.pk if draft else None)
+        workspace=workspace, actor=actor, draft_id=draft.pk if draft else None, correction=origination_correction)
     if post is not None and post.get("action") == "add":
         try:
             post["events-TOTAL_FORMS"] = str(min(30, int(post.get("events-TOTAL_FORMS", "3")) + 1))
@@ -385,6 +385,10 @@ def paper_history_entry(request, *, draft=None):
     form = PaperHistoryForm(post, workspace=workspace, initial=initial, routine=not archive,
         itemized_archive=bool(archive and len(archive.document["facts"]["collateral"] or []) > 1))
     form.saved_draft = draft is not None
+    if origination_correction:
+        form.fields["correction_reason"] = forms.CharField(max_length=500,
+            label="Why are these the actual paper facts rather than the reversed digital payout?",
+            widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))
     if draft:
         form.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, pk=draft.borrower_id)
         form.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace, pk=draft.product_version_id)
@@ -426,6 +430,7 @@ def paper_history_entry(request, *, draft=None):
     if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
         try:
             data = _data(form, rows, collateral)
+            correction_reason = data.pop("correction_reason", None)
             reconciliation = data.pop("reconciliation", "")
             if archive:
                 from apps.tenant_apps.loans.services.archive_admission import preview_archive_admission, admit_archive_history
@@ -434,6 +439,8 @@ def paper_history_entry(request, *, draft=None):
             else:
                 preview, admit = preview_recorded_history, admit_recorded_history
                 extra = dict(draft_id=draft.pk) if draft else {}
+                if origination_correction:
+                    extra["correction_reason"] = correction_reason
             if post.get("action") == "confirm":
                 loan, created = admit(workspace=workspace, actor=actor, data=data, intent_token=intent, **extra,
                     review_token=post.get("review_token"), confirmed=post.get("confirm_review") == "on")
@@ -456,5 +463,5 @@ def paper_history_entry(request, *, draft=None):
     return render(request, "loans/pawn/paper_history.html", dict(form=form, rows=rows, review=review,
         formset=collateral, entry_purpose="paper",
         archive=archive, archive_snapshots=snapshots, review_token=token, intent_token=intent,
-        completed_draft=draft, loan=draft, form_action=request.path if draft else None,
+        completed_draft=draft, origination_correction=origination_correction, loan=draft, form_action=request.path if draft else None,
         sections=[(title, [form[name] for name in names]) for title, names in sections], **presentation))

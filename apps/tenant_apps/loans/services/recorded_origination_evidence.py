@@ -47,6 +47,8 @@ def _validate(snapshot):
     _require(snapshot.created_by_id is not None and snapshot.created_by_id == event.created_by_id,
              "The actual recording user must be retained.")
     recording = snapshot.evidence["recording"]
+    from .origination_corrections import validate_correction_evidence
+    validate_correction_evidence(snapshot)
     _require(recording["schema"] == "recorded-origination/1", "Unsupported evidence version.")
     _require(recording["payout_already_occurred"] is True, "Confirm that the payout already occurred.")
     reference = recording["source_reference"]

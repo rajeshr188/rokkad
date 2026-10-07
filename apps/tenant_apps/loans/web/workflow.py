@@ -102,6 +102,25 @@ def pawn_loan_record_completed_payout(request, pk):
     return paper_history_entry(request, draft=loan)
 
 
+@loans_action_required("workspace.settings.manage")
+@loans_action_required("data.create")
+@loans_action_required("data.edit")
+@loans_action_required("loan.disburse")
+@never_cache
+def pawn_loan_correct_origination(request, pk):
+    from apps.tenant_apps.loans.services.origination_corrections import correction_source
+    from .recorded_history import paper_history_entry
+    loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"),
+        pk=pk, workspace=request.loans_workspace)
+    if request.method != "POST" or loan.state == "DRAFT":
+        try:
+            correction_source(loan, actor=request.user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("workspace_loans:pawn_loan_detail", workspace_slug=request.workspace.slug, pk=pk)
+    return paper_history_entry(request, draft=loan, origination_correction=True)
+
+
 @loans_workspace_required
 @never_cache
 def pawn_loan_record_earlier_payout(request, pk):

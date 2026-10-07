@@ -264,6 +264,9 @@ class PawnLoanDocumentProjectionBuilder:
         terms, day = recording["terms"], as_of_date or timezone.localdate()
         identity = cls.recorded_position_fingerprint(loan, day) if position else origin.payload_fingerprint
         status = f"Recorded from paper; source {recording['source_reference']}; entered {origin.created_at.isoformat()}; generated {timezone.now().isoformat()}; original digital approval absent"
+        if recording.get("origination_correction"):
+            correction = recording["origination_correction"]
+            status += f"; actual-paper origination correction; reversed digital attempts retained; reason {correction['reason']}"
         if recording.get("contract_correction"):
             correction = recording["contract_correction"]
             status += f"; corrected contract; previous event #{correction['source_event_id']}; checked source {correction['reference']}; reason {correction['reason']}"

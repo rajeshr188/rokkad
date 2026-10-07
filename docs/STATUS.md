@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## LO-01 correction implemented and demonstrated (7 October)
+
+Explicit actual-paper correction now reuses the recorded-history writer for an
+eligible reopened draft containing only fully reversed same-day native attempts.
+It retains identities and old evidence, records the reviewed actual agreement,
+rejects native reissue and permits validated subsequent receipt correction.
+Exact Workspace recovery retains the graph; bounded per-loan export remains
+explicitly unsupported. All 17 correction tests and the separately repeated
+opening recovery case pass (18 checks). The broader initial run passed 256
+checks, with an invocation typo and recovery-fixture lock deadlock resolved on
+follow-up. Final presentation/retained-native/correction/dependency regression
+passes all **75 checks** against the final source. Documentation, import boundaries
+and whitespace pass. LO-02's shared routine editor is next; final CI/artifact and
+production acceptance remain later plan gates.
+
+D01623 is corrected **only in the approved staging copy**, retaining loan/item
+identity and old evidence: 2,100 principal, 84 advance, 10 charge, 2,006 proceeds,
+one live recorded origin. Interest stays zero through 24 October and starts at
+84 on 25 October. The 11:06:13 IST diagnostic used pinned runtime plus source
+overlays; it does not certify the final clean artifact. Production remains
+uncorrected and no production financial write occurred.
+
+Read-only discovery at 10:54:17 IST found approximately **1.67 GiB free** and
+private R2 production media. Bucket versioning metadata returned AccessDenied;
+actual media recovery and adequate release headroom remain open. See the
+[LO-01 execution note](implementation/actual-paper-origination-correction-lo01.md).
+
 ## Loan origination completion selected (7 October)
 
 The owner accepted the architecture analysis and all recommendations, including

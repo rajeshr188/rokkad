@@ -61,6 +61,8 @@ def disburse_pawn_loan(
     """Activate an approved loan; a fully reversed attempt may be replaced."""
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.disburse")
+    if loan.disbursal_snapshots.filter(basis="RECORDED").exists():
+        raise PawnDisbursalError("A recorded origin cannot be reissued through native approval and disbursal.")
     if loan.state == PawnLoanState.ACTIVE.value:
         return _existing_disbursal_result(loan)
     if loan.state != PawnLoanState.APPROVED.value:

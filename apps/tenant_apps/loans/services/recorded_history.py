@@ -1,4 +1,4 @@
-"""Reviewed, atomic admission of a never-entered paper loan and its timeline."""
+"""Reviewed paper recording, including explicit correction of reversed native attempts."""
 from copy import deepcopy
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -209,17 +209,24 @@ def _authorize(workspace, actor, data=None):
             require_workspace_action(workspace, actor, "loan.release")
 
 
-def new_recording_intent(*, workspace, actor, draft_id=None):
+def new_recording_intent(*, workspace, actor, draft_id=None, correction=False):
     _authorize(workspace, actor)
-    return signing.dumps(dict(workspace=workspace.pk, actor=actor.pk, key=str(uuid4()), draft_id=draft_id), salt=INTENT_SALT)
+    context = dict(workspace=workspace.pk, actor=actor.pk, key=str(uuid4()), draft_id=draft_id)
+    if correction:
+        from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION
+        require_workspace_action(workspace, actor, LOANS_ADMIN_ACTION, "data.edit")
+        if type(draft_id) is not int:
+            raise ValueError("Origination correction requires an existing loan.")
+        context["origination_correction"] = True
+    return signing.dumps(context, salt=INTENT_SALT)
 
 
-def _intent(token, workspace, actor, draft_id=None):
+def _intent(token, workspace, actor, draft_id=None, correction=False):
     try:
         intent = signing.loads(token or "", salt=INTENT_SALT)
         if (intent["workspace"], intent["actor"]) != (workspace.pk, actor.pk):
             raise PermissionDenied("This paper-entry form belongs to another Workspace or user.")
-        if intent.get("draft_id") != draft_id:
+        if intent.get("draft_id") != draft_id or intent.get("origination_correction", False) != correction:
             raise ValueError("This submission belongs to a different draft or entry purpose.")
         return UUID(intent["key"])
     except (signing.BadSignature, KeyError, TypeError, ValueError) as exc:
@@ -227,13 +234,15 @@ def _intent(token, workspace, actor, draft_id=None):
 
 
 @transaction.atomic
-def preview_recorded_history(*, workspace, actor, data, intent_token, draft_id=None):
+def preview_recorded_history(*, workspace, actor, data, intent_token, draft_id=None, correction_reason=None):
     data = validate_input(data)
     _authorize(workspace, actor, data)
-    key = _intent(intent_token, workspace, actor, draft_id)
+    if correction_reason is not None:
+        correction_reason = _text(correction_reason, "the origination correction reason", 500)
+    key = _intent(intent_token, workspace, actor, draft_id, correction_reason is not None)
     Company.all_objects.select_for_update().get(pk=workspace.pk)
     with transaction.atomic():
-        _, review = _admit(workspace, actor, data, key, draft_id=draft_id)
+        _, review = _admit(workspace, actor, data, key, draft_id=draft_id, correction_reason=correction_reason)
         transaction.set_rollback(True)
     token = signing.dumps(dict(workspace=workspace.pk, actor=actor.pk, key=str(key),
         data=_digest(data), review=review), salt=SALT, compress=True)
@@ -241,21 +250,29 @@ def preview_recorded_history(*, workspace, actor, data, intent_token, draft_id=N
 
 
 @transaction.atomic
-def admit_recorded_history(*, workspace, actor, data, intent_token, review_token, confirmed=False, draft_id=None):
+def admit_recorded_history(*, workspace, actor, data, intent_token, review_token, confirmed=False, draft_id=None, correction_reason=None):
     data = validate_input(data)
     _authorize(workspace, actor, data)
-    key = _intent(intent_token, workspace, actor, draft_id)
+    if correction_reason is not None:
+        from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION
+        require_workspace_action(workspace, actor, LOANS_ADMIN_ACTION, "data.edit")
+        correction_reason = _text(correction_reason, "the origination correction reason", 500)
+    key = _intent(intent_token, workspace, actor, draft_id, correction_reason is not None)
     Company.all_objects.select_for_update().get(pk=workspace.pk)
     if draft_id is not None:
         from .completed_payouts import draft_source
         candidate = draft_source(workspace, actor, draft_id)
-        existing = candidate if candidate.disbursal_snapshots.exists() else None
+        existing = candidate if candidate.disbursal_snapshots.exists() and (
+            correction_reason is None or candidate.disbursal_snapshots.filter(basis="RECORDED").exists()) else None
         if existing and (not existing.disbursal_snapshot or existing.disbursal_snapshot.evidence.get("recording", {}).get("admission", {}).get("key") != str(key)):
             raise ValueError("Another payout has already been recorded for this draft. Open its existing loan.")
     else:
         existing = m.PawnLoan.objects.filter(workspace=workspace, creation_submission_id=key).first()
     if existing:
         admission = existing.disbursal_snapshot.evidence["recording"]["admission"]
+        actual_reason = existing.disbursal_snapshot.evidence["recording"].get("origination_correction", {}).get("reason")
+        if actual_reason != correction_reason:
+            raise ValueError("This submission already recorded a different correction reason.")
         if admission["request_sha256"] != _digest(data):
             raise ValueError("This submission already recorded different facts. Open its existing history.")
         return existing, False
@@ -267,13 +284,13 @@ def admit_recorded_history(*, workspace, actor, data, intent_token, review_token
         raise ValueError("Preview the history again; its review is missing or expired.") from exc
     if any(signed.get(k) != v for k, v in dict(workspace=workspace.pk, actor=actor.pk, key=str(key), data=_digest(data)).items()):
         raise ValueError("The history or recording context changed. Preview again.")
-    loan, review = _admit(workspace, actor, data, key, draft_id=draft_id)
+    loan, review = _admit(workspace, actor, data, key, draft_id=draft_id, correction_reason=correction_reason)
     if signed["review"] != review:
         raise ValueError("Numbering or calculated results changed since review. Preview again.")
     return loan, True
 
 
-def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None, historical_setup=None, terminal=False):
+def _make_contract(workspace, actor, data, key, *, number, day, principal, rate, tenure, advance, predecessor=None, custody_state="IN_VAULT", archive_ids=(), draft=None, historical_setup=None, terminal=False, correction=False):
     series = m.LoanSeries.objects.select_related("license").get(pk=data["series_id"], workspace=workspace)
     revision = None
     if data.get("license_revision_id") is not None:
@@ -310,7 +327,7 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
     from .recorded_items import contract_items, ITEM_PROFILE
     if draft:
         from .completed_payouts import apply_actual_contract
-        items = apply_actual_contract(draft, data, actor=actor)
+        items = apply_actual_contract(draft, data, actor=actor, correction=correction)
     else:
         items = []
     for facts in (() if draft else contract_items(dict(data, principal=str(principal), rate=str(rate)))):
@@ -363,12 +380,20 @@ def _make_contract(workspace, actor, data, key, *, number, day, principal, rate,
     return loan, items[0], policy, recording, tranches, monthly
 
 
-def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historical_setup=None):
+def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historical_setup=None, correction_reason=None):
     draft = source = None
+    correction = None
+    if correction_reason is not None and draft_id is None:
+        raise ValueError("Origination correction requires an existing loan.")
     if draft_id is not None:
         from .completed_payouts import draft_source, require_unpaid_draft, source_evidence
         draft = draft_source(workspace, actor, draft_id)
-        require_unpaid_draft(draft)
+        if correction_reason is not None:
+            from .origination_corrections import correction_source, PROFILE as CORRECTION_PROFILE
+            attempts = correction_source(draft, actor=actor)
+            correction = dict(profile=CORRECTION_PROFILE, reason=correction_reason, attempts=attempts)
+        else:
+            require_unpaid_draft(draft)
         source = source_evidence(draft)
     references = () if historical_setup else m.PawnLoanEvent.objects.filter(loan__workspace=workspace,
             event_kind="DISBURSAL", payload__recording__collection_profile__in=(PROFILE, "recorded-anniversary/2", RECORDED_PROFILE)).values_list(
@@ -384,9 +409,11 @@ def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historic
     original, item, policy, recording, tranches, monthly = _make_contract(workspace, actor, data, key,
         number=data["number"], day=date.fromisoformat(data["date"]), principal=principal, rate=rate,
         tenure=data["tenure"], advance=advance, archive_ids=archive["snapshot_ids"] if archive else (), draft=draft,
-        historical_setup=historical_setup)
+        historical_setup=historical_setup, correction=correction is not None)
     if source:
         recording["draft_source"] = source
+    if correction is not None:
+        recording["origination_correction"] = correction
     fees = Decimal(data.get("document_charge", "0"))
     fee_rows = [dict(kind="DOCUMENT_CHARGE", amount=str(fees), deducted=True)] if fees else []
     if "payout_basis" in data:
@@ -401,10 +428,13 @@ def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historic
         approval_snapshot_id=None, policy_snapshot_id=policy.pk, advance_interest_periods=data["advance_months"],
         monthly_interest=str(monthly), tranches=tranches, fees=fee_rows))
     event, _ = record_loan_event(original.pk, event_kind="DISBURSAL", effective_date=original.loan_date, payload=payload, actor=actor)
-    m.PawnLoanDisbursalSnapshot.objects.create(loan=original, basis="RECORDED", policy_snapshot=policy, loan_event=event,
+    snapshot = m.PawnLoanDisbursalSnapshot.objects.create(loan=original, basis="RECORDED", policy_snapshot=policy, loan_event=event,
         gross_principal=principal, monthly_interest=monthly, advance_interest_periods=data["advance_months"],
         advance_interest=advance, deducted_fees=fees, net_disbursed=Decimal(data["cash_paid"]),
         evidence=dict(recording=recording, tranches=tranches, fees=fee_rows), created_by=actor)
+    if correction is not None:
+        original.disbursal_snapshot = snapshot
+        original.save(update_fields=["disbursal_snapshot"])
     _activate(original, event, actor)
     current, loans = original, [original]
     rows = [dict(kind="Paper proceeds" if data.get("payout_basis") == "PROCEEDS" else "Original payout", date=data["date"], number=data["number"], cash=data["cash_paid"],
@@ -465,6 +495,8 @@ def _admit(workspace, actor, data, key, *, archive=None, draft_id=None, historic
         complete_through=data["complete_through"], confirmed_complete=data["confirmed_history"])
     if source:
         review["draft_source"] = source
+    if correction is not None:
+        review["origination_correction"] = correction
     return original, review
 
 

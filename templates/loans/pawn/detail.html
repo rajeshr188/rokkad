@@ -18,6 +18,7 @@
 {% include "loans/pawn/_draft_split_discovery.html" %}
 {% include "loans/pawn/_recorded_by.html" %}
 {% if can_record_completed_payout %}<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_record_completed_payout' request.workspace.slug loan.pk %}">Record completed payout</a> <span class="small">Use when the money was already paid; keep this draft's identity.</span></p>{% endif %}
+{% if can_correct_origination %}<p><a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_correct_origination' request.workspace.slug loan.pk %}">Correct recorded origination</a> <span class="small">Review actual paper facts after a fully reversed digital payout.</span></p>{% endif %}
 {% if recorded_history and can_administer %}<p><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_correct_paper_history' request.workspace.slug loan.pk %}">Review paper history correction</a> <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_correct_paper_contract' request.workspace.slug loan.pk %}">Correct original paper terms</a> {% if can_correct_paper_closing %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_correct_paper_closing' request.workspace.slug loan.pk %}">Correct paper closing facts</a>{% endif %}</p>{% endif %}
 
 {% if can_preview_imported_ticket %}
@@ -31,7 +32,7 @@
 <section class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4" aria-labelledby="print-loan-ticket-title" data-print-loan-ticket data-loan-block="print">
   <div>
     <h2 class="h5 mb-1" id="print-loan-ticket-title">{% translate "Print loan ticket" %}</h2>
-    <p class="mb-0">{% translate "Open the approved loan ticket, check the details, then print it for the customer." %}</p>
+    <p class="mb-0">{% if ticket_is_recorded %}Open the recorded agreement copy, check the original date and terms, then print it for the customer.{% else %}{% translate "Open the approved loan ticket, check the details, then print it for the customer." %}{% endif %}</p>
   </div>
   <a class="btn btn-primary btn-lg" target="_blank" rel="noopener" href="{% url 'workspace_loans:pawn_loan_ticket_pdf' request.workspace.slug loan.pk %}"><i class="bi bi-printer me-2" aria-hidden="true"></i>{% translate "Print loan ticket" %}<span class="d-block small">{% translate "PDF opens in a new tab" %}</span></a>
 </section>

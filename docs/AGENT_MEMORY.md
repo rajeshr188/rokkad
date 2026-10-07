@@ -23,6 +23,17 @@ recovery and capacity remain release work. See the
 [completion plan](plans/loan-origination-completion.md) and
 [decision](adr/2026-10-07-shared-loan-entry-and-explicit-origination-correction.md).
 
+LO-01 implements explicit administrator review through the existing recorded
+writer for reopened drafts with fully reversed same-day native attempts. It
+retains physical identity and old evidence, creates one current recorded origin,
+and validates retained pair IDs before excluding them from servicing chronology
+or receipt-correction blockers. Native reissue is refused. Different-day reversals
+and changed physical jewellery evidence require broader review. Exact Workspace
+recovery retains the graph; bounded per-loan export explicitly refuses embedded
+native IDs until supported remapping exists. D01623 is demonstrated only in the
+approved staging copy; production remains uncorrected. Shared routine editor and
+final candidate/media/source acceptance remain subsequent slices.
+
 The Loans directory now reads ordinary loans and retained historical closed claims
 together; browsing never admits finance, supplies an unknown balance or certifies
 handover. Exact source scope deduplicates snapshots; admitted identities use the

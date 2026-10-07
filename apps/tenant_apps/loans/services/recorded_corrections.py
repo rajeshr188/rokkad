@@ -102,7 +102,10 @@ def dependencies(loan, *, batch_id=None):
             blockers.append(f"Event #{event.pk} ({event.event_kind}) needs a lifecycle correction beyond this receipt review.")
         elif event.event_kind == "INTEREST_ACCRUAL" and not event.payload.get("recorded_collection"):
             blockers.append(f"Accrual #{event.pk} does not use the recorded anniversary calculation.")
-    if any(e.event_kind == "REVERSAL" and e.payload.get("history_correction", {}).get("schema") != PROFILE for e in events):
+    from .origination_corrections import retained_attempt_event_ids
+    retained = retained_attempt_event_ids(loan)
+    if any(e.pk not in retained and e.event_kind == "REVERSAL"
+            and e.payload.get("history_correction", {}).get("schema") != PROFILE for e in events):
         blockers.append("Existing corrections outside this historical-restatement profile require separate reconciliation.")
     if len(events) > 1000 or len(active) > 121:
         blockers.append("This history exceeds the supported review limit of 120 collection events and 1,000 retained events.")
