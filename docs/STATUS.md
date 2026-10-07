@@ -1,11 +1,28 @@
 ---
 status: active
 owner: project
-updated: 2026-10-06
+updated: 2026-10-07
 tags: [status, architecture]
 ---
 
 # Status
+
+## Loan origination completion selected (7 October)
+
+The owner accepted the architecture analysis and all recommendations, including
+D01623 correction, source/staff acceptance, actual media recovery and capacity
+review, and requested incremental delivery. The
+[LO-00 through LO-07 plan](plans/loan-origination-completion.md) records scope,
+dependencies and completion checks. Start early capacity/storage discovery and
+explicit fully reversed native-to-recorded correction, then shared editor,
+review/confirmation, servicing/monitoring compatibility, real acceptance, final
+candidate/recovery and concrete rollout review.
+
+The [decision](adr/2026-10-07-shared-loan-entry-and-explicit-origination-correction.md)
+retains internal approval/payout facts and existing permissions while simplifying
+routine actions. No runtime code, database or production changes occur in this
+planning checkpoint. ef3c82a5/e963b079 remain the dated verification baseline;
+a changed candidate needs its own release evidence.
 
 ## Approved production-copy verification (6 October, latest)
 

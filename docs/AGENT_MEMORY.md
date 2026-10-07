@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-06
+updated: 2026-10-07
 tags: [agents, context, architecture]
 ---
 
@@ -11,6 +11,17 @@ Stable project understanding only. Delivery evidence belongs in [Status](STATUS.
 selected work in [the hardening plan](plans/project-hardening.md), and shelved ideas
 in [Future work](plans/future-work.md). Prior notes, including superseded decisions,
 are preserved in [the historical snapshot](archive/context/2026-09-09/AGENT_MEMORY.md).
+
+On 7 October the owner accepted shared routine origination: one editor/review,
+current lending versus completed recording selected by existing scoped defaults
+and per-loan override. Approval/payout remain internal facts; SIMPLE combines
+confirmation without changing current owner authority, and EXTENDED keeps separate
+actions. Explicit reviewed correction for the demonstrated fully reversed
+native-to-actual-paper shape comes first, retaining old evidence rather than
+falling back after historical review fails. Source/staff acceptance, actual media
+recovery and capacity remain release work. See the
+[completion plan](plans/loan-origination-completion.md) and
+[decision](adr/2026-10-07-shared-loan-entry-and-explicit-origination-correction.md).
 
 The Loans directory now reads ordinary loans and retained historical closed claims
 together; browsing never admits finance, supplies an unknown balance or certifies

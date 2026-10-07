@@ -7,6 +7,11 @@ tags: [loans, plan, continuation]
 
 # Loan continuation consolidation
 
+The owner selected the [origination completion plan](loan-origination-completion.md)
+on 7 October. LO-00 through LO-07 finish shared editor/review, the demonstrated
+reversed-origin correction and remaining LC-07 release gates. This plan retains
+LC history; source/media/production acceptance is not marked complete.
+
 This follows LD-01–08. The owner's 6 October brief authorizes a plan and the
 smallest safe first implementation slice, not production deployment or conversion.
 The pasted brief is authoritative; its shared ChatGPT link was unavailable.
