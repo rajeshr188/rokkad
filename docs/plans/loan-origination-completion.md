@@ -222,6 +222,15 @@ No real partial-repayment event exists in the selected snapshot cohort; generate
 LO-04 coverage supplements the available real closure. See the
 [comparison sheet and pending acceptance record](../implementation/loan-source-staff-acceptance-lo05.md).
 
+A separate current fictional screen-review app is now available at
+`http://127.0.0.1:8083`, with private generated login details in
+`.tmp/lo05-preview-20261007/review-login.txt`. It uses commit `925a6b4a`, a new
+fictional database/media copy, restricted runtime and SIMPLE owner review.
+All 1,666 runtime files match; authenticated pages/29 assets and actual
+desktop/mobile shared-editor/item/purpose checks pass without financial posts.
+Owner screen review is still pending. Real corrected D01623 remains server-only;
+this preview does not establish actual production media recovery or final CI.
+
 Use RA00500 for opening acceptance and corrected D01623 for paper payout.
 Select a real JCL/JSK direct loan and real receipt/closure examples where available.
 Record actual reviewer/date/source/result; generated scenarios supplement testing

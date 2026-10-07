@@ -143,13 +143,53 @@ project chat with a short source reference. The agent records those results here
 This release acceptance is not the in-app Review transactions action, which
 records a separate per-loan coverage attestation.
 
-**A browser-accessible LO-05 candidate has not yet been provided.** The private
-server evidence is a read-only diagnostic, not a running staff preview. The
-existing localhost:8079 preview was checked on 7 October and lacks the shared
-routine editor; it cannot accept the latest LO-02/03 screens. Prepare and identify
-an isolated current candidate and provide its actual URL/login route before asking
-the owner to complete the walkthrough below. Corrected real D01623 remains
-server-only staging data; do not imply it is present in a local fictional preview.
+The initial handoff lacked a current browser preview; that gap is now addressed
+by a separate **fictional localhost review app** at **http://127.0.0.1:8083**.
+The older localhost:8079 preview lacks the shared routine editor; use 8083 for
+the latest LO-02/03 screens. Real corrected D01623 remains server-only staging
+data and is not copied into this fictional app.
+
+Sign in at `http://127.0.0.1:8083/accounts/login/` using the private generated
+login in `.tmp/lo05-preview-20261007/review-login.txt`. Select the copied test
+Workspace `khata-2777349a`; its name comes from the earlier fictional pilot.
+This preview's owner workflow was set to SIMPLE through the ordinary authorized
+settings form. Standing economic policies and real Workspace settings were not
+changed. Separate approval/disbursal remains selectable in this test Workspace.
+
+- Direct: `http://127.0.0.1:8083/w/khata-2777349a/loans/internal/create/?entry=direct`
+- Paper: `http://127.0.0.1:8083/w/khata-2777349a/loans/internal/create/?entry=paper`
+- Existing test loans: `http://127.0.0.1:8083/w/khata-2777349a/loans/internal/`
+- Loan health: `http://127.0.0.1:8083/w/khata-2777349a/loans/setup/operations/risk/`
+
+The preview uses application commit `925a6b4a1b4ff4fe51b7de2a4b8e2cc734b1b45c`,
+image `rokkad:lo05-preview-925a6b4a`, ID
+`sha256:de5f1cda93cd08f69dd050281f40152bd76d46a1ad327f3bf94cf8c18bb285aa`.
+All **1,666 application/template/static/contract files** match that committed
+archive. A preview-only settings module isolates cookies/cache, disables platform
+email/WhatsApp credentials and guards the fictional target database. No workers
+were started. The credential-free relay publishes **127.0.0.1:8083**; the app/database
+stay on the established internal local network. Production is not connected.
+
+The documented fictional source `rokkad_ld08_stage_20261005` was copied into new
+database `rokkad_lo05_preview_20261007_925a6b4a`. All **202 source tables** match
+before migration and all **nine fictional media files** match individually.
+Source fingerprints remain unchanged through preparation. Owner-only migrations
+apply Loans 0061 through 0063 in the new copy; restricted runtime startup passes
+with no owner credentials in the web environment. This fictional recovery does
+not certify actual production media or complete LO-06.
+
+Authenticated direct/paper, Loans and Loan health GETs return 200; **29 local
+assets** are available. Actual desktop/mobile Chromium checks pass shared layout,
+customer search, add/remove item controls, no horizontal overflow and automatic
+purpose switching with retained collateral facts. No mocked app responses or
+financial submissions were used. The first browser probe attempted an unnecessary
+second Apply click after the automatic selection change; the corrected probe uses
+the actual selection behavior and passes. The first offline image build lacked
+package caches; the normal dependency build passes. Private fictional diagnostics
+and screenshots remain under `.tmp/lo05-preview-20261007/`.
+
+Successful automated checks are not staff acceptance. The owner still needs to
+try the screens and report the actual review result in chat.
 
 Use the candidate in an isolated test environment. Existing records can be read
 without posting. Any new payout, receipt or closure exercise uses fictional loans

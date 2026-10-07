@@ -45,11 +45,26 @@ stays at the approved private server destination. **LO-05 remains awaiting the
 corrected-paper display and staff screen review**; LO-06 exact-candidate CI/media/capacity and LO-07
 rollout remain pending. See the [review sheet and acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
-Review-access clarification: the owner reported the three book matches in chat.
-A browser-accessible LO-05 candidate/URL has not been
-provided. The running localhost:8079 preview lacks the shared routine editor;
-staff screen acceptance must wait for an identified current isolated preview.
-Private GET projections do not substitute for that access or actual UI review.
+Review access is now available at **http://127.0.0.1:8083** in a separate fictional
+copy, using application commit `925a6b4a` / image `rokkad:lo05-preview-925a6b4a`.
+All 1,666 runtime source files match the committed archive; 202 fictional source
+tables and nine media files match the new copy before candidate migration. The
+source remains unchanged through preparation. Owner-only migrations through Loans
+0063 and restricted runtime startup pass. Generated login details stay private in
+`.tmp/lo05-preview-20261007/review-login.txt`; its copied test Workspace is
+`khata-2777349a`, configured through the normal owner form for SIMPLE review.
+Cookie/cache and provider settings are isolated. Existing previews/production
+remain unchanged; real corrected D01623 is not present in this fictional app.
+
+Authenticated login/direct/paper/list/Loan health checks and 29 local assets pass.
+Actual desktop/mobile Chromium checks pass shared controls, customer search,
+add/remove, no overflow and purpose roundtrip with retained item facts, without
+mocked application responses or financial submissions. The probe's redundant
+Apply click was corrected for actual automatic switching; the final browser run
+passes. The offline dependency build failed; the normal build succeeds. These
+are preview checks, not owner screen acceptance or LO-06 actual media recovery.
+The [review pack](implementation/loan-source-staff-acceptance-lo05.md) has exact
+links and the remaining walkthrough.
 
 ## LO-04 servicing, monitoring and legacy compatibility verified (7 October)
 
