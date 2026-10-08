@@ -44,3 +44,12 @@ container and background readers do not need replacement for a data-only repair.
 This is an explicit correction of existing customers, not a new automatic status
 policy or a restriction on registering new customers before their first loan.
 Normal staff status controls and credit holds remain separate.
+
+The 8 October production repair completed at 10:31 IST after the actual-source
+stage rehearsal and checksum/catalogue validation of the current backup. It
+activated 393 customers and deactivated 214, with 607 status audits. Final
+ACTIVE/INACTIVE counts: JCL 4,428/1,463, JSK 640/13, Lakshmi 2,104/3. All 4,689
+historical-only customers count as having loans. Search membership and second
+previews pass in all three Workspaces, with exact preserved contact, loan and
+source fingerprints. The private server evidence child is `party-status-feecbb58/`;
+the production web container was not replaced or restarted.

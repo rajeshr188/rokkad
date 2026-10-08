@@ -22,8 +22,21 @@ edit permissions and Workspace transactions, locking customers and auditing only
 status/actor/time changes. All **9 focused restricted-role tests pass** for ordinary
 states, exact historical aliases, namespace mismatch refusal, stale previews,
 permissions/isolation, audit rollback, protected statuses and command privacy.
-Actual-source isolated rehearsal and production application are next. No automatic
-creation policy, schema or financial writer is introduced. See the
+Actual-source isolated rehearsal and production application both pass. The
+production repair completes at **10:31 IST**: **393 customers activated**, **214
+deactivated**, and **607 actor/object-linked status audit entries**. Final counts
+are JCL **4,428 ACTIVE / 1,463 INACTIVE**, JSK **640 / 13**, Lakshmi **2,104 / 3**.
+All **4,689 historical-only customers** remain ACTIVE. Exact fingerprints preserve
+loan/event/issued-document/archive/import/source-identity/address/contact rows and
+every nonstatus Party field. Borrower-search membership matches the ACTIVE cohort
+in all three Workspaces; fresh command previews show zero remaining candidates.
+
+The restricted ephemeral operator uses `rokkad:customer-status-repair-feecbb58`
+(two source files over the current web image) with current backup checksum/catalogue
+validated. The production web container/start time, background readers, schema and
+media remain unchanged. Private snapshots and rehearsal/application evidence stay
+in the approved server child `party-status-feecbb58/`, not the checkout.
+No automatic creation policy, schema or financial writer is introduced. See the
 [operator guide](flows/customer-status-repair.md).
 
 ## Customer address/phone display repair (8 October)
