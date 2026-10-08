@@ -7,6 +7,17 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+On 8 October the owner requests repairing missing customer address/telephone
+defaults across JCL, JSK and Lakshmi so existing details appear in borrower search.
+The explicit Party repair preserves existing selections, chooses HOME then oldest
+nonempty address only when no default exists, and chooses a master-matching or
+oldest nonblank telephone only when no primary exists. Empty master phone summaries
+are synchronized; existing nonempty summaries, stored formats, verification and
+source provenance remain intact. No absent address/telephone is fabricated.
+The repair command previews a scoped digest, requires Party-edit authority and
+audits per-customer atomic changes. It is not a new automatic import/create policy.
+See the [operator guide](flows/customer-display-default-repair.md).
+
 Stable project understanding only. Delivery evidence belongs in [Status](STATUS.md),
 selected work in [the hardening plan](plans/project-hardening.md), and shelved ideas
 in [Future work](plans/future-work.md). Prior notes, including superseded decisions,

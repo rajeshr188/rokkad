@@ -22,7 +22,21 @@ Workspace/actor permissions. Each customer is independently atomic; no schema,
 loan/event/document or import-provenance change. All **13 focused tests pass** for
 selection, display, preservation, retries, changed preview, missing facts, atomic
 audit rollback and restricted-role/Workspace boundaries. Actual-source isolated
-rehearsal and the authorized production repair are in progress. See the
+rehearsal passes with exact retained Party nonselection fields and loan/event/issued
+document fingerprints. The production repair completes at **10:17 IST**, selecting
+**3,927 addresses**, **1,819 primary telephone contacts** and synchronizing **1,818
+phone summaries**. All existing selections and nonselection Party/address/contact
+fields remain exact. **7,564 actor/object-linked audit entries** are recorded;
+search labels pass for all **4,369 changed customers**. Fresh restricted read-only
+inventory and second previews find zero remaining repairable gaps in all three
+Workspaces. Missing-fact counts remain 1,944 addresses / 5,273 phones.
+
+The restricted operator uses `rokkad:party-default-repair-dc49e131`, a two-file
+derivative of the current web image, only for the isolated command. Web/container,
+background readers, runtime schema and media remain unchanged; no financial writer
+is called. Current backup checksum/catalogue passes before applying. Personal
+snapshots and per-Workspace evidence remain in the approved private server child
+`party-defaults-dc49e131/`, never in the local checkout. See the
 [operator guide](flows/customer-display-default-repair.md).
 
 ## Lakshmi paper setup warning correction (8 October)
