@@ -10,7 +10,8 @@
     {% for message in form.terms.messages %}<p class="text-warning">{{ message }}</p>{% endfor %}
   {% else %}<p class="text-body-secondary">Choose the series and original date to load the standing agreement.</p>{% endif %}
 
-  <details data-paper-term-exceptions {% if paper_terms_open %}open{% endif %}>
+  {% if paper_tenure_missing and not form.exceptions.value %}<p class="alert alert-warning" data-paper-tenure-missing>No standing tenure is configured for this series and original loan date. Update standing setup, or select the agreement choice below to enter the actual paper tenure.</p>{% endif %}
+  <details id="paper-term-exceptions" data-paper-term-exceptions {% if paper_terms_open %}open{% endif %}>
     <summary>Record different agreed terms</summary>
     <div class="form-check my-3">{{ form.exceptions }}<label class="form-check-label" for="{{ form.exceptions.id_for_label }}">{{ form.exceptions.label }}</label></div>
     <p class="small">Use only when the actual agreement differs or dated setup is unavailable. If all loans in this series use different terms, update standing setup once.</p>

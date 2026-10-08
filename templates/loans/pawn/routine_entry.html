@@ -2,13 +2,17 @@
 {% load loans_display static i18n %}
 {% block title %}New loan{% endblock %}
 {% block workspace_content %}
-<div class="loan-entry" hx-history="false" data-new-loan-entry data-routine-loan-editor>
+<div class="loan-entry" hx-history="false" data-new-loan-entry data-routine-loan-editor {% if entry_purpose == 'paper' and review %}data-paper-review{% endif %}>
+  {% if entry_purpose == 'paper' %}<div data-paper-entry-heading {% if review %}hidden{% endif %}>{% endif %}
   {% include "loans/pawn/_entry_purpose.html" %}
   <p class="text-body-secondary">{% if entry_purpose == 'paper' %}Record the original agreement. Standing setup supplies the terms; add known payments or closure here or later.{% else %}Enter the proposed agreement and review the payout. You can also save a draft to finish later.{% endif %}</p>
   <nav class="loan-workflow-nav" aria-label="Loan entry sections"><a href="#loan-details">1 &middot; Customer &amp; terms</a><a href="#collateral-formset">2 &middot; Collateral</a><a href="#loan-review-actions">3 &middot; Review</a></nav>
+  {% if entry_purpose == 'paper' %}</div>{% endif %}
+  {% if entry_purpose == 'paper' and review %}<h1 class="h3" data-paper-review-heading>Review paper loan</h1>{% endif %}
   <div class="loan-workflow-grid"><div class="loan-workflow-main">
   <form id="new-loan-form" method="post" action="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}" enctype="multipart/form-data" novalidate {% if entry_purpose == 'paper' %}data-paper-entry{% else %}data-draft-save-form data-valuation-preflight="{% url 'workspace_loans:pawn_valuation_readiness' request.workspace.slug %}"{% endif %}>
     {% csrf_token %}<input type="hidden" name="entry_mode" value="{{ entry_purpose }}"><input type="hidden" name="entry_values" value="{{ entry_values|default:'{}' }}">
+    {% if entry_purpose == 'paper' %}<p class="small" role="status" aria-live="polite" data-paper-review-status></p>{% endif %}
     {% if entry_purpose == 'paper' %}{{ form.routine_entry }}<input type="hidden" name="intent_token" value="{{ intent_token }}">
     {% else %}<input type="hidden" name="submission_token" value="{{ submission_token|default:'' }}"><div class="alert alert-info" role="status" aria-live="polite" data-draft-save-status hidden></div>{% endif %}
     {% if submission_reference_error %}<p class="alert alert-warning">Check the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" target="_blank" rel="noopener">loan list</a> for a recent save first. If no loan was saved, <a href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}">open a fresh New loan form</a>.</p>{% endif %}
@@ -17,8 +21,9 @@
       <ul>{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}{% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}{% for item in formset %}{% for error in item.non_field_errors %}<li>Collateral: {{ error }}</li>{% endfor %}{% for field in item %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">Item {{ forloop.parentloop.parentloop.counter }} &middot; {{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% endfor %}</ul>
     </div>{% endif %}
     {% if entry_photo_reselect and not entry_changing %}<p class="alert alert-warning" data-entry-photo-reselect>Your entered details are retained. After this page reload, select any new photographs again before submitting. For a reviewed paper entry, reselect the same files before confirmation.</p>{% endif %}
+    {% if entry_purpose == 'paper' %}<div data-paper-entry-details {% if review %}hidden{% endif %}>{% endif %}
     <section class="card mb-4" id="loan-details"><div class="card-body"><h2 class="h5 mb-3">Loan details</h2><div class="row g-3">
-      {% for field in loan_details_fields %}<div class="col-md-6">{% include "components/forms/accessible.html#field" %}{% if field.name == 'series' or field.name == 'series_id' %}<noscript><button class="btn btn-sm btn-outline-secondary" name="action" value="entry_change" formnovalidate>Apply series setup</button></noscript>{% include "loans/pawn/_entry_override.html" %}{% endif %}{% if forloop.first and can_add_customer %}<a class="small d-inline-block mb-2" href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">+ Add customer</a>{% endif %}</div>{% endfor %}
+      {% for field in loan_details_fields %}<div class="col-md-6">{% include "components/forms/accessible.html#field" %}{% if entry_purpose == 'paper' and field.name == 'tenure' %}<a class="small d-inline-block mb-2" href="#paper-term-exceptions" data-paper-edit-terms>Enter actual agreed terms</a>{% endif %}{% if field.name == 'series' or field.name == 'series_id' %}<noscript><button class="btn btn-sm btn-outline-secondary" name="action" value="entry_change" formnovalidate>Apply series setup</button></noscript>{% include "loans/pawn/_entry_override.html" %}{% endif %}{% if forloop.first and can_add_customer %}<a class="small d-inline-block mb-2" href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">+ Add customer</a>{% endif %}</div>{% endfor %}
     </div><div id="borrower-outstanding" class="mt-3" data-url="{% url 'workspace_loans:borrower_outstanding' request.workspace.slug %}" role="status" aria-live="polite"></div>
     {% if can_manage_loan_setup %}<a class="small" href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">Review branch setup</a>{% endif %}</div></section>
     {% if entry_purpose == 'paper' %}<section class="card mb-4"><div class="card-body"><h2 class="h5">Original number &amp; source</h2><div class="row g-3"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.number %}
@@ -38,7 +43,7 @@
     {% if entry_purpose == 'paper' %}{% include "loans/pawn/_paper_entry_agreement.html" %}{% include "loans/pawn/_paper_entry_activity.html" %}
     {% else %}{% include "loans/pawn/_direct_entry_preview.html" %}{% endif %}
     <div class="loan-workflow-actions" id="loan-review-actions">{% if entry_purpose == 'paper' %}<button class="btn btn-primary" name="action" value="preview">Review loan record</button>{% else %}{% if can_review_payout %}<button class="btn btn-primary" type="submit" name="action" value="review">Review loan</button>{% endif %}<button class="btn {% if can_review_payout %}btn-outline-secondary{% else %}btn-primary{% endif %}" type="submit" name="action" value="save">Save draft</button><button class="btn btn-outline-primary" type="submit" name="action" value="preview">Preview economics</button>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">Cancel</a></div>
-    {% if entry_purpose == 'paper' %}{% include "loans/pawn/_paper_entry_review.html" %}{% endif %}
+    {% if entry_purpose == 'paper' %}</div>{% include "loans/pawn/_paper_entry_review.html" %}{% endif %}
   </form></div>{% include "loans/pawn/_draft_summary.html" %}</div>
   {% include "loans/pawn/_camera_capture.html" %}
 </div>

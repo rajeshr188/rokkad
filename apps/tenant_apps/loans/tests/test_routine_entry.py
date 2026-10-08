@@ -70,6 +70,7 @@ class RoutineEntryTests(WorkspaceTestCase):
         self.assertEqual(paper.context["form"]["tenure"].value(), 12)
         self.assertEqual(str(paper.context["formset"][0]["interest_rate_override"].value()), "2.000000")
         self.assertContains(paper, 'name="tenure"', count=1)
+        self.assertContains(paper, "Supplied from the selected series and original loan date")
         self.assertNotContains(paper, "data-rate-readiness-panel")
 
     def test_multiple_series_wait_for_selection_before_reporting_missing_setup(self):
@@ -134,6 +135,70 @@ class RoutineEntryTests(WorkspaceTestCase):
         self.assertIsNotNone(response.context["review"], response.context["form"].errors)
         self.assertEqual(response.context["form"]["tenure"].value(), "3")
         self.assertFalse(response.context["form"].fields["tenure"].widget.attrs["readonly"])
+
+    def capture_step(self, name, response):
+        import os
+        from pathlib import Path
+        if folder := os.environ.get("PAPER_STEP_QA_CAPTURE"):
+            target = Path(folder)
+            target.mkdir(parents=True, exist_ok=True)
+            (target / (name + ".html")).write_bytes(response.content)
+
+    def test_missing_standing_tenure_has_visible_actual_terms_recovery(self):
+        client, path = self._entry_client()
+        m.PawnLoanEconomicPolicy.objects.filter(workspace=self.tenant).update(default_tenure_months=None)
+        page = client.get(path + "?entry=paper")
+        self.capture_step("missing-tenure", page)
+        self.assertIsNone(page.context["form"]["tenure"].value())
+        self.assertTrue(page.context["paper_terms_open"])
+        self.assertContains(page, "data-paper-tenure-missing")
+        self.assertContains(page, "Enter actual agreed terms")
+        self.assertContains(page, 'id="id_tenure_helptext"')
+        self.assertContains(page, "If setup has no tenure for that date")
+        data = self.paper_facts(page)
+        data.pop("tenure", None)
+        refused = client.post(path, data)
+        self.assertContains(refused, "Tenure is missing. Update standing setup")
+        self.assertIsNone(refused.context["review"])
+        data.update(exceptions="on", exception_reason="Actual book agreement", tenure="3")
+        reviewed = client.post(path, data)
+        self.assertIsNotNone(reviewed.context["review"], reviewed.context["form"].errors)
+        self.assertEqual(reviewed.context["form"]["tenure"].value(), "3")
+        self.assertFalse(reviewed.context["form"].fields["tenure"].widget.attrs["readonly"])
+        self.assertNotContains(reviewed, "data-paper-tenure-missing")
+
+    def test_paper_review_is_focused_and_edit_preserves_facts_without_posting(self):
+        client, path = self._entry_client()
+        page = client.get(path + "?entry=paper")
+        self.capture_step("entry", page)
+        data = self.paper_facts(page)
+        data.update(exceptions="on", exception_reason="Original tenure in book", tenure="3")
+        before = (m.PawnLoan.objects.count(), m.PawnLoanEvent.objects.count())
+        reviewed = client.post(path, data)
+        self.capture_step("review", reviewed)
+        self.assertIsNotNone(reviewed.context["review"], reviewed.context["form"].errors)
+        self.assertContains(reviewed, "data-paper-entry-details hidden")
+        self.assertContains(reviewed, "data-paper-review>")
+        self.assertContains(reviewed, "Edit details")
+        self.assertContains(reviewed, "Record completed payout")
+        edited = client.post(path, dict(data, action="edit", review_token=reviewed.context["review_token"], confirm_review="on"))
+        self.capture_step("edit", edited)
+        self.assertIsNone(edited.context["review"])
+        self.assertNotContains(edited, "data-paper-entry-details hidden")
+        self.assertNotContains(edited, 'name="review_token"')
+        self.assertEqual(edited.context["form"]["tenure"].value(), "3")
+        self.assertEqual(edited.context["form"]["number"].value(), data["number"])
+        self.assertEqual(edited.context["formset"][1]["allocated_principal"].value(), "4000")
+        self.assertEqual(before, (m.PawnLoan.objects.count(), m.PawnLoanEvent.objects.count()))
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
+        data["tenure"] = "6"
+        fresh = client.post(path, data)
+        stale = client.post(path, dict(data, action="confirm", review_token=reviewed.context["review_token"], confirm_review="on"))
+        self.assertIsNone(stale.context["review"])
+        self.assertEqual(before, (m.PawnLoan.objects.count(), m.PawnLoanEvent.objects.count()))
+        self.assertEqual(client.post(path, dict(data, action="confirm", review_token=fresh.context["review_token"], confirm_review="on")).status_code, 302)
+        self.assertEqual(m.PawnLoan.objects.get(loan_number=data["number"]).tenure_months, 6)
 
     def test_standard_terms_allow_confirmed_payout_details_and_exact_retry(self):
         client, path = self._entry_client()
@@ -230,6 +295,7 @@ class RoutineEntryTests(WorkspaceTestCase):
                        "collateral-2-photograph": self.photo()})
         count = m.PawnLoan.objects.count()
         preview = client.post(path, data)
+        self.capture_step("photo-review", preview)
         self.assertIsNotNone(preview.context["review"], preview.context["form"].errors)
         self.assertContains(preview, "data-origination-agreement")
         self.assertContains(preview, "Record completed payout")

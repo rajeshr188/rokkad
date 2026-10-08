@@ -1,12 +1,29 @@
 ---
 status: implemented
 owner: project
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [loans, origination, review, verification]
 related: [../plans/loan-origination-completion.md]
 ---
 
 # LO-03: shared origination review and confirmation
+
+On 8 October routine paper review becomes a separate visible step at the same
+ordinary New loan route. The editor remains populated but hidden during review;
+Edit details restores it and removes the signed review, requiring a new preview.
+The server's nonfinancial edit action provides the same fallback without JavaScript.
+Direct review and specialized archive/saved-draft admission keep their existing
+commands. Simple entry collapses transaction/evidence explanations; recorded later
+transactions open them for review.
+
+The existing entry-presentation replacement retains actual File inputs for paper
+preview responses; confirmation remains an ordinary multipart financial POST.
+DOMParser's noscript elements are removed from enhanced replacements so fallback
+file inputs cannot take the retained file out of the editor. Without JavaScript,
+unique-ID review file controls allow same-file reselection. Old signed-photo checks
+continue rejecting missing/changed files. Failed or edited-during-load previews
+preserve current inputs; reviewed facts are not automatically refreshed.
+
 
 ## Staff behavior
 

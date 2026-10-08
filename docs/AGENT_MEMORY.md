@@ -7,6 +7,15 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Routine paper origination uses two visible entry/review steps with the same signed
+recorded-history confirmation. Edit restores existing fields and requires a fresh
+review. Standing tenure stays supplied by dated setup; missing/different actual
+terms have an explicit beside-field exception action and source explanation.
+Browser review retains selected photos locally; no server staging store is added.
+Without JavaScript, the review offers truthful same-file reselection. This is a
+presentation refinement, not another admission or servicing lifecycle.
+
+
 On 8 October the owner separately authorizes correcting Lakshmi D01622/D01623 and
 confirms D01622's actual paper terms. Both production loans are now ACTIVE recorded
 contracts: ordinary unpaid-draft admission for D01622, and explicit fully reversed

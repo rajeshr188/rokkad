@@ -248,6 +248,17 @@ class PaperHistoryForm(forms.Form):
                 pass
         if self.routine:
             self.fields["tenure"].widget.attrs["readonly"] = not bool(self["exceptions"].value())
+            tenure = self["tenure"]
+            tenure.help_text = self.fields["tenure"].help_text = (
+                "Enter the tenure actually agreed on paper."
+                if self["exceptions"].value() else
+                "Supplied from the selected series and original loan date. Use Enter actual agreed terms to record a different agreement."
+                if tenure.value() else
+                "Choose the series and original date. If setup has no tenure for that date, update standing setup or use Enter actual agreed terms."
+            )
+            self.fields["tenure"].error_messages["required"] = (
+                "Tenure is missing. Update standing setup, or select Paper agreement differs from standard terms and enter the actual tenure."
+            )
         _style(self)
 
     def clean(self):
@@ -480,7 +491,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             for name in ("rate", "tenure", "renewal_method", "new_principal", "cash_paid", "interest_offset", "custody"):
                 row.fields[name].widget = forms.HiddenInput()
     review, token, agreement = None, "", None
-    if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
+    if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change", "edit") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
         try:
             data = _data(form, rows, collateral)
             correction_reason = data.pop("correction_reason", None)

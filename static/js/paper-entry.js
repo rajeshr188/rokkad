@@ -1,6 +1,7 @@
 function initPaperEntry() {
   const form = document.querySelector('form[data-paper-entry]');
-  if (!form) return;
+  if (!form || form.dataset.paperEntryReady) return;
+  form.dataset.paperEntryReady = 'true';
   let revision = 0;
   let pending;
   const relevant = name => ['series_id', 'date', 'metal', 'principal', 'exceptions'].includes(name)
@@ -25,6 +26,8 @@ function initPaperEntry() {
     if (principal) principal.value = (cents / 100).toFixed(2);
   };
   const load = async () => {
+    // Reviewed facts must remain untouched until staff choose Edit details.
+    if (form.querySelector('#history-review-title')) return;
     if (!form.elements.namedItem('series_id')?.value || !form.elements.namedItem('date')?.value) return;
     if (form.elements.namedItem('exceptions')?.checked) return;
     const current = revision;
@@ -54,7 +57,13 @@ function initPaperEntry() {
       if (product && !product.value) product.value = doc.querySelector('[name=product_version_id]')?.value || '';
       const tenure = form.elements.namedItem('tenure');
       const updatedTenure = doc.querySelector('[name=tenure]');
-      if (tenure && updatedTenure) tenure.value = updatedTenure.value;
+      if (tenure && updatedTenure) {
+        tenure.value = updatedTenure.value;
+        tenure.readOnly = updatedTenure.readOnly;
+        const help = form.querySelector('#id_tenure_helptext');
+        const updatedHelp = doc.querySelector('#id_tenure_helptext');
+        if (help && updatedHelp) help.textContent = updatedHelp.textContent;
+      }
       form.dispatchEvent(new Event('loan-terms:loaded'));
     } catch (_) {
       // The ordinary terms submit remains available without JavaScript.
@@ -72,6 +81,8 @@ function initPaperEntry() {
       const fields = form.querySelector('[data-paper-term-fields]');
       if (fields) fields.hidden = !event.target.checked;
       form.elements.namedItem('tenure').readOnly = !event.target.checked;
+      const help = form.querySelector('#id_tenure_helptext');
+      if (help && event.target.checked) help.textContent = 'Enter the tenure actually agreed on paper.';
       for (const input of form.querySelectorAll('[name$="-interest_rate_override"]')) input.readOnly = !event.target.checked;
     }
     if (!relevant(event.target.name)) return;
@@ -79,14 +90,36 @@ function initPaperEntry() {
     clearTimeout(pending);
     pending = setTimeout(load, 150);
   });
+  form.addEventListener('click', event => {
+    if (event.target.closest('[data-paper-edit-terms]')) {
+      event.preventDefault();
+      const details = form.querySelector('[data-paper-term-exceptions]');
+      if (details) details.open = true;
+      const choice = form.elements.namedItem('exceptions');
+      choice.checked = true;
+      choice.dispatchEvent(new Event('change', {bubbles: true}));
+      form.elements.namedItem('tenure').focus();
+    }
+    if (event.target.closest('[data-paper-edit]')) {
+      event.preventDefault();
+      invalidate();
+      const root = form.closest('[data-new-loan-entry]');
+      root?.removeAttribute('data-paper-review');
+      root?.querySelector('[data-paper-review-heading]')?.remove();
+      for (const node of root?.querySelectorAll('[data-paper-entry-heading], [data-paper-entry-details], #draft-loan-summary') || []) node.hidden = false;
+      const details = form.querySelector('#loan-details');
+      details?.setAttribute('tabindex', '-1');
+      details?.focus();
+    }
+  });
   form.addEventListener('loan-collateral:changed', () => {
     for (const input of form.querySelectorAll('[name*="-item_principal_"]')) input.value = '';
     invalidate();
     total();
     load();
   });
-  total();
-  load();
+  if (!form.querySelector('#history-review-title')) { total(); load(); }
+  form.querySelector('#history-review-title')?.focus();
 }
 document.addEventListener("DOMContentLoaded", initPaperEntry);
 document.addEventListener("loan-entry:ready", initPaperEntry);

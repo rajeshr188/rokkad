@@ -4,7 +4,22 @@
   const photos = new Map();
   const root = () => document.querySelector('[data-new-loan-entry]');
   const form = () => root()?.querySelector('#new-loan-form');
-  const status = text => { const node = root()?.querySelector('[data-entry-status]'); if (node) node.textContent = text; };
+  const status = text => { const node = root()?.querySelector('[data-paper-review-status]') || root()?.querySelector('[data-entry-status]'); if (node) node.textContent = text; };
+  function replaceEditor(replacement) {
+    // DOMParser parses noscript markup as elements; those fallback controls must
+    // not duplicate the live file inputs in this JavaScript-enhanced editor.
+    replacement.querySelectorAll('script, noscript').forEach(script => script.remove());
+    root().replaceWith(replacement);
+    replacement.querySelectorAll('input[type=file]').forEach(input => {
+      const retained = photos.get(input.name);
+      if (retained?.files.length) input.replaceWith(retained);
+    });
+    replacement.querySelector('[data-entry-file-warning]')?.remove();
+    replacement.querySelector('[data-entry-photo-reselect]')?.remove();
+    if (window.jQuery?.fn.djangoSelect2) window.jQuery(replacement).find('select.django-select2').djangoSelect2();
+    window.htmx?.process(replacement);
+    document.dispatchEvent(new Event('loan-entry:ready'));
+  }
   async function change() {
     const current = form();
     if (!current) return;
@@ -29,16 +44,7 @@
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const replacement = doc.querySelector('[data-new-loan-entry]');
       if (!replacement) throw new Error('unavailable');
-      replacement.querySelectorAll('script').forEach(script => script.remove());
-      root().replaceWith(replacement);
-      replacement.querySelectorAll('input[type=file]').forEach(input => {
-        const retained = photos.get(input.name);
-        if (retained?.files.length) input.replaceWith(retained);
-      });
-      replacement.querySelector('[data-entry-file-warning]')?.remove();
-      if (window.jQuery?.fn.djangoSelect2) window.jQuery(replacement).find('select.django-select2').djangoSelect2();
-      window.htmx?.process(replacement);
-      document.dispatchEvent(new Event('loan-entry:ready'));
+      replaceEditor(replacement);
       status(replacement.querySelector('[data-entry-status]')?.textContent || '');
     } catch (error) {
       if (ticket !== requestId || error.name === 'AbortError') return;
@@ -46,6 +52,39 @@
       const selection = root()?.querySelector('[name=entry_selection]');
       if (selection) selection.value = current.elements.namedItem('entry_mode').value;
       status('Entry could not be changed. Your form and photographs are retained; try again.');
+    }
+  }
+  async function reviewPaper(button) {
+    const current = form(), version = revision, ticket = ++requestId;
+    controller?.abort(); controller = new AbortController();
+    const data = new FormData(current); data.set('action', 'preview');
+    current.querySelectorAll('input[type=file]').forEach(input => photos.set(input.name, input));
+    current.dataset.paperReviewPending = 'true';
+    current.setAttribute('aria-busy', 'true');
+    if (button) button.disabled = true;
+    status('Preparing loan review. Your entered details and photographs are retained.');
+    try {
+      const response = await fetch(current.getAttribute('action'), {method: 'POST', body: data,
+        credentials: 'same-origin', signal: controller.signal});
+      if (ticket !== requestId || current !== form()) return;
+      if (version !== revision) { status('Details changed while preparing the review. Review the updated loan again.'); return; }
+      if (!response.ok) throw new Error('unavailable');
+      const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      if (ticket !== requestId || current !== form()) return;
+      if (version !== revision) { status('Details changed while preparing the review. Review the updated loan again.'); return; }
+      const replacement = doc.querySelector('[data-routine-loan-editor]');
+      if (!replacement) throw new Error('unavailable');
+      replaceEditor(replacement);
+      const target = replacement.querySelector('[data-form-errors], #history-review-title');
+      target?.focus();
+      target?.scrollIntoView({block: 'start'});
+    } catch (error) {
+      if (ticket !== requestId || error.name === 'AbortError') return;
+      status('Review could not be loaded. Your form and photographs are retained; try again.');
+    } finally {
+      delete current.dataset.paperReviewPending;
+      current.removeAttribute('aria-busy');
+      if (button) button.disabled = false;
     }
   }
   document.addEventListener('input', event => { if (root()?.contains(event.target)) revision += 1; });
@@ -63,6 +102,10 @@
       event.preventDefault(); event.stopImmediatePropagation(); change();
     } else if (event.target.dataset.entryChanging === 'true') {
       event.preventDefault(); event.stopImmediatePropagation(); status('Wait for the entry purpose to finish updating.');
+    } else if (event.target.dataset.paperReviewPending === 'true') {
+      event.preventDefault(); event.stopImmediatePropagation(); status('Wait for the loan review to finish loading.');
+    } else if (event.target.matches('[data-paper-entry]') && root()?.matches('[data-routine-loan-editor]') && event.submitter?.value === 'preview') {
+      event.preventDefault(); event.stopImmediatePropagation(); reviewPaper(event.submitter);
     }
   }, true);
   function enhancedSeries() {

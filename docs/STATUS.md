@@ -7,6 +7,44 @@ tags: [status, architecture]
 
 # Status
 
+## Paper entry tenure guidance and focused review (8 October, local)
+
+Routine paper entry now has two visible steps at the ordinary New loan route:
+enter facts, then review/confirm. The review hides the editor and its live sidebar;
+Edit details restores populated fields and invalidates the old signed review.
+Transaction/evidence explanations are collapsible, opening when subsequent
+transactions need review. Original agreement, balances, custody, completeness,
+photographs and counter changes remain available. Confirmation still uses the
+existing immutable recorded-history/photo writer and deliberate checked agreement.
+
+Tenure explains its standing setup source. Missing dated tenure opens the agreement
+section and displays a targeted warning and actionable validation. Enter actual
+agreed terms beside tenure explicitly selects the existing exception and unlocks
+tenure/item rates; it still requires a source reason. No current tenure is silently
+substituted for historical agreement facts. Term refresh updates tenure guidance.
+
+Browser-enhanced nonfinancial review retains selected File inputs locally through
+review/edit/re-review. Failed or stale responses retain the entered form; reviewed
+facts are not automatically refreshed. No temporary photo storage is introduced.
+Ordinary multipart confirmation and exact financial retries remain. Without
+JavaScript, server review/edit works; previously selected photos must be reselected
+using the review's explicit same-file controls.
+
+**61 distinct Django checks pass** (95 executions: 51 entry/media/multi-item,
+27 direct-review/routine, then 17 final routine checks after the help-text fix).
+Six Chromium
+scenarios pass on rendered fictional fixtures: desktop/mobile tenure recovery and
+photo-preserving review/edit/confirmation, failed/stale review and no-JavaScript
+editing/reselection. No page errors or viewport overflow; final screenshots are
+visually checked. Existing localhost preview 8083 now has this scoped overlay and
+collected assets. Its actual desktop/mobile series defaults/overrides and separate
+no-JavaScript series-change smoke checks pass; the first combined no-JavaScript
+navigation timed out, then the unchanged separate run succeeded. No financial
+POST or source-record change is made by those smoke checks. Django system checks,
+migration drift and diff whitespace pass. Production and real loan records are
+unchanged; rollout pending.
+
+
 ## Lakshmi draft payouts corrected in production (8 October, 18:49 IST)
 
 The owner requests correction or deletion of D01622/D01623, then confirms D01622's

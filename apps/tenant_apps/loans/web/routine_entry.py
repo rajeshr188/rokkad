@@ -53,12 +53,14 @@ def _paper_agreement_context(form):
     rounding_needed = form.terms is not None and (defaults.get("currency_quantum") is None or (
         bool(form["exceptions"].value()) and str(rounding) != str(defaults["currency_quantum"])))
     term_names = ("rate", "advance_months", "document_charge", "exception_reason")
+    missing_tenure = form.terms is not None and defaults.get("tenure") is None
     return {
         "paper_term_fields": [form[name] for name in term_names],
         "paper_monitoring_fields": [form[name] for name in monitoring_names],
         "paper_monitoring_missing": missing_monitoring,
         "paper_rounding_needed": rounding_needed,
-        "paper_terms_open": bool(form["exceptions"].value()) or any(name in form.errors for name in term_names),
+        "paper_tenure_missing": missing_tenure,
+        "paper_terms_open": missing_tenure or bool(form["exceptions"].value()) or any(name in form.errors for name in (*term_names, "tenure")),
         "paper_payout_open": bool(form["cash_paid"].value()) or form["payout_basis"].value() == "CASH"
             or any(name in form.errors for name in ("cash_paid", "payout_basis")),
     }

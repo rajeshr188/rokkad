@@ -10,6 +10,16 @@ related: [../plans/loan-origination-completion.md]
 
 ## Result and boundaries
 
+The 8 October tenure refinement explains the dated standing source beside tenure.
+When no tenure is configured, agreement details open with a targeted warning;
+Enter actual agreed terms explicitly enables the existing exception and actual
+tenure/item rates, retaining the source-reason requirement. The missing-tenure
+error explains both setup and supported actual-entry recovery. Asynchronous terms
+refresh updates the tenure value, read-only state and help text together. Routine
+paper entry/review now uses distinct visible steps; see the
+[review implementation](shared-origination-review-lo03.md).
+
+
 Routine direct and paper entry now render `loans/pawn/routine_entry.html` at the
 same New loan route. Both have the same customer search, series/product/date/tenure
 layout, borrower balances, collateral rows, add/remove controls, camera/upload and

@@ -1,5 +1,5 @@
 {% load loans_display %}
-<aside class="loan-summary" aria-label="Loan summary" id="draft-loan-summary">
+<aside class="loan-summary" aria-label="Loan summary" id="draft-loan-summary" {% if entry_purpose == 'paper' and review %}hidden{% endif %}>
   <div class="card"><div class="card-body">
     <h2>Loan summary</h2>
     <div class="loan-summary-label">Entered principal</div>

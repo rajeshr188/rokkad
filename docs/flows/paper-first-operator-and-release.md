@@ -7,6 +7,22 @@ tags: [loans, paper-entry, acceptance, release]
 
 # Operate and accept the paper-first workflow
 
+**8 October focused-review refinement (local, rollout pending):** enter the facts,
+then choose **Review loan record**. The next visible step shows the agreement and
+amounts rather than the full editable form. **Edit details** returns to the retained
+fields and requires another review. Check the agreement and use **Record completed
+payout** to save. Review/edit does not reserve a number or create a financial loan.
+Selected photographs are retained through these steps with JavaScript; without it,
+reselect the same reviewed photographs using the review's explicit controls.
+
+Tenure is supplied from the selected series and original loan date. If it is blank
+or the paper agreement differs, use **Enter actual agreed terms** beside tenure;
+this selects the agreement exception and enables the actual tenure/item rates.
+Enter the source explanation and check the other terms. Without JavaScript, use
+the agreement checkbox and **Apply agreement choice**. Fix a series-wide missing
+standing tenure in dated setup; do not change a correct original date for defaults.
+
+
 **8 October shared-editor refinement:** standard paper entry shows the standing
 agreement and calculated proceeds without asking for monitoring/rounding settings.
 Use **Record different agreed terms** only for an actual supported exception;
