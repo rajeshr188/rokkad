@@ -64,6 +64,14 @@ are included; phone numbers and address text are not duplicated in these entries
 Import admission retains its own batch actor/provenance. This does not reconstruct
 actors for earlier unlogged changes or replace current choices with source defaults.
 
+The owner's existing-customer status correction makes customers ACTIVE if any
+ordinary loan was created against them, regardless of loan state, or if retained
+closed-loan evidence resolves through their exact accepted source alias. Customers
+with neither are INACTIVE. This is independent of outstanding debt and credit
+holds. It does not financially admit historical evidence or infer identities from
+names. See the [scoped status repair](../flows/customer-status-repair.md); it is an
+explicit data correction, not an automatic customer creation/servicing policy.
+
 Phone entry uses the existing `django-phonenumber-field` dependency directly,
 with India as the default region. The owner chose a compact single field rather
 than a country selector. Indian mobiles and landlines with area codes, and

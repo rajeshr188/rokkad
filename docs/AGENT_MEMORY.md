@@ -7,6 +7,15 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The owner also requests existing customers ACTIVE when any loan was created
+against them, and INACTIVE when none exists. Count closed historical loans through
+exact accepted source aliases (legacy installation/schema UUID5), not names or
+coincident source/local numeric IDs. Count all ordinary loan states; this says
+nothing about outstanding debt. The explicit digest-bound, actor-audited
+[status repair](flows/customer-status-repair.md) preserves financial records,
+customer contact facts, source provenance and credit holds. It is not an automatic
+new-customer status policy.
+
 On 8 October the owner requests repairing missing customer address/telephone
 defaults across JCL, JSK and Lakshmi so existing details appear in borrower search.
 The explicit Party repair preserves existing selections, chooses HOME then oldest

@@ -7,6 +7,25 @@ tags: [status, architecture]
 
 # Status
 
+## Customer status reconciliation (8 October)
+
+The owner requests all existing customers with created loans ACTIVE, with only
+customers having no loans INACTIVE. Restricted production inventory resolves all
+**39,215 retained historical loan records** through exact accepted source aliases.
+There are no blocked/archived/merged customers or unresolved archive borrowers.
+The preview proposes activating **393 JCL customers** and deactivating **198 JCL,
+13 JSK and 3 Lakshmi customers** without loans. Historical-only borrowers remain
+ACTIVE; all ordinary loan states count, independently of debt balances.
+
+An explicit Loans service and aggregate preview/digest-bound command use Party
+edit permissions and Workspace transactions, locking customers and auditing only
+status/actor/time changes. All **9 focused restricted-role tests pass** for ordinary
+states, exact historical aliases, namespace mismatch refusal, stale previews,
+permissions/isolation, audit rollback, protected statuses and command privacy.
+Actual-source isolated rehearsal and production application are next. No automatic
+creation policy, schema or financial writer is introduced. See the
+[operator guide](flows/customer-status-repair.md).
+
 ## Customer address/phone display repair (8 October)
 
 The owner requests at least one saved default address and primary phone for
