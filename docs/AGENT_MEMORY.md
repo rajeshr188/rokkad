@@ -7,6 +7,15 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+On 8 October the owner separately authorizes correcting Lakshmi D01622/D01623 and
+confirms D01622's actual paper terms. Both production loans are now ACTIVE recorded
+contracts: ordinary unpaid-draft admission for D01622, and explicit fully reversed
+native-to-paper correction for D01623. Original identities, physical evidence and
+D01623's neutral native payout/reversal pair remain. Exactly one unreversed origin
+exists per loan; no current physical payout or inferred complete-paper-book claim
+is added. This supersedes the earlier staging-only/pending correction statements.
+See the [execution record](implementation/lakshmi-draft-activation-20261008.md).
+
 The owner accepts one Close / release loan action with an explicit purpose:
 collect/return now or record a completed settlement. Origination source does not
 choose the subsequent servicing action. Standing entry preferences are convenience
@@ -84,8 +93,8 @@ pinning web, dispatch/feedback/recovery and watchdog to verified candidate
 and original business projections remain valid. Existing six timers resume and
 post-release backup/retention succeed. Exact dated evidence belongs in the
 [release record](implementation/loan-production-release-lo07.md). Do not assume
-changing web updates these independent readers. Production D01623's financial
-correction remains a separate reviewed action; deployment does not post it.
+changing web updates these independent readers. D01623's financial correction is a separate reviewed action; deployment itself
+does not post it. The owner separately authorizes and completes it on 8 October.
 
 For TestCase recovery fixtures, acquire the existing offline table locks in
 `setUpTestData`, before class-level role grants/catalogue writes as well as row
@@ -103,7 +112,7 @@ On 8 October the owner accepted the series-driven New loan presentation as
 satisfactory for now, then confirmed document/printing and Loan health screens
 checked and satisfactory. Corrected-paper presentation/latest-position review
 remains with D01623's separate correction. Release acceptance does not post
-per-loan coverage reviews or certify later activity. Production D01623 is not corrected. See the
+per-loan coverage reviews or certify later activity. The separate owner-authorized D01623 production correction is completed on 8 October. See the
 [dated acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
 LO-01 implements explicit administrator review through the existing recorded
@@ -113,8 +122,8 @@ and validates retained pair IDs before excluding them from servicing chronology
 or receipt-correction blockers. Native reissue is refused. Different-day reversals
 and changed physical jewellery evidence require broader review. Exact Workspace
 recovery retains the graph; bounded per-loan export explicitly refuses embedded
-native IDs until supported remapping exists. D01623 is demonstrated only in the
-approved staging copy; production remains uncorrected.
+native IDs until supported remapping exists. LO-01 originally demonstrates D01623 in the
+approved staging copy; its separate production correction completes on 8 October.
 
 LO-02 gives routine direct/paper entry one New loan template and collateral
 controller, reusing existing forms, scoped search/defaults and financial writers.

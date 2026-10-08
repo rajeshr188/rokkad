@@ -7,6 +7,24 @@ tags: [status, architecture]
 
 # Status
 
+## Lakshmi draft payouts corrected in production (8 October, 18:49 IST)
+
+The owner requests correction or deletion of D01622/D01623, then confirms D01622's
+actual paper date, three-month terms and deductions/proceeds. Existing signed
+rollback previews reconcile both. D01622 records its completed 2 October payout;
+D01623 uses the existing reviewed correction for its confirmed 24 September payout,
+retaining the fully reversed native attempt and original approvals/photographs.
+Both are now ACTIVE with one unreversed origin and recorded principal 3,000/2,100.
+No new physical payout, deletion, manually assigned state or rewritten event occurs.
+
+Restricted read-only verification passes ordinary list/detail, repayment and release
+screens (200), document projections, current balances, source isolation and next
+interest boundaries. Identical command retries create no duplicates. A complete
+latest-paper-book claim is not inferred. Private before-images/reviews/operator
+logs stay server-only. No application deployment or migration is performed. This
+supersedes the earlier pending production correction for D01623. See the
+[scoped execution record](implementation/lakshmi-draft-activation-20261008.md).
+
 ## Unified closing and completed-settlement recording (8 October)
 
 CL-01 through CL-04 are complete locally. Ordinary loan details now use one
