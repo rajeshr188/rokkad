@@ -206,8 +206,10 @@ explicit disposition. No second finance engine or automatic conversion.
 
 ### LO-05: real source and staff acceptance
 
-**Status: owner accepted RA00500/C07557/06716 book comparisons on 7 October;
-corrected-paper display and shared workflow screen review pending.**
+**Status: owner accepted RA00500/C07557/06716 book comparisons on 7 October,
+series-driven entry presentation and document/printing/Loan health screens on
+8 October. Corrected D01623 display/latest-paper-position review remains with
+its separate financial correction; software rollout is expressly authorized.**
 
 The owner is the reviewer and confirmed post-25-September JCL/JSK originations
 as direct. After receiving the comparison sheet, the owner confirmed that the
@@ -231,7 +233,7 @@ desktop/mobile shared-editor/item/purpose checks pass without financial posts.
 The 1,666-file match describes the initial clean preview; subsequent authorized
 form/template/static overlays are recorded in STATUS. On 8 October the owner
 accepted the series-driven New loan presentation as satisfactory for now.
-Document/monitoring screen review remains pending. Real corrected D01623 remains server-only;
+Document/monitoring screen review is accepted on 8 October. Real corrected D01623 remains server-only;
 this preview does not establish actual production media recovery or final CI.
 
 Use RA00500 for opening acceptance and corrected D01623 for paper payout.
@@ -293,8 +295,12 @@ source integrity and measured capacity pass, with essential gaps explicitly reso
 
 ### LO-07: concrete rollout review and production release
 
-**Status: pending remaining LO-05 staff acceptance and concrete rollout review/
-authorization. LO-06 technical preparation is complete; no deployment performed.**
+**Status: completed on 8 October at 08:49 IST, after explicit owner rollout and
+recurring-retention approval and document/printing/Loan health screen acceptance.
+Exact 5f10b597 candidate runs with owner migrations, compatible guarded readers,
+source integrity, live read-only smoke and post-release backup/retention checks.
+D01623's reviewed correction is separate. See the
+[release record](../implementation/loan-production-release-lo07.md).**
 
 Present target, commit/image, migration range, acceptance, checkpoints, interruption
 and compatible recovery procedure. Execute only when requirements and deployment

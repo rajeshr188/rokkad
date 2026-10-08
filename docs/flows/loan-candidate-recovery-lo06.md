@@ -36,14 +36,63 @@ copy from every older date. All separate deployment/rehearsal checkpoints were
 preserved. The manifest and validation evidence remain in the approved private
 server folder. This approval does not authorize arbitrary future deletions.
 
-Until ongoing retention is approved and installed, review capacity and backup
-success daily. Prepare a new bounded manifest when more space is needed. Validate
-path containment, immutable names/checksums, the copies to retain and a fresh
-checkpoint before a separately approved cleanup. Do not remove the only compatible
-reader or the checkpoint needed for an existing correction/recovery demonstration.
+On 8 October the owner separately approved the recommended recurring retention.
+It is now installed as a post-success step of the existing backup service; the
+[LO-07 execution record](../implementation/loan-production-release-lo07.md) gives
+its exact source, tests and first successful run. Review backup success/freshness
+and capacity; external failure alerting is not installed. Do not remove the only
+compatible reader or a protected correction/recovery checkpoint.
 
-An ongoing automated retention policy and backup-failure alerting remain follow-up
-operational improvements. Do not claim that the one-time cleanup installs them.
+### Ongoing policy (approved and installed on 8 October)
+
+The 8 October follow-up recommends keeping the newest 24 completed hourly
+database copies plus the newest completed copy for each of the last 30 UTC
+calendar dates. Retain the union, so a copy serving both purposes is stored once.
+At the current 88,598,984-byte dump size, the upper bound of 54 copies is about
+4.8 GB (4.5 GiB), excluding protected release/rehearsal checkpoints and growth.
+This bounds operational storage without lowering the existing 5 GiB free-space
+guard. The backup is a full compressed PostgreSQL custom-format dump each hour;
+it is not an incremental copy and does not copy R2 media each hour.
+
+Run expiry only after a new copy passes checksum/catalogue validation, using the
+same operational backup lock. Restrict candidates to completed dump/checksum
+pairs in `backups/operational`; validate containment and retained copies before
+removal. Keep `latest.json` pointing at a retained successful copy. Skip expiry
+and surface a failure if validation fails. Separate deployment/rehearsal
+checkpoints remain protected and require their own review. Recurring deletion is
+covered by the separate 8 October approval, not the earlier 257-copy cleanup.
+
+Check freshness against the hourly schedule and capacity before the guard is
+reached. Service failures remain visible in systemd; retention reports flag space
+below 8 GiB. No real notification recipient or outbound delivery is configured.
+Nine tests cover retention selection, overlap, protected paths, failed validation
+and repeat execution on Windows/Linux. Installation is an operator change
+independent of the verified application candidate.
+
+For host-loss recovery, separately select a private encrypted off-host destination
+for daily database copies (30 days), monthly copies (12 months) and recoverable
+media checkpoints. A separate private R2 backup destination is an option, not a
+currently configured backup. Long-term copies must have verified recovery coverage
+before local expiry is relied upon for that coverage. Avoid copying the entire
+media collection every hour; retain matching manifests and required bytes through
+a separately designed media backup procedure and periodic restore drills.
+
+### Verified storage placement
+
+At 08:18 IST on 8 October, a read-only production probe confirms the default
+backend is `helpers.cloudflare.storages.MediaFileStorage`, with prefix
+`media/application/production/linode-rls`. The LO-06 inventory contains 30,293
+required media objects totalling 942,099,334 bytes. The two Linode media folders
+are isolated checkpoint/restore copies, not the live production store. The live
+database retains file references and relevant hashes; its hourly dump alone does
+not contain the media bytes. Bucket versioning remains unverified (AccessDenied).
+
+At the same check, the latest hourly database copy (07:30 IST) passes checksum
+and catalogue validation, the timer is active and its service result is success.
+There are 34 completed copies and about 10.5 GiB free. The operator script uses
+`pg_dump -Fc` and has no expiry or off-host-copy command. Production remains on
+the prior image; neither recurring expiry nor deployment is performed by these
+checks.
 
 ## Consistent recovery checkpoint
 

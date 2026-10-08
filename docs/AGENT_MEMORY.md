@@ -28,17 +28,23 @@ restricted loan/source reads under the exact candidate; final CI is tracked in
 the [execution record](implementation/loan-release-preparation-lo06.md).
 Real customer files and full dumps stay in the previously approved private server
 scope, outside local OneDrive. Same-host recovery does not establish off-host
-disaster recovery. The owner approved one exact operational-backup cleanup after
-retained-copy verification; the unchanged 5 GiB guard and hourly backup service
-now complete a fresh copy. That approval does not authorize arbitrary future
-retention deletion or install automated retention/failure alerts.
+disaster recovery. The owner first approved one exact operational-backup cleanup,
+then separately approved recurring retention and the LO-07 switch on 8 October.
+The host-only post-success operator keeps 24 hourly copies plus one daily copy for
+30 UTC dates, validates before expiry under the existing lock and protects separate
+checkpoints. The 5 GiB backup guard remains. External failure alerts and off-host
+recovery remain separate; this approval does not permit unrelated cleanup.
 
 Mail dispatch/feedback/recovery timers use an image independent of the web
 container, and their health watchdog has a configured reader command. LO-06
-prepares guarded candidate drop-ins/config; they are not installed. A later
-release must pin web and these independent readers together, rather than assume
-that changing web updates every reader. Production D01623's financial correction
-and remaining LO-05 staff acceptance are separate from recovery verification.
+prepared guarded candidate drop-ins/config. LO-07 installs them on 8 October,
+pinning web, dispatch/feedback/recovery and watchdog to verified candidate
+5f10b597 with guarded startup. All 35 owner migrations apply; restricted runtime
+and original business projections remain valid. Existing six timers resume and
+post-release backup/retention succeed. Exact dated evidence belongs in the
+[release record](implementation/loan-production-release-lo07.md). Do not assume
+changing web updates these independent readers. Production D01623's financial
+correction remains a separate reviewed action; deployment does not post it.
 
 For TestCase recovery fixtures, acquire the existing offline table locks in
 `setUpTestData`, before class-level role grants/catalogue writes as well as row
@@ -53,9 +59,10 @@ RA00500 (opening), corrected staging D01623, C07557 (direct) and JSK 06716
 (direct origin with later paper closure). On 7 October the owner accepted the
 RA00500/C07557/06716 book comparisons as matching, correct and satisfactory.
 On 8 October the owner accepted the series-driven New loan presentation as
-satisfactory for now. Document/monitoring screen review and corrected-paper
-presentation/latest-position review remain pending. Release acceptance does not post per-loan coverage reviews or
-certify later activity. Production D01623 is not corrected. See the
+satisfactory for now, then confirmed document/printing and Loan health screens
+checked and satisfactory. Corrected-paper presentation/latest-position review
+remains with D01623's separate correction. Release acceptance does not post
+per-loan coverage reviews or certify later activity. Production D01623 is not corrected. See the
 [dated acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
 LO-01 implements explicit administrator review through the existing recorded

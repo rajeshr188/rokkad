@@ -1,7 +1,7 @@
 ---
 status: awaiting-owner-review
 owner: project
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [loans, origination, acceptance, release]
 related: [../plans/loan-origination-completion.md, ../flows/loan-continuation-release-acceptance.md]
 ---
@@ -23,8 +23,11 @@ On 7 October, after receiving the comparison sheet, the owner confirmed:
 "all three RA00500,C07557 and 06716 match and are correct and satisfactory."
 The three displayed book comparisons are accepted. No separate book/page reference
 was supplied; the acceptance source is the owner's project-chat declaration.
-Staff screen review remains pending. D01623's previously confirmed terms are
-retained below without requesting them again.
+On 8 October the owner confirmed document/printing and Loan health screens were
+checked and satisfactory, after accepting the series-driven entry presentation.
+D01623's previously confirmed terms are retained below without requesting them
+again. Its corrected display/latest-paper-position review remains separate from
+the expressly authorized software deployment and financial correction.
 
 No production correction, book-review confirmation, risk refresh, document issue,
 financial posting or deployment occurred. This slice currently changes documentation
@@ -236,21 +239,21 @@ The detailed operational guides are [workflow choice](../flows/loan-workflow-cho
 | 06716 closure/custody comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory, including the presented settlement/return; project-chat declaration, no separate closing reference supplied |
 | Series-driven New loan presentation | Workspace owner / 8 October | Accepted as satisfactory for now after the fictional local presentation trial; this covers entry-purpose presentation, not actual corrected D01623, documents or monitoring |
 | Corrected D01623 display and latest position | Workspace owner / pending | Presentation review and any post-snapshot activity needed; confirmed terms need not be repeated |
-| Shared workflow, documents and monitoring walkthrough | Workspace owner / pending | Actual UI review date, acceptable/problem result and any required corrections needed |
+| Shared workflow, documents and monitoring walkthrough | Workspace owner / 8 October | Accepted: owner confirms document/printing and Loan health screens checked and satisfactory; series-driven editor separately accepted the same day |
 
 Record matches or exact discrepancies with a short book/page or document reference;
 do not copy customer documents into the shared repository. An owner confirmation
 becomes source acceptance only for the facts actually checked. It does not write
 an in-app transaction review or establish complete books for every loan.
 
-The three book comparisons are accepted; corrected D01623's display/latest position
-and the shared staff screen walkthrough remain pending. No in-app coverage review
-was posted and no current production position is newly certified by this declaration.
-LO-05 remains **awaiting screen review**, not complete. Financial or workflow
-mismatches return to LO-01/02/03/04 as appropriate. LO-06 still needs the exact
-candidate, fresh database/media recovery and measured capacity; LO-07 contains
-the concrete production rollout review. D01623 production correction remains a
-separate reviewed financial action.
+The three book comparisons and shared staff screen walkthrough are accepted;
+corrected D01623's display/latest position remain pending with its separate
+financial correction. No in-app coverage review was posted and no current
+production position is newly certified by this declaration. LO-05 remains
+**awaiting corrected D01623 review**. Financial or workflow mismatches return to
+LO-01/02/03/04 as appropriate. LO-06 technical preparation and the expressly
+authorized LO-07 software rollout are complete, as recorded in their dated
+execution notes. D01623 production correction remains a separate reviewed action.
 
 Private evidence is retained under the already approved server-only directory
 `/home/rokkad/deploy/cutover-20260924/loan-continuation-20261006-b69df6ab`:

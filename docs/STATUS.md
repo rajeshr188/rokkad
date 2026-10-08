@@ -7,6 +7,66 @@ tags: [status, architecture]
 
 # Status
 
+## LO-07 deployed and recurring retention installed (8 October)
+
+The owner approved ongoing retention and explicitly requested the production
+switch, then confirmed document/printing and Loan health screens were checked
+and satisfactory. **LO-07 completes at 08:49 IST**: exact candidate **5f10b597**
+now runs on `https://rokkad.com`, with canonical compose, its separate static
+volume, all four compatible guarded mail readers and all six prior timers resumed.
+All 35 owner migrations apply (Loans 0033 through 0063 plus portability 0018/0019).
+Restricted startup/schema, owner-startup refusal and local/public HTTPS pass.
+
+The final write-pause checkpoint at 08:44 IST matches 30,293 verified media files.
+All **183 original business projections remain exact** after migration. Actual
+production loan, direct/paper editor, servicing, Loan health and issued PDF reads
+pass under a read-only restricted transaction, with no-context/cross-Workspace
+isolation. No financial transaction, document issue or message is created by
+smoke checks. D01623 remains an uncorrected draft with zero recorded debt;
+its own reviewed correction/latest-paper-position acceptance remains separate.
+
+Approved recurring retention is installed as the hourly backup's post-success
+step: 24 hourly copies plus one daily copy for 30 UTC dates, deduplicated and
+verified before expiry. Nine destructive-boundary tests pass on Windows/Linux.
+The first run retains 31 copies and expires four; post-release backup/retention
+succeed again, retaining 31. About **10.5 GiB** remains free. Release/rehearsal
+checkpoints and R2 media are protected; the 5 GiB guard remains. External backup
+alerts and off-host disaster recovery remain follow-ups.
+
+Final live verification at 08:53 IST confirms **202 tables**, the exact candidate
+under restricted `rokkad_prod_runtime`, all **6,739 ordinary active/closed loans**
+supported and all 39,215 unadmitted archive identities retained. Candidate web
+logs show no error/traceback lines; the post-release dump passes checksum/catalogue
+checks. Calculation support remains distinct from complete books, current
+assessment and eligible valuation. No archive conversion occurs.
+
+See the [release record](implementation/loan-production-release-lo07.md) and
+[retention/recovery runbook](flows/loan-candidate-recovery-lo06.md).
+
+## Backup retention and LO-07 readiness follow-up (8 October)
+
+Read-only checks at **08:18 IST** confirm healthy hourly backups: the latest
+07:30 IST copy passes checksum/catalogue validation, the timer is active, 34
+completed copies remain and about **10.5 GiB** is free. Production media uses
+Cloudflare R2 (`media/application/production/linode-rls`); Linode media copies
+are isolated LO-06 recovery artifacts. The operator saves a full compressed
+database dump each hour, about **89 MB / 2.1 GB per day**, with no automatic
+expiry or off-host copy. Media is not copied by that hourly database job.
+
+The [retention proposal](flows/loan-candidate-recovery-lo06.md) recommends the
+union of 24 hourly copies and one daily copy for 30 dates (at most about 4.8 GB
+at today's dump size), preserving separate release/rehearsal checkpoints and
+the 5 GiB guard. Recurring deletion is **proposed, not approved or installed**;
+the earlier approval covered only the exact 257-copy cleanup. Off-host daily/
+monthly database and recoverable media checkpoints remain a separate proposed
+host-loss remedy, with destination and restore verification still needed.
+
+LO-06 technical readiness is unchanged. Remaining LO-05 corrected-paper and
+document/monitoring screen acceptance, a fresh final checkpoint and the concrete
+coordinated web/timer migration rollout remain LO-07 work. D01623's production
+correction is a separate reviewed financial action after compatible deployment.
+No production deployment, financial posting or recurring expiry was performed.
+
 ## LO-06 technical release preparation complete (8 October)
 
 Published candidate **5f10b597** passes
