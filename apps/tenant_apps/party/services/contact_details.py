@@ -3,6 +3,54 @@ from django.db import transaction
 from apps.orgs.audit import AuditLog
 from apps.tenant_apps.party.models import Party, PartyAddress, PartyContactMethod
 
+
+@transaction.atomic
+def ensure_party_display_defaults(*, workspace_id, party_id, actor):
+    """Fill missing display choices without replacing facts or existing choices."""
+    from .action_access import require_party_service_permission
+    from apps.tenant_apps.party.access import PARTY_ACTION_PERMISSIONS
+
+    require_party_service_permission(workspace_id, actor, *PARTY_ACTION_PERMISSIONS["edit"])
+    party = Party.objects.select_for_update().get(pk=party_id, workspace_id=workspace_id)
+    addresses = list(PartyAddress.objects.filter(party=party, workspace_id=workspace_id).order_by("pk"))
+    phones = list(PartyContactMethod.objects.filter(party=party, workspace_id=workspace_id,
+        contact_type__in=("PHONE", "MOBILE", "WHATSAPP")).order_by("pk"))
+    phones = [phone for phone in phones if phone.value.strip()]
+    changed = {"address_id": None, "contact_id": None, "phone_summary": False}
+
+    if not any(address.is_default for address in addresses):
+        eligible = [address for address in addresses if str(address).strip()]
+        address = next((row for row in eligible if row.address_type == "HOME"),
+                       eligible[0] if eligible else None)
+        if address:
+            address.is_default = True
+            address.save(update_fields=["is_default", "updated_at"])
+            _audit_flag(address, party, actor, "is_default", False, True)
+            changed["address_id"] = address.pk
+
+    primary = [phone for phone in phones if phone.is_primary]
+    summary = party.primary_phone.strip()
+    if not primary:
+        # Respect a phone already chosen on the master, including legacy format.
+        # An unrelated contact must not silently replace that existing choice.
+        phone = next((row for row in phones if row.value.strip() == summary), None) if summary else (
+            phones[0] if phones else None)
+        if phone:
+            phone.is_primary = True
+            phone.save(update_fields=["is_primary", "updated_at"])
+            _audit_flag(phone, party, actor, "is_primary", False, True)
+            changed["contact_id"] = phone.pk
+            primary = [phone]
+    if not summary and primary:
+        sync_party_primary_contact(party, primary[0])
+        AuditLog.log("UPDATE", user=actor, company=party.workspace, content_object=party,
+            description="Filled a missing customer primary phone from an existing contact.",
+            data={"operation": "PARTY_PRIMARY_PHONE_SYNC", "party_id": party.pk,
+                  "contact_id": primary[0].pk, "field": "primary_phone",
+                  "before_present": False, "after_present": True})
+        changed["phone_summary"] = True
+    return changed
+
 def sync_party_primary_contact(party, contact, *, old_contact=None, deleted=False):
     phone_types = {
         PartyContactMethod.ContactType.PHONE,

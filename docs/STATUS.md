@@ -7,6 +7,24 @@ tags: [status, architecture]
 
 # Status
 
+## Customer address/phone display repair (8 October)
+
+The owner requests at least one saved default address and primary phone for
+customers across JCL, JSK and Lakshmi. Restricted read-only production inventory
+finds 3,927 missing address defaults and 1,819 missing primary telephone contacts;
+1,818 telephone summaries also need synchronization. No address exists for 1,944
+customers and no telephone exists anywhere for 5,273, so no facts can be invented
+for those cohorts.
+
+An explicit Party service and preview/digest-bound repair command preserve existing
+selections and stored values, reuse contact summary/audit helpers and enforce
+Workspace/actor permissions. Each customer is independently atomic; no schema,
+loan/event/document or import-provenance change. All **13 focused tests pass** for
+selection, display, preservation, retries, changed preview, missing facts, atomic
+audit rollback and restricted-role/Workspace boundaries. Actual-source isolated
+rehearsal and the authorized production repair are in progress. See the
+[operator guide](flows/customer-display-default-repair.md).
+
 ## Lakshmi paper setup warning correction (8 October)
 
 Restricted, repeatable-read/read-only production diagnostics reproduce a false

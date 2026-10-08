@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-30
+updated: 2026-10-08
 tags: [domain, party]
 ---
 
@@ -42,6 +42,20 @@ See the [retention correction](../adr/2026-09-30-retain-detached-party-and-colla
 Borrower search shows name, relation, one primary phone and one default address
 (HOME preferred, otherwise the first saved default), plus the customer code. Contact
 methods and addresses remain multiple with a primary/default per type.
+
+An explicit authorized repair can fill missing display selections on existing
+customers. Preserve every existing default/primary choice. With no address
+default, prefer the oldest saved HOME address, then the oldest nonempty saved
+address. With no primary telephone contact, prefer the contact matching an
+existing master phone, otherwise the oldest nonblank PHONE/MOBILE/WHATSAPP
+contact when the master phone is empty. An unrelated saved master phone is not
+overwritten. A missing master phone is synchronized from the selected or existing
+primary contact so phone search can find it. Existing text, formatting, source
+provenance and verification flags remain unchanged; missing facts are not created.
+
+The repair is per-customer atomic, actor-audited and Workspace/permission checked.
+This is an explicit data repair, not a new automatic import/default policy. See
+the [operator guide](../flows/customer-display-default-repair.md).
 
 Customer status edits and contact/address primary/default changes through the
 ordinary Workspace screens record the signed-in actor, object, timestamp and
