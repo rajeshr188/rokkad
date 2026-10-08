@@ -23,7 +23,15 @@ monitoring setup directs staff to the latest history row's **Amend** action.
 No policy, frozen agreement, financial writer, numbering or migration changes.
 All **29 focused checks pass**, covering multiple-series selection, genuine setup
 gaps, direct/paper entry, saved review binding, policy amendments and immutable
-monitoring evidence. Production delivery is in progress.
+monitoring evidence. The history-link refinement passes its affected check again.
+At **10:01 IST**, production web switches to the verified three-file UI derivative
+`rokkad:monitoring-ui-5c016ddb-server` of the LO-07 image. Restricted read-only
+candidate/live checks pass blank/selected Lakshmi paper forms, existing-policy
+guidance, amendment GET and direct entry in all three Workspaces; public HTTPS
+passes. Runtime credentials, mounts, ports, static volume and all six timers stay
+unchanged. Independent background readers retain the compatible LO-07 image.
+No database migration, financial post, policy amendment or media change occurs.
+See the [release addendum](implementation/loan-production-release-lo07.md).
 
 ## LO-07 deployed and recurring retention installed (8 October)
 

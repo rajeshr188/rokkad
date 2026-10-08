@@ -96,6 +96,15 @@ remain supported. Explicit standard-term proceeds are retained and must reconcil
 never silently cleared. CASH means the full proceeds were paid physically;
 PROCEEDS does not assert net customer cash or a predecessor. No new financial model.
 
+Paper current valuation method/LTV come from the current calculation policy;
+risk monitoring policies separately provide warning thresholds/freshness. Do not
+send a missing valuation prompt to risk-policy creation. Before a valid series/date
+resolves standing terms, missing setup is unknown, not a confirmed gap. The
+8 October monitoring UI fix implements this and guides existing risk-policy
+changes through Amend. Production web uses the three-file `5c016ddb` UI derivative
+of LO-07; independent compatible background readers remain on `5f10b597`.
+See the [release addendum](implementation/loan-production-release-lo07.md).
+
 LO-04 verifies common servicing against actual direct, recorded, history/4 and
 reviewed-opening admissions, including mixed item rates and actual paper receipts
 on direct-origin loans. Omitted zero paper item splits are accepted by the opening

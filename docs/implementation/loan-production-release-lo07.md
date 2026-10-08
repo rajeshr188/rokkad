@@ -152,3 +152,40 @@ in `lo07-operator-sources/`, with manifest SHA-256
 The finalized nine Linux retention tests pass again; the Windows external-symlink
 case passes separately after tightening its fixture. No customer artifacts leave
 the approved server scope.
+
+## Monitoring setup UI correction, 8 October at 10:01 IST
+
+The owner reported a Lakshmi New loan monitoring warning followed by a policy
+overlap error. Restricted read-only production reproduction shows the warning
+only before selecting a series; all three selected series resolve current
+valuation defaults. Workspace risk policy v2 already supersedes v1. An unrelated
+new policy correctly cannot overlap that chain.
+
+Commit `5c016ddb70a7e1cb3e11e595c63e2cda4228189f` distinguishes unresolved
+setup from a confirmed gap, directs actual method/LTV gaps to Calculation policy
+and guides changes to an existing risk scope through Monitoring history > Amend.
+All 29 focused routine-entry/monitoring tests pass; the final history-link change
+passes its affected test again. Financial writers and frozen evidence are untouched.
+
+Web now uses `rokkad:monitoring-ui-5c016ddb-server`, image ID
+`sha256:5a1312dc7db130c701e74bb7e2aefaf3dfdf2c318c6ce9a329345a79b4dfc68b`.
+This is a bounded derivative of the verified LO-07 image, copying exactly
+`web/routine_entry.py` and the paper-agreement/economic-setup templates. Source
+checks against the pinned base normalize its original Windows CRLF; target hashes
+are retained in the private preparation report. No dependencies, migrations,
+static assets, financial commands or background-reader contracts change.
+
+The candidate passes guarded runtime/schema startup and actual-source read-only
+GET checks before switching. Live checks verify blank/selected Lakshmi paper entry,
+existing-policy guidance, amendment GET and direct entry in JCL, JSK and Lakshmi,
+with no-context/cross-Workspace isolation. Public HTTPS passes. Exact web runtime
+environment, mounts, ports and app user remain equal. All six timers stay active;
+independent mail/watchdog readers intentionally retain their compatible LO-07 image.
+
+The latest operational backup passes checksum/catalogue validation before the
+switch, SHA-256 `420f79977a9bbc77d159add61a95196fce784f9088494cd4ae210727f94c9371`.
+The prior compose/image remain available for an image-only rollback, with no
+database rollback required. No financial posting, policy amendment or customer
+artifact transfer occurs. Private reports are under the previously approved
+server directory's `monitoring-ui-5c016ddb/` child; `prepared.json` and
+`deployed.json` record candidate/live proof. Original LO-07 evidence remains intact.
