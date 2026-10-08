@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: completed
 owner: project
 updated: 2026-10-08
 tags: [loans, release, recovery, storage, operations]
@@ -12,6 +12,13 @@ The owner accepted the series-driven New loan presentation as satisfactory for
 now on 8 October and explicitly requested LO-06 release preparation. Production
 rollout and D01623's production financial correction remain separate.
 
+LO-06 technical preparation is complete on 8 October. Published candidate
+**5f10b597** passes [full CI](https://github.com/rajeshr188/rokkad/actions/runs/37713872975),
+including all 2,138 Loans tests, image build and restricted runtime/static checks.
+Exact candidate source/media/recovery verification passes below. Remaining staff
+acceptance, production rollout, ongoing retention and off-host recovery are
+separately identified rather than claimed complete.
+
 ## Published candidate
 
 Candidate **7a7bc8e6e8a2ad1539a1597173bbaeae508eac04** is committed and pushed.
@@ -21,9 +28,9 @@ and assumed that adding one month to the sale always crosses the original loan
 anniversary. On this run a 31 March sale plus a month clamps to 30 April, which
 remains covered. The corrected deterministic fixture asserts zero through that
 anniversary and the next INR 164 charge on 1 May, after the auction reversal and
-interest repayment. Runtime calculation/posting code is unchanged. Focused tests
-and new exact-candidate CI must pass before completion. All 38 focused auction and
-shared-monthly-contract tests pass locally; full CI remains required. The clean local image is
+interest repayment. Runtime calculation/posting code is unchanged. This prompted
+new exact-candidate CI. All 38 focused auction/shared-monthly-contract checks
+passed locally before that rerun. The clean local image is
 `rokkad:loan-continuation-7a7bc8e6`, image ID
 `sha256:c00ccd5d43210648f3869d951564ffe11d492fbbe92f9f4909a9ce985fa576ae`.
 Committed source ZIP SHA-256:
@@ -44,8 +51,8 @@ grants. The five fixtures using that helper now acquire the same locks in
 autovacuum are unchanged; separate TransactionTestCase concurrency fixtures do
 not acquire those class locks. All 60 checkpoint/auction tests and 65 other
 affected origination/entry/bundle/concurrency tests pass (125 checks total).
-A fresh published candidate and full CI remain required.
-Its source ZIP SHA-256 is
+A new published candidate and full CI were required; their latest status follows
+below. For b172c7bb, the source ZIP SHA-256 is
 `6c67802de1f4f87f5b6f47dc35fe5d1e23949c8f449966ae694f3b278ea8c6d0`.
 Clean local image `rokkad:loan-continuation-b172c7bb`, ID
 `sha256:a2e4c33f1ccd8870fc02a104eecabfceb8ce56de2feb0874aeeb83508ba1f87c`;
@@ -60,7 +67,7 @@ Final-candidate server checks reuse the verified cold checkpoint rather than
 recapturing identical source data. First-run recovery artifacts remain preserved;
 final-candidate evidence uses the separate `lo06-final-` prefix.
 
-At **06:28:42 IST**, the final server artifact passes restricted startup/schema,
+At **06:28:42 IST**, the b172c7bb server artifact passes restricted startup/schema,
 all three Workspace inventories (6,739 supported active/closed calculations),
 selected source/isolation checks and actual restored-file reading: all 350 issued
 PDFs open and 27,616 photo/archive hashes match. All 202 tables still match the
@@ -79,6 +86,38 @@ runtime files**, including contracts, match the local clean archive; Python pars
 dependency consistency and restricted static collection pass. The first hash
 probe included operator scripts deliberately excluded by `.dockerignore`; the
 corrected probe follows the runtime allowlist.
+
+### Latest verification candidate
+
+The lock-order corrected candidate **5f10b597d6229d3a74b4c5fd6f1207595b80a143**
+is pushed; [its full CI](https://github.com/rajeshr188/rokkad/actions/runs/37713872975)
+passes all gates, including 2,138 Loans tests, image build and restricted
+runtime/static checks. Committed source ZIP SHA-256:
+`9444de9434a53757ad356d09d3ea194e76c1f312f72d76d40c863b7f855a2047`.
+The seven changed runtime files versus the recovered 7a7bc8e6 artifact are all
+test fixtures/regressions. Business code, contracts, migrations, templates and
+static assets remain byte-identical. New artifact/reader checks reuse the sealed
+cold-restored stage and preserve earlier evidence under the `lo06-final2-` prefix.
+Clean local image: `rokkad:loan-continuation-5f10b597`, ID
+`sha256:ee6828a981c32a8e96a42bb83319f8328f27a0014cdb191445312c79c4c48e65`.
+Clean server image: `rokkad:loan-origination-5f10b597-server`, ID
+`sha256:9846d3add8cfe7e16998e3befccfb1f3b10ff3563a7ae7b705932b2f4e850408`.
+The server artifact matches all 1,673 runtime files and passes dependency, Python
+parse and restricted static collection checks. Free space after this final build
+is **11,361,488,896 bytes** (about 10.6 GiB). Both clean artifacts pass all 1,673
+source hashes, Python parse, dependencies and restricted static collection. Local
+startup, owner refusal, schema and cohort checks preserve all 202 tables on both
+fictional recovery databases.
+
+At **07:15:31 IST**, the exact 5f10b597 server artifact passes restricted startup,
+schema, all three Workspace inventories (6,739 supported ordinary active/closed
+loans), selected source/isolation reads and restored-file verification: 350 issued
+PDFs open, 27,616 photo/archive hashes match and representative images/PDFs decode/
+render. All 202 tables match the sealed cold checkpoint and all 199 sequences
+remain unchanged before/after reads. All independent coverage/valuation limits
+remain truthful. Free space is **11,361,099,776 bytes** (about 10.6 GiB).
+Final guarded reader files use `lo06-final2-` and pass their three entrypoint
+checks; they are uninstalled. Full CI now passes; no technical LO-06 check remains.
 
 ## Fresh read-only production discovery
 
@@ -144,6 +183,17 @@ the headroom above the 5 GiB guard in about three to four days, before other
 growth. Daily capacity/success review is required until ongoing retention is
 separately approved and installed; this rehearsal installs neither retention nor
 failure alerting.
+
+After the last candidate build, the **07:30 IST** automatic copy also succeeds
+(`20261008T020003Z`, 88,598,984 bytes); checksum/catalogue are verified at
+**07:32 IST**. SHA-256:
+`dbf5b9518d4be8bd8200f0a65e1aca06a06c2b882b42639f55322bce1533f7f0`.
+There are now 34 completed operational copies: the approved 31 retained copies,
+the manual service-recovery copy and two scheduled copies. Production remains
+running on its original image. Free space is **11,263,705,088 bytes** (about
+10.5 GiB). At the observed hourly size, headroom above the 5 GiB guard is roughly
+two to three days before other growth; ongoing retention remains an operational
+follow-up, not an installed feature.
 
 The fresh checkpoint restored exactly across all 186 original tables into the
 previously approved private staging database. The earlier corrected stage is
@@ -227,9 +277,10 @@ demonstration is preserved separately; this fresh source clone did not silently
 apply that correction. The 39,215 unadmitted archive identities remain source evidence.
 Archive counts complete in 1.656s (JCL), 0.538s (JSK) and 0.663s (Lakshmi).
 
-## Remaining verification and rollout limits
+## Rollout limits and operational follow-up
 
-1. Full exact-candidate CI must pass; resolve findings before freezing a new identity.
+1. Full exact-candidate CI passes for 5f10b597. That is the verified release
+   artifact identity; later evidence-only documentation does not change runtime code.
 2. Database/media capture, owner upgrade, exact cold recovery, restricted reads,
    representative file decoding, source integrity and capacity checks pass as dated
    above. A rollout needs fresh checkpoints covering subsequent production activity.
@@ -238,6 +289,10 @@ Archive counts complete in 1.656s (JCL), 0.538s (JSK) and 0.663s (Lakshmi).
 4. Record off-host recovery separately; same-host recovery does not prove host-loss
    resilience. Corrected-paper display/latest position and document/monitoring staff
    acceptance remain separate LO-05 gates.
+5. Ongoing retention/failure alerts are not installed. Review backup success and
+   capacity daily; current headroom above the guard is roughly two to three days
+   at observed hourly growth. A new retention approval is separate from the one
+   exact cleanup already performed.
 
 Use the [recovery and retention runbook](../flows/loan-candidate-recovery-lo06.md).
 The exact 21 bounded operator sources are preserved in `lo06-operator-sources/`
@@ -246,6 +301,9 @@ inside the same private server folder. Source manifest SHA-256:
 The final ten verification/operator sources are separately preserved in
 `lo06-final-operator-sources/`, manifest SHA-256
 `91c7fb1acff857cc4217937699d3ba1a2063e3faed954c3f8d51a610009938d1`.
+The latest eleven verification/operator sources for 5f10b597 are preserved in
+`lo06-final2-operator-sources/`, manifest SHA-256
+`66f3a932a39603bca2022e1967ac24edb5ed58a6adecb30cd707e02647d1e7fa`.
 These harnesses are scoped to this approved disposable target; they are not permission
 to reuse its destructive staging commands against another database.
 

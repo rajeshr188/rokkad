@@ -7,57 +7,47 @@ tags: [status, architecture]
 
 # Status
 
-## LO-06 candidate published; backup service restored (8 October)
+## LO-06 technical release preparation complete (8 October)
 
-Candidate `7a7bc8e6` is committed and pushed;
-[first full CI](https://github.com/rajeshr188/rokkad/actions/runs/37705798126)
-completed with one date-sensitive auction assertion failing among 2,138 Loans
-tests. The test incorrectly treated a month after a 31 March sale (30 April) as
-the next charge day; the original anniversary remains covered through 30 April.
-Its fixture is now fixed and checks zero on 30 April and the next charge on 1 May.
-Calculation and posting code are unchanged. All 38 focused tests pass; corrected
-candidate `b172c7bb` is pushed and
-[second full CI](https://github.com/rajeshr188/rokkad/actions/runs/37709841525)
-passes the interest regression but finds one recovery-fixture deadlock among
-2,138 Loans tests. PostgreSQL identifies autovacuum; fixtures now take their
-existing table locks before class-level role grants, with no production change.
-All 125 affected checkpoint/auction/origination/entry/bundle/concurrency checks
-pass; the corrected published candidate and new full CI are required.
-Its clean local/server artifacts match all 1,673 runtime files and pass dependency
-and static checks. Final server reads pass all 6,739 supported ordinary loan
-calculations and restored-file checks; all 202 tables match the cold checkpoint
-and all 199 sequence positions remain unchanged. About 11.7 GiB remains after
-the final build. Guarded final-candidate reader files are prepared, not installed.
-Its clean local image passes restricted startup, owner refusal, schema and cohort
-reads on both fictional recovery databases; all 202 tables remain unchanged.
-Fresh production metadata finds 30,293 referenced media objects (942,099,334 bytes),
-zero missing references and about 1.85 GiB free. Versioning remains unverified
-(AccessDenied). This was the initial metadata-only discovery; subsequent actual
-body and cold recovery results follow below.
+Published candidate **5f10b597** passes
+[full CI](https://github.com/rajeshr188/rokkad/actions/runs/37713872975), including
+all **2,138 Loans tests**, migrations/isolation, billing/mail, image build and
+restricted image/static checks. The first run exposed an auction test's clamped
+anniversary assumption; the second exposed an autovacuum/test-fixture lock cycle.
+The deterministic date regression and early class fixture locks pass 38 and 125
+focused checks respectively. All seven changed runtime files since the recovered
+7a7bc8e6 candidate are tests; business code, contracts, migrations and UI match.
 
-The hourly backup service had failed its 5 GiB space guard for over four days.
-The owner approved the exact scoped cleanup; after verifying all 31 retained
-checksums/catalogues and capturing a fresh consistent source checkpoint, 257
-redundant hourly copies were removed. Separate release checkpoints remain.
-Free space rose to about 15.9 GiB, and the unchanged backup service completed a
-fresh verified backup. The clean server artifact is built; the fresh snapshot
-restores exactly across 186 original tables, and owner migrations preserve all 183
-original business projections. Restricted startup and owner/pending-migration
-refusal pass. All 30,293 actual media files now match separate restore copies;
-350 issued-document and 20 template-asset stored hashes pass. About 12.8 GiB
-remains after both media copies. Cold recovery now passes all 202 tables/199
-sequence positions, all media, 350 issued-PDF opens and 27,616 retained photo/archive
-hash checks. All 6,739 ordinary active/closed source loans calculate under retained
-contracts; book/valuation limits remain independent and no archive is converted.
-The four selected source reads, no-context/cross-Workspace isolation and bounded
-archive counts pass. Post-read table/sequence integrity remains exact; about
-12.7 GiB remains. Full exact-candidate CI is the remaining technical check.
-Independent older mail-reader images were discovered; guarded candidate timer
-drop-ins/config are prepared and their three command entrypoints verified, without
-installation or sending. The prior corrected stage is checkpointed.
-See
-[LO-06 evidence and remaining checks](implementation/loan-release-preparation-lo06.md).
-No production deployment, migration or financial correction.
+Clean local/server artifacts match all 1,673 runtime files and pass dependencies,
+Python parse, static collection, restricted startup, schema and cohort checks.
+The exact server image is `rokkad:loan-origination-5f10b597-server`, ID
+`sha256:9846d3add8cfe7e16998e3befccfb1f3b10ff3563a7ae7b705932b2f4e850408`.
+Fresh source upgrade preserves 183 original business projections. Actual cold
+recovery verifies all **202 tables, 199 sequences and 30,293 media files**;
+350 issued PDFs open and retained file hashes match. Final restricted reads
+calculate all **6,739 ordinary active/closed loans**, preserve source/sequence
+integrity and enforce no-context/cross-Workspace isolation. Archive counts finish
+within two seconds per Workspace. Independent book/valuation limits remain; no
+archive is converted and no financial correction is posted. Actual customer
+files/full dumps stay in the approved private server folder.
+
+The owner-approved cleanup removed exactly 257 redundant hourly backups after
+validating all 31 retained checksums/catalogues and capturing a fresh source
+checkpoint. About 14.2 GiB was reclaimed. The unchanged 5 GiB guard remains;
+the backup service and two subsequent scheduled hourly copies now succeed.
+There are 34 completed operational copies and about **10.5 GiB free** after the
+final build/latest copy. Ongoing retention/failure alerts are not installed;
+current hourly growth can reach the guard again in roughly two to three days.
+Daily capacity/success review and a separately approved retention policy remain
+operational follow-up. Same-host recovery does not establish off-host recovery;
+bucket versioning remains unverified (AccessDenied).
+
+Compatible guarded mail timer/watchdog files are prepared and verified, not
+installed. Production image, migrations, routing, customer data and media remain
+unchanged. LO-07 rollout, D01623's explicit production correction and remaining
+LO-05 corrected-paper/document/monitoring staff acceptance are separate.
+See the [dated execution record](implementation/loan-release-preparation-lo06.md)
+and [recovery/retention runbook](flows/loan-candidate-recovery-lo06.md).
 
 ## Series-driven entry presentation accepted for now (8 October)
 

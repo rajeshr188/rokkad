@@ -250,14 +250,11 @@ reconstructed; it requires truthful limits and action-specific enforcement.
 
 ### LO-06: final candidate, actual media recovery and capacity
 
-**Status: published candidate 7a7bc8e6; fresh source/media cold recovery, restricted
-readers and capacity pass on 8 October. First full CI found one date-sensitive
-auction assertion among 2,138 Loans tests; its deterministic boundary regression
-passes all 38 focused checks. Corrected candidate b172c7bb is pushed and its full
-CI passed the interest regression but found an autovacuum/recovery-fixture setup
-deadlock. Early class fixture locks pass all 125 affected checks, including
-separate concurrency tests; a new candidate/full CI is required. Financial code, contracts and
-migrations are unchanged.**
+**Status: technically complete on 8 October. Published candidate 5f10b597 passes
+full CI, including all 2,138 Loans tests and image/runtime checks. Exact source/
+media cold recovery, restricted readers, source integrity and capacity pass.
+Test-only date/early-class-lock fixes pass 38 and 125 focused checks; financial
+code, contracts, migrations and UI remain unchanged from the recovered candidate.**
 
 The owner approved the exact 257-copy operational-backup cleanup after validation;
 31 older copies and separate checkpoints remain, and the guarded hourly service
@@ -267,6 +264,10 @@ timer-reader files are prepared, not installed. See the
 [execution record](../implementation/loan-release-preparation-lo06.md) and
 [recovery/retention runbook](../flows/loan-candidate-recovery-lo06.md).
 Same-host recovery, off-host resilience and staff acceptance remain distinct.
+Two subsequent scheduled backups also succeed; 34 copies remain and about
+10.5 GiB is free after final builds. Ongoing retention/failure alerts remain
+uninstalled, with roughly two to three days of hourly growth above the guard.
+Daily review and separately approved retention are operational follow-up.
 
 Commit/publish the complete candidate and run full CI/appropriate changed-area
 checks. Build one exact artifact with runtime contracts for web/workers.
@@ -292,7 +293,8 @@ source integrity and measured capacity pass, with essential gaps explicitly reso
 
 ### LO-07: concrete rollout review and production release
 
-**Status: pending LO-01 through LO-06.**
+**Status: pending remaining LO-05 staff acceptance and concrete rollout review/
+authorization. LO-06 technical preparation is complete; no deployment performed.**
 
 Present target, commit/image, migration range, acceptance, checkpoints, interruption
 and compatible recovery procedure. Execute only when requirements and deployment
