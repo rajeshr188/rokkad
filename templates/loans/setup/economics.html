@@ -43,6 +43,7 @@
 <details data-policy-section id="monitoring-policy" class="card card-body mb-3" {% if monitoring_form.is_bound or monitoring_amendment %}open{% endif %}>
   <summary class="h5">{% if monitoring_form.supersedes.value %}{% translate "Amend monitoring policy" %}{% else %}{% translate "Risk monitoring policy" %}{% endif %}</summary>
   <p class="mt-3">{% translate "These thresholds control warnings about maturity, days past due and loan-to-value. They do not change interest or fees. Review the limits before saving; monitoring remains unavailable without a policy." %}</p>
+  {% if not monitoring_form.supersedes.value and monitoring_policies %}<p class="alert alert-info">{% translate "Monitoring policies are already saved. To change an existing scope, find its latest version in Monitoring policy history and select Amend. Saving another unlinked policy for the same dates causes an overlap error. Create a policy here only for a scope without one." %} <a href="#policy-history">{% translate "View monitoring policy history" %}</a></p>{% endif %}
   <p class="small text-body-secondary">{% translate "Enter ratios as decimals: 0.70 means 70%. Use Amend in the saved history to change a policy while keeping earlier versions. Amendments start today or later." %}</p>
   <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="action" value="monitoring">
     {% include "loans/setup/_policy_form.html#fields" with form=monitoring_form %}

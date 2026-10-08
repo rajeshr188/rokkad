@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-30
+updated: 2026-10-08
 tags: [loans, setup, staff, ltv]
 ---
 
@@ -33,6 +33,23 @@ explicitly revised.
 History is retained for review. An earlier row marked active remains eligible
 for its dates, but the latest applicable date/version within the scope wins.
 Changing calculation settings does not change fees or risk-monitoring thresholds.
+
+## Paper entry and monitoring setup
+
+Select the series and original date before checking its standing setup. An
+unselected series has not been checked and does not mean a policy is missing.
+The paper form's current collateral valuation method and maximum LTV come from
+the current **Calculation policy**, using series, licence and Workspace precedence.
+An actual missing valuation setup links to that section. These settings do not
+reapprove the original paper payout.
+
+**Risk monitoring policy** separately supplies warning thresholds and evidence
+freshness limits. If a policy already covers the scope and dates, do not add an
+unlinked duplicate or change the date to evade the overlap check. In **Monitoring
+policy history**, select **Amend** on the latest open-ended version, review the
+settings and provide a reason. This creates an immutable successor; earlier
+versions remain available. Merely selecting a series or opening either form
+does not save a policy or consume a loan number.
 
 For partial-month charging and the minimum full first month, see the
 [interest policy guide](loan-interest-policies.md). A series calculation policy

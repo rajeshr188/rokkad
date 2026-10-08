@@ -7,6 +7,24 @@ tags: [status, architecture]
 
 # Status
 
+## Lakshmi paper setup warning correction (8 October)
+
+Restricted, repeatable-read/read-only production diagnostics reproduce a false
+paper-entry monitoring warning before series selection. All three Lakshmi series
+resolve current valuation setup successfully when selected. Risk monitoring
+already has Workspace v1 (2 October) and its explicit v2 successor (8 October);
+an unrelated duplicate correctly fails the overlap guard.
+
+The routine editor now distinguishes unresolved scope from a checked setup gap,
+including the rounding prompt. Genuine collateral valuation gaps point to
+**Calculation policy**, which supplies method/LTV, rather than asking for a second
+**Risk monitoring policy**, which supplies warning thresholds/freshness. Existing
+monitoring setup directs staff to the latest history row's **Amend** action.
+No policy, frozen agreement, financial writer, numbering or migration changes.
+All **29 focused checks pass**, covering multiple-series selection, genuine setup
+gaps, direct/paper entry, saved review binding, policy amendments and immutable
+monitoring evidence. Production delivery is in progress.
+
 ## LO-07 deployed and recurring retention installed (8 October)
 
 The owner approved ongoing retention and explicitly requested the production

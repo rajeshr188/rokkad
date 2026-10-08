@@ -43,12 +43,15 @@ def _paper_number_context(form):
 def _paper_agreement_context(form):
     defaults = (form.terms or {}).get("values", {})
     monitoring_names = ("monitoring_method", "monitoring_ltv", "monitoring_reason")
-    missing_monitoring = any(defaults.get(name) is None for name in monitoring_names)
+    # No selected/valid series means setup has not been resolved yet, rather
+    # than a missing policy. Only ask for setup after checking that scope.
+    missing_monitoring = form.terms is not None and any(
+        defaults.get(name) is None for name in monitoring_names)
     # A retained actual rounding exception must remain visible on redisplay;
     # ordinary entry only carries the standing value as a hidden form field.
     rounding = form["currency_quantum"].value()
-    rounding_needed = defaults.get("currency_quantum") is None or (
-        bool(form["exceptions"].value()) and str(rounding) != str(defaults["currency_quantum"]))
+    rounding_needed = form.terms is not None and (defaults.get("currency_quantum") is None or (
+        bool(form["exceptions"].value()) and str(rounding) != str(defaults["currency_quantum"])))
     term_names = ("rate", "advance_months", "document_charge", "exception_reason")
     return {
         "paper_term_fields": [form[name] for name in term_names],

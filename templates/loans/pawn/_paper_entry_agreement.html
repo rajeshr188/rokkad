@@ -31,9 +31,9 @@
 
   {% if paper_monitoring_missing %}
     <div class="alert alert-warning mt-3" data-paper-monitoring-attention>
-      <h3 class="h6">Current monitoring setup needs attention</h3>
-      <p class="small">Complete the current monitoring policy for this series. These choices do not approve or reprice the original paper loan.</p>
-      {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}" target="_blank" rel="noopener">Open Economic Setup</a>{% endif %}
+      <h3 class="h6">Current collateral valuation setup needs attention</h3>
+      <p class="small">Set the valuation method and maximum LTV for this series under Calculation policy. Risk monitoring policy sets warning thresholds separately. These choices do not approve or reprice the original paper loan.</p>
+      {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy" target="_blank" rel="noopener">Open Calculation policy</a>{% endif %}
       <details class="mt-2"><summary>Record a supported monitoring choice when setup is unavailable</summary><div class="row g-3 mt-2">{% for field in paper_monitoring_fields %}<div class="col-12 col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div></details>
     </div>
   {% else %}{% for field in paper_monitoring_fields %}{{ field.as_hidden }}{% endfor %}{% endif %}

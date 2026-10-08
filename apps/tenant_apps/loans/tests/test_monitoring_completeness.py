@@ -252,6 +252,12 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
                 get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today, _collateral=replace(collateral, **changes))
 
     def test_form_and_history_offer_a_preserving_amendment(self):
+        request = RequestFactory().get("/")
+        request.user, request.workspace = self.actor, self.tenant
+        page = pawn_economics_setup(request)
+        self.assertContains(page, "Monitoring policies are already saved")
+        self.assertContains(page, 'href="#policy-history"')
+        self.assertContains(page, f"?amend_monitoring={self.policy.pk}#monitoring-policy")
         request = RequestFactory().get("/", {"amend_monitoring": self.policy.pk})
         request.user, request.workspace = self.actor, self.tenant
         page = pawn_economics_setup(request)

@@ -72,6 +72,24 @@ class RoutineEntryTests(WorkspaceTestCase):
         self.assertContains(paper, 'name="tenure"', count=1)
         self.assertNotContains(paper, "data-rate-readiness-panel")
 
+    def test_multiple_series_wait_for_selection_before_reporting_missing_setup(self):
+        client, path = self._entry_client()
+        m.LoanSeries.objects.create(workspace=self.tenant, license=self.series.license,
+            code="SECOND", name="Second paper register")
+        counts = (m.PawnLoan.objects.count(), m.LoanMonitoringPolicy.objects.count())
+        page = client.get(path + "?entry=paper")
+        self.assertIsNone(page.context["form"].terms)
+        self.assertContains(page, "Choose the series and original date")
+        self.assertNotContains(page, "data-paper-monitoring-attention")
+        self.assertNotContains(page, "data-paper-calculation-attention")
+        selected = client.get(path + f"?entry=paper&series={self.series.pk}")
+        self.assertIsNotNone(selected.context["form"].terms)
+        self.assertNotContains(selected, "data-paper-monitoring-attention")
+        self.assertContains(selected, "Monitoring supplied by setup")
+        self.assertEqual(counts, (m.PawnLoan.objects.count(), m.LoanMonitoringPolicy.objects.count()))
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
+
     def test_switch_preserves_common_rows_deletion_and_number_without_financial_write(self):
         client, path = self._entry_client()
         original = client.get(path + "?entry=direct")
@@ -177,6 +195,9 @@ class RoutineEntryTests(WorkspaceTestCase):
         with patch("apps.tenant_apps.loans.services.paper_entry_terms.paper_entry_terms", side_effect=no_current_monitoring):
             response = client.post(path, data)
         self.assertContains(response, "data-paper-monitoring-attention")
+        self.assertContains(response, "Current collateral valuation setup needs attention")
+        self.assertContains(response, "#calculation-policy")
+        self.assertNotContains(response, "Complete the current monitoring policy")
         self.assertIsNotNone(response.context["review"], response.context["form"].errors)
         self.assertFalse(response.context["form"].cleaned_data["exceptions"])
 
