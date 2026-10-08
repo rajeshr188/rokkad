@@ -250,8 +250,20 @@ reconstructed; it requires truthful limits and action-specific enforcement.
 
 ### LO-06: final candidate, actual media recovery and capacity
 
-**Status: release preparation authorized on 8 October after entry presentation
-acceptance; final candidate publication/CI and fresh media/capacity checks in progress.**
+**Status: published candidate 7a7bc8e6; fresh source/media cold recovery, restricted
+readers and capacity pass on 8 October. First full CI found one date-sensitive
+auction assertion among 2,138 Loans tests; its deterministic boundary regression
+must pass focused verification and new exact-candidate full CI. Financial code is
+unchanged.**
+
+The owner approved the exact 257-copy operational-backup cleanup after validation;
+31 older copies and separate checkpoints remain, and the guarded hourly service
+completed a fresh backup. All 202 candidate tables/199 sequences, 30,293 actual
+media files and 6,739 ordinary source-loan calculations pass. Compatible guarded
+timer-reader files are prepared, not installed. See the
+[execution record](../implementation/loan-release-preparation-lo06.md) and
+[recovery/retention runbook](../flows/loan-candidate-recovery-lo06.md).
+Same-host recovery, off-host resilience and staff acceptance remain distinct.
 
 Commit/publish the complete candidate and run full CI/appropriate changed-area
 checks. Build one exact artifact with runtime contracts for web/workers.

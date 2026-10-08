@@ -18,10 +18,27 @@ and per-loan override. Approval/payout remain internal facts; SIMPLE combines
 confirmation without changing current owner authority, and EXTENDED keeps separate
 actions. Explicit reviewed correction for the demonstrated fully reversed
 native-to-actual-paper shape comes first, retaining old evidence rather than
-falling back after historical review fails. Source/staff acceptance, actual media
-recovery and capacity remain release work. See the
+falling back after historical review fails. Release checks distinguish staff
+acceptance, actual recovery, capacity and production rollout. See the
 [completion plan](plans/loan-origination-completion.md) and
 [decision](adr/2026-10-07-shared-loan-entry-and-explicit-origination-correction.md).
+
+LO-06 on 8 October verifies fresh server-only source/media cold recovery and
+restricted loan/source reads under the exact candidate; final CI is tracked in
+the [execution record](implementation/loan-release-preparation-lo06.md).
+Real customer files and full dumps stay in the previously approved private server
+scope, outside local OneDrive. Same-host recovery does not establish off-host
+disaster recovery. The owner approved one exact operational-backup cleanup after
+retained-copy verification; the unchanged 5 GiB guard and hourly backup service
+now complete a fresh copy. That approval does not authorize arbitrary future
+retention deletion or install automated retention/failure alerts.
+
+Mail dispatch/feedback/recovery timers use an image independent of the web
+container, and their health watchdog has a configured reader command. LO-06
+prepares guarded candidate drop-ins/config; they are not installed. A later
+release must pin web and these independent readers together, rather than assume
+that changing web updates every reader. Production D01623's financial correction
+and remaining LO-05 staff acceptance are separate from recovery verification.
 
 For LO-05 the owner is the actual source/workflow reviewer and confirmed that
 JCL/JSK loans originated after 25 September are direct. The comparison pack uses

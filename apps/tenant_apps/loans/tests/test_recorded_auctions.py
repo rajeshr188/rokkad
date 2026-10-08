@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
@@ -36,9 +36,13 @@ class RecordedAuctionTests(WorkspaceTestCase):
         return "recorded-auction"
 
     def setUp(self):
-        self.prepare_history()
-        self.data["events"] = [self.row(amount="2000")]
-        self.loan, _, _ = self.admit()
+        # Keep the original 30 September anchor deterministic. The sale lands
+        # on 31 March, so adding one month to the sale clamps to the covered
+        # 30 April anniversary rather than the next charge day.
+        with on(date(2026, 10, 8)):
+            self.prepare_history()
+            self.data["events"] = [self.row(amount="2000")]
+            self.loan, _, _ = self.admit()
         self.notice_day = self.day+relativedelta(months=4)
         self.sale_day = self.notice_day+timedelta(days=60)
 
@@ -98,7 +102,10 @@ class RecordedAuctionTests(WorkspaceTestCase):
             record_pawn_loan_repayment(self.loan.pk, amount=expected.interest_outstanding,
                 request_key="interest-after-reversal", actor=self.actor)
         self.assertEqual(collection_balance(self.loan, self.sale_day).interest_outstanding, 0)
-        self.assertEqual(collection_balance(self.loan, self.sale_day+relativedelta(months=1)).interest_outstanding, 164)
+        covered_anniversary = self.day + relativedelta(months=7)
+        self.assertEqual(covered_anniversary, date(2027, 4, 30))
+        self.assertEqual(collection_balance(self.loan, covered_anniversary).interest_outstanding, 0)
+        self.assertEqual(collection_balance(self.loan, covered_anniversary+timedelta(days=1)).interest_outstanding, 164)
 
     def test_missing_changed_behind_and_incomplete_coverage_block_before_posting(self):
         count = self.loan.loan_events.count()

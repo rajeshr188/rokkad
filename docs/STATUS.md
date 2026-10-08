@@ -7,6 +7,47 @@ tags: [status, architecture]
 
 # Status
 
+## LO-06 candidate published; backup service restored (8 October)
+
+Candidate `7a7bc8e6` is committed and pushed;
+[first full CI](https://github.com/rajeshr188/rokkad/actions/runs/37705798126)
+completed with one date-sensitive auction assertion failing among 2,138 Loans
+tests. The test incorrectly treated a month after a 31 March sale (30 April) as
+the next charge day; the original anniversary remains covered through 30 April.
+Its fixture is now fixed and checks zero on 30 April and the next charge on 1 May.
+Calculation and posting code are unchanged; focused verification and a new
+exact-candidate full CI run are required.
+Its clean local image passes restricted startup, owner refusal, schema and cohort
+reads on both fictional recovery databases; all 202 tables remain unchanged.
+Fresh production metadata finds 30,293 referenced media objects (942,099,334 bytes),
+zero missing references and about 1.85 GiB free. Versioning remains unverified
+(AccessDenied). This was the initial metadata-only discovery; subsequent actual
+body and cold recovery results follow below.
+
+The hourly backup service had failed its 5 GiB space guard for over four days.
+The owner approved the exact scoped cleanup; after verifying all 31 retained
+checksums/catalogues and capturing a fresh consistent source checkpoint, 257
+redundant hourly copies were removed. Separate release checkpoints remain.
+Free space rose to about 15.9 GiB, and the unchanged backup service completed a
+fresh verified backup. The clean server artifact is built; the fresh snapshot
+restores exactly across 186 original tables, and owner migrations preserve all 183
+original business projections. Restricted startup and owner/pending-migration
+refusal pass. All 30,293 actual media files now match separate restore copies;
+350 issued-document and 20 template-asset stored hashes pass. About 12.8 GiB
+remains after both media copies. Cold recovery now passes all 202 tables/199
+sequence positions, all media, 350 issued-PDF opens and 27,616 retained photo/archive
+hash checks. All 6,739 ordinary active/closed source loans calculate under retained
+contracts; book/valuation limits remain independent and no archive is converted.
+The four selected source reads, no-context/cross-Workspace isolation and bounded
+archive counts pass. Post-read table/sequence integrity remains exact; about
+12.7 GiB remains. Full exact-candidate CI is the remaining technical check.
+Independent older mail-reader images were discovered; guarded candidate timer
+drop-ins/config are prepared and their three command entrypoints verified, without
+installation or sending. The prior corrected stage is checkpointed.
+See
+[LO-06 evidence and remaining checks](implementation/loan-release-preparation-lo06.md).
+No production deployment, migration or financial correction.
+
 ## Series-driven entry presentation accepted for now (8 October)
 
 At the owner's request, the shared editor now trials a read-only purpose label at
