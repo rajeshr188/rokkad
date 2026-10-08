@@ -234,6 +234,7 @@ The detailed operational guides are [workflow choice](../flows/loan-workflow-cho
 | RA00500 register and checkpoint comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory; project-chat declaration, no book/page reference supplied |
 | C07557 payout/ticket comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory; project-chat declaration, no separate ticket reference supplied |
 | 06716 closure/custody comparison | Workspace owner / 7 October | Accepted: owner confirms the displayed comparison matches and is correct/satisfactory, including the presented settlement/return; project-chat declaration, no separate closing reference supplied |
+| Series-driven New loan presentation | Workspace owner / 8 October | Accepted as satisfactory for now after the fictional local presentation trial; this covers entry-purpose presentation, not actual corrected D01623, documents or monitoring |
 | Corrected D01623 display and latest position | Workspace owner / pending | Presentation review and any post-snapshot activity needed; confirmed terms need not be repeated |
 | Shared workflow, documents and monitoring walkthrough | Workspace owner / pending | Actual UI review date, acceptable/problem result and any required corrections needed |
 

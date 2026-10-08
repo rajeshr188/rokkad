@@ -1,11 +1,27 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-06
+updated: 2026-10-08
 tags: [loans, paper-entry, acceptance, release]
 ---
 
 # Operate and accept the paper-first workflow
+
+**8 October shared-editor refinement:** standard paper entry shows the standing
+agreement and calculated proceeds without asking for monitoring/rounding settings.
+Use **Record different agreed terms** only for an actual supported exception;
+check the agreement choice to unlock item rates and tenure. Without JavaScript,
+use **Apply agreement choice**. For a series-wide agreement change, update dated
+Economic Setup once. Missing setup has a targeted prompt rather than silently
+substituted terms. Current monitoring is separate from original financial terms.
+
+**Additional payout details** is optional and independent of term exceptions.
+Blank proceeds use the agreement calculation; entered proceeds must match it.
+Choose confirmed cash only when the full proceeds were physically paid to the
+customer. If proceeds were used to settle another loan and net customer cash is
+different, retain PROCEEDS; this field is not an arbitrary net-cash override.
+Optional source-licence evidence has its own section. These choices do not establish
+complete paper books, identify an unknown predecessor or perform a second payout.
 
 **LC-05 local extension:** paper receipt preview accepts actual fee components and
 complete staff item principal splits for multi-item openings. Use the actual

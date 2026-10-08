@@ -37,6 +37,11 @@ function initPaperEntry() {
       const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
       const terms = doc.querySelector('#standing-terms');
       if (!terms) return;
+      // Refresh calculations without closing the optional details being edited.
+      for (const selector of ['[data-paper-payout-details]', '[data-paper-term-exceptions]']) {
+        const before = form.querySelector(selector), after = terms.querySelector(selector);
+        if (before && after) after.open = before.open || after.open;
+      }
       form.querySelector('#standing-terms')?.replaceWith(terms);
       const activity = form.querySelector('#paper-activity');
       const updated = doc.querySelector('#paper-activity');
@@ -64,6 +69,8 @@ function initPaperEntry() {
     if (event.target.name === 'confirm_review') return;
     invalidate();
     if (event.target.name === 'exceptions') {
+      const fields = form.querySelector('[data-paper-term-fields]');
+      if (fields) fields.hidden = !event.target.checked;
       form.elements.namedItem('tenure').readOnly = !event.target.checked;
       for (const input of form.querySelectorAll('[name$="-interest_rate_override"]')) input.readOnly = !event.target.checked;
     }

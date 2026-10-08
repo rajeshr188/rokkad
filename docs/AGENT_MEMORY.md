@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [agents, context, architecture]
 ---
 
@@ -28,8 +28,9 @@ JCL/JSK loans originated after 25 September are direct. The comparison pack uses
 RA00500 (opening), corrected staging D01623, C07557 (direct) and JSK 06716
 (direct origin with later paper closure). On 7 October the owner accepted the
 RA00500/C07557/06716 book comparisons as matching, correct and satisfactory.
-Shared screen review and corrected-paper presentation/latest-position review
-remain pending. Release acceptance does not post per-loan coverage reviews or
+On 8 October the owner accepted the series-driven New loan presentation as
+satisfactory for now. Document/monitoring screen review and corrected-paper
+presentation/latest-position review remain pending. Release acceptance does not post per-loan coverage reviews or
 certify later activity. Production D01623 is not corrected. See the
 [dated acceptance record](implementation/loan-source-staff-acceptance-lo05.md).
 
@@ -55,6 +56,14 @@ in approval JSON for exact active retry. Issued v1 reviews keep their original
 contract. Paper review data/signatures are unchanged by presentation. Specialized
 archive/import/opening preparation and legacy POST contexts remain supported.
 Final candidate/media/source acceptance remain subsequent slices.
+
+On 8 October routine paper presentation separates actual agreement exceptions,
+optional payout facts and source-licence evidence. Standard monitoring/rounding
+stay in setup with targeted missing/actual-rule prompts. Itemized agreement
+exceptions still use available current monitoring setup; legacy explicit contexts
+remain supported. Explicit standard-term proceeds are retained and must reconcile,
+never silently cleared. CASH means the full proceeds were paid physically;
+PROCEEDS does not assert net customer cash or a predecessor. No new financial model.
 
 LO-04 verifies common servicing against actual direct, recorded, history/4 and
 reviewed-opening admissions, including mixed item rates and actual paper receipts

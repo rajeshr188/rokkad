@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.utils import timezone
 
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenant_apps.loans import models as m
@@ -113,6 +114,88 @@ class RoutineEntryTests(WorkspaceTestCase):
         self.assertEqual(response.context["form"]["tenure"].value(), "3")
         self.assertFalse(response.context["form"].fields["tenure"].widget.attrs["readonly"])
 
+    def test_standard_terms_allow_confirmed_payout_details_and_exact_retry(self):
+        client, path = self._entry_client()
+        data = self.paper_facts(client.get(path + "?entry=paper"))
+        data.update(payout_basis="CASH", cash_paid="10000")
+        review = client.post(path, data)
+        self.assertIsNotNone(review.context["review"], review.context["form"].errors)
+        self.assertFalse(review.context["form"].cleaned_data["exceptions"])
+        data.update(action="confirm", confirm_review="on", review_token=review.context["review_token"])
+        self.assertEqual(client.post(path, data).status_code, 302)
+        loan = m.PawnLoan.objects.get(loan_number=self.data["number"])
+        self.assertEqual(str(loan.disbursal_snapshot.evidence["recording"]["funding"]["actual_cash_paid"]), "10000.00")
+        self.assertEqual(client.post(path, data).status_code, 302)
+        self.assertEqual(m.PawnLoan.objects.filter(loan_number=self.data["number"]).count(), 1)
+
+    def test_inconsistent_standard_payout_is_rejected_without_erasing_the_amount(self):
+        client, path = self._entry_client()
+        data = self.paper_facts(client.get(path + "?entry=paper"))
+        data.update(payout_basis="CASH", cash_paid="9999")
+        count = m.PawnLoan.objects.count()
+        response = client.post(path, data)
+        self.assertIsNone(response.context["review"])
+        self.assertContains(response, "Original proceeds must equal principal")
+        self.assertEqual(response.context["form"]["cash_paid"].value(), "9999")
+        self.assertEqual(m.PawnLoan.objects.count(), count)
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
+
+    def test_actual_terms_keep_current_monitoring_from_setup(self):
+        from decimal import Decimal
+        client, path = self._entry_client()
+        data = self.paper_facts(client.get(path + "?entry=paper"))
+        data.update(exceptions="on", exception_reason="Actual supported book agreement", tenure="9",
+            advance_months="0", document_charge="5", cash_paid="9995",
+            monitoring_method="LATEST_APPRAISAL", monitoring_ltv="0.1", monitoring_reason="Posted override",
+            **{"collateral-0-interest_rate_override": "1.5", "collateral-1-interest_rate_override": "3"})
+        response = client.post(path, data)
+        self.assertIsNotNone(response.context["review"], response.context["form"].errors)
+        self.assertEqual(response.context["form"].cleaned_data["monitoring_method"], "CALCULATED_METAL_VALUE")
+        self.assertEqual(response.context["form"].cleaned_data["monitoring_ltv"], Decimal("0.8"))
+        data.update(action="confirm", confirm_review="on", review_token=response.context["review_token"])
+        self.assertEqual(client.post(path, data).status_code, 302)
+        loan = m.PawnLoan.objects.get(loan_number=self.data["number"])
+        self.assertEqual(loan.tenure_months, 9)
+        self.assertEqual(loan.disbursal_snapshot.monthly_interest, Decimal("210"))
+        self.assertEqual(loan.policy_snapshot.maximum_ltv_ratio, Decimal("0.8"))
+
+    def test_missing_monitoring_prompts_separately_without_requiring_agreement_exception(self):
+        from apps.tenant_apps.loans.services.paper_entry_terms import paper_entry_terms
+        client, path = self._entry_client()
+        data = self.paper_facts(client.get(path + "?entry=paper"))
+
+        def no_current_monitoring(**kwargs):
+            terms = paper_entry_terms(**kwargs)
+            for name in ("monitoring_method", "monitoring_ltv", "monitoring_reason"):
+                terms["values"].pop(name, None)
+            return terms
+
+        with patch("apps.tenant_apps.loans.services.paper_entry_terms.paper_entry_terms", side_effect=no_current_monitoring):
+            response = client.post(path, data)
+        self.assertContains(response, "data-paper-monitoring-attention")
+        self.assertIsNotNone(response.context["review"], response.context["form"].errors)
+        self.assertFalse(response.context["form"].cleaned_data["exceptions"])
+
+    def test_monitoring_setup_change_requires_fresh_exception_review(self):
+        from decimal import Decimal
+        from apps.tenant_apps.loans.services.economic_policies import create_pawn_economic_configuration
+        client, path = self._entry_client()
+        data = self.paper_facts(client.get(path + "?entry=paper"))
+        data.update(exceptions="on", exception_reason="Original book tenure", tenure="3")
+        response = client.post(path, data)
+        self.assertIsNotNone(response.context["review"], response.context["form"].errors)
+        create_pawn_economic_configuration(workspace=self.tenant, actor=self.actor,
+            gold_monthly_interest_rate=Decimal("2"), silver_monthly_interest_rate=Decimal("4"),
+            valuation_method="CALCULATED_METAL_VALUE", maximum_ltv_ratio=Decimal("0.7"),
+            default_tenure_months=12, advance_interest_periods=0, effective_from=self.day)
+        data.update(action="confirm", confirm_review="on", review_token=response.context["review_token"])
+        changed = client.post(path, data)
+        self.assertTrue(changed.context["form"].errors)
+        self.assertFalse(m.PawnLoan.objects.filter(loan_number=self.data["number"]).exists())
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
+
     def test_paper_photo_preview_confirm_and_retry_match_surviving_item(self):
         client, path = self._entry_client()
         data = self.paper_facts(client.get(path + "?entry=paper"))
@@ -137,7 +220,7 @@ class RoutineEntryTests(WorkspaceTestCase):
         photo = m.PawnCollateralPhoto.objects.get(collateral_item__loan=loan)
         self.assertEqual(photo.collateral_item.description, "Silver anklets")
         self.assertEqual(photo.workflow_source, "POST_APPROVAL")
-        self.assertEqual(photo.captured_at.date(), self.today)
+        self.assertEqual(timezone.localdate(photo.captured_at), self.today)
         detail = client.get(confirmed.url)
         self.assertContains(detail, "Current collateral evidence")
         self.assertNotContains(detail, "Post-approval evidence")

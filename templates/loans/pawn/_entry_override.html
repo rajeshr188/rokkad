@@ -1,0 +1,14 @@
+<details class="small mt-2" data-entry-override {% if entry_selection != 'auto' or entry_change_error %}open{% endif %}>
+  <summary>Use a different entry purpose for this loan</summary>
+  <div class="border rounded p-2 mt-2">
+    <p class="small text-body-secondary">Optional. This changes only this loan's entry; it does not update the series default. Choose Use series setup to return to automatic selection.</p>
+    <label for="entry-selection" class="form-label">Entry purpose for this loan</label>
+    <select name="entry_selection" id="entry-selection" class="form-select form-select-sm" form="new-loan-form">
+      <option value="auto" {% if entry_selection == 'auto' %}selected{% endif %}>Use series setup</option>
+      <option value="direct" {% if entry_selection == 'direct' %}selected{% endif %}>Create and pay now</option>
+      <option value="paper" {% if entry_selection == 'paper' %}selected{% endif %}>Record from paper</option>
+    </select>
+    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" data-apply-entry>Apply entry choice</button>
+    <noscript><button type="submit" class="btn btn-sm btn-outline-secondary mt-2" name="action" value="entry_change" form="new-loan-form" formnovalidate>Apply entry choice</button></noscript>
+  </div>
+</details>

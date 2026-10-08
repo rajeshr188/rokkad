@@ -1,7 +1,7 @@
 ---
 status: implemented
 owner: project
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [loans, origination, editor, verification]
 related: [../plans/loan-origination-completion.md]
 ---
@@ -23,6 +23,40 @@ and optionally records known payments or closure. It does not reapprove the orig
 advance using current prices. The shared tenure field is supplied from setup and
 editable for actual paper exceptions. The standing agreement remains a summary
 with additional details collapsed, rather than routine repeated terms questions.
+
+On 8 October the paper original-number field gained selected-series guidance:
+configured prefix/digit width and next automatic number, refreshed through the
+existing series-change presentation. The original remains editable and is never
+prefilled or rewritten as the next automatic number. The read-only hint explains
+high-water advancement on successful recording, preservation for older/unmatched
+originals, and no reservation during review. Automatic-preview unavailability is
+displayed without changing admission rules. Direct numbering presentation and both
+financial writers are unchanged.
+
+The same day's agreement cleanup separates actual terms, optional payout details
+and optional source-licence mapping. Ordinary monitoring/rounding controls are
+hidden standing fields, with missing monitoring and unavailable/different rounding
+prompts. Itemized actual agreement exceptions use available current monitoring;
+legacy explicit non-itemized contexts keep their shape. Standard-term explicit
+proceeds are retained instead of cleared, and existing exact reconciliation rejects
+inconsistent amounts. No arbitrary customer net-cash override was added. Terms
+refresh retains open optional sections; no-JavaScript exception selection uses the
+existing nonfinancial terms action. Verification counts and local overlay state are
+recorded in [Status](../STATUS.md).
+
+An owner-requested reversible presentation trial on 8 October moves the optional
+per-loan purpose override from the page heading to the series field. Ordinary entry
+retains a read-only current-purpose label and automatically follows configured
+defaults. Explicit override state is disclosed; Use series setup resets it. No
+dispatch/default/financial behavior changes. The fictional 8083 demo includes
+DEMO-D-/DEMO-P- series; existing series and loan records are untouched. Previous
+templates and a local-only restore/reapply helper are retained in
+`.tmp/entry-purpose-preview-20261008/`. On 8 October the owner accepted the entry
+presentation as satisfactory for now. This does not complete the outstanding
+corrected-paper, document and monitoring acceptance or production release gates.
+Seven focused Django checks and actual desktop/mobile/no-JavaScript browser checks
+pass. The saved previous layout was restored and checked for both demo defaults;
+the trial was then reapplied. Rollback changes templates only, not database records.
 
 This slice does not combine final confirmation. Direct still saves a draft and
 uses existing approval/payout actions; paper still uses its signed history review.

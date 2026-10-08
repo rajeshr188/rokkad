@@ -228,7 +228,10 @@ A separate current fictional screen-review app is now available at
 fictional database/media copy, restricted runtime and SIMPLE owner review.
 All 1,666 runtime files match; authenticated pages/29 assets and actual
 desktop/mobile shared-editor/item/purpose checks pass without financial posts.
-Owner screen review is still pending. Real corrected D01623 remains server-only;
+The 1,666-file match describes the initial clean preview; subsequent authorized
+form/template/static overlays are recorded in STATUS. On 8 October the owner
+accepted the series-driven New loan presentation as satisfactory for now.
+Document/monitoring screen review remains pending. Real corrected D01623 remains server-only;
 this preview does not establish actual production media recovery or final CI.
 
 Use RA00500 for opening acceptance and corrected D01623 for paper payout.
@@ -247,7 +250,8 @@ reconstructed; it requires truthful limits and action-specific enforcement.
 
 ### LO-06: final candidate, actual media recovery and capacity
 
-**Status: discovery begins in LO-00; final rehearsal follows code freeze.**
+**Status: release preparation authorized on 8 October after entry presentation
+acceptance; final candidate publication/CI and fresh media/capacity checks in progress.**
 
 Commit/publish the complete candidate and run full CI/appropriate changed-area
 checks. Build one exact artifact with runtime contracts for web/workers.

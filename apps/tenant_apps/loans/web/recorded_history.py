@@ -185,7 +185,20 @@ class PaperHistoryForm(forms.Form):
                                 continue
                             data[name] = "" if value is None else str(value)
                         data["document_charge"] = str(self.terms["values"].get("document_charge", ""))
-                        data["cash_paid"] = ""
+                    elif self.itemized:
+                        # An actual agreement exception does not replace current
+                        # monitoring setup. Legacy non-itemized submissions retain
+                        # their original explicit review shape.
+                        for name in ("monitoring_method", "monitoring_ltv", "monitoring_reason"):
+                            if name in self.terms["values"]:
+                                data[name] = str(self.terms["values"][name])
+                        if not data.get("currency_quantum"):
+                            data["currency_quantum"] = str(self.terms["values"].get("currency_quantum", "0.01"))
+                            if getattr(self, "item_monthly", None) is not None:
+                                try:
+                                    self.item_monthly = monthly_interest(actual, Decimal(data["currency_quantum"]))
+                                except (ValueError, TypeError, ArithmeticError):
+                                    pass
                     data["payout_basis"] = data.get("payout_basis") or "PROCEEDS"
                     data["confirmed_rule"] = "on"
                     self.data = data
@@ -247,7 +260,7 @@ class PaperHistoryForm(forms.Form):
         if data.get("confirmed_history") and not data.get("complete_through"):
             self.add_error("complete_through", "Enter the actual date through which the paper activity was checked.")
         if not data.get("exceptions") and self.terms:
-            missing = [name for name in ("rate", "tenure", "advance_months", "document_charge", "monitoring_method", "monitoring_ltv")
+            missing = [name for name in ("rate", "tenure", "advance_months", "document_charge")
                        if self.terms["values"].get(name) is None]
             if missing:
                 self.add_error(None, "Complete standing setup or select Paper agreement differs and enter the actual supported terms: " + ", ".join(missing) + ".")

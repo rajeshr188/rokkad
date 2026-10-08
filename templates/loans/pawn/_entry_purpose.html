@@ -3,19 +3,11 @@
   <h1 class="h3">{% translate "New loan" %}</h1>
   <div class="d-flex flex-wrap align-items-start gap-2 small">
     <span>Entry: <strong data-entry-label>{% if entry_purpose == 'paper' %}From paper{% else %}Direct in Rokkad{% endif %}</strong>{% if entry_selection == 'auto' %} <span class="text-body-secondary">(from setup)</span>{% endif %}</span>
-    <details><summary>Change</summary><div class="border rounded p-2 mt-1">
-      <label for="entry-selection" class="form-label">Entry purpose</label>
-      <select name="entry_selection" id="entry-selection" class="form-select form-select-sm" form="new-loan-form">
-        <option value="auto" {% if entry_selection == 'auto' %}selected{% endif %}>Use series setup</option>
-        <option value="direct" {% if entry_selection == 'direct' %}selected{% endif %}>Create and pay now</option>
-        <option value="paper" {% if entry_selection == 'paper' %}selected{% endif %}>Record from paper</option>
-      </select>
-      <button type="button" class="btn btn-sm btn-outline-secondary mt-2" data-apply-entry>Apply entry choice</button>
-      <noscript><button type="submit" class="btn btn-sm btn-outline-secondary mt-2" name="action" value="entry_change" form="new-loan-form" formnovalidate>Apply entry choice</button></noscript>
-    </div></details>
+    {% if entry_selection != 'auto' %}<span class="text-body-secondary">(override for this loan)</span>{% endif %}
   </div>
-  <p class="small text-body-secondary mt-2">Choose the series in Loan details. Its setup supplies the entry purpose; you can change it for this loan.</p>
-  <noscript><p class="small">After changing the series, use Apply entry choice to apply its setup.</p></noscript>
+  <p class="small text-body-secondary mt-2">Select the series in Loan details to use its configured entry purpose and terms.</p>
+  {% if not routine_editor %}{% include "loans/pawn/_entry_override.html" %}{% endif %}
+  <noscript><p class="small">After changing the series, use {% if routine_editor %}Apply series setup{% else %}Apply entry choice{% endif %} to apply its setup.</p></noscript>
   <p class="small" role="status" aria-live="polite" data-entry-status>{{ entry_change_error }}</p>
   {% if entry_file_warning %}<p class="alert alert-warning" data-entry-file-warning>Your entered facts are retained. Without JavaScript, select photographs again after changing entry purpose.</p>{% endif %}
 </div>

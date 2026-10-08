@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-10-03
+updated: 2026-10-08
 tags: [loans, paper-first, economics, monitoring]
 ---
 
@@ -42,3 +42,22 @@ This updates the presentation and routine entry semantics of the
 [transaction coverage decision](2026-10-03-loan-transaction-completeness.md), while
 retaining its immutable review, authorization and downstream protection boundaries.
 See the [delivery plan](../plans/unified-loan-recording.md).
+
+## Routine presentation refinement accepted 8 October
+
+The owner selected separate actual-term and optional payout actions in the shared
+editor. Standing monitoring/calculation configuration stays out of routine editable
+controls; show a targeted prompt only when setup is missing or an actual supported
+rounding exception is retained. The agreement summary remains visible. Itemized
+actual-term exceptions resolve available current monitoring independently; missing
+monitoring retains an explicit supported choice/reason rather than pretending the
+financial agreement differs. Legacy explicit non-itemized contexts retain their
+existing shape. Setup changes invalidate pending affected reviews; saved contracts
+are not rewritten.
+
+Payout details must work with standard terms. Preserve an explicitly supplied
+proceeds amount and validate it through the existing writer instead of clearing it.
+It must still equal principal less agreed deductions. Confirmed CASH means the
+full proceeds were physically paid; PROCEEDS retains uncertainty/possible settlement
+use. This presentation refinement adds no separate arbitrary customer net-cash
+amount, inferred renewal relationship or new financial admission profile.

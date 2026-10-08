@@ -1,11 +1,115 @@
 ---
 status: active
 owner: project
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [status, architecture]
 ---
 
 # Status
+
+## Series-driven entry presentation accepted for now (8 October)
+
+At the owner's request, the shared editor now trials a read-only purpose label at
+the top and a secondary **Use a different entry purpose for this loan** section
+beside the series selector. Default selection stays **Use series setup**; an
+explicit override is labelled for this loan and resetting to setup restores
+automatic series resolution. Existing dispatch, permissions, review/financial
+commands and scoped defaults are unchanged. Without JavaScript, **Apply series
+setup** remains available next to the selector. Legacy editors retain their
+existing ability to choose purpose.
+
+Seven focused Django checks pass for precedence, explicit override/reset, retained
+facts, foreign-series refusal, shared layout and no-JavaScript entry. Actual desktop
+and mobile browser checks pass both defaults, secondary override, persistent
+explicit choice, reset to setup and retained details without overflow/page errors.
+The initial no-JavaScript navigation probe timed out; its isolated response-based
+check passes Apply series setup and retained facts. Only presentation/terms actions
+were submitted. The previous presentation was restored and verified for both demo
+defaults, then the trial was reapplied successfully. On 8 October the owner said
+the presentation looks satisfactory for now. This accepts the entry presentation;
+final candidate CI, corrected D01623 display/latest-position review, documents,
+monitoring walkthrough and production release gates remain separate.
+
+The owner confirmed proceeding with LO-06 release preparation on 8 October.
+LC-06 quote-age configuration is already implemented. LO-06 now proceeds with
+the final candidate, full CI, actual database/media recovery and capacity review;
+production rollout and D01623's production correction remain separate.
+
+The fictional 8083 Workspace now also has two clearly labelled demo series created
+through ordinary authorized setup services: **DEMO-D-** (`series=3`, DIRECT) and
+**DEMO-P-** (`series=4`, PAPER). Existing loans/events/counters and existing series
+configuration are unchanged. Review automatic selection at
+[direct demo](http://127.0.0.1:8083/w/khata-2777349a/loans/internal/create/?series=3)
+and [paper demo](http://127.0.0.1:8083/w/khata-2777349a/loans/internal/create/?series=4).
+These links deliberately omit a forced `entry=direct` or `entry=paper` override.
+
+Exact pre-trial header/shared-editor templates are retained under
+`.tmp/entry-purpose-preview-20261008/before/`; the local-only
+`switch_preview.py before` / `trial` restores/reapplies the presentation without
+database changes. Restore those two working-tree files from this pre-trial backup
+if the owner later requests reverting this presentation; do not reset to HEAD, which would also discard
+earlier authorized numbering/agreement cleanup. The new override partial is unused
+by the restored presentation. No migration, financial write or production rollout.
+
+## Routine paper agreement simplified (8 October)
+
+The shared paper editor now keeps the standing agreement/amounts summary visible,
+with separate **Record different agreed terms**, **Additional payout details** and
+optional source-licence evidence sections. Checking actual terms reveals the
+override fields and unlocks existing item rates/tenure; the no-JavaScript Apply
+choice remains. Standard monitoring and rounding travel as hidden standing values.
+Missing monitoring or unavailable/different rounding has its own targeted prompt.
+Current setup supplies monitoring independently of an itemized agreement exception;
+legacy non-itemized explicit review contexts remain supported.
+
+Routine entry no longer erases an explicit payout amount when standard terms are
+selected. The existing writer still requires proceeds to reconcile exactly with
+principal, advance and document fee. CASH confirms the full proceeds paid to the
+customer; PROCEEDS retains unknown physical cash/possible settlement use. No new
+net-cash or inferred predecessor model was introduced. Missing monitoring may use
+an explicitly supported choice/reason without declaring different financial terms;
+required field validation, immutable snapshots and signed review remain.
+
+All **76 affected Django checks pass across the focused runs**, covering paper
+defaults/exceptions/mixed items, payout reconciliation, retry, changed monitoring
+review, photos/recovery, direct review and saved correction. The initial 48-check
+run passed 47 and exposed an existing UTC-versus-local photo-date assertion; the
+corrected photo check and new monitoring-change check both pass, followed by all
+27 direct/correction checks. The two shared-controller JavaScript checks pass.
+Actual localhost desktop/mobile and no-JavaScript checks pass optional section
+behaviour, hidden setup controls, retained original/payout facts on refresh,
+unchanged direct numbering and no overflow/page errors. Browser actions are only
+presentation/terms refresh; no financial submission.
+
+The existing fictional http://127.0.0.1:8083 review app has five current form/source
+files overlaid on its `925a6b4a` base image, refreshed static assets and reloaded
+workers. Overlay hashes/browser evidence are under
+`.tmp/paper-agreement-cleanup-20261008/`. No migration or production change;
+LO-05 staff acceptance and subsequent release gates remain separate.
+
+## Paper original-number guidance (8 October)
+
+The shared paper editor now shows the selected series prefix, digit width and next
+automatic loan number beside the editable original-number field. It explains that
+only a successfully recorded matching number at or above the counter advances it;
+older or differently formatted originals leave it unchanged. Opening/reviewing the
+form reserves no number. Existing series-change presentation refreshes the hint
+while retaining the entered original. Scoped read-only preview failures are shown
+as guidance, rather than new restrictions on paper admission.
+
+The four focused Django numbering/shared-form checks pass. Actual localhost Chromium
+checks pass on desktop/mobile: correct format/next number, editable original, series
+refresh retaining `0003`, unchanged direct preview, no overflow or page errors.
+Only existing presentation/terms-refresh POSTs occur, with no financial submission;
+the next automatic number remains `P-0058`. The browser probe was corrected to wait
+for asynchronous form replacement and recognize read-only terms refreshes. No schema,
+number allocation, duplicate protection or financial writer changes.
+
+The fictional review app at http://127.0.0.1:8083 uses the existing `925a6b4a` image
+with these two presentation files overlaid and workers reloaded; the original clean
+image verification below describes its preparation before this overlay. Overlay
+hashes/evidence stay in `.tmp/paper-number-guidance-20261008/`. No production change
+or source/staff acceptance is implied.
 
 ## LO-05 three book comparisons accepted; screen review pending (7 October)
 
