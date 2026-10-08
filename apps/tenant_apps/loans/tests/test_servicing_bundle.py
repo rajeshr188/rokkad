@@ -396,11 +396,11 @@ class AuctionBundleTests(CheckpointAuctionTests):
 
 @override_settings(STORAGES={'default':{'BACKEND':'django.core.files.storage.InMemoryStorage'},'staticfiles':{'BACKEND':'django.contrib.staticfiles.storage.StaticFilesStorage'}})
 class ApprovedBundleTests(approved.LoanHistoryTests):
-    def setUp(self):
-        if self._testMethodName == "test_bundle_retained_source_packet_exact_workspace_recovery":
-            from .recovery_fixtures import lock_recovery_fixture_tables
-            lock_recovery_fixture_tables()
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        from .recovery_fixtures import lock_recovery_fixture_tables
+        lock_recovery_fixture_tables()
+        super().setUpTestData()
 
     def test_bundle_native_payout_photo_and_later_receipt(self):
         self.native_bundle()

@@ -253,8 +253,11 @@ reconstructed; it requires truthful limits and action-specific enforcement.
 **Status: published candidate 7a7bc8e6; fresh source/media cold recovery, restricted
 readers and capacity pass on 8 October. First full CI found one date-sensitive
 auction assertion among 2,138 Loans tests; its deterministic boundary regression
-must pass focused verification and new exact-candidate full CI. Financial code is
-unchanged.**
+passes all 38 focused checks. Corrected candidate b172c7bb is pushed and its full
+CI passed the interest regression but found an autovacuum/recovery-fixture setup
+deadlock. Early class fixture locks pass all 125 affected checks, including
+separate concurrency tests; a new candidate/full CI is required. Financial code, contracts and
+migrations are unchanged.**
 
 The owner approved the exact 257-copy operational-backup cleanup after validation;
 31 older copies and separate checkpoints remain, and the guarded hourly service

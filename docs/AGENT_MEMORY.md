@@ -40,6 +40,13 @@ release must pin web and these independent readers together, rather than assume
 that changing web updates every reader. Production D01623's financial correction
 and remaining LO-05 staff acceptance are separate from recovery verification.
 
+For TestCase recovery fixtures, acquire the existing offline table locks in
+`setUpTestData`, before class-level role grants/catalogue writes as well as row
+fixtures. Per-test `setUp` can be too late: autovacuum can hold a recovery table
+lock while waiting on the class transaction's catalogue change. Keep production
+locks/autovacuum unchanged and keep separate TransactionTestCase races free of
+those class locks. LO-06's execution record retains the demonstrated failure.
+
 For LO-05 the owner is the actual source/workflow reviewer and confirmed that
 JCL/JSK loans originated after 25 September are direct. The comparison pack uses
 RA00500 (opening), corrected staging D01623, C07557 (direct) and JSK 06716

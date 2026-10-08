@@ -173,10 +173,16 @@ class OpeningCheckpointMathTests(SimpleTestCase):
 class OpeningCheckpointTests(imports.OpeningImportFixture):
     restore = restores.OpeningRestoreTests.restore
 
+    @classmethod
+    def setUpTestData(cls):
+        # Django has opened the class transaction, but PortabilityFixture has
+        # not yet granted its runtime role. Lock before those catalogue writes
+        # too: autovacuum can wait on them while holding a recovery table lock.
+        from .recovery_fixtures import lock_recovery_fixture_tables
+        lock_recovery_fixture_tables()
+        super().setUpTestData()
+
     def setUp(self):
-        if self._testMethodName == "test_exact_recovery_preserves_checkpoint_rows_and_new_guard_fingerprint":
-            from .recovery_fixtures import lock_recovery_fixture_tables
-            lock_recovery_fixture_tables()
         super().setUp()
         from apps.tenant_apps.data_portability.models import SourceIdentity
         from apps.tenant_apps.loans.services.license_series import create_license

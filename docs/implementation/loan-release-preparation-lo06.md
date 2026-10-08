@@ -33,6 +33,43 @@ This local artifact remains distinct from the clean server-built artifact:
 `sha256:e8275c7c2413c905afa2a6ba453585ed59bdc7997b7fdf9559e1d9814de9a44e`.
 Both use the same committed archive. Neither is deployed to production.
 
+The corrected published candidate is **b172c7bbcfa5d309588bf0a9582858ce1cb6115e**;
+[its full CI](https://github.com/rajeshr188/rokkad/actions/runs/37709841525)
+passed the corrected interest test but failed one recovery fixture setup among
+2,138 Loans tests. PostgreSQL's service log identifies autovacuum on
+`loans_loanchangelog` waiting on the fixture transaction while that transaction
+waits for its table lock. Per-test early locking was still after class-level role
+grants. The five fixtures using that helper now acquire the same locks in
+`setUpTestData`, before class catalogue/row writes. Production recovery locks and
+autovacuum are unchanged; separate TransactionTestCase concurrency fixtures do
+not acquire those class locks. All 60 checkpoint/auction tests and 65 other
+affected origination/entry/bundle/concurrency tests pass (125 checks total).
+A fresh published candidate and full CI remain required.
+Its source ZIP SHA-256 is
+`6c67802de1f4f87f5b6f47dc35fe5d1e23949c8f449966ae694f3b278ea8c6d0`.
+Clean local image `rokkad:loan-continuation-b172c7bb`, ID
+`sha256:a2e4c33f1ccd8870fc02a104eecabfceb8ce56de2feb0874aeeb83508ba1f87c`;
+clean server image `rokkad:loan-origination-b172c7bb-server`, ID
+`sha256:7edda077ba56e3de658e3a07583cd3ddcc402430dfd1a9b952b46dc7025cb1e9`.
+Both artifacts match all 1,673 runtime source files and pass Python parse,
+dependencies and restricted static collection. Local restricted startup,
+owner refusal, schema and cohort reads pass, preserving all 202 tables in both
+fictional recovery databases. The only changed runtime file is the auction test;
+business code, contracts, migrations, templates and static assets match 7a7bc8e6.
+Final-candidate server checks reuse the verified cold checkpoint rather than
+recapturing identical source data. First-run recovery artifacts remain preserved;
+final-candidate evidence uses the separate `lo06-final-` prefix.
+
+At **06:28:42 IST**, the final server artifact passes restricted startup/schema,
+all three Workspace inventories (6,739 supported active/closed calculations),
+selected source/isolation checks and actual restored-file reading: all 350 issued
+PDFs open and 27,616 photo/archive hashes match. All 202 tables still match the
+sealed cold checkpoint, and all 199 sequence positions remain unchanged before/
+after reads. Ephemeral media credentials are removed. Free space after the final
+build is **12,535,508,992 bytes** (about 11.7 GiB). Provider delivery and public
+listeners remain disabled; production readers/data are unchanged. Final guarded
+timer-reader files are prepared under `lo06-final-`, not installed.
+
 Restricted production-settings startup, owner-startup refusal, schema-drift and
 retained-cohort reads pass on both existing fictional recovery databases. All
 202 public tables remain unchanged. This does not prove fresh production or actual
@@ -95,6 +132,18 @@ Its catalogue and checksum pass. Free space after that service is
 **17,047,748,608 bytes** (about 15.9 GiB). The 5 GiB guard is unchanged.
 Live data, media objects and production image are unchanged. A one-time cleanup
 does not establish ongoing retention or off-host recovery.
+
+At **06:30 IST**, the next automatically scheduled hourly copy also completed
+successfully (`20261008T010000Z`, 88,598,984 bytes). Its checksum/catalogue pass,
+the timer remains active and the production web container remains running on its
+original image. SHA-256:
+`00f20e6e324a81a17145139841936a3b7103abd1f6a726386928f4fc24b51047`.
+Free space after the final build and this backup is **12,446,515,200 bytes**
+(about 11.6 GiB). At roughly 89 MB per hourly dump, unchanged retention can consume
+the headroom above the 5 GiB guard in about three to four days, before other
+growth. Daily capacity/success review is required until ongoing retention is
+separately approved and installed; this rehearsal installs neither retention nor
+failure alerting.
 
 The fresh checkpoint restored exactly across all 186 original tables into the
 previously approved private staging database. The earlier corrected stage is
@@ -194,7 +243,10 @@ Use the [recovery and retention runbook](../flows/loan-candidate-recovery-lo06.m
 The exact 21 bounded operator sources are preserved in `lo06-operator-sources/`
 inside the same private server folder. Source manifest SHA-256:
 `8fa32e17cd60a9fa62391d2cd9fa01b0eb53d47bfb072dffee48b53f300fe93d`.
-That harness is scoped to this approved disposable target; it is not permission
+The final ten verification/operator sources are separately preserved in
+`lo06-final-operator-sources/`, manifest SHA-256
+`91c7fb1acff857cc4217937699d3ba1a2063e3faed954c3f8d51a610009938d1`.
+These harnesses are scoped to this approved disposable target; they are not permission
 to reuse its destructive staging commands against another database.
 
 Production data, media, migrations, routing and readers remain unchanged.

@@ -36,10 +36,13 @@ class OriginationCorrectionTests(WorkspaceTestCase):
     def get_test_schema_name(cls):
         return "origination-correction-lo01"
 
+    @classmethod
+    def setUpTestData(cls):
+        from .recovery_fixtures import lock_recovery_fixture_tables
+        lock_recovery_fixture_tables()
+        super().setUpTestData()
+
     def setUp(self):
-        if connection.in_atomic_block:
-            from .recovery_fixtures import lock_recovery_fixture_tables
-            lock_recovery_fixture_tables()
         self.make_loan(age_days=2)
         self.native = self.loan.loan_events.get(event_kind="DISBURSAL")
         self.retained = deepcopy(self.approval.payload)

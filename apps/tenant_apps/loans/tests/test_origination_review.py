@@ -34,11 +34,14 @@ class OriginationReviewTests(WorkspaceTestCase):
     def get_test_schema_name(cls):
         return "origination-review-lo03"
 
+    @classmethod
+    def setUpTestData(cls):
+        from .recovery_fixtures import lock_recovery_fixture_tables
+        lock_recovery_fixture_tables()
+        super().setUpTestData()
+
     def setUp(self):
         super().setUp()
-        if self._testMethodName == "test_combined_review_proof_photos_and_retry_survive_exact_recovery":
-            from .recovery_fixtures import lock_recovery_fixture_tables
-            lock_recovery_fixture_tables()
         for mock in (patch("django.utils.timezone.localdate", return_value=date(2026, 7, 18)),
                      patch("django.templatetags.static.StaticNode.handle_simple", side_effect=lambda path: f"/static/{path}")):
             mock.start()

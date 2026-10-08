@@ -23,10 +23,13 @@ class RoutineEntryTests(WorkspaceTestCase):
     _entry_client = fixtures.MultiItemPaperTests._entry_client
     _direct_entry_facts = fixtures.MultiItemPaperTests._direct_entry_facts
 
+    @classmethod
+    def setUpTestData(cls):
+        from .recovery_fixtures import lock_recovery_fixture_tables
+        lock_recovery_fixture_tables()
+        super().setUpTestData()
+
     def setUp(self):
-        if self._testMethodName == "test_recorded_photos_and_review_metadata_survive_exact_recovery":
-            from .recovery_fixtures import lock_recovery_fixture_tables
-            lock_recovery_fixture_tables()
         fixtures.MultiItemPaperTests.setUp(self)
 
     @classmethod

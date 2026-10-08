@@ -15,8 +15,19 @@ completed with one date-sensitive auction assertion failing among 2,138 Loans
 tests. The test incorrectly treated a month after a 31 March sale (30 April) as
 the next charge day; the original anniversary remains covered through 30 April.
 Its fixture is now fixed and checks zero on 30 April and the next charge on 1 May.
-Calculation and posting code are unchanged; focused verification and a new
-exact-candidate full CI run are required.
+Calculation and posting code are unchanged. All 38 focused tests pass; corrected
+candidate `b172c7bb` is pushed and
+[second full CI](https://github.com/rajeshr188/rokkad/actions/runs/37709841525)
+passes the interest regression but finds one recovery-fixture deadlock among
+2,138 Loans tests. PostgreSQL identifies autovacuum; fixtures now take their
+existing table locks before class-level role grants, with no production change.
+All 125 affected checkpoint/auction/origination/entry/bundle/concurrency checks
+pass; the corrected published candidate and new full CI are required.
+Its clean local/server artifacts match all 1,673 runtime files and pass dependency
+and static checks. Final server reads pass all 6,739 supported ordinary loan
+calculations and restored-file checks; all 202 tables match the cold checkpoint
+and all 199 sequence positions remain unchanged. About 11.7 GiB remains after
+the final build. Guarded final-candidate reader files are prepared, not installed.
 Its clean local image passes restricted startup, owner refusal, schema and cohort
 reads on both fictional recovery databases; all 202 tables remain unchanged.
 Fresh production metadata finds 30,293 referenced media objects (942,099,334 bytes),
