@@ -1,57 +1,74 @@
 ---
 status: active
 owner: project
-updated: 2026-09-25
+updated: 2026-10-08
 tags: [loans, staff-guide, release]
 ---
 
-# Staff guide: paper closures and system-first releases
+# Close loans now or record completed closures
 
-Use **Loans > Record paper closures**, or **Paper closures** in the sidebar, only
-after payment and all pledged items have already been handed over according to
-the paper book. For payment being collected now, open the loan and choose Full
-release. Release multiple loans is for a single combined counter collection.
-Never enter the same closure through both routes.
+Open an active loan and choose **Close / release loan**. Choose **Collect payment
+and return collateral now** for business happening now, or **Record a settlement
+already completed** for a paper/outage transaction. Origination source does not
+restrict this choice. Standing entry preferences supply the initial selection;
+loan-level Rokkad-only capture and an effective Workspace recording commitment
+favor current action. Changing the choice does not post anything.
 
-1. Choose the actual closure date (today by default), optional shared book/page,
-   and up to 50 loan numbers. One date per submission; no daily submission limit.
-2. Review calculated dues for that date. Actual cash defaults to that suggestion;
-   check it against the book. Payer and recipient default to borrower. Expand a
-   row's details to change identities, reference or authorized interest concession.
-   Another recipient needs relationship and authority-to-collect evidence.
-3. Select ready rows and confirm once that collection and completed return match
-   the paper record. Every selected row saves or none does. Unselected rows remain
-   on screen with their inputs; navigating away discards unsubmitted entries.
+Current action reviews today's exact settlement and collateral, then confirms
+collection and handover together. For one combined payment covering several loans,
+use **Release multiple loans** (up to 20). Do not record the same settlement twice.
 
-A quote lasts ten minutes and is rechecked on submission. Changed dates or loan
-activity need review again. Discounts require settings-administrator permission
-and an explicit interest concession/reason. Cash plus concession must equal due;
-principal, capitalized interest and fees cannot be waived, and excess collections
-are not silently treated as interest. Ordinary staff can record exact settlements.
+For a completed individual closure, enter the actual closing date, settlement and
+optional source reference/original closing number. If no original closing number
+exists, leave it blank: Rokkad assigns a labelled recording number. Review the
+financial split before confirmation. Choose what the source actually establishes:
 
-Blocked rows explain missing setup/accrual/valuation, custody, financial activity
-or chronology. Do not substitute today's date for an earlier closure to bypass
-checks. Imported loans cannot be closed on or before the migration opening date.
-For native loans, finalize completed interest periods using the ordinary workflow.
-The paper path does not change historical rates or calculate from current defaults.
+- **Settled; cash and handover unspecified** clears reconciled debt, leaves customer
+  return unconfirmed and preserves last-known storage for investigation. Later
+  evidenced handover does not collect another payment or rewrite the original.
+- **Cash received and all collateral returned** requires payer and recipient facts.
+  Another recipient needs relationship and authority-to-collect evidence. The actual
+  return date is retained; an exact time is not invented.
 
-History shows effective date, actual collections, entry time/actor and each receipt.
-Individual PDFs are optional; no customer notifications are sent automatically.
-Unknown handover time is labelled honestly. Download the CSV for count/cash
-reconciliation with the book. Original batch totals remain unchanged after a
-reversal, and reversed rows are marked. Authorized corrections reverse individual
-releases; they never edit original batch evidence.
+For several independent completed settlements, choose **Completed closures** in the
+sidebar. Select up to 50 loans sharing one actual closing date. Each row retains its
+own settlement, evidence basis, optional closing number and source reference.
+Calculated amounts and suggested names must be checked against the source; they
+are not historical evidence. Expand details for confirmed-return facts, different
+references and authorized interest concessions. Select ready rows and confirm.
+Every selected row saves or none does; unselected rows retain their inputs on this
+screen. Leaving the page discards unsubmitted entries.
 
-The CSV is not a restorable package. Strict loan-history/opening export currently
-rejects paper-closure histories because those profile versions cannot represent
-date-only handovers and all per-line evidence. Full database backups retain them.
+Bulk quotes expire after ten minutes; individual reviews expire after one hour.
+Changed loan activity or review facts require review again. Identical successful
+retries return the existing record. Corrections/reversals retain original evidence.
+Interest concessions require settings-administrator authority and an explicit
+reason. Settlement plus concession must reconcile exactly: principal, capitalized
+interest and fees cannot be waived, and excess collections are not silently interest.
+Existing correction profiles retain their limits; a concession-bearing settlement
+cannot be rewritten through a correction profile that cannot represent its loss.
 
-## Retirement for each branch
+Blocked rows explain missing setup, interest recognition, financial activity or
+chronology. Use the actual date; resolve the blocker instead of substituting today.
+Imported openings require closure after their checkpoint. Legacy native contracts
+retain completed-period finalization; supported modern contracts prepare their
+eligible charges through the canonical settlement writer.
 
-The owner opens **Move this branch to system-first**, chooses a start date and
-records the reason. New closures from that date use Full release in Rokkad;
-earlier paper backlog stays open for entry. Once counts, collections and unresolved
-rows are reconciled, the owner checks **Retire routine paper entry**. History stays
-available. Administrators may enter late discoveries/outage closures with a reason.
-The owner may reopen routine entry with a reason by adjusting both retirement and
-the system-first date. Changing one branch never changes another branch.
+History, individual PDFs and reconciliation CSV distinguish settlement amounts
+from established cash/return facts. No customer notifications are sent automatically.
+Original batch totals remain after a reversal, with reversed rows labelled. The
+CSV is for reconciliation; the connected **loan-servicing-bundle/1** export/restore
+retains batch relationships and both evidence bases. Earlier narrow export profiles
+retain their existing limits.
+
+## Optional completed-recording controls
+
+The Workspace owner opens **Completed-recording controls**. Leave the date empty
+and restriction unchecked for unrestricted ongoing paper/mixed practice. No
+retirement date is imposed. A dated operating commitment requires administrator
+exceptions for settlements from that date; the all-recording restriction requires
+exceptions regardless of date. Earlier backlog otherwise remains available.
+These controls apply to both individual and bulk completed closures and are
+rechecked under lock at recording. Authorized exceptions retain their reasons.
+Clear both controls with a reason to reopen unrestricted recording. Choices are
+Workspace-specific and do not rewrite existing records or loan-level book reviews.

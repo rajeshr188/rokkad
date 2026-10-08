@@ -465,6 +465,17 @@ def _new_row(kind, values):
     # SQL-nullable legacy measurements may intentionally be unknown even where
     # the current origination form requires a value (blank=False).
     unknown = [key for key, spec in ROWS[kind].items() if spec["nullable"] and values.get(key) is None]
+    if kind == "PawnReleaseBatchLine" and not values.get("collector_name"):
+        # The original field predates unspecified-handover closures. Permit its
+        # blank value only with the same exact evidence binding as the SQL guard.
+        release, batch = obj.release, obj.batch
+        paper = release.loan_event.payload.get("release", {}).get("paper_closure", {})
+        require(batch.mode == "PAPER" and batch.workspace_id == release.workspace_id == obj.workspace_id
+            and paper.get("profile") == "recorded-history-closure/1"
+            and paper.get("closure_basis") == "PAPER_SETTLEMENT"
+            and paper.get("batch_id") == batch.pk,
+            "A blank collector requires exactly bound unspecified completed-closure evidence.")
+        unknown.append("collector_name")
     obj.full_clean(exclude=unknown, validate_unique=False, validate_constraints=False)
     KINDS[kind].objects.bulk_create([obj])
     return obj

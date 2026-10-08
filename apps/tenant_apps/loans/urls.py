@@ -1,7 +1,7 @@
 from django.urls import path
 
 from apps.tenant_apps.loans import views, browse
-from apps.tenant_apps.loans.web import workflow, release_batches, paper_closures, journey
+from apps.tenant_apps.loans.web import workflow, release_batches, paper_closures, journey, closing
 from apps.tenant_apps.loans.web import paper_backlog
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
@@ -144,6 +144,7 @@ urlpatterns = [
     path("internal/auctions/<int:auction_pk>/recovery.pdf", views.pawn_loan_auction_recovery_pdf, name="pawn_loan_auction_recovery_pdf"),
     path("internal/<int:pk>/renew/", views.pawn_loan_renew, name="pawn_loan_renew"),
     path("internal/<int:pk>/record-paper-closure/", recorded_servicing.closure, name="pawn_loan_record_paper_closure"),
+    path("internal/<int:pk>/close/", closing.close, name="pawn_loan_close"),
     path("internal/<int:pk>/correct-paper-contract/", recorded_corrections.contract_correction, name="pawn_loan_correct_paper_contract"),
     path("internal/<int:pk>/correct-paper-closing/", recorded_corrections.settlement_facts, name="pawn_loan_correct_paper_closing"),
     path("internal/<int:pk>/confirm-paper-handover/", recorded_servicing.handover, name="pawn_loan_confirm_paper_handover"),

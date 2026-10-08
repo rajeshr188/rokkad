@@ -358,7 +358,7 @@ class IndependentPaperTests(WorkspaceTestCase):
         data = self.closure_data()
         response = client.post(path, dict(data, action="preview"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Customer handover and physical cash method remain unconfirmed")
+        self.assertContains(response, "Physical cash and customer handover remain unconfirmed")
         self.capture("paper-closure.html", response)
         response = client.post(path, dict(data, action="confirm", confirmed="on", review_token=response.context["review_token"]))
         self.assertEqual(response.status_code, 302)

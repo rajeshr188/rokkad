@@ -135,7 +135,7 @@ class PaperClosureTests(ReleaseBatchTests):
 
     def test_http_partial_selection_retains_other_rows_and_exports_csv(self):
         url = reverse("workspace_loans:paper_closure_create", kwargs={"workspace_slug": self.tenant.slug})
-        self.assertContains(self.client.get(url), "Record paper closures")
+        self.assertContains(self.client.get(url), "Record completed closures")
         data = {"action": "review", "loans": [str(loan.pk) for loan in self.loans],
             "closure_date": "2026-07-18", "paper_reference": "Page 8", "request_key": str(uuid.uuid4())}
         response = self.client.post(url, data)

@@ -337,9 +337,9 @@ def _primary_action(loan, context):
         if context.get("is_opening"):
             if not context.get("can_release"):
                 return None
-            return {"label": "Collect and release", "url": reverse(
-                'workspace_loans:pawn_loan_release_full', args=[loan.workspace.slug, loan.pk]),
-                "message": "Review the amount to collect, record any interest concession and return the collateral."}
+            return {"label": "Close / release loan", "url": reverse(
+                'workspace_loans:pawn_loan_close', args=[loan.workspace.slug, loan.pk]),
+                "message": "Collect and return collateral now, or record a settlement already completed."}
         if not context.get("can_repay", False):
             return None
         return {

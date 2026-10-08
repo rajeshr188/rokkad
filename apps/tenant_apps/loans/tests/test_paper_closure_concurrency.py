@@ -32,6 +32,9 @@ class PaperConcurrencyTests(TransactionTestCase):
             command = dict(workspace=self.tenant, actor=self.actor, request_key=uuid.uuid4(), quote_token=preview["token"],
                 confirmed=True, rows=[dict(loan_id=self.loan.pk, amount=str(preview["rows"][0]["amount"]),
                     paid_by="Borrower", collector_name=self.loan.borrower.display_name)])
+            if getattr(self, "unspecified", False):
+                command["rows"][0].update(basis="PAPER_SETTLEMENT", number="SOURCE-CLOSE-1",
+                    paid_by="", collector_name="")
         barrier = Barrier(2)
         def run():
             try:
@@ -46,4 +49,8 @@ class PaperConcurrencyTests(TransactionTestCase):
         with workspace_context(self.tenant.pk):
             self.assertEqual(PawnReleaseBatch.objects.count(), 1)
             self.assertEqual(PawnLoanRelease.objects.count(), 1)
-            self.assertEqual(LoanNumberSequence.objects.get(series=self.loan.series, document_kind="PAWN_LOAN_RELEASE").next_number, 2)
+            self.assertEqual(LoanNumberSequence.objects.get(series=self.loan.series, document_kind="PAWN_LOAN_RELEASE").next_number, 1 if getattr(self, "unspecified", False) else 2)
+
+    def test_identical_unspecified_completed_submissions_close_once(self):
+        self.unspecified = True
+        self.test_identical_simultaneous_submissions_close_once()

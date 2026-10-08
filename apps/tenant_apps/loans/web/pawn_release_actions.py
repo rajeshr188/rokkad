@@ -80,6 +80,7 @@ def pawn_loan_release_full(request, pk):
         "loans/pawn/full_release.html",
         {
             "loan": loan,
+            "closure_purpose": "CURRENT",
             "form": form,
             "action_label": _("Full release"),
             "quote": quote,

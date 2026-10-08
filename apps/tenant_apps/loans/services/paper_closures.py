@@ -43,8 +43,8 @@ def set_paper_transition(*, workspace, actor, system_first_date, retired, reason
     reason = _text(reason, "reason", 255)
     if system_first_date is not None and type(system_first_date) is not date:
         raise ValueError("Choose a valid system-first date.")
-    if not isinstance(retired, bool) or (retired and (system_first_date is None or system_first_date > timezone.localdate())):
-        raise ValueError("Retirement requires a system-first date on or before today.")
+    if type(retired) is not bool:
+        raise ValueError("Choose whether every completed closure requires an administrator exception.")
     row = transition_for(workspace, lock=True)
     previous = {"system_first_date": str(row.system_first_date or ""), "retired": row.retired}
     row.system_first_date, row.retired, row.updated_by = system_first_date, retired, actor
@@ -79,6 +79,16 @@ def _ids(values):
     return sorted(ids)
 
 
+def require_completed_closure_access(workspace, actor, day, exception_reason="", *, lock=False):
+    """Use the same optional owner commitment for single and bulk recording.
+
+    Acquire this lock before any loan locks at commit, as the bulk writer does.
+    """
+    _access(workspace, actor)
+    reason = _text(exception_reason, "exception reason", 255, required=False)
+    _transition_access(workspace, actor, transition_for(workspace, lock=lock), _day(day), reason)
+
+
 def _loans(workspace, ids, *, lock=False):
     query = PawnLoan.objects.filter(workspace=workspace, pk__in=ids).select_related("borrower", "license", "series").prefetch_related("series__number_sequences").order_by("pk")
     if lock:
@@ -107,7 +117,7 @@ def preview_paper_closures(*, workspace, actor, loan_ids, closure_date, exceptio
     _access(workspace, actor)
     day = _day(closure_date)
     exception_reason = _text(exception_reason, "exception reason", 255, required=False)
-    _transition_access(workspace, actor, transition_for(workspace), day, exception_reason)
+    require_completed_closure_access(workspace, actor, day, exception_reason)
     rows, signed = [], []
     for loan in _loans(workspace, _ids(loan_ids)):
         row = {"loan": loan}
@@ -138,7 +148,7 @@ def complete_paper_closures(*, workspace, actor, request_key, quote_token, rows,
                             paper_reference="", confirmed=False):
     _access(workspace, actor)
     if confirmed is not True:
-        raise ValueError("Confirm that the selected rows match the paper closures and all collateral was returned.")
+        raise ValueError("Confirm that each selected settlement and handover basis matches the completed record.")
     try:
         request_key = uuid.UUID(str(request_key))
     except (TypeError, ValueError, AttributeError) as exc:
@@ -148,14 +158,17 @@ def complete_paper_closures(*, workspace, actor, request_key, quote_token, rows,
     ids = _ids([row.get("loan_id") for row in rows])
     data = _decode(quote_token, workspace)
     day = _day(date.fromisoformat(data["date"]))
-    settings = transition_for(workspace, lock=True)
-    _transition_access(workspace, actor, settings, day, data["exception_reason"])
+    require_completed_closure_access(workspace, actor, day, data["exception_reason"], lock=True)
     paper_reference = _text(paper_reference, "book/page reference", 100, required=False)
     loans = _loans(workspace, ids, lock=True)
     inputs = {int(row["loan_id"]): row for row in rows}
     normalized = []
     for loan in loans:
         row = inputs[loan.pk]
+        extended = "basis" in row
+        basis = row.get("basis", "RETURNED")
+        if basis not in ("RETURNED", "PAPER_SETTLEMENT"):
+            raise ValueError("Choose a confirmed return or settlement with handover unspecified.")
         cash = _money_amount(row.get("amount"), loan)
         concession = _money_amount(row.get("concession", 0), loan)
         reason = _text(row.get("concession_reason", ""), "concession reason", 255, required=bool(concession))
@@ -165,17 +178,19 @@ def complete_paper_closures(*, workspace, actor, request_key, quote_token, rows,
         if not isinstance(other, bool):
             raise ValueError("Confirm who received the collateral.")
         normalized.append({"loan_id": loan.pk, "amount": str(cash), "concession": str(concession),
-            "concession_reason": reason, "paid_by": _text(row.get("paid_by"), "payer", 255),
+            "concession_reason": reason, "paid_by": _text(row.get("paid_by") or "", "payer", 255) if basis == "RETURNED" else "",
             "collector_is_borrower": other,
-            "collector_name": _text(row.get("collector_name"), "recipient", 255),
-            "relationship": _text(row.get("relationship", ""), "relationship", 100, required=not other),
-            "authorization_note": _text(row.get("authorization_note", ""), "authority to collect", 500, required=not other),
+            "collector_name": _text(row.get("collector_name") or "", "recipient", 255) if basis == "RETURNED" else "",
+            "relationship": _text(row.get("relationship", ""), "relationship", 100, required=not other) if basis == "RETURNED" else "",
+            "authorization_note": _text(row.get("authorization_note", ""), "authority to collect", 500, required=not other) if basis == "RETURNED" else "",
             "paper_reference": _text(row.get("paper_reference") or paper_reference, "book/page reference", 100, required=False)})
+        if extended:
+            normalized[-1].update(basis=basis, number=_text(row.get("number") or "", "original closing number", 64, required=False))
     fingerprint = _digest({"quote": data, "rows": normalized, "paper_reference": paper_reference})
     total = sum((Decimal(row["amount"]) for row in normalized), Decimal("0"))
     batch, created = PawnReleaseBatch.objects.get_or_create(workspace=workspace, request_key=request_key,
         defaults={"mode": "PAPER", "effective_date": day, "request_fingerprint": fingerprint,
-            "total_amount": total, "paid_by": "Individual collections", "paper_reference": paper_reference,
+            "total_amount": total, "paid_by": "Independent settlements" if any("basis" in row for row in normalized) else "Individual collections", "paper_reference": paper_reference,
             "exception_reason": data["exception_reason"], "created_by": actor})
     if not created:
         if batch.mode != "PAPER" or batch.request_fingerprint != fingerprint:
@@ -187,14 +202,31 @@ def complete_paper_closures(*, workspace, actor, request_key, quote_token, rows,
         current, _ = _quote(loan, day)
         if current != quoted.get(loan.pk):
             raise ValueError(f"Loan {loan.loan_number} changed or was not ready. Review it again.")
-        if row["collector_is_borrower"] and row["collector_name"] != loan.borrower.display_name:
+        if row.get("basis", "RETURNED") == "RETURNED" and row["collector_is_borrower"] and row["collector_name"] != loan.borrower.display_name:
             raise ValueError("Select another recipient when someone other than the borrower received the items.")
         evidence = {"profile": "paper-closure/1", "batch_id": batch.pk, "date_precision": "DAY",
             "paid_by": row["paid_by"], "collector_name": row["collector_name"],
             "paper_reference": row["paper_reference"], "exception_reason": data["exception_reason"]}
-        result = _release_pawn_loan_in_full_at(loan.pk, settlement_amount=row["amount"],
-            request_key=f"paper:{request_key}:{loan.pk}", actor=actor, effective_date=day,
-            interest_concession=row["concession"], concession_reason=row["concession_reason"], paper_evidence=evidence)
+        if "basis" in row:
+            from .recorded_closures import _facts, _write
+            from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+            coverage = transaction_completeness(loan, day)
+            facts = _facts(dict(date=day.isoformat(), amount=row["amount"], number=row["number"],
+                reference=row["paper_reference"], basis=row["basis"], recipient=row["collector_name"],
+                request_key=f"paper:{request_key}:{loan.pk}", interest_concession=row["concession"],
+                concession_reason=row["concession_reason"], exception_reason=data["exception_reason"],
+                paid_by=row["paid_by"], collector_is_borrower=row["collector_is_borrower"],
+                relationship=row["relationship"], authorization_note=row["authorization_note"]))
+            result = _write(loan, facts, actor, batch_id=batch.pk)
+            if coverage.required and coverage.complete:
+                from .transaction_reviews import _store
+                _store(result.loan, actor, through_date=day, confirmed_complete=True,
+                    source_reference=row["paper_reference"], request_key=f"closure:{facts['request_key']}")
+        else:
+            # Issued old reviews retain their original payload and retry digest.
+            result = _release_pawn_loan_in_full_at(loan.pk, settlement_amount=row["amount"],
+                request_key=f"paper:{request_key}:{loan.pk}", actor=actor, effective_date=day,
+                interest_concession=row["concession"], concession_reason=row["concession_reason"], paper_evidence=evidence)
         PawnReleaseBatchLine.objects.create(workspace=workspace, batch=batch, release=result.release,
             borrower_name=loan.borrower.display_name, **{key: row[key] for key in
                 ("paid_by", "paper_reference", "collector_name", "collector_is_borrower", "relationship", "authorization_note")})

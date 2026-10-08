@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-06
+updated: 2026-10-08
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -9,6 +9,17 @@ related:
 ---
 
 # PawnLoan Financial Read Models
+
+Individual and bulk completed closures share canonical full settlement and the
+recorded-history-closure/1 basis. Financial closure does not by itself prove
+physical cash or customer return. Unspecified returns retain PAPER_CLOSED and
+last-known storage; confirmed returns retain their actual date without inventing
+a time. Batch totals sum independent settlements rather than asserting a combined
+current payment. Concessions retain separate interest-loss evidence and authority.
+Previously complete book coverage is carried through a reconciled completed
+closure; a prior Rokkad-only future-capture claim is not carried forward. Existing
+records and older paper-closure/1 batches retain their evidence and retry meaning.
+See the [closing decision](../adr/2026-10-08-unified-closing-and-completed-recording.md).
 
 LC-05 adds a verified terminal position: an ordinary CLOSED loan with its original
 agreement and a sole zero-valued opening at verified closure. At/after closure its
@@ -415,7 +426,9 @@ all principal (including capitalized interest) and fees. Obligation allocations
 record cash only; the full-release schedule termination closes the remaining
 obligations with the concession traceable to the same source event. The whole
 release and its correction remain atomic. This does not implement active migration
-openings or concessions for ordinary repayments, renewal or batch release. See the
+openings or concessions for ordinary repayments, renewal or current combined batch release.
+Completed-recording batches support authorized interest concessions through the
+same canonical full-release writer. See the
 [decision](../adr/2026-09-12-legacy-collection-estimates-and-concessions.md).
 
 ## Recorded paper anniversary contracts

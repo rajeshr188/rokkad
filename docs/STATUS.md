@@ -7,6 +7,47 @@ tags: [status, architecture]
 
 # Status
 
+## Unified closing and completed-settlement recording (8 October)
+
+CL-01 through CL-04 are complete locally. Ordinary loan details now use one
+Close / release loan screen with explicit current/completed purpose and a standing
+convenience default. Current releases retain their canonical collection/handover
+writer. Completed individual and bulk settlements share actual-date, evidence-basis,
+original-number and authorized interest-concession handling. Unknown cash/return
+keeps PAPER_CLOSED and last-known storage; receipts, batch history and CSV avoid
+invented payer/collector claims. Later handover remains a separate evidenced action.
+
+Optional Workspace recording controls apply to both paths, with commit-time lock
+rechecks and retained administrator exception reasons. The all-recording restriction
+can be enabled without a dated cutoff. No retirement/cutoff is enabled by this
+change. Reconciled completed closures carry prior complete book coverage while
+ending a prior Rokkad-only capture claim. Old payload meanings and old HTTP/service
+retry fingerprints are preserved; existing posted evidence is not rewritten.
+
+Migration **0064** narrowly updates two existing batch guards: blank identities
+require an exactly bound PAPER/recorded-history-closure/1/PAPER_SETTLEMENT event.
+Confirmed returns retain payer/collector/authority checks, immutable evidence,
+scope/date constraints and total conservation. Portable restoration permits that
+same narrow unknown-evidence case under ordinary Python/SQL guards and forced RLS.
+No new financial table or customer-data backfill is needed.
+
+**223 test executions pass** in isolated fictional PostgreSQL QA: 93 closing checks
+(142.020 s), 128 servicing/portability/coverage checks (124.749 s), then 2 final
+recipient-receipt/legacy HTTP retry checks (2.597 s). Coverage includes current and
+completed actions, mixed batches, financial conservation/concessions, chronology,
+permission failures, cross-workspace refusal, rollback, replay, revisions/reversals,
+concurrent submissions, restricted-role guards, later handover and connected
+export/restore. Django checks, JavaScript syntax and migration drift pass; 0064 is
+applied only in the isolated QA database. Earlier failing checks exposed missing
+unknown-identity guards/restore handling and overly brittle CSV/portable-number
+assertions; those are resolved in the passing runs.
+
+[Plan](plans/closure-workflow-consolidation.md),
+[decision](adr/2026-10-08-unified-closing-and-completed-recording.md) and
+[staff guide](flows/paper-closure-transition.md) are updated. Production is unchanged.
+Rollout requires the coherent application change plus owner-run migration 0064;
+restricted web/worker roles remain. Unrelated monthly-pilot edits are excluded.
+
 ## Customer status reconciliation (8 October)
 
 The owner requests all existing customers with created loans ACTIVE, with only

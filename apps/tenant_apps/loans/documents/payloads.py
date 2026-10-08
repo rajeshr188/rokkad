@@ -409,19 +409,24 @@ class PawnLoanDocumentProjectionBuilder:
                 details = tuple((label, "Not confirmed by paper record" if label == "Collected by" else
                     "Paper settlement; physical cash and customer handover unspecified" if label == "Entry source" else value)
                     for label, value in details)
+            elif batch_line is None and "paid_by" in paper:
+                details += (("Paid by", paper["paid_by"]),
+                    ("Collector relationship", "Borrower" if paper["collector_is_borrower"] else paper["relationship"]),
+                    ("Collection authorization", paper["authorization_note"] or "Borrower receipt attested from paper record"))
         if Decimal(str(concession)):
             details += (("Interest lost / concession", cls._money(concession)),
                         ("Concession reason", event.payload["release"]["interest_concession_reason"]))
         if batch_line is not None:
+            unspecified = paper.get("closure_basis") == "PAPER_SETTLEMENT"
             details += (
-                ("Release batch", batch_line.batch_id), ("Paid by", batch_line.paid_by or batch_line.batch.paid_by),
-                ("Collected by", batch_line.collector_name),
-                ("Collector relationship", "Borrower" if batch_line.collector_is_borrower else batch_line.relationship),
-                ("Collection authorization", batch_line.authorization_note or ("Borrower receipt attested from paper record" if batch_line.batch.mode == "PAPER" else "Borrower verified; items ready for handover")),
+                ("Release batch", batch_line.batch_id), ("Paid by", "Not established" if unspecified else batch_line.paid_by or batch_line.batch.paid_by),
+                ("Collected by", "Not confirmed by paper record" if unspecified else batch_line.collector_name),
+                ("Collector relationship", "Not established" if unspecified else "Borrower" if batch_line.collector_is_borrower else batch_line.relationship),
+                ("Collection authorization", "Not established" if unspecified else batch_line.authorization_note or ("Borrower receipt attested from paper record" if batch_line.batch.mode == "PAPER" else "Borrower verified; items ready for handover")),
             )
             if batch_line.batch.mode == "PAPER":
                 details += (("Paper reference", batch_line.paper_reference or "Not supplied"),
-                            ("Entry source", "Paper closure; return date attested, exact time unknown"))
+                            ("Entry source", "Paper settlement; physical cash and customer handover unspecified" if unspecified else "Paper closure; return date attested, exact time unknown"))
         item_rows = [("Item ID", "Description", "Value at release", "Returned at")]
         for item in release.items.all():
             snapshot = item.valuation_snapshot or {}

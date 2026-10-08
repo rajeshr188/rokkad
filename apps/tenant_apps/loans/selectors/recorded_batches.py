@@ -18,9 +18,11 @@ def batch_financial_review(batch):
     for line in batch.lines.select_related("release__loan", "release__loan_event", "release__reversal").order_by("pk"):
         projected = copy(line)
         projected.release = restated_release(line.release)
+        projected.closure_basis = projected.release.loan_event.payload.get("release", {}).get("paper_closure", {}).get("closure_basis", "RETURNED")
         rows.append(projected)
     event = batch_correction_event(batch)
     evidence = event.payload["history_correction"]["batch_correction"] if event else None
     return dict(lines=rows, correction=event, evidence=evidence,
         total=Decimal(evidence["total_received"]) if evidence else batch.total_amount,
+        unspecified_cash_count=sum(line.closure_basis == "PAPER_SETTLEMENT" for line in rows),
         reversed=any(hasattr(line.release, "reversal") for line in rows))

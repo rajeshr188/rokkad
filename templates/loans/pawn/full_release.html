@@ -1,15 +1,19 @@
 {% extends "base_tenant.html" %}
 {% load loans_display static i18n %}
-{% block title %}{% translate "Full release" %} &middot; {{ loan.loan_number }}{% endblock %}
+{% block title %}{% translate "Close / release loan" %} &middot; {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div hx-history="false">
   <div class="mb-4">
     <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
-    <h1 class="h3 mt-2">{% translate "Full release" %}</h1>
-    <p>{% translate "Review the settlement, collect payment and return every listed item. Confirm only when collection and handover are complete." %}</p>
+    <h1 class="h3 mt-2">{% translate "Close / release loan" %}</h1>
+    <form method="get" action="{% url 'workspace_loans:pawn_loan_close' request.workspace.slug loan.pk %}" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+      <div><label for="closing-purpose" class="form-label">{% translate "What are you doing?" %}</label><select id="closing-purpose" name="purpose" class="form-select"><option value="CURRENT" {% if closure_purpose != 'PAPER' %}selected{% endif %}>{% translate "Collect payment and return collateral now" %}</option><option value="PAPER" {% if closure_purpose == 'PAPER' %}selected{% endif %}>{% translate "Record a settlement already completed" %}</option></select></div><button class="btn btn-outline-secondary">{% translate "Continue" %}</button>
+    </form>
+    {% if closure_purpose == 'PAPER' %}<p>{% translate "Record the actual closing date and settlement. Confirm cash collection and customer return only when the source establishes them. Recording does not collect money again." %}</p>{% else %}<p>{% translate "Full release: review the settlement, collect payment and return every listed item. Confirm only when collection and handover are complete." %}</p>{% endif %}
   </div>
   <div class="loan-workflow-grid"><div class="loan-workflow-main">
     {% include "components/forms/accessible.html#errors" %}
+    {% if closure_purpose == 'PAPER' %}{% include "loans/pawn/_completed_closure.html" %}{% else %}
     {% partialdef settlement inline %}
     <section class="card mb-3" aria-labelledby="release-amount-title"><div class="card-body">
       <h2 class="h5" id="release-amount-title">{% translate "1. Review the amount" %}</h2>
@@ -41,7 +45,7 @@
     {% endpartialdef %}
     <section class="card mb-3" aria-labelledby="release-confirm-title"><div class="card-body">
       <h2 class="h5" id="release-confirm-title">{% translate "3. Record collection and handover" %}</h2>
-      <form method="post" novalidate>{% csrf_token %}{{ form.request_key }}
+      <form method="post" novalidate>{% csrf_token %}{{ form.request_key }}<input type="hidden" name="purpose" value="CURRENT">
         {% include "components/forms/accessible.html#field" with field=form.settlement_amount %}
         {% if can_concede_interest %}
         <details class="border rounded p-3 mb-3" {% if form.interest_concession.errors or form.concession_reason.errors or form.is_bound %}open{% endif %}>
@@ -60,6 +64,7 @@
       </form>
       <p class="small text-body-secondary mt-3 mb-0">{% translate "Saving records the collection, marks the collateral returned and closes this loan. The release memo is available from the loan's release history." %}</p>
     </div></section>
+    {% endif %}
   </div>{% include "loans/pawn/_loan_summary.html" %}</div>
 </div>
 <script src="{% static 'js/form-errors.js' %}"></script>

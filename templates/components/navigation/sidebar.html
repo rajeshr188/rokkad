@@ -20,7 +20,7 @@
   <div class="workspace-nav-group-label">{% translate "Records & reports" %}</div>
   <a class="workspace-nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:pawn_loan_reports' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-bar-chart"></i> {% translate "Reports" %}</a>
   <a class="workspace-nav-link {% if '/history-archive/' in request.path %}active{% endif %}" href="{% url 'workspace_portability:archive_list' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-archive"></i> {% translate "Historical loans" %}</a>
-  <a class="workspace-nav-link {% if '/releases/paper/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:paper_closure_guide' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-journal-check"></i> {% translate "Paper closures" %}</a>
+  <a class="workspace-nav-link {% if '/releases/paper/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:paper_closure_guide' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-journal-check"></i> {% translate "Completed closures" %}</a>
   <a class="workspace-nav-link {% if '/releases/batch/' in request.path %}active{% endif %}" href="{% url 'workspace_loans:release_batch_list' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-collection"></i> {% translate "Release batches" %}</a>
   <div class="workspace-nav-group-label">{% translate "Reference & communication" %}</div>
   <a class="workspace-nav-link {% if request.resolver_match.url_name == 'loan_journey_guide' %}active{% endif %}" href="{% url 'workspace_loans:loan_journey_guide' effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-book"></i> {% translate "Loan journey guide" %}</a>

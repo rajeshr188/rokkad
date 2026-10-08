@@ -209,6 +209,50 @@ class ServicingBundleTests(OpeningRestoreTests):
 
 
 class RecordedBundleTests(recorded.RecordedSourceHistoryTests):
+    def test_bundle_mixed_completed_batch_preserves_unknown_cash_and_original_number(self):
+        from uuid import uuid4
+        from apps.tenant_apps.loans.services.recorded_history import new_recording_intent, preview_recorded_history, admit_recorded_history
+        from apps.tenant_apps.loans.services.paper_closures import preview_paper_closures, complete_paper_closures
+        with on(date(2026, 10, 5)):
+            with self.scoped():
+                args = self.paper_setup()
+                loans = []
+                for number in ('P-0020', 'P-0021'):
+                    args['data'].update(number=number, source_reference='Book / ' + number)
+                    args['intent_token'] = new_recording_intent(workspace=self.a, actor=self.actor)
+                    _, token = preview_recorded_history(**args)
+                    loans.append(admit_recorded_history(**args, review_token=token, confirmed=True)[0])
+                from apps.tenant_apps.loans.services.transaction_reviews import preview_transaction_review, confirm_transaction_review
+                for loan in loans:
+                    review_data = dict(through_date=date(2026, 10, 5), confirmed_complete=True,
+                        source_reference='Checked source through today', request_key=str(uuid4()), future_capture='ROKKAD_ONLY')
+                    _, token = preview_transaction_review(loan.pk, actor=self.actor, **review_data)
+                    confirm_transaction_review(loan.pk, actor=self.actor, review_token=token, acknowledged=True, **review_data)
+                preview = preview_paper_closures(workspace=self.a, actor=self.actor,
+                    loan_ids=[loan.pk for loan in loans], closure_date=date(2026, 10, 5))
+                rows = [dict(loan_id=row['loan'].pk, amount=str(row['amount']),
+                    basis='PAPER_SETTLEMENT', number='', paid_by='', collector_name='') for row in preview['rows']]
+                rows[1].update(basis='RETURNED', number='OLD-CLOSE-21', paid_by='Family payer',
+                    collector_name=loans[1].borrower.display_name)
+                complete_paper_closures(workspace=self.a, actor=self.actor, request_key=uuid4(),
+                    quote_token=preview['token'], confirmed=True, paper_reference='Closing register', rows=rows)
+                from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+                for loan in loans:
+                    loan.refresh_from_db()
+                    self.assertTrue(transaction_completeness(loan, date(2026, 10, 5)).complete)
+                    self.assertEqual(loan.transaction_reviews.order_by('-pk').first().future_capture, 'PAPER_MIXED')
+                content = export_servicing_bundle(workspace_id=self.a.pk, actor=self.actor, loan_id=loans[0].pk)
+            roundtrip(self, content)
+            with self.scoped(self.b):
+                batch = m.PawnReleaseBatch.objects.get()
+                self.assertEqual(batch.lines.count(), 2)
+                unknown = batch.lines.get(paid_by='')
+                self.assertEqual(unknown.release.loan.collateral_items.get().custody_state, 'PAPER_CLOSED')
+                self.assertEqual(unknown.release.loan_event.payload['release']['paper_closure']['batch_id'], batch.pk)
+                returned = batch.lines.exclude(paid_by='').get()
+                self.assertEqual(returned.release.loan_event.payload['release']['paper_closure']['original_release_number'], 'OLD-CLOSE-21')
+                self.assertEqual(returned.release.loan.collateral_items.get().custody_state, 'WITH_CUSTOMER')
+
     def test_bundle_shared_release_batch_members_are_not_truncated(self):
         from uuid import uuid4
         from apps.tenant_apps.loans.services.recorded_history import new_recording_intent,preview_recorded_history,admit_recorded_history

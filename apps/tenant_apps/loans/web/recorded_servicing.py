@@ -23,12 +23,35 @@ class PaperClosureForm(forms.Form):
     amount = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, label="Settlement amount on paper")
     number = forms.CharField(max_length=64, required=False, label="Original release / closing number (if recorded)",
         help_text="Leave blank if paper has no closing number. Rokkad assigns a system recording number.")
-    reference = forms.CharField(max_length=160, label="Paper book / page reference")
+    reference = forms.CharField(max_length=160, required=False, label="Source book / receipt reference")
     basis = forms.ChoiceField(initial="PAPER_SETTLEMENT", label="What the record confirms", choices=(
         ("PAPER_SETTLEMENT", "Loan settled; cash method and customer handover unspecified"),
         ("RETURNED", "Cash received and collateral returned to the named customer")))
     recipient = forms.CharField(max_length=255, required=False, label="Customer return recipient (for confirmed return only)")
+    collector_is_borrower = forms.TypedChoiceField(required=False, label="Return recipient", empty_value=True,
+        choices=(("yes", "Borrower"), ("no", "Another person")), coerce=lambda value: value == "yes")
+    paid_by = forms.CharField(max_length=255, required=False, label="Paid by (for confirmed cash collection)")
+    relationship = forms.CharField(max_length=100, required=False)
+    authorization_note = forms.CharField(max_length=500, required=False, label="Authority to collect")
+    interest_concession = forms.DecimalField(max_digits=16, decimal_places=2, min_value=0, required=False, initial=0)
+    concession_reason = forms.CharField(max_length=255, required=False)
+    exception_reason = forms.CharField(max_length=255, required=False, label="Administrator recording exception reason")
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput)
+
+    def clean(self):
+        data = super().clean()
+        data["interest_concession"] = data.get("interest_concession") or 0
+        if data["interest_concession"] and not data.get("concession_reason"):
+            self.add_error("concession_reason", "Explain the agreed interest concession.")
+        if data.get("basis") == "RETURNED":
+            for name in (("recipient", "paid_by") if "paid_by" in self.data or "purpose" in self.data else ("recipient",)):
+                if not data.get(name):
+                    self.add_error(name, "Required for confirmed cash collection and return.")
+            if data.get("collector_is_borrower") is False:
+                for name in ("relationship", "authorization_note"):
+                    if not data.get(name):
+                        self.add_error(name, "Required for another recipient.")
+        return data
 
 
 class PaperRenewalForm(forms.Form):
@@ -95,11 +118,17 @@ def _action(request, pk, *, renewal):
     form_type, preview, commit = ((PaperRenewalForm, preview_existing_paper_renewal, record_existing_paper_renewal)
         if renewal else (PaperClosureForm, preview_recorded_closure, record_paper_closure))
     form = form_type(request.POST or None, **({"loan": loan} if renewal else {}), initial=dict(date=timezone.localdate(), request_key=str(uuid4()),
-        new_principal=loan.principal_amount, rate=loan.monthly_interest_rate, tenure=loan.tenure_months))
+        new_principal=loan.principal_amount, rate=loan.monthly_interest_rate, tenure=loan.tenure_months,
+        recipient=loan.borrower.display_name, paid_by=loan.borrower.display_name, collector_is_borrower="yes"))
     _style(form)
     review, token = None, ""
     if request.method == "POST" and form.is_valid():
         cleaned = dict(form.cleaned_data)
+        if not renewal and "purpose" not in request.POST and not any(name in request.POST for name in (
+                "interest_concession", "exception_reason", "paid_by", "collector_is_borrower")):
+            # Already issued legacy forms keep their exact seven-fact review.
+            cleaned = {name: value for name, value in cleaned.items() if name in (
+                "date", "amount", "number", "reference", "basis", "recipient", "request_key")}
         if "product_version_id" in cleaned:
             cleaned["product_version_id"] = cleaned["product_version_id"].pk
         data = json.loads(json.dumps(cleaned, default=lambda value: value.isoformat() if hasattr(value, "isoformat") else str(value)))
@@ -113,7 +142,9 @@ def _action(request, pk, *, renewal):
             review, token = preview(loan_id=loan.pk, actor=request.user, data=data)
         except (ValueError, ValidationError, ObjectDoesNotExist) as exc:
             form.add_error(None, str(exc))
-    return render(request, "loans/pawn/paper_servicing.html", dict(loan=loan, form=form, renewal=renewal, review=review, review_token=token))
+    return render(request, "loans/pawn/paper_servicing.html" if renewal else "loans/pawn/full_release.html",
+        dict(loan=loan, form=form, renewal=renewal, review=review, review_token=token,
+             closure_purpose="PAPER", can_concede_interest=request.loans_workspace_access.can("workspace.settings.manage")))
 
 
 @loans_workspace_required

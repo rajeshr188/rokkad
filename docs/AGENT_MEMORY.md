@@ -7,6 +7,27 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The owner accepts one Close / release loan action with an explicit purpose:
+collect/return now or record a completed settlement. Origination source does not
+choose the subsequent servicing action. Standing entry preferences are convenience
+defaults; loan-level Rokkad-only capture and effective Workspace operating
+commitments favor current action. Counter batches remain one combined payment
+(up to 20); completed batches group independent settlements sharing one actual
+date (up to 50). Source-established cash/return differs from financial settlement
+with cash/return unspecified; the latter keeps PAPER_CLOSED and last-known storage
+until separate evidenced handover. Original closing numbers are optional.
+
+Paper/mixed practice has no mandatory retirement deadline. Existing Workspace
+cutoff/all-recording controls are optional and apply equally to individual and bulk
+completed closures, rechecked under the transition lock before loan locks. The
+all-recording restriction needs no cutoff date; authorized exceptions retain reasons.
+Both paths use canonical settlement/concession rules and preserve old evidence and
+retry meanings. New extended batch rows use recorded-history-closure/1 with additive
+batch metadata; migration 0064 and portable restore permit blank identities only
+for exactly bound unspecified cash/return evidence. Reconciled completed closure
+carries complete book coverage without perpetuating Rokkad-only future capture.
+See the [closing decision](adr/2026-10-08-unified-closing-and-completed-recording.md).
+
 The owner also requests existing customers ACTIVE when any loan was created
 against them, and INACTIVE when none exists. Count closed historical loans through
 exact accepted source aliases (legacy installation/schema UUID5), not names or

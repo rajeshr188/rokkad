@@ -23,10 +23,11 @@
         const details = row.querySelector('details');
         const payer = row.querySelector('[name$="-paid_by"]').value;
         const recipient = row.querySelector('[name$="-collector_name"]').value;
-        details.querySelector('summary').textContent = `Paid by ${payer}; received by ${recipient} · details`;
+        const basis = row.querySelector('[name$="-basis"]')?.value;
+        details.querySelector('summary').textContent = basis === 'PAPER_SETTLEMENT' ? 'Cash / customer handover unspecified · closing details' : `Paid by ${payer}; received by ${recipient} · details`;
       });
       const output = document.getElementById('paper-total');
-      if (output) output.textContent = `${count} selected · Actual collections ₹${total.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
+      if (output) output.textContent = `${count} selected · Recorded settlements ₹${total.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
     };
     form.addEventListener('input', update);
     form.addEventListener('change', update);

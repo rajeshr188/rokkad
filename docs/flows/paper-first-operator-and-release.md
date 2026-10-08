@@ -119,7 +119,9 @@ direct entry's highest-rate-first allocation to a paper receipt. A mid-month pri
 anniversary; that month's charge uses its earlier principal. Missing earlier
 receipts affecting existing later activity require Review paper history correction.
 
-Use Record paper closure for the actual closing date and exact settlement. Leave
+Use Close / release loan and select Record a settlement already completed for the
+actual closing date and exact settlement. The same screen supports current collection
+and return, irrespective of origination. See the [individual and bulk guide](paper-closure-transition.md). Leave
 the original closing number blank when none was written: the system assigns and
 labels a recording number. Choose whether the physical return is established.
 Financial closure with unknown handover stays closed financially and retains a
