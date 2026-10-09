@@ -48,7 +48,7 @@ def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
         from .historical_origination import authorize, historical_basis
         authorize(loan, actor)
         historical = historical_basis(loan)
-    assert_series_can_issue(loan.series, as_of_date=loan.loan_date if historical else None)
+    assert_series_can_issue(loan.series, as_of_date=loan.loan_date if historical else None, for_update=True)
     loan.full_clean()
     collateral = tuple(loan.collateral_items.all())
     if not collateral:

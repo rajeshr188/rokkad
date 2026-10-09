@@ -1,0 +1,5 @@
+<div class="mt-2" data-paper-series-selection>
+  {% include "components/forms/accessible.html#field" with field=form.include_old_series %}
+  <noscript><button class="btn btn-sm btn-outline-secondary" name="action" value="entry_change" formnovalidate>Apply series list</button></noscript>
+  {% if not form.fields.series_id.queryset.exists %}<p class="small text-warning">No running series are available. Use the old-series option to record an earlier paper loan, or ask the owner to review series setup.</p>{% endif %}
+</div>

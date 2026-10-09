@@ -101,8 +101,8 @@ class LoanSeriesSetupForm(forms.ModelForm):
     class Meta:
         model = LoanSeries
         fields = ("name", "code", "is_active")
-        labels = {"name": _("Series name"), "code": _("Series code"), "is_active": _("Active series")}
-        help_texts = {"code": _("A short code unique within this license, such as A."), "is_active": _("An active series still needs a valid license and available numbers.")}
+        labels = {"name": _("Series name"), "code": _("Series code"), "is_active": _("Open for new loans")}
+        help_texts = {"code": _("A short code unique within this license, such as A."), "is_active": _("Stop new lending by clearing this option. Existing loans remain serviceable. A running series also needs a current licence and available loan numbers.")}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

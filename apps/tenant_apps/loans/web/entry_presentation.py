@@ -25,12 +25,15 @@ def entry_presentation(request):
     selection = request.POST.get("entry_selection", "auto") if posted else request.GET.get("entry", "auto")
     if selection not in ("auto", "paper", "direct"):
         selection = "auto"
+    old_series = (request.POST.get("include_old_series") if posted else request.GET.get("include_old_series")) in ("on", "true", "True", "1")
+    if old_series and (source == "paper" or selection == "paper"):
+        selection = "paper"
     archive = request.POST.get("archive_evidence_id") if posted else request.GET.get("archive")
     purpose, error = source, ""
     series = request.POST.get("series_id" if source == "paper" else "series") if posted else request.GET.get("series")
     if not posted and not series:
-        from apps.tenant_apps.loans.models import LoanSeries
-        choices = list(LoanSeries.objects.filter(workspace=request.loans_workspace, is_active=True).values_list("pk", flat=True)[:2])
+        from apps.tenant_apps.loans.selectors.series import running_series
+        choices = list(running_series(request.loans_workspace).values_list("pk", flat=True)[:2])
         series = choices[0] if len(choices) == 1 else None
     if archive:
         purpose = "paper"

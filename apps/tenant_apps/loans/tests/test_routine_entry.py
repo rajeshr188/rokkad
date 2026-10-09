@@ -77,8 +77,10 @@ class RoutineEntryTests(WorkspaceTestCase):
 
     def test_multiple_series_wait_for_selection_before_reporting_missing_setup(self):
         client, path = self._entry_client()
-        m.LoanSeries.objects.create(workspace=self.tenant, license=self.series.license,
+        second = m.LoanSeries.objects.create(workspace=self.tenant, license=self.series.license,
             code="SECOND", name="Second paper register")
+        m.LoanNumberSequence.objects.create(series=second, document_kind="PAWN_LOAN",
+            prefix="SECOND-", width=4, next_number=1, maximum_number=9999)
         counts = (m.PawnLoan.objects.count(), m.LoanMonitoringPolicy.objects.count())
         page = client.get(path + "?entry=paper")
         self.assertIsNone(page.context["form"].terms)

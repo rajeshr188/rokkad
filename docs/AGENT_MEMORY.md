@@ -7,6 +7,19 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Series availability now means Open for new loans, reusing is_active. Routine
+direct/paper New loan lists only running series with a current active verified
+licence and remaining active loan numbering. Exhaustion is derived, not another
+stored state. Stopping/reopening is actor-audited and serialized against allocation,
+approval and unpaid payout; counters never rewind. Release-number issuance is
+existing-loan servicing and ignores current series/licence lending availability,
+while retaining its own sequence and all financial/custody/authority checks.
+Paper entry explicitly exposes retained registers through Record an earlier loan
+from an old series. This is unsigned presentation metadata stripped before signed
+financial data; it does not reactivate setup or bypass source, numbering or duplicate
+validation. Signed open confirmations/retries and saved/specialist identities remain
+supported. See the [series decision](adr/2026-10-09-series-new-lending-and-servicing.md).
+
 After evaluating the direct-entry trial, the owner accepts the simplified layout
 and explicitly retires Current and the switcher on 9 October. Routine direct New
 loan now always uses the compact editor. Layout preferences are no longer read or

@@ -8,6 +8,16 @@ related: [loan-continuation-consolidation.md, ../adr/2026-10-07-shared-loan-entr
 
 # Loan origination completion and production acceptance
 
+## Running-series selection and servicing (9 October, local)
+
+The owner accepts and authorizes running-only routine series choices, manual stop
+of new lending, derived exhaustion and explicit older-paper recording. Implemented
+with the existing availability flag, shared selector, audited locking and release
+issuance independent of current lending status. Existing financial records and
+monitoring contracts remain. Local verification/preview are complete; production
+rollout is separate. See the [decision](../adr/2026-10-09-series-new-lending-and-servicing.md)
+and [operator guide](../domain/loan-series-availability.md).
+
 ## Accepted direct-entry presentation (9 October, local)
 
 The owner evaluates and accepts the Simplified trial, then explicitly requests

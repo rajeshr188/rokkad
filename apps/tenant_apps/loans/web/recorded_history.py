@@ -68,6 +68,9 @@ class PaperHistoryForm(forms.Form):
     exception_reason = forms.CharField(required=False, max_length=160, label="Source explanation for different terms")
     borrower_id = forms.ModelChoiceField(queryset=Party.objects.none(), label="Customer")
     series_id = forms.ModelChoiceField(queryset=m.LoanSeries.objects.none(), label="Series (license / register)")
+    include_old_series = forms.BooleanField(required=False,
+        label="Record an earlier loan from an old series",
+        help_text="Show stopped, exhausted and old-licence series for an existing paper transaction. This does not reopen them for new lending.")
     source_license_from_setup = forms.BooleanField(required=False, initial=True,
         label="Use dated licence evidence from series setup")
     license_revision_id = forms.ModelChoiceField(queryset=m.LoanLicenseRevision.objects.none(), required=False,
@@ -108,7 +111,7 @@ class PaperHistoryForm(forms.Form):
     confirmed_rule = forms.BooleanField(label="The agreed rule is simple monthly interest: the next month starts the day after the original loan anniversary; principal reductions apply from the next boundary.")
     confirmed_history = forms.BooleanField(label="I checked this loan's paper record through the stated date and checked for duplicates. No earlier or later loan's renewal history is required.")
 
-    def __init__(self, *args, workspace, routine=True, itemized_archive=False, auto_source_license=False, **kwargs):
+    def __init__(self, *args, workspace, routine=True, itemized_archive=False, auto_source_license=False, filter_series=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.routine = routine and (not self.is_bound or self.data.get("routine_entry") in ("on", "true", "True", "1"))
         self.terms = None
@@ -122,7 +125,14 @@ class PaperHistoryForm(forms.Form):
             self.fields[target] = deepcopy(PawnDraftForm.base_fields[source])
         self.fields["borrower_id"].widget.data_url = reverse("workspace_party:party_autocomplete", args=[workspace.slug])
         self.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, status="ACTIVE")
-        self.fields["series_id"].queryset = m.LoanSeries.objects.filter(workspace=workspace).select_related("license")
+        self.fields["series_id"].queryset = m.LoanSeries.objects.filter(workspace=workspace).select_related("license").prefetch_related("number_sequences").order_by("license__license_number", "code")
+        if filter_series and not self.fields["include_old_series"].clean(self["include_old_series"].value()) and not self.data.get("review_token"):
+            from apps.tenant_apps.loans.selectors.series import running_series
+            self.fields["series_id"].queryset = running_series(workspace)
+        if not filter_series:
+            self.fields["include_old_series"].widget = forms.HiddenInput()
+        else:
+            self.fields["series_id"].show_availability = True
         self.fields["license_revision_id"].queryset = m.LoanLicenseRevision.objects.filter(workspace=workspace)
         self.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace,
             status="ACTIVE", repayment_structure__in=("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"), amortisation_method="NONE").select_related("product")
@@ -367,6 +377,7 @@ def _data(form, rows, collateral=None):
     value = dict(form.cleaned_data)
     value.pop("routine_entry", None)
     value.pop("source_license_from_setup", None)
+    value.pop("include_old_series", None)
     exceptions = value.pop("exceptions", False)
     reason = value.pop("exception_reason", "")
     value["document_charge"] = value["document_charge"] or Decimal("0")
@@ -431,6 +442,8 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
                 post[name] = value.isoformat() if hasattr(value, "isoformat") else str(value)
     if not draft and request.GET.get("series"):
         initial["series_id"] = request.GET["series"]
+    if presentation and not draft and request.GET.get("include_old_series") in ("on", "true", "True", "1"):
+        initial["include_old_series"] = True
     if not draft and request.GET.get("party"):
         initial["borrower_id"] = request.GET["party"]
     if archive_id and draft:
@@ -469,6 +482,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             pass
     form = PaperHistoryForm(post, workspace=workspace, initial=initial, routine=not archive,
         auto_source_license=not archive and not draft,
+        filter_series=bool(presentation) and not archive and not draft,
         itemized_archive=bool(archive and len(archive.document["facts"]["collateral"] or []) > 1))
     form.saved_draft = draft is not None
     if origination_correction:

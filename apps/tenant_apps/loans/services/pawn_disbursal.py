@@ -92,7 +92,7 @@ def disburse_pawn_loan(
                 evidence=approval_snapshot.payload.get("origination_rates"), effective_date=effective_date)
     validate_approval()
     try:
-        assert_series_can_issue(loan.series, as_of_date=effective_date)
+        assert_series_can_issue(loan.series, as_of_date=effective_date, for_update=True)
     except Exception as exc:
         if isinstance(exc, PawnDisbursalError):
             raise

@@ -87,7 +87,12 @@ class LoanProductVersionDraftForm(forms.ModelForm):
 
 class LoanSeriesChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return f"{obj.license.license_number} / {obj.pawn_display_name}"
+        label = f"{obj.license.license_number} / {obj.pawn_display_name}"
+        if not getattr(self, "show_availability", False):
+            return label
+        from .selectors.series import series_new_loan_status
+        status = series_new_loan_status(obj)
+        return label if status["running"] else f"{label} — {status['label']}"
 
 
 class PawnDraftForm(forms.Form):
@@ -128,6 +133,10 @@ class PawnDraftForm(forms.Form):
         self.fields["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
         ).select_related("license").prefetch_related("number_sequences").order_by("license__license_number", "code")
+        if instance is None:
+            from .selectors.series import running_series
+            self.fields["series"].queryset = running_series(workspace)
+            self.fields["series"].help_text += " Only running series are listed."
         self.fields["product_version"].queryset = LoanProductVersion.objects.filter(
             product__workspace=workspace,
             product__is_active=True,

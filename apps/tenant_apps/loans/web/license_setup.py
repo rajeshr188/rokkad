@@ -84,6 +84,7 @@ def license_register_pdf(request):
 @loans_setup_required
 @never_cache
 def license_detail(request, pk):
+    from apps.tenant_apps.loans.selectors.series import series_new_loan_status
     license = _license_for_workspace(request, pk)
     revisions = license.revisions.select_related("created_by").order_by(
         "-revision_number"
@@ -93,6 +94,7 @@ def license_detail(request, pk):
         series_rows.append(
             {
                 "series": series,
+                "new_loan_status": series_new_loan_status(series),
                 "loan_preview": _safe_preview(series, LoanDocumentKind.PAWN_LOAN),
                 "release_preview": _safe_preview(
                     series, LoanDocumentKind.PAWN_LOAN_RELEASE

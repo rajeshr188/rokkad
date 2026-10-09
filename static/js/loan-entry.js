@@ -94,7 +94,7 @@
   document.addEventListener('change', event => {
     if (!root()?.contains(event.target)) return;
     revision += 1;
-    if (event.target.name === 'entry_selection' || ['series', 'series_id'].includes(event.target.name)) change();
+    if (['entry_selection', 'series', 'series_id', 'include_old_series'].includes(event.target.name)) change();
   });
   document.addEventListener('submit', event => {
     if (event.target !== form()) return;

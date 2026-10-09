@@ -10,6 +10,7 @@
 {% if not readiness.requires_setup or can_manage_loan_setup %}<a class="btn btn-primary" href="{{ readiness.action_url }}">{% translate readiness.action_label %}</a>{% else %}<p class="alert alert-info">{% translate "Ask your Workspace owner or administrator to complete Settings ? Loan setup. Existing loans remain available according to your permissions." %}</p>{% endif %}
 {% if can_manage_loan_setup %}<a class="btn btn-outline-secondary" href="{% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug %}">{% translate "Review branch setup" %}</a>{% endif %}
 <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">{% translate "Back to loans" %}</a>
+<p class="small mt-3"><a href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}?entry=paper&amp;include_old_series=1">Record an earlier paper loan from an old series</a>. Recording an existing transaction does not reopen a series for new lending.</p>
 <p class="small text-body-secondary mt-3 mb-0">{% translate "Imported loans and customer history are preserved. New lending needs current branch configuration; opening this page changes no settings." %}</p>
 </div></section>
 {% endblock %}

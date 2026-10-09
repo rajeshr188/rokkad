@@ -209,7 +209,7 @@ class LicenseSeriesServiceTests(WorkspaceTestCase):
         activate_license(license, actor=self.user, as_of_date=date(2026, 6, 1))
         series.is_active = False
         series.save(update_fields=["is_active"])
-        with self.assertRaisesRegex(LicenseSeriesError, "series is inactive"):
+        with self.assertRaisesRegex(LicenseSeriesError, "stopped for new loans"):
             assert_series_can_issue(series, as_of_date=date(2026, 6, 1))
 
     @patch("apps.tenant_apps.loans.services.license_series.AuditLog.log")

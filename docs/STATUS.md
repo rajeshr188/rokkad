@@ -7,6 +7,44 @@ tags: [status, architecture]
 
 # Status
 
+## Running series and retained-register recording (9 October, local)
+
+Routine New loan now filters direct/paper choices and automatic purpose selection
+to running series: open, current active verified licence, active loan sequence with
+remaining numbers. Setup renames Active series to Open for new loans and retains
+all registers with availability labels/reasons and separate release-number warnings.
+Stopping/reopening is audited and serialized; number allocation/approval/unpaid
+payout recheck current availability. Exhaustion remains derived and no counter resets.
+
+Existing-loan release numbering no longer requires current lending availability;
+its own range/activity and all settlement, custody and authorization checks remain.
+Paper entry has an explicit old-series checkbox with native Apply series list, plus
+a recovery link from blocked direct setup. It preserves original numbers/facts and
+current photos without activating setup. Presentation metadata is stripped before
+canonical financial data; signed confirmations/retries and saved/archive contexts
+retain their source identity and supported semantics.
+
+**174 automated checks pass**, including running/unavailable filtering, forged/stale
+choices, audited stop/reopen without counter rewind, stopped approval and separately
+approved unpaid payout, finishing the last numbered draft after exhaustion, actual
+closure after series stop/licence expiry, older-number
+paper admission and exact retry after exhaustion, shared direct/paper/photo/financial
+review/recovery checks, and numbering concurrency. A two-connection owner-stop race
+refuses a stale allocator without consuming a number. Existing multiple-choice paper
+fixtures now configure both registers as running instead of treating an unconfigured
+register as usable. Initial test harness fixture/count issues are corrected.
+
+Actual fictional localhost desktop/mobile and native no-JavaScript checks pass:
+running-only choices, explicitly exposed stopped/exhausted registers, retained
+number/photos/token, and setup labels/control. No page errors or overflow; screenshots
+are reviewed. Localhost 8083 has the scoped overlay and two fictional nonfinancial
+register examples; existing fictional loan events/counters remain unchanged.
+Artifacts are under `.tmp/series-availability-20261009/`. No production deployment,
+real register change, migration or financial correction is performed. Migration
+drift checks report no changes against the isolated test database. See the
+[decision](adr/2026-10-09-series-new-lending-and-servicing.md) and
+[operator/domain guide](domain/loan-series-availability.md).
+
 ## Simplified direct-entry layout accepted (9 October, local)
 
 The owner evaluates the trial, accepts Simplified and explicitly requests removal

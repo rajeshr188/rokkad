@@ -57,7 +57,7 @@
         <td><strong>{{ row.series.name }}</strong><div class="small text-muted">{{ row.series.code }}</div></td>
         <td>{% if row.loan_preview.value %}<code>{{ row.loan_preview.value }}</code>{% else %}<span class="text-danger small">{{ row.loan_preview.error }}</span>{% endif %}</td>
         <td>{% if row.release_preview.value %}<code>{{ row.release_preview.value }}</code>{% else %}<span class="text-danger small">{{ row.release_preview.error }}</span>{% endif %}</td>
-        <td>{% if row.series.is_active and license.is_active and not license.is_expired and row.loan_preview.value and row.release_preview.value %}<span class="badge text-bg-success">Ready</span>{% else %}<span class="badge text-bg-warning">Not ready</span>{% endif %}</td>
+        <td><span class="badge {% if row.new_loan_status.running %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ row.new_loan_status.label }}</span><div class="small text-body-secondary">{{ row.new_loan_status.reason }}</div>{% if not row.release_preview.value %}<div class="small text-warning">Release numbering needs attention.</div>{% endif %}</td>
         <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'workspace_loans:series_update' request.workspace.slug row.series.pk %}">Configure</a></td>
       </tr>
     {% empty %}<tr><td colspan="5" class="text-center py-5 text-muted">Add a series to configure loan and release numbering.</td></tr>{% endfor %}

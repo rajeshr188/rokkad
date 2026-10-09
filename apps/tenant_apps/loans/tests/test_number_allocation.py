@@ -276,3 +276,46 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
             values = list(executor.map(allocate_in_own_connection, range(2)))
 
         self.assertEqual(sorted(values), ["PL-C-0001", "PL-C-0002"])
+
+    def test_owner_stop_serializes_with_allocation_from_a_stale_series(self):
+        from threading import Event
+        from apps.tenant_apps.loans.services.license_series import set_series_active, LicenseSeriesError
+        stopped, loaded, commit_stop = Event(), Event(), Event()
+
+        def stop():
+            close_old_connections()
+            try:
+                with workspace_context(self.tenant.pk):
+                    set_series_active(self.series, is_active=False, actor=self.user)
+                    stopped.set()
+                    assert commit_stop.wait(10)
+            finally:
+                close_old_connections()
+
+        def allocate_stale():
+            close_old_connections()
+            try:
+                with workspace_context(self.tenant.pk):
+                    stale = self.series.__class__.objects.get(pk=self.series.pk)
+                    self.assertTrue(stale.is_active)
+                    loaded.set()
+                    try:
+                        allocate_pawn_loan_number(series=stale, actor=self.user)
+                    except LicenseSeriesError as exc:
+                        return str(exc)
+                    raise AssertionError("The stopped series issued a number.")
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            stop_future = executor.submit(stop)
+            try:
+                self.assertTrue(stopped.wait(10))
+                issue_future = executor.submit(allocate_stale)
+                self.assertTrue(loaded.wait(10))
+            finally:
+                commit_stop.set()
+            stop_future.result(timeout=15)
+            self.assertIn("stopped for new loans", issue_future.result(timeout=15))
+        with workspace_context(self.tenant.pk):
+            self.assertEqual(self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 1)

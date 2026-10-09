@@ -41,9 +41,9 @@ def allocate_number(
     actor=None,
 ) -> NumberAllocation:
     """Allocate once under a row lock; committed numbers are never reclaimed."""
-    assert_series_can_issue(series, document_kind=LoanDocumentKind(document_kind))
     kind = LoanDocumentKind(document_kind).value
     with transaction.atomic():
+        assert_series_can_issue(series, document_kind=LoanDocumentKind(document_kind), for_update=True)
         try:
             sequence = (
                 LoanNumberSequence.objects.select_for_update()

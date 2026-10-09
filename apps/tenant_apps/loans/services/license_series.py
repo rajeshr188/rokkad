@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from .action_access import require_setup_administration
 from apps.orgs.audit import AuditLog
+from apps.orgs.models import Company
 from apps.tenant_apps.loans.domain import LoanDocumentKind
 from apps.tenant_apps.loans.models import (
     LoanLicense,
@@ -235,12 +236,23 @@ def update_series(series: LoanSeries, *, name: str | None = None, code: str | No
     return series
 
 
+@transaction.atomic
 def set_series_active(series: LoanSeries, *, is_active: bool, actor=None) -> LoanSeries:
     _require_active_workspace(series.workspace_id)
     require_setup_administration(series.workspace_id, actor)
-    if series.is_active != is_active:
-        series.is_active = is_active
-        series.save(update_fields=["is_active", "updated_at"])
+    # Acquire the audit's Workspace dependency before the series. NO KEY UPDATE
+    # remains compatible with financial rows' foreign-key checks.
+    Company.objects.select_for_update(no_key=True).get(pk=series.workspace_id)
+    locked = LoanSeries.objects.select_for_update().get(pk=series.pk, workspace_id=series.workspace_id)
+    if locked.is_active != is_active:
+        before = locked.is_active
+        locked.is_active = is_active
+        locked.save(update_fields=["is_active", "updated_at"])
+        AuditLog.log("SETTINGS_UPDATE", user=actor, company=series.license.workspace,
+            description=f"Series {series.code}: {'opened' if is_active else 'stopped'} for new loans.",
+            data={"entity": "loan_series_availability", "series_id": series.pk,
+                  "before": before, "after": is_active}, success=True)
+    series.is_active = locked.is_active
     return series
 
 
@@ -291,7 +303,9 @@ def update_configured_series(
     request=None,
 ) -> LoanSeries:
     """Update series identity, availability, and both sequences atomically."""
+    _require_active_workspace(series.workspace_id)
     require_setup_administration(series.workspace_id, actor)
+    Company.objects.select_for_update(no_key=True).get(pk=series.workspace_id)
 
     update_series(series, name=name, code=code, actor=actor)
     set_series_active(series, is_active=is_active, actor=actor)
@@ -421,16 +435,23 @@ def reserve_sequence_through(*, series, document_kind, last_used_number, evidenc
 
 
 def assert_series_can_issue(
-    series: LoanSeries, *, as_of_date: date | None = None, document_kind=None
+    series: LoanSeries, *, as_of_date: date | None = None, document_kind=None, for_update=False
 ) -> None:
     _require_active_workspace(series.workspace_id)
+    # Closing an existing loan is servicing, not permission to lend again.
+    if document_kind == LoanDocumentKind.PAWN_LOAN_RELEASE:
+        return
+    if for_update:
+        series = LoanSeries.objects.select_for_update(of=("self",)).select_related("license").get(
+            pk=series.pk, workspace_id=series.workspace_id)
     if not series.is_active:
-        raise LicenseSeriesError("The selected loan series is inactive.")
-    legacy_release = series.license.is_legacy_reference and document_kind == LoanDocumentKind.PAWN_LOAN_RELEASE
-    if not series.license.is_active and not legacy_release:
+        raise LicenseSeriesError("The selected loan series is stopped for new loans.")
+    if not series.license.is_active:
         raise LicenseSeriesError("The selected loan license is inactive.")
     if series.license.is_expired(as_of_date):
         raise LicenseSeriesError("The selected loan license has expired.")
+    if series.license.issued_on and series.license.issued_on > (as_of_date or timezone.localdate()):
+        raise LicenseSeriesError("The selected loan license is not yet valid.")
 
 
 def _require_active_workspace(workspace_id: int) -> None:
