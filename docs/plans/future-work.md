@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-09
+updated: 2026-10-10
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -44,15 +44,16 @@ plans; shelving an idea must not hide a release blocker.
 | FW-019 | Workspace subscription monetization and Razorpay automatic renewal | Active: owner selected delivery | Local implementation and provider acceptance | Held-access review and collection-attention guidance implemented; provider failure simulation unexpectedly captured, so actual failure/recovery and naturally due acceptance remain open |
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
-| FW-022 | Main Loans-list search performance | Investigated; deferred at owner request, 9 October | Owner selects query correction and verified rollout | Candidate-first archive search, complete broad fallback and fragment readiness reduction; no production search change |
+| FW-022 | Main Loans-list search performance | Implemented and fully rehearsed through IP-05 | Coordinated verified rollout | Complete candidate/broad queries, generated source metadata and fragment readiness reduction; production unchanged |
 
 ## FW-022: Main Loans-list search performance
 
-**Subsequent owner selection, 9 October:** the
-[position-import plan](loan-position-import.md) now includes ordinary-directory
-consolidation and search measurement after closed-record admission/conversion.
-The standalone query correction remains deferred until that ordered work reaches
-IP-05. This does not claim conversion itself fixes the measured query cost.
+**Owner-selected IP-05, 9 October; verified 10 October:** query correction and
+ordinary browsing are implemented under the [position-import plan](loan-position-import.md).
+All 294 fresh-PostgreSQL checks, 39,196 isolated real-source admissions, 78 read-only
+searches and 39 complete-query comparisons pass. Narrow queries improve; broad
+lists still take several seconds. See the [IP-05 delivery](../implementation/loan-position-import-ip05.md).
+Production search remains unchanged until the coordinated switch.
 
 **Owner deferral, 9 October:** retain the measured search recommendation as future
 work while reviewing how historical loans arose. Investigation and an isolated

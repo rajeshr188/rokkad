@@ -1,5 +1,6 @@
 """Position admission keeps unknown past facts out of financial transactions."""
 from copy import deepcopy
+from unittest.mock import patch
 from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
@@ -11,6 +12,7 @@ from django.core.files.base import ContentFile
 from django.db import connection, transaction, DatabaseError
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.tenancy.context import workspace_context, without_workspace_context
 from apps.orgs.models import Company, Membership, Role
@@ -100,6 +102,29 @@ class ClosedPositionAdmissionTests(RecordedOriginationTests):
         self.seq.refresh_from_db(); self.assertEqual(self.seq.next_number, 11)
         from apps.tenant_apps.loans.selectors.interest_contract_inventory import interest_contract_inventory
         self.assertEqual(next(row for row in interest_contract_inventory() if row["loan_id"] == loan.pk)["status"], "VERIFIED_TERMINAL_POSITION")
+
+    def test_closed_position_guard_uses_india_business_date_on_utc_connection(self):
+        with connection.cursor() as cursor:
+            cursor.execute("SET LOCAL TIME ZONE 'UTC'")
+            cursor.execute("SELECT ('2026-10-09 18:45:00+00'::timestamptz AT TIME ZONE 'Asia/Kolkata')::date")
+            self.assertEqual(cursor.fetchone()[0].isoformat(), '2026-10-10')
+            cursor.execute("SELECT pg_get_functiondef('loans_closed_position_complete()'::regprocedure)")
+            self.assertIn("statement_timestamp() AT TIME ZONE 'Asia/Kolkata'", cursor.fetchone()[0])
+        self.document['position']['as_of'] = timezone.localdate().isoformat()
+        loan, _, _ = self.admit_position()
+        self.assertEqual(loan.loan_events.get().effective_date, timezone.localdate())
+
+    def test_database_still_rejects_tomorrows_closed_position(self):
+        from apps.tenant_apps.loans.services import closed_position
+        before = m.PawnLoan.objects.count()
+        with self.assertRaisesMessage(DatabaseError, 'Closed position requires exact immutable origin'), transaction.atomic():
+            workspace, series, accepted = closed_position._prepare(document=self.document, **self.mapping)
+            accepted['position']['position']['as_of'] = (timezone.localdate() + timedelta(days=1)).isoformat()
+            with patch.object(closed_position, 'read_position', return_value={}):
+                closed_position._write(workspace, series, self.actor, accepted)
+        self.assertEqual(m.PawnLoan.objects.count(), before)
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
 
     def test_known_original_terms_and_unknown_custody_remain_distinct(self):
         self.document["loan"].update(original_date=self.day.isoformat(), closed_on=self.today.isoformat(),

@@ -1,11 +1,27 @@
 ---
 status: active
 owner: project
-updated: 2026-10-09
+updated: 2026-10-10
 tags: [agents, context, architecture]
 ---
 
 # Agent Memory
+
+IP-05 implements ordinary closed-position browsing, open-first original-date
+ordering and secondary retained-source access. Migration 0066 stores generated
+immutable source lookup metadata; candidate queries retain complete broad
+fallbacks, full-universe latest snapshots and exact-binding FK checks. A SQL CASE
+prevents old JSON aliases from scanning closed-position source graphs. Results-only
+fragments skip New loan readiness; full pages retain it. Number/range/source
+checks and forced RLS remain intact. Migration 0067 aligns the new closed-position
+guard with the statement's India business date, preserving future-date rejection.
+All 294 tests and restricted isolated startup/schema checks pass. The isolated
+copy admits all 39,196 eligible positions (including the exact 190 JCL cohort),
+holds 19 date conflicts and preserves existing loan/event/provenance/source/
+sequence fingerprints and source hashes. All 78 read-only searches and 39 complete
+reference comparisons pass; broad lists still take several seconds. Production
+remains unchanged at 0064. Coordinate compatible release through 0067 and fresh
+reviewed live batches. See [IP-05](implementation/loan-position-import-ip05.md).
 
 IP-04 implements reviewed retained-source batch conversion through IP-03; chunks
 are at most 100, atomic, current-authority/source/mapping/number checked and

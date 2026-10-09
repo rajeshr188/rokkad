@@ -2,7 +2,7 @@ from uuid import UUID
 
 import django_filters
 from django import forms
-from django.db.models import Q
+from django.db.models import BooleanField, Case, Q, Value, When
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from apps.tenant_apps.party.models import Party
@@ -21,6 +21,7 @@ from apps.tenant_apps.loans.models import (
     PawnLoanNotice,
     PawnPhysicalVerificationSession,
     PawnStorageLocation,
+    HistoricalLoanImport,
 )
 
 
@@ -56,8 +57,9 @@ class PawnLoanSearchForm(forms.Form):
 
 
 class PawnLoanFilter(django_filters.FilterSet):
+    IMPORT_ALIAS_CANDIDATE_LIMIT = 500
     records = django_filters.ChoiceFilter(method='filter_records',label=_("Records"),
-        choices=[('ordinary',_("Ordinary loans")),('historical',_("Historical records"))],empty_label=_("All records"),
+        choices=[('ordinary',_("Loans")),('historical',_("Source records awaiting admission"))],empty_label=_("Loans and retained source records"),
         widget=forms.Select(attrs={'class':'form-select'}))
     borrower = django_filters.ModelChoiceFilter(
         queryset=Party.objects.none(), label=_("Borrower"),
@@ -118,6 +120,7 @@ class PawnLoanFilter(django_filters.FilterSet):
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)
+        self.workspace = workspace
         # Include inactive borrowers: their outstanding loans still need servicing.
         self.filters["borrower"].queryset = Party.objects.filter(workspace=workspace)
         self.filters["borrower"].field.widget.data_url = reverse("workspace_loans:loan_borrower_autocomplete", args=[workspace.slug])
@@ -138,6 +141,7 @@ class PawnLoanFilter(django_filters.FilterSet):
             Q(borrower__display_name__icontains=value)
             | Q(borrower__party_code__icontains=value)
             | Q(borrower__primary_phone__icontains=value)
+            | Q(historical_import__archive_evidence__search_borrower_name__icontains=value)
         ) if value else queryset
 
     def filter_records(self, queryset, name, value):
@@ -149,6 +153,27 @@ class PawnLoanFilter(django_filters.FilterSet):
         value = value.strip()
         if not value:
             return queryset
+        # Closed-position imports retain large source graphs. Their actual loan
+        # number and compact source fields already cover these lookups. Keep the
+        # older financial-profile aliases, scanning only those older origins.
+        alias_predicate = (
+            Q(document__loan__number__icontains=value)
+            | Q(document__loan__book_reference__icontains=value)
+            | Q(document__source_loan__loan_number__icontains=value)
+            | Q(document__review__source__number__icontains=value))
+        # A plain joined flag filter lets the planner evaluate JSON first across
+        # every import. CASE keeps legacy JSON evaluation behind that flag even
+        # after a large closed-position batch, without changing matching rules.
+        aliases = HistoricalLoanImport.objects.filter(workspace_id=self.workspace.pk,
+            loan__workspace_id=self.workspace.pk, loan__is_imported_closed_position=False).annotate(
+                legacy_alias_match=Case(When(loan__is_imported_closed_position=False, then=alias_predicate),
+                    default=Value(False), output_field=BooleanField())).filter(legacy_alias_match=True).values("loan_id")
+        # A small alias set avoids embedding expensive legacy JSON scans in both
+        # directory count and page queries. Broad matches retain the complete
+        # subquery; the limit is an optimization, never a result cap.
+        alias_ids = list(aliases.order_by().values_list("loan_id", flat=True)[:self.IMPORT_ALIAS_CANDIDATE_LIMIT + 1])
+        if len(alias_ids) <= self.IMPORT_ALIAS_CANDIDATE_LIMIT:
+            aliases = alias_ids
         return queryset.filter(
             Q(loan_number__icontains=value)
             | Q(borrower__display_name__icontains=value)
@@ -156,10 +181,11 @@ class PawnLoanFilter(django_filters.FilterSet):
             | Q(borrower__primary_phone__icontains=value)
             | Q(license__license_number__icontains=value)
             | Q(series__code__icontains=value)
-            | Q(historical_import__document__loan__number__icontains=value)
-            | Q(historical_import__document__loan__book_reference__icontains=value)
-            | Q(historical_import__document__source_loan__loan_number__icontains=value)
-            | Q(historical_import__document__review__source__number__icontains=value)
+            | Q(pk__in=aliases)
+            | Q(historical_import__source_id__icontains=value)
+            | Q(historical_import__archive_evidence__source_id__icontains=value)
+            | Q(historical_import__archive_evidence__search_loan_number__icontains=value)
+            | Q(historical_import__archive_evidence__search_borrower_name__icontains=value)
         )
 
 

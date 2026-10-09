@@ -1,11 +1,42 @@
 ---
 status: active
 owner: project
-updated: 2026-10-09
+updated: 2026-10-10
 tags: [status, architecture]
 ---
 
 # Status
+
+## IP-05 browsing/search implemented and fully rehearsed (10 October)
+
+Loans is the primary directory: accepted closed positions are ordinary CLOSED
+loans, open loans precede old completed records by original date, and source
+aliases/media remain accessible. Only unresolved source claims remain pending;
+retained documents are secondary supporting evidence. No original dates or
+entry timestamps are changed.
+
+Migration 0066 adds immutable generated source lookup fields. Narrow candidate
+queries retain complete broad fallbacks and full-universe latest-snapshot checks.
+Exact-binding source exclusion, SQL CASE for older JSON aliases, compact number
+reads and fragment-only readiness reduction preserve existing guards and RLS.
+All 294 fresh-PostgreSQL tests pass. A midnight regression caught the new guard's
+UTC/India date mismatch; migration 0067 uses the statement's India business date
+and retains future-date rejection. Owner-only isolated migrations, restricted
+startup and schema consistency pass.
+
+All 39,196 eligible real-source positions are admitted in the isolated copy:
+JCL 26,649, JSK 3,836, Lakshmi 8,711. All 190 exact JCL recovery entries are included;
+15 JCL and 4 JSK date conflicts remain held. Existing loan/event/provenance/source/
+sequence fingerprints and retained source hashes pass. No live business writes
+or media changes occur. All 78 read-only searches and 39 complete-query reference
+comparisons pass. Number searches improve against the matched IP-04 baseline;
+bounded pending-ID reuse improves broad queries, with several-second variability
+still present under the reader's 0.5 CPU limit.
+
+Production remains on its existing application and schema 0064. A fresh checkpoint,
+compatible reader/schema switch through 0067, refreshed live reviews and verified
+bounded conversion remain required. See the [IP-05 delivery](implementation/loan-position-import-ip05.md).
+Unrelated billing edits remain outside the candidate and scoped commit.
 
 ## IP-04 batch conversion implemented and rehearsed (9 October)
 

@@ -124,7 +124,7 @@ class ArchiveBrowseTests(PortabilityFixture):
             evidence = self.accept(value)
             before = digest(evidence.document)
         response = self.client.get(self.url("archive_detail", evidence_id=evidence.public_id))
-        for text in ("Historical loan C00123", "01/02/2021", "Gold chain", "Recorded principal payment",
+        for text in ("Source record C00123", "01/02/2021", "Gold chain", "Recorded principal payment",
                      "Recorded interest payment", "REL001", "Old-system customer details",
                      "Stored loan amount (old system)", "may have changed during servicing"):
             self.assertContains(response, text)

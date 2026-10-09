@@ -24,6 +24,15 @@ ordinary closed-position admission, recheck current authority/source/mapping and
 numbering, commit at most 100 records atomically, and retry immutable origins
 without duplicate actions. See the [tested implementation and isolated rehearsal](../implementation/loan-position-import-ip04.md).
 
+IP-05 keeps accepted closed positions in the ordinary Loans directory, ahead of
+which running loans remain prominent. Source claims awaiting admission are
+labelled separately; all retained documents/snapshots survive as supporting
+evidence. Database-generated search fields derive from those immutable documents
+and are not new financial facts or independent editable records. Narrow-query
+optimizations always have complete broad fallbacks. Original dates, true entry
+timestamps, source identity, duplicate guards and forced RLS are preserved. See
+the [browsing/search decision](../adr/2026-10-09-loan-directory-after-position-admission.md).
+
 The September audit below retains its original baseline. LC-05 now adds versioned
 actual paper fee/item evidence, multi-item archive admission, delegated preparation,
 precise opening checkpoints and verified terminal positions. Current applicability

@@ -68,30 +68,31 @@ def pawn_loan_list(request):
     valid = loan_filter.is_valid()
     page_obj, historical_mapping_filter = loan_directory_page(workspace_id=request.loans_workspace.pk,
         loan_filter=loan_filter,page=request.GET.get('page'))
-    readiness = get_pawn_draft_readiness(request.loans_workspace)
     fragment = (
         request.headers.get("HX-Request") == "true"
         and request.headers.get("HX-Target") == "loan-results"
         and request.headers.get("HX-History-Restore-Request") != "true"
         and request.headers.get("HX-Boosted") != "true"
     )
-    response = render(
-        request,
-        "loans/pawn/list.html#results" if fragment else "loans/pawn/list.html",
-        {
-            "loans": [r['loan'] for r in page_obj.object_list if r['kind']=='ordinary'],
-            "directory_rows": page_obj.object_list,
-            "historical_mapping_filter": historical_mapping_filter,
-            "loan_filter": loan_filter,
-            "selected_borrower": loan_filter.form.cleaned_data.get("borrower") if valid else None,
-            "page_obj": page_obj,
+    readiness = None if fragment else get_pawn_draft_readiness(request.loans_workspace)
+    context = {
+        "loans": [r['loan'] for r in page_obj.object_list if r['kind']=='ordinary'],
+        "directory_rows": page_obj.object_list,
+        "historical_mapping_filter": historical_mapping_filter,
+        "has_retained_source_rows": any(r['kind']=='historical' for r in page_obj.object_list),
+        "loan_filter": loan_filter,
+        "selected_borrower": loan_filter.form.cleaned_data.get("borrower") if valid else None,
+        "page_obj": page_obj,
+    }
+    if not fragment:
+        context.update({
             "readiness": readiness,
             "can_create_loans": workspace_activity(request.loans_workspace).can_write and request.loans_workspace_access.can("data.create"),
             "can_review_paper_backlog": request.loans_workspace_access.can("data.edit"),
             "more_filters_open": any(request.GET.get(key) for key in ("license", "series", "loan_date_from", "loan_date_to")),
             "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
-        },
-    )
+        })
+    response = render(request, "loans/pawn/list.html#results" if fragment else "loans/pawn/list.html", context)
     if fragment:
         response["X-Rokkad-Fragment"] = "loan-results"
     return response

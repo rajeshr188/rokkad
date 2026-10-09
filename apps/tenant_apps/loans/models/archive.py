@@ -2,6 +2,7 @@
 import uuid
 from django.conf import settings
 from django.db import models
+from django.db.models.fields.json import KT
 from apps.tenancy.models import WorkspaceOwnedModel
 from django.core.exceptions import ValidationError
 from django_cleanup import cleanup
@@ -14,6 +15,14 @@ class HistoricalLoanEvidence(WorkspaceOwnedModel):
     source_id = models.CharField(max_length=255)
     source_sha256 = models.CharField(max_length=64)
     document = models.JSONField()
+    # Stored, database-derived lookup metadata. The immutable source document is
+    # still authoritative; these cannot be independently supplied or corrected.
+    search_loan_number = models.GeneratedField(expression=KT("document__facts__loan_number"),
+        output_field=models.TextField(), db_persist=True)
+    search_borrower_name = models.GeneratedField(expression=KT("document__facts__borrower_name"),
+        output_field=models.TextField(), db_persist=True)
+    search_opened_on = models.GeneratedField(expression=KT("document__facts__opened_on"),
+        output_field=models.TextField(), db_persist=True)
     review = models.JSONField()
     accepted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     accepted_at = models.DateTimeField(auto_now_add=True)

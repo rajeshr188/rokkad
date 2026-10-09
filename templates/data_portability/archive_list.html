@@ -1,23 +1,23 @@
 {% extends 'base_tenant.html' %}
-{% block title %}Historical loans{% endblock %}
+{% block title %}Retained source documents{% endblock %}
 {% block workspace_content %}
-<div class="app-heading"><div><h1 class="h3">Historical loans</h1><p>Closed loans retained from the previous system. Open a loan number to read its recorded details.</p></div></div>
-<p class="small text-body-secondary">Browse ordinary closed loans and retained historical records together in the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?state=CLOSED">Loans list</a>. This evidence page retains every source snapshot, including records already linked to an ordinary loan.</p>
+<div class="app-heading"><div><h1 class="h3">Retained source documents</h1><p>Original loan records and immutable snapshots. Use Loans for ordinary active and closed loans; open a source record here to inspect its evidence.</p></div></div>
+<p class="small text-body-secondary">Browse ordinary closed loans and unresolved source records together in the <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?state=CLOSED">Loans list</a>. This evidence page retains every source snapshot, including records already linked to an ordinary loan.</p>
 <form method="get" class="card card-body mb-3">
   <label class="form-label" for="archive-search">Find a loan number, customer name or source ID</label>
   <div class="d-flex flex-wrap gap-2"><input class="form-control flex-grow-1 w-auto" id="archive-search" name="q" value="{{ query }}" maxlength="255"><button class="btn btn-primary">Search</button><a class="btn btn-outline-secondary" href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Clear</a></div>
 </form>
 <p>{{ page.paginator.count }} retained record{{ page.paginator.count|pluralize }}{% if page.paginator.count %} · Showing {{ page.start_index }}–{{ page.end_index }}{% endif %}</p>
 <div class="table-responsive">
-<table class="table align-middle"><caption class="visually-hidden">Historical closed loans</caption><thead><tr><th scope="col">Loan number</th><th scope="col">Customer</th><th scope="col">Loan date</th><th scope="col">Closed date</th><th scope="col">Status</th></tr></thead><tbody>
+<table class="table align-middle"><caption class="visually-hidden">Retained loan source snapshots</caption><thead><tr><th scope="col">Loan number</th><th scope="col">Customer</th><th scope="col">Loan date</th><th scope="col">Closed date</th><th scope="col">Status</th></tr></thead><tbody>
 {% for row in archive_rows %}<tr>
   <td><a href="{% url 'workspace_portability:archive_detail' workspace_slug=request.workspace.slug evidence_id=row.evidence.public_id %}">{{ row.evidence.document.facts.loan_number|default_if_none:row.evidence.source_id }}</a></td>
   <td>{{ row.evidence.document.facts.borrower_name|default_if_none:"Not recorded" }}</td>
   <td>{{ row.summary.opened_on|date:"d/m/Y"|default:"Not recorded" }}</td><td>{{ row.summary.closed_on|date:"d/m/Y"|default:"Not recorded" }}</td>
-  <td>{% if row.origin %}<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug row.origin.loan_id %}">Linked ordinary loan {{ row.origin.loan.loan_number }}</a><div class="small">Retained source evidence</div>{% else %}<span class="badge text-bg-secondary">Closed · Historical</span>{% endif %}</td>
-</tr>{% empty %}<tr><td colspan="5">No matching historical loans. Try the loan number or customer name, or clear the search.</td></tr>{% endfor %}
+  <td>{% if row.origin %}<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug row.origin.loan_id %}">Linked ordinary loan {{ row.origin.loan.loan_number }}</a><div class="small">Retained source evidence</div>{% else %}<span class="badge text-bg-secondary">Awaiting admission</span>{% endif %}</td>
+</tr>{% empty %}<tr><td colspan="5">No matching source records. Try the loan number or customer name, or clear the search.</td></tr>{% endfor %}
 </tbody></table></div>
-{% if page.has_other_pages %}<nav aria-label="Historical loan pages" class="d-flex flex-wrap gap-3 align-items-center">
+{% if page.has_other_pages %}<nav aria-label="Source document pages" class="d-flex flex-wrap gap-3 align-items-center">
 {% if page.has_previous %}<a class="btn btn-outline-secondary" href="?page={{ page.previous_page_number }}&amp;q={{ query|urlencode }}">Previous</a>{% endif %}
 <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
 {% if page.has_next %}<a class="btn btn-outline-secondary" href="?page={{ page.next_page_number }}&amp;q={{ query|urlencode }}">Next</a>{% endif %}

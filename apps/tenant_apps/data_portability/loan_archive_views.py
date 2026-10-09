@@ -38,8 +38,8 @@ def listing(request):
     query = request.GET.get("q", "")[:255].strip()
     rows = HistoricalLoanEvidence.objects.filter(workspace_id=workspace.pk).order_by("-accepted_at", "-pk")
     if query:
-        rows = rows.filter(Q(source_id__icontains=query) | Q(document__facts__loan_number__icontains=query)
-                           | Q(document__facts__borrower_name__icontains=query))
+        rows = rows.filter(Q(source_id__icontains=query) | Q(search_loan_number__icontains=query)
+                           | Q(search_borrower_name__icontains=query))
     access = resolve_workspace_access(actor=request.user, workspace=workspace)
     can_import = (access.platform_override or workspace.owner_id == request.user.pk) and all(
         access.can(action) for action in ("data.import", "workspace.settings.manage"))

@@ -21,7 +21,7 @@
     <label class="form-label fw-semibold" for="{{ loan_filter.form.q.id_for_label }}">{{ loan_filter.form.q.label }}</label>
     <div class="d-flex gap-2">{{ loan_filter.form.q }}<button class="btn btn-primary" type="submit">{% translate "Search" %}</button></div>
     <p id="loan-search-help" class="form-text">{% translate "Search by loan number, customer name, customer code, phone, license or series." %}</p>
-    <p class="form-text">Historical records can be found by their original loan number, customer name or source ID.</p>
+    <p class="form-text">Imported loans and retained source records can also be found by their original number, source customer name or source ID.</p>
     {{ loan_filter.form.borrower_q }}
     <div class="row g-3 align-items-end"><div class="col-sm-6"><label class="form-label" for="{{ loan_filter.form.borrower.id_for_label }}">{{ loan_filter.form.borrower.label }}</label>{{ loan_filter.form.borrower }}</div><div class="col-sm-4"><label class="form-label" for="{{ loan_filter.form.state.id_for_label }}">{{ loan_filter.form.state.label }}</label>{{ loan_filter.form.state }}</div>
       <div class="col-sm-auto"><a class="btn btn-outline-secondary" href="{{ request.path }}">{% translate "Clear" %}</a></div></div>
@@ -47,8 +47,9 @@
     {% else %}
       <h2 id="loan-results-title" class="h5 mb-3" tabindex="-1">{% blocktranslate count total=page_obj.paginator.count %}{{ total }} loan record found{% plural %}{{ total }} loan records found{% endblocktranslate %}</h2>
       <p class="small text-body-secondary">{% translate "Principal is the amount recorded when the loan was created or imported. Open the loan for current balances and the collection amount." %}</p>
-      <p class="small text-body-secondary">Historical records retain the old system's closed-loan claim and details. Their financial history has not been admitted to ordinary Loans.</p>
-      {% if historical_mapping_filter %}<p class="alert alert-info py-2">Customer selection, licence and series filters show ordinary loans with local mappings. To find historical records, clear these filters and search the original loan number or customer name.</p>{% endif %}
+      <p class="small text-body-secondary">Open loans first, then completed records, newest original loan dates first. Unknown dates appear last within each group.</p>
+      {% if has_retained_source_rows %}<p class="small text-body-secondary">Source records awaiting admission retain their original claims and documents. Open them to review unresolved details.</p>{% endif %}
+      {% if historical_mapping_filter %}<p class="alert alert-info py-2">Customer selection, licence and series filters show loans with local mappings. To find unadmitted source records, clear these filters and search the original loan number or customer name.</p>{% endif %}
       <ul class="list-unstyled directory-records">
       {% for row in directory_rows %}{% if row.kind == 'ordinary' %}{% with loan=row.loan %}<li class="card p-3{% if loan.state == 'CLOSED' %} border-success border-start border-4{% endif %}">
         <div class="row g-3 align-items-center">
@@ -57,14 +58,14 @@
             <div class="text-break"><a class="directory-name" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{{ loan.loan_number }}</a><div><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}" title="View all loans for this borrower">{{ loan.borrower.display_name }}</a></div><div class="small text-body-secondary">{{ loan.borrower.party_code }} · {{ loan.license.license_number }}/{{ loan.series.pawn_display_name }}</div></div>
           </div></div>
           <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">{% if loan.is_imported_closed_position %}Original principal{% else %}{% translate "Principal at entry" %}{% endif %}</dt><dd class="mb-1">{% if loan.principal_amount != None %}₹{{ loan.principal_amount|indian_money }}{% else %}Unknown{% endif %}</dd><dt class="small text-body-secondary fw-normal">{% translate "Loan date" %}</dt><dd class="mb-0">{{ loan.loan_date|default_if_none:"Unknown" }}</dd></dl></div>
-          <div class="col-6 col-md-4">{% include "loans/pawn/_state_badge.html" %}<p class="small mt-2 mb-0">{% if loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>
+          <div class="col-6 col-md-4">{% include "loans/pawn/_state_badge.html" %}<p class="small mt-2 mb-0">{% if loan.is_imported_closed_position %}Open the accepted closed position and retained source documents. Earlier financial transactions are unavailable.{% elif loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>
         </div>
       </li>{% endwith %}{% else %}
       <li class="card p-3" data-historical-record>
         <div class="row g-3 align-items-center">
           <div class="col-md-5"><a class="directory-name" href="{% url 'workspace_portability:archive_detail' workspace_slug=request.workspace.slug evidence_id=row.evidence.public_id %}">{{ row.evidence.document.facts.loan_number|default_if_none:row.evidence.source_id }}</a><div>{{ row.evidence.document.facts.borrower_name|default_if_none:"Customer not recorded" }}</div><div class="small text-body-secondary text-break">Source: {{ row.evidence.source_system }} / {{ row.evidence.source_id }}</div></div>
           <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">Original principal (source claim)</dt><dd class="mb-1">{% if row.evidence.document.facts.original_principal != None %}₹{{ row.evidence.document.facts.original_principal|indian_money }}{% else %}Not known{% endif %}</dd><dt class="small text-body-secondary fw-normal">Loan date / closed date</dt><dd class="mb-0">{{ row.summary.opened_on|date:"d/m/Y"|default:"Not recorded" }} / {{ row.summary.closed_on|date:"d/m/Y"|default:"Not recorded" }}</dd></dl></div>
-          <div class="col-6 col-md-4"><span class="badge text-bg-secondary">Closed · Historical record</span><p class="small mt-2 mb-0">Open retained details, payments and release records. Unknown settlement and handover facts remain unknown.</p></div>
+          <div class="col-6 col-md-4"><span class="badge text-bg-secondary">Closed claim · Source record</span><p class="small mt-2 mb-0">Awaiting admission. Open retained details, payments and release records. Unknown settlement and handover facts remain unknown.</p></div>
         </div>
       </li>{% endif %}{% empty %}<li class="card app-empty"><strong>{% translate "No matching loans" %}</strong><p>{% translate "Check the loan number, try the customer’s phone, or clear the filters." %}</p></li>{% endfor %}
       </ul>
@@ -80,7 +81,7 @@
   <details class="directory-tools mt-4"><summary>{% translate "Reports, batch releases and setup" %}</summary><div class="d-flex flex-wrap gap-2 mt-2">
     <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_reports' request.workspace.slug %}">{% translate "Reports & reconciliation" %}</a>
     {% if can_create_loans %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_loan_create' request.workspace.slug %}?entry=paper">Record completed loan</a>{% endif %}
-    <a class="btn btn-outline-secondary" href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Historical evidence &amp; snapshots</a>
+    <a class="btn btn-outline-secondary" href="{% url 'workspace_portability:archive_list' workspace_slug=request.workspace.slug %}">Retained source documents &amp; snapshots</a>
     {% if 'loan.release' in batch_actions %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:paper_closure_create' request.workspace.slug %}">Record paper closures</a><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}">{% translate "Release multiple loans" %}</a>{% endif %}
     <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}">{% translate "Release batches" %}</a>
     {% if can_manage_loan_setup %}<a class="btn btn-outline-secondary" data-loan-setup-link href="{% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug %}">{% translate "Loan setup" %}</a>{% endif %}

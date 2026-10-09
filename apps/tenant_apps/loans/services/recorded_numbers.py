@@ -28,12 +28,15 @@ class LockedNumberClaims:
             workspace_id=workspace_id, document_kind="PAWN_LOAN").order_by("pk"))
         self.numbers = {identity(n) for n in m.PawnLoan.objects.filter(workspace_id=workspace_id).values_list("loan_number", flat=True)}
         self.archives = defaultdict(set)
-        for pk, number in m.HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id).values_list("pk", "document__facts__loan_number"):
+        for pk, number in m.HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id).values_list("pk", "search_loan_number"):
             if number is not None:
                 self.archives[identity(number)].add(pk)
         # Extract only aliases in SQL, never load all retained source graphs.
         paths = ("source__number", "loan__number", "loan__loan_number", "review__source__number", "history__number", "position__loan__number")
-        for numbers in m.HistoricalLoanImport.objects.filter(workspace_id=workspace_id).values_list(*(f"document__{p}" for p in paths)):
+        # Guarded closed-position number equals its ordinary loan number above;
+        # it has no separate aliases. Avoid decompressing its source graphs.
+        for numbers in m.HistoricalLoanImport.objects.filter(workspace_id=workspace_id,
+                loan__is_imported_closed_position=False).values_list(*(f"document__{p}" for p in paths)):
             self.numbers.update(identity(n) for n in numbers if n is not None)
 
     def reject(self, number, archive_ids):
@@ -48,13 +51,12 @@ def reject_existing_source(workspace_id, number, *, archive_ids=(), existing_loa
     key = identity(number)
     if any(identity(n) == key for n in m.PawnLoan.objects.filter(workspace_id=workspace_id).exclude(pk=existing_loan_id).values_list("loan_number", flat=True)):
         raise ValueError(f"Loan number {number} already exists. Open the existing loan instead.")
-    for source_number in m.HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id).exclude(pk__in=archive_ids).values_list("document__facts__loan_number", flat=True):
+    for source_number in m.HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id).exclude(pk__in=archive_ids).values_list("search_loan_number", flat=True):
         if source_number is not None and identity(source_number) == key:
             raise ValueError(f"{number} is retained in historical evidence. Use reviewed archive admission; do not enter it twice.")
-    for doc in m.HistoricalLoanImport.objects.filter(workspace_id=workspace_id).values_list("document", flat=True):
-        numbers = (doc.get("source", {}).get("number"), doc.get("loan", {}).get("number"),
-                   doc.get("loan", {}).get("loan_number"), doc.get("review", {}).get("source", {}).get("number"),
-                   doc.get("history", {}).get("number"))
+    paths = ("source__number", "loan__number", "loan__loan_number", "review__source__number", "history__number")
+    for numbers in m.HistoricalLoanImport.objects.filter(workspace_id=workspace_id,
+            loan__is_imported_closed_position=False).values_list(*(f"document__{p}" for p in paths)):
         if key in {identity(n) for n in numbers if n is not None}:
             raise ValueError(f"{number} already has an imported financial origin. Reconcile its identity first.")
 
