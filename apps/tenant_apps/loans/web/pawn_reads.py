@@ -101,6 +101,20 @@ def pawn_loan_list(request):
 @never_cache
 def pawn_loan_detail(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    if loan.is_imported_closed_position:
+        from datetime import date
+        from apps.tenant_apps.loans.services.closed_position import read_position
+        from apps.tenant_apps.loans.selectors.archive import historical_loan_details
+        position = read_position(loan)
+        evidence = loan.historical_import.archive_evidence
+        return render(request, "loans/pawn/closed_position_detail.html", dict(
+            loan=loan, position=position, position_as_of=date.fromisoformat(position["position"]["as_of"]),
+            closed_on=date.fromisoformat(position["loan"]["closed_on"]) if position["loan"]["closed_on"] else None,
+            returned=position["position"]["custody"] == "RETURNED_TO_BORROWER",
+            source_details=historical_loan_details(position["retained_evidence"]) if evidence else None,
+            evidence=evidence, attachments=evidence.attachments.filter(workspace_id=loan.workspace_id) if evidence else (),
+            can_export=(request.loans_workspace_access.can("workspace.settings.manage")
+                and request.loans_workspace_access.can("data.export"))))
     opening = next((event for event in loan.loan_events.all() if event.event_kind == "MIGRATION_OPENING"), None)
     series_navigation = get_pawn_loan_series_navigation(loan)
     context = {

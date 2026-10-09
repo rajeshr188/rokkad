@@ -25,7 +25,7 @@ class TerminalForm(PaperHistoryForm):
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, workspace=workspace, routine=False, itemized_archive=True, **kwargs)
-        for name in ("routine_entry", "exceptions", "exception_reason", "advance_months", "document_charge", "payout_basis", "cash_paid",
+        for name in ("routine_entry", "exceptions", "exception_reason", "include_old_series", "source_license_from_setup", "advance_months", "document_charge", "payout_basis", "cash_paid",
             "complete_through", "final_state", "confirmed_history", "confirmed_rule", "description", "metal", "quantity",
             "gross_weight", "net_weight", "purity", "principal", "rate"):
             self.fields.pop(name)

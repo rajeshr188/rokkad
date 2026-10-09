@@ -1,8 +1,8 @@
 """Paged ordinary loans and retained closed source records, without admission."""
 from django.core.paginator import Paginator
-from django.db.models import BooleanField, Case, CharField, Exists, F, Func, OuterRef, Q, Value, When
+from django.db.models import BinaryField, BooleanField, Case, CharField, Exists, F, Func, OuterRef, Q, Value, When
 from django.db.models.fields.json import KT
-from django.db.models.functions import Cast, Concat, Replace
+from django.db.models.functions import Cast, Concat, Length, Replace
 
 from apps.tenant_apps.loans.models import HistoricalLoanEvidence, HistoricalLoanImport, PawnLoan
 from apps.tenant_apps.loans.models import current_tenant_workspace_id
@@ -38,7 +38,13 @@ def unadmitted_historical_records(workspace_id):
     bound_matches = origins.filter(source_id=OuterRef('binding'))
     old_matches = origins.filter(source_id=OuterRef('source_id'),
         old_id=OuterRef('source_id'), old_system=OuterRef('source_system'))
-    return rows.filter(~Exists(newer)).annotate(admitted=Exists(bound_matches) | Exists(old_matches)).filter(
+    material = Concat(Cast(Length(F('source_system')), CharField()), Value(':'), F('source_system'), F('source_id'))
+    closed_key = Concat(Value('closed:'), Func(Func(Func(material, Value('UTF8'), function='convert_to', output_field=BinaryField()),
+        function='sha256', output_field=BinaryField()), Value('hex'), function='encode', output_field=CharField()))
+    rows = rows.annotate(closed_binding=Case(When(source_system__startswith='legacy:', then=Value(None)),
+        default=closed_key, output_field=CharField()))
+    closed_matches = origins.filter(source_id=OuterRef('closed_binding'))
+    return rows.filter(~Exists(newer)).annotate(admitted=Exists(bound_matches) | Exists(old_matches) | Exists(closed_matches)).filter(
         Q(admitted=False) | Q(valid_binding=False))
 
 

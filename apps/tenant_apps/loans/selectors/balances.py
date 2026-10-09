@@ -26,7 +26,7 @@ class PawnLoanBalanceSelectorError(ValueError):
 class PawnLoanBalance:
     loan_id: int
     as_of_date: date
-    due_date: date
+    due_date: date | None
     principal_disbursed: Decimal
     principal_capitalized: Decimal
     principal_paid: Decimal
@@ -173,7 +173,7 @@ def calculate_pawn_loan_balance(
     total_due = principal_outstanding + interest_outstanding + fees_outstanding
     has_disbursal = totals["principal_disbursed"] + totals["opening_principal"] > ZERO
     financially_settled = has_disbursal and total_due == ZERO
-    if opening and opening["profile"] == "loan-terminal-evidence/1":
+    if opening and opening["profile"] in {"loan-terminal-evidence/1", "loan-closed-position-evidence/1"}:
         if len(events) != 1:
             raise PawnLoanBalanceSelectorError("A terminal checkpoint cannot invent subsequent financial history.")
         financially_settled = total_due == ZERO
@@ -193,9 +193,12 @@ def calculate_pawn_loan_balance(
         item.custody_state in resolved_custody_states
         for item in collateral_items
     )
-    due_date = (date.fromisoformat(opening["review"]["terms"]["maturity_date"]) if opening
+    minimal = opening and opening["profile"] == "loan-closed-position-evidence/1"
+    if minimal:
+        collateral_return_complete = opening["review"]["position"]["position"]["custody"] == "RETURNED_TO_BORROWER"
+    due_date = (None if minimal else date.fromisoformat(opening["review"]["terms"]["maturity_date"]) if opening
                 else _add_months(loan.loan_date, loan.tenure_months))
-    overdue_interest = interest_outstanding if as_of_date > due_date else ZERO
+    overdue_interest = interest_outstanding if due_date and as_of_date > due_date else ZERO
     current_interest = interest_outstanding - overdue_interest
     return PawnLoanBalance(
         loan_id=loan.pk,
@@ -226,7 +229,7 @@ def calculate_pawn_loan_balance(
         fees_outstanding=_money(fees_outstanding, quantum),
         total_due=_money(total_due, quantum),
         interest_method=getattr(policy_snapshot, "interest_method", None),
-        is_overdue=as_of_date > due_date and total_due > ZERO,
+        is_overdue=bool(due_date and as_of_date > due_date and total_due > ZERO),
         financially_settled=financially_settled,
         collateral_partially_returned=collateral_partially_returned,
         collateral_return_complete=collateral_return_complete,

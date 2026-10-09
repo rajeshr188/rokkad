@@ -17,7 +17,7 @@ class ServicingContract:
     origin_event_id: int | None
     origin_kind: str | None
     profile: str
-    original_date: date
+    original_date: date | None
     financial_history_from: date
     policy_snapshot_id: int | None
     interest_method: str | None
@@ -55,7 +55,7 @@ def resolve_servicing_contract(loan, *, as_of_date):
     """
     if current_tenant_workspace_id() is None or loan.workspace_id != current_tenant_workspace_id():
         raise ServicingContractError("Servicing requires the loan's active Workspace context.")
-    if type(as_of_date) is not date or as_of_date < loan.loan_date:
+    if type(as_of_date) is not date or (loan.loan_date is not None and as_of_date < loan.loan_date):
         raise ServicingContractError("Servicing history before the original loan date is unavailable.")
     events = tuple(loan.loan_events.all())
     openings = [event for event in events if event.event_kind == "MIGRATION_OPENING"]
@@ -78,6 +78,13 @@ def resolve_servicing_contract(loan, *, as_of_date):
         review = opening["review"]
         if as_of_date < origin.effective_date:
             raise ServicingContractError("Servicing history before the migration cutover is unavailable.")
+        if opening["profile"] == "loan-closed-position-evidence/1":
+            if len(events) != 1 or policy is not None:
+                raise ServicingContractError("Closed position requires its sole accepted checkpoint without calculation policy.")
+            return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,
+                profile="loan-closed-position/1", financial_history_from=origin.effective_date,
+                currency_quantum=None, rounding_scope=None, rounding_mode="NOT_APPLICABLE",
+                anniversary_rule="NOT_APPLICABLE", principal_reduction_rule="EARLIER_TRANSACTIONS_UNAVAILABLE")
         if opening["profile"] == "loan-terminal-evidence/1":
             if len(events) != 1 or policy is None or policy.basis != "RECORDED_CONTRACT" or policy.policy_version != 2:
                 raise ServicingContractError("Terminal position requires its sole checkpoint and frozen recorded agreement.")
@@ -159,7 +166,7 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
     continuation = resolve_loan_continuation(loan, as_of_date=as_of_date)
     contract = continuation.contract
     basis = "RECORDED_DEBT"
-    if contract.profile == "loan-terminal-position/1":
+    if contract.profile in {"loan-terminal-position/1", "loan-closed-position/1"}:
         return ServicingPosition(contract, continuation.recorded_balance, "VERIFIED_TERMINAL_POSITION",
             transaction_completeness(loan, as_of_date) if include_coverage else None, continuation)
     if (contract.checkpoint_period_number is not None and as_of_date == contract.financial_history_from):

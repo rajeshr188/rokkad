@@ -96,7 +96,7 @@ def export(request, loan_id):
         raise Http404("Loan history is unavailable.") from exc
     except HistoryError as exc:
         return render(request, "data_portability/loan_history_export_error.html", {"error": str(exc)}, status=400)
-    response = HttpResponse(content, content_type="application/zip" if filename.endswith(".zip") else "application/x-ndjson")
+    response = HttpResponse(content, content_type="application/zip" if filename.endswith(".zip") else "application/json" if filename.endswith(".json") else "application/x-ndjson")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 

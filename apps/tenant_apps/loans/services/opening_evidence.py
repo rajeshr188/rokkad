@@ -22,8 +22,14 @@ def read_opening_evidence(loan, event):
             payload.get("currency") != "INR" or payload.get("reversal") is not None):
         raise OpeningEvidenceError("Unsupported migration opening event envelope.")
     opening = payload["opening"]
-    if set(opening) != {"profile", "review", "item_mapping"} or opening["profile"] not in {PROFILE, "loan-terminal-evidence/1"}:
+    if set(opening) != {"profile", "review", "item_mapping"} or opening["profile"] not in {PROFILE, "loan-terminal-evidence/1", "loan-closed-position-evidence/1"}:
         raise OpeningEvidenceError("Unsupported migration opening evidence.")
+    if opening["profile"] == "loan-closed-position-evidence/1":
+        from .closed_position import read_closed_evidence
+        try:
+            return read_closed_evidence(loan, event)
+        except (ValueError, KeyError, TypeError) as exc:
+            raise OpeningEvidenceError(str(exc)) from exc
     review = opening["review"]
     if opening["profile"] == "loan-terminal-evidence/1":
         from .terminal_admission import read_terminal_review

@@ -21,6 +21,13 @@ SALT = "loans.archive-admission.review.v1"
 
 
 def archive_origin(evidence):
+    if not evidence.source_system.startswith("legacy:"):
+        from .closed_position import position_source_id
+        origin = m.HistoricalLoanImport.objects.select_related("loan").filter(workspace_id=evidence.workspace_id,
+            source_namespace=evidence.source_namespace, source_id=position_source_id(dict(namespace=str(evidence.source_namespace),
+                system=evidence.source_system, loan_id=evidence.source_id))).first()
+        if origin:
+            return origin
     return find_source_origin(workspace_id=evidence.workspace_id, namespace=evidence.source_namespace,
         source_id=evidence.source_id, borrower_source_system=evidence.source_system)
 
@@ -30,6 +37,7 @@ def source_snapshots(evidence):
     rows = []
     for row in m.HistoricalLoanEvidence.objects.filter(workspace_id=evidence.workspace_id,
             source_namespace=evidence.source_namespace,
+            source_system=evidence.source_system,
             source_id__in={evidence.source_id, binding, binding.partition(":")[2]}).order_by("pk"):
         try:
             candidate = source_binding_id(row.source_namespace, row.source_id, row.source_system)

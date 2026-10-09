@@ -24,7 +24,7 @@ ExposureComponent = ObligationAmount
 class PawnLoanExposure:
     loan_id: int
     as_of_date: date
-    original_principal: Decimal
+    original_principal: Decimal | None
     principal_repaid: Decimal
     principal_outstanding: Decimal
     recorded_interest: Decimal
@@ -67,6 +67,17 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
     continuation = plan.calculation if plan.adapter == "OPENING_CHECKPOINT" else None
     previews = plan.projection_periods
     projected_interest = plan.additional_interest
+    if position.contract.profile == "loan-closed-position/1":
+        zero = Decimal("0")
+        component = ExposureComponent(principal=zero, interest=zero, fees=zero)
+        return PawnLoanExposure(loan_id=loan.pk, as_of_date=as_of_date, original_principal=loan.principal_amount,
+            principal_repaid=zero, principal_outstanding=zero, recorded_interest=zero, projected_interest=zero,
+            fees_and_penalties=zero, due_now=component, overdue=component, recorded_total_due=zero,
+            total_economic_exposure=zero, cash_receivable_basis=zero, maturity_payoff=zero, ltv_exposure_basis=zero,
+            projection_periods=(), provenance=("accepted:loan-closed-position/1", "earlier-history:UNAVAILABLE"),
+            integrity_findings=(), ltv_basis_label="Closed zero-debt position",
+            principal_history_basis="VERIFIED_TERMINAL_POSITION", financial_history_from=position.contract.financial_history_from,
+            servicing_profile=position.contract.profile)
     active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
     if continuation and not balance.financially_settled and (active_schedule is None or active_schedule.source_event_id != continuation.opening_event_id):
         raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")

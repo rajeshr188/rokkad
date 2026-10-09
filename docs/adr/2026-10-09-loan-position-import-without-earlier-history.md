@@ -15,6 +15,11 @@ Lakshmi: **released means the loan was completed, no debt remains, and collatera
 was physically handed back to the borrower.** This is a source-scoped business
 interpretation, not a universal meaning for arbitrary external release fields.
 
+The owner additionally confirms that the 190 JCL records with an earlier
+owner-confirmed closed/zero position and no release row can be considered closed
+with collateral returned to the borrower. Preserve unknown closure dates; this
+confirmation adds custody knowledge without inventing release transactions.
+
 ## Decision
 
 An incoming loan does not need earlier receipts, approval, payout, accrual or
@@ -66,6 +71,11 @@ Exports and fresh-Workspace imports preserve accepted position, known original
 details, unavailable-history declarations, provenance and later Rokkad activity.
 Do not reinterpret unavailable receipts as no receipts, or unknown collected
 interest as zero. Existing published profiles retain their old meanings.
+
+IP-03 implements the narrowly guarded ordinary closed-position basis in the same
+PawnLoan/event/provenance tables, with common position readers and versioned
+source/media portability. Its marker is a persistence basis, not a new product
+or lifecycle state. See the [delivery record](../implementation/loan-position-import-ip03.md).
 
 See the [ordered delivery plan](../plans/loan-position-import.md). This decision
 authorizes the work; it does not claim unperformed schema, conversion, recovery,

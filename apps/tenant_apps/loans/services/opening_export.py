@@ -55,6 +55,9 @@ def export_loan_data(*, workspace_id, actor, loan_id):
     Company.all_objects.select_for_update().get(pk=workspace_id)
     _access(workspace_id, actor)
     loan = m.PawnLoan.objects.select_for_update().get(workspace_id=workspace_id, pk=loan_id)
+    if loan.is_imported_closed_position:
+        from .closed_position_portability import export_closed_position
+        return export_closed_position(workspace_id=workspace_id, actor=actor, loan_id=loan_id)
     wider = (loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists()
         or loan.loan_events.filter(payload__opening__profile="loan-terminal-evidence/1").exists()
         or loan.loan_events.filter(event_kind__in=["RENEWAL_OPENING", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY", "REVERSAL"]).exists()

@@ -9,6 +9,7 @@ from apps.tenant_apps.loans.services.portability_validation import PortabilityVa
 
 SOURCE_NAMESPACE = "6ca968d6-2647-4dbb-8e39-24f0c1a12ed6"
 SOURCE_SCHEMAS = {"jcl", "jsk", "lakshmipawnbroker"}
+OWNER_RETURN_REFERENCE = "owner-confirmation-2026-10-09:jcl-190-owner-closed-zero-all-collateral-returned-to-borrower"
 RELEASE_MEANING_REFERENCE = "owner-confirmation-2026-10-09:released-zero-debt-all-collateral-returned-to-borrower"
 
 
@@ -51,8 +52,10 @@ def prepare_closed_position(document, *, as_of, release_meaning_reference):
     elif (facts["raw_status"] == "NO_RELEASE_ROW; OWNER_REPORTS_CLOSED"
             and facts["reported_balance"] is not None and Decimal(facts["reported_balance"]) == 0
             and any(row.get("owner_decision") for row in document["source_records"])):
-        # An earlier zero-debt decision does not acquire today's release-row custody meaning.
+        # Separate owner confirmation covers JCL's 190 no-release-row cohort only.
         basis, custody, reference = "OWNER_CLOSED_POSITION", "UNKNOWN", "Retained owner closed-position decision; original closure date and handover unavailable."
+        if schema == "jcl":
+            custody, reference = "RETURNED_TO_BORROWER", OWNER_RETURN_REFERENCE
     else:
         raise ValueError("Resolve ambiguous release claims or supply an accepted closed-position decision.")
     candidate = dict(profile=closed_position_contract.PROFILE,

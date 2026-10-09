@@ -47,7 +47,7 @@ def loan_release_inventory(*, as_of_date, summary_only=False):
                 earlier_financial_history_available=contract.origin_kind != "MIGRATION_OPENING")
             quality = loan_evidence_quality(loan, as_of_date=as_of_date,
                 calculation_status="SUPPORTED", financial_history_from=contract.financial_history_from,
-                principal_history_basis="VERIFIED_TERMINAL_POSITION" if contract.profile == "loan-terminal-position/1"
+                principal_history_basis="VERIFIED_TERMINAL_POSITION" if contract.profile in {"loan-terminal-position/1", "loan-closed-position/1"}
                     else "OPENING_CHECKPOINT" if contract.origin_kind == "MIGRATION_OPENING" else "ORIGINAL_PAYOUT")
         # Calculation, books and valuation are independent. No stored risk refresh.
         row["transactions"] = quality["transactions"]

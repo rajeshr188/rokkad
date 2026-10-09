@@ -19,6 +19,11 @@ def get_pawn_loan_series_navigation(loan: PawnLoan) -> PawnLoanSeriesNavigation:
         workspace_id=loan.workspace_id,
         series_id=loan.series_id,
     )
+    if loan.loan_date is None:
+        return PawnLoanSeriesNavigation(
+            previous=series_loans.filter(loan_date__isnull=True, loan_number__lt=loan.loan_number).order_by("-loan_number", "-pk").first()
+                or series_loans.filter(loan_date__isnull=False).order_by("-loan_date", "-loan_number", "-pk").first(),
+            next=series_loans.filter(loan_date__isnull=True, loan_number__gt=loan.loan_number).order_by("loan_number", "pk").first())
     earlier = Q(loan_date__lt=loan.loan_date) | Q(
         loan_date=loan.loan_date,
         loan_number__lt=loan.loan_number,

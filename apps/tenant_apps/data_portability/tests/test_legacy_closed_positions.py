@@ -51,13 +51,14 @@ class LegacyClosedPositionTests(SimpleTestCase):
         self.assertEqual(prepared["retained_evidence"]["facts"]["payments"], value["facts"]["payments"])
         self.assertNotIn("events", prepared)
 
-    def test_retained_owner_closed_zero_position_does_not_assert_return_or_closure_date(self):
+    def test_jcl_owner_closed_zero_position_uses_new_return_confirmation_without_inventing_date(self):
         value = retained(); value["source_records"].pop()
         value["source_records"].append(dict(owner_decision="Owner confirmed closed; zero remaining debt."))
         value["facts"].update(raw_status="NO_RELEASE_ROW; OWNER_REPORTS_CLOSED", reported_balance="0", closed_on=None)
         prepared = self.prepare(value)
         self.assertEqual(prepared["position"]["basis"], "OWNER_CLOSED_POSITION")
-        self.assertEqual(prepared["position"]["custody"], "UNKNOWN")
+        self.assertEqual(prepared["position"]["custody"], "RETURNED_TO_BORROWER")
+        self.assertEqual(prepared["position"]["evidence_reference"], adapter.OWNER_RETURN_REFERENCE)
         self.assertIsNone(prepared["loan"]["closed_on"])
         self.assertEqual(prepared["position"]["as_of"], "2026-10-09")
 

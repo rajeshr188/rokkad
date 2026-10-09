@@ -37,12 +37,12 @@ def loan_evidence_quality(loan, *, as_of_date, calculation_status=None, calculat
             if events is not None else loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING")).exists())
         if admitted:
             financial_history_from = opening.effective_date if opening else loan.loan_date
-            principal_history_basis = ("VERIFIED_TERMINAL_POSITION" if opening and opening.payload.get("opening", {}).get("profile") == "loan-terminal-evidence/1"
+            principal_history_basis = ("VERIFIED_TERMINAL_POSITION" if opening and opening.payload.get("opening", {}).get("profile") in {"loan-terminal-evidence/1", "loan-closed-position-evidence/1"}
                 else "OPENING_CHECKPOINT" if opening else "ORIGINAL_PAYOUT")
     return dict(
-        assessment=dict(status=assessment, as_of_date=snapshot.as_of_date if snapshot else None),
+        assessment=dict(status="NOT_REQUIRED" if getattr(loan, "is_imported_closed_position", False) else assessment, as_of_date=snapshot.as_of_date if snapshot else None),
         transactions=transaction_completeness(loan, as_of_date).evidence(),
-        valuation=dict(status="ELIGIBLE" if eligible else "UNAVAILABLE" if current else "UNASSESSED",
+        valuation=dict(status="NOT_REQUIRED" if getattr(loan, "is_imported_closed_position", False) else "ELIGIBLE" if eligible else "UNAVAILABLE" if current else "UNASSESSED",
             blockers=coverage.get("blockers", []), items=source.get("evidence", [])),
         calculation=dict(status=calculation, message=calculation_message,
             profile=financial.get("servicing_profile")),

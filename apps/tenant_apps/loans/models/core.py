@@ -566,6 +566,7 @@ class LoanNumberSequence(WorkspaceOwnedModel):
 
 
 class PawnLoan(models.Model):
+    is_imported_closed_position = models.BooleanField(default=False, editable=False)
     creation_submission_id = models.UUIDField(null=True, blank=True, editable=False)
     # Current operational evidence; earlier attempts remain on the history FKs.
     policy_snapshot = models.ForeignKey(
@@ -605,6 +606,7 @@ class PawnLoan(models.Model):
     )
     product_version = models.ForeignKey(
         "loans.LoanProductVersion",
+        null=True,
         on_delete=models.PROTECT,
         related_name="pawn_loans",
     )
@@ -615,10 +617,10 @@ class PawnLoan(models.Model):
         default=PawnLoanState.DRAFT.value,
         db_index=True,
     )
-    principal_amount = models.DecimalField(max_digits=18, decimal_places=2)
-    monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6)
-    loan_date = models.DateField(default=timezone.localdate, db_index=True)
-    tenure_months = models.PositiveIntegerField(default=3)
+    principal_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True)
+    monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6, null=True)
+    loan_date = models.DateField(default=timezone.localdate, db_index=True, null=True)
+    tenure_months = models.PositiveIntegerField(default=3, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
@@ -656,6 +658,14 @@ class PawnLoan(models.Model):
             models.CheckConstraint(
                 condition=Q(tenure_months__gt=0),
                 name="loans_pawn_tenure_positive",
+            ),
+            models.CheckConstraint(
+                condition=(Q(is_imported_closed_position=True, state="CLOSED", product_version__isnull=True,
+                    policy_snapshot__isnull=True, disbursal_snapshot__isnull=True, license_revision__isnull=True)
+                    | Q(is_imported_closed_position=False, principal_amount__isnull=False,
+                        monthly_interest_rate__isnull=False, tenure_months__isnull=False,
+                        loan_date__isnull=False, product_version__isnull=False)),
+                name="loans_pawn_position_or_complete",
             ),
         ]
         indexes = [
@@ -698,6 +708,14 @@ class PawnLoan(models.Model):
                 errors["product_version"] = (
                     "Product version must belong to the loan workspace."
                 )
+        if self.is_imported_closed_position:
+            if self.state != "CLOSED" or any(getattr(self, key) is not None for key in (
+                    "product_version_id", "policy_snapshot_id", "disbursal_snapshot_id", "license_revision_id")):
+                errors["state"] = "Accepted closed positions cannot acquire a new operational agreement."
+        else:
+            for key in ("product_version_id", "principal_amount", "monthly_interest_rate", "loan_date", "tenure_months"):
+                if getattr(self, key) is None:
+                    errors[key.removesuffix("_id")] = "Ordinary origination requires complete loan terms."
         if errors:
             raise ValidationError(errors)
 

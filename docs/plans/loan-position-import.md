@@ -19,13 +19,17 @@ JCL, JSK and Lakshmi source; external adapters need their own declared meaning.
 | --- | --- | --- |
 | IP-01 | Document minimal active/closed position contracts and source interpretation; preserve complete-history restoration | Contract and pure source adapter implemented locally; 34 focused checks pass |
 | IP-02 | Read-only retained-data inventory: identities, exact Party/register mappings, known fields, duplicates and contradictions; prepare eligible/exception cohorts | Read-only rehearsal complete: 39,196 candidates and 19 date-order exceptions; no admissions |
-| IP-03 | Minimal ordinary closed-position admission, optional original terms, shared balances/details/source media and versioned portability; native and active guards retained | Pending IP-02 findings |
+| IP-03 | Minimal ordinary closed-position admission, optional original terms, shared balances/details/source media and versioned portability; native and active guards retained | Implemented locally; 150 fresh-PostgreSQL checks pass; production migration/conversion remains IP-04 |
 | IP-04 | Reviewed, resumable, idempotent eligible batch conversion through the admission service; source evidence retained and existing loans unchanged | Pending tested admission |
 | IP-05 | Ordinary browsing and source access; simplify/archive-directory role only after records accounted for; measure and correct search queries | Pending conversion coverage |
 
 See the [IP-01/IP-02 delivery and inventory](../implementation/loan-position-import-ip01-ip02.md).
-The 190 earlier owner-closed/zero JCL claims retain unknown closure date and
-physical handover, independently of the release-row interpretation.
+The owner subsequently confirms the 190 earlier owner-closed/zero JCL records
+also had all collateral returned. Their unknown closure dates remain unknown.
+IP-03 records that separate source-scoped attestation; it does not add a release
+row or mutate the retained documents. See the [IP-03 delivery](../implementation/loan-position-import-ip03.md).
+The updated read-only classification still has 39,196 candidates and 19 date-order
+exceptions, with unchanged source document fingerprints.
 
 Do not turn IP-02 into receipt reconstruction for every old loan. Classify known
 position and identity, with specific exceptional contradictions. No individual
@@ -63,3 +67,8 @@ customer activity. Keep a compatible reader for nullable imported details.
 Search correction remains measured work, not a reason to manufacture financial
 history or erase source evidence. Related deferred findings are in
 [FW-022](future-work.md#fw-022-main-loans-list-search-performance).
+
+IP-05 must also review default directory ordering: real admission timestamps for
+old closed loans must not bury currently running loans beneath a large batch of
+newly admitted old records. Preserve the true entered-at timestamp; choose clear
+browsing defaults/order without changing source dates or financial history.

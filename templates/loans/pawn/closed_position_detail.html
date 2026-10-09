@@ -1,0 +1,29 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}{{ loan.loan_number }}{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; Loans</a>
+<h1 class="h3 mt-3">{{ loan.loan_number }}</h1>
+<p><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}">{{ loan.borrower.display_name }}</a> &middot; {{ loan.license.license_number }} / {{ loan.series.pawn_display_name }}</p>
+<section class="alert alert-success">
+ <h2 class="h5">Closed &mdash; accepted zero-debt position</h2>
+ <p class="mb-1">No principal, interest or fees remain as of {{ position_as_of|date:"d/m/Y" }}.</p>
+ <p class="mb-0">{% if returned %}All collateral returned to the borrower.{% else %}Collateral handover is unknown in the supplied source.{% endif %} Live loan health monitoring is not required for this closed loan.</p>
+</section>
+<dl class="row">
+ <dt class="col-sm-4">Original loan date</dt><dd class="col-sm-8">{{ loan.loan_date|date:"d/m/Y"|default:"Unknown" }}</dd>
+ <dt class="col-sm-4">Closure date</dt><dd class="col-sm-8">{{ closed_on|date:"d/m/Y"|default:"Unknown" }}</dd>
+ <dt class="col-sm-4">Original principal</dt><dd class="col-sm-8">{% if loan.principal_amount != None %}₹{{ loan.principal_amount|indian_money }}{% else %}Unknown{% endif %}</dd>
+ <dt class="col-sm-4">Monthly interest rate</dt><dd class="col-sm-8">{% if loan.monthly_interest_rate != None %}{{ loan.monthly_interest_rate }}%{% else %}Unknown{% endif %}</dd>
+ <dt class="col-sm-4">Agreed tenure</dt><dd class="col-sm-8">{% if loan.tenure_months %}{{ loan.tenure_months }} months{% else %}Unknown{% endif %}</dd>
+ <dt class="col-sm-4">Entered into Rokkad</dt><dd class="col-sm-8">{{ loan.created_at|date:"d/m/Y, H:i T" }}</dd>
+</dl>
+<section class="alert alert-info"><h2 class="h5">Earlier financial history unavailable</h2><p class="mb-0">Earlier payouts, receipts, interest collected and cash totals are unknown. This loan records an accepted closed position; it does not reconstruct those transactions.</p></section>
+<details class="mb-3"><summary>Accepted source and position basis</summary><p class="mt-2 text-break">{{ position.position.evidence_reference }}</p><p class="text-break">{{ position.source.system }} / {{ position.source.loan_id }}</p></details>
+{% if source_details %}
+<h2 class="h5">Retained source records</h2><p>Amounts and other details below are preserved source values. They do not establish the original agreement or a complete financial history.</p>
+{% for group, records in source_details.source_groups.items %}{% if records %}<details class="mb-3"><summary>{{ group|capfirst }} ({{ records|length }})</summary>{% for record in records %}<h3 class="h6 mt-3">{{ record.reference }}</h3><dl class="row">{% for field in record.fields %}<dt class="col-sm-5">{{ field.label }}</dt><dd class="col-sm-7 text-break">{{ field.value|default_if_none:"Unknown" }}</dd>{% endfor %}</dl>{% endfor %}</details>{% endif %}{% endfor %}
+{% endif %}
+{% if attachments %}<h2 class="h5">Source photographs and documents</h2><div class="d-flex flex-wrap gap-3 mb-4">{% for media in attachments %}<a href="{% url 'workspace_portability:archive_attachment' request.workspace.slug evidence.public_id media.pk %}"><img width="160" height="120" class="img-thumbnail object-fit-cover" loading="lazy" src="{% url 'workspace_portability:archive_attachment' request.workspace.slug evidence.public_id media.pk %}?inline=1" alt="Retained source image"><span class="d-block small">{{ media.original_filename }}</span>{% if media.is_blank_legacy_image %}<span class="d-block small">Blank source image</span>{% endif %}</a>{% endfor %}</div>{% endif %}
+{% if can_export %}<form method="post" action="{% url 'workspace_portability:loan_export' request.workspace.slug loan.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Export loan position and source evidence</button></form>{% endif %}
+{% endblock %}

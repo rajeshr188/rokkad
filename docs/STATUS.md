@@ -7,6 +7,30 @@ tags: [status, architecture]
 
 # Status
 
+## IP-03 closed-position admission implemented locally (9 October)
+
+The owner confirms the 190 JCL owner-closed/zero records without release rows
+also had their collateral returned. The source adapter records this separate
+confirmation and preserves unknown closure dates. Refreshed restricted read-only
+classification retains 39,196 candidates and 19 date conflicts with unchanged
+source fingerprints; no production business records are changed.
+
+Implement narrowly guarded ordinary CLOSED admission without dummy original
+principal/rate/date/tenure/product or monitoring policy. Owner review, exact
+source/Party/series identity, numbering, source snapshot conflicts and immutable
+provenance are checked. One accepted zero checkpoint replaces no earlier cash
+events; common balances/exposure/coverage/reports and ordinary detail/download
+recognise it. Source records/media remain attached and versioned file portability
+supports fresh destination mappings. Existing native/paper/active constraints and
+older wire profiles are preserved. See the [IP-03 delivery](implementation/loan-position-import-ip03.md).
+
+All 150 fresh-PostgreSQL checks pass, including restricted-role guard/isolation,
+ordinary browsing/download and fresh-Workspace source-media restore. Migration
+consistency reports no changes. Owner-only migration 0065 is not applied locally
+to business data or in production. Reviewed
+batch conversion is IP-04; directory consolidation/search correction is IP-05.
+Unrelated billing work remains outside this slice.
+
 ## Position-only loan import selected; IP-01/IP-02 delivered (9 October)
 
 The owner confirms the old source's RELEASED means completed loan, zero debt and

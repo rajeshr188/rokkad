@@ -12,7 +12,8 @@ def transaction_fingerprint(loan, *, events=None, state=None):
     material = dict(state=loan.state if state is None else state, events=rows, contract={key: str(getattr(loan, key)) for key in (
         "borrower_id", "loan_number", "loan_date", "principal_amount", "monthly_interest_rate", "tenure_months", "policy_snapshot_id")})
     for key in ("principal_amount", "monthly_interest_rate"):
-        material["contract"][key] = format(Decimal(material["contract"][key]).normalize(), "f")
+        if material["contract"][key] != "None":
+            material["contract"][key] = format(Decimal(material["contract"][key]).normalize(), "f")
     return hashlib.sha256(json.dumps(material, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -52,6 +53,12 @@ class TransactionCompleteness:
 
 
 def transaction_completeness(loan, as_of_date):
+    if getattr(loan, "is_imported_closed_position", False):
+        from apps.tenant_apps.loans.services.closed_position import read_position
+        position = read_position(loan)
+        return TransactionCompleteness("TERMINAL_POSITION", True, False,
+            date.fromisoformat(position["position"]["as_of"]), None,
+            "Closed zero-debt position accepted. Earlier receipts, payout cash and collection totals are unavailable; no complete transaction history is claimed.")
     cached = getattr(loan, "_prefetched_objects_cache", {})
     terminal = (next((e for e in cached["loan_events"] if e.payload.get("opening", {}).get("profile") == "loan-terminal-evidence/1"), None)
         if "loan_events" in cached else loan.loan_events.filter(payload__opening__profile="loan-terminal-evidence/1").first())

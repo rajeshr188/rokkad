@@ -69,7 +69,7 @@ def resolve_loan_continuation(loan, *, as_of_date, include_legacy_projection=Fal
     eligible = False
     adapter = "RECORDED_ONLY"
     rule = "actual-outstanding-daily-v1"
-    if contract.profile == "loan-terminal-position/1":
+    if contract.profile in {"loan-terminal-position/1", "loan-closed-position/1"}:
         adapter, eligible, rule = "VERIFIED_TERMINAL_POSITION", False, contract.profile
     elif contract.origin_kind == "MIGRATION_OPENING":
         from apps.tenant_apps.loans.services.opening_continuation import preview_opening_collection

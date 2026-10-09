@@ -10,10 +10,13 @@ tags: [loans, constraints, invariants, portability, audit]
 The owner accepts [position-only ordinary loan import](../adr/2026-10-09-loan-position-import-without-earlier-history.md)
 on 9 October. Earlier financial history is optional. Active loans need an accepted
 continuation position; closed records need an accepted zero-debt position rather
-than original calculation/monitoring settings. IP-01/IP-02 implement input
-preparation and classify retained records read-only; ordinary admission and
-conditional persistence changes remain pending. Native and existing active-loan
-guards are unchanged. See the [contract](../contracts/loan-closed-position-v1.md).
+than original calculation/monitoring settings. IP-03 now implements guarded
+ordinary closed admission with absent original terms/product, a sole accepted
+zero checkpoint, common readers and source/media export/restore. Native, direct,
+paper and active loans retain complete-term requirements. Ordinary financial
+history is not fabricated. Existing older profiles remain frozen. Production
+conversion is IP-04. See the [contract](../contracts/loan-closed-position-v1.md)
+and [IP-03 delivery](../implementation/loan-position-import-ip03.md).
 
 The September audit below retains its original baseline. LC-05 now adds versioned
 actual paper fee/item evidence, multi-item archive admission, delegated preparation,

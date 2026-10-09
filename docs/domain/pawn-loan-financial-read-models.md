@@ -10,6 +10,16 @@ related:
 
 # PawnLoan Financial Read Models
 
+IP-03 adds the minimal loan-closed-position/1 admission basis. It is an ordinary
+CLOSED PawnLoan whose unavailable original principal/date/rate/tenure/product
+remain unknown, with no calculation or monitoring policy invented. The sole
+zero checkpoint establishes debt/exposure at the accepted as_of date; earlier
+positions, lifetime cash and collected interest are unavailable. The event date
+does not assert an unknown closure or handover date. Accepted returned custody
+and unknown custody remain distinct. No financial servicing or reopening of this
+position-only record is enabled. Native/direct/paper and active continuation
+retain their existing contracts. See [IP-03](../implementation/loan-position-import-ip03.md).
+
 Individual and bulk completed closures share canonical full settlement and the
 recorded-history-closure/1 basis. Financial closure does not by itself prove
 physical cash or customer return. Unspecified returns retain PAPER_CLOSED and

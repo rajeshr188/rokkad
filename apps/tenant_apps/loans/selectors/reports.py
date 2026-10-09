@@ -402,6 +402,12 @@ def get_pawn_party_statement(*, party_id: int, as_of_date: date) -> PawnPartySta
 
 def _loan_issues(loan, events, collateral, balance):
     issues = []
+    if getattr(loan, "is_imported_closed_position", False) and balance and balance.financially_settled:
+        if not balance.collateral_return_complete:
+            issues.append(_issue("IMPORTED_CLOSED_HANDOVER_UNKNOWN", loan,
+                "Closed zero-debt position accepted; physical handover was not supplied.", severity="WARNING",
+                action="Retain unknown handover unless supported source evidence becomes available."))
+        return issues
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value} and not any(
         event.event_kind
         in {

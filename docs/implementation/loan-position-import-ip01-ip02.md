@@ -86,6 +86,15 @@ explicit review before admission. Missing receipts or structured items do not
 exclude the remaining records. Normalized original principal is unknown in all
 39,215; raw loan/item amounts remain retained source fields.
 
+## Later owner confirmation during IP-03
+
+The owner subsequently confirms returned collateral for the 190 JCL no-release-row
+owner-closed/zero records. The read-only classifier is refreshed: the same 39,196
+candidates now all have returned custody, and the same 19 date conflicts remain
+held. Source fingerprints above are unchanged. Unknown closure dates remain
+unknown. The initial table documents the earlier state of knowledge, before this
+additional confirmation. See [IP-03](loan-position-import-ip03.md).
+
 ## Validation and next slice
 
 34 focused SimpleTestCase checks pass across the new contract/adapter and existing

@@ -26,12 +26,12 @@ def interest_contract_inventory(*, as_of_date=None):
         shared = (profile in ("loan-opening-review/3", "loan-opening-review/4", "loan-opening-review/5") if origin and origin.event_kind == "MIGRATION_OPENING"
                   else profile == "recorded-anniversary/3" if policy and policy.basis == "RECORDED_CONTRACT"
                   else bool(policy and policy.policy_version == 2))
-        terminal = profile == "loan-terminal-review/1"
+        terminal = profile in {"loan-terminal-review/1", "loan-closed-position-admission/1"}
         financial = [event for event in events if event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING")]
         blocker, contract = None, None
         if origin:
             try:
-                contract = resolve_servicing_contract(loan, as_of_date=max(loan.loan_date, origin.effective_date))
+                contract = resolve_servicing_contract(loan, as_of_date=max(loan.loan_date or origin.effective_date, origin.effective_date))
             except (ServicingContractError, ValueError) as exc:
                 blocker = str(exc)
         status = ("INVALID_ORIGIN" if origin is None else "INVALID_CONTRACT" if blocker else

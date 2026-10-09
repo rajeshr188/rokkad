@@ -7,13 +7,25 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+IP-03 implements ordinary minimal CLOSED position admission locally in the same
+PawnLoan/event/provenance tables. Only this immutable evidenced basis may omit
+original principal/rate/date/tenure/product; native/direct/paper/active terms stay
+required. A sole zero MIGRATION_OPENING establishes the accepted as_of position,
+not a fabricated closure, payout, receipt or return event. Shared readers,
+ordinary details/source media and versioned closed-position file portability
+preserve unknown earlier history. Exact Party/source/series identity, current
+owner authority, numbering and reviewed snapshot checks remain required. Do not
+convert or deploy merely because the local service exists; IP-04 is reviewed
+resumable conversion, IP-05 directory/search work. See [IP-03](implementation/loan-position-import-ip03.md).
+
 On 9 October the owner selects position-only import: ordinary active loans need
 an accepted continuation position, closed imports need a known closed position;
 earlier transaction history is optional. RELEASED in the reviewed legacy
 installation means zero debt and all collateral returned to the borrower.
 IP-01/IP-02 deliver a tested closed-position input/adapter and read-only census:
 39,196 candidates, 19 date-order exceptions. 190 JCL records use an earlier
-owner-closed/zero basis without release rows; their date/return remain unknown.
+owner-closed/zero basis without release rows; the owner subsequently confirms
+all collateral returned for those 190. Their closure dates remain unknown.
 No ordinary admission or conversion is implemented by these first slices. Do not
 fill required old terms with dummy values. Follow the
 [accepted decision](adr/2026-10-09-loan-position-import-without-earlier-history.md)
@@ -25,8 +37,9 @@ loan to evidence and deliberately leaves normalized principal/balance unknown;
 it does not test individual reconstructability. Useful amounts and payment splits
 may survive in raw source rows. Supported paper loans remain ordinary loans;
 archive admission requires source-backed reconciliation, while browsing does not.
-Verified closed-position admission can establish an ordinary closed loan with
-earlier receipts/payout unavailable; it needs original terms and zero-debt evidence.
+The older verified terminal admission requires original terms with zero-debt
+evidence. IP-03 adds a distinct minimal closed-position contract permitting
+unknown original terms; both preserve unavailable earlier receipts/payout.
 Standalone search correction is deferred in FW-022; the later selected import
 plan includes directory simplification/benchmarking after conversion. See the
 [origin review](implementation/historical-loan-origin-review-20261009.md).
