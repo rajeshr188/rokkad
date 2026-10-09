@@ -1,11 +1,22 @@
 ---
 status: active
 owner: project
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [agents, context, architecture]
 ---
 
 # Agent Memory
+
+Routine paper entry supplies dated standing terms without a repeated agreement
+section. One collapsed Additional details control retains actual exceptions,
+optional payout facts and licence mapping; focused review shows the full agreement.
+Missing dated setup or current monitoring remains actionable. New routine entry
+automatically maps source licence evidence only when one retained dated revision
+matches the selected series/licence and original date. Ambiguous/unknown evidence
+stays unspecified; staff can select actual retained evidence manually. Signed
+confirmations/retries retain their reviewed mapping. Older submissions, archived
+admission and saved drafts retain their previous evidence semantics. No new
+financial writer or servicing contract is introduced.
 
 Routine paper origination uses two visible entry/review steps with the same signed
 recorded-history confirmation. Edit restores existing fields and requires a fresh

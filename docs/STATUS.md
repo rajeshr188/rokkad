@@ -1,11 +1,41 @@
 ---
 status: active
 owner: project
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [status, architecture]
 ---
 
 # Status
+
+## Routine paper entry simplification (9 October, local)
+
+The repeated Standing agreement section is removed from routine New loan entry.
+Standing tenure and item rates still come from dated setup; financial agreement,
+deductions and proceeds remain in the focused review. One collapsed Additional
+details control holds actual terms exceptions, optional payout facts and licence
+mapping. Missing original agreement or current monitoring setup remains visible
+with setup links and supported recovery. Missing second-item rate is also surfaced;
+a percentage fee awaiting entered principal is not labelled missing setup.
+
+New routine paper entry selects licence evidence automatically only if exactly one
+retained revision covers the selected series/licence and original date. Missing,
+ambiguous and unknown legacy validity remain unspecified. Manual evidence selection
+remains available and is validated by the existing admission service. An explicit
+presentation opt-in preserves older submission fingerprints; signed confirmations
+and successful retries retain the reviewed mapping despite later setup additions.
+Saved drafts and archive admission are unchanged. Date/series refresh preserves
+explicit actual terms and open optional sections, including the licence controls.
+
+**66 distinct Django checks pass** across routine entry, standing agreement,
+multi-item servicing and direct review. The affected routine checks pass again
+after the optional-section retention fix. Eight rendered-fixture Chromium scenarios
+cover desktop/mobile routine presentation, tenure recovery, photo-preserving
+review/edit/confirmation, failed/stale review and no-JavaScript editing. Three actual
+localhost smoke scenarios pass on desktop/mobile and without JavaScript, including
+evidence-mode changes, series defaults and retained fields. Localhost
+8083 uses a scoped overlay on its fictional database; no production deployment or
+financial data correction is performed. Verification artifacts and source-only
+fallback are under `.tmp/paper-entry-simplification-20261009/`.
 
 ## Paper entry tenure guidance and focused review (8 October, local)
 

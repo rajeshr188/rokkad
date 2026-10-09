@@ -1,7 +1,7 @@
 ---
 status: implemented
 owner: project
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [loans, origination, editor, verification]
 related: [../plans/loan-origination-completion.md]
 ---
@@ -9,6 +9,29 @@ related: [../plans/loan-origination-completion.md]
 # LO-02: shared routine New loan editor
 
 ## Result and boundaries
+
+On 9 October routine paper entry removes the repeated Standing agreement section.
+The main fields remain customer, series/product/date/tenure, original number/source
+and collateral allocations. One collapsed Additional details control contains
+actual terms exceptions, optional payout facts and licence evidence. Complete
+agreement and deductions stay in focused review. Missing setup is actionable;
+current monitoring and rounding retain their supported fallback controls. A missing
+rate on another item also prompts setup; percentage fees await the entered principal.
+
+`paper_source_license_revision` resolves only one dated retained revision in the
+selected Workspace/series/licence. Ambiguity and unknown legacy validity remain
+blank. Routine forms opt in to this read-only convenience through a presentation
+field stripped before canonical normalization; old POSTs without it keep their
+fingerprints. A signed review retains its posted mapping, including blank, rather
+than remapping after later setup changes. Explicit manual choice remains scoped and
+dated by admission validation. Saved drafts and archive entry do not auto-map.
+The existing financial services freeze all reviewed facts as before. No model,
+migration, calculation profile, approval requirement or posting service is changed.
+
+Terms refresh now also updates licence evidence while actual agreement exceptions
+remain intact. Open optional sections survive refresh. Native Apply controls work
+without JavaScript. Both direct-entry and paper-entry regression checks, including
+financial reconciliation, frozen agreement and exact retry, pass; see Status.
 
 The 8 October tenure refinement explains the dated standing source beside tenure.
 When no tenure is configured, agreement details open with a targeted warning;
@@ -31,8 +54,8 @@ draft submission/economic preview commands. Paper entry asks for the original
 number/source, supplies dated standing terms, permits explained actual exceptions
 and optionally records known payments or closure. It does not reapprove the original
 advance using current prices. The shared tenure field is supplied from setup and
-editable for actual paper exceptions. The standing agreement remains a summary
-with additional details collapsed, rather than routine repeated terms questions.
+editable for actual paper exceptions. Agreement details are shown in review,
+with exceptional entry controls collapsed under Additional details.
 
 On 8 October the paper original-number field gained selected-series guidance:
 configured prefix/digit width and next automatic number, refreshed through the

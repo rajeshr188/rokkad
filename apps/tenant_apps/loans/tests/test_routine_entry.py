@@ -56,6 +56,8 @@ class RoutineEntryTests(WorkspaceTestCase):
         client, path = self._entry_client()
         for purpose in ("direct", "paper"):
             page = client.get(path + "?entry=" + purpose)
+            if purpose == "direct":
+                self.assertNotContains(page, "data-paper-additional-details")
             self.assertTemplateUsed(page, "loans/pawn/routine_entry.html")
             self.assertContains(page, "data-routine-loan-editor")
             self.assertContains(page, 'id="loan-details"')
@@ -86,10 +88,107 @@ class RoutineEntryTests(WorkspaceTestCase):
         selected = client.get(path + f"?entry=paper&series={self.series.pk}")
         self.assertIsNotNone(selected.context["form"].terms)
         self.assertNotContains(selected, "data-paper-monitoring-attention")
-        self.assertContains(selected, "Monitoring supplied by setup")
+        self.assertContains(selected, 'name="monitoring_method"')
+        self.assertNotContains(selected, '<h2 class="h5">Standing agreement</h2>')
+        self.assertContains(selected, 'data-paper-additional-details >')
         self.assertEqual(counts, (m.PawnLoan.objects.count(), m.LoanMonitoringPolicy.objects.count()))
         self.seq.refresh_from_db()
         self.assertEqual(self.seq.next_number, 1)
+
+    def test_missing_second_item_rate_prompts_setup_and_refuses_review(self):
+        from datetime import timedelta
+        client, path = self._entry_client()
+        page = client.get(path + "?entry=paper")
+        data = self.paper_facts(page)
+        m.PawnMetalInterestRatePolicy.objects.filter(workspace=self.tenant, metal="SILVER").update(
+            effective_from=self.today + timedelta(days=1))
+        result = client.post(path, data)
+        self.assertContains(result, "data-paper-agreement-attention")
+        self.assertTrue(result.context["paper_additional_open"])
+        self.assertIsNone(result.context["review"])
+        self.assertEqual(result.context["formset"][1]["allocated_principal"].value(), "4000")
+
+    def license_evidence(self, **overrides):
+        from datetime import timedelta
+        values = dict(workspace=self.tenant, license=self.series.license,
+            revision_number=self.series.license.revisions.count() + 1, kind="INITIAL",
+            name="Retained licence", license_number="LICENSE-PAPER",
+            issued_on=self.day - timedelta(days=30), expires_on=self.today + timedelta(days=30))
+        values.update(overrides)
+        return m.LoanLicenseRevision.objects.create(**values)
+
+    def test_automatic_source_evidence_is_scoped_dated_and_unambiguous(self):
+        from datetime import timedelta
+        from types import SimpleNamespace
+        from apps.tenant_apps.loans.services.paper_entry_terms import paper_source_license_revision as resolve
+        values = dict(workspace=self.tenant, series=self.series, day=self.day)
+        self.assertIsNone(resolve(**values))
+        legacy = m.LoanLicense.objects.create(workspace=self.tenant, name="Unknown legacy validity",
+            license_number="LEGACY-TEST", is_legacy_reference=True, is_active=False)
+        legacy_series = m.LoanSeries.objects.create(workspace=self.tenant, license=legacy,
+            code="LEGACY-TEST", name="Legacy register")
+        self.license_evidence(license=legacy, kind="LEGACY_REFERENCE", issued_on=None, expires_on=None)
+        self.assertIsNone(resolve(workspace=self.tenant, series=legacy_series, day=self.day))
+        self.license_evidence(expires_on=self.day - timedelta(days=1))
+        revision = self.license_evidence()
+        self.assertEqual(resolve(**values), revision)
+        with self.assertRaisesMessage(ValueError, "Workspace"):
+            resolve(workspace=self.tenant, series=SimpleNamespace(workspace_id=-1), day=self.day)
+        self.license_evidence()
+        self.assertIsNone(resolve(**values))
+
+    def test_routine_evidence_defaults_and_signed_retry_preserve_frozen_mapping(self):
+        client, path = self._entry_client()
+        revision = self.license_evidence()
+        page = client.get(path + "?entry=paper")
+        self.assertEqual(page.context["form"]["license_revision_id"].value(), revision.pk)
+        self.assertFalse(page.context["paper_additional_open"])
+        data = self.paper_facts(page)
+        data.update(source_license_from_setup="on")
+        reviewed = client.post(path, data)
+        self.assertIsNotNone(reviewed.context["review"], reviewed.context["form"].errors)
+        self.assertEqual(reviewed.context["form"].cleaned_data["license_revision_id"], revision)
+        data.update(action="confirm", confirm_review="on", review_token=reviewed.context["review_token"],
+            license_revision_id=str(revision.pk))
+        self.assertEqual(client.post(path, data).status_code, 302)
+        loan = m.PawnLoan.objects.get(loan_number=data["number"])
+        self.assertEqual(loan.license_revision_id, revision.pk)
+        self.license_evidence()  # Later setup ambiguity cannot change a signed retry.
+        self.assertEqual(client.post(path, data).status_code, 302)
+        loan.refresh_from_db()
+        self.assertEqual(loan.license_revision_id, revision.pk)
+        self.assertEqual(m.PawnLoan.objects.filter(loan_number=data["number"]).count(), 1)
+
+    def test_manual_and_older_submissions_keep_their_evidence_choice(self):
+        client, path = self._entry_client()
+        page = client.get(path + "?entry=paper")
+        data = self.paper_facts(page)  # Existing submissions have no automatic marker.
+        reviewed = client.post(path, data)
+        self.assertIsNotNone(reviewed.context["review"])
+        revision = self.license_evidence()
+        confirmed = dict(data, action="confirm", confirm_review="on", review_token=reviewed.context["review_token"])
+        self.assertEqual(client.post(path, confirmed).status_code, 302)
+        self.assertIsNone(m.PawnLoan.objects.get(loan_number=data["number"]).license_revision_id)
+        self.assertEqual(client.post(path, confirmed).status_code, 302)
+        manual = dict(data, action="terms", source_license_from_setup="false", license_revision_id=str(revision.pk))
+        response = client.post(path, manual)
+        self.assertEqual(response.context["form"]["license_revision_id"].value(), str(revision.pk))
+        self.assertTrue(response.context["paper_additional_open"])
+
+    def test_automatic_evidence_refresh_leaves_actual_agreement_unchanged(self):
+        from datetime import timedelta
+        client, path = self._entry_client()
+        revision = self.license_evidence(expires_on=self.day)
+        data = self.paper_facts(client.get(path + "?entry=paper"))
+        data.update(action="terms", source_license_from_setup="on", exceptions="on",
+            exception_reason="Actual book agreement", tenure="3", license_revision_id=str(revision.pk))
+        result = client.post(path, data)
+        self.assertEqual(result.context["form"]["license_revision_id"].value(), str(revision.pk))
+        data["date"] = (self.day + timedelta(days=1)).isoformat()
+        result = client.post(path, data)
+        self.assertEqual(result.context["form"]["license_revision_id"].value(), "")
+        self.assertEqual(result.context["form"]["tenure"].value(), "3")
+        self.assertFalse(result.context["form"].fields["tenure"].widget.attrs["readonly"])
 
     def test_switch_preserves_common_rows_deletion_and_number_without_financial_write(self):
         client, path = self._entry_client()

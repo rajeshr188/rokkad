@@ -4,7 +4,7 @@ function initPaperEntry() {
   form.dataset.paperEntryReady = 'true';
   let revision = 0;
   let pending;
-  const relevant = name => ['series_id', 'date', 'metal', 'principal', 'exceptions'].includes(name)
+  const relevant = name => ['series_id', 'date', 'metal', 'principal', 'exceptions', 'source_license_from_setup'].includes(name)
     || /^collateral-\d+-(description|metal|allocated_principal|interest_rate_override|DELETE)$/.test(name);
   const invalidate = () => {
     revision += 1;
@@ -29,19 +29,18 @@ function initPaperEntry() {
     // Reviewed facts must remain untouched until staff choose Edit details.
     if (form.querySelector('#history-review-title')) return;
     if (!form.elements.namedItem('series_id')?.value || !form.elements.namedItem('date')?.value) return;
-    if (form.elements.namedItem('exceptions')?.checked) return;
     const current = revision;
     const data = new FormData(form);
     form.querySelectorAll('input[type=file]').forEach(input => data.delete(input.name));
     data.set('action', 'terms');
     try {
       const response = await fetch(form.getAttribute('action'), {method: 'POST', body: data, credentials: 'same-origin'});
-      if (!response.ok || current !== revision || form.elements.namedItem('exceptions')?.checked) return;
+      if (!response.ok || current !== revision) return;
       const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
       const terms = doc.querySelector('#standing-terms');
       if (!terms) return;
       // Refresh calculations without closing the optional details being edited.
-      for (const selector of ['[data-paper-payout-details]', '[data-paper-term-exceptions]']) {
+      for (const selector of ['[data-paper-additional-details]', '[data-paper-payout-details]', '[data-paper-term-exceptions]', '[data-paper-license-details]']) {
         const before = form.querySelector(selector), after = terms.querySelector(selector);
         if (before && after) after.open = before.open || after.open;
       }
@@ -95,6 +94,8 @@ function initPaperEntry() {
       event.preventDefault();
       const details = form.querySelector('[data-paper-term-exceptions]');
       if (details) details.open = true;
+      const additional = form.querySelector('[data-paper-additional-details]');
+      if (additional) additional.open = true;
       const choice = form.elements.namedItem('exceptions');
       choice.checked = true;
       choice.dispatchEvent(new Event('change', {bubbles: true}));

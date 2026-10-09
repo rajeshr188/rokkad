@@ -1,17 +1,20 @@
-{% load loans_display %}
-<section class="border rounded p-3 mb-3" id="standing-terms">
-  <h2 class="h5">Standing agreement</h2>
+<div class="mb-3" id="standing-terms">
   <noscript><button class="btn btn-outline-secondary mb-2" type="submit" name="action" value="terms" formnovalidate>Load standing terms / apply changes</button></noscript>
   {% if form.terms %}
-    <p>Monthly interest {{ form.rate.value|floatformat:"-6" }}%{% if formset %} (each item retains its own rate){% endif %} &middot; Tenure {{ form.tenure.value|default_if_none:"—" }} months &middot; Advance {{ form.advance_months.value|default_if_none:"—" }} month(s) &middot; Document charge {{ form.document_charge.value|default_if_none:"—" }}</p>
-    <p class="small">The next month's interest starts the day after the original loan anniversary. Principal reductions apply from that next monthly charge.</p>
-    <p>Total principal: <strong>{{ form.principal.value|indian_money }}</strong>{% if form.deductions %}<br>Advance interest deducted: {{ form.deductions.advance|indian_money }} &middot; Proceeds after deductions: <strong>{{ form.deductions.proceeds|indian_money }}</strong>{% endif %}</p>
-    {% if not paper_monitoring_missing %}<p class="small text-body-secondary">Monitoring supplied by setup: {% for value, label in form.fields.monitoring_method.choices %}{% if value == form.monitoring_method.value %}{{ label }}{% endif %}{% endfor %} &middot; Maximum LTV {{ form.monitoring_ltv.value }}.</p>{% endif %}
-    {% for message in form.terms.messages %}<p class="text-warning">{{ message }}</p>{% endfor %}
+    {% if paper_agreement_missing and not form.exceptions.value %}
+      <div class="alert alert-warning" data-paper-agreement-attention{% if paper_tenure_missing %} data-paper-tenure-missing{% endif %}>
+        <p class="mb-1">{% if paper_tenure_missing %}No standing tenure is configured for this series and original loan date. Update standing setup, or use Enter actual agreed terms to enter the paper tenure.{% else %}Standing agreement setup is incomplete for this series and original date.{% endif %}</p>
+        {% for message in form.terms.messages %}<p class="small mb-1">{{ message }}</p>{% endfor %}
+        {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}" target="_blank" rel="noopener">Open agreement setup</a>{% endif %}
+      </div>
+    {% endif %}
   {% else %}<p class="text-body-secondary">Choose the series and original date to load the standing agreement.</p>{% endif %}
 
-  {% if paper_tenure_missing and not form.exceptions.value %}<p class="alert alert-warning" data-paper-tenure-missing>No standing tenure is configured for this series and original loan date. Update standing setup, or select the agreement choice below to enter the actual paper tenure.</p>{% endif %}
-  <details id="paper-term-exceptions" data-paper-term-exceptions {% if paper_terms_open %}open{% endif %}>
+  {% if paper_monitoring_missing %}<p class="alert alert-warning" data-paper-monitoring-attention>Current collateral valuation setup needs attention. {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy" target="_blank" rel="noopener">Open Calculation policy</a>{% endif %}</p>{% endif %}
+  <details class="border rounded p-3" data-paper-additional-details {% if paper_additional_open %}open{% endif %}>
+    <summary>Additional details</summary>
+    <p class="small text-body-secondary mt-2">Standing terms are supplied by setup and shown in review. Use these options only for an actual exception or additional source facts.</p>
+  <details class="mt-3" id="paper-term-exceptions" data-paper-term-exceptions {% if paper_terms_open %}open{% endif %}>
     <summary>Record different agreed terms</summary>
     <div class="form-check my-3">{{ form.exceptions }}<label class="form-check-label" for="{{ form.exceptions.id_for_label }}">{{ form.exceptions.label }}</label></div>
     <p class="small">Use only when the actual agreement differs or dated setup is unavailable. If all loans in this series use different terms, update standing setup once.</p>
@@ -31,10 +34,9 @@
   {% else %}{{ form.currency_quantum.as_hidden }}{% endif %}
 
   {% if paper_monitoring_missing %}
-    <div class="alert alert-warning mt-3" data-paper-monitoring-attention>
+    <div class="mt-3">
       <h3 class="h6">Current collateral valuation setup needs attention</h3>
       <p class="small">Set the valuation method and maximum LTV for this series under Calculation policy. Risk monitoring policy sets warning thresholds separately. These choices do not approve or reprice the original paper loan.</p>
-      {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy" target="_blank" rel="noopener">Open Calculation policy</a>{% endif %}
       <details class="mt-2"><summary>Record a supported monitoring choice when setup is unavailable</summary><div class="row g-3 mt-2">{% for field in paper_monitoring_fields %}<div class="col-12 col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div></details>
     </div>
   {% else %}{% for field in paper_monitoring_fields %}{{ field.as_hidden }}{% endfor %}{% endif %}
@@ -45,8 +47,15 @@
     <div class="row g-3"><div class="col-12 col-md-6">{% include "components/forms/accessible.html#field" with field=form.payout_basis %}</div><div class="col-12 col-md-6">{% include "components/forms/accessible.html#field" with field=form.cash_paid %}</div></div>
   </details>
 
-  <details class="mt-3" {% if form.license_revision_id.value or form.license_revision_id.errors %}open{% endif %}>
-    <summary>Source licence evidence (optional)</summary>
-    {% include "components/forms/accessible.html#field" with field=form.license_revision_id %}
+  <details class="mt-3" data-paper-license-details {% if form.license_revision_id.errors or not form.source_license_from_setup.value %}open{% endif %}>
+    <summary>Licence evidence</summary>
+    <input type="hidden" name="source_license_from_setup" value="false">
+    <div class="form-check my-2">{{ form.source_license_from_setup }}<label class="form-check-label" for="{{ form.source_license_from_setup.id_for_label }}">{{ form.source_license_from_setup.label }}</label></div>
+    {% if form.source_license_from_setup.value %}
+      {{ form.license_revision_id.as_hidden }}
+      <p class="small">{% if form.source_license_resolved %}Dated licence evidence selected from the series setup.{% else %}No single dated revision matches. Leave the evidence unspecified, or turn off automatic selection to identify retained source evidence.{% endif %}</p>
+    {% else %}{% include "components/forms/accessible.html#field" with field=form.license_revision_id %}{% endif %}
+    <noscript><button class="btn btn-outline-secondary" type="submit" name="action" value="terms" formnovalidate>Apply licence evidence choice</button></noscript>
   </details>
-</section>
+  </details>
+</div>

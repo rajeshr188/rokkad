@@ -77,6 +77,7 @@ def entry_presentation(request):
                        "entry_mode": purpose, "entry_selection": selection, "action": "entry_change"})
         if purpose == "paper":
             target.setdefault("routine_entry", "on")
+            target.setdefault("source_license_from_setup", "on")
             target.setdefault("events-TOTAL_FORMS", "1")
             target.setdefault("events-INITIAL_FORMS", "0")
         else:

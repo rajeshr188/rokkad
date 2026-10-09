@@ -54,13 +54,28 @@ def _paper_agreement_context(form):
         bool(form["exceptions"].value()) and str(rounding) != str(defaults["currency_quantum"])))
     term_names = ("rate", "advance_months", "document_charge", "exception_reason")
     missing_tenure = form.terms is not None and defaults.get("tenure") is None
+    # A percentage fee awaits the entered principal; that is not missing setup.
+    # Item-specific setup messages also matter when the first item's rate exists.
+    missing_agreement = form.terms is not None and (any(
+        defaults.get(name) is None for name in ("rate", "tenure", "advance_months")) or any(
+        not message.startswith("Choose the current monitoring basis;")
+        for message in form.terms.get("messages", [])))
+    terms_open = missing_agreement or bool(form["exceptions"].value()) or any(
+        name in form.errors for name in (*term_names, "tenure"))
+    payout_open = bool(form["cash_paid"].value()) or form["payout_basis"].value() == "CASH" or any(
+        name in form.errors for name in ("cash_paid", "payout_basis"))
     return {
         "paper_term_fields": [form[name] for name in term_names],
         "paper_monitoring_fields": [form[name] for name in monitoring_names],
         "paper_monitoring_missing": missing_monitoring,
         "paper_rounding_needed": rounding_needed,
         "paper_tenure_missing": missing_tenure,
-        "paper_terms_open": missing_tenure or bool(form["exceptions"].value()) or any(name in form.errors for name in (*term_names, "tenure")),
-        "paper_payout_open": bool(form["cash_paid"].value()) or form["payout_basis"].value() == "CASH"
-            or any(name in form.errors for name in ("cash_paid", "payout_basis")),
+        "paper_agreement_missing": missing_agreement,
+        "paper_terms_open": terms_open,
+        "paper_payout_open": payout_open,
+        "paper_additional_open": terms_open or payout_open or missing_monitoring or rounding_needed
+            or bool(form["license_revision_id"].errors)
+            or (form.is_bound and "source_license_from_setup" in form.data
+                and not form["source_license_from_setup"].value())
+            or bool(form["license_revision_id"].value() and not form["source_license_from_setup"].value()),
     }

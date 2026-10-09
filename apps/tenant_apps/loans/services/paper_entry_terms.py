@@ -57,6 +57,17 @@ def paper_entry_terms(*, workspace, series, day, metal, principal=None):
     return dict(values=values, messages=messages, sources=sources)
 
 
+def paper_source_license_revision(*, workspace, series, day):
+    """Use dated retained evidence only when its mapping is unambiguous."""
+    if series.workspace_id != workspace.pk:
+        raise ValueError("Select a series in this Workspace.")
+    candidates = list(m.LoanLicenseRevision.objects.filter(
+        workspace=workspace, license_id=series.license_id,
+        issued_on__lte=day, expires_on__gte=day,
+    ).exclude(kind=m.LoanLicenseRevision.Kind.LEGACY_REFERENCE).order_by("pk")[:2])
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def preferred_paper_product(*, workspace, day):
     candidates = m.LoanProductVersion.objects.filter(workspace=workspace, product__is_active=True,
         status="ACTIVE", repayment_structure="FLEXIBLE_PARTIAL_PAYMENT", amortisation_method="NONE"

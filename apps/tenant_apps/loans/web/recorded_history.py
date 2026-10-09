@@ -68,6 +68,8 @@ class PaperHistoryForm(forms.Form):
     exception_reason = forms.CharField(required=False, max_length=160, label="Source explanation for different terms")
     borrower_id = forms.ModelChoiceField(queryset=Party.objects.none(), label="Customer")
     series_id = forms.ModelChoiceField(queryset=m.LoanSeries.objects.none(), label="Series (license / register)")
+    source_license_from_setup = forms.BooleanField(required=False, initial=True,
+        label="Use dated licence evidence from series setup")
     license_revision_id = forms.ModelChoiceField(queryset=m.LoanLicenseRevision.objects.none(), required=False,
         label="Source licence evidence (optional)",
         help_text="Select retained evidence for this series' licence and original date when known. Leave blank if unknown; portable history export requires this mapping. A saved draft keeps its original mapping.")
@@ -106,10 +108,13 @@ class PaperHistoryForm(forms.Form):
     confirmed_rule = forms.BooleanField(label="The agreed rule is simple monthly interest: the next month starts the day after the original loan anniversary; principal reductions apply from the next boundary.")
     confirmed_history = forms.BooleanField(label="I checked this loan's paper record through the stated date and checked for duplicates. No earlier or later loan's renewal history is required.")
 
-    def __init__(self, *args, workspace, routine=True, itemized_archive=False, **kwargs):
+    def __init__(self, *args, workspace, routine=True, itemized_archive=False, auto_source_license=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.routine = routine and (not self.is_bound or self.data.get("routine_entry") in ("on", "true", "True", "1"))
         self.terms = None
+        self.source_license_resolved = False
+        if not auto_source_license:
+            self.fields["source_license_from_setup"].widget = forms.HiddenInput()
         item_sources, item_messages = [], []
         self.itemized = (self.routine or itemized_archive) and (not self.is_bound or "collateral-TOTAL_FORMS" in self.data)
         from apps.tenant_apps.loans.forms import PawnDraftForm
@@ -246,6 +251,23 @@ class PaperHistoryForm(forms.Form):
                     self.initial.setdefault("product_version_id", preferred.pk)
             except (ValidationError, ValueError, ObjectDoesNotExist):
                 pass
+        if auto_source_license and self.routine and self.itemized and self["source_license_from_setup"].value():
+            # Signed confirmations retain the reviewed mapping, including blank.
+            # Old submissions without this opt-in retain their original payload.
+            from apps.tenant_apps.loans.services.paper_entry_terms import paper_source_license_revision
+            try:
+                series = self.fields["series_id"].clean(self["series_id"].value())
+                day = self.fields["date"].clean(self["date"].value())
+                revision = paper_source_license_revision(workspace=workspace, series=series, day=day)
+                if self.is_bound and not self.data.get("review_token"):
+                    data = self.data.copy()
+                    data["license_revision_id"] = str(revision.pk) if revision else ""
+                    self.data = data
+                elif not self.is_bound:
+                    self.initial["license_revision_id"] = revision.pk if revision else None
+                self.source_license_resolved = bool(self["license_revision_id"].value())
+            except (ValidationError, ValueError, ObjectDoesNotExist):
+                pass
         if self.routine:
             self.fields["tenure"].widget.attrs["readonly"] = not bool(self["exceptions"].value())
             tenure = self["tenure"]
@@ -344,6 +366,7 @@ Transactions = forms.formset_factory(PaperTransactionForm, extra=1, max_num=30, 
 def _data(form, rows, collateral=None):
     value = dict(form.cleaned_data)
     value.pop("routine_entry", None)
+    value.pop("source_license_from_setup", None)
     exceptions = value.pop("exceptions", False)
     reason = value.pop("exception_reason", "")
     value["document_charge"] = value["document_charge"] or Decimal("0")
@@ -445,6 +468,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
         except ValueError:
             pass
     form = PaperHistoryForm(post, workspace=workspace, initial=initial, routine=not archive,
+        auto_source_license=not archive and not draft,
         itemized_archive=bool(archive and len(archive.document["facts"]["collateral"] or []) > 1))
     form.saved_draft = draft is not None
     if origination_correction:

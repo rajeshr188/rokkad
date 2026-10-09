@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [loans, paper-entry, acceptance, release]
 ---
 
@@ -65,8 +65,13 @@ It selects the paper editor or retained native review from saved evidence. Genui
 earlier approval and fully reversed native payout corrections retain their quote,
 policy, reason, authority and dependent-reversal checks. Old earlier-payout links
 redirect to the same action; active origins require their correction workflow.
-New paper entry optionally selects **Source licence evidence** under additional
-details, when known. It must match the series/licence and original date. An inactive
+Since 9 October, routine paper entry shows one collapsed **Additional details**
+control for actual exceptions, payout facts and licence evidence. Standing terms
+are supplied by setup; the full agreement and amounts appear in review. If exactly
+one retained dated licence revision matches the selected series and original date,
+it is selected automatically. Otherwise evidence stays unspecified. Turn off the
+automatic choice under Licence evidence to select known retained evidence manually.
+It must match the series/licence and original date. An inactive
 legacy reference preserves unknown validity. Blank evidence does not prevent
 recording, but full portable history still requires that mapping and its other
 coverage/profile checks. Saved drafts keep their original mapping.
