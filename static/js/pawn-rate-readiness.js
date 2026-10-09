@@ -70,6 +70,18 @@ function initPawnRateReadiness() {
           showStatus(label || 'Price check unavailable', !label || result.dataset.attention === 'true');
         }
         rows.querySelectorAll('[data-collateral-form]').forEach(row => {
+          const appraisal = row.querySelector('[data-direct-appraisal]');
+          if (appraisal) {
+            const method = result?.dataset.valuationMethod || '';
+            const required = method !== 'CALCULATED_METAL_VALUE';
+            const previousRequired = appraisal.dataset.policyRequired === 'true';
+            appraisal.dataset.policyRequired = String(required);
+            appraisal.querySelector('[data-direct-appraisal-label]').textContent = required
+              ? (method ? 'Staff appraisal — needed for valuation' : 'Staff appraisal — check valuation setup')
+              : 'Staff appraisal (optional)';
+            if (required) appraisal.open = true;
+            else if (previousRequired && !row.querySelector('[name$="-latest_appraised_value"]')?.value) appraisal.open = false;
+          }
           const metal = row.querySelector('[name$="-metal"]')?.value;
           const input = row.querySelector('[name$="-interest_rate_override"]');
           if (!input) return;

@@ -1,5 +1,5 @@
 {% load loans_display %}
-<div data-rate-readiness-result data-request-key="{{ request_key }}" data-ready="{{ ready|yesno:'true,false' }}" data-attention="{% if not ready or not approval_ready %}true{% else %}false{% endif %}">
+<div data-rate-readiness-result data-valuation-method="{{ valuation_method }}" data-request-key="{{ request_key }}" data-ready="{{ ready|yesno:'true,false' }}" data-attention="{% if not ready or not approval_ready %}true{% else %}false{% endif %}">
   <span hidden data-rate-summary>{% if date_error %}Check loan date{% elif not ready and needs_rates %}Missing prices — {% for row in rows %}{% if not row.usable %}{{ row.label }} {% endif %}{% endfor %}{% elif not ready %}Check policy setup{% elif not needs_rates %}Not required by policy{% elif not approval_ready %}Update prices before approval{% else %}Ready for this loan date{% endif %}</span>
   {% if interest_rates %}<p class="small mb-2">Default monthly interest: {% for rate in interest_rates %}<span data-policy-interest-metal="{{ rate.metal }}" data-policy-interest-rate="{{ rate.monthly_interest_rate|stringformat:'f' }}">{{ rate.get_metal_display }} {{ rate.monthly_interest_rate|compact_decimal }}%</span>{% if not forloop.last %} · {% endif %}{% endfor %}. Item overrides remain separate.</p>{% endif %}
   {% if message %}<p class="mb-2">{{ message }}</p>{% endif %}

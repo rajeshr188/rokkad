@@ -66,6 +66,7 @@ def pawn_valuation_readiness(request):
             context.update(
                 ready=not needs_rates or all(row["usable"] for row in rows),
                 needs_rates=needs_rates, rows=rows, as_of=values["as_of"],
+                valuation_method=policy.valuation_method,
                 approval_ready=not needs_rates or (values["as_of"] == timezone.localdate() and all(row["fresh"] for row in rows)),
                 message="" if needs_rates else "This policy uses staff appraisal only; a metal price is not required.",
             )

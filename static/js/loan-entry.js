@@ -4,7 +4,7 @@
   const photos = new Map();
   const root = () => document.querySelector('[data-new-loan-entry]');
   const form = () => root()?.querySelector('#new-loan-form');
-  const status = text => { const node = root()?.querySelector('[data-paper-review-status]') || root()?.querySelector('[data-entry-status]'); if (node) node.textContent = text; };
+  const status = text => { const node = root()?.querySelector('[data-paper-review-status]') || root()?.querySelector('[data-direct-layout-status]') || root()?.querySelector('[data-entry-status]'); if (node) node.textContent = text; };
   function replaceEditor(replacement) {
     // DOMParser parses noscript markup as elements; those fallback controls must
     // not duplicate the live file inputs in this JavaScript-enhanced editor.
@@ -20,27 +20,27 @@
     window.htmx?.process(replacement);
     document.dispatchEvent(new Event('loan-entry:ready'));
   }
-  async function change() {
+  async function change(action = 'entry_change') {
     const current = form();
     if (!current) return;
     const ticket = ++requestId, version = revision;
     controller?.abort(); controller = new AbortController();
-    const data = new FormData(current); data.set('action', 'entry_change');
+    const data = new FormData(current); data.set('action', action);
     current.querySelectorAll('input[type=file]').forEach(input => {
       photos.set(input.name, input);
       data.delete(input.name); // Keep the actual File input locally until an ordinary save.
     });
     current.dataset.entryChanging = 'true';
-    status('Updating entry purpose; your entered facts are retained.');
+    status('Updating loan entry; your entered facts are retained.');
     try {
       const response = await fetch(current.getAttribute('action'), {method: 'POST', body: data,
         credentials: 'same-origin', signal: controller.signal});
       if (ticket !== requestId || current !== form()) return;
-      if (version !== revision) { change(); return; }
+      if (version !== revision) { change(action); return; }
       if (!response.ok) throw new Error('unavailable');
       const html = await response.text();
       if (ticket !== requestId || current !== form()) return;
-      if (version !== revision) { change(); return; }
+      if (version !== revision) { change(action); return; }
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const replacement = doc.querySelector('[data-new-loan-entry]');
       if (!replacement) throw new Error('unavailable');
@@ -50,8 +50,10 @@
       if (ticket !== requestId || error.name === 'AbortError') return;
       delete current.dataset.entryChanging;
       const selection = root()?.querySelector('[name=entry_selection]');
-      if (selection) selection.value = current.elements.namedItem('entry_mode').value;
+      if (selection && action !== 'layout_change') selection.value = current.elements.namedItem('entry_mode').value;
       status('Entry could not be changed. Your form and photographs are retained; try again.');
+      const layout = current.querySelector('[name=direct_layout]');
+      if (layout) layout.value = root().dataset.directLayout || 'current';
     }
   }
   async function reviewPaper(button) {
@@ -94,14 +96,15 @@
   document.addEventListener('change', event => {
     if (!root()?.contains(event.target)) return;
     revision += 1;
+    if (event.target.name === 'direct_layout') change('layout_change');
     if (event.target.name === 'entry_selection' || ['series', 'series_id'].includes(event.target.name)) change();
   });
   document.addEventListener('submit', event => {
     if (event.target !== form()) return;
-    if (event.submitter?.value === 'entry_change') {
-      event.preventDefault(); event.stopImmediatePropagation(); change();
+    if (['entry_change', 'layout_change'].includes(event.submitter?.value)) {
+      event.preventDefault(); event.stopImmediatePropagation(); change(event.submitter.value);
     } else if (event.target.dataset.entryChanging === 'true') {
-      event.preventDefault(); event.stopImmediatePropagation(); status('Wait for the entry purpose to finish updating.');
+      event.preventDefault(); event.stopImmediatePropagation(); status('Wait for loan entry to finish updating.');
     } else if (event.target.dataset.paperReviewPending === 'true') {
       event.preventDefault(); event.stopImmediatePropagation(); status('Wait for the loan review to finish loading.');
     } else if (event.target.matches('[data-paper-entry]') && root()?.matches('[data-routine-loan-editor]') && event.submitter?.value === 'preview') {

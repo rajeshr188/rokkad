@@ -515,7 +515,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             for name in ("rate", "tenure", "renewal_method", "new_principal", "cash_paid", "interest_offset", "custody"):
                 row.fields[name].widget = forms.HiddenInput()
     review, token, agreement = None, "", None
-    if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change", "edit") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
+    if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change", "layout_change", "edit") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
         try:
             data = _data(form, rows, collateral)
             correction_reason = data.pop("correction_reason", None)

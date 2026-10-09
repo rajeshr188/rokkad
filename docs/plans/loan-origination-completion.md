@@ -1,12 +1,22 @@
 ---
 status: active
 owner: project
-updated: 2026-10-07
+updated: 2026-10-09
 tags: [loans, origination, plan, release]
 related: [loan-continuation-consolidation.md, ../adr/2026-10-07-shared-loan-entry-and-explicit-origination-correction.md]
 ---
 
 # Loan origination completion and production acceptance
+
+## Direct-entry presentation trial (9 October, local)
+
+Implemented an optional Simplified layout beside the retained Current default,
+using the same loan commands and review. Staff may compare both before deciding
+on a preferred default or retirement; neither is removed or automatically selected
+for other users. Preference is local to the authenticated Workspace/user browser
+session. Technical checks and fictional localhost preview are complete; production
+rollout and actual staff evaluation remain separate. See the
+[trial ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md) and current Status.
 
 ## Authorization and starting point
 

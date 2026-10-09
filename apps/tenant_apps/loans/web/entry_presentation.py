@@ -19,7 +19,8 @@ def entry_presentation(request):
     posted = request.method == "POST"
     source = request.POST.get("entry_mode", "direct") if posted else request.GET.get("entry")
     source = source if source in ("paper", "direct") else "direct"
-    changing = posted and request.POST.get("action") == "entry_change"
+    layout_change = posted and request.POST.get("action") == "layout_change"
+    changing = posted and request.POST.get("action") in ("entry_change", "layout_change")
     selection = request.POST.get("entry_selection", "auto") if posted else request.GET.get("entry", "auto")
     if selection not in ("auto", "paper", "direct"):
         selection = "auto"
@@ -33,13 +34,19 @@ def entry_presentation(request):
     if archive:
         purpose = "paper"
         changing = False
-    elif not posted or changing:
+    elif not posted or (changing and not layout_change):
         try:
             configured = default_entry_purpose(workspace=request.loans_workspace, series_id=series)
             purpose = selection if selection != "auto" else configured.lower()
         except (ValueError, TypeError):
             error = "Select a series in this Workspace before applying its entry setting."
 
+    layout_key = f"loans.direct_layout.{request.loans_workspace.pk}.{request.user.pk}"
+    layout = (request.POST.get("direct_layout") if posted else request.GET.get("layout")) or request.session.get(layout_key, "current")
+    if layout not in ("current", "simplified"):
+        layout = "current"
+    if layout_change or (not posted and request.GET.get("layout") in ("current", "simplified")):
+        request.session[layout_key] = layout
     state = {}
     try:
         raw = request.POST.get("entry_values", "") if posted else ""
@@ -74,7 +81,8 @@ def entry_presentation(request):
                 target[key] = values.get(key, "")
         target.update({"collateral-TOTAL_FORMS": str(count), "collateral-INITIAL_FORMS": "0",
                        "collateral-MIN_NUM_FORMS": "1", "collateral-MAX_NUM_FORMS": "100",
-                       "entry_mode": purpose, "entry_selection": selection, "action": "entry_change"})
+                       "entry_mode": purpose, "entry_selection": selection,
+                       "direct_layout": layout, "action": "layout_change" if layout_change else "entry_change"})
         if purpose == "paper":
             target.setdefault("routine_entry", "on")
             target.setdefault("source_license_from_setup", "on")
@@ -86,6 +94,7 @@ def entry_presentation(request):
         data.update(target)
         request.POST = data
     return purpose, {"entry_selection": selection, "entry_values": json.dumps(state),
+                     "direct_layout": layout, "direct_simplified": purpose == "direct" and layout == "simplified",
                      "entry_changing": changing, "entry_change_error": error,
                      "entry_file_warning": changing and bool(request.FILES)}
 

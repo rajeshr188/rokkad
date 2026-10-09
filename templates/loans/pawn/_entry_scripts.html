@@ -9,5 +9,6 @@
 {% if not loan %}
 <script src="{% static 'js/paper-entry.js' %}" defer></script>
 <script src="{% static 'js/loan-entry.js' %}" defer></script>
+<script src="{% static 'js/direct-entry-layout.js' %}" defer></script>
 {% if entry_purpose == 'paper' and not routine_editor %}<script src="{% static 'js/camera-selection.js' %}" defer></script><script src="{% static 'loans/collateral_camera.js' %}" defer></script>{% endif %}
 {% endif %}

@@ -7,6 +7,39 @@ tags: [status, architecture]
 
 # Status
 
+## Optional direct-entry layout trial (9 October, local)
+
+Direct New loan now offers Current / Simplified (trial), retaining Current as the
+default. Choice is remembered per user and Workspace in the authenticated browser
+session; it does not change entry purpose or other staff's interface. Both use the
+same forms, submission identity, financial services and payout review. Layout
+switching saves nothing and consumes no number. Enhanced switching preserves File
+inputs; native Apply layout preserves fields with explicit photo-reselection guidance.
+
+The simplified view puts expected numbering beside series, uses compact controls
+for a sole valid selected product/date/tenure, and groups normal item facts. Policy
+interest is visible; permitted overrides and their required reasons are collapsible,
+opening for entered exceptions/errors. Appraisals are visible for appraisal/lower-of
+policies and optional for calculated-metal policies; unresolved setup exposes them.
+Existing suggestion/LTV arithmetic remains unchanged and appears beside normal
+item facts. Missing standing tenure is disclosed without reinterpreting the legacy
+fallback as setup. Entered custom tenure/appraisal/rates remain intact. Check amounts
+is a quieter version of the same economics preview; payout review remains shared.
+
+**73 Django tests pass**, including combined origination review/rollback/retry,
+full frozen-contract and recovery checks through the trial, presentation defaults,
+Workspace/user preference isolation, no-write/counter switching, appraisal methods,
+LTV and override errors, and staff authority. Adjacent routine paper/standing/multi-item
+checks pass. Actual fictional localhost desktop/mobile checks retain entered facts,
+File inputs, token and deleted rows across both layouts, and recover from a failed
+switch. Native no-JavaScript switching preserves fields with photo guidance. No page
+errors or viewport overflow; screenshots are retained for visual review.
+
+Localhost 8083 has a scoped overlay with source fallback; no production deployment,
+migration or financial data correction is performed. QA artifacts are under
+`.tmp/direct-entry-layout-20261009/`. Both layouts remain available for staff
+evaluation; see the [trial decision](adr/2026-10-09-optional-direct-entry-layout-trial.md).
+
 ## Routine paper entry simplification (9 October, local)
 
 The repeated Standing agreement section is removed from routine New loan entry.

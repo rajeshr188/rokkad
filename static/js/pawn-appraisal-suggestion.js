@@ -14,7 +14,9 @@ function initPawnAppraisalSuggestion() {
     panel.setAttribute('role', 'status');
     panel.setAttribute('aria-live', 'polite');
     panel.setAttribute('hx-params', 'metal,gross_weight,net_weight,purity,as_of,request_key,series,appraisal,principal');
-    input.insertAdjacentElement('afterend', panel);
+    const guidance = row.querySelector('[data-direct-valuation-guidance]');
+    if (guidance) guidance.append(panel);
+    else input.insertAdjacentElement('afterend', panel);
     const state = {input, panel, manual: input.value !== '', key: 0, timer: null};
     states.set(row, state);
     panel.addEventListener('htmx:beforeSwap', event => {

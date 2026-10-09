@@ -80,6 +80,8 @@ def pawn_loan_create(request):
         workspace=request.loans_workspace,
         initial=initial,
     )
+    from .direct_entry_layout import direct_entry_layout_context
+    layout_context = direct_entry_layout_context(request, form)
     collateral_post = request.POST.copy() if request.method == "POST" else None
     adding = collateral_post is not None and collateral_post.get("action") == "add_collateral"
     if adding:
@@ -136,6 +138,7 @@ def pawn_loan_create(request):
             "submission_reference_error": token_error,
             **_pawn_number_preview_context(form),
             **routine_entry_context(request, form, purpose="direct"),
+            **layout_context,
             **presentation,
         },
     )

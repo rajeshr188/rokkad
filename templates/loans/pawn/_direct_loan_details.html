@@ -1,0 +1,13 @@
+{% load loans_display %}
+<div class="row g-3">
+  <div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.borrower %}{% if can_add_customer %}<a class="small" href="{% url 'workspace_slug_party_create' workspace_slug=request.workspace.slug %}" target="_blank" rel="noopener">+ Add customer</a>{% endif %}</div>
+  <div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.series %}<noscript><button class="btn btn-sm btn-outline-secondary" name="action" value="entry_change" formnovalidate>Apply series setup</button></noscript>{% include "loans/pawn/_entry_override.html" %}{% include "loans/pawn/_entry_number.html" %}</div>
+  <div class="col-md-6">
+    {% if direct_product_compact and not form.product_version.errors %}<details data-direct-product><summary class="small">Product: <strong>{{ direct_selected_product.product.name }}</strong> · Change</summary><div class="mt-2">{% include "components/forms/accessible.html#field" with field=form.product_version %}</div></details>
+    {% else %}{% include "components/forms/accessible.html#field" with field=form.product_version %}{% endif %}
+  </div>
+  <div class="col-md-6"><details data-direct-date {% if direct_date_open %}open{% endif %}><summary class="small">Loan date: <strong data-direct-date-label>{{ form.loan_date.value|date:"d/m/Y"|default:form.loan_date.value }}</strong> · Change</summary><div class="mt-2">{% include "components/forms/accessible.html#field" with field=form.loan_date %}</div></details></div>
+  <div class="col-md-6"><details data-direct-tenure {% if direct_tenure_open %}open{% endif %}><summary class="small">Tenure: <strong><span data-direct-tenure-label>{{ form.tenure_months.value|default_if_none:"—" }}</span> months</strong> · Change</summary><div class="mt-2">{% include "components/forms/accessible.html#field" with field=form.tenure_months %}</div></details>
+    <p class="small text-body-secondary mt-2 mb-0">{% if direct_standing_tenure %}Standing setup: {{ direct_standing_tenure }} months. Permitted different tenures can be entered under Change.{% else %}No standing tenure has been resolved. Check setup and enter the actual agreed tenure; the displayed value is not a confirmed setup term.{% endif %}</p>
+  </div>
+</div>

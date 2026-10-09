@@ -10,6 +10,29 @@ related: [../plans/loan-origination-completion.md]
 
 ## Result and boundaries
 
+On 9 October direct entry gains an opt-in Current / Simplified (trial) presentation.
+Current remains the default. The authenticated session preference key includes
+Workspace and user IDs; explicit form state wins for an open tab. No model or
+migration is added. `layout_change` is a nonfinancial presentation action, separate
+from `entry_change`: it retains the current origination purpose even when standing
+entry defaults change. Both writers exclude it from financial processing.
+
+Simplified template fragments reuse the same fields/formsets and file controls.
+Expected numbering moves beside series; a single valid selected product is compact;
+date and tenure remain editable through Change. The dated policy supplies guidance,
+but presentation never replaces entered custom terms. Missing standard tenure is
+disclosed. Item overrides/reasons open for actual values and errors. Required
+appraisal panels use the dated valuation method, also exposed by the existing rate
+preflight to update added rows and changed dates. Existing appraisal suggestion and
+LTV arithmetic is reused; the optional panel placement does not change saved values.
+
+Enhanced layout replacement reuses existing File inputs, async revision guards and
+submission tokens. Failed switching restores the displayed selector and retains
+facts. Without JavaScript, native Apply layout needs explicit photo reselection.
+Check amounts posts the existing preview action; all save/review/approval/payout and
+retry commands remain shared. Saved-draft editing and payout review retain their
+existing layouts. See [the trial ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md).
+
 On 9 October routine paper entry removes the repeated Standing agreement section.
 The main fields remain customer, series/product/date/tenure, original number/source
 and collateral allocations. One collapsed Additional details control contains
