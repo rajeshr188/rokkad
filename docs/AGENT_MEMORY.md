@@ -7,6 +7,16 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The coordinated closed-position production switch completes on 10 October at
+01:20:58 IST, runtime e851f261/image rokkad:closed-position-ip05-3829abaa8ac7.
+Owner-only migrations 0065/0066/0067, fresh validated checkpoint, preservation of
+198 original business tables, restricted startup/native/billing checks and HTTPS
+pass. Existing billing/configuration/media/static mounts are preserved and six
+timers resume. Fresh production reviews/conversion are running for 39,196 eligible
+positions with 19 held date conflicts. Do not claim conversion complete until
+reconciliation passes. After admissions, retain nullable-detail-compatible readers
+and never rewind over later transactions. See the [release record](implementation/loan-position-import-release-20261010.md).
+
 IP-05 implements ordinary closed-position browsing, open-first original-date
 ordering and secondary retained-source access. Migration 0066 stores generated
 immutable source lookup metadata; candidate queries retain complete broad

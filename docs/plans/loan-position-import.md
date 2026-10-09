@@ -19,9 +19,9 @@ JCL, JSK and Lakshmi source; external adapters need their own declared meaning.
 | --- | --- | --- |
 | IP-01 | Document minimal active/closed position contracts and source interpretation; preserve complete-history restoration | Contract and pure source adapter implemented locally; 34 focused checks pass |
 | IP-02 | Read-only retained-data inventory: identities, exact Party/register mappings, known fields, duplicates and contradictions; prepare eligible/exception cohorts | Read-only rehearsal complete: 39,196 candidates and 19 date-order exceptions; no admissions |
-| IP-03 | Minimal ordinary closed-position admission, optional original terms, shared balances/details/source media and versioned portability; native and active guards retained | Implemented locally; 150 fresh-PostgreSQL checks pass; production migration/conversion remains IP-04 |
-| IP-04 | Reviewed, resumable, idempotent eligible batch conversion through the admission service; source evidence retained and existing loans unchanged | Implemented; 170 checks pass; 390 real-source admissions rehearsed, including all 190 JCL exceptions; live execution remains a coordinated release step |
-| IP-05 | Ordinary browsing and source access; simplify/archive-directory role only after records accounted for; measure and correct search queries | Implemented and fully rehearsed; 294 checks, 39,196 isolated admissions and 78 read-only searches pass; 19 held claims and production release remain |
+| IP-03 | Minimal ordinary closed-position admission, optional original terms, shared balances/details/source media and versioned portability; native and active guards retained | Implemented locally; 150 fresh-PostgreSQL checks pass; migration is live; reviewed production conversion is running |
+| IP-04 | Reviewed, resumable, idempotent eligible batch conversion through the admission service; source evidence retained and existing loans unchanged | Implemented; 170 checks pass; 390 real-source admissions rehearsed, including all 190 JCL exceptions; live conversion running; JSK 3,836 complete/4 held; JCL and Lakshmi underway |
+| IP-05 | Ordinary browsing and source access; simplify/archive-directory role only after records accounted for; measure and correct search queries | Implemented and fully rehearsed; 294 checks, 39,196 isolated admissions and 78 read-only searches pass; compatible production code/schema live; conversion running, 19 held claims retained |
 
 See the [IP-01/IP-02 delivery and inventory](../implementation/loan-position-import-ip01-ip02.md).
 The owner subsequently confirms the 190 earlier owner-closed/zero JCL records
@@ -35,10 +35,10 @@ The owner limits the 190-record recognition to a temporary exact recovery
 cohort. IP-04 freezes its source identities/hashes and removes the schema-wide
 inference; future no-release-row claims require separate review. The tested batch
 path and [390-record rehearsal](../implementation/loan-position-import-ip04.md)
-preserve original records and numbering. Production remains on the prior schema
-and readers. Coordinate compatible deployment/migration and live bounded
-conversion with IP-05's completed [full rehearsal/search acceptance](../implementation/loan-position-import-ip05.md); the actual 39,196-record
-production conversion is not yet complete.
+preserve original records and numbering. Compatible production code and migrations through 0067 are live. Bounded
+conversion is running; JSK completes 3,836 admissions with 4 held claims, while
+JCL and Lakshmi continue. See the [production rollout](../implementation/loan-position-import-release-20261010.md).
+The actual 39,196-record production conversion is not yet complete.
 
 Do not turn IP-02 into receipt reconstruction for every old loan. Classify known
 position and identity, with specific exceptional contradictions. No individual

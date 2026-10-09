@@ -7,6 +7,21 @@ tags: [status, architecture]
 
 # Status
 
+## Closed-position production switch complete; conversion running (10 October)
+
+The owner authorizes rollout. Runtime e851f261 is pushed and deployed as the
+36-file bounded IP-05 image at 01:20:58 IST. Fresh checkpoint/catalogue and owner-only
+migrations 0065/0066/0067 pass; all 198 checked original business tables are
+unchanged. Restricted startup, original loan screens, billing, HTTPS, source hashes
+and configuration/mount checks pass. Six operational timers resume; media and
+separate billing development are unchanged.
+
+Fresh signed production reviews and bounded conversion are running. Expected
+eligible/held positions are JCL 26,649/15, JSK 3,836/4 and Lakshmi 8,711/0. Do not
+claim all positions converted until exact reconciliation passes. Keep the compatible
+reader after admissions begin; never rewind data over later staff transactions.
+See the [production release record](implementation/loan-position-import-release-20261010.md).
+
 ## IP-05 browsing/search implemented and fully rehearsed (10 October)
 
 Loans is the primary directory: accepted closed positions are ordinary CLOSED
