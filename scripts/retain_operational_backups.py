@@ -93,7 +93,7 @@ def plan_retention(folder, now, check_catalogue=catalogue):
         check_catalogue(path)
     return dict(copies=copies, retained=retained,
                 removed=[path for path in copies if path not in retained],
-                fingerprints=fingerprints, latest=newest)
+                fingerprints=fingerprints, digests=digests, latest=newest)
 
 
 def apply_plan(folder, plan):

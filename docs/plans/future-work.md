@@ -45,7 +45,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
-| FW-023 | Database backup capacity and evidence storage | BS-02 scoped cleanup complete; recovery follow-up open | BS-03/04 encrypted off-server backup and actual restore | 25 removed, 89 protected; 10.127 GiB free; full-retention projection 4.817 GiB before growth; no retention/data changes |
+| FW-023 | Database backup capacity and evidence storage | BS-03/04 live and accepted; ongoing growth/old-coverage follow-up | Monitor space/service failures; preserve uncovered old points; BS-05 future compact sources separately | 28 tests and actual restore/image recovery pass; hourly R2 24/30 and local six-plus-uncovered active; three remote/35 local points, zero expiry, 9.141 GiB free |
 
 ## FW-022: Main Loans-list search performance
 
@@ -1702,3 +1702,17 @@ growth. Capacity follow-up remains open. BS-03/04 off-server encrypted recovery
 and verified restore remain next; six local copies are not activated.
 
 See the [execution record](../implementation/backup-image-cleanup-20261010.md).
+
+**BS-03 publication / BS-04 technical recovery pass, 10 October:** private R2
+database and compatible release-image artifacts are actually uploaded, downloaded,
+decrypted and restored/loaded. All 879,350 rows across 202 tables match the snapshot;
+restricted startup/native/RLS readers and all closed/held cohorts pass. The exact
+generated test database/files are removed; free space is 9.375 GiB. Owner key copies
+are initially selected with custody pending; the owner subsequently confirms both
+saved and checked. Ordered hourly R2 publication/verification and remote 24-hourly/
+30-UTC-daily retention are now active. Local selection keeps six recent copies plus
+all older copies without retained remote coverage. The full cycle passes with three
+remote points and all 35 local copies retained (32 uncovered), zero expiry and
+9.141 GiB free. 28 operator tests pass. Monitor capacity/failures, protect the old
+points and repeat compatible image/key acceptance after changes. See the
+[recovery record](../implementation/encrypted-backup-recovery-20261010.md).

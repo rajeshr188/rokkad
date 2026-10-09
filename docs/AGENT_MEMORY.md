@@ -7,6 +7,25 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+BS-03/04 encrypted private R2 publication, actual recovery and hourly activation pass
+on 10 October. Dedicated backup credentials are root-only, bucket-scoped and
+limited to the production server's exact IPv4/IPv6 addresses; web/media credentials
+are separate. The protected private age identity stays on Windows, outside Git
+and OneDrive; the owner confirms password-manager/offline copies saved and checked.
+Actual download/decryption restores a new isolated PostgreSQL 16 database; all
+879,350 rows/202 tables match, 39,196 closed positions/19 held claims and restricted
+startup/native/health/RLS readers pass. Exact compatible image recovery also passes
+from separate encrypted R2 release storage. 28 operator tests pass. Temporary test
+database/files are removed. Ordered hourly publication/verification and remote
+24-hourly/30-UTC-daily retention are active; locally keep six recent copies plus
+all older copies without matching retained remote coverage. The full cycle passes
+with three remote points and all 35 local copies retained (32 uncovered), zero
+expiry, six healthy timers/HTTPS and 9.141 GiB free. Existing financial/media data,
+live image and original unit files remain intact. Failed uploads/evidence stop
+expiry; new images/keys require renewed root-only recovery acceptance. New-host role
+provisioning and managed-provider compatibility remain separate unproven checks.
+See the [recovery record](implementation/encrypted-backup-recovery-20261010.md).
+
 BS-02 removes all 25 rechecked unused application images without force or
 refusals, preserves all 89 protected images and existing containers, and recovers
 2.553 GiB net. Available disk is 10.127 GiB. HTTPS, the live image, six

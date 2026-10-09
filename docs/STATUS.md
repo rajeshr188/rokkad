@@ -7,6 +7,38 @@ tags: [status, architecture]
 
 # Status
 
+## BS-03/04 encrypted recovery and hourly retention active (10 October)
+
+One real completed backup is age-encrypted, uploaded to private R2 and downloaded/
+hashed successfully. Dedicated root-only bucket credentials permit only the exact
+production IPv4/IPv6 addresses; media/web credentials are unchanged. The protected
+private key stays outside Git/OneDrive on Windows. The owner confirms both
+password-manager and offline recovery copies saved and checked.
+
+Decrypted SSH streaming restores a new isolated PostgreSQL 16 database, without
+placing the private identity on production or plaintext customer data locally.
+All 879,350 rows across 202 snapshot tables match. Restricted startup, regenerated
+static assets, 39,196 ordinary closed positions/19 held claims, native direct/paper/
+closure/health readers and adversarial cross-Workspace hiding pass. The exact
+compatible application image is separately encrypted in R2 and actually downloaded,
+decrypted and loaded with the expected image ID. All 28 operator tests pass.
+
+The exact temporary database and test files are removed. Ordered hourly encrypted
+publication/verification and remote 24-hourly/30-UTC-daily retention are active.
+Local selection keeps six recent copies plus all older copies without matching
+retained remote coverage. A complete production cycle passes: three remote points,
+all 35 local copies retained (32 uncovered), zero expiry, six healthy timers/HTTPS
+and 9.141 GiB free. Production financial rows, live image, media and original unit
+files are preserved; the backup completion hook alone changes. Failure stops expiry,
+and new images/keys require renewed root-only recovery acceptance. New-host role
+provisioning and managed PostgreSQL compatibility
+are unproven; no paid cluster is created or unrelated cluster repurposed.
+
+See the [execution/acceptance record](implementation/encrypted-backup-recovery-20261010.md),
+[operator recovery flow](flows/off-server-database-recovery.md),
+[ordered plan](plans/backup-storage-and-evidence-efficiency.md) and
+[managed feasibility review](implementation/managed-postgresql-feasibility-20261010.md).
+
 ## BS-02 scoped image cleanup complete (10 October)
 
 BS-02 removes all 25 rechecked unused application images without force or

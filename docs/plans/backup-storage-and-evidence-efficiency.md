@@ -8,9 +8,11 @@ tags: [backups, storage, positions, plan]
 # Backup storage and source-evidence efficiency
 
 The owner selects review and recommendations, then authorizes proceeding with
-BS-02. The [measured review](../implementation/backup-storage-review-20261010.md)
+BS-02 and then the BS-03/04 recovery recommendation. The [measured review](../implementation/backup-storage-review-20261010.md)
 and [scoped image cleanup](../implementation/backup-image-cleanup-20261010.md)
-are complete. External upload and changed local retention are not activated.
+are complete. One real encrypted backup and its compatible runtime image are
+uploaded/downloaded/decrypted/restored successfully. Owner recovery-copy custody
+is confirmed; ordered hourly R2 publication and conservative retention are active.
 
 ## Recommended order
 
@@ -18,14 +20,19 @@ are complete. External upload and changed local retention are not activated.
 | --- | --- | --- |
 | BS-01 | Read-only server, backup, source-duplication and protected-image inventory | Complete; 25 image candidates after protecting 89 images; private exact manifest retained |
 | BS-02 | Scoped unused application-image cleanup and renewed capacity measurement | Complete; 25 removed, 89 protected, 2.553 GiB net recovered; backup and live checks pass; no force, cache, database, volume, media or checkpoint deletion |
-| BS-03 | Encrypted private R2 database-backup upload with verified remote bytes | Proposed; choose private backup bucket, dedicated scoped credentials and externally recoverable decryption key; retain current local copies while proving upload |
-| BS-04 | Restore downloaded/decrypted backup in isolation and activate retention | Proposed; preserve remote 24-hourly/30-daily set; proposed six recent local hourly copies only after owner selection and actual restore acceptance |
+| BS-03 | Encrypted private R2 database-backup upload with verified remote bytes | Complete/live; private bucket/root-only scoped token, real ciphertext download/hash and compatible independent release image recovery; hourly publication passes |
+| BS-04 | Restore downloaded/decrypted backup in isolation and activate retention | Complete/live: 202 tables/879,350 rows, restricted startup/native/RLS and exact image recovery pass; owner confirms both key copies; ordered remote 24-hourly/30-daily and local six-plus-uncovered retention active |
 | BS-05 | Compact future closed-position source snapshots | Proposed; versioned stored profile, immutable source identity/FK/hash, financial facts and standalone export/restore; old posted bytes and profile semantics preserved |
 
 BS-02 available space is 10.127 GiB; full retention at current backup sizes
 projects 4.817 GiB, below the cutoff before growth. Headroom is improved
-but not fully resolved. BS-03/04 remain next; preserve existing local retention
-until remote recovery is accepted. No generic cache pruning is authorized.
+but not fully resolved. After the recovery test and removal of its exact generated
+database/files, free space is 9.375 GiB; after the complete new hourly cycle it is
+9.141 GiB. Retention acceptance preserves all 35 local points initially, including
+32 without independent remote coverage. New hourly growth is bounded while these
+older points stay protected. No generic cache
+pruning is authorized. See the [recovery acceptance](../implementation/encrypted-backup-recovery-20261010.md)
+and separate [managed PostgreSQL review](../implementation/managed-postgresql-feasibility-20261010.md).
 
 Nominal Docker image sizes do not guarantee physical reclaimed bytes. Separately
 assess unused build cache before any further cleanup; never apply generic system
