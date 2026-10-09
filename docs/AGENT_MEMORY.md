@@ -7,6 +7,16 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The accepted cumulative loan UI/servicing changes are live from 9 October 15:53
+IST as `rokkad:loan-release-20261009-e7d8f58bbc0e`, runtime commit 2b85a41f from
+work/loan-servicing-contract-ld01. The bounded derivative preserves current live
+billing configuration; separate local billing edits are not included. Loans guard
+migration 0064 is applied owner-only, with no business-row mutation. Web remains
+restricted UID 10001/runtime role, six timers resume and backup retention remains
+active. New-loan simplification, series availability, draft batch splitting and
+paper identity defaults are deployed. Exact manifest, checkpoint and compatible
+image rollback guidance are in the [release record](implementation/loan-ui-and-servicing-release-20261009.md).
+
 Routine paper New loan prefills the original number and paper reference from the
 selected running series' non-consuming next-number suggestion. Both remain
 editable; untouched suggestions refresh on series changes while custom values

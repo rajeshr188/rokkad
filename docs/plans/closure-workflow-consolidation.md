@@ -1,7 +1,7 @@
 ---
 status: completed
 owner: project
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [loans, closure, paper, implementation]
 ---
 
@@ -52,6 +52,6 @@ restricted-role database guards and connected export/restore. Final receipt and
 legacy HTTP assertions are recorded in Status. Django checks, migration drift and
 JavaScript syntax checks also pass.
 
-Production has not received this change. Deploy the coherent application change
-with owner-run migration 0064 under the normal release procedure; runtime web and
-workers retain their restricted roles. No automatic retirement/cutoff is enabled.
+Production receives the coherent change and owner-run migration 0064 on 9 October
+at 15:53 IST. Runtime web and compatible workers retain restricted roles; no
+automatic retirement/cutoff is enabled. See the [verified release](../implementation/loan-ui-and-servicing-release-20261009.md).

@@ -48,7 +48,8 @@ insufficient capacity, stale item/economics/number previews, partial failure
 rollback, request mismatch, unauthorized/cross-Workspace access, HTTP retry after
 series stop, and two simultaneous confirmations returning the same drafts.
 Local verification artifacts are under `.tmp/draft-split-20261009/`. The preview
-database contains fictional unpaid examples only; production rollout is separate.
+database contains fictional unpaid examples only; production rollout completes on 9 October at 15:53 IST.
+See the [verified release](loan-ui-and-servicing-release-20261009.md).
 
 Verification: 132 regression checks pass in a fresh disposable test database;
 two final HTTP/form checks pass after improving the item labels. Desktop, mobile

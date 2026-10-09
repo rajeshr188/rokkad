@@ -1,5 +1,5 @@
 ---
-status: implemented-local
+status: deployed
 owner: loans
 updated: 2026-10-09
 tags: [loans, paper-entry, repayment, origination, verification]
@@ -37,7 +37,8 @@ suite covers routine paper, simplification, series availability, multi-item
 recording and direct entry. Fictional localhost browser checks cover editable
 prefills, linked/custom references, asynchronous series refresh, retained photos,
 desktop/mobile and native no-JavaScript Apply series setup. Production rollout
-is separate; browser checks make no financial submission.
+is complete on 9 October at 15:53 IST; browser checks make no financial submission.
+See the [verified release](loan-ui-and-servicing-release-20261009.md).
 
 ## UR-23: compact purpose and retained entry facts
 

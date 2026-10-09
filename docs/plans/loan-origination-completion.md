@@ -8,16 +8,20 @@ related: [loan-continuation-consolidation.md, ../adr/2026-10-07-shared-loan-entr
 
 # Loan origination completion and production acceptance
 
-## Editable paper-number and reference defaults (9 October, local)
+The cumulative loan changes below are live on 9 October at 15:53 IST. See the
+[verified release](../implementation/loan-ui-and-servicing-release-20261009.md);
+earlier dated verification sections remain historical evidence.
+
+## Editable paper-number and reference defaults (9 October, deployed)
 
 The owner requests both paper identity fields start with the selected series' next
 automatic suggestion to reduce typing. Implemented as editable, non-consuming
 presentation defaults with manual-value retention on series changes. Submitted
 review/confirmation facts remain authoritative; normal source/duplicate/counter
 validation and exact retry remain. See the [implementation](../implementation/unified-loan-recording.md).
-Production rollout is separate.
+Production rollout is complete; see the release record above.
 
-## One draft per collateral entry (9 October, local)
+## One draft per collateral entry (9 October, deployed)
 
 The owner authorizes a second mode in the existing Split screen: retain a chosen
 entry on the original and create one ordinary draft for every other entry.
@@ -25,26 +29,26 @@ Implemented with non-consuming per-loan/totals review, preserved item/photo
 identities, atomic bounded numbering and audited identical retries. Selected-item
 grouping remains supported; no payout, new lifecycle or migration is introduced.
 See the [implementation](../implementation/draft-collateral-batch-split.md).
-Production rollout remains separate.
+Production rollout is complete; see the release record above.
 
-## Running-series selection and servicing (9 October, local)
+## Running-series selection and servicing (9 October, deployed)
 
 The owner accepts and authorizes running-only routine series choices, manual stop
 of new lending, derived exhaustion and explicit older-paper recording. Implemented
 with the existing availability flag, shared selector, audited locking and release
 issuance independent of current lending status. Existing financial records and
 monitoring contracts remain. Local verification/preview are complete; production
-rollout is separate. See the [decision](../adr/2026-10-09-series-new-lending-and-servicing.md)
+rollout is complete. See the [decision](../adr/2026-10-09-series-new-lending-and-servicing.md)
 and [operator guide](../domain/loan-series-availability.md).
 
-## Accepted direct-entry presentation (9 October, local)
+## Accepted direct-entry presentation (9 October, deployed)
 
 The owner evaluates and accepts the Simplified trial, then explicitly requests
 removal of Current and the switcher. Routine direct New loan now uses that editor
 for all users, with the same commands and review. Layout preferences are retired;
 old bookmarks/session values cannot restore Current. Already-open trial layout
 requests remain read-only. Origination-purpose selection, saved-draft editing and
-paper entry retain their supported behavior. Production rollout remains separate.
+paper entry retain their supported behavior. Production rollout is complete; see the release record above.
 See the [trial and retirement ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md)
 and current Status.
 

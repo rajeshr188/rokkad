@@ -7,6 +7,27 @@ tags: [status, architecture]
 
 # Status
 
+## Loan UI and servicing release live (9 October, 15:53 IST)
+
+The accepted cumulative loan changes are deployed as `rokkad:loan-release-20261009-e7d8f58bbc0e`,
+runtime commit `2b85a41f` on work/loan-servicing-contract-ld01. This includes unified
+closing, simplified direct/paper entry and clear review, running-series selection,
+one draft per collateral splitting, and editable suggested paper identities. The
+latest live monthly/annual billing behavior is preserved; independent local
+billing edits are excluded. Source commit is pushed to GitHub.
+
+456 fresh-database regressions and 15 Node interaction checks pass, together with
+documentation/import boundaries, static collection and schema-drift checks.
+Restricted read-only candidate/live screens pass in all three Workspaces. After
+the validated fresh checkpoint, owner-only migration 0064 updates the two closure
+guards; 198 business-table row fingerprints remain unchanged. No customer
+financial transaction is posted by deployment. HTTPS, exact source/static hashes,
+restricted runtime and existing sample states/balances pass. All six timers resume,
+the new web log has no errors, and the post-release backup/retention pass with
+9.73 GiB free. Exact artifact/checkpoint/rollback details are in the
+[release record](implementation/loan-ui-and-servicing-release-20261009.md).
+Earlier local-only rollout statements below are superseded by this release.
+
 ## Editable paper identity suggestions (9 October, local)
 
 Routine paper New loan now fills Original loan number and Paper book/page/loan
