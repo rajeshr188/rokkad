@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: active
 owner: operations
 updated: 2026-10-10
 tags: [backups, storage, positions, plan]
@@ -7,24 +7,29 @@ tags: [backups, storage, positions, plan]
 
 # Backup storage and source-evidence efficiency
 
-The owner selects review and recommendations. The [measured review](../implementation/backup-storage-review-20261010.md)
-is complete; implementation, destructive cleanup, external upload and retention
-activation are not claimed or authorized merely by that review.
+The owner selects review and recommendations, then authorizes proceeding with
+BS-02. The [measured review](../implementation/backup-storage-review-20261010.md)
+and [scoped image cleanup](../implementation/backup-image-cleanup-20261010.md)
+are complete. External upload and changed local retention are not activated.
 
 ## Recommended order
 
 | Slice | Outcome | Current state |
 | --- | --- | --- |
 | BS-01 | Read-only server, backup, source-duplication and protected-image inventory | Complete; 25 image candidates after protecting 89 images; private exact manifest retained |
-| BS-02 | Scoped unused application-image cleanup and renewed capacity measurement | Proposed; recheck references and verified checkpoint, approve exact final manifest, remove only eligible IDs; no force, database, volume, media or checkpoint deletion |
+| BS-02 | Scoped unused application-image cleanup and renewed capacity measurement | Complete; 25 removed, 89 protected, 2.553 GiB net recovered; backup and live checks pass; no force, cache, database, volume, media or checkpoint deletion |
 | BS-03 | Encrypted private R2 database-backup upload with verified remote bytes | Proposed; choose private backup bucket, dedicated scoped credentials and externally recoverable decryption key; retain current local copies while proving upload |
 | BS-04 | Restore downloaded/decrypted backup in isolation and activate retention | Proposed; preserve remote 24-hourly/30-daily set; proposed six recent local hourly copies only after owner selection and actual restore acceptance |
 | BS-05 | Compact future closed-position source snapshots | Proposed; versioned stored profile, immutable source identity/FK/hash, financial facts and standalone export/restore; old posted bytes and profile semantics preserved |
 
-BS-02 may obtain enough headroom without a paid server expansion, but nominal
-Docker image sizes do not guarantee physical reclaimed bytes. Measure after
-cleanup and separately assess unused build cache; never apply generic system or
-volume pruning. If safe cleanup cannot sustain the 5 GiB cutoff and reasonable
+BS-02 available space is 10.127 GiB; full retention at current backup sizes
+projects 4.817 GiB, below the cutoff before growth. Headroom is improved
+but not fully resolved. BS-03/04 remain next; preserve existing local retention
+until remote recovery is accepted. No generic cache pruning is authorized.
+
+Nominal Docker image sizes do not guarantee physical reclaimed bytes. Separately
+assess unused build cache before any further cleanup; never apply generic system
+or volume pruning. If safe cleanup cannot sustain the 5 GiB cutoff and reasonable
 growth headroom, arrange additional capacity. Existing operational backups pass.
 
 BS-03/BS-04 solve host-loss recovery and long local-retention growth. Application

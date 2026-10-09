@@ -7,6 +7,22 @@ tags: [status, architecture]
 
 # Status
 
+## BS-02 scoped image cleanup complete (10 October)
+
+BS-02 removes all 25 rechecked unused application images without force or
+refusals, preserves all 89 protected images and existing containers, and recovers
+2.553 GiB net. Available disk is 10.127 GiB. HTTPS, the live image, six
+timers and the latest backup checksum/catalogue pass; local retention, database,
+volumes, media and checkpoints remain intact. No build-cache cleanup is performed.
+At the current dump size, a conservative full 53-copy retention set projects
+4.817 GiB free, still 0.183 GiB below the 5 GiB cutoff before further
+growth. Capacity follow-up remains open. BS-03/04 off-server encrypted recovery
+and verified restore remain next; six local copies are not activated.
+
+See the [execution record](implementation/backup-image-cleanup-20261010.md) and
+[ordered plan](plans/backup-storage-and-evidence-efficiency.md). The review below
+describes the preceding read-only stage.
+
 ## Backup storage review complete; ordered improvements proposed (10 October)
 
 Read-only inspection finds production data about 1.23 GiB, operational backups

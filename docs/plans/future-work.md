@@ -45,7 +45,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
-| FW-023 | Database backup capacity and evidence storage | Read-only review complete; ordered improvements proposed | Select BS-02 scoped image cleanup, then off-server backup acceptance | 25 candidates after protecting 89 images; private R2 recovery and compact future snapshots proposed; no retention/data changes |
+| FW-023 | Database backup capacity and evidence storage | BS-02 scoped cleanup complete; recovery follow-up open | BS-03/04 encrypted off-server backup and actual restore | 25 removed, 89 protected; 10.127 GiB free; full-retention projection 4.817 GiB before growth; no retention/data changes |
 
 ## FW-022: Main Loans-list search performance
 
@@ -1689,3 +1689,16 @@ encrypted private R2 database backups, actual isolated restore and selected loca
 retention, then compact future admissions. Existing posted snapshots remain
 intact. Six local hourly copies are a proposal, not an activated policy. See the
 [measured review](../implementation/backup-storage-review-20261010.md).
+
+
+**BS-02 executed, 10 October:** BS-02 removes all 25 rechecked unused application images without force or
+refusals, preserves all 89 protected images and existing containers, and recovers
+2.553 GiB net. Available disk is 10.127 GiB. HTTPS, the live image, six
+timers and the latest backup checksum/catalogue pass; local retention, database,
+volumes, media and checkpoints remain intact. No build-cache cleanup is performed.
+At the current dump size, a conservative full 53-copy retention set projects
+4.817 GiB free, still 0.183 GiB below the 5 GiB cutoff before further
+growth. Capacity follow-up remains open. BS-03/04 off-server encrypted recovery
+and verified restore remain next; six local copies are not activated.
+
+See the [execution record](../implementation/backup-image-cleanup-20261010.md).

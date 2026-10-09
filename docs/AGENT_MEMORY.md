@@ -7,14 +7,26 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
-The 10 October backup/storage review is complete and the ordered improvement
-plan is proposed: protected unused-image cleanup, encrypted private off-server
+BS-02 removes all 25 rechecked unused application images without force or
+refusals, preserves all 89 protected images and existing containers, and recovers
+2.553 GiB net. Available disk is 10.127 GiB. HTTPS, the live image, six
+timers and the latest backup checksum/catalogue pass; local retention, database,
+volumes, media and checkpoints remain intact. No build-cache cleanup is performed.
+At the current dump size, a conservative full 53-copy retention set projects
+4.817 GiB free, still 0.183 GiB below the 5 GiB cutoff before further
+growth. Capacity follow-up remains open. BS-03/04 off-server encrypted recovery
+and verified restore remain next; six local copies are not activated.
+
+See the [cleanup record](implementation/backup-image-cleanup-20261010.md).
+
+The preceding 10 October read-only review completes and proposes the ordered
+improvement plan: protected unused-image cleanup, encrypted private off-server
 database backups with verified restore, then compact future closed-position
 snapshots. Containerd is about 39.49 GiB; production data 1.23 GiB and current
 operational backups 2.80 GiB. Expanded config/script/metadata checks protect 89
 images and leave 25 candidates (3.14 GiB image-unique bytes, potentially pinned
-by build cache). Exact private manifest/recheck requirements exist; no deletion,
-upload or retention change is performed. The proposed six local hourly copies
+by build cache). At that review stage no deletion, upload or retention change
+is performed; the subsequent BS-02 execution above supersedes the cleanup status. The proposed six local hourly copies
 must wait for selected policy and actual off-server restore acceptance. Compact
 future profiles do not shrink the already-posted 39,196 snapshots. See the
 [plan](plans/backup-storage-and-evidence-efficiency.md) and
