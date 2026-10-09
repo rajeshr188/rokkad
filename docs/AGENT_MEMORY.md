@@ -7,6 +7,13 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Standing calculation defaults resolve by scope, then effective start date, then
+revision/id. A newly saved earlier start does not replace an applicable later
+row with missing tenure. Lakshmi's 25 September gap is corrected by audited policy
+11/revision 2 with the approved 12-month default; earlier/later policies and frozen
+loan agreements remain intact. Check every dated interval when repairing setup,
+rather than falling back silently to today's loan terms.
+
 The accepted cumulative loan UI/servicing changes are live from 9 October 15:53
 IST as `rokkad:loan-release-20261009-e7d8f58bbc0e`, runtime commit 2b85a41f from
 work/loan-servicing-contract-ld01. The bounded derivative preserves current live

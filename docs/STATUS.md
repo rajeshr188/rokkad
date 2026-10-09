@@ -7,6 +7,26 @@ tags: [status, architecture]
 
 # Status
 
+## Lakshmi historical-date tenure gap corrected (9 October)
+
+The owner reports blank tenure after choosing 25 September in paper New loan.
+Restricted read-only reproduction finds workspace policy 3 (25 September) with
+no default tenure, taking precedence over the corrected 24 September revision
+10. Policy 7 supplies 12 months only from 8 October. A broadly backdated policy
+does not override a later effective start simply because it was created later.
+
+Append audited workspace policy 11, revision 2, effective 25 September, through
+the existing economic-policy service. Its only changed term is the previously
+agreed 12-month default. All other settings and all previous policies are retained;
+rates, fees, monitoring, loan records and numbering remain unchanged. Fingerprints
+match across the other 102 Workspace-owned Loans models. Eighteen series/date
+checks cover all three registers and both neighboring policy boundaries. Six
+read-only production date-refresh responses show tenure 12 and no warning, using
+the old-series option where that retained register requires it. No loan is saved,
+no financial event is posted and no application deployment is needed. Evidence:
+`.tmp/paper-tenure-20261009/`, with the private server correction report in the
+existing deployment folder's `paper-tenure-20261009/` child.
+
 ## Loan UI and servicing release live (9 October, 15:53 IST)
 
 The accepted cumulative loan changes are deployed as `rokkad:loan-release-20261009-e7d8f58bbc0e`,

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [loans, setup, staff, ltv]
 ---
 
@@ -33,6 +33,16 @@ explicitly revised.
 History is retained for review. An earlier row marked active remains eligible
 for its dates, but the latest applicable date/version within the scope wins.
 Changing calculation settings does not change fees or risk-monitoring thresholds.
+
+When correcting a missing standing tenure for older paper loans, check the dated
+rows in history. A revision starting 24 September does not replace a row starting
+25 September, even if the 24 September revision was saved more recently. Select
+**Use these settings** on the applicable 25 September row, supply the actual
+standing tenure, retain its other settings and save with that same effective
+start date. The added revision fills that interval; later effective policies and
+existing loans' frozen agreements remain unchanged. Verify the boundary dates in
+New loan. Use **Enter actual agreed terms** for a loan whose paper agreement
+really differs from those standing defaults.
 
 ## Paper entry and monitoring setup
 
