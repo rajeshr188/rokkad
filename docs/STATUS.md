@@ -7,6 +7,29 @@ tags: [status, architecture]
 
 # Status
 
+## Position-only loan import selected; IP-01/IP-02 delivered (9 October)
+
+The owner confirms the old source's RELEASED means completed loan, zero debt and
+all collateral returned to the borrower, and selects the
+[ordered position-import plan](plans/loan-position-import.md). Earlier history is
+optional; requirements depend on continuing servicing versus closed retention.
+Existing complete-history/opening contracts retain their meanings.
+
+Implement and test the minimal loan-closed-position/1 input and pure source
+adapter: no receipts, old approval/pricing, item reconstruction or monitoring
+policy required for closed preparation. All 34 focused checks pass. This is input
+preparation, not ordinary-loan admission.
+
+Restricted read-only production rehearsal classifies 39,215 retained records:
+39,196 candidates and 19 closure-before-origination exceptions (JCL 15, JSK 4).
+Candidates comprise 39,006 released/returned claims plus 190 JCL owner-closed/zero
+claims with unknown return/date. Exact Party/legacy-register candidates and
+document fingerprints reconcile; no number duplicates, repeated source families,
+source/Party binding disagreement or ordinary conflicts are found. No live loan,
+schema, counter, source document, image or financial event changes. Ordinary
+nullable-detail admission, batch conversion and browsing/search remain
+IP-03/IP-04/IP-05. See the [delivery record](implementation/loan-position-import-ip01-ip02.md).
+
 ## Search deferred; historical-loan origins reviewed (9 October)
 
 The owner shelves the measured main Loans-list search correction in

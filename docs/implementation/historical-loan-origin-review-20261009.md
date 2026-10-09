@@ -8,6 +8,14 @@ related: [../adr/2026-09-13-historical-closed-loan-archive.md, ../adr/2026-10-05
 
 # How Historical loans arose
 
+**Subsequent owner decision, 9 October:** the owner confirms the old source's
+released loans have zero debt and all collateral was returned, and selects
+[ordinary position import without earlier history](../adr/2026-10-09-loan-position-import-without-earlier-history.md).
+The new [IP-01/IP-02 delivery](loan-position-import-ip01-ip02.md) prepares and
+classifies 39,196 candidate closed positions and 19 date-order exceptions without
+admission. This supersedes the unscheduled next-decision description below;
+conversion and ordinary persistence remain subsequent ordered work.
+
 The owner requested this review after deferring the measured Loans-list search
 improvement to [FW-022](../plans/future-work.md#fw-022-main-loans-list-search-performance).
 This is repository/source-decision tracing, supported by the already completed

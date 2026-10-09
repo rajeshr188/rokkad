@@ -7,6 +7,18 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+On 9 October the owner selects position-only import: ordinary active loans need
+an accepted continuation position, closed imports need a known closed position;
+earlier transaction history is optional. RELEASED in the reviewed legacy
+installation means zero debt and all collateral returned to the borrower.
+IP-01/IP-02 deliver a tested closed-position input/adapter and read-only census:
+39,196 candidates, 19 date-order exceptions. 190 JCL records use an earlier
+owner-closed/zero basis without release rows; their date/return remain unknown.
+No ordinary admission or conversion is implemented by these first slices. Do not
+fill required old terms with dummy values. Follow the
+[accepted decision](adr/2026-10-09-loan-position-import-without-earlier-history.md)
+and [ordered plan](plans/loan-position-import.md).
+
 Historical loans originated as retained legacy released-source evidence, before
 paper-first adaptation. The released-record adapter routes every release-bearing
 loan to evidence and deliberately leaves normalized principal/balance unknown;
@@ -15,7 +27,8 @@ may survive in raw source rows. Supported paper loans remain ordinary loans;
 archive admission requires source-backed reconciliation, while browsing does not.
 Verified closed-position admission can establish an ordinary closed loan with
 earlier receipts/payout unavailable; it needs original terms and zero-debt evidence.
-Search performance is owner-deferred in FW-022 on 9 October. See the
+Standalone search correction is deferred in FW-022; the later selected import
+plan includes directory simplification/benchmarking after conversion. See the
 [origin review](implementation/historical-loan-origin-review-20261009.md).
 
 Standing calculation defaults resolve by scope, then effective start date, then

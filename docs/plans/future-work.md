@@ -48,6 +48,12 @@ plans; shelving an idea must not hide a release blocker.
 
 ## FW-022: Main Loans-list search performance
 
+**Subsequent owner selection, 9 October:** the
+[position-import plan](loan-position-import.md) now includes ordinary-directory
+consolidation and search measurement after closed-record admission/conversion.
+The standalone query correction remains deferred until that ordered work reaches
+IP-05. This does not claim conversion itself fixes the measured query cost.
+
 **Owner deferral, 9 October:** retain the measured search recommendation as future
 work while reviewing how historical loans arose. Investigation and an isolated
 query experiment are complete; no search implementation or production change is
