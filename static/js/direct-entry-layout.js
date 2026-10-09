@@ -1,6 +1,6 @@
 /* Labels describe the existing fields; no financial values are calculated here. */
 function initDirectEntryLayout() {
-  const root = document.querySelector('[data-new-loan-entry][data-direct-layout="simplified"]');
+  const root = document.querySelector('[data-new-loan-entry]');
   if (!root || !root.querySelector('[data-draft-save-form]') || root.dataset.directLabelsReady) return;
   root.dataset.directLabelsReady = 'true';
   const update = () => {

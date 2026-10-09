@@ -1,4 +1,4 @@
-"""Read-only presentation facts for the optional simplified direct editor."""
+"""Read-only standing-policy guidance for the direct New loan editor."""
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
@@ -9,7 +9,7 @@ from apps.tenant_apps.loans.services.economic_policies import (
 
 
 def direct_entry_layout_context(request, form):
-    if not request.loan_entry_presentation.get("direct_simplified"):
+    if not request.loan_entry_presentation.get("direct_new_entry"):
         return {}
     result = dict(direct_standing_tenure=None, direct_valuation_method="",
                   direct_product_compact=False, direct_tenure_open=True,

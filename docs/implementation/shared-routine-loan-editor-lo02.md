@@ -10,12 +10,12 @@ related: [../plans/loan-origination-completion.md]
 
 ## Result and boundaries
 
-On 9 October direct entry gains an opt-in Current / Simplified (trial) presentation.
-Current remains the default. The authenticated session preference key includes
-Workspace and user IDs; explicit form state wins for an open tab. No model or
-migration is added. `layout_change` is a nonfinancial presentation action, separate
-from `entry_change`: it retains the current origination purpose even when standing
-entry defaults change. Both writers exclude it from financial processing.
+On 9 October the owner accepts the simplified direct-entry trial and requests
+retirement of Current and the layout switcher. Routine direct New loan always
+uses the accepted editor. No layout preference is read/written, and old session
+values or query parameters cannot restore Current. No model or migration is added.
+An already-open trial's `layout_change` remains a nonfinancial compatibility action:
+it retains the current purpose and facts, and both writers exclude it from saves.
 
 Simplified template fragments reuse the same fields/formsets and file controls.
 Expected numbering moves beside series; a single valid selected product is compact;
@@ -26,12 +26,12 @@ appraisal panels use the dated valuation method, also exposed by the existing ra
 preflight to update added rows and changed dates. Existing appraisal suggestion and
 LTV arithmetic is reused; the optional panel placement does not change saved values.
 
-Enhanced layout replacement reuses existing File inputs, async revision guards and
-submission tokens. Failed switching restores the displayed selector and retains
-facts. Without JavaScript, native Apply layout needs explicit photo reselection.
+Origination-purpose/series replacement still reuses existing File inputs, async
+revision guards and submission tokens. The retired layout selector, native Apply
+layout button and layout-specific JavaScript branches are removed.
 Check amounts posts the existing preview action; all save/review/approval/payout and
 retry commands remain shared. Saved-draft editing and payout review retain their
-existing layouts. See [the trial ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md).
+existing layouts. See [the trial and retirement ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md).
 
 On 9 October routine paper entry removes the repeated Standing agreement section.
 The main fields remain customer, series/product/date/tenure, original number/source

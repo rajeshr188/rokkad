@@ -8,15 +8,16 @@ related: [loan-continuation-consolidation.md, ../adr/2026-10-07-shared-loan-entr
 
 # Loan origination completion and production acceptance
 
-## Direct-entry presentation trial (9 October, local)
+## Accepted direct-entry presentation (9 October, local)
 
-Implemented an optional Simplified layout beside the retained Current default,
-using the same loan commands and review. Staff may compare both before deciding
-on a preferred default or retirement; neither is removed or automatically selected
-for other users. Preference is local to the authenticated Workspace/user browser
-session. Technical checks and fictional localhost preview are complete; production
-rollout and actual staff evaluation remain separate. See the
-[trial ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md) and current Status.
+The owner evaluates and accepts the Simplified trial, then explicitly requests
+removal of Current and the switcher. Routine direct New loan now uses that editor
+for all users, with the same commands and review. Layout preferences are retired;
+old bookmarks/session values cannot restore Current. Already-open trial layout
+requests remain read-only. Origination-purpose selection, saved-draft editing and
+paper entry retain their supported behavior. Production rollout remains separate.
+See the [trial and retirement ADR](../adr/2026-10-09-optional-direct-entry-layout-trial.md)
+and current Status.
 
 ## Authorization and starting point
 

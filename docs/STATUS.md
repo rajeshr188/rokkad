@@ -7,6 +7,34 @@ tags: [status, architecture]
 
 # Status
 
+## Simplified direct-entry layout accepted (9 October, local)
+
+The owner evaluates the trial, accepts Simplified and explicitly requests removal
+of Current and the switcher. Routine direct New loan now always uses the accepted
+editor. Layout selection markup, session preference handling and enhanced/native
+switching controls are removed. Old bookmarks/session values cannot restore the
+retired layout. Already-open trial layout_change requests remain read-only and
+preserve their current purpose, values and submission token without consuming a
+number. Origination-purpose selection remains available; saved-draft editing,
+paper entry and the financial services/review retain their supported behavior.
+
+**143 Django checks pass**, covering standard presentation and old-request safety,
+policy/appraisal guidance, LTV and rate exceptions, permissions, frozen review,
+atomic payout/retry/recovery, routine paper entry, multi-item history and saved
+draft editing. The first broad run exposed a pre-existing assertion for the retired
+closure button label; the check now verifies the already-supported Close / release
+loan label and scoped route. No closure implementation change is made.
+
+Actual fictional localhost desktop/mobile checks confirm the default layout,
+absence of layout controls, and retained facts/photos/token/deleted rows across
+direct/paper purpose changes. Native no-JavaScript series refresh retains fields
+and token. No page errors/overflow; screenshots are visually reviewed. Localhost
+8083 is updated with the scoped overlay. Artifacts are under
+`.tmp/direct-entry-standard-20261009/`. No production deployment, migration or
+financial data correction is performed. The earlier trial section below is dated
+implementation evidence, superseded by this acceptance and
+[retirement decision](adr/2026-10-09-optional-direct-entry-layout-trial.md#owner-acceptance-and-retirement-9-october).
+
 ## Optional direct-entry layout trial (9 October, local)
 
 Direct New loan now offers Current / Simplified (trial), retaining Current as the

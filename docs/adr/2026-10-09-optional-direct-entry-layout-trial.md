@@ -38,3 +38,20 @@ authorization, frozen review, exact retry and posting rules remain. Do not maint
 two financial implementations or silently retire either layout. Evaluate the trial
 with staff before a separate owner decision on default or retirement. Production
 rollout remains a separate release task.
+
+## Owner acceptance and retirement (9 October)
+
+The owner evaluates the trial, accepts the simplified layout and explicitly asks
+to keep it and remove Current and the switcher. This supersedes the dual-layout
+and session-preference decision above. Routine direct New loan now always uses
+the accepted compact editor; there is no layout choice, preference writer or
+legacy direct layout branch. Existing session values and layout query parameters
+cannot restore Current. Saved-draft editing and shared payout review remain as
+before; their shared field rendering is not an alternative New loan layout.
+
+Already-open trial `layout_change` submissions remain nonfinancial, preserve
+their current purpose and facts, and render the accepted editor. This small
+compatibility guard avoids interpreting an old presentation request as a draft
+save. Origination-purpose selection remains independent and available. Financial
+forms, commands, authorization, frozen agreements and retry contracts do not
+change. Production rollout remains separate.

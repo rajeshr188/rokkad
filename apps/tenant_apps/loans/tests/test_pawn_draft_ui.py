@@ -1862,7 +1862,10 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(detail, "Accrue interest")
         self.assertNotContains(detail, "Partial release")
         self.assertContains(detail, "Release and renew")
-        self.assertContains(detail, "Collect and release all collateral")
+        self.assertContains(detail, "Close / release loan")
+        self.assertContains(detail, reverse(
+            "workspace_loans:pawn_loan_close", args=[self.tenant.slug, loan.pk],
+        ))
         self.assertContains(detail, "More loan actions")
         self.assertContains(detail, 'href="#loan-overview"')
         self.assertContains(detail, 'id="loan-overview"')

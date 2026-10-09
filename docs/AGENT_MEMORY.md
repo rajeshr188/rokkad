@@ -7,14 +7,14 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
-Direct New loan retains Current as the default and adds an optional Simplified
-layout trial. The choice belongs to the user's Workspace/browser session, not the
-loan's origination purpose or financial contract. Both layouts share bound forms,
-submission identities and payout review/commands. Layout changes are nonfinancial
-and preserve entered facts; enhanced switching retains actual File inputs locally.
-Native no-JavaScript switching requires truthful photo reselection after reload.
-Neither layout is retired without a separate owner decision. See the
-[trial decision](adr/2026-10-09-optional-direct-entry-layout-trial.md).
+After evaluating the direct-entry trial, the owner accepts the simplified layout
+and explicitly retires Current and the switcher on 9 October. Routine direct New
+loan now always uses the compact editor. Layout preferences are no longer read or
+written; old session values and bookmarks cannot restore Current. Already-open
+trial layout_change submissions remain nonfinancial and retain purpose/facts.
+Origination-purpose controls remain independent. Financial services, forms,
+submission identities, saved-draft editing and shared payout review are unchanged.
+See the [trial and retirement decision](adr/2026-10-09-optional-direct-entry-layout-trial.md).
 
 Routine paper entry supplies dated standing terms without a repeated agreement
 section. One collapsed Additional details control retains actual exceptions,

@@ -1,5 +1,5 @@
 {% load i18n %}
-  {% if direct_simplified %}<div class="small mt-2">{% else %}<div class="card mb-4"><div class="card-body"><h2 class="h5 mb-2">{% translate "Loan number" %}</h2>{% endif %}
+  <div class="small mt-2">
   {% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.license.license_number }} / {{ loan.series.pawn_display_name }} when this draft was first saved.</div>
   {% else %}
     <div class="small text-body-secondary">{% translate "Expected loan number" %}</div>
@@ -7,4 +7,4 @@
     <p class="small text-body-secondary mb-0 mt-2">{% translate "Assigned when you save. Another loan saved first may change this number." %}</p>
     {{ number_previews|json_script:"loan-number-previews" }}
     <noscript><p class="small">{% translate "Enable JavaScript to update the preview when changing series. The official number is assigned on save." %}</p></noscript>
-  {% endif %}</div>{% if not direct_simplified %}</div>{% endif %}
+  {% endif %}</div>
