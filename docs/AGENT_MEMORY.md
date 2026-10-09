@@ -7,6 +7,19 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The 10 October backup/storage review is complete and the ordered improvement
+plan is proposed: protected unused-image cleanup, encrypted private off-server
+database backups with verified restore, then compact future closed-position
+snapshots. Containerd is about 39.49 GiB; production data 1.23 GiB and current
+operational backups 2.80 GiB. Expanded config/script/metadata checks protect 89
+images and leave 25 candidates (3.14 GiB image-unique bytes, potentially pinned
+by build cache). Exact private manifest/recheck requirements exist; no deletion,
+upload or retention change is performed. The proposed six local hourly copies
+must wait for selected policy and actual off-server restore acceptance. Compact
+future profiles do not shrink the already-posted 39,196 snapshots. See the
+[plan](plans/backup-storage-and-evidence-efficiency.md) and
+[review](implementation/backup-storage-review-20261010.md).
+
 The coordinated closed-position production rollout completes on 10 October:
 runtime e851f261/image rokkad:closed-position-ip05-3829abaa8ac7, migrations through
 0067 and 39,196 ordinary CLOSED positions (JCL 26,649; JSK 3,836; Lakshmi 8,711).
@@ -23,8 +36,8 @@ A read-only backup-size review confirms the closed-position implementation embed
 full retained source JSON in both origin.document and opening.review, in addition
 to the original archive: about 585 MiB additional uncompressed copies. R2 media
 files are separate; each local backup is a compressed full database snapshot.
-Compact future profiles and separately protected off-server backup retention need
-review; never strip source fields from immutable existing posted payloads casually.
+Compact future profiles and separately protected off-server backup retention are
+reviewed proposals; never strip source fields from immutable existing posted payloads casually.
 Keep nullable-detail-compatible readers and never rewind over later transactions.
 Broad search can still take several seconds. See the [release record](implementation/loan-position-import-release-20261010.md).
 

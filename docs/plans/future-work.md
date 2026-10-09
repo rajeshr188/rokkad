@@ -45,7 +45,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
-| FW-023 | Database backup capacity after closed-position conversion | Measured capacity follow-up; current backup passes | Choose capacity expansion or separately reviewed cleanup | Larger 157 MiB copies project 8.11 GiB for full retention; retain policy/checkpoints/media and provide growth headroom |
+| FW-023 | Database backup capacity and evidence storage | Read-only review complete; ordered improvements proposed | Select BS-02 scoped image cleanup, then off-server backup acceptance | 25 candidates after protecting 89 images; private R2 recovery and compact future snapshots proposed; no retention/data changes |
 
 ## FW-022: Main Loans-list search performance
 
@@ -1658,8 +1658,9 @@ occupy 2.8 GiB. A conservative full set of 53 copies under the approved
 is needed merely to retain the 5 GiB cutoff; allow further headroom for growth.
 These are measured-size projections, not guaranteed future sizes or dates.
 
-Prefer arranging additional capacity. Alternatively, prepare and approve a scoped
-cleanup of demonstrably redundant non-live artifacts with recovery verification.
+The later read-only review recommends scoped unused-image cleanup before assuming
+expansion is necessary, followed by verified off-server backup retention. Arrange
+additional capacity if safe cleanup cannot sustain the cutoff and growth headroom.
 Do not delete live data/media, discard release checkpoints, change retention or
 remove rehearsal databases without a separate reviewed scope. The current
 rollout is complete; this ongoing operational follow-up remains open. See the
@@ -1676,3 +1677,15 @@ backup retention plus recent local recovery copies and other disk usage before
 assuming expansion is the only remedy. Preserve the existing approved retention
 until an alternative is explicitly selected and verified. See the detailed
 [size inspection](../implementation/loan-position-import-release-20261010.md#read-only-backup-size-follow-up).
+
+
+**Review and ordered recommendations complete, 10 October:** containerd image/build
+storage occupies about 39.49 GiB, compared with production data 1.23 GiB and
+operational backups 2.80 GiB. Expanded metadata/container/script/config checks
+protect 89 images; 25 application-image candidates have 3.14 GiB image-unique data,
+with build-cache references affecting actual recovery. No deletion is performed.
+Follow [BS-01 to BS-05](backup-storage-and-evidence-efficiency.md): scoped cleanup,
+encrypted private R2 database backups, actual isolated restore and selected local
+retention, then compact future admissions. Existing posted snapshots remain
+intact. Six local hourly copies are a proposal, not an activated policy. See the
+[measured review](../implementation/backup-storage-review-20261010.md).

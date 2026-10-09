@@ -7,6 +7,22 @@ tags: [status, architecture]
 
 # Status
 
+## Backup storage review complete; ordered improvements proposed (10 October)
+
+Read-only inspection finds production data about 1.23 GiB, operational backups
+2.80 GiB and containerd image/build storage 39.49 GiB. This changes the recommended
+priority from simply expanding disk to reviewed unused-image cleanup first,
+encrypted off-server database recovery next, and compact future source snapshots
+after that. Approved local retention and all business/source records are unchanged.
+
+The expanded image review protects 89 images and identifies 25 application-image
+candidates, with 3.14 GiB image-unique data and possible build-cache references.
+No freed-space guarantee or deletion is claimed. Exact private manifest and
+recheck requirements are prepared. R2 upload/restore, six local copies and compact
+profiles remain proposals; existing posted snapshots are not rewritten. Follow
+the [ordered plan](plans/backup-storage-and-evidence-efficiency.md) and
+[measured review](implementation/backup-storage-review-20261010.md).
+
 ## Closed-position production rollout complete (10 October)
 
 Runtime e851f261 and migrations through 0067 are live. All 39,196 eligible
