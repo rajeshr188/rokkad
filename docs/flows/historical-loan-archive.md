@@ -1,11 +1,23 @@
 ---
 status: implemented
 owner: project
-updated: 2026-10-05
+updated: 2026-10-09
 tags: [loans, portability, archive, flow]
 ---
 
 # Historical loan evidence
+
+**Current release status, 9 October:** readable archive details, unified Loans
+browsing and supported reconciled closed-history admission are deployed. Earlier
+local/pending statements below describe their original delivery checkpoints.
+See the [origin and current-boundary review](../implementation/historical-loan-origin-review-20261009.md).
+Archive membership reflects the released-source migration route, not a per-loan
+finding that complete financial reconstruction is impossible.
+The later verified closed-position option also permits ordinary CLOSED admission
+without unavailable receipt history, after verifying original agreement and zero
+principal/interest/fees at closure. Physical handover may remain unknown. Open
+archive admission review, then **Record a verified closed position**; see the
+[evidence-extension decision](../adr/2026-10-06-bounded-loan-evidence-extensions.md).
 
 The [unified recording workflow](unified-loan-recording.md) now implements a local
 review route for one complete, reconciled closed history without renewals. The

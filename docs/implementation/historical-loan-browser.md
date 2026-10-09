@@ -1,11 +1,17 @@
 ---
-status: implemented-locally
+status: deployed
 owner: project
-updated: 2026-10-03
+updated: 2026-10-09
 tags: [loans, archive, migration, usability]
 ---
 
 # Readable historical closed-loan browser
+
+**Release update, 9 October:** this browser and subsequent unified browsing/
+supported archive admission are deployed. The local validation and pending
+rollout statements below retain the original checkpoint history. See the
+[current origin review](historical-loan-origin-review-20261009.md) and
+[production release](loan-production-release-lo07.md).
 
 The owner reported that the archive looked as if closed-loan data had been lost:
 the list exposed source hashes instead of customer/dates, and detail put items,

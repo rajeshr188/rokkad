@@ -7,6 +7,17 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Historical loans originated as retained legacy released-source evidence, before
+paper-first adaptation. The released-record adapter routes every release-bearing
+loan to evidence and deliberately leaves normalized principal/balance unknown;
+it does not test individual reconstructability. Useful amounts and payment splits
+may survive in raw source rows. Supported paper loans remain ordinary loans;
+archive admission requires source-backed reconciliation, while browsing does not.
+Verified closed-position admission can establish an ordinary closed loan with
+earlier receipts/payout unavailable; it needs original terms and zero-debt evidence.
+Search performance is owner-deferred in FW-022 on 9 October. See the
+[origin review](implementation/historical-loan-origin-review-20261009.md).
+
 Standing calculation defaults resolve by scope, then effective start date, then
 revision/id. A newly saved earlier start does not replace an applicable later
 row with missing tenure. Lakshmi's 25 September gap is corrected by audited policy

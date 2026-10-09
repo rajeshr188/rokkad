@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-03
+updated: 2026-10-09
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -44,6 +44,45 @@ plans; shelving an idea must not hide a release blocker.
 | FW-019 | Workspace subscription monetization and Razorpay automatic renewal | Active: owner selected delivery | Local implementation and provider acceptance | Held-access review and collection-attention guidance implemented; provider failure simulation unexpectedly captured, so actual failure/recovery and naturally due acceptance remain open |
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
+| FW-022 | Main Loans-list search performance | Investigated; deferred at owner request, 9 October | Owner selects query correction and verified rollout | Candidate-first archive search, complete broad fallback and fragment readiness reduction; no production search change |
+
+## FW-022: Main Loans-list search performance
+
+**Owner deferral, 9 October:** retain the measured search recommendation as future
+work while reviewing how historical loans arose. Investigation and an isolated
+query experiment are complete; no search implementation or production change is
+authorized by this deferral. Resume when the owner selects this improvement.
+
+All-record search is slow in JCL, JSK and Lakshmi. Exact count and selected-page
+queries repeatedly scan retained historical JSON and evaluate source identity,
+latest-snapshot and admission checks. Results fragments also run unnecessary
+new-loan setup/readiness reads. Six narrow-number experiments preserve identical
+HTML while substantially reducing server time. This is diagnostic evidence,
+not broad-query or release acceptance. See the [measured investigation](../implementation/loan-directory-search-investigation-20261009.md).
+
+Proposed order:
+
+1. Find matching archive candidates first, then apply existing identity rules.
+   Use a complete fallback for broad matches; never truncate real results.
+2. Skip new-loan readiness work on results-only HTMX fragments while preserving
+   full-page guidance, authorization and normal financial entry checks.
+3. Measure residual historical JSON-search cost. Introduce an index or searchable
+   projection only after proving its benefit under the restricted runtime role.
+4. Verify numbers, customer names, source IDs, prefixes, no matches, blank lists,
+   dates, states, record modes, local mappings, broad fallback and later pages.
+   Check superseded matching snapshots against the full identity universe,
+   admission de-duplication and Workspace isolation. Benchmark all three real
+   cohorts read-only before a separately verified production rollout.
+
+Preserve unified browsing, current result semantics and retained documents.
+Changing the default to Ordinary or disabling historical search is not the
+selected remedy. Global JIT changes and a new search service are not the first
+step. Staff may temporarily select Records > Ordinary loans for operational
+searches; All records and Historical records remain available.
+
+The [historical-loan origin review](../implementation/historical-loan-origin-review-20261009.md)
+explains why source archives coexist with ordinary loans. Archive reconstruction
+is a different decision and is not needed to implement this search improvement.
 
 ## FW-021: Khata agreements
 

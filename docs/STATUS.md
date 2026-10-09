@@ -7,6 +7,25 @@ tags: [status, architecture]
 
 # Status
 
+## Search deferred; historical-loan origins reviewed (9 October)
+
+The owner shelves the measured main Loans-list search correction in
+[FW-022](plans/future-work.md#fw-022-main-loans-list-search-performance). No search
+code, index or production configuration changes are made. Resume only when
+selected; preserve complete results, snapshot/admission identity and RLS.
+
+Repository tracing confirms Historical loans originated in September migration
+as immutable retention for released-source records without established financial
+history. The legacy adapter routes every release-bearing loan to that archive;
+it does not determine financial reconstructability per loan. Normalized unknown
+principal/payment fields can coexist with retained raw item amounts and payment
+splits. Archive membership alone proves neither irrecoverability nor eligibility
+for automatic conversion. Readable/unified browsing and supported reconciled
+closed-history admission are now deployed; no archive conversion occurs in this
+review. A verified closed-position route also supports confirmed zero debt
+without inventing missing receipts/payout; it still needs verified original terms
+and closure evidence. See the [origin review](implementation/historical-loan-origin-review-20261009.md).
+
 ## Main Loans-list search bottleneck investigated (9 October)
 
 The owner reports slow search in all three Workspaces. Read-only restricted-role
