@@ -7,6 +7,23 @@ tags: [status, architecture]
 
 # Status
 
+## Main Loans-list search bottleneck investigated (9 October)
+
+The owner reports slow search in all three Workspaces. Read-only restricted-role
+production profiling reproduces the delay in the unified historical/ordinary
+directory. Initial All-record number samples take JCL 20.208 seconds (cold), JSK
+1.886 and Lakshmi 2.204; ordinary-only takes 0.777/0.191/0.254. Warmed JCL searches
+are 3.2–4.4 seconds. Count and reference-page queries dominate; historical document
+scans and approximately one second of JIT compilation per sampled page account
+for most work. Results fragments also perform unnecessary new-loan setup checks.
+
+An isolated candidate-first archive experiment produces byte-identical result
+HTML for six ordinary/retained number searches: about 1.0–1.1 seconds in JCL,
+0.29 in JSK and 0.50 in Lakshmi. This is not deployed or certified for broad
+queries. No application/database/index/customer change is made; local JIT tests
+expire with their read-only transactions. Findings, limitations and recommended
+validation/fallback requirements are in the [investigation](implementation/loan-directory-search-investigation-20261009.md).
+
 ## Lakshmi historical-date tenure gap corrected (9 October)
 
 The owner reports blank tenure after choosing 25 September in paper New loan.
