@@ -1,5 +1,5 @@
 ---
-status: implemented-rehearsed
+status: deployed
 owner: loans
 updated: 2026-10-10
 tags: [loans, directory, search, import, rehearsal]
@@ -12,7 +12,8 @@ Follow the [position-import plan](../plans/loan-position-import.md) and
 Implementation and 294 fresh-PostgreSQL checks pass. All 39,196 eligible real
 source positions have been admitted in the isolated production-derived copy,
 with 19 contradictory date pairs held. Search counts and selected records pass
-the complete-query reference. Production has not switched or converted.
+the complete-query reference. The later [production rollout](loan-position-import-release-20261010.md)
+verifies the compatible switch and all 39,196 eligible live conversions.
 
 ## Staff-facing behavior
 
@@ -149,6 +150,8 @@ or restoring a checkpoint over later customer transactions.
 
 The exact 190-record JCL recovery input remains temporary and unchanged. The
 19 contradictory date pairs remain retained source claims, pending correction
-review; they are not silently admitted or rewritten. Production migration,
-application switch and the 39,196 live conversions are separate outstanding
-operations until actually executed and verified.
+review; they are not silently admitted or rewritten. The later [production
+rollout](loan-position-import-release-20261010.md) completes the compatible
+migration/application switch, all 39,196 eligible conversions and final acceptance.
+The isolated search measurements above remain rehearsal evidence, not a production
+latency guarantee.

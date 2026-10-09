@@ -7,15 +7,20 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
-The coordinated closed-position production switch completes on 10 October at
-01:20:58 IST, runtime e851f261/image rokkad:closed-position-ip05-3829abaa8ac7.
-Owner-only migrations 0065/0066/0067, fresh validated checkpoint, preservation of
-198 original business tables, restricted startup/native/billing checks and HTTPS
-pass. Existing billing/configuration/media/static mounts are preserved and six
-timers resume. Fresh production reviews/conversion are running for 39,196 eligible
-positions with 19 held date conflicts. Do not claim conversion complete until
-reconciliation passes. After admissions, retain nullable-detail-compatible readers
-and never rewind over later transactions. See the [release record](implementation/loan-position-import-release-20261010.md).
+The coordinated closed-position production rollout completes on 10 October:
+runtime e851f261/image rokkad:closed-position-ip05-3829abaa8ac7, migrations through
+0067 and 39,196 ordinary CLOSED positions (JCL 26,649; JSK 3,836; Lakshmi 8,711).
+The 19 conflicting-date claims remain held; the exact 190 JCL recovery cohort is
+included without a reusable relaxation. Existing loan/event/provenance/source/
+sequence fingerprints and all source hashes are preserved. Each admission adds
+only one zero opening and immutable origin, never invented earlier transactions.
+Restricted ordinary/source/search readers, native workflows/balances, billing,
+configuration and media checks pass. Six timers and HTTPS are healthy; a verified
+post-conversion backup and bounded retention pass, with capacity above the cutoff.
+Full 24-hourly/30-daily retention at the larger backup size still needs a capacity
+increase; see [FW-023](plans/future-work.md#fw-023-database-backup-capacity-after-closed-position-conversion).
+Keep nullable-detail-compatible readers and never rewind over later transactions.
+Broad search can still take several seconds. See the [release record](implementation/loan-position-import-release-20261010.md).
 
 IP-05 implements ordinary closed-position browsing, open-first original-date
 ordering and secondary retained-source access. Migration 0066 stores generated
@@ -30,8 +35,8 @@ copy admits all 39,196 eligible positions (including the exact 190 JCL cohort),
 holds 19 date conflicts and preserves existing loan/event/provenance/source/
 sequence fingerprints and source hashes. All 78 read-only searches and 39 complete
 reference comparisons pass; broad lists still take several seconds. Production
-remains unchanged at 0064. Coordinate compatible release through 0067 and fresh
-reviewed live batches. See [IP-05](implementation/loan-position-import-ip05.md).
+was unchanged at 0064 during this isolated acceptance; the production rollout
+above subsequently completes the compatible release and all eligible admissions. See [IP-05](implementation/loan-position-import-ip05.md).
 
 IP-04 implements reviewed retained-source batch conversion through IP-03; chunks
 are at most 100, atomic, current-authority/source/mapping/number checked and
@@ -42,11 +47,11 @@ holds future unlisted/changed no-release claims for separate review. No generic
 custody or financial guard is relaxed. All 170 checks pass; 390 real-source
 admissions (including all 190) pass in a restricted isolated production copy,
 with existing loan/event/provenance/source/counter fingerprints unchanged. Live
-schema/data are not converted yet. Coordinate compatible release/migration and
-bounded full conversion with IP-05 directory ordering/search acceptance. See
+schema/data were unchanged during this isolated rehearsal; the production
+rollout above subsequently verifies compatible migration and full conversion. See
 [IP-04](implementation/loan-position-import-ip04.md).
 
-IP-03 implements ordinary minimal CLOSED position admission locally in the same
+IP-03 implements ordinary minimal CLOSED position admission in the same
 PawnLoan/event/provenance tables. Only this immutable evidenced basis may omit
 original principal/rate/date/tenure/product; native/direct/paper/active terms stay
 required. A sole zero MIGRATION_OPENING establishes the accepted as_of position,
@@ -79,8 +84,8 @@ archive admission requires source-backed reconciliation, while browsing does not
 The older verified terminal admission requires original terms with zero-debt
 evidence. IP-03 adds a distinct minimal closed-position contract permitting
 unknown original terms; both preserve unavailable earlier receipts/payout.
-Standalone search correction is deferred in FW-022; the later selected import
-plan includes directory simplification/benchmarking after conversion. See the
+Standalone search correction was initially deferred in FW-022; IP-05 later
+implements and deploys the measured directory/search correction. See the
 [origin review](implementation/historical-loan-origin-review-20261009.md).
 
 Standing calculation defaults resolve by scope, then effective start date, then

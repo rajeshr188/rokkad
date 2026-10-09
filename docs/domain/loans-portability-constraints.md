@@ -1,7 +1,7 @@
 ---
 status: audit
 owner: project
-updated: 2026-09-12
+updated: 2026-10-10
 tags: [loans, constraints, invariants, portability, audit]
 ---
 
@@ -15,7 +15,8 @@ ordinary closed admission with absent original terms/product, a sole accepted
 zero checkpoint, common readers and source/media export/restore. Native, direct,
 paper and active loans retain complete-term requirements. Ordinary financial
 history is not fabricated. Existing older profiles remain frozen. Production
-conversion is IP-04. See the [contract](../contracts/loan-closed-position-v1.md)
+conversion through IP-04/IP-05 is verified: 39,196 ordinary closed positions and
+19 held date conflicts. See the [production record](../implementation/loan-position-import-release-20261010.md), [contract](../contracts/loan-closed-position-v1.md)
 and [IP-03 delivery](../implementation/loan-position-import-ip03.md).
 
 The 190 JCL records without release rows use a one-time exact source/hash recovery

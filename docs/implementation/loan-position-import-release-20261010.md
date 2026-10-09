@@ -1,5 +1,5 @@
 ---
-status: deployed-conversion-in-progress
+status: deployed
 owner: loans
 updated: 2026-10-10
 tags: [loans, release, positions, production]
@@ -9,8 +9,8 @@ tags: [loans, release, positions, production]
 
 The owner authorizes the coordinated rollout after [IP-05 acceptance](loan-position-import-ip05.md).
 Compatible code and schema are live from 10 October 2026, 01:20:58 IST. Conversion
-is running; do not describe all retained records as converted until reconciliation
-passes for each Workspace.
+completes and reconciles in all three Workspaces. All 39,196 eligible retained
+records are ordinary CLOSED loans; 19 contradictory claims remain held.
 
 Runtime source: `e851f2613238fbc1e5b85701946defaf675a19a9`, pushed to
 `work/loan-servicing-contract-ld01` on GitHub.
@@ -49,9 +49,11 @@ identity/hash attestation is used only for its approved recovery cohort; no
 standing missing-release inference is added. Source semantics remain zero debt
 and returned collateral, with unavailable earlier financial history.
 
-Expected eligible/held counts: JCL 26,649/15; JSK 3,836/4; Lakshmi 8,711/0.
-JSK completes 3,836 admissions with 4 held claims; original loan/event/provenance/
-source/sequence fingerprints remain unchanged. JCL and Lakshmi continue.
+Verified eligible/held counts: JCL 26,649/15; JSK 3,836/4; Lakshmi 8,711/0.
+All 39,196 admissions complete, including the exact 190-record JCL recovery cohort.
+Original loan/event/provenance/source/sequence fingerprints and retained source
+hashes remain unchanged in every Workspace. Each loan has exactly one zero
+MIGRATION_OPENING and one origin; no other events were added to these loans.
 
 Each chunk has at most 100 records, commits independently and saves progress.
 Successful chunks remain immutable and retries skip matching origins. Two jobs
@@ -82,3 +84,43 @@ existing loan/event/source/provenance/sequence preservation or explicit
 reconciliation of legitimate concurrent staff actions, readable ordinary/source
 pages, native workflow checks, healthy timers and a completed post-conversion
 backup with retained capacity.
+
+## Final production acceptance
+
+All three restricted conversion jobs exit successfully. Read-only repeatable-read
+checks reconcile the exact ordinary/event/origin/pending counts and returned
+custody with explicitly unavailable earlier history. Ordinary details, retained
+source details, number search, open-first lists and Workspace isolation pass.
+Original native paper/direct/closure/Loan health screens and sampled loan balances
+match the paused baseline. Subscription fingerprints, deployed source files,
+configuration and media remain unchanged. HTTPS pages and all six operational
+timers are healthy; post-switch web logs contain no checked error/traceback lines.
+The native comparison retains the original five Workspace/number samples. One
+additional newly admitted sample with a matching number in another Workspace is
+separately verified as a zero-debt closed-position profile.
+
+Final backup acceptance completes at 10 October 2026, 02:42:37 IST. The fresh
+post-conversion archive has a verified checksum and catalogue. SHA-256:
+`9815d9e0603f295de24f3ab6cf5fcb2ab170d46e542a3777a80b1ff67383ebfc`.
+Backup size is 164370606 bytes. Retention applies the existing
+latest-24-hourly/30-UTC-daily policy and protects separate release checkpoints.
+Free disk is 7.58 GiB, above the 5 GiB backup cutoff.
+This server-only database copy is not off-server disaster recovery; existing media
+storage/recovery arrangements are preserved.
+
+Capacity follow-up: the verified archive is now about 157 MiB. The current 34
+completed operational copies occupy 2.8 GiB. A conservative full
+24-hourly/30-daily footprint of 53 copies at this measured size is
+8.11 GiB, projecting only 2.27 GiB free with other usage fixed.
+At least 2.73 GiB additional capacity is needed to preserve the 5 GiB cutoff,
+before future business growth. The current backup passes; this projection is not
+an assertion that ongoing capacity is solved. Preserve the approved retention,
+media and release checkpoints. Arrange capacity expansion or separately reviewed
+cleanup; do not silently weaken retention. Track
+[FW-023](../plans/future-work.md#fw-023-database-backup-capacity-after-closed-position-conversion).
+
+Use the ordinary Loans list for these closed loans. Retained source documents and
+photos remain linked supporting evidence. The 19 held records require date
+correction review; this rollout does not rewrite their claims. Search corrections
+are deployed, but broad searches may still take several seconds. Unrelated local
+billing work stays outside the deployed runtime and these scoped commits.

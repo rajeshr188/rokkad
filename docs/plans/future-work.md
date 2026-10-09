@@ -44,7 +44,8 @@ plans; shelving an idea must not hide a release blocker.
 | FW-019 | Workspace subscription monetization and Razorpay automatic renewal | Active: owner selected delivery | Local implementation and provider acceptance | Held-access review and collection-attention guidance implemented; provider failure simulation unexpectedly captured, so actual failure/recovery and naturally due acceptance remain open |
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
-| FW-022 | Main Loans-list search performance | Implemented and fully rehearsed through IP-05 | Coordinated verified rollout | Complete candidate/broad queries, generated source metadata and fragment readiness reduction; production unchanged |
+| FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
+| FW-023 | Database backup capacity after closed-position conversion | Measured capacity follow-up; current backup passes | Choose capacity expansion or separately reviewed cleanup | Larger 157 MiB copies project 8.11 GiB for full retention; retain policy/checkpoints/media and provide growth headroom |
 
 ## FW-022: Main Loans-list search performance
 
@@ -53,7 +54,7 @@ ordinary browsing are implemented under the [position-import plan](loan-position
 All 294 fresh-PostgreSQL checks, 39,196 isolated real-source admissions, 78 read-only
 searches and 39 complete-query comparisons pass. Narrow queries improve; broad
 lists still take several seconds. See the [IP-05 delivery](../implementation/loan-position-import-ip05.md).
-Production search remains unchanged until the coordinated switch.
+Production search correction and all eligible closed admissions are deployed and verified; see the [release record](../implementation/loan-position-import-release-20261010.md). Broad queries can still take several seconds.
 
 **Owner deferral, 9 October:** retain the measured search recommendation as future
 work while reviewing how historical loans arose. Investigation and an isolated
@@ -1645,3 +1646,21 @@ merely to filter the list. Select the work explicitly before implementation.
 
 **References:** [Party portability scope](data-portability.md#mvp-scope-closeout-2026-09-12),
 [operator guide](../flows/party-master-portability.md).
+
+## FW-023: Database backup capacity after closed-position conversion
+
+The 10 October production conversion and post-conversion backup pass. Current
+free disk is 7.58 GiB, above the 5 GiB backup cutoff, and bounded retention applies.
+The archive grows to 164,370,606 bytes (about 157 MiB). Current 34 completed copies
+occupy 2.8 GiB. A conservative full set of 53 copies under the approved
+24-hourly/30-UTC-daily policy would occupy 8.11 GiB at this size, leaving about
+2.27 GiB free if other usage stays fixed. At least 2.73 GiB additional capacity
+is needed merely to retain the 5 GiB cutoff; allow further headroom for growth.
+These are measured-size projections, not guaranteed future sizes or dates.
+
+Prefer arranging additional capacity. Alternatively, prepare and approve a scoped
+cleanup of demonstrably redundant non-live artifacts with recovery verification.
+Do not delete live data/media, discard release checkpoints, change retention or
+remove rehearsal databases without a separate reviewed scope. The current
+rollout is complete; this ongoing operational follow-up remains open. See the
+[release record](../implementation/loan-position-import-release-20261010.md).

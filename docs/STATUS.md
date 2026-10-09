@@ -7,19 +7,26 @@ tags: [status, architecture]
 
 # Status
 
-## Closed-position production switch complete; conversion running (10 October)
+## Closed-position production rollout complete (10 October)
 
-The owner authorizes rollout. Runtime e851f261 is pushed and deployed as the
-36-file bounded IP-05 image at 01:20:58 IST. Fresh checkpoint/catalogue and owner-only
-migrations 0065/0066/0067 pass; all 198 checked original business tables are
-unchanged. Restricted startup, original loan screens, billing, HTTPS, source hashes
-and configuration/mount checks pass. Six operational timers resume; media and
-separate billing development are unchanged.
+Runtime e851f261 and migrations through 0067 are live. All 39,196 eligible
+positions are verified ordinary CLOSED loans: JCL 26,649, JSK 3,836 and Lakshmi
+8,711. The 15 JCL and 4 JSK conflicting-date claims remain held. All 190 exact
+JCL recovery records are included without introducing a standing exception.
 
-Fresh signed production reviews and bounded conversion are running. Expected
-eligible/held positions are JCL 26,649/15, JSK 3,836/4 and Lakshmi 8,711/0. Do not
-claim all positions converted until exact reconciliation passes. Keep the compatible
-reader after admissions begin; never rewind data over later staff transactions.
+Each loan has one zero opening and immutable origin; no earlier payments,
+approvals, payouts, accruals or physical returns are fabricated. Original
+loan/event/provenance/source/sequence fingerprints and source hashes are preserved.
+Ordinary details, source access, number searches and open-first browsing pass
+under the restricted role. Native paper/direct/closure/Loan health checks and
+existing balances pass; billing, configuration and media are preserved.
+
+HTTPS and six timers are healthy. A completed post-conversion backup has a
+verified checksum/catalogue and applied 24-hourly/30-daily retention; free capacity
+remains above the 5 GiB backup cutoff. Broad-search timing variability remains.
+Full retention at the larger backup size needs more capacity; see
+[FW-023](plans/future-work.md#fw-023-database-backup-capacity-after-closed-position-conversion).
+Keep compatible readers after admission; never rewind over later transactions.
 See the [production release record](implementation/loan-position-import-release-20261010.md).
 
 ## IP-05 browsing/search implemented and fully rehearsed (10 October)
@@ -48,9 +55,9 @@ comparisons pass. Number searches improve against the matched IP-04 baseline;
 bounded pending-ID reuse improves broad queries, with several-second variability
 still present under the reader's 0.5 CPU limit.
 
-Production remains on its existing application and schema 0064. A fresh checkpoint,
-compatible reader/schema switch through 0067, refreshed live reviews and verified
-bounded conversion remain required. See the [IP-05 delivery](implementation/loan-position-import-ip05.md).
+At isolated IP-05 acceptance, production was still at schema 0064. The coordinated
+production rollout above subsequently completes the compatible switch, fresh
+reviews and all eligible admissions. See the [IP-05 delivery](implementation/loan-position-import-ip05.md).
 Unrelated billing edits remain outside the candidate and scoped commit.
 
 ## IP-04 batch conversion implemented and rehearsed (9 October)
