@@ -124,3 +124,38 @@ photos remain linked supporting evidence. The 19 held records require date
 correction review; this rollout does not rewrite their claims. Search corrections
 are deployed, but broad searches may still take several seconds. Unrelated local
 billing work stays outside the deployed runtime and these scoped commits.
+
+## Read-only backup-size follow-up
+
+The default deployed media backend is helpers.cloudflare.storages.MediaFileStorage
+(S3-compatible R2 media). The hourly command uses pg_dump -Fc for the entire
+production database; it does not copy image files or only the latest changes.
+Production database disk size is 1,317,362,711 bytes, about 1.23 GiB. The measured
+157 MiB backup is compressed and cannot be equated to physical table/index size.
+
+Restricted repeatable-read aggregate inspection of all three Workspaces finds:
+
+| Data | Rows | Uncompressed JSON text bytes |
+| --- | ---: | ---: |
+| Original retained sources | 39,215 | 306,774,422 |
+| New closed origin documents | 39,196 | 352,502,647 |
+| New closed opening payloads | 39,196 | 365,672,503 |
+
+Each of the latter two sets contains 306,617,412 bytes of embedded retained source
+JSON, about 585 MiB additional uncompressed source copies in total. The current
+closed-position admission deep-copies the full input, including retained_evidence,
+into both financial-origin and opening snapshots while preserving the original
+archive. That duplication contributes to the backup growth; it is not photo-file
+storage. Logical JSON lengths include serialization whitespace and are not exact
+compressed backup contributions. Source-copy measurements remain aggregate-only;
+private customer rows stay on the server.
+
+Consider compact future financial snapshots referencing one immutable source by
+identity/hash, with versioned readers/guards and complete export/restore support.
+Do not silently strip evidence from existing immutable payloads. Also review
+separately protected off-server database backups with tested restore and approved
+retention, keeping recent copies locally. R2 media storage alone does not provide
+database backup protection. Inspect other server disk usage before purchasing
+capacity or deleting artifacts. This is diagnostic/recommendation work only: no
+runtime code, financial records, source snapshots or retention settings change.
+Operator helpers and aggregate proof remain in the private release evidence folder.

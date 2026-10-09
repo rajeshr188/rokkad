@@ -26,6 +26,13 @@ verified checksum/catalogue and applied 24-hourly/30-daily retention; free capac
 remains above the 5 GiB backup cutoff. Broad-search timing variability remains.
 Full retention at the larger backup size needs more capacity; see
 [FW-023](plans/future-work.md#fw-023-database-backup-capacity-after-closed-position-conversion).
+The follow-up read-only size review confirms database-only compressed full backups
+and R2 media storage. Retained source JSON is about 293 MiB uncompressed; the new
+closed origin and opening snapshots embed two additional copies, about 585 MiB.
+Review compact future source references and off-server database-backup retention
+before treating extra Linode capacity as the only remedy. No source/financial
+payloads or retention settings are changed by this investigation.
+
 Keep compatible readers after admission; never rewind over later transactions.
 See the [production release record](implementation/loan-position-import-release-20261010.md).
 

@@ -1664,3 +1664,15 @@ Do not delete live data/media, discard release checkpoints, change retention or
 remove rehearsal databases without a separate reviewed scope. The current
 rollout is complete; this ongoing operational follow-up remains open. See the
 [release record](../implementation/loan-position-import-release-20261010.md).
+
+
+**Read-only size follow-up, 10 October:** production is about 1.23 GiB on disk;
+157 MiB is a compressed full database backup, with R2 images excluded. The closed
+conversion embeds about 293 MiB of retained source JSON twice more in origin and
+opening snapshots (about 585 MiB additional uncompressed text). Review compact
+future source references with tested versioned export/restore, without rewriting
+existing immutable payloads. Review separately protected off-server database
+backup retention plus recent local recovery copies and other disk usage before
+assuming expansion is the only remedy. Preserve the existing approved retention
+until an alternative is explicitly selected and verified. See the detailed
+[size inspection](../implementation/loan-position-import-release-20261010.md#read-only-backup-size-follow-up).

@@ -19,6 +19,12 @@ configuration and media checks pass. Six timers and HTTPS are healthy; a verifie
 post-conversion backup and bounded retention pass, with capacity above the cutoff.
 Full 24-hourly/30-daily retention at the larger backup size still needs a capacity
 increase; see [FW-023](plans/future-work.md#fw-023-database-backup-capacity-after-closed-position-conversion).
+A read-only backup-size review confirms the closed-position implementation embeds
+full retained source JSON in both origin.document and opening.review, in addition
+to the original archive: about 585 MiB additional uncompressed copies. R2 media
+files are separate; each local backup is a compressed full database snapshot.
+Compact future profiles and separately protected off-server backup retention need
+review; never strip source fields from immutable existing posted payloads casually.
 Keep nullable-detail-compatible readers and never rewind over later transactions.
 Broad search can still take several seconds. See the [release record](implementation/loan-position-import-release-20261010.md).
 
