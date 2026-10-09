@@ -34,6 +34,24 @@ def preview_number(
     return _build_allocation(sequence)
 
 
+def preview_numbers(*, series, document_kind, count):
+    """Preview a complete bounded batch without reserving any number."""
+    if count < 1:
+        raise NumberAllocationError("At least one number is required.")
+    assert_series_can_issue(series, document_kind=LoanDocumentKind(document_kind))
+    sequence = _get_ready_sequence(series=series, document_kind=document_kind)
+    first = _build_allocation(sequence)
+    if first.counter + count - 1 > sequence.maximum_number:
+        raise SequenceExhaustedError(
+            f"This split needs {count} new numbers, but only "
+            f"{sequence.maximum_number - first.counter + 1} remain in this series."
+        )
+    return tuple(NumberAllocation(
+        value=f"{sequence.prefix}{counter:0{sequence.width}d}",
+        counter=counter, sequence_id=sequence.pk,
+    ) for counter in range(first.counter, first.counter + count))
+
+
 def allocate_number(
     *,
     series: LoanSeries,

@@ -81,6 +81,21 @@ photographs to one newly numbered draft, recalculates both drafts independently,
 and leaves the source number unchanged. The split is atomic and creates no
 accounting event.
 
+The same Split screen also offers **One loan per collateral**. Choose exactly one
+recorded entry to keep on the source (the first entry is initially selected).
+Every other entry receives its own numbered draft for the same borrower, initially
+using the source series, product, date and tenure. Quantity within a row stays
+together; this operation never invents separate physical pieces.
+
+Review shows each resulting loan's principal, monthly/advance interest, deducted
+fees and estimated payout, with combined totals compared to the original draft.
+Separate fixed fees and rounded interest can change combined proceeds. Nothing is
+paid by splitting. Collateral identities, quantities and photographs move rather
+than being duplicated; the original loan retains its number. Confirmation checks
+the entire numbering range and current draft/economics, commits every new draft
+together or none, and returns the same loans on an identical retry. Completion
+links to all resulting loans. Existing selected-item grouping remains available.
+
 ## Invariants
 
 Loan detail also offers one **100 x 60 mm combined collateral label** alongside

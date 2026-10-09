@@ -7,6 +7,66 @@ tags: [status, architecture]
 
 # Status
 
+## Editable paper identity suggestions (9 October, local)
+
+Routine paper New loan now fills Original loan number and Paper book/page/loan
+reference from the selected series' next suggested number, retaining editable
+fields. Untouched defaults refresh on series changes; entered custom numbers and
+book/page references survive presentation refresh. JavaScript lets the reference
+follow number edits until it differs. No selected/usable sequence leaves the
+fields available for actual source entry. Native Apply series setup also works.
+
+No number is reserved by GET, terms or entry-choice refresh. Financial review,
+confirmation and error redisplay retain submitted identities. The unsigned
+paper_number_suggestion marker is absent from financial form data and signed
+evidence; normal numbering, source uniqueness and exact retry remain. Saved
+draft, archive/correction and direct-entry financial adapters remain supported.
+
+**89 automated checks pass** in a fresh disposable database across routine paper,
+simplification, series availability, direct entry and multi-item recording. New
+checks cover editable/non-consuming defaults, selection from multiple series,
+untouched/custom identity changes, unavailable old registers, cleared-field
+validation, metadata exclusion, successful advancement and exact retry after
+counter changes. Fictional localhost desktop/mobile and no-JavaScript checks pass
+for both defaults, reference following/custom edits, series refresh, retained
+photographs and native Apply series setup. Screenshots are visually reviewed;
+browser verification uses no financial submissions. Artifacts:
+`.tmp/paper-number-prefill-20261009/`. Production is unchanged. See the
+[implementation](implementation/unified-loan-recording.md).
+
+## One loan per draft collateral entry (9 October, local)
+
+The saved-draft Split screen now retains selected-item grouping and offers **One
+loan per collateral**. Staff choose the entry retained on the original number;
+every other row receives its own ordinary draft for the same borrower. Readable
+item choices show description, metal, weight and principal. Preview lists each
+loan's economics and compares combined totals with the grouped original, including
+separate fixed fees. Quantities within a row remain together; item/photo identities
+move rather than being cloned. All drafts remain unpaid.
+
+One atomic command checks the full number range, locks/rechecks current input and
+economics, creates every destination and updates the source once. Insufficient
+capacity or any later failure leaves drafts, item ownership, numbering and audits
+unchanged. Completed split metadata supports exact authorized retries, including
+after a series stops, and links all resulting loans. No model/migration is added.
+
+**132 automated checks pass** in a fresh disposable database, covering draft/UI,
+services, numbering, series availability and discovery. Batch-specific checks
+include ten entries/nine drafts, photos/quantities, per-loan charges, changed
+previews, insufficient capacity, rollback on the second creation, grouped-mode
+compatibility, changed requests, denied/cross-Workspace access and two simultaneous
+confirmations returning the same drafts. A retained test database initially leaked
+the new concurrency fixture into a later run; the fixture now cleans its own
+unpaid graph and the fresh full run passes.
+
+Fictional localhost desktop/mobile and no-JavaScript previews and batch completion
+pass, with screenshot review. Two final targeted HTTP/form checks also pass after
+the readable retained-item labels change; final browser checks confirm those labels
+and the mobile sideways-scroll hint. A fresh
+fictional ten-item draft is left on localhost 8083 for manual testing; production
+is unchanged. Artifacts: `.tmp/draft-split-20261009/`. See the
+[implementation](implementation/draft-collateral-batch-split.md).
+
 ## Running series and retained-register recording (9 October, local)
 
 Routine New loan now filters direct/paper choices and automatic purpose selection

@@ -1,12 +1,43 @@
 ---
 status: implemented-local
 owner: loans
-updated: 2026-10-03
+updated: 2026-10-09
 tags: [loans, paper-entry, repayment, origination, verification]
 related: [../plans/unified-loan-recording.md, ../adr/2026-10-02-unified-loan-recording.md]
 ---
 
 # Unified loan recording implementation
+
+## Editable paper identity suggestions (9 October)
+
+The owner requests prefilling routine paper New loan's Original loan number and
+Paper book / page / loan reference with the selected series' next automatic number.
+`prepare_paper_number_defaults` uses the existing non-consuming preview. Both
+fields stay editable. No selected/usable series leaves them blank for actual
+source entry. Saved draft, archive and correction identities retain their source.
+
+Initial GET and nonfinancial entry/terms refreshes fill blank fields or values
+still equal to the previous suggestion. A small unsigned hidden
+`paper_number_suggestion` marker identifies that presentation default; it is not
+a declared financial form field and never enters `_data`, signed review or stored
+origination evidence. Series/purpose switching retains custom identities, item
+facts, photos and intent. Without JavaScript, Apply series setup uses the same
+server behavior. Financial preview/confirmation and error redisplay preserve the
+actual submitted fields, even when blank; the usual required/duplicate checks apply.
+
+The reference follows loan-number typing while it still equals the preceding loan
+number. A different book/page reference remains independent. Terms responses
+refresh displayed suggestions under revision checks, including a second check
+after response-body reading so late responses cannot replace edited facts. Loan
+numbering advances only on successful admission through the unchanged service;
+confirmation and exact retry retain the reviewed number as the counter changes.
+
+Verification artifacts: `.tmp/paper-number-prefill-20261009/`. The scoped 89-test
+suite covers routine paper, simplification, series availability, multi-item
+recording and direct entry. Fictional localhost browser checks cover editable
+prefills, linked/custom references, asynchronous series refresh, retained photos,
+desktop/mobile and native no-JavaScript Apply series setup. Production rollout
+is separate; browser checks make no financial submission.
 
 ## UR-23: compact purpose and retained entry facts
 

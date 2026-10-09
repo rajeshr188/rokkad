@@ -250,14 +250,28 @@ def pawn_loan_split(request, pk):
         split_pawn_draft,
     )
     loan = _pawn_loan_for_workspace(request, pk)
+    if request.method == "GET" and request.GET.get("completed"):
+        completed = loan.change_log.filter(
+            metadata__draft_split_out__fingerprint=request.GET["completed"],
+        ).first()
+        if completed:
+            ids = completed.metadata["draft_split_out"]["new_loan_ids"]
+            loans = {item.pk: item for item in PawnLoan.objects.filter(
+                workspace=request.loans_workspace, pk__in=ids)}
+            return render(request, "loans/pawn/split.html", {
+                "loan": loan, "completed_loans": tuple(loans[identity] for identity in ids),
+            })
     if loan.state != PawnLoanState.DRAFT.value:
         messages.error(request, "Only a draft PawnLoan can be split.")
         return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
     initial = {"series": loan.series_id, "product_version": loan.product_version_id, "loan_date": loan.loan_date, "tenure_months": loan.tenure_months}
     if request.method == "GET" and request.GET.get("item"):
         initial["collateral_items"] = [request.GET["item"]]
+    data = request.POST.copy() if request.method == "POST" else None
+    if data is not None:
+        data.setdefault("split_mode", "selected")
     form = PawnDraftSplitForm(
-        request.POST or None,
+        data,
         workspace=request.loans_workspace,
         source=loan,
         initial=initial,
@@ -266,22 +280,20 @@ def pawn_loan_split(request, pk):
     if request.method == "POST" and form.is_valid():
         values = form.cleaned_data
         try:
-            preview = preview_pawn_draft_split(
-                loan.pk,
+            arguments = dict(
                 collateral_item_ids=tuple(values["collateral_items"].values_list("pk", flat=True)),
                 series=values["series"], product_version=values["product_version"],
                 loan_date=values["loan_date"], tenure_months=values["tenure_months"],
+                split_each=values["split_mode"] == "each",
             )
             if request.POST.get("action") == "confirm":
-                new_loan = split_pawn_draft(
-                    loan.pk,
-                    collateral_item_ids=tuple(values["collateral_items"].values_list("pk", flat=True)),
-                    series=values["series"], product_version=values["product_version"],
-                    loan_date=values["loan_date"], tenure_months=values["tenure_months"],
+                split_pawn_draft(
+                    loan.pk, **arguments,
                     expected_fingerprint=request.POST.get("fingerprint", ""), actor=request.user,
                 )
-                messages.success(request, f"Moved selected collateral into new draft {new_loan.loan_number}.")
-                return redirect('workspace_loans:pawn_loan_detail', pk=new_loan.pk, workspace_slug=request.workspace.slug)
+                url = reverse('workspace_loans:pawn_loan_split', args=[request.workspace.slug, loan.pk])
+                return redirect(f"{url}?completed={request.POST['fingerprint']}")
+            preview = preview_pawn_draft_split(loan.pk, **arguments)
         except (PawnDraftSplitError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
     template = "loans/pawn/_split_form.html" if request.headers.get("HX-Request") else "loans/pawn/split.html"

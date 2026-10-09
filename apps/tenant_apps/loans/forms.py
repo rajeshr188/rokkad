@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django_select2 import forms as s2forms
@@ -287,10 +288,22 @@ class PawnCollateralDraftForm(forms.ModelForm):
 
 
 class PawnDraftSplitForm(forms.Form):
+    split_mode = forms.ChoiceField(
+        choices=(("selected", "Move selected collateral to one new loan"),
+                 ("each", "One loan per collateral")),
+        initial="selected", label="How to split",
+        widget=forms.RadioSelect,
+    )
     collateral_items = forms.ModelMultipleChoiceField(
         queryset=PawnCollateralItem.objects.none(),
         widget=forms.CheckboxSelectMultiple,
+        required=False,
         help_text="Selected items move to one new draft. At least one item stays here.",
+    )
+    retained_collateral = forms.ModelChoiceField(
+        queryset=PawnCollateralItem.objects.none(), required=False,
+        label="Collateral to keep on the original loan",
+        help_text="For one loan per collateral: every other entry moves to its own draft. Quantity within an entry stays together.",
     )
     series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
     product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label=_("Loan product"))
@@ -300,16 +313,55 @@ class PawnDraftSplitForm(forms.Form):
     def __init__(self, *args, workspace, source, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["collateral_items"].queryset = source.collateral_items.order_by("pk")
+        completed = None
+        # A successful confirmation can be retried after its items have moved.
+        # Only identities in that source's persisted split may be accepted.
+        if self.is_bound and self.data.get("action") == "confirm" and self.data.get("fingerprint"):
+            completed = source.change_log.filter(
+                metadata__draft_split_out__fingerprint=self.data["fingerprint"],
+            ).first()
+            if completed:
+                self.fields["collateral_items"].queryset = PawnCollateralItem.objects.filter(
+                    workspace=workspace,
+                    pk__in=completed.metadata["draft_split_out"]["original_collateral_item_ids"],
+                ).order_by("pk")
+        self.fields["retained_collateral"].queryset = self.fields["collateral_items"].queryset
+        def item_label(item):
+            return (f"{item.description} — {item.metal.title()}, {item.net_weight:g} g; "
+                    f"principal ₹{item.allocated_principal:,.2f}")
+        self.fields["collateral_items"].label_from_instance = item_label
+        self.fields["retained_collateral"].label_from_instance = item_label
+        first = self.fields["retained_collateral"].queryset.first()
+        self.initial.setdefault("retained_collateral", first.pk if first else None)
         self.fields["series"].queryset = LoanSeries.objects.filter(license__workspace=workspace, is_active=True).select_related("license")
         self.fields["product_version"].queryset = LoanProductVersion.objects.filter(product__workspace=workspace, product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value).select_related("product")
-        for field in ("series", "product_version", "loan_date", "tenure_months"):
+        if completed:
+            details = completed.metadata["draft_split_out"]
+            self.fields["series"].queryset = LoanSeries.objects.filter(license__workspace=workspace).filter(
+                Q(is_active=True) | Q(pk=details["series_id"])).select_related("license")
+            self.fields["product_version"].queryset = LoanProductVersion.objects.filter(product__workspace=workspace).filter(
+                Q(product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value)
+                | Q(pk=details["product_version_id"])).select_related("product")
+        for field in ("retained_collateral", "series", "product_version", "loan_date", "tenure_months"):
             self.fields[field].widget.attrs.setdefault("class", "form-select" if field in {"series", "product_version"} else "form-control")
 
-    def clean_collateral_items(self):
-        selected = self.cleaned_data["collateral_items"]
-        if selected.count() >= self.fields["collateral_items"].queryset.count():
-            raise forms.ValidationError("At least one collateral item must remain on the source draft.")
-        return selected
+    def clean(self):
+        values = super().clean()
+        if values.get("split_mode") == "each":
+            retained = values.get("retained_collateral")
+            if retained is None:
+                self.add_error("retained_collateral", "Choose the collateral to keep on the original loan.")
+            else:
+                values["collateral_items"] = self.fields["collateral_items"].queryset.exclude(pk=retained.pk)
+                if not values["collateral_items"].exists():
+                    self.add_error("retained_collateral", "Splitting needs at least two collateral entries.")
+        elif "collateral_items" in values:
+            selected = values["collateral_items"]
+            if not selected:
+                self.add_error("collateral_items", "Select collateral to move.")
+            elif len(selected) >= self.fields["collateral_items"].queryset.count():
+                self.add_error("collateral_items", "At least one collateral item must remain on the source draft.")
+        return values
 
 
 class PawnCollateralPhotoForm(forms.Form):

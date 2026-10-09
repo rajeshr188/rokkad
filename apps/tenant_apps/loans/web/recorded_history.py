@@ -495,6 +495,9 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
         for name in ("borrower_id", "series_id", "product_version_id", "number", "date", "license_revision_id"):
             form.fields[name].disabled = True
     routine_editor = form.routine and form.itemized and not archive and not draft
+    if routine_editor:
+        from .routine_entry import prepare_paper_number_defaults
+        prepare_paper_number_defaults(form)
     collateral = PaperCollateralFormSet(form.data if post is not None else None, request.FILES or None, prefix="collateral",
         initial=initial_collateral,
         form_kwargs={"exceptions": bool(archive) or bool(form["exceptions"].value()), "allow_photos": routine_editor,

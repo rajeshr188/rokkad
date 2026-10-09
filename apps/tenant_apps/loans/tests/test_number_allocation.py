@@ -319,3 +319,62 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
             self.assertIn("stopped for new loans", issue_future.result(timeout=15))
         with workspace_context(self.tenant.pk):
             self.assertEqual(self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 1)
+
+    def test_concurrent_batch_split_confirmations_return_the_same_drafts(self):
+        from threading import Barrier
+        from decimal import Decimal
+        from apps.tenancy.testing import start_workspace_trial
+        from apps.tenant_apps.party.models import Party
+        from apps.tenant_apps.loans.models import PawnLoan, PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy
+        from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_products
+        from apps.tenant_apps.loans.services.pawn_drafts import create_pawn_draft, CreatePawnDraftCommand, CollateralDraftInput
+        from apps.tenant_apps.loans.services.pawn_draft_split import preview_pawn_draft_split, split_pawn_draft
+        with workspace_context(self.tenant.pk):
+            start_workspace_trial(self.tenant)
+            borrower = Party.objects.create(display_name="Concurrent split borrower")
+            product = _seed_default_loan_products()[0]
+            type(product).objects.filter(pk=product.pk).update(status="ACTIVE")
+            PawnLoanEconomicPolicy.objects.create(workspace=self.tenant, license=self.series.license,
+                valuation_method="LATEST_APPRAISAL", maximum_ltv_ratio=Decimal("0.8"),
+                advance_interest_periods=1, effective_from=date(2026, 1, 1))
+            PawnMetalInterestRatePolicy.objects.create(workspace=self.tenant, license=self.series.license,
+                metal="GOLD", monthly_interest_rate=2, effective_from=date(2026, 1, 1))
+            source = create_pawn_draft(CreatePawnDraftCommand(
+                workspace_id=self.tenant.pk, borrower_id=borrower.pk, license_id=self.series.license_id,
+                series_id=self.series.pk, product_version_id=product.pk,
+                principal_amount=Decimal("3000"), monthly_interest_rate=Decimal("2"),
+                loan_date=date(2026, 7, 18), tenure_months=3,
+                collateral=tuple(CollateralDraftInput(description=f"Ring {index}", metal="GOLD",
+                    gross_weight=Decimal("10"), net_weight=Decimal("9"), purity_percentage=Decimal("91.6"),
+                    latest_appraised_value=Decimal("50000"), allocated_principal=Decimal("1000"))
+                    for index in range(3)),
+            ), actor=self.user)
+            arguments = dict(collateral_item_ids=tuple(source.collateral_items.order_by("pk").values_list("pk", flat=True))[1:],
+                series=self.series, product_version=product, loan_date=source.loan_date,
+                tenure_months=3, split_each=True)
+            preview = preview_pawn_draft_split(source.pk, **arguments)
+        ready = Barrier(2)
+        def confirm(_):
+            close_old_connections()
+            try:
+                with workspace_context(self.tenant.pk):
+                    ready.wait(timeout=10)
+                    return tuple(loan.pk for loan in split_pawn_draft(source.pk, **arguments,
+                        expected_fingerprint=preview.fingerprint, actor=self.user))
+            finally:
+                close_old_connections()
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(confirm, index) for index in range(2)]
+            results = [future.result(timeout=25) for future in futures]
+        self.assertEqual(results[0], results[1])
+        with workspace_context(self.tenant.pk):
+            self.assertEqual(PawnLoan.objects.filter(borrower=borrower).count(), 3)
+            self.assertEqual(self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 4)
+            # This class intentionally skips database flush. Remove only this
+            # test's unpaid fixture graph so --keepdb cannot leak draft rows
+            # into owner-backed tests whose assertions count all loans.
+            from apps.tenant_apps.loans.models import LoanChangeLog, PawnCollateralItem
+            fixture_ids = (source.pk, *results[0])
+            LoanChangeLog.objects.filter(loan_id__in=fixture_ids).delete()
+            PawnCollateralItem.objects.filter(loan_id__in=fixture_ids).delete()
+            PawnLoan.objects.filter(pk__in=fixture_ids).delete()

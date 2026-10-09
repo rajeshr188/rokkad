@@ -37,7 +37,28 @@ def _paper_number_context(form):
             hint["value"] = preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN).value
         except ValueError as exc:
             hint["error"] = str(exc)
-    return {"paper_number_hint": hint}
+    return {"paper_number_hint": hint,
+            "paper_number_suggestion": getattr(form, "paper_number_suggestion",
+                form.data.get("paper_number_suggestion", "") if form.is_bound else "")}
+
+
+def prepare_paper_number_defaults(form):
+    """Prefill routine presentation only; submitted financial facts are never replaced."""
+    context = _paper_number_context(form)
+    suggested = (context["paper_number_hint"] or {}).get("value")
+    if not suggested or (form.is_bound and (form.data.get("review_token") or
+            form.data.get("action") not in {"entry_change", "layout_change", "terms"})):
+        return
+    previous = form.data.get("paper_number_suggestion", "") if form.is_bound else ""
+    values = form.data.copy() if form.is_bound else form.initial
+    for name in ("number", "source_reference"):
+        value = values.get(name, "")
+        if not str(value or "").strip() or (previous and value == previous):
+            values[name] = suggested
+    if form.is_bound:
+        values["paper_number_suggestion"] = suggested
+        form.data = values
+    form.paper_number_suggestion = suggested
 
 
 def _paper_agreement_context(form):

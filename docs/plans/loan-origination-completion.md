@@ -8,6 +8,25 @@ related: [loan-continuation-consolidation.md, ../adr/2026-10-07-shared-loan-entr
 
 # Loan origination completion and production acceptance
 
+## Editable paper-number and reference defaults (9 October, local)
+
+The owner requests both paper identity fields start with the selected series' next
+automatic suggestion to reduce typing. Implemented as editable, non-consuming
+presentation defaults with manual-value retention on series changes. Submitted
+review/confirmation facts remain authoritative; normal source/duplicate/counter
+validation and exact retry remain. See the [implementation](../implementation/unified-loan-recording.md).
+Production rollout is separate.
+
+## One draft per collateral entry (9 October, local)
+
+The owner authorizes a second mode in the existing Split screen: retain a chosen
+entry on the original and create one ordinary draft for every other entry.
+Implemented with non-consuming per-loan/totals review, preserved item/photo
+identities, atomic bounded numbering and audited identical retries. Selected-item
+grouping remains supported; no payout, new lifecycle or migration is introduced.
+See the [implementation](../implementation/draft-collateral-batch-split.md).
+Production rollout remains separate.
+
 ## Running-series selection and servicing (9 October, local)
 
 The owner accepts and authorizes running-only routine series choices, manual stop

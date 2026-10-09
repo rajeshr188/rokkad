@@ -7,6 +7,28 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Routine paper New loan prefills the original number and paper reference from the
+selected running series' non-consuming next-number suggestion. Both remain
+editable; untouched suggestions refresh on series changes while custom values
+are retained. Reference follows number typing while it still matches, and a
+different book/page reference remains independent. The unsigned hidden
+paper_number_suggestion marker is presentation-only and absent from canonical
+financial data. Submitted financial preview/confirmation and saved/archive/
+correction identities are retained; only successful admission advances numbering.
+See [implementation](implementation/unified-loan-recording.md).
+
+Saved-draft splitting supports selected entries grouped into one new draft and
+One loan per collateral. The latter retains a staff-chosen row on the original
+number and creates one ordinary draft per other row, initially using the same
+borrower/series/product/date/tenure. Quantity within a row remains together. Review
+compares per-loan and combined principal, interest, deductions and payout with the
+original; fixed fees/rounding can differ after splitting. Item/photo identities
+move without duplication. Full-range numbering, source/series/sequence locks and
+one transaction prevent partial splits. Source/destination change logs preserve
+relationships and authorize identical retries without another number, even after
+series stop. Splitting never records a payout or financial event. No migration or
+new lifecycle. See [implementation](implementation/draft-collateral-batch-split.md).
+
 Series availability now means Open for new loans, reusing is_active. Routine
 direct/paper New loan lists only running series with a current active verified
 licence and remaining active loan numbering. Exhaustion is derived, not another

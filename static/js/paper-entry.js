@@ -4,6 +4,7 @@ function initPaperEntry() {
   form.dataset.paperEntryReady = 'true';
   let revision = 0;
   let pending;
+  let previousNumber = form.elements.namedItem('number')?.value || '';
   const relevant = name => ['series_id', 'date', 'metal', 'principal', 'exceptions', 'source_license_from_setup'].includes(name)
     || /^collateral-\d+-(description|metal|allocated_principal|interest_rate_override|DELETE)$/.test(name);
   const invalidate = () => {
@@ -37,6 +38,7 @@ function initPaperEntry() {
       const response = await fetch(form.getAttribute('action'), {method: 'POST', body: data, credentials: 'same-origin'});
       if (!response.ok || current !== revision) return;
       const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      if (current !== revision) return;
       const terms = doc.querySelector('#standing-terms');
       if (!terms) return;
       // Refresh calculations without closing the optional details being edited.
@@ -63,6 +65,14 @@ function initPaperEntry() {
         const updatedHelp = doc.querySelector('#id_tenure_helptext');
         if (help && updatedHelp) help.textContent = updatedHelp.textContent;
       }
+      for (const name of ['number', 'source_reference', 'paper_number_suggestion']) {
+        const field = form.elements.namedItem(name), updated = doc.querySelector(`[name="${name}"]`);
+        if (field && updated) field.value = updated.value;
+      }
+      previousNumber = form.elements.namedItem('number')?.value || '';
+      const guidance = form.querySelector('#paper-number-guidance');
+      const updatedGuidance = doc.querySelector('#paper-number-guidance');
+      if (guidance && updatedGuidance) guidance.replaceWith(updatedGuidance);
       form.dispatchEvent(new Event('loan-terms:loaded'));
     } catch (_) {
       // The ordinary terms submit remains available without JavaScript.
@@ -70,6 +80,11 @@ function initPaperEntry() {
   };
   form.addEventListener('input', event => {
     if (event.target.name === 'confirm_review') return;
+    if (event.target.name === 'number') {
+      const reference = form.elements.namedItem('source_reference');
+      if (reference && reference.value === previousNumber) reference.value = event.target.value;
+      previousNumber = event.target.value;
+    }
     invalidate();
     if (event.target.name?.endsWith('-allocated_principal')) total();
   });

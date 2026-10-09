@@ -1,1 +1,17 @@
-{% extends "base_tenant.html" %}{% block title %}Split {{ loan.loan_number }}{% endblock %}{% block workspace_content %}<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a><h1 class="h3 mt-2">Split collateral into a new draft</h1><p class="text-muted">The selected physical items and photographs move to one new PawnLoan. {{ loan.loan_number }} keeps the unselected items and its existing number.</p><div id="split-workspace">{% include "loans/pawn/_split_form.html" %}</div>{% endblock %}
+{% extends "base_tenant.html" %}{% load static %}
+{% block title %}Split {{ loan.loan_number }}{% endblock %}
+{% block workspace_content %}
+<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
+<h1 class="h3 mt-2">Split draft collateral</h1>
+{% if completed_loans %}
+  <div class="alert alert-success">Split completed. {{ completed_loans|length }} new draft{{ completed_loans|length|pluralize }} created for the same borrower. No payout recorded.</div>
+  <div class="card"><div class="card-header">Resulting loans</div><div class="card-body"><ul class="mb-0">
+    <li><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">{{ loan.loan_number }}</a> — original loan</li>
+    {% for new_loan in completed_loans %}<li><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug new_loan.pk %}">{{ new_loan.loan_number }}</a></li>{% endfor %}
+  </ul></div></div>
+{% else %}
+  <p class="text-body-secondary">Move selected entries to one new loan, or keep one entry here and create a loan for every other entry. Collateral identities and photographs move with their entries. {{ loan.loan_number }} keeps its number.</p>
+  <div id="split-workspace">{% include "loans/pawn/_split_form.html" %}</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/pawn-draft-split.js' %}" defer></script>{% endblock %}

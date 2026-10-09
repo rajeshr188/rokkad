@@ -1,0 +1,6 @@
+{% load loans_display %}
+<td>{{ economics.gross_principal|indian_money }}</td>
+<td>{{ economics.monthly_interest|indian_money }}</td>
+<td>{{ economics.advance_interest|indian_money }}</td>
+<td>{{ economics.deducted_fees|indian_money }}</td>
+<td>{{ economics.net_disbursed|indian_money }}</td>

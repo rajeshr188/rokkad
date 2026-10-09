@@ -97,6 +97,108 @@ class RoutineEntryTests(WorkspaceTestCase):
         self.seq.refresh_from_db()
         self.assertEqual(self.seq.next_number, 1)
 
+    def test_paper_identity_fields_start_with_editable_non_consuming_suggestion(self):
+        client, path = self._entry_client()
+        before = m.PawnLoan.objects.count()
+        page = client.get(path + "?entry=paper")
+        suggested = page.context["paper_number_hint"]["value"]
+        for name in ("number", "source_reference"):
+            self.assertEqual(page.context["form"][name].value(), suggested)
+            self.assertFalse(page.context["form"].fields[name].disabled)
+            self.assertNotIn("readonly", page.context["form"].fields[name].widget.attrs)
+        self.assertEqual(page.context["paper_number_suggestion"], suggested)
+        self.assertContains(page, "Check it against the paper record")
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
+        self.assertEqual(m.PawnLoan.objects.count(), before)
+
+    def test_blank_identity_waits_for_series_then_fills_on_presentation_change(self):
+        client, path = self._entry_client()
+        second = m.LoanSeries.objects.create(workspace=self.tenant, license=self.series.license,
+            code="NEXT", name="Next register")
+        sequence = m.LoanNumberSequence.objects.create(series=second, document_kind="PAWN_LOAN",
+            prefix="NEXT-", width=4, next_number=7, maximum_number=9999)
+        page = client.get(path + "?entry=paper")
+        self.assertIsNone(page.context["form"]["number"].value())
+        self.assertIsNone(page.context["form"]["source_reference"].value())
+        values = dict(entry_mode="paper", entry_selection="paper", routine_entry="on",
+            series_id=second.pk, date=self.today.isoformat(), action="entry_change",
+            number="", source_reference="", intent_token=page.context["intent_token"],
+            **{"collateral-TOTAL_FORMS": "1", "collateral-INITIAL_FORMS": "0"})
+        response = client.post(path, values)
+        self.assertEqual(response.context["form"]["number"].value(), "NEXT-0007")
+        self.assertEqual(response.context["form"]["source_reference"].value(), "NEXT-0007")
+        sequence.refresh_from_db()
+        self.assertEqual(sequence.next_number, 7)
+
+    def test_series_change_refreshes_suggestions_and_preserves_individual_manual_fields(self):
+        client, path = self._entry_client()
+        page = client.get(path + "?entry=paper")
+        old = page.context["paper_number_hint"]["value"]
+        second = m.LoanSeries.objects.create(workspace=self.tenant, license=self.series.license,
+            code="NEXT", name="Next register")
+        m.LoanNumberSequence.objects.create(series=second, document_kind="PAWN_LOAN",
+            prefix="NEXT-", width=4, next_number=7, maximum_number=9999)
+        values = self.paper_facts(page)
+        values.update(action="entry_change", entry_selection="paper", series_id=second.pk,
+            number=old, source_reference=old, paper_number_suggestion=old)
+        response = client.post(path, values)
+        self.assertEqual(response.context["form"]["number"].value(), "NEXT-0007")
+        self.assertEqual(response.context["form"]["source_reference"].value(), "NEXT-0007")
+        values.update(number="Actual-older-0003", source_reference="Book 2 / page 10")
+        response = client.post(path, values)
+        self.assertEqual(response.context["form"]["number"].value(), "Actual-older-0003")
+        self.assertEqual(response.context["form"]["source_reference"].value(), "Book 2 / page 10")
+        values.update(number=old)
+        response = client.post(path, values)
+        self.assertEqual(response.context["form"]["number"].value(), "NEXT-0007")
+        self.assertEqual(response.context["form"]["source_reference"].value(), "Book 2 / page 10")
+
+    def test_unavailable_old_series_does_not_invent_an_original_number_or_reference(self):
+        client, path = self._entry_client()
+        m.LoanSeries.objects.filter(pk=self.series.pk).update(is_active=False)
+        page = client.get(path + f"?entry=paper&include_old_series=1&series={self.series.pk}")
+        self.assertIsNone(page.context["form"]["number"].value())
+        self.assertIsNone(page.context["form"]["source_reference"].value())
+        self.assertIn("error", page.context["paper_number_hint"])
+
+    def test_financial_review_does_not_replace_cleared_identity_fields(self):
+        client, path = self._entry_client()
+        page = client.get(path + "?entry=paper")
+        values = self.paper_facts(page)
+        values.update(number="", source_reference="", paper_number_suggestion=page.context["paper_number_hint"]["value"])
+        response = client.post(path, values)
+        self.assertIn("number", response.context["form"].errors)
+        self.assertIn("source_reference", response.context["form"].errors)
+        self.assertEqual(response.context["form"]["number"].value(), "")
+        self.assertEqual(response.context["form"]["source_reference"].value(), "")
+        self.assertIsNone(response.context["review"])
+
+    def test_suggested_number_admission_advances_only_on_confirmation_and_retries_exactly(self):
+        from apps.tenant_apps.loans.services.recorded_entry_photos import preview_recorded_entry
+        client, path = self._entry_client()
+        page = client.get(path + "?entry=paper")
+        suggested = page.context["paper_number_hint"]["value"]
+        values = self.paper_facts(page)
+        values.update(number=suggested, source_reference=suggested, paper_number_suggestion=suggested)
+        with patch("apps.tenant_apps.loans.services.recorded_entry_photos.preview_recorded_entry", wraps=preview_recorded_entry) as preview:
+            reviewed = client.post(path, values)
+        self.assertIsNotNone(reviewed.context["review"], reviewed.context["form"].errors)
+        self.assertNotIn("paper_number_suggestion", preview.call_args.kwargs["data"])
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 1)
+        confirmed = dict(values, action="confirm", confirm_review="on", review_token=reviewed.context["review_token"],
+            paper_number_suggestion="untrusted presentation only")
+        first = client.post(path, confirmed)
+        self.assertEqual(first.status_code, 302)
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 2)
+        second = client.post(path, confirmed)
+        self.assertEqual(second.status_code, 302)
+        self.assertEqual(first.url, second.url)
+        self.seq.refresh_from_db()
+        self.assertEqual(self.seq.next_number, 2)
+
     def test_missing_second_item_rate_prompts_setup_and_refuses_review(self):
         from datetime import timedelta
         client, path = self._entry_client()

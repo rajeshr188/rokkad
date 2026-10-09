@@ -31,7 +31,12 @@ In paper New loan, select **Record an earlier loan from an old series** beside
 the series field to expose retained registers. Without JavaScript, use **Apply
 series list** after changing this choice. A blocked direct-entry setup screen also
 links to this paper path. The selected register's status is visible. Original
-paper numbers stay editable and are not replaced by the next automatic number.
+paper numbers stay editable. For a running register, routine paper entry initially
+fills the original number and paper reference with the next automatic suggestion;
+staff check them against the paper record and edit either field as needed. Untouched
+suggestions follow series changes; custom values are retained. An unavailable old
+register supplies no automatic suggestion, so staff enter its actual source identity.
+Displaying or reviewing a suggestion reserves no number.
 
 An unused older original number can be recorded after a range is exhausted. All
 duplicate, applicable range, original-date evidence, agreement and financial

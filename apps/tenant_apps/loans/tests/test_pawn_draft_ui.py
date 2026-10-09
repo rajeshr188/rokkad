@@ -1065,6 +1065,219 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertTrue(selected.photos.filter(pk=selected_photo_id).exists())
         self.assertEqual(new_loan.loan_events.count(), 0)
 
+    def _split_source(self, count=3):
+        license, series = self._configured_setup()
+        payload = self._payload(license, series)
+        payload["collateral-TOTAL_FORMS"] = str(count)
+        for index in range(count):
+            for field, value in (
+                ("description", f"Gold item {index + 1}"), ("metal", "GOLD"),
+                ("gross_weight", "10"), ("net_weight", "9"),
+                ("purity_percentage", "91.6"), ("latest_appraised_value", "50000"),
+                ("allocated_principal", str(1000 * (index + 1))), ("quantity", "2"),
+            ):
+                payload[f"collateral-{index}-{field}"] = value
+            payload[f"collateral-{index}-photograph"] = SimpleUploadedFile(
+                f"item-{index}.jpg", b"\xff\xd8\xff\xe0item" + bytes([index]), content_type="image/jpeg")
+        self.client.post(reverse("loans:pawn_loan_create"), payload)
+        source = PawnLoan.objects.get()
+        items = tuple(source.collateral_items.order_by("pk"))
+        arguments = dict(collateral_item_ids=tuple(item.pk for item in items[1:]),
+            series=series, product_version=self.product_version,
+            loan_date=source.loan_date, tenure_months=source.tenure_months, split_each=True)
+        return source, items, arguments
+
+    def test_one_per_collateral_creates_nine_drafts_preserving_identity_and_photos(self):
+        source, items, arguments = self._split_source(10)
+        number = source.loan_number
+        identities = [(item.pk, item.public_id, item.photos.get().pk) for item in items]
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        sequence = LoanNumberSequence.objects.get(series=source.series, document_kind="PAWN_LOAN")
+        self.assertEqual(sequence.next_number, 2)
+        self.assertEqual(len(preview.new_drafts), 9)
+        loans = split_pawn_draft(source.pk, **arguments,
+            expected_fingerprint=preview.fingerprint, actor=self.owner)
+        self.assertEqual([loan.loan_number for loan in loans],
+            [f"PL-A-{index:05d}" for index in range(2, 11)])
+        source.refresh_from_db()
+        self.assertEqual(source.loan_number, number)
+        self.assertEqual(source.principal_amount, Decimal("1000"))
+        self.assertEqual(source.collateral_items.get().pk, items[0].pk)
+        for loan, item, identity in zip((source, *loans), items, identities, strict=True):
+            item.refresh_from_db()
+            self.assertEqual((item.pk, item.public_id, item.photos.get().pk), identity)
+            self.assertEqual(item.loan_id, loan.pk)
+            self.assertEqual(item.quantity, 2)
+            self.assertEqual(loan.collateral_items.count(), 1)
+            self.assertEqual(loan.borrower_id, source.borrower_id)
+            self.assertEqual(loan.state, "DRAFT")
+            self.assertEqual(loan.loan_date, source.loan_date)
+            self.assertEqual(loan.tenure_months, source.tenure_months)
+            self.assertEqual(loan.loan_events.count(), 0)
+        self.assertEqual(sum(loan.principal_amount for loan in (source, *loans)), Decimal("55000"))
+        sequence.refresh_from_db()
+        self.assertEqual(sequence.next_number, 11)
+        replay = split_pawn_draft(source.pk, **arguments,
+            expected_fingerprint=preview.fingerprint, actor=self.owner)
+        self.assertEqual([loan.pk for loan in replay], [loan.pk for loan in loans])
+        self.assertEqual(PawnLoan.objects.count(), 10)
+        sequence.refresh_from_db()
+        self.assertEqual(sequence.next_number, 11)
+
+    def test_split_preview_shows_per_loan_fixed_charges(self):
+        from apps.tenant_apps.loans.models import PawnLoanFeePolicy
+        source, items, arguments = self._split_source()
+        PawnLoanFeePolicy.objects.create(workspace=self.tenant, license=source.license,
+            code="DOC", name="Document charge", calculation_type="FIXED", value=10,
+            deducted_at_disbursal=True, effective_from=date(2026, 1, 1))
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        self.assertEqual(preview.original_economics.economics.deducted_fees, Decimal("10"))
+        self.assertEqual(preview.totals["deducted_fees"], Decimal("30"))
+        self.assertEqual(preview.totals["net_disbursed"], Decimal("5850"))
+        self.assertEqual(preview.original_economics.economics.net_disbursed, Decimal("5870"))
+
+    def test_batch_split_failure_rolls_back_created_drafts_items_audit_and_numbers(self):
+        from apps.tenant_apps.loans.models import LoanChangeLog
+        from apps.tenant_apps.loans.services.pawn_drafts import create_pawn_draft
+        source, items, arguments = self._split_source()
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        logs = LoanChangeLog.objects.count()
+        count = 0
+        def fail_second(*args, **kwargs):
+            nonlocal count
+            count += 1
+            if count == 2:
+                raise ValueError("Second draft failed")
+            return create_pawn_draft(*args, **kwargs)
+        with patch("apps.tenant_apps.loans.services.pawn_draft_split.create_pawn_draft", side_effect=fail_second):
+            with self.assertRaisesMessage(ValueError, "Second draft failed"):
+                split_pawn_draft(source.pk, **arguments,
+                    expected_fingerprint=preview.fingerprint, actor=self.owner)
+        source.refresh_from_db()
+        self.assertEqual(source.principal_amount, Decimal("6000"))
+        self.assertEqual(source.collateral_items.count(), 3)
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        self.assertEqual(LoanChangeLog.objects.count(), logs)
+        self.assertEqual(source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 2)
+        for item in items:
+            item.refresh_from_db()
+            self.assertEqual(item.loan_id, source.pk)
+            self.assertEqual(item.photos.count(), 1)
+
+    def test_batch_split_requires_enough_numbers_without_consuming_any(self):
+        from apps.tenant_apps.loans.services.number_allocation import SequenceExhaustedError
+        source, items, arguments = self._split_source()
+        sequence = source.series.number_sequences.get(document_kind="PAWN_LOAN")
+        sequence.maximum_number = 2
+        sequence.save()
+        with self.assertRaisesMessage(SequenceExhaustedError, "needs 2 new numbers"):
+            preview_pawn_draft_split(source.pk, **arguments)
+        sequence.refresh_from_db()
+        self.assertEqual(sequence.next_number, 2)
+        self.assertEqual(PawnLoan.objects.count(), 1)
+
+    def test_batch_split_rejects_changed_item_economics_and_number_preview(self):
+        from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+        source, items, arguments = self._split_source()
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        type(items[1]).objects.filter(pk=items[1].pk).update(description="Changed ring")
+        with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
+            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        policy = PawnMetalInterestRatePolicy.objects.get(license=source.license, metal="GOLD")
+        policy.monthly_interest_rate = Decimal("3")
+        policy.save()
+        with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
+            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        LoanNumberSequence.objects.filter(series=source.series, document_kind="PAWN_LOAN").update(next_number=3)
+        with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
+            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        self.assertEqual(source.collateral_items.count(), 3)
+
+    def test_batch_split_rejects_empty_all_foreign_or_multiple_retained_entries(self):
+        from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+        source, items, arguments = self._split_source()
+        for selected in ((), tuple(item.pk for item in items), (999999,), (items[1].pk,)):
+            with self.subTest(selected=selected), self.assertRaises(PawnDraftSplitError):
+                preview_pawn_draft_split(source.pk, **{**arguments, "collateral_item_ids": selected})
+        PawnLoan.objects.filter(pk=source.pk).update(state="APPROVED")
+        with self.assertRaisesMessage(PawnDraftSplitError, "Only a draft"):
+            preview_pawn_draft_split(source.pk, **arguments)
+
+    def test_batch_split_replay_rejects_changed_request_and_revoked_access(self):
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+        source, items, arguments = self._split_source()
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        with self.assertRaisesMessage(PawnDraftSplitError, "does not match"):
+            split_pawn_draft(source.pk, **{**arguments, "tenure_months": 4},
+                expected_fingerprint=preview.fingerprint, actor=self.owner)
+        with self.assertRaises(PermissionDenied):
+            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=None)
+        self.assertEqual(PawnLoan.objects.count(), 3)
+
+    def test_split_screen_batch_preview_confirm_and_exact_http_retry(self):
+        source, items, arguments = self._split_source()
+        url = reverse("loans:pawn_loan_split", args=[source.pk])
+        response = self.client.get(url)
+        self.assertContains(response, "One loan per collateral")
+        self.assertContains(response, "Gold item 1 — Gold, 9.0000 g; principal ₹1,000.00")
+        self.assertEqual(response.context["form"]["retained_collateral"].value(), items[0].pk)
+        data = dict(split_mode="each", retained_collateral=items[2].pk,
+            series=source.series_id, product_version=source.product_version_id,
+            loan_date="2026-07-18", tenure_months=3, action="preview")
+        response = self.client.post(url, data)
+        self.assertContains(response, "Review 2 new drafts")
+        self.assertContains(response, "Before splitting")
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        data.update(action="confirm", fingerprint=response.context["preview"].fingerprint)
+        response = self.client.post(url, data, follow=True)
+        self.assertContains(response, "2 new drafts created")
+        self.assertEqual(len(response.context["completed_loans"]), 2)
+        self.assertEqual(source.collateral_items.get().pk, items[2].pk)
+        response = self.client.post(url, data, follow=True)
+        self.assertContains(response, "Split completed")
+        self.assertEqual(PawnLoan.objects.count(), 3)
+        self.assertEqual(source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 4)
+        LoanSeries.objects.filter(pk=source.series_id).update(is_active=False)
+        response = self.client.post(url, data, follow=True)
+        self.assertContains(response, "Split completed")
+        self.assertEqual(PawnLoan.objects.count(), 3)
+
+    def test_selected_split_still_groups_items_and_supports_retry(self):
+        source, items, arguments = self._split_source()
+        arguments["split_each"] = False
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        self.assertEqual(len(preview.new_drafts), 1)
+        loan = split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        self.assertEqual(loan.collateral_items.count(), 2)
+        replay = split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        self.assertEqual(replay.pk, loan.pk)
+        self.assertEqual(PawnLoan.objects.count(), 2)
+
+    def test_split_service_refuses_another_workspace_source(self):
+        from apps.tenancy.context import without_workspace_context, workspace_context
+        from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+        source, items, arguments = self._split_source()
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        other = Company.objects.create(schema_name=f"split-other-{uuid.uuid4().hex[:8]}",
+            name="Other split workspace", owner=self.owner, creator=self.owner)
+        with without_workspace_context(), workspace_context(other.pk), self.assertRaisesMessage(PawnDraftSplitError, "not found"):
+            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        self.assertEqual(source.collateral_items.count(), 3)
+
+    def test_split_form_missing_retained_entry_is_an_actionable_error(self):
+        source, items, arguments = self._split_source()
+        url = reverse("loans:pawn_loan_split", args=[source.pk])
+        response = self.client.post(url, dict(split_mode="each", series=source.series_id,
+            product_version=source.product_version_id, loan_date="2026-07-18", tenure_months=3, action="preview"))
+        self.assertContains(response, "Choose the collateral to keep")
+        self.assertEqual(PawnLoan.objects.count(), 1)
+
     def test_invalid_create_rerenders_without_consuming_number(self):
         license, series = self._configured_setup()
         payload = self._payload(license, series)
