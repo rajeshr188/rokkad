@@ -37,6 +37,9 @@ class ClosedPositionAdmissionTests(RecordedOriginationTests):
 
     def setUp(self):
         super().setUp()
+        self.prepare_position()
+
+    def prepare_position(self):
         self.start_active_trial()
         self.prepare_history()
         self.document = dict(profile="loan-closed-position/1",

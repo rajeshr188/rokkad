@@ -84,7 +84,7 @@ def _prepare(workspace_id, actor, document, borrower_id, series_id, evidence_id=
     return workspace, series, accepted
 
 
-def _write(workspace, series, actor, accepted):
+def _write(workspace, series, actor, accepted, *, _number_claims=None):
     document = accepted["position"]
     source, terms = document["source"], document["loan"]
     namespace = UUID(source["namespace"])
@@ -104,7 +104,7 @@ def _write(workspace, series, actor, accepted):
     from .recorded_numbers import claim_number
     archive = accepted["archive"]
     claim_number(series, terms["number"], kind="PAWN_LOAN", actor=actor,
-        archive_ids=[row[0] for row in archive["snapshots"]] if archive else ())
+        archive_ids=[row[0] for row in archive["snapshots"]] if archive else (), _claims=_number_claims)
     loan = m.PawnLoan.objects.create(workspace=workspace, license=series.license, series=series,
         borrower_id=accepted["mapping"]["borrower_id"], loan_number=terms["number"], state="CLOSED",
         is_imported_closed_position=True, product_version=None, policy_snapshot=None,

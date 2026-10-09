@@ -20,7 +20,7 @@ JCL, JSK and Lakshmi source; external adapters need their own declared meaning.
 | IP-01 | Document minimal active/closed position contracts and source interpretation; preserve complete-history restoration | Contract and pure source adapter implemented locally; 34 focused checks pass |
 | IP-02 | Read-only retained-data inventory: identities, exact Party/register mappings, known fields, duplicates and contradictions; prepare eligible/exception cohorts | Read-only rehearsal complete: 39,196 candidates and 19 date-order exceptions; no admissions |
 | IP-03 | Minimal ordinary closed-position admission, optional original terms, shared balances/details/source media and versioned portability; native and active guards retained | Implemented locally; 150 fresh-PostgreSQL checks pass; production migration/conversion remains IP-04 |
-| IP-04 | Reviewed, resumable, idempotent eligible batch conversion through the admission service; source evidence retained and existing loans unchanged | Pending tested admission |
+| IP-04 | Reviewed, resumable, idempotent eligible batch conversion through the admission service; source evidence retained and existing loans unchanged | Implemented; 170 checks pass; 390 real-source admissions rehearsed, including all 190 JCL exceptions; live execution remains a coordinated release step |
 | IP-05 | Ordinary browsing and source access; simplify/archive-directory role only after records accounted for; measure and correct search queries | Pending conversion coverage |
 
 See the [IP-01/IP-02 delivery and inventory](../implementation/loan-position-import-ip01-ip02.md).
@@ -30,6 +30,15 @@ IP-03 records that separate source-scoped attestation; it does not add a release
 row or mutate the retained documents. See the [IP-03 delivery](../implementation/loan-position-import-ip03.md).
 The updated read-only classification still has 39,196 candidates and 19 date-order
 exceptions, with unchanged source document fingerprints.
+
+The owner limits the 190-record recognition to a temporary exact recovery
+cohort. IP-04 freezes its source identities/hashes and removes the schema-wide
+inference; future no-release-row claims require separate review. The tested batch
+path and [390-record rehearsal](../implementation/loan-position-import-ip04.md)
+preserve original records and numbering. Production remains on the prior schema
+and readers. Coordinate compatible deployment/migration and live bounded
+conversion with IP-05's directory/default-order review; the actual 39,196-record
+production conversion is not yet complete.
 
 Do not turn IP-02 into receipt reconstruction for every old loan. Classify known
 position and identity, with specific exceptional contradictions. No individual

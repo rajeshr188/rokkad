@@ -19,6 +19,12 @@ The owner additionally confirms that the 190 JCL records with an earlier
 owner-confirmed closed/zero position and no release row can be considered closed
 with collateral returned to the borrower. Preserve unknown closure dates; this
 confirmation adds custody knowledge without inventing release transactions.
+The owner subsequently limits this exception to that exact one-time recovery
+cohort. IP-04 freezes its 190 source identities and document hashes. Missing
+release rows in any future import do not inherit the JCL confirmation; they
+require their own explicitly reviewed position/custody evidence. No standing
+policy, staff switch or generic relaxation is introduced. See the
+[IP-04 implementation and rehearsal](../implementation/loan-position-import-ip04.md).
 
 ## Decision
 

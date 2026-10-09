@@ -5,6 +5,7 @@ from uuid import UUID
 
 from apps.tenant_apps.loans.services import archive_contract, closed_position_contract
 from apps.tenant_apps.loans.services.import_identity import source_binding_id
+from apps.tenant_apps.loans.services.history_contract import digest
 from apps.tenant_apps.loans.services.portability_validation import PortabilityValidationError
 
 SOURCE_NAMESPACE = "6ca968d6-2647-4dbb-8e39-24f0c1a12ed6"
@@ -13,7 +14,7 @@ OWNER_RETURN_REFERENCE = "owner-confirmation-2026-10-09:jcl-190-owner-closed-zer
 RELEASE_MEANING_REFERENCE = "owner-confirmation-2026-10-09:released-zero-debt-all-collateral-returned-to-borrower"
 
 
-def prepare_closed_position(document, *, as_of, release_meaning_reference):
+def prepare_closed_position(document, *, as_of, release_meaning_reference, owner_return_cohort=None):
     """Return a portable candidate, not owner approval or financial admission.
 
     Exact Party/register resolution and snapshot/collision checks are performed
@@ -52,10 +53,13 @@ def prepare_closed_position(document, *, as_of, release_meaning_reference):
     elif (facts["raw_status"] == "NO_RELEASE_ROW; OWNER_REPORTS_CLOSED"
             and facts["reported_balance"] is not None and Decimal(facts["reported_balance"]) == 0
             and any(row.get("owner_decision") for row in document["source_records"])):
-        # Separate owner confirmation covers JCL's 190 no-release-row cohort only.
-        basis, custody, reference = "OWNER_CLOSED_POSITION", "UNKNOWN", "Retained owner closed-position decision; original closure date and handover unavailable."
-        if schema == "jcl":
-            custody, reference = "RETURNED_TO_BORROWER", OWNER_RETURN_REFERENCE
+        # A temporary recovery cohort, not a rule for future JCL imports. The
+        # caller supplies the frozen, owner-reviewed exact identities/hashes.
+        binding = source_binding_id(source["namespace"], source["loan_id"], source["system"])
+        if (schema != "jcl" or not isinstance(owner_return_cohort, dict)
+                or owner_return_cohort.get(binding) != digest(document)):
+            raise ValueError("No release row: this exact snapshot needs a separate owner-reviewed closed/custody position.")
+        basis, custody, reference = "OWNER_CLOSED_POSITION", "RETURNED_TO_BORROWER", OWNER_RETURN_REFERENCE
     else:
         raise ValueError("Resolve ambiguous release claims or supply an accepted closed-position decision.")
     candidate = dict(profile=closed_position_contract.PROFILE,
@@ -70,10 +74,11 @@ def prepare_closed_position(document, *, as_of, release_meaning_reference):
     return candidate
 
 
-def classify_closed_position(document, *, as_of, release_meaning_reference):
+def classify_closed_position(document, *, as_of, release_meaning_reference, owner_return_cohort=None):
     """Prepare eligible facts and expose exceptions; no evidence is changed or dropped."""
     try:
-        candidate = prepare_closed_position(document, as_of=as_of, release_meaning_reference=release_meaning_reference)
+        candidate = prepare_closed_position(document, as_of=as_of, release_meaning_reference=release_meaning_reference,
+            owner_return_cohort=owner_return_cohort)
     except (ValueError, PortabilityValidationError) as exc:
         return dict(status="REVIEW", document=None, reason=str(exc))
     return dict(status="CANDIDATE", document=candidate, reason=None)

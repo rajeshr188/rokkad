@@ -18,6 +18,12 @@ history is not fabricated. Existing older profiles remain frozen. Production
 conversion is IP-04. See the [contract](../contracts/loan-closed-position-v1.md)
 and [IP-03 delivery](../implementation/loan-position-import-ip03.md).
 
+The 190 JCL records without release rows use a one-time exact source/hash recovery
+attestation, not a reusable rule for JCL or future imports. IP-04 batches reuse
+ordinary closed-position admission, recheck current authority/source/mapping and
+numbering, commit at most 100 records atomically, and retry immutable origins
+without duplicate actions. See the [tested implementation and isolated rehearsal](../implementation/loan-position-import-ip04.md).
+
 The September audit below retains its original baseline. LC-05 now adds versioned
 actual paper fee/item evidence, multi-item archive admission, delegated preparation,
 precise opening checkpoints and verified terminal positions. Current applicability

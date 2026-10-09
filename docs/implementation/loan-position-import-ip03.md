@@ -26,7 +26,10 @@ The refreshed read-only classification retains 39,196 candidates and 19
 closure-before-original-date exceptions. Source document fingerprints remain
 unchanged. Candidate custody is now returned for all 39,196, including those 190;
 this changes prepared position facts, not the immutable source documents. Private
-manifests remain on the server. IP-04 must freeze and recheck the selected cohort.
+manifests remain on the server. IP-04 now freezes and rechecks the exact 190
+identities/hashes, removing the schema-wide inference at the owner's direction.
+Future missing release rows need separate review. See the
+[IP-04 delivery](loan-position-import-ip04.md).
 
 ## Persistence and authority
 

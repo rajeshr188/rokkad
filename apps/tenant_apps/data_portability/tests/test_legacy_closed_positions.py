@@ -7,6 +7,7 @@ from django.test import SimpleTestCase
 from apps.tenant_apps.data_portability import legacy_closed_positions as adapter
 from apps.tenant_apps.loans.services import archive_contract, closed_position_contract
 from .test_loan_archive import document as archive_document
+from apps.tenant_apps.loans.services.history_contract import digest
 
 
 def retained(schema="jcl"):
@@ -55,12 +56,24 @@ class LegacyClosedPositionTests(SimpleTestCase):
         value = retained(); value["source_records"].pop()
         value["source_records"].append(dict(owner_decision="Owner confirmed closed; zero remaining debt."))
         value["facts"].update(raw_status="NO_RELEASE_ROW; OWNER_REPORTS_CLOSED", reported_balance="0", closed_on=None)
-        prepared = self.prepare(value)
+        cohort = {"jcl:girvi_loan:1": digest(value)}
+        prepared = adapter.prepare_closed_position(value, as_of=date(2026,10,9),
+            release_meaning_reference=adapter.RELEASE_MEANING_REFERENCE, owner_return_cohort=cohort)
         self.assertEqual(prepared["position"]["basis"], "OWNER_CLOSED_POSITION")
         self.assertEqual(prepared["position"]["custody"], "RETURNED_TO_BORROWER")
         self.assertEqual(prepared["position"]["evidence_reference"], adapter.OWNER_RETURN_REFERENCE)
         self.assertIsNone(prepared["loan"]["closed_on"])
         self.assertEqual(prepared["position"]["as_of"], "2026-10-09")
+
+    def test_temporary_jcl_attestation_does_not_cover_unlisted_or_changed_snapshots(self):
+        value = retained(); value["source_records"].pop()
+        value["source_records"].append(dict(owner_decision="Owner confirmed closed; zero remaining debt."))
+        value["facts"].update(raw_status="NO_RELEASE_ROW; OWNER_REPORTS_CLOSED", reported_balance="0", closed_on=None)
+        for cohort in (None, {}, {"jcl:girvi_loan:2": digest(value)}, {"jcl:girvi_loan:1": "a"*64}):
+            with self.subTest(cohort=cohort):
+                result = adapter.classify_closed_position(value, as_of=date(2026,10,9),
+                    release_meaning_reference=adapter.RELEASE_MEANING_REFERENCE, owner_return_cohort=cohort)
+                self.assertEqual(result["status"], "REVIEW")
 
     def test_other_installation_and_schema_cannot_use_the_owner_confirmation(self):
         for value in (retained("unreviewed"), retained()):

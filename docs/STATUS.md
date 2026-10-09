@@ -7,6 +7,35 @@ tags: [status, architecture]
 
 # Status
 
+## IP-04 batch conversion implemented and rehearsed (9 October)
+
+The owner clarifies that JCL's 190 no-release-row records are a temporary exact
+recovery cohort. Freeze their reviewed source identities/hashes and remove the
+schema-wide return inference. Future missing release rows require separate
+position/custody review; ordinary native/paper/active safeguards remain intact.
+Restricted read-only classification retains 39,196 eligible records and 19 held
+date conflicts with unchanged source fingerprints.
+
+Implement signed exact batch review, bounded atomic admission through IP-03,
+current authority/source/mapping/number checks, interruption/retry without duplicate
+origins, and unchanged-manifest review renewal. Number/source indexing occurs
+once per locked chunk without bypassing reserved ranges. All 170 fresh-PostgreSQL
+checks pass, including real concurrent replay, rollback, source changes, native
+compatibility, restricted guards/RLS and portability.
+
+A bounded loan-only candidate preserves live billing. A private production-derived
+copy passes owner-only migration 0065, restricted startup and migration consistency.
+Rehearse 390 real-source admissions: JCL 290 (all 190 exceptional records), JSK 50,
+Lakshmi 50. Retries skip 150 unchanged positions; existing loan/event/provenance/
+source/sequence fingerprints remain identical. Media mounts are read-only.
+See the [IP-04 delivery](implementation/loan-position-import-ip04.md).
+
+No live schema, loan, counter or media change occurs. Full live conversion remains
+a coordinated compatible-reader release/migration step, with 19 exceptions retained.
+IP-05 directory ordering/consolidation and measured search acceptance are next;
+the large old-closed cohort must not bury running loans on the default screen.
+Unrelated billing edits remain outside the slice.
+
 ## IP-03 closed-position admission implemented locally (9 October)
 
 The owner confirms the 190 JCL owner-closed/zero records without release rows

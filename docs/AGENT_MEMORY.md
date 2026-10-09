@@ -7,6 +7,19 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+IP-04 implements reviewed retained-source batch conversion through IP-03; chunks
+are at most 100, atomic, current-authority/source/mapping/number checked and
+idempotent through immutable provenance. Refresh expired unchanged manifests
+without changing accepted positions. The 190 JCL no-release-row records are a
+temporary exact identity/hash recovery cohort only: default adapter preparation
+holds future unlisted/changed no-release claims for separate review. No generic
+custody or financial guard is relaxed. All 170 checks pass; 390 real-source
+admissions (including all 190) pass in a restricted isolated production copy,
+with existing loan/event/provenance/source/counter fingerprints unchanged. Live
+schema/data are not converted yet. Coordinate compatible release/migration and
+bounded full conversion with IP-05 directory ordering/search acceptance. See
+[IP-04](implementation/loan-position-import-ip04.md).
+
 IP-03 implements ordinary minimal CLOSED position admission locally in the same
 PawnLoan/event/provenance tables. Only this immutable evidenced basis may omit
 original principal/rate/date/tenure/product; native/direct/paper/active terms stay
