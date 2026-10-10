@@ -78,7 +78,7 @@ def resolve_servicing_contract(loan, *, as_of_date):
         review = opening["review"]
         if as_of_date < origin.effective_date:
             raise ServicingContractError("Servicing history before the migration cutover is unavailable.")
-        if opening["profile"] == "loan-closed-position-evidence/1":
+        if opening["profile"] in {"loan-closed-position-evidence/1", "loan-closed-position-evidence/2"}:
             if len(events) != 1 or policy is not None:
                 raise ServicingContractError("Closed position requires its sole accepted checkpoint without calculation policy.")
             return ServicingContract(**common, origin_event_id=origin.pk, origin_kind=origin.event_kind,

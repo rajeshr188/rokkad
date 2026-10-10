@@ -1,4 +1,5 @@
 """The common directory is read-only; archive claims are never financial debt."""
+from copy import deepcopy
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -197,10 +198,12 @@ class UnifiedDirectoryTests(WorkspaceTestCase):
         args = dict(workspace_id=self.tenant.pk, actor=self.owner, borrower_id=self.party.pk, series_id=series.pk,
             evidence_id=evidence.public_id, document=position)
         if inconsistent_source:
-            # Deliberately bypass pure validation to model an inconsistent FK.
-            # Browsing must still check source identity rather than trust the FK.
+            # Preserve a version-1 inconsistent FK fixture. Version-2 database
+            # guards refuse this binding; browsing must still distrust old FKs.
             from apps.tenant_apps.loans.services import closed_position
             workspace, selected_series, accepted = closed_position._prepare(**args)
+            accepted['profile'] = closed_position.ADMISSION_PROFILE
+            accepted['position'] = deepcopy(position)
             accepted['position']['source']['system'] = 'unrelated-source-book'
             with patch.object(closed_position, 'read_position', return_value={}):
                 loan, _ = closed_position._write(workspace, selected_series, self.owner, accepted)

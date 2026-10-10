@@ -26,7 +26,7 @@ def interest_contract_inventory(*, as_of_date=None):
         shared = (profile in ("loan-opening-review/3", "loan-opening-review/4", "loan-opening-review/5") if origin and origin.event_kind == "MIGRATION_OPENING"
                   else profile == "recorded-anniversary/3" if policy and policy.basis == "RECORDED_CONTRACT"
                   else bool(policy and policy.policy_version == 2))
-        terminal = profile in {"loan-terminal-review/1", "loan-closed-position-admission/1"}
+        terminal = profile in {"loan-terminal-review/1", "loan-closed-position-admission/1", "loan-closed-position-admission/2"}
         financial = [event for event in events if event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING")]
         blocker, contract = None, None
         if origin:

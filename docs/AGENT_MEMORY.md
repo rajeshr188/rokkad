@@ -7,6 +7,22 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+BS-05 implements compact future closed-position admissions locally. Stored
+admission/evidence version 2 freezes small financial facts and exact source
+ID/hash/snapshot references through the existing protected archive FK. Readers
+verify and hydrate source evidence in memory; standalone version-1 files/media
+remain self-contained. Existing posted version-1 snapshots/retry hashes are
+preserved. Migration 0068 adds exact source/version pairing guards and refuses
+rollback after compact admissions; no table, lifecycle, numbering or authority
+change. All 112 closed-position, 180 broader compatibility and ten balance checks
+pass, including restricted-role source tamper/rebinding/RLS, old retries/upgrade
+and standalone media/fresh-Workspace restoration. The disposable test database is
+removed. Production and the
+roughly 585 MiB already duplicated in posted payloads remain unchanged. A future
+release must renew BS-04 recovery acceptance for its exact compatible image.
+See the [decision](adr/2026-10-10-compact-closed-position-evidence.md) and
+[implementation](implementation/compact-closed-position-evidence-bs05.md).
+
 BS-03/04 encrypted private R2 publication, actual recovery and hourly activation pass
 on 10 October. Dedicated backup credentials are root-only, bucket-scoped and
 limited to the production server's exact IPv4/IPv6 addresses; web/media credentials

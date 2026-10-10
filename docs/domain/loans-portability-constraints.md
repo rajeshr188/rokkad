@@ -7,6 +7,13 @@ tags: [loans, constraints, invariants, portability, audit]
 
 # Loans constraints and applicability
 
+BS-05 adds compact internal closed-position admission/evidence version 2 for
+future records. Their frozen financial facts reference protected source IDs/hashes;
+readers verify the retained documents and exports still include them through the
+unchanged standalone version-1 file contracts. Old posted snapshots and retries
+keep version-1 semantics. No authority, numbering, financial-history or custody
+rule is relaxed. See the [decision](../adr/2026-10-10-compact-closed-position-evidence.md).
+
 The owner accepts [position-only ordinary loan import](../adr/2026-10-09-loan-position-import-without-earlier-history.md)
 on 9 October. Earlier financial history is optional. Active loans need an accepted
 continuation position; closed records need an accepted zero-debt position rather

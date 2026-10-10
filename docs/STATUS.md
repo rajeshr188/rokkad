@@ -7,6 +7,33 @@ tags: [status, architecture]
 
 # Status
 
+## BS-05 compact closed-position evidence implemented locally (10 October)
+
+New closed-position admissions retain the source document once in the protected
+archive and small immutable financial/source facts in origin/opening version 2.
+Readers verify source hashes, identity and known facts before hydration. Existing
+version-1 snapshots and exact retries remain unchanged; standalone exports still
+carry the full source and verified media into fresh-Workspace restoration.
+
+Owner-only migration 0068 preserves old branches and enforces the new source
+references and version pairing, with the same zero checkpoint, immutability and
+forced RLS. It refuses schema rollback over posted compact origins. No new table,
+business workflow or relaxation of the exact 190-record recovery exception.
+
+All 112 closed-position regressions, 180 wider PostgreSQL compatibility tests
+and ten pure balance tests pass, including compact source tamper/rebinding,
+restricted writes/RLS, old snapshot upgrades/retries and standalone source/media
+fresh-Workspace restore. The disposable regression database is removed. Model/
+migration consistency, all changed module boundaries and documentation checks pass.
+No production
+migration/deployment or existing payload rewrite is performed; the approximately
+585 MiB existing duplication is retained. A later compatible release must renew
+its exact-image recovery acceptance under the active BS-04 backup gate.
+
+See the [decision](adr/2026-10-10-compact-closed-position-evidence.md),
+[implementation record](implementation/compact-closed-position-evidence-bs05.md)
+and [plan](plans/backup-storage-and-evidence-efficiency.md).
+
 ## BS-03/04 encrypted recovery and hourly retention active (10 October)
 
 One real completed backup is age-encrypted, uploaded to private R2 and downloaded/

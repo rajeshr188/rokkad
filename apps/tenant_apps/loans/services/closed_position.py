@@ -21,6 +21,8 @@ from .import_identity import find_source_origin, source_binding_id
 
 EVIDENCE_PROFILE = "loan-closed-position-evidence/1"
 ADMISSION_PROFILE = "loan-closed-position-admission/1"
+COMPACT_EVIDENCE_PROFILE = "loan-closed-position-evidence/2"
+COMPACT_ADMISSION_PROFILE = "loan-closed-position-admission/2"
 SALT = "loans.closed-position.review.v1"
 
 
@@ -31,6 +33,13 @@ def position_source_id(source):
     # Length-prefixing is unambiguous even when identities contain punctuation.
     material = f"{len(source['system'])}:{source['system']}{source['loan_id']}"
     return "closed:" + sha256(material.encode("utf-8")).hexdigest()
+
+
+def _origin(workspace_id, source):
+    origin = m.HistoricalLoanImport.objects.select_related("loan").filter(workspace_id=workspace_id,
+        source_namespace=source["namespace"], source_id=position_source_id(source)).first()
+    return origin or find_source_origin(workspace_id=workspace_id, namespace=UUID(source["namespace"]),
+        source_id=source["loan_id"], borrower_source_system=source["system"])
 
 
 def _prepare(workspace_id, actor, document, borrower_id, series_id, evidence_id=None):
@@ -79,7 +88,11 @@ def _prepare(workspace_id, actor, document, borrower_id, series_id, evidence_id=
         evidence = accept_evidence(workspace_id=workspace_id, actor=actor, document=document["retained_evidence"],
             expected_sha256=digest(document["retained_evidence"]), confirmed=True)
         archive = dict(id=evidence.pk, sha256=evidence.source_sha256, snapshots=[[evidence.pk, evidence.source_sha256]])
-    accepted = dict(profile=ADMISSION_PROFILE, position=deepcopy(document), archive=archive,
+    # Existing posted profiles and their exact retry fingerprints stay frozen.
+    origin = _origin(workspace_id, document["source"])
+    profile = ADMISSION_PROFILE if origin and origin.document.get("profile") == ADMISSION_PROFILE else COMPACT_ADMISSION_PROFILE
+    position = deepcopy(document if profile == ADMISSION_PROFILE else {**document, "retained_evidence": None})
+    accepted = dict(profile=profile, position=position, archive=archive,
         mapping=dict(workspace_id=workspace_id, borrower_id=borrower_id, series_id=series.pk, license_id=series.license_id))
     return workspace, series, accepted
 
@@ -88,13 +101,7 @@ def _write(workspace, series, actor, accepted, *, _number_claims=None):
     document = accepted["position"]
     source, terms = document["source"], document["loan"]
     namespace = UUID(source["namespace"])
-    origin = m.HistoricalLoanImport.objects.select_related("loan").filter(workspace_id=workspace.pk,
-        source_namespace=namespace, source_id=position_source_id(source)).first()
-    if origin is None:
-        # Existing older financial profiles retain their original bindings. An
-        # ambiguous older origin is held rather than silently imported twice.
-        origin = find_source_origin(workspace_id=workspace.pk, namespace=namespace,
-            source_id=source["loan_id"], borrower_source_system=source["system"])
+    origin = _origin(workspace.pk, source)
     checksum = digest(accepted)
     if origin:
         if origin.source_sha256 != checksum or origin.document != accepted:
@@ -116,7 +123,8 @@ def _write(workspace, series, actor, accepted, *, _number_claims=None):
     payload = dict(contract_version=1, currency="INR", event_kind="MIGRATION_OPENING", effective_date=day.isoformat(),
         source_identity=dict(app="loans", model="PawnLoan", loan_id=loan.pk),
         values=dict(principal="0", interest="0", fees="0"),
-        opening=dict(profile=EVIDENCE_PROFILE, review=accepted, item_mapping={}))
+        opening=dict(profile=EVIDENCE_PROFILE if accepted["profile"] == ADMISSION_PROFILE else COMPACT_EVIDENCE_PROFILE,
+            review=accepted, item_mapping={}))
     from .event_recording import _persist_locked_event
     event, _ = _persist_locked_event(loan, kind="MIGRATION_OPENING", effective_date=day, payload=payload, actor=actor)
     m.HistoricalLoanImport.objects.create(workspace=workspace, loan=loan, source_namespace=namespace,
@@ -179,9 +187,14 @@ def read_closed_evidence(loan, event):
     payload = event.payload
     opening = payload["opening"]
     accepted = opening["review"]
-    if type(accepted) is not dict or set(accepted) != {"profile", "position", "archive", "mapping"} or accepted["profile"] != ADMISSION_PROFILE:
+    if type(accepted) is not dict or set(accepted) != {"profile", "position", "archive", "mapping"} or accepted["profile"] not in {ADMISSION_PROFILE, COMPACT_ADMISSION_PROFILE}:
         raise ValueError("Unsupported closed-position admission evidence.")
+    compact = accepted["profile"] == COMPACT_ADMISSION_PROFILE
+    if opening["profile"] != (COMPACT_EVIDENCE_PROFILE if compact else EVIDENCE_PROFILE):
+        raise ValueError("Closed-position stored profiles must match.")
     document = contract.validate_document(accepted["position"])
+    if compact and document["retained_evidence"] is not None:
+        raise ValueError("Compact position must reference, rather than copy, retained source evidence.")
     terms = document["loan"]
     mapping = dict(workspace_id=loan.workspace_id, borrower_id=loan.borrower_id, series_id=loan.series_id, license_id=loan.license_id)
     original = date.fromisoformat(terms["original_date"]) if terms["original_date"] else None
@@ -206,7 +219,34 @@ def read_closed_evidence(loan, event):
     if origin.archive_evidence_id != (archive["id"] if archive else None):
         raise ValueError("Retained source binding differs from admission.")
     if archive:
-        evidence = origin.archive_evidence
-        if evidence.document != document["retained_evidence"] or evidence.source_sha256 != archive["sha256"] or digest(evidence.document) != archive["sha256"]:
+        evidence = m.HistoricalLoanEvidence.objects.filter(workspace_id=loan.workspace_id, pk=origin.archive_evidence_id).first()
+        if evidence is None or evidence.source_sha256 != archive["sha256"] or digest(evidence.document) != archive["sha256"]:
             raise ValueError("Retained source evidence differs from the accepted position.")
+        if not compact and evidence.document != document["retained_evidence"]:
+            raise ValueError("Retained source evidence differs from the accepted position.")
+        if compact:
+            if (type(archive) is not dict or set(archive) != {"id", "sha256", "snapshots"}
+                or type(archive["id"]) is not int or type(archive["snapshots"]) is not list
+                or not archive["snapshots"]):
+                raise ValueError("Compact position requires its exact frozen source references.")
+            seen = set()
+            for pair in archive["snapshots"]:
+                if (type(pair) is not list or len(pair) != 2 or type(pair[0]) is not int
+                    or pair[0] <= 0 or type(pair[1]) is not str or len(pair[1]) != 64
+                    or any(c not in "0123456789abcdef" for c in pair[1]) or pair[0] in seen):
+                    raise ValueError("Invalid compact source snapshot reference.")
+                seen.add(pair[0])
+                row = m.HistoricalLoanEvidence.objects.filter(workspace_id=loan.workspace_id, pk=pair[0]).first()
+                if row is None or row.source_sha256 != pair[1] or digest(row.document) != pair[1]:
+                    raise ValueError("Frozen source snapshot is missing or changed.")
+                if (str(row.source_namespace), row.source_system, row.source_id) != (
+                        source["namespace"], source["system"], source["loan_id"]):
+                    raise ValueError("Frozen source snapshot identifies a different loan.")
+                contract.validate_document({**document, "retained_evidence": row.document})
+            if [archive["id"], archive["sha256"]] not in archive["snapshots"]:
+                raise ValueError("Selected source must belong to the frozen source references.")
+            # Hydration is ephemeral; event/origin hashes always use stored bytes.
+            hydrated = deepcopy(opening)
+            hydrated["review"]["position"]["retained_evidence"] = deepcopy(evidence.document)
+            return hydrated
     return opening

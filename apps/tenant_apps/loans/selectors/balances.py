@@ -173,7 +173,7 @@ def calculate_pawn_loan_balance(
     total_due = principal_outstanding + interest_outstanding + fees_outstanding
     has_disbursal = totals["principal_disbursed"] + totals["opening_principal"] > ZERO
     financially_settled = has_disbursal and total_due == ZERO
-    if opening and opening["profile"] in {"loan-terminal-evidence/1", "loan-closed-position-evidence/1"}:
+    if opening and opening["profile"] in {"loan-terminal-evidence/1", "loan-closed-position-evidence/1", "loan-closed-position-evidence/2"}:
         if len(events) != 1:
             raise PawnLoanBalanceSelectorError("A terminal checkpoint cannot invent subsequent financial history.")
         financially_settled = total_due == ZERO
@@ -193,7 +193,7 @@ def calculate_pawn_loan_balance(
         item.custody_state in resolved_custody_states
         for item in collateral_items
     )
-    minimal = opening and opening["profile"] == "loan-closed-position-evidence/1"
+    minimal = opening and opening["profile"] in {"loan-closed-position-evidence/1", "loan-closed-position-evidence/2"}
     if minimal:
         collateral_return_complete = opening["review"]["position"]["position"]["custody"] == "RETURNED_TO_BORROWER"
     due_date = (None if minimal else date.fromisoformat(opening["review"]["terms"]["maturity_date"]) if opening
