@@ -29,12 +29,12 @@ plans; shelving an idea must not hide a release blocker.
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 | FW-005 | Broader historical loan admission and quote-age policy | Partial scope implemented; remaining work unscheduled | Missing historical evidence or a guided import contract is needed | Native earlier payouts and explicit daily confirmations are implemented; wider exceptions remain deferred |
 | FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
-| FW-007 | Guided customer-facing legacy migration and ordinary paper recording | Guided register and supported paper-first workflow implemented locally; real-book/release acceptance pending | Representative acceptance, then separately selected additional source/rule profiles | See unified-loan-recording.md, flows/paper-first-operator-and-release.md and portability-confidence-and-completion.md; broader profiles remain future work |
+| FW-007 | Guided customer-facing legacy migration and ordinary paper recording | Supported paper workflow accepted/released; guided register remains bounded | Select staff restore integration or additional reviewed source/position profiles | Current coverage: architecture/data-portability-review-20261010.md; reduced-principal spreadsheet admission and broader profiles remain future work |
 | FW-008 | Servicing-only subscription restriction | Deferred beyond the pre-cutover continuity increment | Owner selects a collections-only stage after read-only/grace acceptance | Full access, seven-day grace, read-only and audited administrator decisions implemented; action-level servicing exceptions undesigned |
 | FW-009 | Consent-based borrower identity verification / Aadhaar-assisted onboarding | Provider enquiries sent; implementation pending | Written lender/platform eligibility, hosting terms and comparable quotes | Digio/Surepass/Cashfree compared; optional-guidance JCL pilot agreed; approved enquiries sent 30 September, answers pending |
 | FW-010 | Platform administrator role, operational workflows and UI | Console and guided lifecycle increment delivered; broader scope remains | Owner selects next action/delegation increment | Overview, directory/detail, suspend/restore review and operator guide; existing authority retained |
 | FW-011 | Platform and Workspace WhatsApp messaging and phone verification | Recorded at owner request; unscheduled discovery | Owner selects messaging product/policy review and integration acceptance | Workspace Cloud API foundation and acceptance plan exist; broader platform/workspace experience and verification need definition |
-| FW-012 | Complete Workspace export and guided restore into a fresh Workspace | Sequenced after import confidence and guided migration; not started | Audit supported export/restore coverage and define complete-package acceptance | Partial Party bundles and bounded loan restore exist; follow portability-confidence-and-completion.md |
+| FW-012 | Complete Workspace export and guided restore into a fresh Workspace | Coverage review complete; whole-package implementation not started | Select phased volume/configuration/package delivery and continuation acceptance | Current gaps/order: architecture/data-portability-review-20261010.md; existing partial Party and loan profiles do not deliver full transfer |
 | FW-013 | Tamil Nadu prescribed forms and pledge book in English/Tamil | Further work paused by owner, 30 September | Establish import confidence, then owner chooses to resume | Statutory notices, Form E and administrative auctioneer lists deployed; E-1 opened, first print batch pending |
 | FW-014 | Domain-owned email and reliable platform/Workspace communication | Active: SES production access approved | Paid-receipt delivery and monitored activation | Mumbai approval verified 28 September; 50,000/day and 14/second; health monitoring enabled, dispatch disabled |
 | FW-015 | Safe orphan-media cleanup and Workspace storage usage | Core delivered; commercial extensions deferred | Select pricing/quotas/billing or online cleanup separately when needed | Inventory/usage, retention protection, offline reviewed cleanup and restoration delivered; no automatic purge or charges |
@@ -45,7 +45,7 @@ plans; shelving an idea must not hide a release blocker.
 | FW-020 | Company registration and GST-ready seller transition | Recorded at owner request; unscheduled | Owner decides to register, or professional review identifies an earlier obligation | Current individual/PAN merchant setup retained; registered-seller invoicing and provider migration need a reviewed transition |
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
-| FW-023 | Database backup capacity and evidence storage | BS-03/04 live and accepted; ongoing growth/old-coverage follow-up | Monitor space/service failures; preserve uncovered old points; BS-05 future compact sources separately | 28 tests and actual restore/image recovery pass; hourly R2 24/30 and local six-plus-uncovered active; three remote/35 local points, zero expiry, 9.141 GiB free |
+| FW-023 | Database backup capacity and evidence storage | BS-03/04/05 live and accepted; ongoing growth/old-coverage follow-up | Monitor space/service failures and preserve uncovered old points | BS-05 release record confirms renewed recovery acceptance, 12 remote/38 local points and 9.155 GiB free; future admissions compact, old snapshots unchanged |
 
 ## FW-022: Main Loans-list search performance
 
@@ -919,6 +919,14 @@ inventory; no forms, filings or production changes are authorised by this captur
 
 ## FW-012: Complete Workspace export and guided restore into a fresh Workspace
 
+**10 October review:** [current architecture and coverage](../architecture/data-portability-review-20261010.md)
+is audited. Existing financial services exceed staff restore coverage; known
+portfolios exceed Party and exact native recovery bounds. Whole-package
+implementation remains unstarted. The recommended order connects existing
+restore services, widens reviewed position adapters, then handles volume and
+configuration/media before complete fresh-Workspace acceptance. Earlier coverage
+notes below retain their dated checkpoint.
+
 **Current sequencing, 30 September:** included after import confidence and guided
 migration in the [portability completion plan](portability-confidence-and-completion.md).
 Whole-Workspace design/implementation has not started; first establish existing
@@ -1301,6 +1309,12 @@ required before real paid onboarding. See the
 [continuity decision](../adr/2026-09-24-subscription-access-continuity.md).
 
 ## FW-007: Guided customer-facing legacy migration
+
+**10 October coverage update:** supported ordinary paper servicing and source/staff
+acceptance have proceeded through the production releases. The
+[fresh review](../architecture/data-portability-review-20261010.md) records the
+remaining staff restore, reduced-principal register and broader source-profile
+gaps. The 3 October local/pending notes below are historical checkpoints.
 
 **3 October checkpoint:** independent paper loan entry, dated total-only receipts,
 supported corrections/renewals/closure, transaction review, native recovery and

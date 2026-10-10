@@ -7,6 +7,19 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Current portability coverage is recorded in the
+[10 October architecture review](architecture/data-portability-review-20261010.md).
+Keep external position import, complete supported Rokkad loan restoration and
+whole-Workspace transfer distinct. Earlier history is optional for accepted
+positions; full-history files must preserve/reconcile what they claim. Existing
+domain services are the right foundation, but browser restore does not cover all
+downloaded profiles, Party export caps exclude known larger Workspaces, and the
+guided register still rejects reduced principal. Exact owner-only native recovery
+is bounded and is not customer fresh-Workspace portability. FW-012 is unimplemented;
+the reviewed integration/volume/configuration recommendations are not a deployment
+or implementation authorization. Do not treat dated portability audits as current
+universal origination restrictions.
+
 New Workspace owners can configure business settings before activating
 commercial access. Missing-subscription recovery permits only exact reviewed
 configuration routes and GET/HEAD/POST for the canonical owner. No automatic trial

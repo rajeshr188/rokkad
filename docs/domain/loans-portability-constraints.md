@@ -7,6 +7,11 @@ tags: [loans, constraints, invariants, portability, audit]
 
 # Loans constraints and applicability
 
+For current delivered profile coverage and staff/volume gaps, see the
+[10 October completeness review](../architecture/data-portability-review-20261010.md).
+The dated audit matrix below is not a universal admission rule: newer position,
+interest and servicing contracts supersede some earlier implementation limits.
+
 BS-05 adds compact internal closed-position admission/evidence version 2 for
 future records. Their frozen financial facts reference protected source IDs/hashes;
 readers verify the retained documents and exports still include them through the

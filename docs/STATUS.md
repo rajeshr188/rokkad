@@ -7,6 +7,24 @@ tags: [status, architecture]
 
 # Status
 
+## Fresh portability completeness review (10 October)
+
+The [code-backed review](architecture/data-portability-review-20261010.md) finds
+strong domain-owned Party/loan exchange, supported position-only imports and
+production-verified ordinary closed conversion. Customer-controlled whole-Workspace
+export/restore remains incomplete. Confirmed gaps include exported servicing/
+closed/opening formats without equivalent browser restore, 1,000-party bounds
+below known JCL/Lakshmi populations, a reduced-principal restriction in the guided
+register adapter, bounded/unsupported financial graphs, and missing complete
+configuration/media coverage. Exact native recovery's 50,000-row cap is also below
+the derived minimum for JCL's closed cohort alone.
+
+Existing contracts/services should be connected and extended in controlled steps;
+no replacement loan domain or relaxation of financial/tenant guards is proposed.
+Current pointers and FW-007/FW-012 tracking are refreshed. This is analysis and
+documentation only: no portability code, production write, deployment or new live
+portfolio audit. Proposed implementation slices remain future work.
+
 ## Local business setup and billing checkpoint (10 October)
 
 The pending guided business setup, owner configuration before activation,

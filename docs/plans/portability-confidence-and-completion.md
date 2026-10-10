@@ -1,11 +1,19 @@
 ---
 status: active
 owner: project
-updated: 2026-10-02
+updated: 2026-10-10
 tags: [portability, migration, reconciliation, fw-007, fw-012]
 ---
 
 # Import confidence first, then usable data portability
+
+**Current checkpoint (10 October):** the
+[fresh architecture review](../architecture/data-portability-review-20261010.md)
+distinguishes implemented loan/Party exchange from incomplete Workspace transfer.
+Supported paper servicing and ordinary closed-position conversion are implemented;
+the IP-05/BS-05 production records supersede local-only and pending-admission
+statements below. Remaining work is staff restore integration, broader reviewed
+position adapters, real-volume export and FW-012's complete-package acceptance.
 
 **2 October direction update:** after the audit/repair and bounded guided-import
 work below, the owner selected [unified loan recording](unified-loan-recording.md)

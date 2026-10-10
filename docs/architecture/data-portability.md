@@ -1,11 +1,18 @@
 ---
 status: proposed
 owner: project
-updated: 2026-09-13
+updated: 2026-10-10
 tags: [architecture, portability, audit, migration, rls]
 ---
 
 # Data portability: repository audit and proposed architecture
+
+**Current assessment (10 October):** use the
+[implementation and completeness review](data-portability-review-20261010.md).
+Supported position-only admission, connected servicing/media profiles and live
+closed conversion supersede older assumptions below. Staff restore routing,
+portfolio-size exports and a complete fresh-Workspace package remain incomplete.
+The sections below retain their dated design/delivery history.
 
 The [archive admission decision](../adr/2026-10-03-archive-admission.md) adds a local
 single-closed-loan reconciliation path through ordinary recorded history. It reuses
