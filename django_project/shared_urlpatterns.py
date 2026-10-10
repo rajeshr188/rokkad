@@ -7,6 +7,7 @@ from apps.orgs import views as org_views
 from apps.orgs.web import platform_console
 from apps.orgs.web import storage as storage_views
 from apps.subscriptions.recurring_views import PublicRecurringStartView
+from apps.subscriptions.prepaid_views import AnnualPrepaidStartView
 
 
 # Cross-plane service routes used by both public and tenant URLConfs.
@@ -625,6 +626,7 @@ CANONICAL_WORKSPACE_SLUG_URLPATTERNS = [
 # Authenticated global/control-plane routes. These are still included in tenant
 # URLConf for compatibility until Phase 2 route separation is completed.
 GLOBAL_AUTHENTICATED_URLPATTERNS = [
+    path("app/billing/prepaid/start/", AnnualPrepaidStartView.as_view(), name="public-prepaid-start"),
     path("app/billing/recurring/start/", PublicRecurringStartView.as_view(), name="public-recurring-start"),
     *CANONICAL_CONTROL_PLANE_URLPATTERNS,
     *CANONICAL_WORKSPACE_SLUG_URLPATTERNS,

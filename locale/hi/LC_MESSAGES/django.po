@@ -3774,3 +3774,433 @@ msgstr "प्रिंटर पर छापकर जाँचें"
 
 msgid "Confirm payout"
 msgstr "ऋण वितरण की पुष्टि करें"
+
+#: guided-business-setup
+msgid "Business setup"
+msgstr "व्यवसाय की तैयारी"
+
+#: guided-business-setup
+msgid "Prepare your business for its first loan. Continue where you left off; saved settings stay with this workspace."
+msgstr "पहले ऋण के लिए अपना व्यवसाय तैयार करें। जहाँ छोड़ा था, वहीं से जारी रखें; सहेजी गई सेटिंग इस कार्यक्षेत्र में रहती हैं।"
+
+#: guided-business-setup
+msgid "Setup steps"
+msgstr "तैयारी के चरण"
+
+#: guided-business-setup
+msgid "Start with the name your staff recognise. You can add a logo and change the appearance later."
+msgstr "वह नाम दर्ज करें जिससे आपके कर्मचारी व्यवसाय को पहचानते हैं। लोगो और रंग बाद में जोड़ सकते हैं।"
+
+#: guided-business-setup
+msgid "English and Hindi are available from the language menu."
+msgstr "भाषा मेन्यू से अंग्रेज़ी या हिंदी चुन सकते हैं।"
+
+#: guided-business-setup
+msgid "Edit business details"
+msgstr "व्यवसाय का विवरण बदलें"
+
+#: guided-business-setup
+msgid "Choose how you want to begin. You can keep using paper books and bring older records in gradually."
+msgstr "चुनें कि कैसे शुरू करना है। कागज़ी बही का उपयोग जारी रखते हुए पुराने रिकॉर्ड धीरे-धीरे ला सकते हैं।"
+
+#: guided-business-setup
+msgid "This choice guides your next steps. Each loan still asks whether you are paying now or recording an earlier transaction."
+msgstr "यह चुनाव अगले चरणों का मार्गदर्शन करता है। हर ऋण में फिर भी चुनना होगा कि भुगतान अभी हो रहा है या पहले हुए लेन-देन का रिकॉर्ड बन रहा है।"
+
+#: guided-business-setup
+msgid "Use the details on your licence document, then choose how your loan and release numbers should look."
+msgstr "लाइसेंस दस्तावेज़ का विवरण दर्ज करें, फिर ऋण और छुड़ाई नंबरों का प्रारूप चुनें।"
+
+#: guided-business-setup
+msgid "Choose the repayment arrangements your business offers. Review the prepared drafts before enabling them for new loans."
+msgstr "अपने व्यवसाय की भुगतान व्यवस्था चुनें। नए ऋणों के लिए सक्षम करने से पहले तैयार मसौदों की शर्तें जाँचें।"
+
+#: guided-business-setup
+msgid "Pay everything at closing"
+msgstr "छुड़ाई पर पूरा भुगतान"
+
+#: guided-business-setup
+msgid "One final principal payment; choose whether interest is collected periodically or at closing."
+msgstr "मूलधन का एक अंतिम भुगतान; ब्याज समय-समय पर लिया जाएगा या छुड़ाई पर, यह चुनें।"
+
+#: guided-business-setup
+msgid "Pay gradually"
+msgstr "धीरे-धीरे भुगतान"
+
+#: guided-business-setup
+msgid "Flexible part payments or scheduled instalments, according to the product you enable."
+msgstr "चुने गए ऋण उत्पाद के अनुसार आंशिक भुगतान या निर्धारित किस्तें।"
+
+#: guided-business-setup
+msgid "Approval and payout"
+msgstr "मंज़ूरी और भुगतान"
+
+#: guided-business-setup
+msgid "Owner reviews and pays the borrower in one combined step."
+msgstr "मालिक एक ही चरण में जाँच करके ऋण लेने वाले को भुगतान करता है।"
+
+#: guided-business-setup
+msgid "Approve the loan, then record the payout in a separate step."
+msgstr "पहले ऋण मंज़ूर करें, फिर अलग चरण में भुगतान दर्ज करें।"
+
+#: guided-business-setup
+msgid "Choose approval and payout steps"
+msgstr "मंज़ूरी और भुगतान के चरण चुनें"
+
+#: guided-business-setup
+msgid "Working alone is supported. Inviting staff does not change your chosen workflow."
+msgstr "अकेले काम कर सकते हैं। कर्मचारियों को आमंत्रित करने से चुनी गई कार्यप्रणाली नहीं बदलती।"
+
+#: guided-business-setup
+msgid "Set your monthly interest, loan tenure, upfront collections and collateral valuation. Review the date from which each setting applies."
+msgstr "मासिक ब्याज, ऋण अवधि, अग्रिम वसूली और गिरवी का मूल्यांकन तय करें। हर सेटिंग लागू होने की तारीख जाँचें।"
+
+#: guided-business-setup
+msgid "Fees, monitoring and entry preferences"
+msgstr "शुल्क, निगरानी और प्रविष्टि की प्राथमिकताएँ"
+
+#: guided-business-setup
+msgid "Fees are optional. Monitoring has separate settings for price ages and risk warnings. Entry preferences can suggest a purpose without changing the actual facts of a loan."
+msgstr "शुल्क वैकल्पिक हैं। दर की उम्र और जोखिम की चेतावनियों के लिए निगरानी की अलग सेटिंग हैं। प्रविष्टि की प्राथमिकता उद्देश्य सुझाती है, ऋण के वास्तविक तथ्य नहीं बदलती।"
+
+#: guided-business-setup
+msgid "Review fees"
+msgstr "शुल्क जाँचें"
+
+#: guided-business-setup
+msgid "Review monitoring"
+msgstr "निगरानी जाँचें"
+
+#: guided-business-setup
+msgid "Loan entry preferences"
+msgstr "ऋण प्रविष्टि की प्राथमिकताएँ"
+
+#: guided-business-setup
+msgid "Review what is saved for today. A loan checks its own series, product, date, collateral and agreement before approval."
+msgstr "आज के लिए सहेजी गई सेटिंग जाँचें। मंज़ूरी से पहले हर ऋण की श्रृंखला, उत्पाद, तारीख, गिरवी और समझौते की जाँच होती है।"
+
+#: guided-business-setup
+msgid "Create your first loan"
+msgstr "अपना पहला ऋण बनाएँ"
+
+#: guided-business-setup
+msgid "Complete the unavailable lending settings before creating a new loan. You can return to any step above."
+msgstr "नया ऋण बनाने से पहले अधूरी ऋण सेटिंग पूरी करें। ऊपर किसी भी चरण पर वापस जा सकते हैं।"
+
+#: guided-business-setup
+msgid "Add the borrower when you are ready to record the first loan. A customer record is not required to finish business configuration."
+msgstr "पहला ऋण दर्ज करते समय ऋण लेने वाले को जोड़ें। व्यवसाय की सेटिंग पूरी करने के लिए ग्राहक रिकॉर्ड आवश्यक नहीं है।"
+
+#: guided-business-setup
+msgid "Continue"
+msgstr "आगे बढ़ें"
+
+#: guided-business-setup
+msgid "Saved setup summary"
+msgstr "सहेजी गई तैयारी का सारांश"
+
+#: guided-business-setup
+msgid "Calculated from saved settings each time you return."
+msgstr "हर बार लौटने पर सहेजी गई सेटिंग से स्थिति तय होती है।"
+
+#: guided-business-setup
+msgid "Existing paper loans"
+msgstr "मौजूदा कागज़ी ऋण"
+
+#: guided-business-setup
+msgid "Keep actual dates, original numbers and agreed terms. Review which records are included before relying on portfolio totals."
+msgstr "वास्तविक तारीखें, मूल नंबर और तय शर्तें रखें। कुल ऋण आँकड़ों पर निर्भर होने से पहले शामिल रिकॉर्ड जाँचें।"
+
+#: guided-business-setup
+msgid "Record an earlier loan"
+msgstr "पहले का ऋण दर्ज करें"
+
+#: guided-business-setup
+msgid "Import an outstanding register"
+msgstr "बकाया ऋण रजिस्टर आयात करें"
+
+#: guided-business-setup
+msgid "The supported template covers unchanged-principal bullet loans with upfront first-month interest. Other source formats need separate preparation."
+msgstr "समर्थित प्रारूप मूलधन में बदलाव रहित, पहले महीने का ब्याज अग्रिम लेने वाले ऋणों के लिए है। अन्य प्रारूपों की अलग तैयारी आवश्यक है।"
+
+#: guided-business-setup
+msgid "Optional finishing touches"
+msgstr "वैकल्पिक अंतिम तैयारी"
+
+#: guided-business-setup
+msgid "Invite your team"
+msgstr "अपनी टीम को आमंत्रित करें"
+
+#: guided-business-setup
+msgid "Save this step, then continue setting up your business. Your saved settings are kept when you leave."
+msgstr "यह चरण सहेजें, फिर व्यवसाय की तैयारी जारी रखें। बाहर जाने पर सहेजी गई सेटिंग बनी रहती हैं।"
+
+#: guided-business-setup
+msgid "Back to guided setup"
+msgstr "व्यवसाय की तैयारी पर लौटें"
+
+#: guided-business-setup
+msgid "Your next numbers"
+msgstr "आपके अगले नंबर"
+
+#: guided-business-setup
+msgid "These previews do not reserve or issue numbers. Loan and release counters are independent."
+msgstr "इन पूर्वावलोकनों से नंबर आरक्षित या जारी नहीं होते। ऋण और छुड़ाई की गिनती अलग है।"
+
+#: guided-business-setup
+msgid "Release"
+msgstr "छुड़ाई"
+
+#: guided-business-setup
+msgid "Saved lending terms by series"
+msgstr "श्रृंखला के अनुसार सहेजी गई ऋण शर्तें"
+
+#: guided-business-setup
+msgid "Standard loan tenure (months)"
+msgstr "सामान्य ऋण अवधि (महीने)"
+
+#: guided-business-setup
+msgid "per month"
+msgstr "प्रति माह"
+
+#: guided-business-setup
+msgid "Staff appraisal required; no buying quote needed."
+msgstr "कर्मचारी का मूल्यांकन आवश्यक है; खरीद दर की आवश्यकता नहीं है।"
+
+#: guided-business-setup
+msgid "Buying quote available within the configured age limit."
+msgstr "निर्धारित उम्र सीमा के भीतर खरीद दर उपलब्ध है।"
+
+#: guided-business-setup
+msgid "Add a buying quote within the configured age limit before new lending."
+msgstr "नया ऋण देने से पहले निर्धारित उम्र सीमा के भीतर की खरीद दर जोड़ें।"
+
+#: guided-business-setup
+msgid "Save an interest rate for the metals you lend against."
+msgstr "जिन धातुओं पर ऋण देते हैं, उनके लिए ब्याज दर सहेजें।"
+
+#: guided-business-setup
+msgid "Set up a current licence and a running numbering series to review lending terms."
+msgstr "ऋण शर्तें जाँचने के लिए वर्तमान लाइसेंस और चालू नंबर श्रृंखला तैयार करें।"
+
+#: guided-business-setup
+msgid "Try your saved terms with an example"
+msgstr "सहेजी गई शर्तों का उदाहरण देखें"
+
+#: guided-business-setup
+msgid "Illustration only: one item, unchanged principal, no repayments or concessions. Uses today's saved terms for the selected series and metal. It does not check collateral value or create a loan."
+msgstr "केवल उदाहरण: एक वस्तु, मूलधन में बदलाव नहीं, कोई पुनर्भुगतान या छूट नहीं। चुनी गई श्रृंखला और धातु की आज की सहेजी गई शर्तें लागू हैं। यह गिरवी का मूल्य नहीं जाँचता और ऋण नहीं बनाता।"
+
+#: guided-business-setup
+msgid "Calculate example"
+msgstr "उदाहरण की गणना करें"
+
+#: guided-business-setup
+msgid "Example loan date"
+msgstr "उदाहरण ऋण की तारीख"
+
+#: guided-business-setup
+msgid "Principal"
+msgstr "मूलधन"
+
+#: guided-business-setup
+msgid "Monthly interest"
+msgstr "मासिक ब्याज"
+
+#: guided-business-setup
+msgid "Interest collected upfront"
+msgstr "अग्रिम लिया गया ब्याज"
+
+#: guided-business-setup
+msgid "Charges deducted at payout"
+msgstr "भुगतान में काटे गए शुल्क"
+
+#: guided-business-setup
+msgid "Amount handed to the borrower"
+msgstr "ऋण लेने वाले को दी गई राशि"
+
+#: guided-business-setup
+msgid "Deducted at payout"
+msgstr "भुगतान में कटौती"
+
+#: guided-business-setup
+msgid "Collected separately at disbursal"
+msgstr "भुगतान के समय अलग से वसूला गया"
+
+#: guided-business-setup
+msgid "Charges collected separately at disbursal"
+msgstr "भुगतान के समय अलग से वसूले गए शुल्क"
+
+#: guided-business-setup
+msgid "These are not deducted from the payout or charged again in the closing illustration."
+msgstr "इन्हें दी जाने वाली राशि से नहीं काटा गया है और छुड़ाई के उदाहरण में फिर से नहीं जोड़ा गया है।"
+
+#: guided-business-setup
+msgid "Payout is shown above. A compound closing amount depends on actual capitalization actions; review it through the ordinary loan workflow."
+msgstr "भुगतान ऊपर दिखाया गया है। चक्रवृद्धि ऋण की छुड़ाई राशि वास्तविक ब्याज पूँजीकरण पर निर्भर है; सामान्य ऋण कार्यप्रणाली में इसकी जाँच करें।"
+
+#: guided-business-setup
+msgid "Closing illustration: selected date, first monthly anniversary and the following day. Assumes charges shown above were collected at disbursal."
+msgstr "छुड़ाई का उदाहरण: चुनी गई तारीख, पहला महीना पूरा होने की तारीख और अगला दिन। ऊपर दिखाए गए शुल्क भुगतान के समय वसूले गए माने गए हैं।"
+
+#: guided-business-setup
+msgid "Closing date"
+msgstr "छुड़ाई की तारीख"
+
+#: guided-business-setup
+msgid "Additional interest"
+msgstr "अतिरिक्त ब्याज"
+
+#: guided-business-setup
+msgid "Principal plus additional interest"
+msgstr "मूलधन और अतिरिक्त ब्याज"
+
+#: guided-business-setup
+msgid "How the selected date was calculated"
+msgstr "चुनी गई तारीख की गणना कैसे हुई"
+
+#: guided-business-setup
+msgid "Period"
+msgstr "अवधि"
+
+#: guided-business-setup
+msgid "Upfront credit"
+msgstr "अग्रिम ब्याज का समायोजन"
+
+#: guided-business-setup
+msgid "Additional"
+msgstr "अतिरिक्त"
+
+#: guided-business-setup
+msgid "Unused upfront credit"
+msgstr "अग्रिम ब्याज का शेष समायोजन"
+
+#: guided-business-setup
+msgid "This illustration does not determine refund eligibility."
+msgstr "यह उदाहरण धनवापसी की पात्रता तय नहीं करता।"
+
+#: guided-business-setup
+msgid "EXAMPLE · NOT AN ISSUED DOCUMENT"
+msgstr "उदाहरण · जारी किया गया दस्तावेज़ नहीं"
+
+#: guided-business-setup
+msgid "Example ticket summary"
+msgstr "उदाहरण टिकट का सारांश"
+
+#: guided-business-setup
+msgid "Actual tickets include the borrower, collateral and confirmed agreement. Review your document layout before issuing a real ticket."
+msgstr "वास्तविक टिकट में ऋण लेने वाला, गिरवी और पुष्ट समझौता शामिल होते हैं। असली टिकट जारी करने से पहले दस्तावेज़ का प्रारूप जाँचें।"
+
+#: guided-business-setup
+msgid "Your business"
+msgstr "आपका व्यवसाय"
+
+#: guided-business-setup
+msgid "Licence and numbering"
+msgstr "लाइसेंस और नंबर"
+
+#: guided-business-setup
+msgid "How you lend"
+msgstr "आप कैसे ऋण देते हैं"
+
+#: guided-business-setup
+msgid "Interest and charges"
+msgstr "ब्याज और शुल्क"
+
+#: guided-business-setup
+msgid "Review and begin"
+msgstr "जाँचें और शुरू करें"
+
+#: guided-business-setup
+msgid "Start with new loans"
+msgstr "नए ऋणों से शुरू करें"
+
+#: guided-business-setup
+msgid "Use Rokkad for loans you issue from now on. Existing paper loans can stay in your books."
+msgstr "अब से दिए जाने वाले ऋणों के लिए रोक्कड़ का उपयोग करें। पुराने कागज़ी ऋण आपकी बही में रह सकते हैं।"
+
+#: guided-business-setup
+msgid "Work alongside paper books"
+msgstr "कागज़ी बही के साथ काम करें"
+
+#: guided-business-setup
+msgid "Record earlier loans gradually, preserving their actual dates, numbers and agreed terms."
+msgstr "वास्तविक तारीखें, नंबर और तय शर्तें रखते हुए पुराने ऋण धीरे-धीरे दर्ज करें।"
+
+#: guided-business-setup
+msgid "Bring existing loans into Rokkad"
+msgstr "मौजूदा ऋण रोक्कड़ में लाएँ"
+
+#: guided-business-setup
+msgid "Use the supported register template, match customers and review balances before confirming an import."
+msgstr "समर्थित रजिस्टर प्रारूप इस्तेमाल करें, ग्राहकों का मिलान करें और आयात की पुष्टि से पहले बकाया जाँचें।"
+
+#: guided-business-setup
+msgid "Collateral metal"
+msgstr "गिरवी की धातु"
+
+#: guided-business-setup
+msgid "Example principal (INR)"
+msgstr "उदाहरण मूलधन (रुपये)"
+
+#: guided-business-setup
+msgid "Example closing date"
+msgstr "उदाहरण छुड़ाई की तारीख"
+
+#: guided-business-setup
+msgid "Choose a series"
+msgstr "श्रृंखला चुनें"
+
+#: guided-business-setup
+msgid "Save a calculation policy and an interest rate for this series and metal first."
+msgstr "पहले इस श्रृंखला और धातु के लिए गणना नीति और ब्याज दर सहेजें।"
+
+#: guided-business-setup
+msgid "Save and continue"
+msgstr "सहेजें और आगे बढ़ें"
+
+#: guided-business-setup
+msgid "Metals to configure"
+msgstr "ब्याज दर तय करने की धातुएँ"
+
+#: guided-business-setup
+msgid "Gold and silver"
+msgstr "सोना और चाँदी"
+
+#: guided-business-setup
+msgid "Gold only"
+msgstr "केवल सोना"
+
+#: guided-business-setup
+msgid "Silver only"
+msgstr "केवल चाँदी"
+
+#: guided-business-setup
+msgid "Only the chosen metals receive a new interest-rate version. Earlier rates for other metals stay unchanged."
+msgstr "केवल चुनी गई धातुओं की नई ब्याज दर सहेजी जाएगी। अन्य धातुओं की पहले की दरें बनी रहेंगी।"
+
+#: guided-business-setup
+msgid "Enter a monthly rate for each chosen metal."
+msgstr "हर चुनी गई धातु की मासिक दर दर्ज करें।"
+
+#: guided-business-setup
+msgid "Review your business name. Branding is optional."
+msgstr "व्यवसाय का नाम जाँचें। लोगो और रंग वैकल्पिक हैं।"
+
+#: guided-business-setup
+msgid "Configure an interest rate for at least one metal."
+msgstr "कम से कम एक धातु के लिए ब्याज दर तय करें।"
+
+#: guided-business-setup
+msgid "This example shows calculation settings; repayment schedules depend on the loan product. Use the real loan review for the actual agreement."
+msgstr "यह उदाहरण गणना की सेटिंग दिखाता है; भुगतान की समय-सारणी ऋण उत्पाद पर निर्भर है। वास्तविक समझौते के लिए असली ऋण की जाँच करें।"
+
+#: guided-business-setup
+msgid "Lending checks remain independent and are recalculated whenever you return."
+msgstr "ऋण देने की जाँच अलग रहती है और हर बार लौटने पर फिर से होती है।"
+
+msgid "You can finish business setup before choosing access. Start an available trial or activate a plan before recording loans."
+msgstr "पहले अपने व्यवसाय की तैयारी पूरी कर सकते हैं। ऋण दर्ज करने से पहले उपलब्ध परीक्षण अवधि शुरू करें या योजना सक्रिय करें।"
+
+msgid "Activate access when you are ready"
+msgstr "तैयार होने पर पहुँच सक्रिय करें"

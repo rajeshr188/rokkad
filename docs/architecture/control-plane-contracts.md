@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-09-30
+updated: 2026-10-10
 tags: [architecture, saas, control-plane, workspace, rls, rbac, billing]
 related:
   - saas-control-plane-architecture-audit.md
@@ -325,6 +325,17 @@ disabled. Physical retention erasure is intentionally not implemented here.
 
 ## 9. Billing and subscription
 
+Selected annual prepayment uses a separate default-off catalog selection and named
+Workspace cohort. The global CSRF-protected adapter commits immutable Invoice intent
+under the Company lock before provider order creation. Unknown outcomes retain the
+reservation; recovery never reposts. Capture rechecks frozen terms, explicit scope,
+capacity and subscription revision, applying one paid year and one receipt intent.
+A cancelled never-authorized mandate may release only after all provider invoices
+are cancelled/expired and all attempts terminal failed, with committed single-post
+cancellation audit and unchanged local history. No dates or payments are invented.
+See the [annual decision](../adr/2026-10-09-selected-annual-prepayment.md).
+
+
 The first verified, currently due recurring capture can move a history-free
 expired trial to the frozen paid offer after its natural expiry. It must preserve
 trial dates, enforce active lifecycle/capacity, reject legacy/conflicting financial
@@ -363,6 +374,11 @@ Natural trial/paid-term expiry grants seven days of full activity, then read-onl
 access to reviewed lists/details/reports, saved artifacts and authorized exports.
 Cancellation, past-due and explicit expired states receive no automatic grace.
 Missing subscriptions remain recovery-only unless platform access was granted.
+The canonical owner of an active recovery-only Workspace may use the exact reviewed
+configuration route list before activation. This does not grant lending, customer
+entry, import, funding or team-expansion access. Existing read-only/lifecycle
+restrictions remain stronger; trial consent and allowance are unchanged. See the
+[initial setup decision](../adr/2026-10-10-initial-setup-before-activation.md).
 `WorkspaceAccessDecision` is immutable global billing control-plane evidence,
 explicitly scoped to Company and appendable only through platform-admin services.
 The latest decision wins; full/read-only decisions require future expiry and a
@@ -378,6 +394,13 @@ verified email, publication, eligibility and consent under its explicit Workspac
 context and Company lock. Consent and reservation commit before provider I/O;
 ordinary Workspace middleware and RLS remain unchanged. See the
 [decision](../adr/2026-09-30-owner-monthly-self-service.md).
+
+An optional named-Workspace rollout list restricts new recurring agreement creation
+and authorization at their service boundaries, including operator entrypoints.
+Offer selection/consent use the same scope. It never restricts existing callbacks,
+recovery or cancellation. A trial offer may be displayed before expiry without
+issuing a consent token or creating an agreement. See the
+[named-pilot decision](../adr/2026-10-08-named-monthly-pilot.md).
 
 Recurring preparation adds global billing evidence (`RecurringPlanBinding`,
 `RecurringAgreement`, `RecurringAgreementEvent`) under the

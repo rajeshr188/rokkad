@@ -1,0 +1,4 @@
+{% load onboarding_tags %}{% setup_navigation_context as setup_journey %}{% if setup_journey %}
+<input type="hidden" name="setup_step" value="{{ setup_journey.step }}">
+<input type="hidden" name="setup_path" value="{{ setup_journey.path }}">
+{% endif %}

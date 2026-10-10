@@ -18,26 +18,44 @@ def get_pawn_setup_checklist(workspace):
     if current_tenant_workspace_id() != workspace.pk:
         raise ValueError("Loan setup must belong to the active Workspace.")
     today = timezone.localdate()
-    licenses = LoanLicense.objects.filter(workspace=workspace, is_active=True, issued_on__lte=today, expires_on__gte=today)
+    licenses = LoanLicense.objects.filter(workspace=workspace, is_active=True, issued_on__lte=today, expires_on__gte=today, is_legacy_reference=False)
     series_ready = False
     economics_ready = False
-    appraisal_only_ready = False
-    for series in LoanSeries.objects.filter(license__in=licenses, is_active=True).select_related("license"):
+    valuation_ready = False
+    series_rows = []
+    quote_rows = get_metal_rate_readiness(workspace=workspace, as_of_date=today)
+    quotes = {row["metal"]: row for row in quote_rows}
+    for series in LoanSeries.objects.filter(license__in=licenses, is_active=True).select_related("license").prefetch_related("number_sequences"):
         try:
-            preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
+            loan_number = preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN).value
         except (NumberAllocationError, ValueError):
             continue
         series_ready = True
+        row = {"series": series, "loan_number": loan_number, "policy": None, "metals": [], "ready": False}
+        try:
+            row["release_number"] = preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE).value
+        except (NumberAllocationError, ValueError) as exc:
+            row["release_error"] = str(exc)
         try:
             policy = resolve_pawn_loan_economic_policy(workspace_id=workspace.pk, license_id=series.license_id, series_id=series.pk, as_of_date=today)
-            for metal in ("GOLD", "SILVER"):
-                resolve_pawn_metal_interest_rate_policy(workspace_id=workspace.pk, license_id=series.license_id, series_id=series.pk, metal=metal, as_of_date=today)
-        except ValueError:
+        except ValueError as exc:
+            row["error"] = str(exc)
+            series_rows.append(row)
             continue
-        economics_ready = True
-        appraisal_only_ready |= policy.valuation_method == ValuationMethod.LATEST_APPRAISAL.value
+        row["policy"] = policy
+        for metal in ("GOLD", "SILVER"):
+            try:
+                rate = resolve_pawn_metal_interest_rate_policy(workspace_id=workspace.pk, license_id=series.license_id, series_id=series.pk, metal=metal, as_of_date=today)
+            except ValueError:
+                continue
+            appraisal_only = policy.valuation_method == ValuationMethod.LATEST_APPRAISAL.value
+            usable = appraisal_only or quotes[metal]["fresh"]
+            row["metals"].append({"metal": metal, "label": _(metal.title()), "rate": rate, "quote": quotes[metal], "ready": usable, "appraisal_only": appraisal_only})
+        economics_ready |= bool(row["metals"])
+        row["ready"] = any(metal["ready"] for metal in row["metals"])
+        valuation_ready |= row["ready"]
+        series_rows.append(row)
 
-    quote_rows = get_metal_rate_readiness(workspace=workspace, as_of_date=today)
     quote_description = "; ".join(
         f"{row['label']}: INR {row['rate'].buying_rate}/g, dated {timezone.localtime(row['rate'].effective_at).date()}"
         if row["usable"] else f"{row['label']}: no usable INR pure-metal buying price"
@@ -57,7 +75,7 @@ def get_pawn_setup_checklist(workspace):
          "description": _("Open a license and add an active series with an available PawnLoan number. Configure release numbering there too."),
          "action_label": _("Set up a series"), "action_url": series_url},
         {"key": "economics", "title": _("Calculation and interest policies"), "complete": economics_ready,
-         "description": _("Set policies effective today, including gold and silver interest, for at least one usable series. Review fees if your business charges them."),
+         "description": _("Set policies effective today, including monthly interest, for the metals you lend against in at least one usable series. Review fees if your business charges them."),
          "action_label": _("Open Economic Setup"), "action_url": url("pawn_economics_setup")},
         {"key": "product", "title": _("Loan product"), "complete": LoanProductVersion.objects.filter(
             workspace=workspace, product__workspace=workspace, product__is_active=True, status="ACTIVE",
@@ -69,9 +87,9 @@ def get_pawn_setup_checklist(workspace):
     ]
     steps.append({
         "key": "metal_rates", "title": _("Metal valuation prices"), "blocking": False,
-        "complete": appraisal_only_ready or any(row["usable"] for row in quote_rows),
-        "description": quote_description + ". Add prices for the metals you lend against; use Pure metal buying prices per gram for both gold and silver. An appraisal-only policy does not require a price. Each loan checks its selected policy, date and metals. Loan entry checks quote availability; active-loan monitoring separately applies configured age limits.",
+        "complete": valuation_ready,
+        "description": quote_description + ". Add prices for the metals you lend against; use Pure metal buying prices per gram for both gold and silver. An appraisal-only policy does not require a price. Each loan checks its selected policy, date and metals. New lending checks the configured quote-age limit; active-loan monitoring uses its separate age limits.",
         "action_label": _("Review metal prices"),
         "action_url": reverse("workspace_rates:rate_list", kwargs={"workspace_slug": workspace.slug}),
     })
-    return {"steps": steps, "ready": all(step["complete"] for step in steps), "as_of_date": today}
+    return {"steps": steps, "ready": all(step["complete"] for step in steps), "as_of_date": today, "series_rows": series_rows, "quote_rows": quote_rows}

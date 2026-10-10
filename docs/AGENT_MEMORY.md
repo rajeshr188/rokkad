@@ -7,6 +7,26 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+New Workspace owners can configure business settings before activating
+commercial access. Missing-subscription recovery permits only exact reviewed
+configuration routes and GET/HEAD/POST for the canonical owner. No automatic trial
+or entitlement is granted; loans, customers, imports, funding and team expansion
+remain gated, while existing expiry/read-only/lifecycle restrictions still win.
+The six-step review offers explicit activation. The creation test follows the
+redirect through to a 200 setup response without fixture-provided access.
+81 focused regressions and 16 live isolated-review HTTP checks pass.
+See the [accepted decision](adr/2026-10-10-initial-setup-before-activation.md).
+
+Local onboarding review on port 8000 uses the separate migrated database
+rokkad_onboarding_review_20261010 and copied local development accounts. Sign in
+again because review cookies are separate. The shared development schema remains
+older; its missing maximum_quote_age_days column caused the initial dashboard's
+secondary aborted-transaction error. Approval review rejected migrating that
+shared database; only the isolated copy was migrated. Nine authenticated local
+dashboard/Workspace/setup reads pass, with original loan/event/numbering
+fingerprints preserved. Restart details are in the
+[guided setup record](implementation/guided-business-setup.md#local-browser-review-10-october).
+
 BS-05 compact future closed-position admissions are live. Stored
 admission/evidence version 2 freezes small financial facts and exact source
 ID/hash/snapshot references through the existing protected archive FK. Readers
@@ -31,6 +51,22 @@ must be refused once compact admissions exist.
 See the [decision](adr/2026-10-10-compact-closed-position-evidence.md) and
 [implementation](implementation/compact-closed-position-evidence-bs05.md) and
 [production release](implementation/compact-closed-position-release-20261010.md).
+
+Business setup now uses six presentation steps over existing configuration
+services. Progress derives from saved effective settings, with bounded unsigned
+return markers and canonical current-Workspace redirects; no wizard persistence
+or tenant/authorization change. New/paper/import paths are navigation guidance,
+never financial purposes or import confirmation. A borrower belongs to the first
+loan, not configuration readiness. Readiness matches calculation, monthly rate
+and valuation evidence for the same usable series/metal. Atomic economic saves
+can revise gold, silver or both; unselected metals keep their earlier rates.
+Read-only fictional cash examples use native inclusive monthly arithmetic and
+fees without loan creation, number allocation or posting; compound settlement and
+actual product/document review remain in ordinary workflows. English/Hindi
+responsive setup and resume links pass 294 affected tests and 36 synthetic layouts.
+Local only; no schema migration or production deployment.
+See the [flow](flows/business-setup.md) and
+[accepted decision](adr/2026-10-10-guided-business-setup.md).
 
 BS-03/04 encrypted private R2 publication, actual recovery and hourly activation pass
 on 10 October. Dedicated backup credentials are root-only, bucket-scoped and
@@ -190,6 +226,15 @@ financial data. Submitted financial preview/confirmation and saved/archive/
 correction identities are retained; only successful admission advances numbering.
 See [implementation](implementation/unified-loan-recording.md).
 
+The JSK pilot offers monthly recurring and annual prepaid as alternatives. A
+verified, closed, cancelled unused agreement with reservation.unpaid_released
+evidence permits fresh monthly consent; historical cancellation alone does not.
+The old mandate is immutable. New monthly and annual reservations mutually block
+each other under the Company lock. The monthly choice fix is live from 9 October
+15:03 IST as rokkad:monthly-choice-20261009-fb076f42f8a8. First real capture is still
+pending; viewing either offer creates no mandate/order and makes no charge.
+
+
 Saved-draft splitting supports selected entries grouped into one new draft and
 One loan per collateral. The latter retains a staff-chosen row on the original
 number and creates one ordinary draft per other row, initially using the same
@@ -214,6 +259,16 @@ from an old series. This is unsigned presentation metadata stripped before signe
 financial data; it does not reactivate setup or bypass source, numbering or duplicate
 validation. Signed open confirmations/retries and saved/specialist identities remain
 supported. See the [series decision](adr/2026-10-09-series-new-lending-and-servicing.md).
+
+On 9 October the owner selects annual prepayment alongside monthly recurring: INR
+14,990 once for twelve months, owner plus five staff, no automatic renewal. JSK's
+unfinished monthly agreement and invoice are now cancelled and their unpaid
+reservation released after verification. The selected annual path is deployed for
+JSK only; the first payment is still the owner's action. Annual recurring remains separate. The annual option
+uses a selected Plan and its own named rollout cohort; generic catalog stays off.
+Commit order intent before provider I/O; an uncertain response must be reconciled,
+never replaced by another charge. See the [annual decision](adr/2026-10-09-selected-annual-prepayment.md).
+
 
 After evaluating the direct-entry trial, the owner accepts the simplified layout
 and explicitly retires Current and the switcher on 9 October. Routine direct New
@@ -273,6 +328,20 @@ batch metadata; migration 0064 and portable restore permit blank identities only
 for exactly bound unspecified cash/return evidence. Reconciled completed closure
 carries complete book coverage without perpetuating Rokkad-only future capture.
 See the [closing decision](adr/2026-10-08-unified-closing-and-completed-recording.md).
+
+On 8 October the owner authorizes proceeding with the JSK paying pilot. The
+JSK-only recurring gate is now enabled in web; selected binding 1 and Workspace
+list 2 keep other Workspaces and public paid signup excluded. The six-member
+INR 1,499 monthly offer is visible before trial expiry; owner consent/creation
+remain blocked until its natural end, 8 October 23:39:08 IST. No automatic charge
+is scheduled. Global checkout remains off. Clearing the optional named cohort
+after first-payment acceptance opens the same self-service flow to other eligible
+Workspaces and updates public pricing copy. Scope removal/pausing never cancels
+existing mandates or blocks recovery/cancellation. Receipt scheduling stays
+invitation/account-only until its separate first-delivery review. Exact deployment
+evidence belongs in Status and the monthly pilot plan. See the
+[named-pilot decision](adr/2026-10-08-named-monthly-pilot.md).
+
 
 The owner also requests existing customers ACTIVE when any loan was created
 against them, and INACTIVE when none exists. Count closed historical loans through

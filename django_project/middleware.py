@@ -133,7 +133,7 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
         # Commercial activity is separate from the truthful billing status.
         try:
             from apps.subscriptions.access_policy import workspace_activity
-            from apps.subscriptions.route_policy import read_route_allowed
+            from apps.subscriptions.route_policy import read_route_allowed, initial_setup_route_allowed
             from django.shortcuts import render
             decision = workspace_activity(workspace)
             request.workspace_activity = decision
@@ -142,6 +142,8 @@ class SubscriptionValidationMiddleware(MiddlewareMixin):
             if decision.mode == "read_only" and read_route_allowed(current_view, request.method):
                 return None
             if decision.mode == "recovery" and workspace.owner_id == request.user.pk:
+                if initial_setup_route_allowed(current_view, request.method):
+                    return None
                 return redirect("workspace_subscriptions:plan-list", workspace_slug=workspace.slug)
             return render(request, "subscriptions/access_restricted.html", {"activity": decision}, status=403)
         except Exception:

@@ -407,6 +407,10 @@ BILLING_CHECKOUT_ENABLED = env.bool("BILLING_CHECKOUT_ENABLED", default=False)
 BILLING_RECURRING_ENABLED = env.bool("BILLING_RECURRING_ENABLED", default=False)
 # Selecting one reviewed binding publishes owner self-service; zero keeps the pilot private.
 BILLING_PUBLIC_RECURRING_BINDING_ID = env.int("BILLING_PUBLIC_RECURRING_BINDING_ID", default=0)
+BILLING_PUBLIC_PREPAID_PLAN_ID = env.int("BILLING_PUBLIC_PREPAID_PLAN_ID", default=0)
+BILLING_PREPAID_WORKSPACE_IDS = env.list("BILLING_PREPAID_WORKSPACE_IDS", default=[])
+# Optional first-payment cohort; an empty list allows all otherwise eligible Workspaces.
+BILLING_RECURRING_WORKSPACE_IDS = env.list("BILLING_RECURRING_WORKSPACE_IDS", default=[])
 
 THOUSAND_SEPARATOR = ","
 DECIMAL_SEPARATOR = "."

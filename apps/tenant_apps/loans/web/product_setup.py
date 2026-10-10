@@ -1,7 +1,10 @@
 """Loan-product catalog setup views; product rules remain in services."""
 
+from apps.onboarding.navigation import setup_saved_redirect, setup_link
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.tenant_apps.loans.access import loans_setup_required
@@ -30,7 +33,7 @@ def loan_product_seed_defaults(request):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"Default product catalog is ready with {len(versions)} version(s). Review and activate each approved draft.")
-    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
+    return redirect(setup_link(request, reverse('workspace_loans:loan_product_list', kwargs={'workspace_slug': request.workspace.slug})))
 
 
 @require_POST
@@ -42,7 +45,10 @@ def loan_product_version_activate(request, version_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"{version.product.name} v{version.version} is active for new loans.")
-    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
+        guided = setup_saved_redirect(request, step="lending")
+        if guided:
+            return guided
+    return redirect(setup_link(request, reverse('workspace_loans:loan_product_list', kwargs={'workspace_slug': request.workspace.slug})))
 
 
 @require_POST
@@ -54,7 +60,7 @@ def loan_product_version_retire(request, version_pk):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"{version.product.name} v{version.version} is retired from new origination. Existing loans are unchanged.")
-    return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
+    return redirect(setup_link(request, reverse('workspace_loans:loan_product_list', kwargs={'workspace_slug': request.workspace.slug})))
 
 
 @loans_setup_required
@@ -75,5 +81,5 @@ def loan_product_version_create(request, product_pk):
             form.add_error(None, str(exc))
         else:
             messages.success(request, f"Created {product.name} v{version.version} as a draft. Review it before activation.")
-            return redirect('workspace_loans:loan_product_list', workspace_slug=request.workspace.slug)
+            return redirect(setup_link(request, reverse('workspace_loans:loan_product_list', kwargs={'workspace_slug': request.workspace.slug})))
     return render(request, "loans/setup/products/version_form.html", {"form": form, "product": product, "active_version": active})

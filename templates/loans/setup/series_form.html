@@ -1,13 +1,15 @@
 {% extends "base_tenant.html" %}
+{% load onboarding_tags %}
 {% load static i18n %}
 {% block title %}{% if series %}{% translate "Configure series" %}{% else %}{% translate "Add numbering series" %}{% endif %}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 <section class="setup-entry" hx-history="false">
-  <a href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">&larr; {{ license.name }}</a>
+  <a {% url 'workspace_loans:license_detail' request.workspace.slug license.pk as setup_target %}href="{% setup_url setup_target %}">&larr; {{ license.name }}</a>
   <h1 class="h3 mt-3">{% if series %}{% translate "Configure series" %}: {{ series.code }}{% else %}{% translate "Add numbering series" %}{% endif %}</h1>
   <p>{% translate "Choose how new loan and release numbers look. Their counters run separately; saving settings does not issue a number." %}</p>
   {% include "components/forms/accessible.html#errors" %}
-  <form method="post" action="{% if series %}{% url 'workspace_loans:series_update' request.workspace.slug series.pk %}{% else %}{% url 'workspace_loans:series_create' request.workspace.slug license.pk %}{% endif %}" novalidate>{% csrf_token %}
+  <form method="post" action="{% if series %}{% url 'workspace_loans:series_update' request.workspace.slug series.pk %}{% else %}{% url 'workspace_loans:series_create' request.workspace.slug license.pk %}{% endif %}" novalidate>{% csrf_token %}{% include "components/setup/journey_fields.html" %}
     <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. Series identity" %}</legend>
       <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.name %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.code %}</div></div>
       {% include "components/forms/accessible.html#field" with field=form.is_active %}
@@ -18,7 +20,7 @@
       <div class="row"><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.number_width %}</div><div class="col-md-6">{% include "components/forms/accessible.html#field" with field=form.maximum_number %}</div></div>
       <p class="mb-0">{% translate "Existing numbers stay unchanged. Editing this form does not reset either counter or reserve historical numbers." %}</p>
     </fieldset>
-    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Save series setup" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}">{% translate "Cancel" %}</a></div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if setup_journey %}{% translate "Save and continue" %}{% else %}{% translate "Save series setup" %}{% endif %}</button><a class="btn btn-outline-secondary" {% url 'workspace_loans:license_detail' request.workspace.slug license.pk as setup_target %}href="{% setup_url setup_target %}">{% translate "Cancel" %}</a></div>
   </form>
 </section>
 {% endblock %}

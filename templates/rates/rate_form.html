@@ -1,14 +1,16 @@
 {% extends 'base_tenant.html' %}
+{% load onboarding_tags %}
 {% load i18n static %}
 {% block title %}{% if form.instance.pk %}{% translate "Correct rate" %}{% else %}{% translate "Add Rate" %}{% endif %}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 <section class="setup-entry" hx-history="false">
 {% include 'rates/_navigation.html' %}
 <h1 class="h3">{% if form.instance.pk %}{% translate "Correct rate" %}{% else %}{% translate "Add Rate" %}{% endif %}</h1>
 <p>{% translate "Use a new quote for a new market observation. A correction replaces an error and keeps the earlier record in history." %}</p>
-{% if not has_rate_sources %}<div class="alert alert-warning">{% translate "A rate source is required before a rate can be saved." %} <a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">{% translate "Add Rate Source" %}</a></div>{% endif %}
+{% if not has_rate_sources %}<div class="alert alert-warning">{% translate "A rate source is required before a rate can be saved." %} <a {% url 'workspace_rates:ratesource_create' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Add Rate Source" %}</a></div>{% endif %}
 {% include 'components/forms/accessible.html#errors' %}
-<form method="post" novalidate>{% csrf_token %}
+<form method="post" novalidate>{% csrf_token %}{% include "components/setup/journey_fields.html" %}
   <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. Source and metal" %}</legend>
     <p>{% translate "For loan valuation choose INR and Pure metal, including silver. Enter the item's actual purity on the loan." %}</p>
     <div class="row">{% for field in form %}{% if field.name == 'rate_source' or field.name == 'metal' or field.name == 'currency' or field.name == 'purity' %}<div class="col-md-6">{% include 'components/forms/accessible.html#field' %}</div>{% endif %}{% endfor %}</div>
@@ -22,7 +24,7 @@
     {% include 'components/forms/accessible.html#field' with field=form.effective_at %}
     {% include 'components/forms/accessible.html#field' with field=form.reason %}
   </fieldset>
-  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if form.instance.pk %}{% translate "Save correction" %}{% else %}{% translate "Save Rate" %}{% endif %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_list' request.workspace.slug %}">{% translate "Cancel" %}</a></div>
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if form.instance.pk %}{% translate "Save correction" %}{% else %}{% translate "Save Rate" %}{% endif %}</button><a class="btn btn-outline-secondary" {% url 'workspace_rates:rate_list' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Cancel" %}</a></div>
 </form></section>
 {% endblock %}
 {% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

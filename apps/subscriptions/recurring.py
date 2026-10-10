@@ -69,6 +69,23 @@ def _outside_transaction():
         raise ImproperlyConfigured("Recurring commands must own their transactions; call outside Workspace context.")
 
 
+def recurring_workspace_enabled(workspace_id):
+    """An optional named rollout cohort limits new mandates, never recovery."""
+    selected = getattr(settings, "BILLING_RECURRING_WORKSPACE_IDS", [])
+    if not isinstance(selected, (list, tuple)):
+        return False
+    if not selected:
+        return True
+    if any(not str(value).isdigit() or int(value) <= 0 for value in selected):
+        return False
+    return workspace_id in {int(value) for value in selected}
+
+
+def require_recurring_workspace(workspace_id):
+    if not recurring_workspace_enabled(workspace_id):
+        raise PermissionDenied("Paid subscriptions are not enabled for this Workspace yet.")
+
+
 def _identity(value, prefix):
     if (not isinstance(value, str) or not value.startswith(prefix) or
             not value[len(prefix):].isalnum() or len(value) > 255):
@@ -197,6 +214,7 @@ def create_agreement(*, workspace_id, actor, binding_id, total_count, request_ke
     """Commit exactly one attempt before one POST. Unknown outcomes never repost."""
     _outside_transaction()
     mode = _creation_mode()
+    require_recurring_workspace(workspace_id)
     if start_at is not None and mode == "live":
         raise ValidationError("Scheduled live starts require a separately reviewed transition workflow.")
     try:

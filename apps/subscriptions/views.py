@@ -35,6 +35,16 @@ class BillingPermissionMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .public_prepaid import selected_offer
+        try:
+            context['public_annual_offer'] = selected_offer(workspace=resolve_request_workspace(self.request))
+        except (ValidationError, PermissionDenied):
+            context['public_annual_offer'] = None
+        return context
+
+
 class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListView):
     """Display available subscription plans"""
 
@@ -73,7 +83,7 @@ class SubscriptionPlanListView(LoginRequiredMixin, BillingPermissionMixin, ListV
         )
         from .public_recurring import selected_binding
         try:
-            context["public_monthly_offer"] = selected_binding()
+            context["public_monthly_offer"] = selected_binding(workspace=workspace)
         except (ValidationError, PermissionDenied):
             context["public_monthly_offer"] = None
 
@@ -248,6 +258,8 @@ class SubscriptionDashboardView(LoginRequiredMixin, BillingPermissionMixin, Temp
             subscription = workspace.subscription
             context["subscription"] = subscription
             context["plan"] = subscription.plan
+            context['annual_paid_invoice'] = Invoice.objects.filter(subscription=subscription,
+                status='paid', checkout_snapshot__kind='annual_prepaid').order_by('-paid_at', '-pk').first()
             from .billing import effective_billing_state
             context["billing_decision"] = effective_billing_state(subscription)
             context["billing_status_label"] = Subscription.StatusChoices(

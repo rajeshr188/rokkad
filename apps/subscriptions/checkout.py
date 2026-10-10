@@ -147,6 +147,11 @@ def _apply_capture(*, invoice_id, payment, actor=None, workspace=None):
         raise ValidationError("This invoice cannot be paid automatically.")
     from .recurring import require_no_recurring_agreement
     require_no_recurring_agreement(company)
+    if snapshot.get("kind") == "annual_prepaid":
+        from .public_prepaid import validate_capture
+        from apps.tenancy.context import workspace_context
+        with workspace_context(company.pk):
+            validate_capture(company=company, invoice=invoice)
     subscription = Subscription.objects.select_for_update().get(pk=invoice.subscription_id)
     if subscription.updated_at.isoformat() != snapshot["subscription_revision"]:
         raise ValidationError("Subscription changed after checkout; payment needs reconciliation.")

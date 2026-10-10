@@ -118,7 +118,8 @@
 {% block mgmt_content %}
 <a class="btn btn-outline-primary mb-3" href="{% url 'workspace_subscriptions:reviews' workspace_slug=request.workspace.slug %}">Billing reviews</a>
 {% include "subscriptions/_navigation.html" %}
-{% if not billing_checkout_enabled %}<div class="alert alert-info">Self-service plan purchases are unavailable. Use Recurring payments to review a prepared agreement, or contact Rokkad support about access. Your records are retained.</div>{% endif %}
+{% if public_annual_offer %}<p class="alert alert-info">Prefer to pay once? <a href="{% url 'workspace_subscriptions:annual-prepaid' workspace_slug=request.workspace.slug %}">Review annual prepayment — ₹14,990, no automatic renewal</a>.</p>{% endif %}
+{% if not billing_checkout_enabled and not public_annual_offer %}<div class="alert alert-info">Self-service plan purchases are unavailable. Use Recurring payments to review a prepared agreement, or contact Rokkad support about access. Your records are retained.</div>{% endif %}
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">
@@ -150,7 +151,7 @@
                 <div class="dashboard-card">
                     <h4 class="mb-3">Current Plan</h4>
                     
-                    <h2 class="mb-2">{{ plan.name }}</h2>
+                    <h2 class="mb-2">{% if annual_paid_invoice %}{{ annual_paid_invoice.billed_plan_name }}{% else %}{{ plan.name }}{% endif %}</h2>
                     <p class="text-muted mb-3">{{ plan.get_tier_display }}</p>
                     
                     <div class="mb-3">
@@ -162,8 +163,10 @@
                     <hr>
                     
                     <div class="mb-3">
-                        <small class="text-muted d-block">Monthly Price</small>
-                        <strong class="h5">₹{{ plan.price }}</strong>
+                        {% if annual_paid_invoice %}<small class="text-muted d-block">Annual prepayment — no automatic renewal</small>
+                        <strong class="h5">₹{{ annual_paid_invoice.total_amount }}</strong>
+                        {% else %}<small class="text-muted d-block">Monthly Price</small>
+                        <strong class="h5">₹{{ plan.price }}</strong>{% endif %}
                     </div>
                     
                     {% if billing_decision.recovery_only %}

@@ -27,15 +27,30 @@
       </div>
       <div class="col-lg-5">
         <article class="public-card alt">
-          <div class="public-kicker">Planned continuation</div>
+          <div class="public-kicker">{% if public_monthly_available %}Available after your trial{% else %}Planned continuation{% endif %}</div>
           <h2 class="h3">Monthly subscription</h2>
           <p class="public-price">&#8377;1,499 <span class="fs-6 fw-normal">per Workspace / month</span></p>
           <p class="public-card-copy">For the owner and up to five staff.</p>
+          {% if public_monthly_available %}
+          <p class="mt-4"><strong>Paid subscriptions are available.</strong> The Workspace owner can subscribe from Settings → Billing after the trial ends. No automatic trial conversion.</p>
+          <p class="public-card-copy">₹1,499 per month, GST not charged. Up to 12 monthly collections with your explicit Razorpay authorization. Stop future renewals from your billing page.</p>
+          <div class="public-actions mt-4"><a href="{% url 'workspace_selector' %}" class="btn btn-outline-dark">Choose your Workspace</a></div>
+          {% else %}
           <p class="mt-4"><strong>Paid subscriptions are not available yet.</strong> Continuation is subject to availability and your separate, explicit subscription consent. Your trial will not automatically become a paid subscription.</p>
           <p class="public-card-copy">Contact support before your trial ends to review available next steps.</p>
           <div class="public-actions mt-4"><a href="{% url 'contact' %}" class="btn btn-outline-dark">Talk to us</a></div>
+          {% endif %}
         </article>
       </div>
+      {% if public_annual_available %}
+      <div class="col-12"><article class="public-card">
+        <h2 class="h3">Annual prepaid — no automatic renewal</h2>
+        <p class="public-price">₹14,990 <span class="fs-6 fw-normal">once for 12 months / Workspace</span></p>
+        <p class="public-card-copy">Owner plus five staff. Save ₹2,998 compared with twelve monthly payments.
+        GST not charged. No recurring mandate; renew with another payment only if you choose.</p>
+        <a href="{% url 'workspace_selector' %}" class="btn btn-outline-dark">Choose your Workspace</a>
+      </article></div>
+      {% endif %}
     </div>
   </div>
 </section>

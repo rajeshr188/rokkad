@@ -78,6 +78,7 @@
 
 {% block mgmt_content %}
 {% include "subscriptions/_navigation.html" %}
+{% if public_annual_offer %}<p class="alert alert-info">Prefer to pay once? <a href="{% url 'workspace_subscriptions:annual-prepaid' workspace_slug=request.workspace.slug %}">Review annual prepayment — ₹14,990, no automatic renewal</a>.</p>{% endif %}
 
 <div class="container py-5">
     <div class="row mb-5">

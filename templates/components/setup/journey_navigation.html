@@ -1,0 +1,7 @@
+{% load i18n onboarding_tags %}{% setup_navigation_context as setup_journey %}
+{% if setup_journey %}
+<nav class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2" aria-label="{% translate 'Business setup' %}">
+  <div><strong>{% translate "Business setup" %}</strong><div class="small">{% translate "Save this step, then continue setting up your business. Your saved settings are kept when you leave." %}</div></div>
+  <a class="btn btn-sm btn-outline-primary" href="{{ setup_journey.return_url }}">{% translate "Back to guided setup" %}</a>
+</nav>
+{% endif %}

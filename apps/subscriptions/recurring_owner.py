@@ -18,7 +18,8 @@ from .models import RecurringAgreement, RecurringAgreementEvent, Subscription
 from .services import get_workspace_member_usage
 from .razorpay_service import BillingProviderError, RazorpayService
 from .recurring import (_identity, _locked_owner, _outside_transaction, _creation_mode,
-                        _verify_plan, recurring_provider_mode, verify_agreement, verify_agreement_observation)
+                        _verify_plan, recurring_provider_mode, require_recurring_workspace,
+                        verify_agreement, verify_agreement_observation)
 
 logger = logging.getLogger(__name__)
 TERMINAL = {"cancelled", "completed", "expired"}
@@ -56,6 +57,7 @@ def refresh_agreement(*, workspace, actor, agreement_id):
 
 def authorization_options(*, workspace, actor, agreement_id):
     mode = _creation_mode()
+    require_recurring_workspace(workspace.pk)
     agreement = refresh_agreement(workspace=workspace, actor=actor, agreement_id=agreement_id)
     with workspace_context(workspace.pk):
         agreement = owned_agreement(workspace=workspace, actor=actor, agreement_id=agreement_id)

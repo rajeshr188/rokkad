@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-06
+updated: 2026-10-10
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -102,7 +102,9 @@ avoid reusing a historical number even if its original series association differ
 1. Create a regulatory license with supporting evidence.
 2. Create a series and configure independent PawnLoan and release sequences.
 3. Add an effective workspace calculation policy, or a license override.
-4. Add the required gold/silver monthly rate policies.
+4. Add monthly rate policies for the metals offered: gold, silver, or both.
+   Business setup can be ready for one metal; rate and valuation readiness must
+   agree on that metal in the same usable series.
    A series can have its own effective-dated gold/silver override under
    Calculation, fees and monitoring > Series-specific monthly interest. Resolution
    uses series, then licence, then Workspace rates. Calculation policies also support series > licence > Workspace precedence;
@@ -124,7 +126,9 @@ capitalization, repayment, balance, and overdue rules.
 Calculation and metal-rate policies support same-day numbered revisions.
 Scope precedence is unchanged; within a scope the latest applicable effective
 date and then highest revision wins. Saving appends evidence and atomically
-retains the calculation policy with gold/silver rates. See the
+retains the calculation policy with the selected gold and/or silver rate revisions.
+Unselected metals keep their earlier rates; selecting one metal is not a metal
+restriction or a change to frozen loans. A save must include at least one rate. See the
 [decision](../adr/2026-09-25-same-day-economic-policy-revisions.md) and
 [operator guide](../flows/changing-loan-calculation-settings.md).
 

@@ -1,12 +1,69 @@
 ---
 status: preparation
 owner: project
-updated: 2026-09-30
+updated: 2026-10-09
 tags: [billing, pilot, commercial, razorpay]
 related: [subscription-monetization-rollout.md, ../implementation/billing-provider-readiness.md]
 ---
 
 # Monthly billing pilot
+
+## Current pilot choice: annual prepaid (9 October)
+
+JSK's owner selected INR 14,990 once for twelve months without automatic renewal.
+The unused monthly mandate and its unpaid provider invoice are cancelled and its
+reservation released after verifying zero authorization/successful payments and the
+single failed attempt. Historical evidence and trial/grace dates are preserved.
+The annual payment option is **deployed and enabled for JSK**, at
+[Annual prepaid payment](https://rokkad.com/w/jsk/settings/billing/annual/).
+The 13:06 IST release passes 96 regression checks plus three final checks, restricted
+read-only candidate/live verification and actual owner browser review.
+
+Monthly recurring remains implemented at INR 1,499; annual recurring is still separate
+and unpublished. Annual selection is Plan 2 with BILLING_PUBLIC_PREPAID_PLAN_ID=2 and
+BILLING_PREPAID_WORKSPACE_IDS=2. Generic checkout stays off. The first payment is now
+expected through the owner's chosen annual path. Verify its captured amount, callback,
+invoice, twelve-month end date and seats, then first receipt delivery and settlement.
+Only afterward review clearing the monthly and annual cohorts and enabling routine
+receipt dispatch. No annual order/payment/email has been initiated by this release.
+
+The earlier monthly-only pilot target below is historical; the owner changed the
+payment preference without changing the offer's six-member scope or public rollout.
+
+
+## Current JSK pilot: enabled 8 October 2026
+
+The twelve-file JSK-only release is live at 17:57 IST. The owner can open
+[JSK Recurring payments](https://rokkad.com/w/jsk/settings/billing/recurring/)
+now to review INR 1,499/month, owner plus five staff and at most twelve
+collections. Its payment form becomes available only after the unchanged trial
+ends at 23:39:08 IST tonight. Refresh the page after expiry; a review expires
+after thirty minutes. The canonical Workspace owner must accept and authorize
+Razorpay payment. Platform-admin status alone cannot accept owner self-service
+terms for someone else. No agreement or payment exists at release verification.
+
+The live settings are recurring enabled, selected binding 1, and named Workspace
+list 2. One-off checkout stays disabled. The guard applies to service creation,
+owner authorization, catalog presentation and saved consent. Recovery/cancellation
+are unaffected. Candidate/live read-only checks verify the actual provider plan,
+owner pages, unchanged dates, empty financial history and future eligibility.
+All 96 local checks pass. No email is sent; existing mail scope excludes receipts.
+
+After the first payment, verify provider capture and signed callback, one invoice/
+payment/paid cycle, exact paid-through date, six-member entitlements and receipt
+delivery. Reconcile the saved attempt/invoice if uncertain; never charge again to
+repair a missing callback. Observe real settlement rather than delaying for fee
+clarification. Then review wider activation: clear BILLING_RECURRING_WORKSPACE_IDS
+(use an empty environment value, not the literal text []), retain selected binding
+1 and recurring enabled, and apply the reviewed receipt-dispatch scope below.
+Public pricing/home/FAQ and in-app plan presentation then advertise the available
+monthly offer. JCL/Lakshmi owners can subscribe after their trials; their grace ends
+15 October at approximately 23:39 IST. New owners still get one optional 30-day
+free trial before separate paid consent. Annual remains unpublished.
+
+The previous local-only and all-paid-disabled checkpoints below are historical.
+No timer or background session is scheduled here to perform the owner’s payment.
+
 
 The owner selected preparation of a monthly-only, operator-prepared paying pilot
 on 28 September 2026. This unpublished offer does not authorize charging.

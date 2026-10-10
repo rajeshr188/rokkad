@@ -1,15 +1,17 @@
 {% extends 'base_tenant.html' %}
+{% load onboarding_tags %}
 {% load i18n static %}
 {% block title %}{% translate "Rate source" %}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 <section class="setup-entry" hx-history="false">
 {% include 'rates/_navigation.html' %}
 <h1 class="h3">{% if form.instance.pk %}{% translate "Edit rate source" %}{% else %}{% translate "Add rate source" %}{% endif %}</h1>
 <p>{% translate "A source identifies where you obtained the price. After saving the source, add a metal quote." %}</p>
 {% include 'components/forms/accessible.html#errors' %}
-<form method="post" class="card card-body" novalidate>{% csrf_token %}
+<form method="post" class="card card-body" novalidate>{% csrf_token %}{% include "components/setup/journey_fields.html" %}
   {% for field in form %}{% include 'components/forms/accessible.html#field' %}{% endfor %}
-  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Save Source" %}</button><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_list' request.workspace.slug %}">{% translate "Cancel" %}</a></div>
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% translate "Save Source" %}</button><a class="btn btn-outline-secondary" {% url 'workspace_rates:ratesource_list' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Cancel" %}</a></div>
 </form></section>
 {% endblock %}
 {% block extra_js %}{{ block.super }}<script src="{% static 'js/form-errors.js' %}"></script>{% endblock %}

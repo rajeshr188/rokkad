@@ -184,6 +184,13 @@ def workspace_setup(request, workspace_id=None, company_id=None):
     from apps.onboarding.services.setup_checklist import build_business_setup
 
     business_setup = build_business_setup(workspace=company)
+    from apps.onboarding.services.business_journey import build_business_journey
+    from apps.tenant_apps.loans.selectors.setup_review import build_setup_review
+
+    journey = build_business_journey(workspace=company, setup=business_setup, query=request.GET)
+    review = build_setup_review(workspace=company, setup=business_setup, query=request.GET) if journey["step"] == "review" else None
+    from apps.subscriptions.access_policy import workspace_activity
+    activity = getattr(request, "workspace_activity", None) or workspace_activity(company)
     setup_checklist = build_workspace_setup_checklist(workspace=company)
     setup_state = build_workspace_setup_display_state(
         user=request.user,
@@ -199,7 +206,12 @@ def workspace_setup(request, workspace_id=None, company_id=None):
             "workspace": company,
             "setup_checklist": setup_checklist,
             "business_setup": business_setup,
-            "can_create_loan": access_context["access"].can("data.create") and access_context["access"].can("data.view"),
+            "journey": journey,
+            "setup_review": review,
+            "can_choose_workflow": access_context["access"].can("workspace.transfer"),
+            "can_import_loans": activity.can_write and access_context["access"].can("data.import"),
+            "activation_required": activity.mode == "recovery",
+            "can_create_loan": activity.can_write and access_context["access"].can("data.create") and access_context["access"].can("data.view"),
             "setup_state": setup_state,
             "user_role": access_context["role_name"],
         },
@@ -347,7 +359,8 @@ def workspace_update(request, workspace_id=None, company_id=None):
                 actor=request.user,
                 request=request,
             )
-            return redirect("workspace_list")
+            from apps.onboarding.navigation import setup_saved_redirect
+            return setup_saved_redirect(request, step="starting") or redirect("workspace_list")
     else:
         form = CompanyForm(instance=company)
     return render(

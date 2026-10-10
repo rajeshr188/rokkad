@@ -6,11 +6,13 @@ Handles plans, checkout, payments, and invoices.
 from django.urls import path
 from . import views
 from .access_views import WorkspaceAccessControlsView
+from .prepaid_views import AnnualPrepaidView
 from .recurring_views import RecurringActionView, RecurringDashboardView
 
 app_name = "subscriptions"
 
 urlpatterns = [
+    path("annual/", AnnualPrepaidView.as_view(), name="annual-prepaid"),
     path("recurring/", RecurringDashboardView.as_view(), name="recurring"),
     *[path("recurring/<int:agreement_id>/" + action + "/", RecurringActionView.as_view(),
            {"action": action}, name="recurring-" + action)

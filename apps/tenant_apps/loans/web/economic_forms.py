@@ -59,7 +59,7 @@ ECONOMIC_LABELS = {
 class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     groups = (
         (_("1. Scope and dates"), ("license", "series", "effective_from", "effective_until", "default_entry_purpose")),
-        (_("2. Monthly interest and tenure"), ("gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods", "default_tenure_months")),
+        (_("2. Monthly interest and tenure"), ("metals_to_configure", "gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods", "default_tenure_months")),
         (_("3. Part-month and compound rules"), ("partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction", "capitalization_interval_periods")),
         (_("4. Collateral value and rounding"), ("valuation_method", "maximum_ltv_ratio", "rounding_method", "currency_quantum")),
     )
@@ -140,13 +140,16 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         initial=Decimal("0.01"),
         help_text=_("Use 0.01 for paise-level currency rounding."),
     )
+    metals_to_configure = forms.ChoiceField(required=False, initial="BOTH",
+        label=_("Metals to configure"), choices=(("BOTH", _("Gold and silver")), ("GOLD", _("Gold only")), ("SILVER", _("Silver only"))),
+        help_text=_("Only the chosen metals receive a new interest-rate version. Earlier rates for other metals stay unchanged."))
     gold_monthly_interest_rate = forms.DecimalField(
         max_digits=9, decimal_places=6, min_value=0, max_value=100,
-        initial=Decimal("2"), help_text=_("Monthly percentage. Starts at 2%; change before saving if needed."),
+        required=False, initial=Decimal("2"), help_text=_("Monthly percentage. Starts at 2%; change before saving if needed."),
     )
     silver_monthly_interest_rate = forms.DecimalField(
         max_digits=9, decimal_places=6, min_value=0, max_value=100,
-        initial=Decimal("4"), help_text=_("Monthly percentage. Starts at 4%; change before saving if needed."),
+        required=False, initial=Decimal("4"), help_text=_("Monthly percentage. Starts at 4%; change before saving if needed."),
     )
     effective_from = forms.DateField(widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
     effective_until = forms.DateField(required=False, label=_("Applies through (optional)"),
@@ -171,6 +174,14 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
 
     def clean(self):
         data = super().clean()
+        selected = data.pop("metals_to_configure", None) or "BOTH"
+        for metal in ("GOLD", "SILVER"):
+            field = f"{metal.lower()}_monthly_interest_rate"
+            if selected in ("BOTH", metal):
+                if data.get(field) is None and field not in self.errors:
+                    self.add_error(field, _("Enter a monthly rate for each chosen metal."))
+            else:
+                data[field] = None
         series, license = data.get("series"), data.get("license")
         if series:
             if license and series.license_id != license.pk:

@@ -13,7 +13,7 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from . import recurring_owner
-from .recurring import recurring_provider_mode
+from .recurring import recurring_provider_mode, recurring_workspace_enabled
 from .models import RecurringAgreement, RecurringCycle
 from .razorpay_service import BillingProviderError
 from .views import BillingPermissionMixin, _payment_json
@@ -27,7 +27,7 @@ class RecurringDashboardView(LoginRequiredMixin, BillingPermissionMixin, Templat
         agreement = RecurringAgreement.objects.filter(workspace=self.request.workspace).select_related(
             "binding").order_by("-created_at", "-pk").first()
         context["agreement"] = agreement
-        if not agreement:
+        if not agreement or agreement.closed_at:
             from .public_recurring import offer_context
             context.update(offer_context(workspace=self.request.workspace, actor=self.request.user))
         if agreement:
@@ -52,6 +52,7 @@ class RecurringDashboardView(LoginRequiredMixin, BillingPermissionMixin, Templat
                 except ValidationError:
                     seller_ready = False
             context["can_authorize"] = (settings.BILLING_RECURRING_ENABLED and
+                recurring_workspace_enabled(self.request.workspace.pk) and
                 seller_ready and
                 matching_mode and not (start_at and agreement.binding.mode == "live") and
                 agreement.state == "verified" and agreement.provider_status == "created" and

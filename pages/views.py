@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
@@ -8,7 +9,25 @@ from apps.orgs.models import Company, Membership
 from apps.orgs.tenant_context import resolve_request_workspace, resolve_preferred_workspace
 
 
-class HomePageView(TemplateView):
+class SubscriptionOfferPageView(TemplateView):
+    """Advertise paid signup only when the reviewed offer is open to everyone."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.subscriptions.public_recurring import selected_binding
+        try:
+            context["public_monthly_available"] = bool(selected_binding())
+        except (ValidationError, PermissionDenied):
+            context["public_monthly_available"] = False
+        from apps.subscriptions.public_prepaid import selected_offer
+        try:
+            context["public_annual_available"] = bool(selected_offer())
+        except (ValidationError, PermissionDenied):
+            context["public_annual_available"] = False
+        return context
+
+
+class HomePageView(SubscriptionOfferPageView):
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return redirect("dashboard")
@@ -22,7 +41,7 @@ class TenantPageView(TemplateView):
     template_name = "pages/tenant.html"
 
 
-class PricingPageView(TemplateView):
+class PricingPageView(SubscriptionOfferPageView):
     template_name = "pages/pricing.html"
 
 
@@ -100,5 +119,5 @@ class HelpPageView(TemplateView):
     template_name = "pages/help.html"
 
 
-class FaqPageView(TemplateView):
+class FaqPageView(SubscriptionOfferPageView):
     template_name = "pages/faq.html"

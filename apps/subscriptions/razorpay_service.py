@@ -19,6 +19,20 @@ def client():
 
 class RazorpayService:
     @staticmethod
+    def get_order(order_id):
+        try:
+            return client().order.fetch(order_id, timeout=20, allow_redirects=False)
+        except Exception as exc:
+            raise BillingProviderError("Order verification is unavailable. Do not start another purchase.") from exc
+
+    @staticmethod
+    def cancel_invoice(invoice_id):
+        try:
+            return client().invoice.cancel(invoice_id, timeout=20, allow_redirects=False)
+        except Exception as exc:
+            raise BillingProviderError("Invoice cancellation needs verification; do not start another purchase.") from exc
+
+    @staticmethod
     def get_subscription_invoices(subscription_id, *, skip=0, count=100):
         try:
             return client().invoice.all({"subscription_id": subscription_id, "skip": skip, "count": count},
@@ -91,7 +105,7 @@ class RazorpayService:
             return client().order.create(data={
                 "amount": amount, "currency": currency, "receipt": receipt,
                 "notes": {"workspace_id": str(workspace_id)},
-            })
+            }, timeout=20, allow_redirects=False)
         except Exception as exc:
             raise BillingProviderError("Payment provider could not create the order. Contact support to reconcile the attempt before retrying.") from exc
 

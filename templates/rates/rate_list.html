@@ -1,19 +1,21 @@
 {% extends 'base_tenant.html' %}
+{% load onboarding_tags %}
 {% load loans_display i18n static orgs_tags %}
 {% block title %}{% translate "Metal rates" %}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 {% navigation_actions as actions %}
 <section hx-history="false">
-<header class="app-heading"><div><h1>{% translate "Metal rates" %}</h1><p>{% translate "Record a market quote, or open an earlier quote to review its history." %}</p></div>{% if 'data.create' in actions %}<a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">{% translate "Add Rate" %}</a>{% endif %}</header>
+<header class="app-heading"><div><h1>{% translate "Metal rates" %}</h1><p>{% translate "Record a market quote, or open an earlier quote to review its history." %}</p></div>{% if 'data.create' in actions %}<a class="btn btn-primary" {% url 'workspace_rates:rate_create' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Add Rate" %}</a>{% endif %}</header>
 {% include 'rates/_navigation.html' %}
 <section class="card card-body mb-3" aria-labelledby="daily-prices-title">
 <h2 class="h5" id="daily-prices-title">Today's lending prices</h2>
 <p>If your buying and selling prices are unchanged, confirm each required metal below. This records a new dated confirmation under your signed-in user; yesterday's quote stays in the history.</p>
 {% for quote in daily_quotes %}<div class="d-flex flex-wrap justify-content-between gap-2 border-top py-3"><div><strong>{{ quote.metal }} · buying ₹{{ quote.buying_rate|indian_money }}/g</strong><div class="small">Selling ₹{{ quote.selling_rate|indian_money }}/g · effective {{ quote.effective_at|date:"d/m/Y, H:i T" }} · {{ quote.source_snapshot.name }}</div>{% if quote.is_today %}<span class="badge text-bg-success">Ready for today</span>{% endif %}</div>
-{% if not quote.is_today and 'data.create' in actions %}<form method="post" action="{% url 'workspace_rates:rate_confirm_unchanged' request.workspace.slug quote.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-primary">Confirm {{ quote.metal|lower }} price unchanged for today</button></form>{% endif %}</div>{% empty %}<p>No applicable INR pure-metal quotes yet. Add your first rate.</p>{% endfor %}
+{% if not quote.is_today and 'data.create' in actions %}<form method="post" action="{% url 'workspace_rates:rate_confirm_unchanged' request.workspace.slug quote.pk %}">{% csrf_token %}{% include "components/setup/journey_fields.html" %}<button type="submit" class="btn btn-outline-primary">Confirm {{ quote.metal|lower }} price unchanged for today</button></form>{% endif %}</div>{% empty %}<p>No applicable INR pure-metal quotes yet. Add your first rate.</p>{% endfor %}
 </section>
 <p class="alert alert-info">{% translate "For loan valuation, use INR and Pure metal for both gold and silver. Buying prices must be per gram, excluding tax and making charges." %}</p>
-{% if not has_rate_sources %}<div class="alert alert-warning">{% translate "Add a source before entering your first metal rate." %} {% if 'data.create' in actions %}<a href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">{% translate "Add Rate Source" %}</a>{% endif %}</div>{% endif %}
+{% if not has_rate_sources %}<div class="alert alert-warning">{% translate "Add a source before entering your first metal rate." %} {% if 'data.create' in actions %}<a {% url 'workspace_rates:ratesource_create' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Add Rate Source" %}</a>{% endif %}</div>{% endif %}
 {% include 'components/reference_search.html' %}
 {% partialdef results inline %}
 {% navigation_actions as actions %}
@@ -22,10 +24,10 @@
   <h2 class="h5 mt-3" id="reference-results-title" tabindex="-1">{% translate "Recorded quotes" %} ({{ page_obj.paginator.count }})</h2>
   {% if not form.errors %}<ul class="list-unstyled">
   {% for rate in rates %}<li class="card card-body mb-3">
-    <div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h5"><a href="{% url 'workspace_rates:rate_detail' request.workspace.slug rate.pk %}">{% translate rate.get_metal_display %} &middot; {% translate rate.get_purity_display %}</a></h3><span>{% translate rate.record_status %}</span></div>
+    <div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h5"><a {% url 'workspace_rates:rate_detail' request.workspace.slug rate.pk as setup_target %}href="{% setup_url setup_target %}">{% translate rate.get_metal_display %} &middot; {% translate rate.get_purity_display %}</a></h3><span>{% translate rate.record_status %}</span></div>
     <dl class="row mb-2"><dt class="col-sm-3">{% translate "Buying price per gram" %}</dt><dd class="col-sm-3 fw-semibold">{{ rate.buying_rate|indian_money }} {{ rate.currency }}</dd><dt class="col-sm-3">{% translate "Selling price per gram" %}</dt><dd class="col-sm-3">{{ rate.selling_rate|indian_money }} {{ rate.currency }}</dd>
       <dt class="col-sm-3">{% translate "Rate source" %}</dt><dd class="col-sm-3 text-break">{{ rate.source_snapshot.name|default:rate.rate_source }}</dd><dt class="col-sm-3">{% translate "Effective at" %}</dt><dd class="col-sm-3">{{ rate.effective_at|date:"d M Y, H:i" }}</dd></dl>
-    {% if rate.record_status == 'Available' %}<div class="d-flex flex-wrap gap-2">{% if 'data.edit' in actions %}<a class="btn btn-outline-secondary" href="{% url 'workspace_rates:rate_update' request.workspace.slug rate.pk %}">{% translate "Correct rate" %}</a>{% endif %}{% if 'data.delete' in actions %}<a class="btn btn-outline-danger" href="{% url 'workspace_rates:rate_delete' request.workspace.slug rate.pk %}">{% translate "Withdraw" %}</a>{% endif %}</div>{% endif %}
+    {% if rate.record_status == 'Available' %}<div class="d-flex flex-wrap gap-2">{% if 'data.edit' in actions %}<a class="btn btn-outline-secondary" {% url 'workspace_rates:rate_update' request.workspace.slug rate.pk as setup_target %}href="{% setup_url setup_target %}">{% translate "Correct rate" %}</a>{% endif %}{% if 'data.delete' in actions %}<a class="btn btn-outline-danger" {% url 'workspace_rates:rate_delete' request.workspace.slug rate.pk as setup_target %}href="{% setup_url setup_target %}">{% translate "Withdraw" %}</a>{% endif %}</div>{% endif %}
   </li>{% empty %}<li class="card card-body"><h3 class="h5">{% translate "No matching metal rates" %}</h3><p>{% translate "Clear the filters, or add a source and your first quote." %}</p></li>{% endfor %}
   </ul>{% include 'components/reference_pagination.html' %}{% endif %}
 </section>

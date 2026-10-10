@@ -11,7 +11,7 @@ from django.utils import timezone
 from apps.orgs.models import Company, Membership
 from .checkout import require_billing_owner
 from .models import Invoice, RecurringAgreement, RecurringPlanBinding, Subscription, WorkspaceAccessDecision
-from .recurring import _offer, recurring_provider_mode
+from .recurring import _offer, recurring_provider_mode, require_recurring_workspace
 from .services import get_workspace_member_usage
 
 
@@ -20,10 +20,11 @@ SALT = "subscriptions.public-monthly"
 CONSENT_MAX_AGE = 1800
 
 
-def selected_binding():
+def selected_binding(*, workspace=None):
     """No generic catalog publication, provider calls or database writes."""
     if not (settings.BILLING_RECURRING_ENABLED and settings.BILLING_PUBLIC_RECURRING_BINDING_ID):
         raise ValidationError("Monthly subscriptions are not available for self-service yet.")
+    require_recurring_workspace(getattr(workspace, "pk", None))
     binding = RecurringPlanBinding.objects.select_related("plan").filter(
         pk=settings.BILLING_PUBLIC_RECURRING_BINDING_ID, mode=recurring_provider_mode(),
     ).first()
@@ -50,10 +51,15 @@ def require_public_owner(*, workspace, actor):
 
 
 def require_eligible(workspace):
-    """First paid subscription only; replacement and access exceptions need review."""
+    """First paid subscription, including an explicitly released unused attempt."""
     if workspace.lifecycle_state != Company.LifecycleState.ACTIVE:
         raise ValidationError("This Workspace cannot start a paid subscription.")
-    if (RecurringAgreement.objects.filter(workspace=workspace).exists()
+    agreements = RecurringAgreement.objects.filter(workspace=workspace)
+    released_unused = agreements.filter(
+        closed_at__isnull=False, state=RecurringAgreement.State.VERIFIED,
+        provider_status="cancelled", events__event_type="reservation.unpaid_released",
+    )
+    if (agreements.exclude(pk__in=released_unused.values("pk")).exists()
             or Invoice.objects.filter(subscription__company=workspace).exists()
             or WorkspaceAccessDecision.objects.filter(workspace=workspace).exists()):
         raise ValidationError("This Workspace has billing or access history to review. Contact support.")
@@ -69,11 +75,14 @@ def require_eligible(workspace):
 
 def offer_context(*, workspace, actor):
     try:
-        binding = selected_binding()
+        binding = selected_binding(workspace=workspace)
         require_public_owner(workspace=workspace, actor=actor)
     except (ValidationError, PermissionDenied):
         return {}
     context = {"monthly_offer": binding, "monthly_terms": TERMS}
+    subscription = Subscription.objects.filter(company=workspace, status="trial").first()
+    if subscription and subscription.trial_end_date and subscription.trial_end_date > timezone.now():
+        context["monthly_trial_end"] = subscription.trial_end_date
     try:
         require_eligible(workspace)
     except ValidationError as exc:
@@ -100,7 +109,7 @@ def read_consent(token, actor):
 def validate_consent(*, workspace, actor, consent, binding_id, total_count, request_key, start_at):
     """Called under the Company lock, before reserving the provider attempt."""
     require_public_owner(workspace=workspace, actor=actor)
-    binding = selected_binding()
+    binding = selected_binding(workspace=workspace)
     if (consent != {"workspace_id": workspace.pk, "actor_id": actor.pk, "binding_id": binding.pk,
                    "snapshot": binding.snapshot, "total_count": 12, "terms": TERMS,
                    "request_key": str(request_key)}

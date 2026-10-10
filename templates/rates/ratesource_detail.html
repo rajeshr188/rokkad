@@ -1,11 +1,13 @@
 {% extends 'base_tenant.html' %}
+{% load onboarding_tags %}
 {% load i18n orgs_tags %}
 {% block title %}{{ ratesource.name }}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 {% navigation_actions as actions %}
 <section class="setup-entry" hx-history="false">{% include 'rates/_navigation.html' %}
 <h1 class="h3">{{ ratesource.name }}</h1>
 <div class="card card-body mb-3"><dl class="row"><dt class="col-sm-4">{% translate "Location" %}</dt><dd class="col-sm-8">{{ ratesource.location }}</dd><dt class="col-sm-4">{% translate "Source publishes prices including tax" %}</dt><dd class="col-sm-8">{% if ratesource.tax_included %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}</dd></dl>
 <p>{% translate "The source is ready. Add a quote to make a price available. Prices must exclude tax; this flag does not adjust amounts." %}</p>
-<div class="d-flex flex-wrap gap-2">{% if 'data.create' in actions %}<a class="btn btn-primary" href="{% url 'workspace_rates:rate_create' request.workspace.slug %}">{% translate "Add Rate" %}</a>{% endif %}{% if 'data.edit' in actions %}<a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk %}">{% translate "Edit source" %}</a>{% endif %}</div></div>
+<div class="d-flex flex-wrap gap-2">{% if 'data.create' in actions %}<a class="btn btn-primary" {% url 'workspace_rates:rate_create' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Add Rate" %}</a>{% endif %}{% if 'data.edit' in actions %}<a class="btn btn-outline-secondary" {% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk as setup_target %}href="{% setup_url setup_target %}">{% translate "Edit source" %}</a>{% endif %}</div></div>
 </section>{% endblock %}

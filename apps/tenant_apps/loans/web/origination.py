@@ -1,5 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from django import forms
+from apps.onboarding.navigation import setup_saved_redirect
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import Http404
@@ -48,12 +50,12 @@ def origination_settings(request):
         set_maximum_quote_age(workspace=workspace, actor=request.user,
             days=quote_form.cleaned_data["maximum_quote_age_days"])
         messages.success(request, "Maximum buying-quote age saved. Pending approvals need a fresh review if the rule changed.")
-        return redirect("workspace_loans:origination_settings", workspace_slug=workspace.slug)
+        return setup_saved_redirect(request, step="terms") or redirect("workspace_loans:origination_settings", workspace_slug=workspace.slug)
     if request.method == "POST" and not quote_action and form.is_valid():
         set_collateral_photo_requirement(workspace=workspace, actor=request.user,
             required=form.cleaned_data["require_collateral_photos"])
         messages.success(request, "Collateral photo rule saved.")
-        return redirect("workspace_loans:origination_settings", workspace_slug=workspace.slug)
+        return setup_saved_redirect(request, step="terms") or redirect("workspace_loans:origination_settings", workspace_slug=workspace.slug)
     return render(request, "loans/setup/origination.html", {"form": form,
         "quote_form": quote_form, "maximum_quote_age_days": limit,
         "can_set_quote_age": can_set_quote_age})

@@ -203,23 +203,16 @@ def build_business_setup(*, workspace):
     """Resume from persisted lending configuration; GET never creates setup records."""
     from django.urls import reverse
     from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
-    from apps.tenant_apps.party.models import Party
-
     lending = get_pawn_setup_checklist(workspace)
     steps = [{
         "key": "business_profile", "title": _("Business details"), "complete": bool(workspace.name),
-        "description": _("Review your business name and branding."),
+        "description": _("Review your business name. Branding is optional."),
         "action_label": _("Review business details"),
         "action_url": reverse("workspace_update", kwargs={"workspace_id": workspace.pk}),
-    }, *lending["steps"], {
-        "key": "borrower", "title": _("First borrower"),
-        "complete": Party.objects.filter(workspace=workspace, status=Party.PartyStatus.ACTIVE).exists(),
-        "description": _("Add a borrower, then record their collateral and photos in a new loan."),
-        "action_label": _("Manage borrowers"),
-        "action_url": reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}),
-    }]
+    }, *lending["steps"]]
     return {
-        "steps": steps, "next_step": next((step for step in steps if not step["complete"]), None),
+        **lending, "steps": steps,
+        "next_step": next((step for step in steps if not step["complete"]), None),
         "completed_count": sum(step["complete"] for step in steps), "total_count": len(steps),
-        "ready": all(step["complete"] for step in steps), "as_of_date": lending["as_of_date"],
+        "ready": all(step["complete"] for step in steps),
     }

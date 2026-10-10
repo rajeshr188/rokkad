@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-11
+updated: 2026-10-10
 tags: [onboarding, workspace, loans]
 ---
 
@@ -11,12 +11,47 @@ From My Workspaces, choose **Set up your business**. The existing creation servi
 creates the Workspace and Owner membership, then opens that business's setup page.
 There is no new tenant model or separate onboarding wizard to synchronize.
 
-The setup page shows business details, license, numbering series, calculation and
-interest policies, an active loan product, and an active borrower. **Continue setup**
-links to the first unavailable step. Each step uses its existing form and service.
-After saving, use **Business setup** in the loan setup navigation, or return through
-Settings → Setup. Reloading or returning after signing in derives progress from saved
-records; reading the checklist does not create records or consume numbers.
+Creating a Workspace does not start a trial or charge the owner. Its owner can
+complete the configuration journey before choosing access. The final review links
+to available trial/plan activation; recording loans, importing records, funding
+and adding customers still require ordinary commercial access. Expired or
+restricted workspaces do not gain configuration writes from this initial-setup
+exception.
+
+The guided page has six steps: **Your business**, **Getting started**, **Licence and
+numbering**, **How you lend**, **Interest and charges**, and **Review and begin**.
+Getting started offers new lending, working alongside paper books, or the supported
+existing-loan register import. The choice is a navigation hint, not a stored entry
+purpose, import approval or automatic change to existing loan facts. Paper entries
+and imports retain their original dates, numbers and terms; imports still follow
+the existing template and review constraints.
+
+Each step opens the existing authorized form and service. Guided forms preserve a
+bounded step/path marker and return to the current Workspace after a successful
+save. Invalid submissions retain values and the return link. Existing links outside
+the journey retain their ordinary redirects. Reloading or returning after signing
+in derives availability from saved records; there is no wizard completion table.
+The first unavailable saved setting selects the initial step. Users can move freely
+between steps without making changes.
+
+Review shows saved terms, non-consuming loan/release number previews, and an optional
+fictional cash example. The example uses the saved effective calculation policy,
+metal interest rate and fee policies for a selected series as of today. Multiple
+series require an explicit choice. It shows principal, upfront interest, deducted
+and separate fees, payout, and simple-interest closing amounts using the native
+inclusive monthly anniversaries and part-month rules. It assumes no repayments,
+concessions or collateral valuation. Compound closing balances require actual
+capitalization events and are not predicted. The ticket summary is labelled
+**EXAMPLE — NOT ISSUED**; actual agreement schedules and printed output must be
+reviewed through the real loan and Documents & printing workflows.
+
+Business readiness does not require a borrower. Add the customer when recording
+the first loan. Configuration readiness still requires a current non-legacy
+licence, a running numbering series, applicable calculation and chosen-metal
+interest rates, an active product, and usable valuation evidence for at least one
+metal within the same series. Price freshness follows the current prospective
+quote-age setting. Release number errors are visible separately. No example,
+progress read or number preview creates a loan, allocates a number or posts money.
 
 An available step is a configuration check as of today, not a certification of
 regulatory compliance or approval for an individual loan. Review license evidence,
@@ -44,7 +79,7 @@ labelled **Pure metal (100%)** for both metals, effective on/before the loan dat
 The compatible storage key remains `24k`. Quote entry separates effective time
 from recorded time and preserves corrections/withdrawals as linked history; see
 [entering metal prices](metal-rate-entry.md). Dates are visible; a usable lookup
-does not yet enforce an origination-age policy. Active-loan monitoring separately
+enforces the configured prospective quote-age limit. Active-loan monitoring separately
 enforces the configured quote/appraisal ages; see [reassessment](collateral-reassessment.md). An appraisal-only
 policy bypasses the price requirement. Server commands always revalidate; without
 JavaScript, or if evidence changes after preflight, normal server form errors apply
@@ -55,6 +90,10 @@ separate fixed INR 10 document fee deducted at disbursal. **Business default (al
 licenses)** remains the default policy scope. Selecting a license creates an override;
 the presence of only one license does not silently change the policy's scope. Saving
 requires explicit review/submission and never rewrites existing policy evidence.
+Choose gold only, silver only, or both metals when saving a calculation revision.
+Only chosen metals receive a new monthly-rate revision; earlier rates for other
+metals remain applicable under the ordinary scope/effective-date resolution. This
+choice does not disable a metal or rewrite a loan.
 
 For an unbound new-loan form:
 

@@ -5,10 +5,14 @@
         <p>One free trial Workspace per owner account, for you and up to five staff. Pending invitations reserve a seat.</p>
         <p><strong>No card required. No automatic charge.</strong> Your trial starts when you accept below.</p>
         <p>After the trial, there is a seven-day grace period, followed by read-only access to your records.</p>
+        {% if public_monthly_offer %}
+        <p>After your trial ends, review the ₹1,499/month subscription from your billing page. Paid continuation requires your separate consent and Razorpay authorization.</p>
+        {% else %}
         <p>The planned monthly offer is ₹1,499/month. Paid continuation is subject to availability and
             requires your separate subscription consent. Contact Rokkad support for an access review while payments are unavailable.</p>
+        {% endif %}
         {% if public_trial_used %}
-        <p>Your account has already used its public trial. Contact Rokkad support for another Workspace.</p>
+        <p>Your account has already used its public trial. {% if public_monthly_offer %}Use Review monthly subscription above to start paid billing for this Workspace.{% else %}Contact Rokkad support for another Workspace.{% endif %}</p>
         {% else %}
         <form method="post" action="{% url 'workspace_subscriptions:start-trial' workspace_slug=request.workspace.slug plan_id=public_trial_plan.pk %}">
             {% csrf_token %}

@@ -2,9 +2,11 @@
 {% partialdef fields %}
 {% for field in form.hidden_fields %}{{ field }}{% endfor %}
 {% for section in form.sections %}
+{% if setup_journey and form.prefix == "configuration" and forloop.counter > 2 %}<details class="mb-3" {% if form.is_bound %}open{% endif %}><summary>{{ section.title }}</summary>{% endif %}
 <fieldset class="mb-3 border-bottom pb-2">
   <legend class="h6">{{ section.title }}</legend>
   <div class="row g-3">{% for field in section.fields %}<div class="col-md-6" data-policy-field="{{ field.name }}">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div>
 </fieldset>
+{% if setup_journey and form.prefix == "configuration" and forloop.counter > 2 %}</details>{% endif %}
 {% endfor %}
 {% endpartialdef %}

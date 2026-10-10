@@ -1,7 +1,9 @@
 {% extends "base_tenant.html" %}
+{% load onboarding_tags %}
 {% load i18n static %}
 {% block title %}{% if is_renewal %}{% translate "Record license renewal" %}{% elif license %}{% translate "Edit license" %}{% else %}{% translate "Add license" %}{% endif %}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 <section class="setup-entry" hx-history="false">
   <a href="{% if license %}{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}{% else %}{% url 'workspace_loans:license_list' request.workspace.slug %}{% endif %}">&larr; {% translate "Loan setup" %}{% if license %}: {{ license.name }}{% endif %}</a>
   <h1 class="h3 mt-3">{% if is_renewal %}{% translate "Record license renewal" %}{% elif license %}{% translate "Edit license" %}{% else %}{% translate "Add regulatory loan license" %}{% endif %}</h1>
@@ -10,7 +12,7 @@
   {% include "components/forms/accessible.html#errors" %}
   {% if form.errors %}<p class="alert alert-warning">{% translate "Choose the supporting file again before saving; browsers do not retain file selections after an error." %}</p>{% endif %}
   <form method="post" action="{% if is_renewal %}{% url 'workspace_loans:license_renew' request.workspace.slug license.pk %}{% elif license %}{% url 'workspace_loans:license_update' request.workspace.slug license.pk %}{% else %}{% url 'workspace_loans:license_create' request.workspace.slug %}{% endif %}" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
+    {% csrf_token %}{% include "components/setup/journey_fields.html" %}
     {% partialdef license_fields inline %}
     <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. License details" %}</legend>
       {% if form.name %}{% include "components/forms/accessible.html#field" with field=form.name %}{% endif %}
@@ -27,7 +29,7 @@
       <details {% if form.notes.value or form.notes.errors %}open{% endif %}><summary>{% translate "Optional notes" %}</summary>{% include "components/forms/accessible.html#field" with field=form.notes %}</details>
     </fieldset>
     {% endpartialdef %}
-    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if is_renewal %}{% translate "Record renewal" %}{% else %}{% translate "Save license" %}{% endif %}</button><a class="btn btn-outline-secondary" href="{% if license %}{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}{% else %}{% url 'workspace_loans:license_list' request.workspace.slug %}{% endif %}">{% translate "Cancel" %}</a></div>
+    <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">{% if is_renewal %}{% translate "Record renewal" %}{% else %}{% if setup_journey %}{% translate "Save and continue" %}{% else %}{% translate "Save license" %}{% endif %}{% endif %}</button><a class="btn btn-outline-secondary" href="{% if license %}{% url 'workspace_loans:license_detail' request.workspace.slug license.pk %}{% else %}{% url 'workspace_loans:license_list' request.workspace.slug %}{% endif %}">{% translate "Cancel" %}</a></div>
   </form>
 </section>
 {% endblock %}

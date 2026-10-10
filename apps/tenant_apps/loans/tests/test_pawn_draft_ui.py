@@ -2726,8 +2726,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         for _ in range(2):
             page = self.client.get(url)
             self.assertTrue(page.context["business_setup"]["ready"])
-            self.assertContains(page, "Create a loan")
-            self.assertContains(page, "Team invitations are optional")
+            self.assertContains(page, "Create your first loan")
+            self.assertContains(page, "Optional finishing touches")
+            self.assertEqual(page.context["journey"]["step"], "review")
         self.assertEqual(counts, (LoanLicense.objects.count(), LoanSeries.objects.count()))
         self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
         self.assertEqual(Membership.objects.filter(company=self.tenant).count(), 1)

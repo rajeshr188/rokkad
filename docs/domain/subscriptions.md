@@ -1,14 +1,26 @@
 ---
 status: active
 owner: project
-updated: 2026-09-30
+updated: 2026-10-10
 tags: [domain, subscriptions, monetization]
 related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 ---
 
 # Subscriptions
 
-Owner monthly self-service is implemented locally with publication off by default.
+The pilot offers annual one-time prepayment from 9 October: INR 14,990 for twelve
+calendar months with six members, no recurring mandate and no automatic renewal.
+Same-plan manual annual renewal adds twelve months after existing paid time. Trial
+conversion preserves trial history; payment verification alone grants paid access.
+Publication is independent of the monthly recurring binding and generic catalog.
+A cancelled unused mandate still needs complete unpaid-invoice/failed-attempt review
+before it releases its reservation. After that verified unused release, the owner
+can choose either a fresh monthly agreement or annual prepayment. The old agreement
+stays cancelled. Starting either purchase reserves the Workspace against the other
+until payment/reconciliation; viewing offers does not create a purchase. See the [annual decision](../adr/2026-10-09-selected-annual-prepayment.md); production evidence is in Status.
+
+
+Owner monthly self-service is deployed and enabled for JSK only as of 8 October.
 One explicitly selected recurring binding exposes INR 1,499/month for the owner
 plus five staff and at most twelve collections, independently of the private
 annual/one-off catalog. A verified canonical owner must accept a signed current
@@ -16,7 +28,11 @@ offer; active trials must expire first. Consent and the durable provider attempt
 commit together before provider creation. Unknown outcomes require recovery, never
 a second mandate. Existing billing/access-exception history requires support review.
 See the [self-service decision](../adr/2026-09-30-owner-monthly-self-service.md).
-Production activation and the first real payment remain pending.
+The first real payment/receipt and wider public activation remain pending. The optional
+BILLING_RECURRING_WORKSPACE_IDS gate limits offer visibility, creation and new
+authorization to named Workspaces; recovery/cancellation stay available. JSK can
+review its offer before trial expiry but cannot start paid billing until afterward.
+See the [named-pilot decision](../adr/2026-10-08-named-monthly-pilot.md).
 
 The first current recurring capture may convert an expired trial to its frozen
 paid plan when the trial ended before agreement creation and period start, the
@@ -105,6 +121,16 @@ trials remain unchanged. See [the trial decision](../adr/2026-09-29-selected-pub
 and [trial operations](../plans/public-workspace-trial.md). Production free trials
 are enabled. The planned INR 1,499 monthly continuation needs separate consent
 and paid-billing launch acceptance.
+
+## Initial business configuration
+
+A missing Subscription remains recovery-only. The canonical owner may complete
+the reviewed business/licence/series/product/policy/price/document configuration
+routes before activation. Setup never starts a trial, resets an allowance or grants
+financial operations. The owner explicitly chooses available trial or paid access
+from review. Expiry, read-only grants, lifecycle and staff permissions retain their
+existing boundaries. See the
+[decision](../adr/2026-10-10-initial-setup-before-activation.md).
 
 ## Direction
 

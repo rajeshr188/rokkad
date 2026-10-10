@@ -1,4 +1,6 @@
 from django.core.exceptions import ValidationError
+from apps.onboarding.navigation import setup_saved_redirect, setup_link
+
 from django.contrib import messages
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -7,6 +9,7 @@ from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.vary import vary_on_headers
 
@@ -95,7 +98,7 @@ def rate_create(request):
             except ValidationError as exc:
                 form.add_error(None, " ".join(exc.messages))
             else:
-                return redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
+                return setup_saved_redirect(request, step="terms") or redirect("workspace_rates:rate_detail", workspace_slug=request.workspace.slug, pk=rate.pk)
     else:
         form = RateForm()
     return render(
@@ -163,7 +166,7 @@ def ratesource_create(request):
         form = RateSourceForm(request.POST)
         if form.is_valid():
             ratesource = form.save()
-            return redirect("workspace_rates:ratesource_detail", workspace_slug=request.workspace.slug, pk=ratesource.pk)
+            return redirect(setup_link(request, reverse("workspace_rates:ratesource_detail", kwargs={"workspace_slug": request.workspace.slug, "pk": ratesource.pk})))
     else:
         form = RateSourceForm()
     return render(request, "rates/ratesource_form.html", {"form": form})
@@ -177,7 +180,7 @@ def ratesource_update(request, pk):
         form = RateSourceForm(request.POST, instance=ratesource)
         if form.is_valid():
             ratesource = form.save()
-            return redirect("workspace_rates:ratesource_detail", workspace_slug=request.workspace.slug, pk=ratesource.pk)
+            return redirect(setup_link(request, reverse("workspace_rates:ratesource_detail", kwargs={"workspace_slug": request.workspace.slug, "pk": ratesource.pk})))
     else:
         form = RateSourceForm(instance=ratesource)
     return render(request, "rates/ratesource_form.html", {"form": form})

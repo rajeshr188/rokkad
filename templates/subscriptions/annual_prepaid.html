@@ -1,0 +1,92 @@
+{% extends 'base_workspace_settings.html' %}
+{% block title %}Annual prepaid payment - Rokkad{% endblock %}
+{% block mgmt_content %}
+{% include 'subscriptions/_navigation.html' %}
+<h1>Annual prepaid payment</h1>
+{% if annual_offer %}
+<div class="card mb-4"><div class="card-body">
+<h2>₹14,990 once for 12 months</h2>
+<p><strong>No automatic renewal. No recurring-payment mandate.</strong></p>
+<p>One Workspace, owner plus five staff. Pending invitations reserve a seat.</p>
+<p>Save ₹2,998 compared with twelve monthly payments of ₹1,499 (about 16.7%, or two months free).</p>
+<p>GST not charged. Your paid year starts when payment is verified. If renewing the same prepaid plan early,
+remaining paid time is preserved and another year is added.</p>
+<p>At expiry, renew with a new payment if you wish. Otherwise seven days of normal-access grace are followed by read-only access.</p>
+{% include 'subscriptions/_seller.html' with seller=annual_offer.seller %}
+<p>Read the <a href="{% url 'cancellation_and_refund' %}">cancellation and refund policy</a>.</p>
+{% if annual_unavailable_reason %}<p class="alert alert-info">{{ annual_unavailable_reason }}</p>{% endif %}
+{% if annual_consent %}
+<form id="annual-payment-form">
+{% csrf_token %}
+<input type="hidden" name="offer_token" value="{{ annual_consent }}">
+<label><input type="checkbox" name="accepted_terms" value="{{ annual_terms }}" required>
+I agree to pay ₹14,990 once for 12 months for this Workspace, with no automatic renewal.</label>
+<button type="submit" class="btn btn-primary d-block mt-3" id="annual-pay">Continue to one-time payment</button>
+</form>
+<noscript><p>Enable JavaScript to open Razorpay checkout.</p></noscript>
+<p id="annual-message" role="status" class="mt-3"></p>
+<button type="button" id="annual-confirm" class="btn btn-outline-primary" hidden>Retry payment confirmation</button>
+{% endif %}
+</div></div>
+{% else %}<p>Annual prepayment is not available for this Workspace yet. Contact support.</p>{% endif %}
+<p><a href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review monthly automatic renewal instead</a></p>
+{% if annual_consent %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+(() => {
+  const form = document.getElementById('annual-payment-form');
+  const button = document.getElementById('annual-pay');
+  const retry = document.getElementById('annual-confirm');
+  const message = document.getElementById('annual-message');
+  let returnedPayment = null;
+  async function post(url, data) {
+    const response = await fetch(url, {method: 'POST', headers: {
+      'Content-Type': 'application/json', 'X-CSRFToken': form.elements.csrfmiddlewaretoken.value
+    }, body: JSON.stringify(data)});
+    const body = await response.json();
+    if (!response.ok || body.error) throw new Error(body.error || 'Payment needs verification. Check Billing before trying again.');
+    return body;
+  }
+  async function confirm() {
+    retry.disabled = true;
+    message.textContent = 'Checking your existing payment. This does not charge again.';
+    try {
+      const result = await post('{% url "workspace_subscriptions:payment-create" workspace_slug=request.workspace.slug %}', returnedPayment);
+      window.location.assign(result.redirect_url);
+    } catch (error) {
+      message.textContent = error.message + ' Check Billing before starting another payment.';
+      retry.hidden = false;
+    } finally { retry.disabled = false; }
+  }
+  retry.addEventListener('click', confirm);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (button.disabled || returnedPayment || !form.reportValidity()) return;
+    button.disabled = true;
+    message.textContent = 'Preparing your one-time payment…';
+    try {
+      const options = await post('{% url "public-prepaid-start" %}', {
+        offer_token: form.elements.offer_token.value, accepted_terms: form.elements.accepted_terms.value
+      });
+      if (options.paid) { window.location.assign(options.redirect_url); return; }
+      if (typeof Razorpay === 'undefined') throw new Error('Razorpay could not load. Reload this page to recover the same order.');
+      const checkout = new Razorpay({...options, retry: {enabled: false},
+        handler: (payment) => { returnedPayment = payment; confirm(); },
+        modal: {ondismiss: () => {
+          if (!returnedPayment) { button.disabled = false; message.textContent = 'Checkout closed. No new order will be created when you continue.'; }
+        }}
+      });
+      checkout.on('payment.failed', () => {
+        message.textContent = 'The payment attempt failed. Check Billing or contact support before trying another payment.';
+        button.disabled = true;
+      });
+      checkout.open();
+    } catch (error) {
+      message.textContent = error.message;
+      button.disabled = false;
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

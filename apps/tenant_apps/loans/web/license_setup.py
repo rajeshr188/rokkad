@@ -2,6 +2,8 @@
 
 import uuid
 
+from apps.onboarding.navigation import setup_saved_redirect
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
@@ -145,7 +147,7 @@ def license_create(request):
             form.add_error("supporting_document", str(exc))
         else:
             messages.success(request, "Loan license and initial evidence created.")
-            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
+            return setup_saved_redirect(request, step="license") or redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(request, "loans/setup/license_form.html", {"form": form})
 
 
@@ -170,7 +172,7 @@ def license_update(request, pk):
             form.add_error("supporting_document", str(exc))
         else:
             messages.success(request, "License amendment evidence recorded.")
-            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
+            return setup_saved_redirect(request, step="license") or redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/license_form.html",
@@ -199,7 +201,7 @@ def license_renew(request, pk):
             form.add_error("supporting_document", str(exc))
         else:
             messages.success(request, "License renewal evidence recorded and activated.")
-            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
+            return setup_saved_redirect(request, step="license") or redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/license_renewal_form.html",
@@ -266,7 +268,7 @@ def series_create(request, license_pk):
             form.add_error(None, exc.messages if isinstance(exc, ValidationError) else str(exc))
         else:
             messages.success(request, "Loan series and numbering sequences created.")
-            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
+            return setup_saved_redirect(request, step="lending") or redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=license.pk)
     return render(
         request,
         "loans/setup/series_form.html",
@@ -287,7 +289,7 @@ def series_update(request, pk):
             form.add_error(None, exc.messages if isinstance(exc, ValidationError) else str(exc))
         else:
             messages.success(request, "Loan series setup updated.")
-            return redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=series.license_id)
+            return setup_saved_redirect(request, step="lending") or redirect("workspace_loans:license_detail", workspace_slug=request.loans_workspace.slug, pk=series.license_id)
     return render(
         request,
         "loans/setup/series_form.html",

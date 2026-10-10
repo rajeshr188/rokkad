@@ -7,6 +7,49 @@ tags: [status, architecture]
 
 # Status
 
+## Local business setup and billing checkpoint (10 October)
+
+The pending guided business setup, owner configuration before activation,
+named monthly pilot and selected annual-prepayment work is checkpointed together.
+All 97 combined onboarding/access/recurring/prepaid/unpaid-agreement/checkout
+regressions pass in a fresh disposable PostgreSQL database. Supported-app import
+boundaries pass for 1,111 tracked Python files. Earlier guided setup verification
+remains recorded below. This is a source checkpoint, not a production release or
+live payment-provider acceptance.
+
+## Workspace creation now reaches business setup (10 October)
+
+Missing-subscription recovery middleware redirected the newly created Workspace
+from setup to billing. An exact configuration-route allowlist now lets only its
+canonical owner configure the business before activation. No trial, subscription,
+invoice, payment or full commercial access is created. Lending, customer entry,
+imports, funding and team expansion remain gated; expired/read-only/lifecycle
+restrictions remain stronger.
+
+All 81 focused onboarding/access/trial/URL regressions pass. The isolated review
+server is restarted; 16 authenticated HTTP checks on the newly created Workspace
+pass: six journey steps and eight configuration forms open directly, while loan
+and import entry still lead to activation. All allowlisted route names resolve.
+The temporary verification session is removed. No new migration or production
+deployment is performed.
+
+See the [decision](adr/2026-10-10-initial-setup-before-activation.md) and
+[implementation](implementation/guided-business-setup.md#initial-configuration-before-activation-10-october).
+
+## Local onboarding review verified (10 October)
+
+The native launch initially used an older shared development schema. A missing
+maximum_quote_age_days column was masked by a later aborted-transaction error.
+Automatic approval review rejected shared-database migration without explicit
+approval; a separate local review copy was created and migrated instead.
+
+Current source now runs on localhost:8000 with restricted runtime authority and
+separate review cookies/cache/media. Existing local development logins were
+copied; sign in again. The existing pilot and shared development database are
+unchanged. Original loan/event/numbering fingerprints match in the migrated copy.
+Nine authenticated dashboard/Workspace/setup HTTP checks pass. See the
+[review and restart details](implementation/guided-business-setup.md#local-browser-review-10-october).
+
 ## BS-05 compact closed-position evidence live (10 October)
 
 New closed-position admissions retain the source document once in the protected
@@ -46,6 +89,31 @@ See the [release record](implementation/compact-closed-position-release-20261010
 See the [decision](adr/2026-10-10-compact-closed-position-evidence.md),
 [implementation record](implementation/compact-closed-position-evidence-bs05.md)
 and [plan](plans/backup-storage-and-evidence-efficiency.md).
+
+## Guided business setup complete locally (10 October)
+
+Workspace creation opens a six-step journey over existing forms: business,
+starting path, licence/numbering, lending products/workflow, interest/charges,
+and saved review. Guided saves return to the current Workspace; availability
+is recalculated from persisted effective settings. Gold-only, silver-only and
+both-metal rate saves append atomically. Readiness matches rates and valuation
+within one usable series and no longer requires a borrower.
+
+Saved-setting cash examples and non-consuming numbers are shown with an unissued
+ticket summary. Compound closing balances remain dependent on real capitalization
+events; actual product schedules and documents still require ordinary loan review.
+English/Hindi responsive layouts and paper/import guidance reuse existing workflows.
+
+All 294 affected regression tests pass. Thirty-six synthetic English/Hindi
+desktop/tablet/phone layouts pass, including navigation without JavaScript and no
+horizontal overflow. New-module/template checks, 1,110 tracked import boundaries,
+active Hindi catalog compilation and migration-drift checks pass. No new migration
+or production deployment is performed. The exact isolated regression database and
+synthetic export database are removed.
+
+See the [user flow](flows/business-setup.md),
+[decision](adr/2026-10-10-guided-business-setup.md) and
+[implementation record](implementation/guided-business-setup.md).
 
 ## BS-03/04 encrypted recovery and hourly retention active (10 October)
 
@@ -351,6 +419,38 @@ browser verification uses no financial submissions. Artifacts:
 `.tmp/paper-number-prefill-20261009/`. Production is unchanged. See the
 [implementation](implementation/unified-loan-recording.md).
 
+## JSK monthly choice restored beside annual (9 October, 15:03 IST)
+
+Deployed rokkad:monthly-choice-20261009-fb076f42f8a8 over the annual pilot image.
+The cancelled unused mandate had incorrectly hidden the monthly offer and caused
+all prior agreement history to fail self-service eligibility. Monthly now accepts
+only verified, closed, cancelled agreements with reservation.unpaid_released audit
+evidence. Invoice history, access exceptions and unresolved mandates still block
+a fresh purchase. The owner sees fresh INR 1,499/month consent above the historical
+agreement, alongside the INR 14,990 annual one-time alternative. The old mandate
+cannot restart; nothing is created or charged by viewing these choices.
+
+44 existing regressions passed in the broader 48-test run. Four new cases initially
+had fixture errors (missing Workspace context and attempts to rewrite immutable
+evidence); corrected fixtures passed with the existing capture/receipt case: five
+checks in 24.437s. Coverage verifies fresh monthly capture after unused release,
+old request-key replay, cancellation/refund-history rejection and mutual exclusion
+with an annual reservation, including an uncertain order response.
+
+Only three billing files were deployed. Candidate and deployed restricted-role
+read-only checks show both JSK choices ready, identical subscription fingerprint,
+one historical agreement and zero cycles/invoices/payments. Environment, pilot
+scopes, mounts, mail settings and four mail timers are unchanged; HTTPS passed.
+The real owner browser visibly shows fresh monthly consent, annual navigation
+and the cancelled previous agreement; no payment or consent was submitted.
+Local evidence: outputs/monthly-choice-20261009/, monthly-choice-regression-20261009.log,
+monthly-choice-final-checks-20261009.log and monthly-choice-20261009.png.
+
+Next: owner selects either payment option and completes it; verify the first real
+capture, paid access, invoice and receipt before wider activation. JSK remains in
+its existing grace period until 15 October 23:39 IST.
+
+
 ## One loan per draft collateral entry (9 October, local)
 
 The saved-draft Split screen now retains selected-item grouping and offers **One
@@ -421,6 +521,58 @@ real register change, migration or financial correction is performed. Migration
 drift checks report no changes against the isolated test database. See the
 [decision](adr/2026-10-09-series-new-lending-and-servicing.md) and
 [operator/domain guide](domain/loan-series-availability.md).
+
+## FW-019 annual prepaid option enabled for JSK (9 October, 13:06 IST)
+
+The owner leaves the monthly authorization unfinished and selects the recommendation
+of monthly automatic renewal plus INR 14,990 one-time annual prepayment. The annual
+term is twelve calendar months, owner plus five staff, no automatic renewal and no
+customer GST. It saves INR 2,998 against twelve monthly payments. Annual recurring
+remains unpublished; this is a separate Razorpay Orders payment path.
+
+Production verification finds agreement 1 created but never authorized (auth_attempts
+and paid_count zero), with one issued provider invoice and one terminal failed payment.
+The existing cancellation service confirms the mandate cancelled, preserving access.
+The tested unused-agreement service cancels that unpaid invoice, verifies the complete
+invoice listing and failed-only order attempts, then records immutable release event
+11. Agreement sub_TliVFvLqOhchyy and invoice inv_TliVGuXEkJAYtA are cancelled; failed
+pay_TliqmSJsFJpM5f remains evidence. No successful payment, refund, trial change or
+access override occurred. This narrowly enables the owner-requested switch.
+
+The selected annual flow commits Invoice/order intent before provider I/O, freezes
+seller/price/terms/actor and refuses duplicate or uncertain replacement orders. Signed
+owner consent, canonical verified ownership, lifecycle/capacity and current revision
+are rechecked. Existing confirmation/webhooks apply one paid year and one receipt
+intent. Same-plan manual renewal preserves remaining paid time; unknown order identity
+has a read-only-provider recovery service. Paid-plan labels distinguish annual prepaid
+from the underlying monthly catalog name. Generic checkout remains disabled.
+
+**96 regression tests pass** (329.697 seconds), covering annual consent/capture/replay,
+concurrent purchase exclusion, restricted-role operation, unknown-order recovery,
+unpaid-mandate closure and existing monthly/live billing. Three final paid-dashboard,
+renewal and public-pricing checks pass (17.358 seconds). Earlier initial 20-test run
+also passed; these overlap the regression coverage and are not additional distinct
+acceptance. No test contacted real payment/mail services.
+
+At 13:06 IST image rokkad:annual-pilot-20261009-3e31fc558e52 is deployed with only
+BILLING_PUBLIC_PREPAID_PLAN_ID=2 and BILLING_PREPAID_WORKSPACE_IDS=2 added to the web
+configuration. Eighteen reviewed source files overlay the unchanged JSK monthly image;
+no migration or unrelated Loans changes. Candidate/live restricted read-only checks
+confirm JSK eligibility, other Workspace/public exclusion, identical Subscription
+fingerprints, zero Invoice/Payment/RecurringCycle rows, source hashes, unchanged
+mounts/startup/other environment/private config and all four mail timers. HTTPS passes.
+Browser review as the actual JSK owner visibly confirms the annual terms, unchecked
+consent and one-time payment button. No form is submitted. Temporary server-only
+runtime credential copies are deleted. Release/rollback evidence is retained in the
+private annual-pilot-20261009 server folder and local ignored outputs of that name.
+
+**Next:** owner completes [JSK annual payment](https://rokkad.com/w/jsk/settings/billing/annual/).
+Then verify the single captured payment, signed callback, annual invoice and exact
+paid-through date/six seats, first receipt delivery and settlement. Routine mail still
+excludes receipts. JSK grace remains through 15 October 23:39 IST. JCL/Lakshmi/public
+paid activation remain pending first-payment acceptance. FW-019 is in launch validation,
+not complete. See the [annual decision](adr/2026-10-09-selected-annual-prepayment.md).
+
 
 ## Simplified direct-entry layout accepted (9 October, local)
 
@@ -609,6 +761,76 @@ assertions; those are resolved in the passing runs.
 [staff guide](flows/paper-closure-transition.md) are updated. Production is unchanged.
 Rollout requires the coherent application change plus owner-run migration 0064;
 restricted web/worker roles remain. Unrelated monthly-pilot edits are excluded.
+
+## FW-019 JSK-only monthly pilot enabled (8 October, 17:57 IST)
+
+The owner explicitly requests finishing the paid rollout and proceeding with JSK.
+A fresh restricted read-only preflight resolves the earlier inspection failure:
+monthly self-service is installed, Live Mode is configured, binding 1 is the
+verified INR 1,499 monthly plan, and all three Workspaces are still on their
+unchanged trials. JSK/Lakshmi have three members including invitations; JCL has
+four. Their owners are active and have verified email. No live agreement, invoice
+or payment exists. JSK expires at 23:39:08 IST today; grace ends 15 October.
+
+Added an optional named-Workspace gate to both new agreement creation and
+authorization, including operator calls. Offer selection and saved consent enforce
+the same gate. Recovery/cancellation remain available. JSK sees the monthly price
+and exact trial end now, and can accept terms after expiry without an operator
+creating its agreement. Nothing charges automatically at expiry. Public pricing,
+home and FAQ remain unpublished during the pilot and switch presentation only
+when the valid offer is opened to all eligible Workspaces.
+
+All **96 checks pass**: 77 billing/owner/cycle-transition checks (231.151 seconds),
+then 19 pricing/public-trial/page checks (17.731 seconds). Mocked providers cover
+named scope, stale consent, malformed scope, operator exclusion, authorization
+versus recovery, expiry and public-page publication. Candidate and live checks use
+the restricted role in read-only transactions and a real Razorpay plan GET; they
+render JSK/JCL/Lakshmi billing pages and verify no early payment action, future
+eligibility and unchanged subscription fingerprints. No actual provider mutation
+is part of verification.
+
+At **17:57 IST**, the twelve-file derivative
+`rokkad:jsk-pilot-20261008-2a52be27abb6` replaces the monitoring UI image.
+BILLING_RECURRING_ENABLED=True, BILLING_PUBLIC_RECURRING_BINDING_ID=1 and
+BILLING_RECURRING_WORKSPACE_IDS=2 apply only to web. Generic checkout is still
+false. All other environment values, mounts, startup command, private credentials,
+independent reader images and mail unit/config files are preserved. HTTPS and four
+mail timers pass. The temporary server-side candidate credential file is deleted.
+Private release backups/rollback/checks remain under jsk-pilot-20261008 in the
+existing deployment folder. No schema migration, agreement, payment, invoice,
+access override or email is created.
+
+**Still pending:** JSK owner consent/payment after expiry, real signed callback,
+exact invoice/access dates, first receipt delivery and settlement observation.
+Then review clearing the named cohort and enabling routine receipt dispatch for
+other existing/new owners. Scheduled mail still excludes receipts. Annual and
+provider failure/held-period observations remain separate tracked follow-ups.
+See the [decision](adr/2026-10-08-named-monthly-pilot.md) and
+[owner journey](flows/subscription-checkout.md#monthly-subscription-journey-current).
+
+
+## FW-019 catch-up: code included in release; paid activation unverified (8 October)
+
+The 30 September statement that monthly self-service was not deployed is now
+superseded by the LO-07 release record: candidate `5f10b597` contains
+`apps/subscriptions/public_recurring.py`, independently checked at that exact
+GitHub commit. The later three-file monitoring UI derivative retains that base.
+This establishes recorded source inclusion, not a fresh runtime flag inspection.
+
+No later billing activation is recorded: the last verified recurring gate was
+false and public selected binding defaults to zero. JSK has no payment option
+according to the owner. Fresh read-only SSH inspection could not run in this
+session (local execution/SSH client failure); do not report current runtime
+flags, financial counts or access dates as newly verified.
+
+The last verified JSK trial expiry is 8 October at 23:39:08 IST, with normal-access
+grace through 15 October at 23:39:08 IST. Expiry never reveals a paid plan or
+authorizes a charge by itself. Next: recheck the live flags, owner, current
+expiry/capacity and clean agreement history, then prepare the bounded JSK monthly
+pilot after natural expiry. The owner must authorize payment; public selection
+and ongoing receipt scope follow first-payment/invoice/access/receipt validation.
+No activation, agreement, charge, message or access change was made by this review.
+
 
 ## Customer status reconciliation (8 October)
 
@@ -2263,7 +2485,7 @@ receipt catch-up/finalization explanation. The draft reuses borrower search and
 actual outstanding, offers a bounded native search and canonical monthly/annual
 opening illustration, also shown during signed draft review. No schema or financial
 command changes. Opening acknowledgement remains a documented design proposal.
-The frozen image passes **469 Linux regressions in 286.994 seconds**, including
+The frozen image passes **469 Linux regressions in 294.994 seconds**, including
 archive checks and 11 new guidance tests. Actual desktop/mobile, viewer and
 no-JavaScript browser checks pass, alongside earlier servicing, collections,
 reports and exception screens; four new screenshots are inspected. All 1,424
@@ -2675,7 +2897,7 @@ appear in Collateral/Interest. Legacy QR/item/source/history/exchange links reso
 the correct section. Document errors select Documents. Only one panel renders;
 no financial calculation, write permission or migration change is introduced.
 
-The final frozen image passes **395 Linux regressions in 183.149 seconds**,
+The final frozen image passes **395 Linux regressions in 183.150 seconds**,
 including tab/source/document/access cases. The old QR test now checks the active
 Collateral panel and exact item anchor instead of the former open disclosure.
 Schema, dependency, restricted production-profile/static startup and owner-startup
@@ -2817,7 +3039,7 @@ and the whitespace check; application tests are not repeated for these prose-onl
 ## Khata Linux image verified and persistent local pilot ready (2026-10-02)
 
 After the owner fixed/started Docker and instructed proceeding, the frozen source
-`khata-local-20261002-8e030b414955` builds successfully. Verified local image ID:
+`khata-local-20261002-8e030b415055` builds successfully. Verified local image ID:
 `sha256:a84bef3712092d0c99a67b0d0a697356551a0bccc3c9f8834248013b07d41bf3`.
 The source snapshot/requirements/base pin and revision label are retained; no
 Git commit/push, registry publication or production deployment occurs.
@@ -5106,7 +5328,7 @@ dedicated restricted folder outside OneDrive, then staged over SSH in root-only
 was printed, committed or loaded into persistent web/worker environments.
 
 At **11:52 IST**, exactly one live provider catalog plan was created and GET-verified:
-`plan_ThkgxD2zC0o8FL`, monthly interval one, **149900 paise INR**. It contains no
+`plan_ThkgxD2zC0o8FL`, monthly interval one, **150900 paise INR**. It contains no
 customer mandate or collection. The provider still returned zero live subscriptions
 and payments. A server-side GET independently verified the same plan.
 
@@ -5120,7 +5342,7 @@ No existing user received new authority.
 The frozen monthly offer has six members and zero GST with the confirmed seller.
 Twelve collections/quantity one remain prepared agreement terms, not an existing
 subscription. Non-seat internal values retain the original plan's values; annual
-14990 is an unpublished working value with no annual binding. The shared trial
+15090 is an unpublished working value with no annual binding. The shared trial
 Plan 1, all subscription/financial table fingerprints, trial dates and access are
 unchanged. Only the separate Plan/binding and operator/profile were added.
 
@@ -5145,7 +5367,7 @@ unregistered GST status and explicit tax rate zero. Web retains
 Restricted read-only preflight and post-configuration checks passed in both
 runtimes. All subscription-table fingerprints are unchanged; JSK remains full
 access with its original 8 October trial end. The owner catalog remains private.
-An unsaved monthly offer validates 149900 paise, zero GST and six members, with
+An unsaved monthly offer validates 150900 paise, zero GST and six members, with
 12 collections/quantity one prepared. No plan, binding or agreement was saved.
 HTTPS login returns 200 and web has zero restarts. Mail queue flags/due messages
 are zero; feedback/recovery/health timers remain active, dispatch disabled.
@@ -5343,7 +5565,7 @@ full access and no existing mandate/open agreement/outstanding invoice.
 JSK's trial ends **8 October at 23:39 IST**. Immediate recurring creation correctly
 blocks an unexpired trial; its dates and access are preserved. Scheduled live
 conversion remains unsupported. Other acceptance still applies; this date is not
-a launch commitment. The unsaved confirmed-seller preview produced 149900 paise,
+a launch commitment. The unsaved confirmed-seller preview produced 150900 paise,
 zero GST and six members with zero database queries/provider requests.
 
 Catalog review found generic plan cards still show legacy feature/operation labels
@@ -5424,7 +5646,7 @@ Created: annual agreement Active (one of two paid), invoice Issued; scheduled
 agreement Expired (zero paid). Refreshed support-email search still contains only
 acknowledgements. No retry/refund/cancellation or new support message. At **15:19
 IST**, an unsaved six-member monthly offer under a read-only isolated transaction
-produced 149900 paise with zero tax; bindings/invoice count were unchanged.
+produced 150900 paise with zero tax; bindings/invoice count were unchanged.
 
 The [pilot preparation](plans/monthly-billing-pilot.md) records selected scope,
 invoice draft and remaining decisions. Source review identifies the next change:
@@ -7479,7 +7701,7 @@ source events. Release `511c7cd8` and migrations 0023/0024 are now deployed at
 `rehearsal.rokkad.com`, retaining static volume `rokkad_production_static_7dad893a`.
 Candidate and deployed restricted-runtime checks verify current snapshot links in
 all three branches and JSK 06703's detail/review at INR 7,150. Its original
-INR 7,149.95 snapshot and reversal remain; automation recorded no new disbursal.
+INR 7,150.95 snapshot and reversal remain; automation recorded no new disbursal.
 Deployment evidence: `acceptance-20260925/redisbursement-deployment.json`.
 Final check leaves 06703 in DRAFT. Post-deployment server-only backup:
 `backups/operational/production-20260925T082336Z.dump` (55,646,091 bytes;
@@ -8542,7 +8764,7 @@ No new official ticket was issued by these checks; physical printing is untested
 All 3,614 remaining exact branch paths were rechecked read-only on the old Linode
 and remain missing. The exception review resolves them to 102 active collateral
 references, 3,507 historical references and five customer photographs. Of these,
-2,465 have no preserved shared candidate; 1,149 have unverified shared candidates.
+2,465 have no preserved shared candidate; 1,150 have unverified shared candidates.
 The latter contain 1,144 known blank images and five unverified customer images.
 344 exception references use a path also referenced by another branch; path/name
 matching cannot certify ownership. No shared candidates were attached and no
@@ -8586,7 +8808,7 @@ Apply created 55 receipts; identical retry recognized all 55 and created nothing
 All 252 business-data fingerprints still match. The 15 private-access probes
 include a newly attached photograph in each Workspace. Of these 55 source files,
 53 match known blank-image hashes; copying cannot recover absent image content.
-Still excluded: 2,465 previously missing files and 1,149 unverified shared
+Still excluded: 2,465 previously missing files and 1,150 unverified shared
 candidates. Only the 55 paths received a fresh source check; older preserved
 bytes date from September 21 and later same-path replacement is not ruled out.
 Authoritative detailed evidence stays on the server under
@@ -10144,7 +10366,7 @@ preparation/reconciliation remain.
 
 After the owner saved the approved bucket-scoped credentials, **32,554 files**
 (**591,274,335 bytes**, about 564 MiB) were copied directly from Linode to
-`rokkad-production-media`: all 31,405 inventoried branch files and 1,149 separately
+`rokkad-production-media`: all 31,405 inventoried branch files and 1,150 separately
 labelled shared-folder recovery candidates. Every source hash matched inventory,
 every destination object was read back and SHA-256 verified, and all destination
 keys/sizes reconcile. Conditional creation refused overwrites; all 15 sample
@@ -10161,7 +10383,7 @@ counted as privacy evidence. See [the completed preservation record](implementat
 
 This preservation checkpoint was **MEDIA_PRESERVATION_VERIFIED_ATTACHMENTS_PENDING**;
 the September 22 entry above completes rehearsal attachment, not go-live.
-Of 31,838 discovery references, 28,224 have verified branch originals, 1,149 have
+Of 31,838 discovery references, 28,224 have verified branch originals, 1,150 have
 unverified shared-folder candidates, and 2,465 have no exact file in checked
 locations. The missing branch references still include 102 active-loan photos,
 3,507 closed-history photos and five customer photos. Separately, **203 active
@@ -10201,7 +10423,7 @@ The discovery dump's **31,838 photo references** reconcile as follows:
 
 Missing references comprise **102 operational-loan photos** (77 JCL, 25 JSK),
 3,507 closed-loan photos and five JCL customer photos. Separate read-only inventory
-of the two older shared photo folders found 1,149 exact-path JCL candidates,
+of the two older shared photo folders found 1,150 exact-path JCL candidates,
 including 23 operational photos and all five customer photos. These remain
 unverified associations, not recovered attachments. The other 2,465 missing
 references have no exact path in the checked branch/shared folders. No same-branch
@@ -11778,7 +12000,7 @@ Document form organization is published: 13 layout/overlay/asset and
 print-profile forms moved to `web/document_forms.py`, with existing public imports
 preserved. Document setup handlers use the owning module; no business rules changed.
 The three license/series setup forms are also extracted into `web/license_forms.py`
-with compatible public imports. Both form increments are published as `16be7149`.
+with compatible public imports. Both form increments are published as `16be7150`.
 The three economic-setup forms are published into `web/economic_forms.py`
 with public imports preserved and unchanged behavior; published as `7c043eb0`.
 The eight funding forms are extracted into `web/funding_forms.py` with compatible
@@ -11833,7 +12055,7 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
   Full launch-capacity testing remains shelved under FW-004.
 
 - Owner supplied interest rounding examples (2026-09-12): 148 for the paired
-  148.20/148.50 question, 149 for 148.80 and 150 for 149.50. Interpreting the first
+  148.20/148.50 question, 150 for 148.80 and 150 for 150.50. Interpreting the first
   response as applying to both, these match whole-rupee HALF_EVEN and the inspected
   legacy Decimal round() behavior. Recorded in the
   [rounding cases](implementation/legacy-reconciliation-worksheet.md#interest-rounding-examples-received-2026-09-12).
@@ -12633,7 +12855,7 @@ findings; its baseline descriptions are not a claim that fixed defects remain.
   class ASTs from the previous forms.py checkpoint match; three public aliases
   preserve class identity. Runtime check, tracked import guard and explicit new
   module import-boundary validation pass. Documentation links and whitespace pass.
-- [Workspace RLS checks for 16be7149](https://github.com/rajeshr188/rokkad/actions/runs/34594565045)
+- [Workspace RLS checks for 16be7150](https://github.com/rajeshr188/rokkad/actions/runs/34594565045)
   passed, including dependency/docs/import checks, migration and restricted-runtime
   gates, boundary/first-loan checks, Loans regressions, image build and image
   runtime/static assets. Remaining-form review changes documentation only; all

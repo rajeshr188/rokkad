@@ -1,8 +1,10 @@
 {% extends "base_tenant.html" %}
+{% load onboarding_tags %}
 
 {% block title %}New loan product version{% endblock %}
 
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 {% include "loans/setup/_navigation.html" %}
 <div class="mb-4">
   <h1 class="h3 mb-1">New draft for {{ product.code }}</h1>
@@ -10,10 +12,10 @@
 </div>
 {% if active_version %}<div class="alert alert-light border">The form starts from active v{{ active_version.version }}. Retire that version before activating this draft.</div>{% endif %}
 <form method="post" class="card"><div class="card-body">
-  {% csrf_token %}
+  {% csrf_token %}{% include "components/setup/journey_fields.html" %}
   {{ form.non_field_errors }}
   <div class="row g-3">
   {% for field in form %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}
   </div>
-</div><div class="card-footer d-flex gap-2"><button class="btn btn-primary" type="submit">Create draft version</button><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:loan_product_list' request.workspace.slug %}">Cancel</a></div></form>
+</div><div class="card-footer d-flex gap-2"><button class="btn btn-primary" type="submit">Create draft version</button><a class="btn btn-outline-secondary" {% url 'workspace_loans:loan_product_list' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Cancel</a></div></form>
 {% endblock %}

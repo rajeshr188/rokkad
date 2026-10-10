@@ -1,8 +1,10 @@
 {% extends "base_tenant.html" %}
+{% load onboarding_tags %}
 
 {% block title %}Loan products{% endblock %}
 
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 {% include "loans/setup/_navigation.html" %}
 <div class="app-heading">
   <div>
@@ -18,7 +20,7 @@
 <div class="card mb-4">
   <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
     <span><strong>{{ product.code }}</strong> — {{ product.name }}</span>
-    <a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace_loans:loan_product_version_create' request.workspace.slug product.pk %}">Create next version</a>
+    <a class="btn btn-sm btn-outline-secondary" {% url 'workspace_loans:loan_product_version_create' request.workspace.slug product.pk as setup_target %}href="{% setup_url setup_target %}">Create next version</a>
   </div>
   <div class="table-responsive">
     <table class="table app-table align-middle mb-0">
@@ -34,8 +36,8 @@
         <td>{{ version.available_from|default:"No start limit" }} – {{ version.available_until|default:"No end limit" }}<details class="small text-muted mt-1"><summary>Calculation reference</summary>{{ version.calculation_contract_version }}</details></td>
         <td>{{ version.pawn_loans.count }}</td>
         <td class="text-end">
-          {% if version.status == 'DRAFT' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_activate' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit" aria-label="Enable {{ product.name }} version {{ version.version }} for new loans">Enable for new loans</button></form>{% endif %}
-          {% if version.status == 'ACTIVE' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_retire' request.workspace.slug version.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Retire</button></form>{% endif %}
+          {% if version.status == 'DRAFT' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_activate' request.workspace.slug version.pk %}">{% csrf_token %}{% include "components/setup/journey_fields.html" %}<button class="btn btn-sm btn-success" type="submit" aria-label="Enable {{ product.name }} version {{ version.version }} for new loans">Enable for new loans</button></form>{% endif %}
+          {% if version.status == 'ACTIVE' %}<form method="post" action="{% url 'workspace_loans:loan_product_version_retire' request.workspace.slug version.pk %}">{% csrf_token %}{% include "components/setup/journey_fields.html" %}<button class="btn btn-sm btn-outline-danger" type="submit">Retire</button></form>{% endif %}
         </td>
       </tr>
       {% endfor %}

@@ -1,56 +1,66 @@
 {% extends 'base_workspace_settings.html' %}
-{% load i18n %}
-
-{% block title %}{{ company.name }} - Setup - Rokkad{% endblock %}
-
-{% block breadcrumbs %}
-<nav aria-label="{% translate 'breadcrumb' %}" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'app_workspaces' %}">{% translate "My Workspaces" %}</a></li>
-<li class="breadcrumb-item"><a href="{% url 'workspace_slug_settings' workspace_slug=company.slug %}">{{ company.name }}</a></li>
-        <li class="breadcrumb-item active">{% translate "Setup" %}</li>
-    </ol>
-</nav>
-{% endblock %}
-
+{% load i18n static %}
+{% block title %}{{ company.name }} · {% translate "Business setup" %}{% endblock %}
+{% block mgmt_extra_css %}<link rel="stylesheet" href="{% static 'css/business-setup.css' %}">{% endblock %}
 {% block page_header %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1">{% translate "Set up your business" %}</h1>
-        <p class="text-muted mb-0">{% translate "Continue where you left off. Saved settings stay in this business; return here any time from Settings." %}</p>
-    </div>
-<a href="{% url 'workspace_slug_dashboard' workspace_slug=company.slug %}" class="btn btn-outline-secondary btn-sm">
-        <i aria-hidden="true" class="bi bi-speedometer2 me-1"></i>{% translate "Dashboard" %}
-    </a>
+  <div><div class="small text-muted mb-1">{{ company.name }}</div><h1 class="h3 fw-bold mb-1">{% translate "Set up your business" %}</h1><p class="text-muted mb-0">{% translate "Prepare your business for its first loan. Continue where you left off; saved settings stay with this workspace." %}</p></div>
+  {% if activation_required %}<a href="{% url 'app_workspaces' %}" class="btn btn-outline-secondary btn-sm">{% translate "My Workspaces" %}</a>{% else %}<a href="{% url 'workspace_slug_dashboard' company.slug %}" class="btn btn-outline-secondary btn-sm">{% translate "Dashboard" %}</a>{% endif %}
 </div>
 {% endblock %}
-
-{% block mgmt_content %}<section hx-history="false">
-<p class="alert alert-info">{% translate "For a new branch, complete the steps below in order. For an imported branch, review the missing setup; do not import or create your customers again." %}</p>
-<section class="card mb-4" aria-labelledby="first-loan-setup-title">
-    <div class="card-body">
-        <h2 id="first-loan-setup-title" class="h5">{% translate "Business and lending setup" %}: {{ business_setup.completed_count }}/{{ business_setup.total_count }} {% translate "Available" %}</h2>
-        <p class="text-muted">{{ business_setup.as_of_date }}. {% translate "Review license evidence, buying rates and product terms before lending. Each loan validates its own date and terms." %}</p>
-        {% if business_setup.next_step %}<a class="btn btn-primary mb-3" href="{{ business_setup.next_step.action_url }}">{% translate "Continue setup" %}: {% translate business_setup.next_step.title %}</a>
-        {% elif can_create_loan %}<a class="btn btn-primary mb-3" href="{% url 'workspace_slug_loan_create' workspace_slug=company.slug %}">{% translate "Create a loan" %}</a>{% endif %}
-        <ol class="list-group list-group-numbered">
-        {% for step in business_setup.steps %}
-            <li class="list-group-item d-flex gap-3"{% if business_setup.next_step.key == step.key %} aria-current="step"{% endif %}><div class="flex-grow-1"><h3 class="h6">{% translate step.title %} <span class="badge {% if step.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if step.complete %}{% translate "Available" %}{% else %}{% translate "Needs setup" %}{% endif %}</span></h3><p class="small text-muted mb-2">{% translate step.description %}</p><a href="{{ step.action_url }}">{% translate step.action_label %}</a></div></li>
-        {% endfor %}
-        </ol>
-        <p class="small mt-3 mb-0">{% translate "Economic setup starts with editable monthly interest of 2% for gold and 4% for silver. The separate fee form starts with a fixed INR 10 document charge deducted at disbursal. Review the scope and effective date before saving; these suggestions do not change existing policies." %}</p>
-        <p class="small mt-2 mb-0">{% translate "Working alone? Team invitations are optional. Your selected loan workflow stays unchanged until you explicitly change it." %}</p>
-        <div class="d-flex flex-wrap gap-3 mt-3"><a href="{% url 'workspace_slug_rates' workspace_slug=company.slug %}">{% translate "Review buying rates" %}</a><a href="{% url 'workspace_loans:document_layout_list' request.workspace.slug %}">{% translate "Documents and printing (customization optional)" %}</a><a href="{% url 'workspace_slug_settings_numbering' workspace_slug=company.slug %}">{% translate "Full loan setup" %}</a></div>
-    </div>
-</section>
-
+{% block mgmt_content %}<section class="business-journey" hx-history="false">
+{% if activation_required %}<div class="alert alert-info" role="status">{% translate "You can finish business setup before choosing access. Start an available trial or activate a plan before recording loans." %}</div>{% endif %}
+<nav aria-label="{% translate 'Setup steps' %}" class="mb-4"><ol class="setup-stepper list-unstyled">
+{% for tab in journey.tabs %}<li><a href="{{ tab.url }}" {% if tab.current %}aria-current="step"{% endif %}><span class="setup-step-number" aria-hidden="true">{{ tab.number }}</span><span>{{ tab.title }}</span></a></li>{% endfor %}
+</ol></nav>
+<div class="row g-4 mb-4"><div class="col-xl-8">
+<section class="card card-body" aria-labelledby="journey-heading">
+<div class="small text-muted mb-1">{% translate "Business setup" %}</div><h2 id="journey-heading" class="h4 mb-3">{{ journey.title }}</h2>
+{% if journey.step == 'business' %}
+<p>{% translate "Start with the name your staff recognise. You can add a logo and change the appearance later." %}</p>
+<dl class="row"><dt class="col-sm-4">{% translate "Business name" %}</dt><dd class="col-sm-8">{{ company.name }}</dd><dt class="col-sm-4">{% translate "Language" %}</dt><dd class="col-sm-8">{% translate "English and Hindi are available from the language menu." %}</dd></dl>
+{% for task in journey.tasks %}{% if task.group == 'business' and can_choose_workflow %}<a class="btn btn-outline-primary align-self-start" href="{{ task.action_url }}">{% translate "Edit business details" %}</a>{% endif %}{% endfor %}
+{% elif journey.step == 'starting' %}
+<p>{% translate "Choose how you want to begin. You can keep using paper books and bring older records in gradually." %}</p>
+<div class="d-grid gap-3">{% for choice in journey.choices %}<a class="card card-body text-decoration-none setup-path-choice" href="{{ choice.url }}"><strong class="mb-1">{{ choice.title }}</strong><span class="text-body-secondary">{{ choice.description }}</span></a>{% endfor %}</div>
+<p class="small text-muted mt-3 mb-0">{% translate "This choice guides your next steps. Each loan still asks whether you are paying now or recording an earlier transaction." %}</p>
+{% elif journey.step == 'license' %}
+<p>{% translate "Use the details on your licence document, then choose how your loan and release numbers should look." %}</p>
+{% for task in journey.tasks %}{% if task.group == 'license' %}<div class="border rounded p-3 mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h6 mb-1">{{ task.title }}</h3><span class="badge {% if task.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if task.complete %}{% translate "Available" %}{% else %}{% translate "Needs setup" %}{% endif %}</span></div><p class="small text-muted">{{ task.description }}</p><a href="{{ task.action_url }}">{{ task.action_label }}</a></div>{% endif %}{% endfor %}
+{% include 'components/setup/number_previews.html' %}
+{% elif journey.step == 'lending' %}
+<p>{% translate "Choose the repayment arrangements your business offers. Review the prepared drafts before enabling them for new loans." %}</p>
+<div class="row g-3 mb-3"><div class="col-sm-6"><strong>{% translate "Pay everything at closing" %}</strong><p class="small text-muted">{% translate "One final principal payment; choose whether interest is collected periodically or at closing." %}</p></div><div class="col-sm-6"><strong>{% translate "Pay gradually" %}</strong><p class="small text-muted">{% translate "Flexible part payments or scheduled instalments, according to the product you enable." %}</p></div></div>
+{% for task in journey.tasks %}{% if task.group == 'lending' %}<a class="btn btn-primary align-self-start mb-4" href="{{ task.action_url }}">{{ task.action_label }}</a>{% endif %}{% endfor %}
+<h3 class="h6">{% translate "Approval and payout" %}</h3><p>{% if company.loan_workflow == 'SIMPLE' %}{% translate "Owner reviews and pays the borrower in one combined step." %}{% else %}{% translate "Approve the loan, then record the payout in a separate step." %}{% endif %}</p>
+{% if can_choose_workflow %}<p><a href="{% url 'workspace_loans:loan_workflow_settings' company.slug %}?setup_step=lending&amp;setup_path={{ journey.path }}">{% translate "Choose approval and payout steps" %}</a></p>{% endif %}
+<p class="small text-muted mb-0">{% translate "Working alone is supported. Inviting staff does not change your chosen workflow." %}</p>
+{% elif journey.step == 'terms' %}
+<p>{% translate "Set your monthly interest, loan tenure, upfront collections and collateral valuation. Review the date from which each setting applies." %}</p>
+{% for task in journey.tasks %}{% if task.group == 'terms' %}<div class="border rounded p-3 mb-3"><div class="d-flex flex-wrap justify-content-between gap-2"><h3 class="h6 mb-1">{{ task.title }}</h3><span class="badge {% if task.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if task.complete %}{% translate "Available" %}{% else %}{% translate "Needs setup" %}{% endif %}</span></div><p class="small text-muted">{{ task.description }}</p><a href="{{ task.action_url }}">{{ task.action_label }}</a></div>{% endif %}{% endfor %}
+<details><summary>{% translate "Fees, monitoring and entry preferences" %}</summary><p class="small mt-2">{% translate "Fees are optional. Monitoring has separate settings for price ages and risk warnings. Entry preferences can suggest a purpose without changing the actual facts of a loan." %}</p><div class="d-flex flex-wrap gap-3"><a href="{% url 'workspace_loans:pawn_economics_setup' company.slug %}?setup_step=terms&amp;setup_path={{ journey.path }}#fee-policy">{% translate "Review fees" %}</a><a href="{% url 'workspace_loans:pawn_economics_setup' company.slug %}?setup_step=terms&amp;setup_path={{ journey.path }}#monitoring-policy">{% translate "Review monitoring" %}</a><a href="{% url 'workspace_loans:origination_settings' company.slug %}?setup_step=terms&amp;setup_path={{ journey.path }}">{% translate "Loan entry preferences" %}</a></div></details>
+{% elif journey.step == 'review' %}
+<p>{% translate "Review what is saved for today. A loan checks its own series, product, date, collateral and agreement before approval." %}</p>
+<ul class="list-group mb-4">{% for task in journey.tasks %}<li class="list-group-item d-flex flex-wrap justify-content-between gap-2"><span>{{ task.title }} <span class="badge {% if task.complete %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if task.complete %}{% translate "Available" %}{% else %}{% translate "Needs setup" %}{% endif %}</span></span><a href="{{ task.action_url }}">{% translate "Review" %}</a></li>{% endfor %}</ul>
+{% include 'components/setup/number_previews.html' %}
+{% include 'components/setup/terms_review.html' %}
+{% include 'components/setup/worked_example.html' %}
+<div class="d-flex flex-wrap gap-2 mt-4">{% if business_setup.ready and can_create_loan %}<a class="btn btn-primary" href="{% url 'workspace_slug_loan_create' company.slug %}">{% if setup_review.has_loans %}{% translate "Create a loan" %}{% else %}{% translate "Create your first loan" %}{% endif %}</a>{% elif activation_required %}<a class="btn btn-primary" href="{% url 'workspace_subscriptions:plan-list' company.slug %}">{% translate "Activate access when you are ready" %}</a>{% else %}<p class="small text-muted mb-0">{% translate "Complete the unavailable lending settings before creating a new loan. You can return to any step above." %}</p>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_list' company.slug %}">{% translate "Documents and printing (customization optional)" %}</a></div>
+<p class="small mt-3 mb-0">{% translate "Add the borrower when you are ready to record the first loan. A customer record is not required to finish business configuration." %}</p>
+{% endif %}
+{% if journey.step != 'starting' %}<div class="d-flex flex-wrap justify-content-between gap-2 border-top pt-3 mt-4">{% if journey.previous %}<a class="btn btn-outline-secondary" href="{{ journey.previous.url }}">{% translate "Back" %}</a>{% endif %}{% if journey.following %}<a class="btn btn-primary ms-auto" href="{{ journey.following.url }}">{% translate "Continue" %}: {{ journey.following.title }}</a>{% endif %}</div>{% endif %}
+</section></div>
+<aside class="col-xl-4" aria-label="{% translate 'Saved setup summary' %}"><section class="card card-body mb-3"><h2 class="h6">{% translate "Saved setup summary" %}</h2><p class="h4">{{ business_setup.completed_count }}/{{ business_setup.total_count }} <span class="small">{% translate "Available" %}</span></p><p class="small text-muted">{{ business_setup.as_of_date }} · {% translate "Calculated from saved settings each time you return." %}</p><ul class="list-unstyled small mb-0">{% for task in journey.tasks %}<li class="mb-2"><span aria-hidden="true">{% if task.complete %}✓{% else %}○{% endif %}</span> {{ task.title }} — {% if task.complete %}{% translate "Available" %}{% else %}{% translate "Needs setup" %}{% endif %}</li>{% endfor %}</ul></section>
+<section class="card card-body"><h2 class="h6">{% translate "Existing paper loans" %}</h2><p class="small">{% translate "Keep actual dates, original numbers and agreed terms. Review which records are included before relying on portfolio totals." %}</p>{% if can_create_loan %}<a class="mb-2" href="{% url 'workspace_slug_loan_create' company.slug %}?entry=paper">{% translate "Record an earlier loan" %}</a>{% endif %}{% if can_import_loans %}<a href="{% url 'workspace_portability:guided_upload' company.slug %}">{% translate "Import an outstanding register" %}</a><p class="small text-muted mt-2 mb-0">{% translate "The supported template covers unchanged-principal bullet loans with upfront first-month interest. Other source formats need separate preparation." %}</p>{% endif %}</section>
+<details class="mt-3"><summary>{% translate "Optional finishing touches" %}</summary><div class="d-grid gap-2 mt-2">{% if not activation_required %}<a href="{% url 'workspace_slug_settings_invite' company.slug %}">{% translate "Invite your team" %}</a>{% endif %}<a href="{% url 'workspace_loans:document_layout_list' company.slug %}">{% translate "Review document layouts" %}</a></div></details>
+</aside></div>
 <details class="mb-4">
 <summary class="fw-semibold mb-3">{% translate "General checklist and dashboard reminders" %}</summary>
 {% if setup_state.is_complete %}
 <div class="alert alert-success mgmt-state-alert d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
     <div>
         <div class="fw-semibold">{% translate "General checklist is complete or marked complete." %}</div>
-        <div class="small">{% translate "Lending checks below remain independent and are recalculated whenever you return." %}</div>
+        <div class="small">{% translate "Lending checks remain independent and are recalculated whenever you return." %}</div>
     </div>
     <form method="post" action="{% url 'workspace_slug_settings_setup_state' workspace_slug=company.slug %}">
         {% csrf_token %}

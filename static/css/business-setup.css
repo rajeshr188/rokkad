@@ -1,0 +1,8 @@
+.setup-stepper { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .5rem; }
+.setup-stepper a { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; padding: .85rem; height: 100%; border: 1px solid var(--bs-border-color); border-radius: .75rem; color: var(--bs-body-color); background: var(--bs-body-bg); text-decoration: none; font-size: .875rem; }
+.setup-stepper a[aria-current="step"] { border-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); font-weight: 600; }
+.setup-step-number { display: grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--bs-secondary-bg); }
+.setup-stepper a[aria-current="step"] .setup-step-number { color: var(--bs-white); background: var(--bs-primary); }
+.setup-path-choice:hover, .setup-path-choice:focus-visible { border-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); }
+.setup-preview-ticket { border: 2px dashed var(--bs-border-color); border-radius: .5rem; padding: 1.25rem; }
+@media (max-width: 767px) { .setup-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-stepper a { flex-direction: row; align-items: center; } .setup-step-number { flex: 0 0 1.7rem; } }

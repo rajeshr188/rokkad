@@ -1,14 +1,16 @@
 {% extends 'base_tenant.html' %}
+{% load onboarding_tags %}
 {% load i18n orgs_tags %}
 {% block title %}{% translate "Rate sources" %}{% endblock %}
 {% block workspace_content %}
+{% setup_navigation_context as setup_journey %}{% include "components/setup/journey_navigation.html" %}
 {% navigation_actions as actions %}
 <section hx-history="false">
 {% include 'rates/_navigation.html' %}
-<header class="app-heading"><div><h1>{% translate "Rate sources" %}</h1><p>{% translate "Sources identify where each metal rate was obtained." %}</p></div>{% if 'data.create' in actions %}<a class="btn btn-primary" href="{% url 'workspace_rates:ratesource_create' request.workspace.slug %}">{% translate "Add Source" %}</a>{% endif %}</header>
+<header class="app-heading"><div><h1>{% translate "Rate sources" %}</h1><p>{% translate "Sources identify where each metal rate was obtained." %}</p></div>{% if 'data.create' in actions %}<a class="btn btn-primary" {% url 'workspace_rates:ratesource_create' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">{% translate "Add Source" %}</a>{% endif %}</header>
 <ul class="list-unstyled">{% for ratesource in ratesources %}<li class="card card-body mb-3">
-  <h2 class="h5"><a href="{% url 'workspace_rates:ratesource_detail' request.workspace.slug ratesource.pk %}">{{ ratesource.name }}</a></h2>
+  <h2 class="h5"><a {% url 'workspace_rates:ratesource_detail' request.workspace.slug ratesource.pk as setup_target %}href="{% setup_url setup_target %}">{{ ratesource.name }}</a></h2>
   <p>{{ ratesource.location }}</p><p>{% translate "Source publishes prices including tax" %}: {% if ratesource.tax_included %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}</p>
-  {% if 'data.edit' in actions %}<div><a class="btn btn-outline-secondary" href="{% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk %}">{% translate "Edit source" %}</a></div>{% endif %}
+  {% if 'data.edit' in actions %}<div><a class="btn btn-outline-secondary" {% url 'workspace_rates:ratesource_update' request.workspace.slug ratesource.pk as setup_target %}href="{% setup_url setup_target %}">{% translate "Edit source" %}</a></div>{% endif %}
 </li>{% empty %}<li class="card card-body">{% translate "No rate sources yet." %}</li>{% endfor %}</ul>
 </section>{% endblock %}

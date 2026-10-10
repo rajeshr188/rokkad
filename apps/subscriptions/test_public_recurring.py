@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from allauth.account.models import EmailAddress
 from django.core import signing
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.management import call_command
 from django.db import connection, transaction
 from django.test import Client, TransactionTestCase, override_settings
@@ -25,7 +26,7 @@ from .test_live_recurring import LIVE_SETTINGS
 
 @override_settings(**{**LIVE_SETTINGS, "BILLING_RECURRING_ENABLED": True, "BILLING_TAX_RATE": "0",
     "BILLING_SELLER_NAME": "Fictional Seller", "BILLING_SELLER_ADDRESS": "1 Example Street",
-    "BILLING_SELLER_TAX_STATUS": "unregistered"})
+    "BILLING_SELLER_TAX_STATUS": "unregistered", "BILLING_RECURRING_WORKSPACE_IDS": []})
 class PublicRecurringTests(TransactionTestCase):
     created_entity = live_tests.LiveCreationTests.created_entity
 
@@ -194,11 +195,87 @@ class PublicRecurringTests(TransactionTestCase):
         self.assertNotContains(page, "/checkout/")
         self.provider_create.assert_not_called()
 
-    @override_settings(**MAIL_SETTINGS)
-    def test_new_owner_creation_capture_receipt_and_duplicate_dispatch(self):
-        from .recurring_cycles import record_paid_cycle
+    def test_named_pilot_controls_offer_and_saved_consent_without_exposing_other_plans(self):
+        token = self.token()
+        plans_url = reverse("workspace_subscriptions:plan-list", kwargs={"workspace_slug": self.workspace.slug})
+        with override_settings(BILLING_RECURRING_WORKSPACE_IDS=[str(self.workspace.pk)]):
+            self.assertContains(self.client.get(plans_url), "Review monthly subscription")
+            self.assertContains(self.client.get(self.url), 'name="offer_token"')
+        with override_settings(BILLING_RECURRING_WORKSPACE_IDS=[str(self.workspace.pk + 1)]):
+            self.assertNotContains(self.client.get(plans_url), "Review monthly subscription")
+            self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+            self.assertEqual(self.submit(token).status_code, 403)
+        self.provider_create.assert_not_called()
+        self.assertFalse(RecurringAgreement.objects.exists())
+
+    def test_public_pricing_opens_only_after_pilot_scope_is_removed(self):
+        self.client.logout()
+        for scope, available in (([str(self.workspace.pk)], False), ([], True), (["invalid"], False)):
+            with override_settings(BILLING_RECURRING_WORKSPACE_IDS=scope):
+                for url in ("/", reverse("pricing"), reverse("faq")):
+                    page = self.client.get(url)
+                    if available:
+                        self.assertContains(page, "Paid subscriptions are available")
+                        self.assertNotContains(page, "Paid subscriptions are not available yet")
+                    else:
+                        self.assertContains(page, "Paid subscriptions are not available yet")
+        with override_settings(BILLING_RECURRING_ENABLED=False):
+            self.assertContains(self.client.get(reverse("pricing")), "Paid subscriptions are not available yet")
+        self.provider_create.assert_not_called()
+
+    def test_pilot_gate_also_blocks_operator_creation_and_malformed_scope(self):
+        from .recurring import create_agreement
+        for scope in (["not-an-id"], ["0"], [True], "2", [str(self.workspace.pk + 1)]):
+            with self.subTest(scope=scope), override_settings(BILLING_RECURRING_WORKSPACE_IDS=scope):
+                with self.assertRaises(PermissionDenied):
+                    create_agreement(workspace_id=self.workspace.pk, actor=self.admin,
+                        binding_id=self.binding.pk, request_key=uuid4(), total_count=12)
+        self.provider_create.assert_not_called()
+        self.assertFalse(RecurringAgreement.objects.exists())
+
+    def test_scope_removal_blocks_new_authorization_but_preserves_status_recovery(self):
+        from .recurring_owner import authorization_options, refresh_agreement
         self.submit()
         agreement = RecurringAgreement.objects.get()
+        provider = {**agreement.request_snapshot, "id": agreement.provider_subscription_id,
+            "entity": "subscription", "status": "created", "has_scheduled_changes": False}
+        args = dict(workspace=self.workspace, actor=self.owner, agreement_id=agreement.pk)
+        with override_settings(BILLING_RECURRING_WORKSPACE_IDS=[str(self.workspace.pk + 1)]), \
+                patch.object(RazorpayService, "get_subscription", return_value=provider) as fetch:
+            with self.assertRaises(PermissionDenied):
+                authorization_options(**args)
+            fetch.assert_not_called()
+            self.assertNotContains(self.client.get(self.url), 'id="recurring-authorize"')
+            self.assertEqual(refresh_agreement(**args).pk, agreement.pk)
+            fetch.assert_called_once()
+
+    def test_trial_offer_visible_now_but_payment_only_after_natural_expiry(self):
+        expiry = timezone.now() + timedelta(hours=1)
+        with workspace_context(self.workspace.pk):
+            subscription = Subscription.objects.create(company=self.workspace, plan=self.plan, status="trial")
+            Subscription.objects.filter(pk=subscription.pk).update(trial_end_date=expiry)
+        with override_settings(BILLING_RECURRING_WORKSPACE_IDS=[str(self.workspace.pk)]):
+            page = self.client.get(self.url)
+            self.assertContains(page, "Your trial ends")
+            self.assertEqual(page.context["monthly_trial_end"], expiry)
+            self.assertNotContains(page, 'name="offer_token"')
+            with patch("apps.subscriptions.public_recurring.timezone.now", return_value=expiry + timedelta(seconds=1)):
+                token = self.token()
+                self.assertEqual(self.submit(token).status_code, 302)
+        self.provider_create.assert_called_once()
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.trial_end_date, expiry)
+        self.assertEqual(subscription.status, "trial")
+        self.assertFalse(Invoice.objects.exists())
+
+    @override_settings(**MAIL_SETTINGS)
+    def test_new_owner_creation_capture_receipt_and_duplicate_dispatch(self):
+        self.submit()
+        agreement = RecurringAgreement.objects.get()
+        self.assert_captured_cycle_and_receipt(agreement)
+
+    def assert_captured_cycle_and_receipt(self, agreement):
+        from .recurring_cycles import record_paid_cycle
         start = timezone.now().replace(microsecond=0)
         end = start + timedelta(days=30)
         provider = {**agreement.request_snapshot, "id": agreement.provider_subscription_id,
@@ -251,3 +328,111 @@ class PublicRecurringTests(TransactionTestCase):
                 cursor.execute("RESET ROLE")
                 cursor.execute(f"DROP OWNED BY {role}")
                 cursor.execute(f"DROP ROLE {role}")
+
+    def release_unused_attempt(self):
+        from .unpaid_agreement import release_unused_agreement
+        token = self.token()
+        self.submit(token)
+        agreement = RecurringAgreement.objects.get()
+        provider = {**agreement.request_snapshot, "id": agreement.provider_subscription_id,
+            "entity": "subscription", "status": "cancelled", "has_scheduled_changes": False,
+            "paid_count": 0, "auth_attempts": 0, "charge_at": None, "start_at": None,
+            "current_start": None, "current_end": None}
+        with patch.object(RazorpayService, "get_subscription", return_value=provider), \
+                patch.object(RazorpayService, "get_subscription_invoices", return_value={
+                    "entity": "collection", "count": 0, "items": []}):
+            release_unused_agreement(workspace_id=self.workspace.pk, actor=self.owner,
+                agreement_id=agreement.pk, reason="Owner reviewing monthly and annual options")
+        agreement.refresh_from_db()
+        self.provider_create.reset_mock()
+        self.provider_create.side_effect = lambda payload: {
+            **self.created_entity(payload), "id": "sub_freshMonthly"}
+        return agreement, token
+
+    @override_settings(**MAIL_SETTINGS)
+    def test_released_unused_attempt_allows_both_choices_and_fresh_monthly_capture(self):
+        with workspace_context(self.workspace.pk):
+            subscription = Subscription.objects.create(company=self.workspace, plan=self.plan, status="trial")
+            Subscription.objects.filter(pk=subscription.pk).update(trial_end_date=timezone.now() - timedelta(days=1))
+        old, old_token = self.release_unused_attempt()
+        before = RecurringAgreement.objects.values().get(pk=old.pk)
+        with override_settings(BILLING_PUBLIC_PREPAID_PLAN_ID=self.plan.pk, BILLING_PREPAID_WORKSPACE_IDS=[]):
+            page = self.client.get(self.url)
+            self.assertContains(page, "Continue with monthly subscription")
+            self.assertContains(page, "Review annual prepayment")
+            self.assertContains(page, "Previous agreement:")
+            self.assertNotContains(page, 'id="recurring-authorize"')
+            annual_url = reverse("workspace_subscriptions:annual-prepaid",
+                kwargs={"workspace_slug": self.workspace.slug})
+            self.assertTrue(self.client.get(annual_url).context["annual_consent"])
+            token = page.context["monthly_consent"]
+        self.provider_create.assert_not_called()
+        # Replaying the original review returns its immutable, closed agreement.
+        self.submit(old_token)
+        self.provider_create.assert_not_called()
+        self.submit(token)
+        self.submit(token)
+        self.provider_create.assert_called_once()
+        fresh = RecurringAgreement.objects.exclude(pk=old.pk).get()
+        self.assertIsNone(fresh.closed_at)
+        self.assertNotEqual(fresh.provider_subscription_id, old.provider_subscription_id)
+        self.assertEqual(RecurringAgreement.objects.values().get(pk=old.pk), before)
+        self.assert_captured_cycle_and_receipt(fresh)
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.status, "active")
+
+    def test_cancellation_and_other_release_history_do_not_allow_new_monthly_consent(self):
+        from .models import RecurringAgreementEvent
+        token = self.token()
+        self.submit(token)
+        old = RecurringAgreement.objects.get()
+        # Ordinary cancellation retains the reservation until reviewed.
+        RecurringAgreement.objects.filter(pk=old.pk).update(provider_status="cancelled")
+        self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+        # A closed or refunded agreement is not proof of a never-used mandate.
+        RecurringAgreement.objects.filter(pk=old.pk).update(closed_at=timezone.now())
+        self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+        RecurringAgreementEvent.objects.create(agreement=old, actor=self.owner,
+            event_type="reservation.released", detail={"reason": "Reviewed refunded fixture"})
+        self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+        self.provider_create.reset_mock()
+        # Another browser's fresh request key still cannot create a new mandate.
+        consent = signing.loads(token, salt=public.SALT)
+        changed = signing.dumps({**consent, "request_key": str(uuid4())}, salt=public.SALT)
+        self.submit(changed)
+        self.provider_create.assert_not_called()
+        self.assertEqual(RecurringAgreement.objects.count(), 1)
+
+    def test_annual_reservation_blocks_saved_monthly_choice_after_unused_release(self):
+        from . import public_prepaid as prepaid
+        self.release_unused_attempt()
+        monthly = self.token()
+        with override_settings(BILLING_PUBLIC_PREPAID_PLAN_ID=self.plan.pk, BILLING_PREPAID_WORKSPACE_IDS=[]):
+            annual_url = reverse("workspace_subscriptions:annual-prepaid",
+                kwargs={"workspace_slug": self.workspace.slug})
+            annual = prepaid.read_consent(self.client.get(annual_url).context["annual_consent"], self.owner)
+            with patch.object(RazorpayService, "create_order", side_effect=BillingProviderError("Mock timeout")) as create:
+                with self.assertRaises(BillingProviderError):
+                    prepaid.prepare_purchase(workspace_id=self.workspace.pk, actor=self.owner, consent=annual)
+                create.assert_called_once()
+        self.submit(monthly)
+        self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+        self.provider_create.assert_not_called()
+        self.assertEqual(RecurringAgreement.objects.count(), 1)
+        self.assertEqual(Invoice.objects.count(), 1)
+        self.assertFalse(Payment.objects.exists())
+
+    def test_new_monthly_reservation_blocks_saved_annual_choice_after_unused_release(self):
+        from . import public_prepaid as prepaid
+        self.release_unused_attempt()
+        with override_settings(BILLING_PUBLIC_PREPAID_PLAN_ID=self.plan.pk, BILLING_PREPAID_WORKSPACE_IDS=[]):
+            annual_url = reverse("workspace_subscriptions:annual-prepaid",
+                kwargs={"workspace_slug": self.workspace.slug})
+            annual = prepaid.read_consent(self.client.get(annual_url).context["annual_consent"], self.owner)
+            self.submit()
+            with patch.object(RazorpayService, "create_order") as create:
+                with self.assertRaises(ValidationError):
+                    prepaid.prepare_purchase(workspace_id=self.workspace.pk, actor=self.owner, consent=annual)
+                create.assert_not_called()
+        self.assertEqual(RecurringAgreement.objects.count(), 2)
+        self.assertFalse(Invoice.objects.exists())

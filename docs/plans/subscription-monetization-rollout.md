@@ -1,12 +1,32 @@
 ---
 status: active
 owner: project
-updated: 2026-09-30
+updated: 2026-10-09
 tags: [plans, billing, subscriptions, razorpay]
 related: [future-work.md, ../domain/subscriptions.md, ../flows/subscription-checkout.md, ../architecture/control-plane-contracts.md]
 ---
 
 # Workspace subscription monetization rollout
+
+**9 October, 13:06 IST:** JSK annual prepayment is live at INR 14,990 once for twelve
+months, six members, no automatic renewal. The owner changed preference from the
+unfinished monthly authorization; its unused mandate/invoice are verified cancelled
+and the reservation released with audit. Monthly recurring remains implemented; annual
+recurring remains separate. First real annual capture/invoice/access/receipt acceptance
+and wider paid activation are pending. No charge was initiated. See the
+[current pilot choice](monthly-billing-pilot.md#current-pilot-choice-annual-prepaid-9-october).
+
+The older dated checkpoints below retain historical launch decisions.
+
+**8 October, 17:57 IST:** JSK-only monthly self-service is live. Its owner can see
+the INR 1,499 offer now and initiate payment after the existing trial ends tonight
+at 23:39:08 IST. The other Workspaces and public paid signup remain excluded by
+the named cohort; first real capture/invoice/access/receipt acceptance is pending.
+All 96 local checks and candidate/live read-only preservation checks pass. Public
+pricing presentation is ready to follow wider activation. No charge or message was
+created by release. This supersedes the all-paid-paused/local-only statements below.
+See [the current pilot](monthly-billing-pilot.md#current-jsk-pilot-enabled-8-october-2026)
+and [owner journey](../flows/subscription-checkout.md#monthly-subscription-journey-current).
 
 FW-019 is **in launch validation, not complete**. The monthly pilot implementation,
 live catalog, credentials, webhook registration and receipt worker are deployed

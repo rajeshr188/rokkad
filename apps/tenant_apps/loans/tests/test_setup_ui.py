@@ -546,7 +546,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         detail = self.tenant_get(reverse("loans:license_detail", args=[license.pk]))
         self.assertContains(detail, "PL-A-00001")
         self.assertContains(detail, "RL-A-00001")
-        self.assertContains(detail, "Ready")
+        self.assertContains(detail, "Running")
         self.assertContains(detail, "Loans Setup")
 
     def test_direct_series_forms_preserve_counters_and_permissions(self):
@@ -898,7 +898,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         detail = self.tenant_get(reverse("loans:license_detail", args=[license.pk]))
 
         self.assertContains(detail, "sequence is exhausted")
-        self.assertContains(detail, "Not ready")
+        self.assertContains(detail, "Numbers exhausted")
 
     def test_non_member_is_denied_setup_access(self):
         user = get_user_model().objects.create_user(

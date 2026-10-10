@@ -1,4 +1,6 @@
 from django import forms
+from apps.onboarding.navigation import setup_saved_redirect
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -31,7 +33,7 @@ def loan_workflow_settings(request):
     if request.method == "POST" and form.is_valid():
         set_loan_workflow(actor=request.user, mode=form.cleaned_data["mode"])
         messages.success(request, "Loan workflow updated. Existing loans and their history are unchanged.")
-        return redirect('workspace_loans:loan_workflow_settings', workspace_slug=request.workspace.slug)
+        return setup_saved_redirect(request, step="lending") or redirect('workspace_loans:loan_workflow_settings', workspace_slug=request.workspace.slug)
     return render(request, "loans/setup/workflow.html", {"form": form})
 
 

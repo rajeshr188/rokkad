@@ -1,12 +1,109 @@
 ---
 status: active
 owner: project
-updated: 2026-09-28
+updated: 2026-10-10
 tags: [flow, billing, payments, operations]
 related: [../adr/2026-09-09-workspace-checkout-evidence.md, ../plans/project-hardening.md]
 ---
 
 # Workspace subscription checkout
+
+## Choose monthly or annual after an unused cancellation
+
+Available plans offers monthly automatic renewal (INR 1,499/month) and annual
+one-time prepayment (INR 14,990). After an explicit verified unused-mandate release,
+the monthly page shows fresh consent above the cancelled agreement history.
+Selecting monthly creates a new agreement only after owner consent; it cannot
+restart the old agreement. Selecting annual creates a one-time order. Once either
+purchase is in progress, resolve it before switching to prevent overlapping payments.
+
+## Annual prepaid journey (enabled for JSK, 9 October)
+
+Open [JSK Annual prepaid payment](https://rokkad.com/w/jsk/settings/billing/annual/)
+as its canonical owner. Billing, Plans and Recurring payments link to it. Review
+INR 14,990 once for twelve months, six members, zero customer GST, no recurring mandate
+and no automatic renewal. Accept the explicit checkbox and choose Continue to one-time
+payment. Complete your chosen available payment method on Razorpay.
+
+Closing checkout grants no paid access. A verified capture records one invoice,
+payment and twelve-month term, preserves historical trial dates, and queues a receipt.
+Browser confirmation and signed provider callbacks share the same idempotent writer.
+If confirmation is uncertain, Retry payment confirmation checks that same payment;
+check Billing/contact support rather than paying again. An unknown order creation
+retains its invoice reservation and needs provider-identity reconciliation; a failed
+payment attempt also requires review before a replacement purchase.
+
+The paid year starts when the payment is verified. Later voluntary annual renewal
+on the same plan adds a year after the existing paid end if it is still future.
+There is no automatic debit at expiry. Normal seven-day grace/read-only policy applies.
+The current pilot still needs its first real capture, invoice/access and receipt checks;
+routine receipt sending has not yet been enabled.
+
+JSK's unfinished monthly agreement and unpaid invoice were verified cancelled, and
+the unused reservation explicitly released. No successful charge or refund occurred.
+The historical agreement stays visible; it cannot be reactivated. Other paid recurring
+or refunded agreements need their own review; this is not a general mid-term switch.
+
+Operator recovery: release_unused_recurring takes an explicit Workspace, actor,
+agreement and reason. Only a cancelled never-authorized unpaid mandate qualifies;
+it cancels issued unpaid invoices once and verifies all attempts terminal failed before
+release. For an uncertain annual order, public_prepaid.reconcile_order binds a located
+provider order only when its saved receipt, amount, currency and Workspace match. It
+never creates or pays an order; normal payment reconciliation follows separately.
+
+
+## Monthly subscription journey (current)
+
+**8 October rollout:** only JSK can start the paid monthly flow. Its owner can
+review the offer now, then continue after the unchanged trial ends at 23:39:08 IST.
+The named pilot is live; first real payment/receipt acceptance and wider publication
+are still pending. Other Workspaces keep their existing access and free-trial
+options. See the [pilot plan](../plans/monthly-billing-pilot.md).
+
+1. **See the offer.** The owner opens Workspace Settings → Billing → Plans →
+   Review monthly subscription (or Recurring payments). The offer is INR 1,499
+   monthly for one Workspace, owner plus five staff, up to twelve collections,
+   with no customer GST under the current seller setup. During an active trial,
+   the offer shows its end time and cannot create a payment agreement.
+2. **Accept terms after expiry.** Continue with monthly subscription saves the
+   owner’s current terms and one durable Razorpay agreement attempt. It does not
+   charge or grant paid access. Duplicate clicks cannot create a second mandate.
+3. **Authorize with Razorpay.** The same owner reviews the saved agreement and
+   chooses Authorize recurring payments. Payment details and any authentication
+   remain on Razorpay. Merely closing Checkout does not establish payment.
+4. **Verify the payment.** Signed provider events and fetched paid-invoice/captured-
+   payment evidence establish the exact amount and period. Rokkad records one
+   invoice/payment/cycle, activates the paid plan and queues one receipt. Missing
+   or uncertain confirmation requires recovery of that same attempt, not repayment.
+5. **Continue or cancel.** Subsequent verified recurring collections extend access
+   by their actual paid periods. Stop future renewals cancels the provider mandate
+   while preserving paid time; it is not a refund. The agreement stops after its
+   maximum collections; replacement currently needs support review.
+
+After JSK acceptance, clearing the named cohort opens the same selected offer to
+other eligible owners. JCL and Lakshmi each need their own owner consent and
+payment. Expired trials can convert after verified capture; annual and existing
+agreement replacement are not part of this public flow.
+
+For new users, public pricing currently shows the available 30-day free trial and
+the planned INR 1,499 continuation while the pilot is restricted. Wider activation
+automatically changes home/pricing/FAQ to show available monthly billing. Users
+verify email, create a Workspace, configure the business and then review its Plans
+page when ready to activate lending. Configuration does not start a trial or grant
+commercial access. One public trial
+Workspace per owner is optional; a new history-free Workspace can choose paid
+billing directly once public activation is approved. An active trial must finish
+before paid consent. Team invitations reserve seats within the six-member limit.
+No card is required for the trial and it never converts or charges automatically.
+
+Receipt delivery is not yet automatic for this pilot: scheduled mail remains
+invitation/account-only. Review and verify the first receipt, then enable the
+reviewed ongoing scope before broader paying-customer launch. Existing billing
+records and saved invoices remain available independently of email delivery.
+
+The one-off checkout and earlier Test Mode preparation below are separate,
+historical implementation details; generic checkout remains disabled.
+
 
 Provider setup/test-mode preparation resumes under selected FW-019 through
 [FW-002](../plans/future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).

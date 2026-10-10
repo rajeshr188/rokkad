@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+from apps.onboarding.navigation import setup_saved_redirect
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -56,6 +58,7 @@ def pawn_economics_setup(request):
         if source_policy:
             configuration_initial.update(model_to_dict(source_policy, fields=tuple(PawnEconomicConfigurationForm.base_fields)))
             configuration_initial["effective_from"] = max(timezone.localdate(), source_policy.effective_from)
+            configured_metals = []
             for metal in ("GOLD", "SILVER"):
                 try:
                     rate = resolve_pawn_metal_interest_rate_policy(workspace_id=request.loans_workspace.pk,
@@ -65,6 +68,9 @@ def pawn_economics_setup(request):
                 except PawnEconomicPolicyError:
                     continue
                 configuration_initial[f"{metal.lower()}_monthly_interest_rate"] = rate.monthly_interest_rate
+                configured_metals.append(metal)
+            if configured_metals:
+                configuration_initial["metals_to_configure"] = "BOTH" if len(configured_metals) == 2 else configured_metals[0]
     configuration_form = PawnEconomicConfigurationForm(
         request.POST if request.method == "POST" and action not in {"fee", "monitoring", "series_rates"} else None,
         workspace=request.loans_workspace,
@@ -87,7 +93,7 @@ def pawn_economics_setup(request):
             series_rate_form.add_error(None, str(exc))
         else:
             messages.success(request, "Series monthly interest rates added. Approved loans retain their agreed rates.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     monitoring_initial = {
         "effective_from": timezone.localdate(),
         "compliance_profile": "Workspace monitoring v1",
@@ -129,7 +135,7 @@ def pawn_economics_setup(request):
                 configuration_form.add_error(None, message)
         else:
             messages.success(request, "New calculation policy version saved. Earlier approved loans retain their agreed terms.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     if action == "fee" and fee_form.is_valid():
         try:
             create_pawn_loan_fee_policy(
@@ -141,7 +147,7 @@ def pawn_economics_setup(request):
             fee_form.add_error(None, str(exc))
         else:
             messages.success(request, "PawnLoan fee policy added.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     if action == "monitoring" and monitoring_form.is_valid():
         try:
             create_loan_monitoring_policy(
@@ -153,7 +159,7 @@ def pawn_economics_setup(request):
             monitoring_form.add_error(None, str(exc))
         else:
             messages.success(request, "Loan monitoring policy added.")
-            return redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
     context = {
         "configuration_form": configuration_form,
         "configuration_source": source_policy,
