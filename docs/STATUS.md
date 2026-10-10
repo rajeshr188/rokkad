@@ -7,7 +7,7 @@ tags: [status, architecture]
 
 # Status
 
-## BS-05 compact closed-position evidence implemented locally (10 October)
+## BS-05 compact closed-position evidence live (10 October)
 
 New closed-position admissions retain the source document once in the protected
 archive and small immutable financial/source facts in origin/opening version 2.
@@ -25,10 +25,23 @@ and ten pure balance tests pass, including compact source tamper/rebinding,
 restricted writes/RLS, old snapshot upgrades/retries and standalone source/media
 fresh-Workspace restore. The disposable regression database is removed. Model/
 migration consistency, all changed module boundaries and documentation checks pass.
-No production
-migration/deployment or existing payload rewrite is performed; the approximately
-585 MiB existing duplication is retained. A later compatible release must renew
-its exact-image recovery acceptance under the active BS-04 backup gate.
+The isolated release restore reproduces 202 tables/879,465 rows, with all 201
+business tables unchanged by migration 0068. The exact encrypted candidate image
+is downloaded/decrypted/loaded and verified before the scoped production switch.
+Compatible readers and migration 0068 are live from commit 74c3634f. Exact-image
+recovery acceptance is renewed; the full new-image R2 publication/download/
+retention cycle passes. HTTPS, all six timers and native/source/health readers
+pass in all three Workspaces. Final free space is 9.155 GiB. Rehearsal database and
+temporary environment/image files are removed.
+
+All 39,196 existing closed positions and 19 held sources remain unchanged; no
+financial post or source rewrite is performed, and approximately 585 MiB of old
+duplication is retained. Unrelated local billing/onboarding work is excluded.
+The initial operator environment-order comparison caused a safe image rollback
+and retry; value comparison confirms identical configuration. The successful
+container replacement took 14.38 seconds with approximately 11.84 seconds of
+sampled HTTP failures; the earlier attempt caused additional brief restarts.
+See the [release record](implementation/compact-closed-position-release-20261010.md).
 
 See the [decision](adr/2026-10-10-compact-closed-position-evidence.md),
 [implementation record](implementation/compact-closed-position-evidence-bs05.md)

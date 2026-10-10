@@ -24,7 +24,7 @@ with existing posted source copies preserved.
 | BS-02 | Scoped unused application-image cleanup and renewed capacity measurement | Complete; 25 removed, 89 protected, 2.553 GiB net recovered; backup and live checks pass; no force, cache, database, volume, media or checkpoint deletion |
 | BS-03 | Encrypted private R2 database-backup upload with verified remote bytes | Complete/live; private bucket/root-only scoped token, real ciphertext download/hash and compatible independent release image recovery; hourly publication passes |
 | BS-04 | Restore downloaded/decrypted backup in isolation and activate retention | Complete/live: 202 tables/879,350 rows, restricted startup/native/RLS and exact image recovery pass; owner confirms both key copies; ordered remote 24-hourly/30-daily and local six-plus-uncovered retention active |
-| BS-05 | Compact future closed-position source snapshots | Complete locally; 112 closed-position, 180 broader PostgreSQL compatibility and ten balance checks pass; compact version-2 source references and standalone old/new restore; posted version-1 bytes/retries preserved; production release pending |
+| BS-05 | Compact future closed-position source snapshots | Complete/live; local regressions plus isolated 202-table/879,465-row restore and 201 unchanged business tables pass; scoped migration/readers deployed, exact image independently recovered, recovery acceptance renewed and new-image R2 backup/retention verified; posted version-1 bytes preserved |
 
 BS-02 available space is 10.127 GiB; full retention at current backup sizes
 projects 4.817 GiB, below the cutoff before growth. Headroom is improved
@@ -77,8 +77,13 @@ separate rewrite of those records is not part of this plan.
 
 BS-05 follows the [accepted compact-evidence decision](../adr/2026-10-10-compact-closed-position-evidence.md)
 and [implementation record](../implementation/compact-closed-position-evidence-bs05.md).
-Migration 0068 and compatible readers must be released together. No production
-admission or migration is performed by the local implementation slice.
+Migration 0068 and compatible readers are now live through the
+[scoped production release](../implementation/compact-closed-position-release-20261010.md).
+Production loan/source/servicing/monitoring checks pass across all three Workspaces;
+39,196 existing closed positions and 19 held sources remain unchanged. Exact-image
+recovery acceptance is renewed, all six timers and the new-image backup/retention
+cycle pass, and final free space is 9.155 GiB. The temporary rehearsal database and
+recovered-image staging are removed. No production admission is posted by the release.
 
 Related: [FW-023](future-work.md#fw-023-database-backup-capacity-after-closed-position-conversion),
 [position-import decision](../adr/2026-10-09-loan-position-import-without-earlier-history.md),

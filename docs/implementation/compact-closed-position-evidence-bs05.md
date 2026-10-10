@@ -1,5 +1,5 @@
 ---
-status: complete-local
+status: complete-live
 owner: loans
 updated: 2026-10-10
 tags: [loans, storage, evidence, portability, bs05]
@@ -89,10 +89,11 @@ documentation links, scoped whitespace and model/migration consistency pass.
 This slice prevents two full source copies for future closed admissions. It does
 not rewrite or reclaim the roughly 585 MiB already duplicated in posted records.
 Actual savings depend on each source document; small financial facts intentionally
-remain in both origin and event. No production migration/deployment, business-row
-conversion, backup retention change or media change is performed by this slice.
+remain in both origin and event. The local implementation performs no business-row
+conversion, backup retention change or media change.
 
-A later production release also needs the BS-04 backup gate renewed for its exact
-compatible image: preserve, download/decrypt and verify that release image before
-recording new image recovery acceptance. The current live image remains accepted;
-this local slice changes neither the hourly hook nor its acceptance configuration.
+The [10 October production release](compact-closed-position-release-20261010.md)
+rehearses migration 0068 against an isolated full restore, preserves/downloads/
+decrypts/loads the exact compatible image, deploys the seven scoped runtime files
+and renews BS-04 recovery acceptance. The complete new-image backup and retention
+cycle passes. Existing financial payloads, media and hourly hook remain intact.

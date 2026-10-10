@@ -7,7 +7,7 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
-BS-05 implements compact future closed-position admissions locally. Stored
+BS-05 compact future closed-position admissions are live. Stored
 admission/evidence version 2 freezes small financial facts and exact source
 ID/hash/snapshot references through the existing protected archive FK. Readers
 verify and hydrate source evidence in memory; standalone version-1 files/media
@@ -17,11 +17,20 @@ rollback after compact admissions; no table, lifecycle, numbering or authority
 change. All 112 closed-position, 180 broader compatibility and ten balance checks
 pass, including restricted-role source tamper/rebinding/RLS, old retries/upgrade
 and standalone media/fresh-Workspace restoration. The disposable test database is
-removed. Production and the
-roughly 585 MiB already duplicated in posted payloads remain unchanged. A future
-release must renew BS-04 recovery acceptance for its exact compatible image.
+removed. The scoped production overlay from commit 74c3634f and migration 0068
+passes an isolated 202-table/879,465-row restore with all 201 business tables
+unchanged, restricted native/source/health readers and independent exact-image
+decryption/Docker loading. Recovery acceptance is renewed; the full new-image R2
+backup/retention cycle and all six timers pass. Final free space is 9.155 GiB.
+The 39,196 existing closed positions, 19 held sources and roughly 585 MiB already
+duplicated in posted payloads remain intact. Temporary rehearsal/image files are
+removed. No operator financial posts or unrelated local setup/billing deployment.
+The initial operator environment-order check caused an image rollback/retry;
+corrected value comparison proves identical configuration. Old-reader rollback
+must be refused once compact admissions exist.
 See the [decision](adr/2026-10-10-compact-closed-position-evidence.md) and
-[implementation](implementation/compact-closed-position-evidence-bs05.md).
+[implementation](implementation/compact-closed-position-evidence-bs05.md) and
+[production release](implementation/compact-closed-position-release-20261010.md).
 
 BS-03/04 encrypted private R2 publication, actual recovery and hourly activation pass
 on 10 October. Dedicated backup credentials are root-only, bucket-scoped and
