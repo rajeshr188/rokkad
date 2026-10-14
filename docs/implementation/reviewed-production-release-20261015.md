@@ -29,6 +29,13 @@ uses a real request fixture for the legacy-review template now that it includes
 guided navigation. The large exchange-volume test remains included in Linux CI;
 its tag only permits separate execution on Windows.
 
+The first combined CI run exposes stale integration fixtures: the first-loan
+journey must request the complete dashboard rather than its lazy shell, the plan
+page shell needs a session and isolates account guidance from its fake user, and
+archive navigation now uses the existing Completed closures label. The fixes
+retain financial lifecycle assertions and check both permitted and denied archive
+links. The release remains gated on a new complete passing CI run.
+
 ## Release gates
 
 The corrected integrated test discovery uses the repository as its top-level

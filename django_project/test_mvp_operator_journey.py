@@ -217,11 +217,11 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertEqual(response.url, detail_url)
         self._get(detail_url)
         dashboard_url = reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
-        draft_work = self._get(dashboard_url)
+        draft_work = self._get(dashboard_url + "?section=full")
         self.assertEqual(draft_work.context["counter_work"]["queues"]["draft"]["count"], 1)
         self.assertContains(draft_work, loan.loan_number)
         self._post(self._loan_url("pawn_loan_approve", loan.pk), expected_url=detail_url)
-        approved_work = self._get(dashboard_url + "?queue=approved")
+        approved_work = self._get(dashboard_url + "?section=full&queue=approved")
         self.assertEqual(approved_work.context["counter_work"]["queues"]["approved"]["count"], 1)
         self.assertContains(approved_work, self._loan_url("pawn_loan_disburse", loan.pk))
         self._post(self._loan_url("pawn_loan_disburse", loan.pk), {"effective_date": self.today.isoformat()}, expected_url=detail_url)
@@ -232,7 +232,7 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         ticket_url = self._loan_url("pawn_loan_ticket_pdf", loan.pk)
         dashboard = self._get(reverse("workspace_slug_dashboard", kwargs={
             "workspace_slug": self.workspace.slug,
-        }))
+        }) + "?section=full")
         self.assertEqual(dashboard.context["counter_work"]["queues"]["approved"]["count"], 0)
         self.assertEqual(dashboard.context["counter_work"]["queues"]["review"]["count"], 0)
         from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
@@ -246,7 +246,7 @@ class MVPOperatorJourneyTests(TransactionTestCase):
             overdue_work = get_workspace_counter_work(workspace=self.workspace, as_of_date=due_date + timedelta(days=1))
             self.assertEqual(overdue_work["queues"]["overdue"]["count"], 1)
         with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work", return_value=due_work):
-            payment_queue = self._get(dashboard_url + "?queue=due")
+            payment_queue = self._get(dashboard_url + "?section=full&queue=due")
         self.assertContains(payment_queue, self._loan_url("pawn_loan_repay", loan.pk))
         self.assertContains(payment_queue, "Record repayment")
         breadcrumb = re.search(

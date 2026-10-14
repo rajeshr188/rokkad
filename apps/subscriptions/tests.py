@@ -142,6 +142,7 @@ class SubscriptionAccessServiceTests(TestCase):
         request = RequestFactory().get("/w/jcl/settings/billing/plans/")
         request.user = user
         request.workspace = workspace
+        request.session = {}
         from apps.subscriptions.access_policy import WorkspaceActivity
         request.workspace_activity = WorkspaceActivity("full", "Test subscription")
         request.resolver_match = resolve(request.path)
@@ -152,6 +153,9 @@ class SubscriptionAccessServiceTests(TestCase):
         ), patch(
             "django_project.context_processors.get_workspace_role_name",
             return_value="Owner",
+        ), patch(
+            "apps.onboarding.services.account_journey.account_journey",
+            return_value=None,
         ):
             html = render_to_string(
                 "subscriptions/plan_list.html",

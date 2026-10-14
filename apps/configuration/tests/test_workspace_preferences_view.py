@@ -46,7 +46,8 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
         request.path = "/w/acme/"
         request.resolver_match = SimpleNamespace(url_name="workspace_slug_dashboard")
         html = render_to_string("components/navigation/sidebar.html", {"request":request,"user_permissions":{"data.view"}})
-        self.assertIn("Historical loans", html)
+        self.assertIn("Completed closures", html)
+        self.assertIn('/w/acme/loans/releases/paper/guide/', html)
         self.assertIn("Reports", html)
         self.assertNotIn("workspace-settings-nav", html)
         self.assertNotIn("Preferences", html)
@@ -54,5 +55,6 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
     def test_user_without_data_view_does_not_get_record_links(self):
         request = self.request()
         html = render_to_string("components/navigation/sidebar.html", {"request":request,"user_permissions":set()})
-        self.assertNotIn("Historical loans", html)
+        self.assertNotIn("Completed closures", html)
+        self.assertNotIn('/loans/releases/paper/guide/', html)
         self.assertNotIn("Release batches", html)
