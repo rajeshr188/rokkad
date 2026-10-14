@@ -1,0 +1,10 @@
+{% extends 'base_global.html' %}
+{% block title %}Review WhatsApp action{% endblock %}
+{% block mgmt_content %}<div class="container py-3" style="max-width:750px;overflow-wrap:anywhere">
+<h1 class="h3">Review WhatsApp {{ action }}</h1>
+{% if errors %}<div class="alert alert-warning" role="alert">{{ errors|join:' ' }}</div>{% endif %}
+{% if result %}<p class="alert alert-info" role="status">Recorded status: {{ result }}.</p>{% endif %}
+{% if review %}<div class="card card-body"><p>{{ review.workspace.name }} · message {{ review.delivery_id }}</p>
+{% if action == 'retry' %}<p>This retry can send one new request only after a definite retryable rejection. Current consent, source, caps and quiet hours are checked again.</p>{% else %}<p>This action matches already received callbacks to the recorded attempt. A stale claim becomes acceptance unknown; it does not resend or invent a provider ID.</p>{% endif %}
+<p>This review expires in {{ review.expires_minutes }} minutes.</p><form method="post">{% csrf_token %}<input type="hidden" name="token" value="{{ review.token }}"><div class="form-check mb-3"><input type="checkbox" class="form-check-input" id="operation-ack" name="acknowledged" required><label class="form-check-label" for="operation-ack">I reviewed this exact source and action.</label></div><button class="btn btn-primary" style="min-height:44px">Confirm {{ action }}</button></form></div>{% endif %}
+<p class="mt-3"><a href="{% url 'platform_whatsapp_preferences' %}">Account WhatsApp choices</a>{% if user.is_superuser %} · <a href="{% url 'platform_whatsapp_dashboard' %}">Platform messaging</a>{% endif %}</p></div>{% endblock %}

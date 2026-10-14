@@ -1,0 +1,8 @@
+{% load i18n onboarding_tags %}{% account_journey_context as account_journey %}
+{% if account_journey and not account_journey.verified %}
+<section class="alert alert-info mb-3" aria-label="{% translate 'Account verification' %}">
+  <strong>{% translate "Verify your account email" %}</strong>
+  <p class="mb-2">{% translate "You can save business setup now. Email verification is required before starting the free trial or accepting a team invitation." %}</p>
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'account_email' %}{% if request.workspace %}?setup_workspace={{ request.workspace.slug|urlencode }}{% endif %}">{% translate "Verify email or re-send the link" %}</a>
+</section>
+{% endif %}

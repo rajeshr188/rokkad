@@ -152,9 +152,9 @@ class ImportedTicketPreviewTests(OpeningImportFixture):
                 self.sequence.prefix = prefix
                 self.sequence.save(update_fields=['prefix'])
                 form = PawnDraftForm(workspace=self.a)
-                choices = str(form['series'])
-                self.assertIn('OLD-L / ' + label, choices)
-                self.assertNotIn('LINODE-1', choices)
+                choice = form.fields['series'].label_from_instance(self.series)
+                self.assertEqual(choice, 'OLD-L / ' + label)
+                self.assertNotIn('LINODE-1', choice)
 
     def snapshot(self):
         return {model.__name__: list(model.objects.order_by('pk').values()) for model in (

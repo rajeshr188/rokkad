@@ -131,7 +131,7 @@ def _issue_precision_ticket(*, workspace, loan, revision, layout, source_type, s
         loan=loan, layout=layout, actor=actor,
         address_id=request.GET.get("address") if request else None,
     )
-    if prepared.source_snapshot["approval_fingerprint"] != source_fingerprint:
+    if prepared.source_snapshot.get("document_fingerprint", prepared.source_snapshot["approval_fingerprint"]) != source_fingerprint:
         raise ValueError("Loan approval changed. Refresh before issuing the ticket.")
     profile = LoanDocumentPrintProfileService.resolve(workspace=workspace, document_type="loan_ticket", series=loan.series)
     result = ConfigurableDocumentRenderer.render_with_print_profile(
@@ -168,8 +168,7 @@ def issue_recorded_document(*, workspace, loan, actor, position=False):
     from django.utils import timezone
     from apps.tenant_apps.loans.models import PawnLoan
     from apps.tenant_apps.loans.documents import PawnLoanDocumentProjectionBuilder as Builder
-    loan = PawnLoan.objects.select_for_update(of=("self",)).select_related(
-        "borrower", "license", "series", "policy_snapshot").get(pk=loan.pk, workspace=workspace)
+    loan = PawnLoan.objects.select_for_update(of=("self",)).get(pk=loan.pk, workspace=workspace)
     require_loan_action(loan, actor, "data.view")
     day = timezone.localdate()
     payload = Builder.recorded_contract(loan, position=position, as_of_date=day)
@@ -178,6 +177,8 @@ def issue_recorded_document(*, workspace, loan, actor, position=False):
     if not position:
         origin = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
         source_type, source_id, fingerprint = "PawnLoanEvent", origin.pk, origin.payload_fingerprint
+    from .borrower_corrections import borrower_document_fingerprint
+    fingerprint = borrower_document_fingerprint(loan, fingerprint)
     existing = LoanDocumentLayoutService.find_official_issue(workspace=workspace, document_type=payload.document_type,
         source_type=source_type, source_id=source_id, source_fingerprint=fingerprint)
     if existing:

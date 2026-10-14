@@ -431,7 +431,8 @@ class DirectLoansAdapterTests(TestCase):
     def test_migrated_routes_resolve_without_dispatch_and_preserve_legacy_paths(self):
         from apps.tenant_apps.loans.workspace_urls import urlpatterns
         from apps.tenant_apps.loans import urls
-        samples = {"issue_pk": 21, "product_pk": 22, "return_pk": 23, "version_pk": 24, "auction_pk": 17, "renewal_pk": 18, "asset_pk": 19, "section": "portfolio", "export_format": "csv", "party_pk": 20, "license_pk": 16, "revision_pk": 15, "notice_pk": 14, "observation_pk": 13, "pk": 7, "event_pk": 8, "release_pk": 9, "item_pk": 10, "photo_pk": 11, "batch_pk": 12, "public_id": "12345678-1234-1234-1234-123456789abc"}
+        samples = {"index": 1, "action": "review", "issue_pk": 21, "product_pk": 22, "return_pk": 23, "version_pk": 24, "auction_pk": 17, "renewal_pk": 18, "asset_pk": 19, "section": "portfolio", "export_format": "csv", "party_pk": 20, "license_pk": 16, "revision_pk": 15, "notice_pk": 14, "observation_pk": 13, "pk": 7, "event_pk": 8, "release_pk": 9, "item_pk": 10, "photo_pk": 11, "batch_pk": 12, "public_id": "12345678-1234-1234-1234-123456789abc"}
+        samples.update(operation_pk=25, handover_pk=26, book_pk=27, loan_pk=28, evidence_pk=29)
         for pattern in urlpatterns:
             legacy = next(p for p in urls.urlpatterns if p.name == pattern.name)
             kwargs = {name: samples[name] for name in pattern.pattern.converters}

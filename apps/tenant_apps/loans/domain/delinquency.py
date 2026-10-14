@@ -27,6 +27,9 @@ class DelinquencyResult:
 
 def calculate_delinquency(obligations, *, as_of_date, operational_grace_days=3):
     """Fold contractual obligations without moving their due dates for grace."""
+    obligations = tuple(obligations)
+    if any(row.principal < 0 or row.interest < 0 for row in obligations):
+        raise ValueError("Unpaid obligation amounts cannot be negative.")
     unpaid = tuple(row for row in obligations if row.outstanding > 0)
     due = sum((row.outstanding for row in unpaid if row.due_date <= as_of_date), Decimal("0"))
     overdue_rows = tuple(row for row in unpaid if row.due_date < as_of_date)

@@ -4,7 +4,11 @@ from types import SimpleNamespace
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_safe
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
@@ -66,6 +70,7 @@ def workspace_selector(request):
         "workspace_count": memberships.count(),
         "invitation_count": len(valid_invitations),
         "has_workspaces": memberships.exists(),
+        "has_workspace_history": user.memberships.exists(),
         "sent_invitations_count": sent_invitations_count,
     }
 
@@ -120,72 +125,69 @@ def workspace_select(request, workspace_id):
 
 
 @login_required
+@never_cache
+@require_safe
 def workspace_dashboard(request, workspace_id):
-    """
-    Main workspace dashboard - shows key metrics and activity.
-
-    Displays:
-    - Loan statistics (unreleased, sunken, today's activity)
-    - Customer statistics
-    - Financial metrics
-    - Team information
-
-    Requires: User must be a member of the workspace (Owner/Admin/Member)
-
-    """
-    # Get workspace and validate access policy.
+    """Render navigation first; load authorized financial sections independently."""
+    section = request.GET.get("section", "")
+    if section not in ("", "queues", "overview", "full"):
+        return HttpResponseBadRequest("Unknown dashboard section.")
+    fragment = section in ("queues", "overview")
     workspace = get_object_or_404(Company, id=workspace_id)
-
     try:
-        access_context = _assert_workspace_access(
-            request,
-            workspace,
-            allow_platform_admin=True,
-        )
+        access_context = _assert_workspace_access(request, workspace, allow_platform_admin=True)
+        if fragment:
+            from apps.tenancy.context import current_workspace_id
+            if (getattr(request, "workspace", None) is None
+                    or request.workspace.pk != workspace.pk
+                    or current_workspace_id() != workspace.pk):
+                raise PermissionDenied("Dashboard requires its matching Workspace context.")
+            access_context["access"].require("data.view")
     except PermissionDenied:
+        if fragment:
+            return HttpResponseForbidden("Access denied to this dashboard section.")
         messages.error(request, "Access denied to this workspace")
         return redirect("workspace_list")
 
-    membership = access_context["membership"]
-    role_name = access_context["role_name"]
-    if membership is None:
-        membership = SimpleNamespace(role=SimpleNamespace(name=role_name))
-
-    # Set as active workspace if not already
-    if request.user.profile.workspace != workspace:
+    # Only ordinary navigation changes the user's saved Workspace preference.
+    if not fragment and request.user.profile.workspace != workspace:
         request.user.profile.workspace = workspace
         request.user.profile.save()
-
-    # Redirect to public if somehow in public schema
     if workspace.slug == "public":
         return redirect("dashboard")
 
-    context = {}
-    context["workspace"] = workspace
-    context["membership"] = membership
-    context["role"] = role_name
-
-    # Check if user can view detailed metrics (Owner/Admin)
-    context["can_view"] = role_name in ["Owner", "Admin", "Superuser"]
+    from urllib.parse import urlencode
     access = access_context["access"]
-    if access.can("data.view") and request.GET.get("queue") == "overdue":
-        from urllib.parse import urlencode
+    if not fragment and access.can("data.view") and request.GET.get("queue") == "overdue":
         query = urlencode({key: request.GET[key]
             for key in ("period", "start", "end", "page") if key in request.GET})
         destination = reverse("workspace_loans:overdue_payments", args=[workspace.slug])
         return redirect(destination + ("?" + query if query else ""))
-    context.update(get_workspace_dashboard_context(workspace=workspace, access=access))
-    context["can_use_counter"] = access.can("data.view")
-    context["can_create_loan"] = access.can("data.view") and access.can("data.create")
-    if context["can_use_counter"]:
-        from django.core.paginator import Paginator
-        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
+    role_name = access_context["role_name"]
+    activity_data = request.GET.copy()
+    if "period" not in activity_data:
+        activity_data["period"] = "month"
+    dashboard_query = urlencode({key: activity_data[key]
+        for key in ("period", "start", "end") if key in activity_data})
+    if section == "full":
+        dashboard_query = "section=full&" + dashboard_query
+    context = {
+        "request": request,
+        "workspace": workspace,
+        "membership": access_context["membership"] or SimpleNamespace(role=SimpleNamespace(name=role_name)),
+        "role": role_name,
+        "can_view": role_name in ("Owner", "Admin", "Superuser"),
+        "can_use_counter": access.can("data.view"),
+        "can_create_loan": access.can("data.view") and access.can("data.create"),
+        "can_manage_health": access.can("workspace.settings.manage"),
+        "user_permissions": access_context["effective_permissions"],
+        "dashboard_url": reverse("workspace_slug_dashboard", args=[workspace.slug]),
+        "dashboard_query": dashboard_query,
+        "dashboard_full": section == "full",
+    }
+    if context["can_use_counter"] and section in ("overview", "full"):
         from apps.tenant_apps.loans.selectors.business_overview import get_business_overview
         from apps.tenant_apps.loans.web.dashboard_forms import DashboardActivityForm
-
-        activity_data = request.GET.copy()
-        if "period" not in activity_data:
-            activity_data["period"] = "month"
         activity_form = DashboardActivityForm(activity_data)
         activity_dates = {}
         if activity_form.is_valid():
@@ -193,23 +195,25 @@ def workspace_dashboard(request, workspace_id):
                               "activity_end": activity_form.cleaned_data["end"]}
         context["activity_form"] = activity_form
         context["business_overview"] = get_business_overview(workspace=workspace, **activity_dates)
-        context["can_manage_health"] = access.can("workspace.settings.manage")
-        from urllib.parse import urlencode
-        context["dashboard_query"] = urlencode({key: activity_data[key]
-            for key in ("period", "start", "end") if key in activity_data})
-
+    if context["can_use_counter"] and section in ("queues", "full"):
+        from django.core.paginator import Paginator
+        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
         work = get_workspace_counter_work(workspace=workspace)
-        default_queue = next((key for key in ("overdue", "due", "approved", "draft", "review") if work["queues"][key]["count"]), "draft")
+        default_queue = next((key for key in ("overdue", "due", "approved", "draft", "review")
+                              if work["queues"][key]["count"]), "draft")
         selected = work["queues"].get(request.GET.get("queue"), work["queues"][default_queue])
-        context["counter_work"] = work
-        context["work_queues"] = work["queues"].values()
-        context["selected_queue"] = selected
-        context["work_page"] = Paginator(selected["rows"], 20).get_page(request.GET.get("page"))
+        context.update(counter_work=work, work_queues=work["queues"].values(),
+                       selected_queue=selected,
+                       work_page=Paginator(selected["rows"], 20).get_page(request.GET.get("page")))
+    if fragment:
+        # Partials need the checked request/permissions, not global shell processors.
+        template = "company/_dashboard_queues.html" if section == "queues" else "company/_business_overview.html"
+        response = HttpResponse(render_to_string(template, context))
+        response["X-Rokkad-Fragment"] = "dashboard-" + section
+        return response
+
+    context.update(get_workspace_dashboard_context(workspace=workspace, access=access))
     if context.get("setup_checklist") is not None:
         context["setup_state"] = build_workspace_setup_display_state(
-            user=request.user,
-            workspace=workspace,
-            checklist=context["setup_checklist"],
-        )
-
+            user=request.user, workspace=workspace, checklist=context["setup_checklist"])
     return render(request, "company/workspace_dashboard.html", context)

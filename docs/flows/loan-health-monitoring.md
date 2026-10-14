@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-12
+updated: 2026-10-12
 tags: [loans, monitoring, operations]
 ---
 
@@ -15,6 +15,38 @@ Closed loans stop live health calculations and disappear from active alerts;
 settlement, appraisal and event history remain available. A release reversal that
 reopens a loan puts it back into monitoring with an outdated assessment.
 
+The in-app **Loan monitoring guide** is linked from Loan health, Operations console
+and the dashboard Financial health block for owners/admins. It is GET-only
+reference content: opening it does not calculate or refresh loans, change policy
+or send messages. Its route is `/w/<workspace-slug>/loans/setup/operations/risk/guide/`.
+The new guide requires an application release before it appears on production.
+Developers should read the [architecture reference](../architecture/post-origination-loan-monitoring.md).
+
+## Choose current monitoring valuation
+
+Open **Loans setup → Calculation, fees and monitoring → Monitoring policy history**.
+Select **Amend** on the latest policy in the intended Workspace/licence scope.
+The **Current monitoring valuation method** defaults to preserving each loan's
+saved method. For paper/imported loans this need not prove the original lending
+valuation. Choose current calculated metal value, latest approved appraisal,
+or their lower value only after reviewing what collateral/evidence the business
+can support. Save a reason and an effective date of today or later. Earlier
+versions and original loan economics remain intact. A licence policy replaces the
+complete Workspace policy; its preserving choice uses each loan's saved method.
+
+Metal monitoring needs fresh prices and recorded weight/purity. Appraisal needs
+fresh approved appraisal evidence. Lower-of needs both. Changing the choice does
+not invent approval evidence or paper transactions. Refresh then calculates the
+applicable current position and records the actual/original method in provenance.
+Older contracts appear outdated until refreshed by the matching web/worker release.
+
+Operational grace is taken from the frozen product or accepted opening agreement,
+not the monitoring policy. The calculator returns an escalation-eligibility
+indicator without moving DPD. Current risk flags/alerts do not consume it as a
+general suppression gate; do not assume grace delays every alert.
+Severity is derived from actual risk conditions; no separate severity-mapping input
+is offered. Legacy policy grace/mapping values remain retained evidence.
+
 ## Read the portfolio
 
 - **UNASSESSED:** no saved assessment exists. Use Refresh.
@@ -22,7 +54,8 @@ reopens a loan puts it back into monitoring with an outdated assessment.
   before using the amounts. Yesterday's assessment is outdated even if nobody
   edited the loan.
 - **ERROR:** an assessment failed. Open the loan, correct the reported setup or
-  evidence problem, then refresh.
+  evidence problem, then refresh. Inconsistent financial evidence cannot support
+  current money, DPD, LTV or a healthy classification; failed metrics are unavailable.
 - **CURRENT:** calculation succeeded for today using the current rules. This is
   assessment freshness, not a declaration that the loan is healthy.
 
@@ -44,11 +77,27 @@ old quote or appraisal new. Enter an updated quote through
 [Rates](metal-rate-entry.md), or use the authorized
 [collateral reassessment](collateral-reassessment.md) workflow as needed.
 
-Summary totals show **Unavailable** while any active loan lacks a current monetary
-assessment. The counts explain the missing work. Unknown coverage has a separate
+Summary totals use the usable current assessment subset, with affected counts and
+provisional verification disclosed; they show **Unavailable** when no usable
+monetary assessments exist. Whole-portfolio completeness requires all active
+loans to have usable results and suitable transaction coverage. Unknown coverage has a separate
 count among current assessments. Metric filters use current results only. Internal
 alerts retain their assessment dates; review live details before acting. Nothing
 is sent to a borrower merely by opening or refreshing this page.
+
+An LTV breach becoming critical keeps its alert open and raises severity. Missing
+valuation or a failed assessment does not prove recovery, so the existing alert
+remains open while its condition is unknown. A successful assessment showing the
+condition has cleared resolves it with a linked confirming event. A later return
+of the same risk is a new incident, even on the same day with identical values.
+This does not create an automatic borrower message or change the loan's debt.
+
+MR-04 adds database protection for these relationships: a transition cannot be
+edited/deleted, and an alert's original loan/source stays fixed. Assessment values,
+alert severity and confirmed resolution remain writable. A manually created
+risk-linked borrower notice retains that alert's exact original source event.
+See [the database protection decision](../adr/2026-10-11-risk-evidence-database-protection.md)
+and [local validation/release prerequisites](../implementation/risk-evidence-guards-mr04.md).
 
 ## When a loan needs another assessment
 
@@ -64,6 +113,12 @@ recalculate every already-current loan every minute or every hour. Its busy/idle
 polling intervals control when pending work is noticed, not the lifetime of a
 successful assessment. An authorized individual refresh remains available.
 
+Live refresh always saves today's local position. A historical or future date is
+rejected before changing the saved assessment, events or staff alerts. Read-only
+dated calculations remain available to code/reporting callers; they restate the
+position from available evidence and do not certify a captured past assessment.
+The routine page uses the server's date when Refresh is submitted.
+
 The owner selected completion within one hour after an applicable metal-price
 change as the launch load-test target. That does not mean all active loans need
 hourly recomputation when nothing changes. Automatic calculation refresh is also
@@ -76,8 +131,8 @@ The current classifier is per loan and operational. It folds the current
 contractual schedule and dated repayment/reversal allocations, finds the oldest
 obligation with unpaid principal or interest whose due date is before today, and
 calculates DPD from that due date. A partial payment does not reset DPD while that
-oldest obligation remains unpaid. Grace affects operational escalation, not the
-contractual due date or DPD. A bullet loan's age alone is not payment delinquency:
+oldest obligation remains unpaid. Grace supplies an eligibility indicator, not a
+shifted due date/DPD or integrated alert suppression. A bullet loan's age alone is not payment delinquency:
 its actual schedule determines when money becomes due.
 
 | Performance | Default condition |
@@ -125,6 +180,12 @@ fees, origination requirements or settlement rules. Keep those decisions separat
 
 ## Enable automatic refresh
 
+MR-06 activated one bounded restricted worker for JCL, JSK and Lakshmi on
+12 October 2026 IST. It runs continuously alongside the web app; the six existing
+mail/backup/storage timers are separate. Initial assessment catch-up does not
+supply missing valuation evidence or certify paper books. See the actual
+[release evidence and coverage limits](../implementation/monitoring-release-mr06.md).
+
 The application provides a repeating command and an optional Compose service.
 They are not enabled just by visiting Loan health. Use restricted runtime database
 credentials; never run a worker under the owner-only migration settings.
@@ -157,7 +218,19 @@ selected Workspaces in turn. For example:
 
 The supplied order determines turns; duplicate IDs are ignored. Configure process
 counts and Workspace lists explicitly; identity never comes from a user's
-last-selected Workspace. The optional Compose profile still supplies one ID.
+last-selected Workspace. Production Compose now accepts an explicit list:
+
+```powershell
+$env:ROKKAD_MONITOR_WORKSPACE_IDS = '123 456'
+docker compose -f docker-compose.production.yml --profile monitoring up -d monitoring
+```
+
+Its startup helper refuses empty/invalid scope and checks the restricted runtime
+role and pending migrations before starting. The previous singular setting is
+compatible. Initial production defaults are ten candidates per Workspace, a
+five-second busy pause and 300-second idle/error pause, capped at 0.35 CPU and
+512 MiB for one process. Set explicit environment overrides only after measuring
+backlog and foreground response time. See [MR-06](../implementation/monitoring-release-mr06.md).
 
 Each turn processes at most 50 candidate loans in this example. Each loan commits
 separately, releasing its lock before the next loan. Unassessed loans go first,
@@ -169,14 +242,20 @@ assessments are succeeding (`--busy-seconds`, configurable from 1 to 60). When n
 assessment succeeds, it waits the idle/error interval (`--repeat-seconds`, five
 minutes here). A failed loan cannot cause an immediate retry loop within its turn.
 Archived/suspended Workspaces are refused, including if lifecycle changes during
-a pass. Monitor logs (`selected`, `current`, `errors`) and the page's outstanding counts; this is
+a pass. A commercial access denial is reported for that Workspace and does not
+stop the other explicitly configured Workspace turns. Monitor logs (`selected`,
+`current`, `errors`, `as_of`, `elapsed_seconds`) and the page's outstanding counts; this is
 bounded polling, not a guarantee that all loans update immediately after a change.
 
 Omit `--repeat-seconds` for a single pass or an OS scheduler. A one-shot run exits
-with failure when assessments fail. Only one-shot mode permits `--as-of YYYY-MM-DD`;
-a historical/future projection is outdated on today's portfolio. Repeated mode
+with failure when assessments or Workspace turns fail, after attempting the other
+configured turns. Only one-shot mode permits `--as-of YYYY-MM-DD`, and that date
+must be today; another date is rejected before any turn. Repeated mode
 uses the local date anew every time, opens/closes a separate transaction context
-for each loan, and continues reporting failures until stopped. It sends no emails or WhatsApp messages.
+for each loan, and continues reporting failures until stopped. Ctrl+C and SIGTERM
+stop the worker cleanly; an interrupted loan transaction unwinds while prior
+completed loans remain committed. It sends no emails or WhatsApp messages.
 
-See [the worker decision](../adr/2026-09-11-monitoring-worker-turns.md) and
+See [the live boundary decision](../adr/2026-10-11-live-risk-assessment-boundary.md),
+[the worker decision](../adr/2026-09-11-monitoring-worker-turns.md) and
 [container operations](../implementation/container-and-ci.md).

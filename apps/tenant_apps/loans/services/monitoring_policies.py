@@ -31,6 +31,9 @@ def create_loan_monitoring_policy(*, workspace, actor=None, **values):
         if values["effective_from"] < timezone.localdate():
             raise ValidationError("Monitoring amendments cannot be backdated.")
         values["supersedes"] = predecessor
+        # Older callers that do not expose these settings must retain them.
+        values.setdefault("valuation_basis", predecessor.valuation_basis)
+        values.setdefault("operational_grace_days", predecessor.operational_grace_days)
     version = (scope.aggregate(value=Max("version"))["value"] or 0) + 1
     policy = LoanMonitoringPolicy(
         workspace=workspace,

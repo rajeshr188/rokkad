@@ -17,6 +17,13 @@ class PawnLoanExposureError(ValueError):
     pass
 
 
+def require_consistent_exposure(exposure):
+    if exposure.integrity_findings:
+        raise PawnLoanExposureError(
+            "Financial evidence is inconsistent: " + " ".join(exposure.integrity_findings)
+        )
+
+
 ExposureComponent = ObligationAmount
 
 
@@ -46,7 +53,24 @@ class PawnLoanExposure:
     servicing_profile: str = ""
 
 
-def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposure:
+@dataclass(frozen=True)
+class _PawnLoanFinancialInputs:
+    """One calculation's source reads, never a cross-call or cross-tenant cache."""
+    loan: object
+    as_of_date: date
+    position: object
+    schedule: object
+    obligation_state: object
+    transaction_coverage: object = None
+
+    def require(self, loan_id, as_of_date):
+        workspace_id = current_tenant_workspace_id()
+        if (workspace_id is None or self.loan.workspace_id != workspace_id
+                or self.loan.pk != loan_id or self.as_of_date != as_of_date):
+            raise PawnLoanExposureError("Prepared financial inputs must match the loan, date and active Workspace.")
+
+
+def _read_financial_inputs(loan_id, *, as_of_date):
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise PawnLoanExposureError("PawnLoan exposure requires an active tenant schema.")
@@ -62,6 +86,22 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         position = resolve_loan_continuation(loan, as_of_date=as_of_date, include_legacy_projection=True)
     except ValueError as exc:
         raise PawnLoanExposureError(str(exc)) from exc
+    if position.contract.profile == "loan-closed-position/1":
+        return _PawnLoanFinancialInputs(loan, as_of_date, position, None, None)
+    active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
+    continuation = position.recognition.calculation if position.recognition.adapter == "OPENING_CHECKPOINT" else None
+    if continuation and not position.recorded_balance.financially_settled and (
+        active_schedule is None or active_schedule.source_event_id != continuation.opening_event_id
+    ):
+        raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")
+    state = calculate_obligation_state_as_of(active_schedule, as_of_date)
+    return _PawnLoanFinancialInputs(loan, as_of_date, position, active_schedule, state)
+
+
+def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date, _inputs=None) -> PawnLoanExposure:
+    inputs = _inputs if _inputs is not None else _read_financial_inputs(loan_id, as_of_date=as_of_date)
+    inputs.require(loan_id, as_of_date)
+    loan, position = inputs.loan, inputs.position
     balance = position.recorded_balance
     plan = position.recognition
     continuation = plan.calculation if plan.adapter == "OPENING_CHECKPOINT" else None
@@ -78,14 +118,15 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
             integrity_findings=(), ltv_basis_label="Closed zero-debt position",
             principal_history_basis="VERIFIED_TERMINAL_POSITION", financial_history_from=position.contract.financial_history_from,
             servicing_profile=position.contract.profile)
-    active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
-    if continuation and not balance.financially_settled and (active_schedule is None or active_schedule.source_event_id != continuation.opening_event_id):
-        raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")
-    obligation_state = calculate_obligation_state_as_of(active_schedule, as_of_date)
+    active_schedule, obligation_state = inputs.schedule, inputs.obligation_state
     due_now = obligation_state.due_now
     overdue = obligation_state.overdue
     scheduled_remaining = obligation_state.remaining
     findings = list(obligation_state.integrity_findings)
+    if active_schedule is None and (
+        balance.total_due != 0 or loan.state == "ACTIVE" and not balance.financially_settled
+    ):
+        findings.append("An unsettled loan has no active repayment schedule.")
     cash_receivable_basis = (
         balance.principal_outstanding + balance.fees_outstanding
     )
@@ -98,6 +139,12 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date) -> PawnLoanExposur
         LoanRepaymentStructure.FLEXIBLE_PARTIAL_PAYMENT.value,
     }
     ltv_basis = maturity_payoff if is_bullet else total_economic
+    if any(amount < 0 for amount in (
+        balance.principal_outstanding, balance.interest_outstanding,
+        balance.fees_outstanding, projected_interest, recorded_total,
+        total_economic, maturity_payoff,
+    )):
+        findings.append("Outstanding or projected debt contains a negative amount.")
     if scheduled_remaining.principal != balance.principal_outstanding:
         findings.append(
             "Scheduled remaining principal does not equal recorded principal outstanding."

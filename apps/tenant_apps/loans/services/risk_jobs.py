@@ -5,7 +5,7 @@ from apps.tenancy.context import current_workspace_id, workspace_context
 from apps.tenant_apps.loans.models import PawnLoan
 from .risk_snapshots import (
     RiskSnapshotRefreshError, _pending_loans, _require_active_workspace,
-    reassess_pawn_loans_batch,
+    reassess_pawn_loans_batch, require_current_assessment_date,
 )
 
 
@@ -21,6 +21,7 @@ def reassess_pawn_loans_pass(*, workspace_id, as_of_date, batch_size=100):
     workspace_id, batch_size = int(workspace_id), int(batch_size)
     if workspace_id < 1 or not 1 <= batch_size <= 1000:
         raise RiskSnapshotRefreshError("Use a positive Workspace ID and batch size from 1 to 1000.")
+    require_current_assessment_date(as_of_date)
     with workspace_context(workspace_id):
         _require_active_workspace(workspace_id)
         candidates = tuple(_pending_loans(PawnLoan.objects.all(), workspace_id, as_of_date)

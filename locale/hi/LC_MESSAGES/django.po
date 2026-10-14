@@ -4204,3 +4204,188 @@ msgstr "पहले अपने व्यवसाय की तैयार�
 
 msgid "Activate access when you are ready"
 msgstr "तैयार होने पर पहुँच सक्रिय करें"
+
+# New-user journey refinement, 14 October 2026.
+
+msgid "For earlier loans, configure the dates when these terms actually applied. A policy starting today does not supply an earlier loan's agreement. This setup choice does not change a series's standing entry purpose."
+msgstr "पुराने ऋणों के लिए शर्तों के वास्तव में लागू होने की तारीखें तय करें। आज से शुरू हुई नीति पुराने ऋण का समझौता नहीं देती। इस सेटअप विकल्प से श्रृंखला का सामान्य प्रविष्टि उद्देश्य नहीं बदलता।"
+
+msgid "Monitoring readiness"
+msgstr "ऋण निगरानी की तैयारी"
+
+msgid "Policy configured"
+msgstr "नीति निर्धारित है"
+
+msgid "lending settings available"
+msgstr "ऋण देने की व्यवस्थाएँ तैयार हैं"
+
+msgid "running series have a monitoring policy for today."
+msgstr "चलती शृंखलाओं के लिए आज की निगरानी नीति उपलब्ध है।"
+
+msgid "Lending setup does not configure monitoring automatically. Review and save a policy before relying on loan health for these series."
+msgstr "ऋण की व्यवस्था करने से निगरानी अपने आप निर्धारित नहीं होती। इन शृंखलाओं की ऋण स्थिति पर भरोसा करने से पहले निगरानी नीति की समीक्षा करके उसे सहेजें।"
+
+msgid "Add a running series to review its monitoring policy."
+msgstr "निगरानी नीति की समीक्षा के लिए एक चलती शृंखला जोड़ें।"
+
+msgid "Policy coverage is separate from permission to lend. Actual loan health also needs usable financial and collateral evidence; portfolio assessments must be refreshed."
+msgstr "नीति का लागू होना और ऋण देने की अनुमति अलग हैं। ऋण की स्थिति जानने के लिए सही वित्तीय और गिरवी विवरण भी चाहिए; सभी ऋणों के आकलन को ताज़ा रखना आवश्यक है।"
+
+msgid "Review monitoring policy"
+msgstr "निगरानी नीति की समीक्षा करें"
+
+msgid "Review free trial and access"
+msgstr "मुफ़्त परीक्षण और उपयोग की शर्तें देखें"
+
+msgid "Review the saved settings below. The actual loan review still checks the borrower, collateral, agreement and payout."
+msgstr "नीचे सहेजी गई व्यवस्थाएँ देखें। वास्तविक ऋण की समीक्षा में ग्राहक, गिरवी, समझौता और भुगतान की जाँच होती है।"
+
+msgid "All workspace navigation"
+msgstr "वर्कस्पेस के सभी विकल्प"
+
+msgid "Business setup navigation"
+msgstr "व्यवसाय की व्यवस्था के विकल्प"
+
+msgid "Optional fees and entry preferences"
+msgstr "वैकल्पिक शुल्क और प्रविष्टि की प्राथमिकताएँ"
+
+msgid "Add fees only if your business charges them. Entry preferences suggest a purpose without changing the actual facts of a loan."
+msgstr "शुल्क तभी जोड़ें जब आपका व्यवसाय उन्हें लेता हो। प्रविष्टि की प्राथमिकताएँ ऋण के वास्तविक तथ्यों को बदले बिना उद्देश्य सुझाती हैं।"
+
+msgid "How should staff confirm a new payout?"
+msgstr "कर्मचारी नए भुगतान की पुष्टि कैसे करें?"
+
+msgid "Owner reviews and records payment together"
+msgstr "मालिक समीक्षा और भुगतान एक साथ दर्ज करे"
+
+msgid "For an owner-operated counter. The owner confirms the reviewed agreement and completed payment in one action."
+msgstr "मालिक द्वारा चलाए जाने वाले काउंटर के लिए। मालिक एक ही कार्रवाई में समझौते और किए गए भुगतान की पुष्टि करता है।"
+
+msgid "Approve first, record payment separately"
+msgstr "पहले स्वीकृति दें, भुगतान अलग से दर्ज करें"
+
+msgid "For separate review and payment responsibilities. Staff permissions continue to apply."
+msgstr "जब समीक्षा और भुगतान की जिम्मेदारियाँ अलग हों। कर्मचारियों की अनुमतियाँ लागू रहती हैं।"
+
+msgid "Save workflow choice"
+msgstr "कार्यप्रणाली का चुनाव सहेजें"
+
+msgid "This changes the steps for future payouts, not existing loan terms or completed history."
+msgstr "यह आगे के भुगतान के चरण बदलता है; पुराने ऋण की शर्तें और पूरा हो चुका विवरण नहीं बदलता।"
+
+msgid "3. Collateral value and lending limit"
+msgstr "3. गिरवी का मूल्य और ऋण सीमा"
+
+msgid "4. Part-month and compound rules"
+msgstr "4. अधूरे महीने और चक्रवृद्धि ब्याज के नियम"
+
+msgid "5. Rounding"
+msgstr "5. राशि पूर्णांकन"
+
+msgid "Metal value uses buying prices, weight and purity. Appraisal uses staff's approved value. Lower-of requires both and uses the smaller value."
+msgstr "धातु का मूल्य खरीद भाव, वजन और शुद्धता से निकलता है। मूल्यांकन में कर्मचारी द्वारा स्वीकृत मूल्य लिया जाता है। दोनों में से कम मूल्य चुनने के लिए दोनों विवरण चाहिए।"
+
+msgid "Add a customer before starting your first loan draft."
+msgstr "पहले ऋण का मसौदा बनाने से पहले ग्राहक जोड़ें।"
+
+msgid "Verify your account email"
+msgstr "अपने खाते का ईमेल सत्यापित करें"
+
+msgid "Account verification"
+msgstr "खाते का सत्यापन"
+
+msgid "You can save business setup now. Email verification is required before starting the free trial or accepting a team invitation."
+msgstr "आप व्यवसाय की व्यवस्था अभी सहेज सकते हैं। मुफ़्त परीक्षण शुरू करने या टीम का निमंत्रण स्वीकार करने से पहले ईमेल सत्यापित करना आवश्यक है।"
+
+msgid "Verify email or re-send the link"
+msgstr "ईमेल सत्यापित करें या लिंक फिर भेजें"
+
+msgid "Continue business setup"
+msgstr "व्यवसाय की व्यवस्था जारी रखें"
+
+msgid "Verify your email"
+msgstr "अपना ईमेल सत्यापित करें"
+
+msgid "Email addresses"
+msgstr "ईमेल पते"
+
+msgid "Verify the email you use for your account before starting a trial or joining a team. You can keep working on business setup while verification is pending."
+msgstr "परीक्षण शुरू करने या टीम में शामिल होने से पहले खाते का ईमेल सत्यापित करें। सत्यापन बाकी रहते हुए भी व्यवसाय की व्यवस्था जारी रख सकते हैं।"
+
+msgid "Choose an email address"
+msgstr "ईमेल पता चुनें"
+
+msgid "Re-send verification"
+msgstr "सत्यापन लिंक फिर भेजें"
+
+msgid "Make primary"
+msgstr "प्राथमिक बनाएँ"
+
+msgid "Add an email address so you can verify your account and recover access."
+msgstr "खाते को सत्यापित करने और आवश्यकता पड़ने पर प्रवेश वापस पाने के लिए ईमेल पता जोड़ें।"
+
+msgid "Check your inbox and spam folder. If a link has expired, request another verification email here."
+msgstr "इनबॉक्स और स्पैम फ़ोल्डर देखें। लिंक की अवधि समाप्त हो गई हो तो यहाँ नया सत्यापन ईमेल माँगें।"
+
+msgid "Add another email address"
+msgstr "एक और ईमेल पता जोड़ें"
+
+msgid "Add email"
+msgstr "ईमेल जोड़ें"
+
+msgid "Confirm email address"
+msgstr "ईमेल पते की पुष्टि करें"
+
+msgid "Confirm this address belongs to your Rokkad account:"
+msgstr "पुष्टि करें कि यह पता आपके रोक्कड़ खाते का है:"
+
+msgid "Confirm email"
+msgstr "ईमेल की पुष्टि करें"
+
+msgid "This address cannot be confirmed for this account. Review your email addresses or contact support."
+msgstr "इस खाते के लिए इस पते की पुष्टि नहीं हो सकती। अपने ईमेल पते देखें या सहायता लें।"
+
+msgid "Review email addresses"
+msgstr "ईमेल पते देखें"
+
+msgid "This verification link has expired or is invalid. Sign in and request another verification email."
+msgstr "यह सत्यापन लिंक अमान्य है या इसकी अवधि समाप्त हो गई है। प्रवेश करके नया सत्यापन ईमेल माँगें।"
+
+msgid "Request another verification email"
+msgstr "नया सत्यापन ईमेल माँगें"
+
+msgid "Check your email"
+msgstr "अपना ईमेल देखें"
+
+msgid "Open the verification link we sent to your email address. Check your spam folder if it does not arrive."
+msgstr "आपके ईमेल पर भेजा गया सत्यापन लिंक खोलें। ईमेल न मिले तो स्पैम फ़ोल्डर देखें।"
+
+msgid "Review address or re-send verification"
+msgstr "पता देखें या सत्यापन लिंक फिर भेजें"
+
+msgid "If this address has an account, you will receive a password-reset link. Check your inbox and spam folder. Your business records and staff access remain unchanged."
+msgstr "यदि इस पते से खाता जुड़ा है तो पासवर्ड बदलने का लिंक मिलेगा। इनबॉक्स और स्पैम फ़ोल्डर देखें। व्यवसाय के विवरण और कर्मचारियों का प्रवेश नहीं बदलता।"
+
+msgid "Try another email address"
+msgstr "दूसरा ईमेल पता आज़माएँ"
+
+msgid "Request a new reset link"
+msgstr "पासवर्ड बदलने का नया लिंक माँगें"
+
+msgid "Choose your new password"
+msgstr "नया पासवर्ड चुनें"
+
+msgid "This reset link has expired or has already been used."
+msgstr "इस लिंक की अवधि समाप्त हो गई है या इसका पहले उपयोग हो चुका है।"
+
+msgid "Save new password"
+msgstr "नया पासवर्ड सहेजें"
+
+msgid "Password changed"
+msgstr "पासवर्ड बदल गया"
+
+msgid "Your new password is ready. Sign in to continue working with your business."
+msgstr "आपका नया पासवर्ड तैयार है। व्यवसाय का काम जारी रखने के लिए प्रवेश करें।"
+
+msgid "Sign in"
+msgstr "प्रवेश करें"

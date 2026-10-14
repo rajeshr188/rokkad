@@ -233,13 +233,13 @@ class LoansSetupUiTests(WorkspaceTestCase):
 
         response = self.client.post(
             reverse("loans:pawn_risk_refresh_one", args=[loan.pk]),
-            {"as_of": "2026-08-13"},
+            {"as_of": timezone.localdate().isoformat()},
             HTTP_HX_REQUEST="true",
         )
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response["HX-Redirect"], reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}))
-        refresh.assert_called_once_with(loan.pk, as_of_date=date(2026, 8, 13))
+        refresh.assert_called_once_with(loan.pk, as_of_date=timezone.localdate())
 
     @patch("apps.tenant_apps.loans.web.risk_refresh.reassess_pawn_loans_batch")
     def test_owner_can_refresh_bounded_due_risk_batch(self, reassess):
@@ -247,7 +247,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
 
         response = self.tenant_post(
             reverse("loans:pawn_risk_refresh_batch"),
-            {"as_of": "2026-08-13"},
+            {},
         )
 
         self.assertRedirects(
@@ -257,7 +257,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         )
         reassess.assert_called_once_with(
             workspace_id=self.tenant.pk,
-            as_of_date=date(2026, 8, 13),
+            as_of_date=timezone.localdate(),
             batch_size=50,
         )
 
@@ -267,7 +267,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
 
         response = self.client.post(
             reverse("loans:pawn_risk_refresh_batch"),
-            {"as_of": "2026-08-13"},
+            {"as_of": timezone.localdate().isoformat()},
             HTTP_HX_REQUEST="true",
         )
 
@@ -276,6 +276,30 @@ class LoansSetupUiTests(WorkspaceTestCase):
             response["HX-Redirect"],
             reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}),
         )
+
+    @patch("apps.tenant_apps.loans.web.risk_refresh.refresh_loan_risk_snapshot")
+    @patch("apps.tenant_apps.loans.web.risk_refresh.reassess_pawn_loans_batch")
+    def test_refresh_rejects_non_today_and_invalid_dates_without_calling_writers(self, batch, refresh):
+        license, series = self._configured_setup()
+        loan = self._loan(license, series, "PL-RISK-DATE", state="ACTIVE")
+        dates = (
+            (timezone.localdate() - timedelta(days=1)).isoformat(),
+            (timezone.localdate() + timedelta(days=1)).isoformat(),
+            "2026-02-30", "invalid",
+        )
+        paths = (
+            reverse("loans:pawn_risk_refresh_batch"),
+            reverse("loans:pawn_risk_refresh_one", args=[loan.pk]),
+        )
+        for path in paths:
+            for day in dates:
+                with self.subTest(path=path, day=day):
+                    response = self.tenant_post(path, {"as_of": day})
+                    self.assertEqual(response.status_code, 302)
+                    expected = "must use YYYY-MM-DD" if day in {"2026-02-30", "invalid"} else "only be refreshed for today"
+                    self.assertTrue(any(expected in str(message) for message in response.wsgi_request._messages))
+        batch.assert_not_called()
+        refresh.assert_not_called()
 
     @patch("apps.tenant_apps.loans.web.risk_refresh.reassess_pawn_loans_batch")
     def test_member_cannot_refresh_risk_monitoring(self, reassess):
@@ -945,6 +969,10 @@ class LoansSetupUiTests(WorkspaceTestCase):
             403,
         )
         self.assertEqual(
+            self.client.get(reverse("workspace_loans:pawn_risk_guide", kwargs={"workspace_slug": self.tenant.slug})).status_code,
+            403,
+        )
+        self.assertEqual(
             self.tenant_get(reverse("loans:document_layout_list")).status_code,
             403,
         )
@@ -1541,6 +1569,39 @@ class LoansSetupUiTests(WorkspaceTestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_owner_monitoring_guide_is_read_only_and_does_not_assess_loans(self):
+        from apps.tenant_apps.loans.models import PawnLoanEvent, LoanRiskSnapshot, LoanRiskEvent, LoanRiskAlert
+        models = (PawnLoanEvent, LoanRiskSnapshot, LoanRiskEvent, LoanRiskAlert, LoanMonitoringPolicy)
+        before = tuple(model.objects.count() for model in models)
+        url = reverse("workspace_loans:pawn_risk_guide", kwargs={"workspace_slug": self.tenant.slug})
+        with patch("apps.tenant_apps.loans.web.operations.get_risk_portfolio") as portfolio, patch(
+            "apps.tenant_apps.loans.web.operations.get_risk_portfolio_summary"
+        ) as summary:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            portfolio.assert_not_called()
+            summary.assert_not_called()
+        self.assertTemplateUsed(response, "loans/setup/risk_guide.html")
+        for text in ("Loan monitoring guide", "Estimated unfinalized interest", "Maturity payoff",
+                     "Grace does not change DPD", "Four separate checks", "Fictional example",
+                     "Current does not mean healthy", "What monitoring cannot establish"):
+            self.assertContains(response, text)
+        self.assertContains(response, reverse("workspace_loans:pawn_risk_portfolio", kwargs={"workspace_slug": self.tenant.slug}))
+        self.assertEqual(self.client.post(url, {"refresh": "1"}).status_code, 405)
+        self.assertEqual(tuple(model.objects.count() for model in models), before)
+
+    def test_monitoring_guide_requires_login_and_target_workspace_membership(self):
+        url = reverse("workspace_loans:pawn_risk_guide", kwargs={"workspace_slug": self.tenant.slug})
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
+        outsider = get_user_model().objects.create_user(username=f"monitoring-guide-outsider-{uuid.uuid4().hex[:8]}")
+        self.client.force_login(outsider)
+        response = self.client.get(url)
+        # Existing Workspace middleware redirects nonmembers before the view.
+        self.assertEqual(response.status_code, 302)
+        self.assertNotEqual(response.url, url)
+        self.assertNotContains(response, "An owner's reference", status_code=302)
 
     def test_owner_can_open_document_layout_starter_guide(self):
         response = self.tenant_get(reverse("loans:document_layout_guide"))

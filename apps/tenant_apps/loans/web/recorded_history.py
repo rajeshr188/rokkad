@@ -20,7 +20,7 @@ DAY = {"type": "date"}
 class PaperCollateralForm(forms.Form):
     description = forms.CharField(max_length=255, label="Item description")
     quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1)
-    metal = forms.ChoiceField(choices=(("GOLD", "Gold"), ("SILVER", "Silver")), initial="GOLD")
+    metal = forms.ChoiceField(choices=(("GOLD", "Gold"), ("SILVER", "Silver"), ("BRONZE", "Bronze")), initial="GOLD")
     gross_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Gross weight (g)")
     net_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Net weight (g)")
     purity_percentage = forms.DecimalField(max_digits=7, decimal_places=4, min_value=Decimal("0.0001"), max_value=100, initial=75, label="Purity (%)")
@@ -92,7 +92,7 @@ class PaperHistoryForm(forms.Form):
     cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False,
         label="Proceeds after interest and document charge", help_text="Leave blank to calculate. A paper renewal may use these proceeds to settle another loan; no predecessor is required.")
     description = forms.CharField(max_length=255, label="Collateral description")
-    metal = forms.ChoiceField(choices=(("GOLD","Gold"),("SILVER","Silver")))
+    metal = forms.ChoiceField(choices=(("GOLD","Gold"),("SILVER","Silver"),("BRONZE","Bronze")))
     quantity = forms.IntegerField(min_value=1, max_value=999)
     gross_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Gross weight (g)")
     net_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Net weight (g)")

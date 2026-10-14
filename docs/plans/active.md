@@ -1,11 +1,102 @@
 ---
 status: active
 owner: project
-updated: 2026-10-07
+updated: 2026-10-14
 tags: [plans, active]
 ---
 
 # Active work
+
+**Origination consolidation (owner approval, 14 October):** common agreement
+capabilities, ordinary register reservation, **Correct loan** and shared customer
+correction, plus exact two-Party servicing bundle v5 are verified locally.
+Same-evidence four-origin risk comparison, the final 205-case affected confirmation,
+two final HTTP checks, eight styled captures and model/import/link checks pass.
+See the [ordered plan](loan-origination-consolidation-20261014.md).
+
+**Bronze and JCL monitoring (owner instruction, 14 October):** existing bronze
+collateral/quote enums now extend through direct/paper entry, dated lookup,
+daily confirmation, price invalidation/source checks and explicit optional
+standing interest. Current value normalizes the stored rounding quantum; V9
+requires matching web/worker delivery and reassessment. Local regressions are
+verified, including final Hindi correction, model/import/document checks and exact
+test-database cleanup. Bronze reference is INR 3,000/kg (INR 3/g); selling/source
+confirmation, production release/amendment and paper-book
+review remain pending. See the [ordered plan](bronze-monitoring-20261014.md).
+
+**Platform-to-owner WhatsApp (owner instruction, 14 October):** PW-01 through
+PW-04 and PW-05 local diagnostics/reviewed operations are verified. All 424 distinct
+selected cases, twelve desktop/phone states, populated source/email/message
+preservation and model/import checks pass; exact task databases are removed.
+Canonical-owner history/invoice status and explicitly scoped platform diagnostics
+preserve authority and capture/attempt/capacity guards. No PW-05 schema is added.
+See [PW-05 evidence and limits](../implementation/platform-whatsapp-pilot-pw05.md),
+[active plan](platform-owner-whatsapp-phase1-20261014.md) and
+[sender/template handoff](platform-whatsapp-sender-setup-20261014.md).
+Deployed JCL owner metadata matches the privately supplied account, verified read-only.
+The owner monitors support@rokkad.com; sender/template setup and production app/schema
+are absent. Actual tariff/cap, adopted retention, fresh pairing/consent, deployment
+and live callbacks/STOP remain pending. Pricing-hold correction, billed-cost and
+retention automation remain separate. No actual send, provider setup, shared
+migration, commit or deployment occurred.
+
+**New-user journey (owner decision, 14 October):** NJ-01 through NJ-05 are
+implemented and locally verified in the existing guided setup. All 340 distinct
+selected regressions pass across the broad run and corrected route-intent rerun;
+the restricted fictional journey reaches an ordinary active loan, and English/Hindi
+phone review checks pass. See the
+[completed plan](new-user-journey-improvements-20261014.md) and
+[evidence](../implementation/new-user-journey-refinement-20261014.md).
+No new wizard/schema or financial validation change. Commit, production release,
+real staff and provider email acceptance are separate.
+
+**Combined monitoring correction (owner decision, 11 October):** follow the
+[MR-01 through MR-07 plan](combined-loan-monitoring-20261011.md). Revalidate the
+September risk audit against current code, then deliver correctness safeguards,
+explicit current valuation policy, bounded recurring monitoring and measured
+efficiency in that order. MR-02's worker access isolation and today's live
+assessment boundary are verified locally across focused/broad and corrected
+fixture reruns. MR-03 financial integrity, confirmed recovery and repeated-incident
+semantics are also verified locally, including actual repayment and neutral
+reversed-renewal portability. See [MR-03 validation](../implementation/risk-integrity-recovery-mr03.md).
+MR-04 risk-event database protection and reference preflight are also locally
+verified, including restricted DML and populated upgrade preservation/refusal.
+See [MR-04 validation](../implementation/risk-evidence-guards-mr04.md).
+MR-05 independent current monitoring valuation is also locally verified, with
+default preservation, separate paper-book/valuation coverage and a populated
+upgrade. See [MR-05 validation](../implementation/current-monitoring-valuation-mr05.md).
+MR-06 is deployed: live preflight/migrations, source-preserving rehearsal,
+graceful shutdown, exact-image recovery, web/worker switch and both backups pass.
+The restricted continuous worker serves JCL/JSK/Lakshmi, with initial catch-up
+progress and zero observed errors. Missing valuation/unchecked books remain
+explicit; see [MR-06](../implementation/monitoring-release-mr06.md).
+MR-07 is deployed: the exact five-file candidate passed recovery, source-preserving
+isolated rehearsal, MR-06 reader recovery, graceful shutdown and both backups.
+The sampled calculation uses 35% fewer queries with exact output parity; the
+selected combined sequence is released. Coverage still depends on genuine
+valuation/book evidence, and full scale acceptance remains future work. See
+[MR-07](../implementation/monitoring-efficiency-mr07.md).
+The [14 October follow-up](../implementation/monitoring-portability-followup-20261014.md)
+adds setup/business-package version 3 locally for explicit monitoring choices.
+Production policy reassignment/evidence review remains separate: JCL's 2,680
+active assessments are current, but 2,376 lack required appraisals under its
+preserving valuation choice and 2,378 have provisional paper-book coverage.
+
+**Portability completion (owner decision, 10 October):** follow the
+[PC-01 through PC-06 plan](data-portability-completion-20261010.md).
+Current capability guidance and unified supported loan-file restoration are
+verified locally with 128 isolated regression checks. PC-03's reduced-principal
+checkpoint and closed-position register templates also pass 123 broader and
+29 final checks within their documented bounds. PC-04's operator-assisted volume
+exchange passes 213 broader and 12 final changed-path checks within documented
+operator bounds, including audited-size synthetic cohorts.
+PC-05's operator-assisted fresh business package passes 177 broader and 12 final
+checks within documented empty-destination/profile bounds. PC-06 now adds verified
+wider graphs, retained zero-item and source-only licence/quote adapters, with
+323 passing regression/continuation cases across the broader run and corrected
+fresh-workspace fixture rerun. All selected slices are locally verified within
+their documented bounds. See the [PC-06 record](../implementation/portable-graphs-pc06.md)
+for held graphs and release requirements. No production rollout is implied by local development.
 
 **Loan origination completion (owner decision, 7 October):** follow the
 [LO-00 through LO-07 plan](loan-origination-completion.md). LO-01 implements the

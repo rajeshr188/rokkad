@@ -12,6 +12,8 @@ from apps.tenancy.context import workspace_context
 
 # No filename inference: ownership comes only from persisted Workspace records.
 FILE_FIELDS = {
+    ("data_portability.businesspackagereceipt", "source"): "historical_evidence",
+    ("data_portability.loanrestorebatch", "source"): "historical_evidence",
     ("loans.pledgebookbatch", "artifact"): "issued_documents",
     ("loans.statutoryauctionnotice", "artifact"): "issued_documents",
     ("loans.statutorynoticeevidence", "attachment"): "notification_artifacts",

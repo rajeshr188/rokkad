@@ -1,4 +1,5 @@
 {% load onboarding_tags %}
+{% setup_navigation_context as setup_journey %}{% if not setup_journey %}
 <nav class="app-section-nav" aria-label="PawnLoan setup">
   {% load orgs_tags %}{% navigation_actions as workflow_actions %}
   <a {% url 'workspace_slug_settings_setup' workspace_slug=request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Business setup</a>
@@ -11,3 +12,4 @@
   {% if request.workspace.owner_id == request.user.pk %}<a {% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Import Loans</a>{% endif %}
   <a  {% url 'workspace_slug_loan_list' workspace_slug=request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Back to loans</a>
 </nav>
+{% endif %}

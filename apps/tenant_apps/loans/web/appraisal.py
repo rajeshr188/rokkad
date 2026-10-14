@@ -18,7 +18,7 @@ from django.utils import timezone
 
 
 class AppraisalSuggestionForm(forms.Form):
-    metal = forms.ChoiceField(choices=[("GOLD", "Gold"), ("SILVER", "Silver")])
+    metal = forms.ChoiceField(choices=[("GOLD", "Gold"), ("SILVER", "Silver"), ("BRONZE", "Bronze")])
     gross_weight = forms.DecimalField(max_digits=14, decimal_places=4, min_value=Decimal("0.0001"))
     net_weight = forms.DecimalField(max_digits=14, decimal_places=4, min_value=Decimal("0.0001"))
     purity = forms.DecimalField(max_digits=7, decimal_places=4, min_value=Decimal("0.0001"), max_value=100)

@@ -51,6 +51,7 @@ class Rate(WorkspaceOwnedModel):
     is_withdrawal = models.BooleanField(default=False, editable=False)
     reason = models.CharField(max_length=500, blank=True)
     source_snapshot = models.JSONField(default=dict, editable=False)
+    portable_source = models.JSONField(default=dict, blank=True, editable=False)
     confirmed_from = models.ForeignKey("self", null=True, blank=True, editable=False,
         on_delete=models.PROTECT, related_name="daily_confirmations")
 
@@ -75,7 +76,8 @@ class Rate(WorkspaceOwnedModel):
                 self.workspace_id = source_workspace_id
             elif self.workspace_id != source_workspace_id:
                 raise ValidationError("Rate and rate source must share a Workspace.")
-            self.source_snapshot = {"name": self.rate_source.name, "location": self.rate_source.location, "tax_included": self.rate_source.tax_included}
+            if not self.portable_source:
+                self.source_snapshot = {"name": self.rate_source.name, "location": self.rate_source.location, "tax_included": self.rate_source.tax_included}
         if self.supersedes_id and self.supersedes.workspace_id != self.workspace_id:
             raise ValidationError("A correction must belong to the original Workspace.")
         if self.confirmed_from_id and self.confirmed_from.workspace_id != self.workspace_id:
@@ -83,6 +85,9 @@ class Rate(WorkspaceOwnedModel):
         return super().save(*args, **kwargs)
 
     def clean(self):
+        if self.portable_source:
+            from .portable_quotes import validate_source
+            validate_source(self.portable_source, snapshot=self.source_snapshot)
         errors = {}
         for field in ("buying_rate", "selling_rate"):
             value = getattr(self, field)
@@ -112,6 +117,11 @@ class Rate(WorkspaceOwnedModel):
         if hasattr(self, "successor"):
             return "Superseded"
         return "Available"
+
+    def get_purity_display(self):
+        if self.metal == self.Metal.BRONZE and self.purity == self.Purity.K24:
+            return "Bronze reference grade (100%)"
+        return dict(self.Purity.choices).get(self.purity, self.purity)
 
     def __str__(self):
         return f" {self.timestamp.date()} {self.metal} {self.purity} {self.buying_rate}"

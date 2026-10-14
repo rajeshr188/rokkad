@@ -20,6 +20,7 @@ __pycache__/
 /staticfiles/
 /outputs/
 /.tmp/
+/tmp/
 /.worktrees/
 /outputs/ticket-template-tests/
 /outputs/ticket-template-sandbox/

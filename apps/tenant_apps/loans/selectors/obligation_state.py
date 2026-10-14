@@ -93,7 +93,7 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
     schedules = RepaymentScheduleVersion.objects.filter(
         workspace=workspace, loan_id__in=loan_ids,
         source_event__effective_date__lte=as_of_date,
-    ).select_related("loan__policy_snapshot").order_by("loan_id", "-version", "-pk").prefetch_related(Prefetch(
+    ).select_related("loan__policy_snapshot", "loan__product_version", "source_event").order_by("loan_id", "-version", "-pk").prefetch_related(Prefetch(
         "changes",
         queryset=RepaymentScheduleChange.objects.filter(
             workspace=workspace, kind=RepaymentScheduleChangeKind.TERMINATE,
@@ -119,11 +119,18 @@ def get_obligation_states_for_loans(*, workspace, loan_ids, as_of_date):
         )),
         to_attr="dashboard_obligations",
     ))
+    from .accrual_evidence import load_pawn_accrual_evidence
+    monthly_loans = [schedule.loan for schedule in selected.values()
+        if any(row.monthly_native or row.recorded_profile in (
+            "recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3")
+            for row in schedule.dashboard_obligations)]
+    accrual_evidence = load_pawn_accrual_evidence(monthly_loans)
     states = {loan_id: calculate_obligation_state_as_of(None, as_of_date) for loan_id in loan_ids}
     for loan_id, schedule in selected.items():
         states[loan_id] = _fold_obligation_state(
             schedule, as_of_date, schedule.dashboard_obligations,
             lambda obligation: obligation.dashboard_allocations,
+            accrual_evidence=accrual_evidence.get(loan_id),
         )
     return states
 
@@ -144,7 +151,7 @@ def calculate_obligation_state_as_of(schedule, as_of_date, *, adjust_recorded=Tr
     )
 
 
-def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *, adjust_recorded=True):
+def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *, adjust_recorded=True, accrual_evidence=None):
     zero = ObligationAmount(ZERO, ZERO)
     if schedule is None:
         return PawnLoanObligationState(None, "", None, (), zero, zero, zero, ())
@@ -194,11 +201,11 @@ def _fold_obligation_state(schedule, as_of_date, obligations, allocations_for, *
     )
     if adjust_recorded and (recorded_profile in ("recorded-anniversary/1", "recorded-anniversary/2", "recorded-anniversary/3")
             or monthly_native):
-        return _monthly_obligation_state(schedule, as_of_date, result)
+        return _monthly_obligation_state(schedule, as_of_date, result, accrual_evidence=accrual_evidence)
     return result
 
 
-def _monthly_obligation_state(schedule, day, raw):
+def _monthly_obligation_state(schedule, day, raw, *, accrual_evidence=None):
     """Read the agreed variable-principal bullet debt without rewriting its schedule.
 
     The ordinary immutable schedule retains the original maturity and allocation
@@ -208,7 +215,8 @@ def _monthly_obligation_state(schedule, day, raw):
     from .continuation import resolve_loan_continuation, RECORDED_PROFILES
     loan = schedule.loan
     horizon = max(day, schedule.maturity_date)
-    position = resolve_loan_continuation(loan, as_of_date=day, forecast_through=horizon)
+    position = resolve_loan_continuation(loan, as_of_date=day, forecast_through=horizon,
+        _accrual_evidence=accrual_evidence)
     if position.contract.profile not in RECORDED_PROFILES:
         from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed
         if (schedule.source_event.event_kind not in ("DISBURSAL", "RENEWAL_OPENING", "MIGRATION_OPENING")

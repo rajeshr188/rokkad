@@ -1,0 +1,24 @@
+{% extends 'platform_console/base.html' %}
+{% block console_content %}
+<div class="row justify-content-center"><div class="col-lg-9 col-xl-8">
+<h2 class="h3">WhatsApp service announcement</h2>
+<p class="text-muted">Review affected Workspaces and owners before saving a service notice. Dispatch uses the private pilot and daily limits.</p>
+{% if review_errors %}<div class="alert alert-warning" role="alert">{% for error in review_errors %}<p class="mb-1">{{ error }}</p>{% endfor %}</div>{% endif %}
+{% if saved %}<div class="alert alert-success" role="status">Service notice {{ saved.pk }} saved. Eligible intents are recorded; this page does not dispatch messages.</div>{% endif %}
+{% if review %}
+<div class="card card-body mb-3"><h3 class="h5">Review service notice</h3><p class="text-break">{{ review.spec.text }}</p>
+<dl><dt>Impact period</dt><dd>{{ review.impact_start|date:'d M Y, H:i T' }} to {{ review.impact_end|date:'d M Y, H:i T' }}</dd>
+<dt>Expires</dt><dd>{{ review.expires_at|date:'d M Y, H:i T' }}</dd><dt>Distinct owners</dt><dd>{{ review.recipient_count }}</dd>
+<dt>Conservative reserved estimate</dt><dd>{% if review.estimate_inr != None %}INR {{ review.estimate_inr }}{% else %}Unavailable — dated pilot pricing required{% endif %}</dd>
+<dt>Urgency</dt><dd>{% if review.spec.urgent %}Incident may bypass quiet hours; consent and limits still apply{% else %}09:00–18:00 Asia/Kolkata{% endif %}</dd></dl>
+{% if not review.pilot_eligible %}<p class="alert alert-info">This review is outside a fully configured pilot. Captured history cannot later be promoted to sending.</p>{% endif %}
+<ul class="list-group mb-3">{% for target in review.targets %}<li class="list-group-item text-break">{{ target.name }} (Workspace {{ target.workspace_id }}) — {% if target.eligible %}{% if target.representative %}Owner message{% else %}Included with this owner's message{% endif %}{% else %}No eligible service consent{% endif %}</li>{% endfor %}</ul>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="confirm"><input type="hidden" name="token" value="{{ review.token }}">
+<div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="acknowledged" id="notice-ack" required><label class="form-check-label" for="notice-ack">I reviewed the service text, affected Workspaces, recipients, expiry and estimated cost.</label></div>
+<button type="submit" class="btn btn-primary" style="min-height:44px">Confirm and save notice</button></form></div>
+{% endif %}
+<form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="review">
+{% for field in form %}<div class="mb-3">{% if field.name == 'urgent' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+<button type="submit" class="btn btn-outline-primary align-self-start" style="min-height:44px">Review recipients and cost</button>
+</form></div></div>
+{% endblock %}

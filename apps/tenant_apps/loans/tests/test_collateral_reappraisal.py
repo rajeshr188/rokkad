@@ -48,7 +48,7 @@ class CollateralReappraisalTests(WorkspaceTestCase):
         tenant.save()
         Membership.objects.create(user=cls.actor, company=tenant, role=Role.objects.get_or_create(name="Owner")[0])
 
-    def make_loan(self, method="LOWER_OF_CALCULATED_AND_APPRAISAL", *, product_index=0, age_days=100, activate=True):
+    def make_loan(self, method="LOWER_OF_CALCULATED_AND_APPRAISAL", *, product_index=0, age_days=100, activate=True, metal="GOLD", purity="100"):
         self.today = timezone.localdate()
         loan_date = self.today - timedelta(days=age_days)
         borrower = Party.objects.create(display_name="Borrower")
@@ -58,14 +58,14 @@ class CollateralReappraisalTests(WorkspaceTestCase):
         product = _seed_default_loan_products()[product_index]
         type(product).objects.filter(pk=product.pk).update(status="ACTIVE")
         create_pawn_loan_economic_policy(workspace=self.tenant, license=license, valuation_method=method, maximum_ltv_ratio=Decimal("0.8"), advance_interest_periods=0, effective_from=loan_date, actor=self.actor)
-        create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=license, metal="GOLD", monthly_interest_rate=Decimal("2"), effective_from=loan_date, actor=self.actor)
+        create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=license, metal=metal, monthly_interest_rate=Decimal("2"), effective_from=loan_date, actor=self.actor)
         self.source = RateSource.objects.create(name="Market", location="Local")
         originated_at = timezone.now() - timedelta(days=age_days)
         with patch("django.utils.timezone.now", return_value=originated_at):
-            self.quote = Rate.objects.create(rate_source=self.source, buying_rate=3000, selling_rate=3100, effective_at=originated_at)
+            self.quote = Rate.objects.create(rate_source=self.source, metal=metal.title(), buying_rate=3000, selling_rate=3100, effective_at=originated_at)
         self.loan = create_pawn_draft(CreatePawnDraftCommand(workspace_id=self.tenant.pk, borrower_id=borrower.pk, license_id=license.pk,
             series_id=series.pk, product_version_id=product.pk, principal_amount=Decimal("1000"), monthly_interest_rate=Decimal("2"), loan_date=loan_date, tenure_months=12,
-            collateral=(CollateralDraftInput(description="Gold ring", metal="GOLD", gross_weight=Decimal("1"), net_weight=Decimal("1"), purity_percentage=Decimal("100"), latest_appraised_value=Decimal("2000"), allocated_principal=Decimal("1000")),)), actor=self.actor)
+            collateral=(CollateralDraftInput(description="Gold ring" if metal == "GOLD" else f"{metal.title()} pledge", metal=metal, gross_weight=Decimal("1"), net_weight=Decimal("1"), purity_percentage=Decimal(purity), latest_appraised_value=Decimal("2000"), allocated_principal=Decimal("1000")),)), actor=self.actor)
         self.item = self.loan.collateral_items.get()
         append_collateral_photo(self.item.pk, upload=SimpleUploadedFile("ring.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg"), actor=self.actor)
         if activate:

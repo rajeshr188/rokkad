@@ -82,6 +82,16 @@ are task artifacts under .tmp/onboarding-local-review/. Restart with:
 .\.venv314\Scripts\python.exe .tmp/onboarding-local-review/serve_review.py
 ```
 
+During the later Party merge-picker review on 10 October, unrelated unfinished
+portability work introduced an invalid migration dependency and prevented shared-
+checkout startup. The same launcher now loads a tracked committed-source snapshot
+under .tmp/party-merge-picker/review-source, with only the four verified Party picker
+implementation files overlaid. It reads the existing local environment in memory,
+and keeps the same restricted review database, cookies and media; no environment
+file is copied into the snapshot. The unfinished source/migration is unchanged.
+Refresh this bounded snapshot deliberately after later changes are validated,
+rather than assuming it follows every working-tree edit.
+
 Stop the existing review server before restarting on the same port. The task
 profile and copy are local only, with no production migration or deployment.
 

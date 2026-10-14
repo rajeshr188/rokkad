@@ -1,0 +1,42 @@
+{% extends 'account/base_task.html' %}
+{% load i18n static crispy_forms_tags onboarding_tags %}
+{% block title %}{% translate "Verify your email" %} · Rokkad{% endblock %}
+{% block account_task %}
+<h1 class="auth-card-title" id="account-task-title">{% translate "Email addresses" %}</h1>
+<p>{% translate "Verify the email you use for your account before starting a trial or joining a team. You can keep working on business setup while verification is pending." %}</p>
+{% account_journey_context as account_journey %}
+{% if emailaddresses %}
+<form method="post" action="{% url 'account_email' %}">
+  {% csrf_token %}
+  {% if account_journey.workspace_slug %}<input type="hidden" name="setup_workspace" value="{{ account_journey.workspace_slug }}">{% endif %}
+  <fieldset><legend class="h6">{% translate "Choose an email address" %}</legend>
+  {% for radio in emailaddress_radios %}{% with address=radio.emailaddress %}
+    <div class="form-check border rounded p-3 ps-5 mb-2">
+      <input class="form-check-input" type="radio" name="email" id="{{ radio.id }}" value="{{ address.email }}" {% if radio.checked %}checked{% endif %}>
+      <label class="form-check-label text-break" for="{{ radio.id }}">{{ address.email }}
+        <span class="badge {% if address.verified %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if address.verified %}{% translate "Verified" %}{% else %}{% translate "Unverified" %}{% endif %}</span>
+        {% if address.primary %}<span class="badge text-bg-secondary">{% translate "Primary" %}</span>{% endif %}
+      </label>
+    </div>
+  {% endwith %}{% endfor %}
+  </fieldset>
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <button class="btn btn-primary" type="submit" name="action_send">{% translate "Re-send verification" %}</button>
+    <button class="btn btn-outline-secondary" type="submit" name="action_primary">{% translate "Make primary" %}</button>
+    <button class="btn btn-outline-danger" type="submit" name="action_remove">{% translate "Remove" %}</button>
+  </div>
+</form>
+{% else %}<p class="alert alert-warning">{% translate "Add an email address so you can verify your account and recover access." %}</p>{% endif %}
+<p class="small text-muted mt-3">{% translate "Check your inbox and spam folder. If a link has expired, request another verification email here." %}</p>
+{% if can_add_email %}
+<details class="mt-4" {% if form.errors %}open{% endif %}><summary>{% translate "Add another email address" %}</summary>
+  <form method="post" action="{% url 'account_email' %}" class="mt-3">{% csrf_token %}{% if account_journey.workspace_slug %}<input type="hidden" name="setup_workspace" value="{{ account_journey.workspace_slug }}">{% endif %}{{ form|crispy }}
+    <button class="btn btn-outline-primary" name="action_add" type="submit">{% translate "Add email" %}</button>
+  </form>
+</details>
+{% endif %}
+{% endblock %}
+{% block extra_js %}{{ block.super }}
+<script src="{% static 'account/js/account.js' %}"></script><script src="{% static 'account/js/onload.js' %}"></script>
+<script data-allauth-onload="allauth.account.forms.manageEmailForm" type="application/json">{"i18n":{"confirmDelete":"{% translate 'Do you really want to remove the selected email address?' %}"}}</script>
+{% endblock %}

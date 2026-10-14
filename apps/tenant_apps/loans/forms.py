@@ -259,7 +259,7 @@ class PawnCollateralDraftForm(forms.ModelForm):
         self.fields["metal"].choices = [
             (item.value, item.name.title())
             for item in CollateralMetal
-            if item in {CollateralMetal.GOLD, CollateralMetal.SILVER}
+            if item in {CollateralMetal.GOLD, CollateralMetal.SILVER, CollateralMetal.BRONZE}
         ]
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "form-select" if field is self.fields["metal"] else "form-control")

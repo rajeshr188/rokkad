@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-03
+updated: 2026-10-14
 tags: [docs, navigation, architecture]
 ---
 
@@ -15,8 +15,14 @@ not an instruction to reintroduce it.
 ## Current work and decisions
 
 - [Status](STATUS.md): checkpoint, validation and remaining acceptance.
+- [Monitoring portability and JCL coverage follow-up](implementation/monitoring-portability-followup-20261014.md): locally verified package v3, live worker frequency and separate appraisal/book gaps.
 - [Agent memory](AGENT_MEMORY.md): stable decisions and owner constraints.
+- [New-user journey refinement](implementation/new-user-journey-refinement-20261014.md): approved contact/authentication handoffs, guided setup and phone improvements, verified locally; production/provider acceptance remains separate. The [earlier audit](implementation/new-user-journey-audit-20261014.md) retains the original findings.
 - [Active delivery](plans/active.md) and [hardening plan](plans/project-hardening.md).
+- [Combined loan monitoring correction](plans/combined-loan-monitoring-20261011.md): revalidated risk safeguards, independent current valuation policy and explicit recurring assessment rollout.
+- [Portability completion](plans/data-portability-completion-20261010.md): current file restoration, capability coverage and ordered fresh-Workspace transfer work, based on the [10 October review](architecture/data-portability-review-20261010.md).
+- [Fresh business package](implementation/fresh-business-package-pc05.md): private operator export, rollback review and atomic restore into an empty unactivated destination, with explicit coverage and exclusions.
+- [Wider portable loan graphs](implementation/portable-graphs-pc06.md): explicit funding, storage/corrections, retained zero-item checkpoints, source-only licence/quote evidence and operational continuation verification.
 - [Unified loan recording](flows/unified-loan-recording.md): accepted real-time/paper-entry design and [tracked delivery](plans/unified-loan-recording.md); independent paper entry, servicing, supported corrections, native recovery and recorded-origin auction implemented locally; real-book/release acceptance pending.
 - [Release Khata and paper-first recording together](flows/khata-and-paper-first-release.md): scoped commit, merged migration dependencies, separate staff acceptance and joint rollout/recovery.
 - [Roadmap](ROADMAP.md) and [Future work](plans/future-work.md): shelved ideas and resume conditions.
@@ -44,6 +50,8 @@ not an instruction to reintroduce it.
 
 ## Business and operator flows
 
+- [Origination consolidation](implementation/loan-origination-consolidation-20261014.md): mixed existing registers, common agreement capabilities and corrections, two-Party transfer and risk parity.
+- [Post-origination monitoring architecture](architecture/post-origination-loan-monitoring.md): developer source map, metrics, evidence dimensions, refresh/alerts and implemented limits; owner reference is linked inside Loan health and Financial health.
 - [Khata account workflow](flows/khata-account-workflow.md): complete staff journey, worked examples, collateral identification and developer source contracts.
 - [Paper-first operator guide](flows/paper-first-operator-and-release.md): independent numbered loans, actual dated receipts/renewal/closure, book review and recovery.
 - [Origination source/staff review](implementation/loan-source-staff-acceptance-lo05.md): real opening, paper, direct and closed-loan comparison sheet with the owner walkthrough and pending acceptance record.

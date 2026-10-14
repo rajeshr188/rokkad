@@ -9,7 +9,7 @@
         <div class="auth-story-kicker">Start with one workspace</div>
         <h1 class="auth-story-title">Create your Rokkad account.</h1>
         <p class="auth-story-copy">
-            Set up a Workspace, invite your team, and manage customers, pawn loans, reminders and reference rates.
+            Create your account, then set up your pawn-lending business. A Workspace keeps each business's records and staff separate.
         </p>
         <div class="auth-check-list">
             <div class="auth-check-item"><i class="bi bi-check-circle-fill"></i><span>Owner-led workspace setup</span></div>
@@ -21,10 +21,11 @@
     <section class="auth-form-wrap">
         <div class="auth-card">
             <h2 class="auth-card-title">Create account</h2>
-            <p class="auth-card-copy">Start with your user account, then create or join a workspace.</p>
+            <p class="auth-card-copy">Next: verify your email and create or join a business. Your free trial starts only when you accept its terms.</p>
 
             <form method="post" class="mb-0">
                 {% csrf_token %}
+                {{ redirect_field }}
                 {{ form|crispy }}
                 <button class="btn btn-success w-100" type="submit">Sign up</button>
             </form>

@@ -20,7 +20,6 @@ from django.utils import timezone
 
 from apps.orgs.models import Company, Membership, Role
 from apps.subscriptions.models import Plan, Subscription
-from apps.subscriptions.public_trial import PUBLIC_TRIAL_TERMS, owner_has_public_trial
 from apps.tenancy.context import current_workspace_id, workspace_context
 from apps.tenancy.testing import start_workspace_trial
 from apps.tenant_apps.loans.models import (
@@ -106,17 +105,11 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertEqual(destination.status_code, 200)
         self.assertEqual(
             destination.request["PATH_INFO"],
-            reverse("workspace_subscriptions:plan-list", kwargs={"workspace_slug": workspace.slug}),
+            reverse("workspace_slug_settings_setup", kwargs={"workspace_slug": workspace.slug}),
         )
-        if owner_has_public_trial(self.owner):
-            # A second Workspace is an isolation fixture, not a second public offer.
-            # PublicTrialTests separately enforce one public trial per owner.
-            start_workspace_trial(workspace)
-        else:
-            self._post(reverse("workspace_subscriptions:start-trial", kwargs={
-                "workspace_slug": workspace.slug, "plan_id": self.plan.pk,
-            }), {"accepted_terms": PUBLIC_TRIAL_TERMS},
-                expected_url=reverse("workspace_slug_dashboard", kwargs={"workspace_slug": workspace.slug}))
+        # Dashboard/servicing fixtures use the explicit test grant. Public offer
+        # activation and owner configuration gates have separate HTTP coverage.
+        start_workspace_trial(workspace)
         self.assertEqual(Subscription.objects.get(company=workspace).status, "trial")
         self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": workspace.slug}))
         return workspace
@@ -387,7 +380,7 @@ class MVPOperatorJourneyTests(TransactionTestCase):
                     loan_date=self.today, created_by=self.owner,
                 )
         url = reverse("workspace_slug_dashboard", kwargs={"workspace_slug": self.workspace.slug})
-        page = self._get(url + "?queue=draft&page=2")
+        page = self._get(url + "?section=full&queue=draft&page=2")
         self.assertContains(page, "Business overview")
         self.assertContains(page, "Financial health")
         self.assertContains(page, "Estimated unfinalized interest")
@@ -399,20 +392,20 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertEqual(page.context["selected_queue"]["count"], 23)
         self.assertEqual(len(page.context["work_page"]), 3)
         self.assertContains(page, "QUEUE-022")
-        custom = self._get(url + f"?period=custom&start={self.today}&end={self.today}&queue=draft")
+        custom = self._get(url + f"?section=full&period=custom&start={self.today}&end={self.today}&queue=draft")
         self.assertEqual(custom.context["business_overview"]["activity"]["calendar_days"], 1)
         self.assertContains(custom, f"period=custom&amp;start={self.today}&amp;end={self.today}&amp;queue=draft&amp;page=2")
-        invalid = self._get(url + "?period=custom&start=bad&queue=draft")
+        invalid = self._get(url + "?section=full&period=custom&start=bad&queue=draft")
         self.assertIsNone(invalid.context["business_overview"]["activity"])
         self.assertContains(invalid, "Correct the period")
         self.assertContains(invalid, "QUEUE-000")
         other = self._workspace("Counter Queue Other")
-        other_page = self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": other.slug}))
+        other_page = self._get(reverse("workspace_slug_dashboard", kwargs={"workspace_slug": other.slug}) + "?section=full")
         self.assertEqual(other_page.context["counter_work"]["queues"]["draft"]["count"], 0)
         member = get_user_model().objects.create_user(username="counter-queue-member")
         membership = Membership.objects.create(user=member, company=self.workspace, role=self.member_role)
         self.client.force_login(member)
-        member_page = self._get(url)
+        member_page = self._get(url + "?section=full")
         self.assertContains(member_page, "QUEUE-000")
         self.assertContains(member_page, "Financial health")
         self.assertNotContains(member_page, "Review Loan health")
@@ -429,6 +422,106 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertNotContains(denied, "Financial health")
         self.assertNotContains(denied, "QUEUE-000")
         self.assertContains(denied, "does not include access to loan operations")
+
+    def test_dashboard_shell_skips_financial_work_and_has_complete_fallback(self):
+        self.workspace = self._workspace("Fast dashboard")
+        url = reverse("workspace_slug_dashboard", args=[self.workspace.slug])
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work") as queues, patch(
+            "apps.tenant_apps.loans.selectors.business_overview.get_business_overview"
+        ) as overview:
+            page = self._get(url + "?queue=draft&page=2&period=custom&start=bad")
+        queues.assert_not_called()
+        overview.assert_not_called()
+        self.assertNotIn("counter_work", page.context)
+        self.assertNotIn("business_overview", page.context)
+        self.assertContains(page, "Find a borrower or loan")
+        self.assertContains(page, 'id="dashboard-queues"')
+        self.assertContains(page, 'id="dashboard-overview"')
+        self.assertContains(page, "Open complete dashboard")
+        self.assertContains(page, "section=full")
+        self.assertContains(page, "start=bad")
+        self.assertNotContains(page, "Recorded interest outstanding")
+        self.assertIn("no-store", page["Cache-Control"])
+        self.assertEqual(self.client.get(url + "?section=invalid").status_code, 400)
+        self.assertEqual(self.client.post(url, HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value).status_code, 405)
+
+    def test_dashboard_sections_preserve_pagination_filters_and_workspace(self):
+        from apps.tenant_apps.loans.selectors.counter_work import get_workspace_counter_work
+        from apps.tenant_apps.loans.selectors.business_overview import get_business_overview
+        self.workspace = self._workspace("Dashboard section scope")
+        self._setup_loans()
+        party = self._party()
+        with workspace_context(self.workspace.pk):
+            for number in range(23):
+                PawnLoan.objects.create(workspace=self.workspace, product_version=self.product,
+                    license_id=self.series.license_id, series=self.series, borrower=party,
+                    loan_number=f"SECTION-{number:03d}", state="DRAFT", principal_amount=1000,
+                    monthly_interest_rate=2, loan_date=self.today, created_by=self.owner)
+        other = self._workspace("Dashboard section other")
+        url = reverse("workspace_slug_dashboard", args=[self.workspace.slug])
+        query = f"period=custom&start={self.today}&end={self.today}&queue=draft&page=2"
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work", wraps=get_workspace_counter_work) as queues, patch(
+            "apps.tenant_apps.loans.selectors.business_overview.get_business_overview"
+        ) as overview:
+            fragment = self._get(url + "?section=queues&" + query)
+        queues.assert_called_once()
+        overview.assert_not_called()
+        self.assertEqual(fragment["X-Rokkad-Fragment"], "dashboard-queues")
+        self.assertIn("no-store", fragment["Cache-Control"])
+        self.assertContains(fragment, "SECTION-022")
+        self.assertNotContains(fragment, "SECTION-000")
+        self.assertContains(fragment, "23 loans")
+        self.assertContains(fragment, "period=custom&amp;start=")
+        self.assertNotContains(fragment, "Business overview")
+        self.owner.profile.refresh_from_db()
+        self.assertEqual(self.owner.profile.workspace_id, other.pk)
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work") as queues, patch(
+            "apps.tenant_apps.loans.selectors.business_overview.get_business_overview", wraps=get_business_overview
+        ) as overview:
+            fragment = self._get(url + "?section=overview&" + query)
+        queues.assert_not_called()
+        overview.assert_called_once()
+        self.assertEqual(overview.call_args.kwargs["workspace"].pk, self.workspace.pk)
+        self.assertEqual(fragment["X-Rokkad-Fragment"], "dashboard-overview")
+        self.assertIn("no-store", fragment["Cache-Control"])
+        self.assertContains(fragment, "Recorded interest outstanding")
+        self.assertContains(fragment, "Review Loan health")
+        self.assertContains(fragment, f'action="{url}"')
+        invalid = self._get(url + "?section=overview&period=custom&start=bad")
+        self.assertContains(invalid, "Correct the period")
+        other_fragment = self._get(reverse("workspace_slug_dashboard", args=[other.slug]) + "?section=queues")
+        self.assertNotContains(other_fragment, "SECTION-")
+        self.assertContains(other_fragment, "No items in this queue")
+
+    def test_dashboard_section_permissions_and_context_are_rechecked(self):
+        from django.test import RequestFactory
+        from apps.orgs.web.workspace_navigation import workspace_dashboard
+        self.workspace = self._workspace("Dashboard section permissions")
+        url = reverse("workspace_slug_dashboard", args=[self.workspace.slug])
+        member = get_user_model().objects.create_user(username="section-member")
+        membership = Membership.objects.create(user=member, company=self.workspace, role=self.member_role)
+        self.client.force_login(member)
+        allowed = self._get(url + "?section=overview")
+        self.assertContains(allowed, "Financial health")
+        self.assertNotContains(allowed, "Review Loan health")
+        membership.role = Role.objects.create(name="Section without loan access")
+        membership.save(update_fields=["role"])
+        with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work") as queues, patch(
+            "apps.tenant_apps.loans.selectors.business_overview.get_business_overview"
+        ) as overview:
+            for section in ("queues", "overview"):
+                self.assertEqual(self.client.get(url + "?section=" + section).status_code, 403)
+            self.client.logout()
+            self.assertEqual(self.client.get(url + "?section=queues").status_code, 302)
+            request = RequestFactory().get(url + "?section=overview")
+            request.user = self.owner
+            request.workspace = self.workspace
+            self.assertEqual(workspace_dashboard(request, self.workspace.pk).status_code, 403)
+            with workspace_context(self.workspace.pk):
+                request.workspace = None
+                self.assertEqual(workspace_dashboard(request, self.workspace.pk).status_code, 403)
+        queues.assert_not_called()
+        overview.assert_not_called()
 
     def test_overdue_page_keeps_details_off_dashboard_and_enforces_access(self):
         self.workspace = self._workspace("Overdue Follow Up")
@@ -456,7 +549,7 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         overdue_url = self._loan_url("overdue_payments")
         query = f"period=custom&start={self.today}&end={self.today}"
         with patch("apps.tenant_apps.loans.selectors.counter_work.get_workspace_counter_work", return_value=work):
-            dashboard = self._get(dashboard_url + "?" + query)
+            dashboard = self._get(dashboard_url + "?section=full&" + query)
         self.assertContains(dashboard, overdue_url)
         self.assertContains(dashboard, "View overdue payments")
         self.assertContains(dashboard, "Business overview")

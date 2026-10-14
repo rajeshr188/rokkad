@@ -5,6 +5,9 @@ from .servicing_bundle_contract import require
 
 
 def reconcile(loan, events):
+    from types import SimpleNamespace
+    from .origination_corrections import retained_attempt_event_ids
+    retained_attempts = set(retained_attempt_event_ids(loan))
     from .pawn_tranches import get_pawn_principal_tranche_balances
     from apps.tenant_apps.loans.selectors.reports import _principal_evidence_issues
     from apps.tenant_apps.loans.selectors.balances import calculate_pawn_loan_balance
@@ -43,7 +46,8 @@ def reconcile(loan, events):
             require(snapshot.gross_principal == amount('principal') and snapshot.advance_interest == amount('advance_interest') and snapshot.net_disbursed == amount('net_cash'), 'Portable payout differs from its frozen snapshot.')
             if snapshot.basis=='APPROVED':
                 from .pawn_renewals import _successor_approval_economics
-                economics = _successor_approval_economics(loan,snapshot.approval_snapshot)
+                contract = SimpleNamespace(principal_amount=snapshot.gross_principal) if event.pk in retained_attempts else loan
+                economics = _successor_approval_economics(contract,snapshot.approval_snapshot)
                 require(all(getattr(snapshot,key)==economics[key] for key in ('gross_principal','monthly_interest','advance_interest_periods','advance_interest','deducted_fees','net_disbursed'))
                     and snapshot.evidence==economics['evidence'], 'Portable native payout differs from its genuine frozen approval.')
         if event.event_kind in {'RELEASE_RECEIPT', 'AUCTION_RECOVERY'}:

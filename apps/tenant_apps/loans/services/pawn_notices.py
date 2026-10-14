@@ -137,6 +137,9 @@ def create_pawn_loan_notice(
         if source_risk_alert is None or notification_template is None:
             raise PawnLoanNoticeError("A frozen payload override is restricted to approved risk communication.")
         payload = dict(payload_snapshot_override)
+        from .borrower_corrections import borrower_notice_identity
+        if payload.get('borrower_identity') != borrower_notice_identity(loan):
+            raise PawnLoanNoticeError('Borrower identity changed; preview the reminder again.')
         if transaction_evidence and payload.get("transaction_review") != transaction_evidence:
             raise PawnLoanNoticeError("Paper transaction review changed; preview the reminder again.")
     if communication_evidence:
@@ -244,7 +247,7 @@ def _locked_loan(loan_id):
         raise PawnLoanNoticeError("PawnLoan notices require an active tenant schema.")
     try:
         return (
-            PawnLoan.objects.select_for_update()
+            PawnLoan.objects.select_for_update(of=('self',))
             .select_related("workspace", "borrower")
             .prefetch_related("collateral_items", "loan_events", "releases")
             .get(pk=loan_id, workspace_id=workspace_id)
@@ -279,7 +282,9 @@ def _require_notice_eligibility(loan, balance, kind):
 
 
 def _payload_snapshot(loan, balance, kind, *, as_of_date, source_auction=None):
+    from .borrower_corrections import borrower_notice_identity
     payload = {
+        'borrower_identity': borrower_notice_identity(loan),
         "event_key": kind.value,
         "customer": {
             "name": loan.borrower.display_name,

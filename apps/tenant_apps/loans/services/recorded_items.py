@@ -29,7 +29,7 @@ def validate_items(rows, amount, text):
         if not isinstance(row, dict) or set(row) != fields:
             raise ValueError("Each collateral row needs its actual item details, principal and rate.")
         row["description"] = text(row["description"], "item description", 255)
-        if row["metal"] not in ("GOLD", "SILVER") or type(row["quantity"]) is not int or not 1 <= row["quantity"] <= 10000:
+        if row["metal"] not in ("GOLD", "SILVER", "BRONZE") or type(row["quantity"]) is not int or not 1 <= row["quantity"] <= 10000:
             raise ValueError("Select a supported item metal and quantity.")
         for name in ("gross_weight", "net_weight", "purity"):
             row[name] = amount(row[name], name, places=4, positive=True)

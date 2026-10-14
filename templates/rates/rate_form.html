@@ -12,7 +12,7 @@
 {% include 'components/forms/accessible.html#errors' %}
 <form method="post" novalidate>{% csrf_token %}{% include "components/setup/journey_fields.html" %}
   <fieldset class="card card-body mb-3"><legend class="h5">{% translate "1. Source and metal" %}</legend>
-    <p>{% translate "For loan valuation choose INR and Pure metal, including silver. Enter the item's actual purity on the loan." %}</p>
+    <p>{% translate "For loan valuation choose INR and the 100% reference grade. Use pure gold/silver prices, or a price for the bronze material itself. Enter the item's actual percentage on the loan; no alloy conversion is performed." %}</p>
     <div class="row">{% for field in form %}{% if field.name == 'rate_source' or field.name == 'metal' or field.name == 'currency' or field.name == 'purity' %}<div class="col-md-6">{% include 'components/forms/accessible.html#field' %}</div>{% endif %}{% endfor %}</div>
   </fieldset>
   <fieldset class="card card-body mb-3"><legend class="h5">{% translate "2. Prices per gram" %}</legend>

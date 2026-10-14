@@ -1,0 +1,14 @@
+{% extends 'base_auth.html' %}
+{% load i18n onboarding_tags %}
+{% block content %}
+<div class="auth-task-wrap"><section class="auth-card auth-task-card" aria-labelledby="account-task-title">
+  {% block account_task %}{% endblock %}
+  {% account_journey_context as account_journey %}
+  <div class="auth-link-row d-flex flex-wrap justify-content-center gap-3">
+    {% if account_journey.setup_url %}<a href="{{ account_journey.setup_url }}">{% translate "Continue business setup" %}</a>
+    {% elif user.is_authenticated %}<a href="{% url 'app_workspaces' %}">{% translate "My Workspaces" %}</a>
+    {% else %}<a href="{% url 'account_login' %}">{% translate "Sign in" %}</a>{% endif %}
+    <a href="mailto:support@rokkad.com">{% translate "Help & support" %}</a>
+  </div>
+</section></div>
+{% endblock %}

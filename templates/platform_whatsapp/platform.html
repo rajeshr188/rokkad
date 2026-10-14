@@ -1,0 +1,21 @@
+{% extends 'platform_console/base.html' %}
+{% block console_content %}
+<h2 class="h3">Platform WhatsApp</h2>
+<p>Readiness and delivery evidence for explicitly selected Workspaces. Reading this page does not send or reconcile messages.</p>
+<p><a class="btn btn-outline-primary" href="{% url 'platform_whatsapp_announcements' %}">Review a service announcement</a></p>
+<form method="get" class="card card-body mb-3">{{ form.as_p }}<button class="btn btn-outline-primary align-self-start" style="min-height:44px">Show selected Workspaces</button></form>
+{% if errors %}<div class="alert alert-warning" role="alert">{{ errors|join:' ' }}</div>{% endif %}
+{% if readiness %}
+<section class="card card-body mb-3"><h3 class="h5">Sender readiness</h3>
+<p>Provider delivery acceptance requires a real consented pilot. Configuration alone does not prove it.</p>
+{% if readiness.blockers %}<ul>{% for blocker in readiness.blockers %}<li class="text-break">{{ blocker }}</li>{% endfor %}</ul>{% else %}<p>Local configuration checks pass. Source and recipient checks still apply to every attempt.</p>{% endif %}
+<h4 class="h6">English template mappings</h4><ul>{% for template in templates %}<li>{{ template.purpose }} — {% if template.available %}Mapping configured{% else %}Approved mapping required{% endif %}</li>{% endfor %}</ul></section>
+<section class="card card-body mb-3"><h3 class="h5">Platform reservations</h3><p>Count and spend capacity remain reserved after rejection, cancellation or unknown acceptance. These amounts are not provider-invoiced charges.</p>
+{% for day in budget_days %}<div class="border rounded p-3 mb-2"><strong>{{ day.day }}</strong><p class="mb-1">{{ day.reserved_count }} / {{ day.platform_limit }} requests · INR {{ day.reserved_amount }} / {{ day.spend_limit }}</p>{% if day.pricing_hold %}<p class="text-danger mb-0">Pricing hold — sending remains blocked pending evidence review.</p>{% endif %}</div>{% empty %}<p>No capacity reserved.</p>{% endfor %}
+<p>{{ pricing_markers }} unknown provider pricing markers.</p><p>{{ receipts_not_in_selected_matches }} receipts outside selected matches. This includes unmatched receipts and receipts linked to Workspaces outside this selection.</p></section>
+{% for summary in summaries %}<section class="card card-body mb-3" style="overflow-wrap:anywhere"><h3 class="h5">{{ summary.workspace.name }} ({{ summary.workspace.pk }})</h3>
+<ul>{% for count in summary.counts %}<li>{{ count.label }}: {{ count.count }}</li>{% empty %}<li>No source intents.</li>{% endfor %}</ul>
+<p>Today: {{ summary.reserved_count }} reservations, INR {{ summary.reserved_amount }} reserved. Known tariff estimates: INR {{ summary.known_estimates }} for {{ summary.priced_count }} reservations.</p>
+{% for delivery in summary.deliveries %}<div class="border rounded p-3 mb-2"><strong>{{ delivery.purpose }}</strong><p>{{ delivery.status }} · {{ delivery.recipient }}</p>{% if delivery.receipt_conflict %}<p>Conflicting callbacks retained; confirmed delivery remains recorded.</p>{% endif %}{% if delivery.attempt_count %}<a href="{% url 'platform_whatsapp_operation' workspace_slug=summary.workspace.slug delivery_id=delivery.id action='reconcile' %}">Review reconciliation</a>{% endif %}</div>{% endfor %}</section>{% empty %}<p>Select explicit Workspace IDs to inspect delivery evidence.</p>{% endfor %}
+{% endif %}
+{% endblock %}

@@ -72,6 +72,7 @@ class CounterWorkTests(SimpleTestCase):
                 html = render_block_to_string("company/workspace_dashboard.html", "workspace_content", {
                     "workspace": SimpleNamespace(name="Test", slug="test"),
                     "can_use_counter": allowed,
+                    "dashboard_full": True,
                     "dashboard_query": "period=today",
                     "counter_work": {"queues": {"review": {"count": count}}},
                     "selected_queue": {"key": "draft", "title": "Drafts"},

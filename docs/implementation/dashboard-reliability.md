@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-12
+updated: 2026-10-10
 tags: [dashboard, performance, loans]
 ---
 
@@ -136,3 +136,32 @@ missing evidence unavailable rather than causing a database cast error. Collater
 coverage completeness is independent, and per-loan shortfalls are summed without
 netting surplus collateral elsewhere. Closed loans never enter these totals.
 See the [decision](../adr/2026-09-12-dashboard-assessment-financial-evidence.md).
+
+## Live JCL measurement (2026-10-10)
+
+The five-query table above characterizes its synthetic schedule-only portfolio,
+not current monthly continuation costs. Live JCL now takes 8.864 seconds and
+3,360 queries for the actual view/template (middleware/browser excluded).
+Its dynamic monthly obligation adjustment calls the shared continuation reader;
+native interest preview repeatedly reloads financial evidence inside period loops.
+A separate selector probe attributes 6.024 seconds and 3,177 queries to 57
+continuation calls. See the [read-only investigation](dashboard-performance-jcl-20261010.md)
+for scope, nested timings, portfolio size and the proposed canonical evidence-reuse
+optimization. No financial calculation or production code changed in this audit.
+
+## Shared monthly evidence batching (2026-10-10)
+
+The current shared monthly path loads source evidence once per dashboard call and
+reuses the canonical calculations across periods. Native, recorded-anniversary
+and supported opening adjustments receive scoped event, collateral, disbursal,
+principal-allocation and charge/advance facts. Original financial formulas,
+knowledge dates, forecast horizons and correction/reversal guards remain intact.
+There is no cross-request cache or schema migration.
+
+Read-only production candidate comparisons preserve every queue row and amount
+in JCL, JSK and Lakshmi, reducing their queue queries from 3,296/600/4,594 to 13.
+The five new monthly performance tests cover short/long horizons, one/three loans,
+real mixed admissions, old /1-/2 recorded contracts and restricted-role exclusion.
+70 focused regressions passed during initial implementation. The fix was deployed
+on 12 October on top of MR-07, with 114 exact-source regressions passing. See
+[release measurements and recovery](dashboard-performance-release-20261012.md). See [implementation and timing limits](dashboard-performance-jcl-20261010.md#shared-fix-implemented-locally-10-october).

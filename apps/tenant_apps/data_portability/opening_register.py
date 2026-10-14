@@ -14,6 +14,8 @@ from apps.tenant_apps.loans.services.opening_validation import COLLECTION_PROFIL
 from .parsers import PortabilityError
 
 PROFILE = 'outstanding-register/1'
+CHECKPOINT_PROFILE = 'outstanding-register/2'
+CLOSED_PROFILE = 'closed-register/1'
 MAX_LOANS, MAX_ROWS = 20, 200
 COLUMNS = (
     'loan_ref', 'loan_number', 'borrower_ref', 'borrower_name', 'borrower_phone',
@@ -24,6 +26,13 @@ COLUMNS = (
 )
 LOAN_FIELDS = ('loan_number', 'borrower_ref', 'borrower_name', 'borrower_phone',
                'original_date', 'tenure_months', 'unpaid_interest', 'unpaid_fees', 'first_month_paid')
+CHECKPOINT_FIELDS = ('recognized_interest', 'current_period_recognized_interest',
+    'current_period_unpaid_interest', 'current_period_advance_interest', 'future_advance_interest', 'interest_quantum')
+CHECKPOINT_COLUMNS = tuple(k for k in COLUMNS if k != 'first_month_paid') + ('period_principal_base', *CHECKPOINT_FIELDS)
+CLOSED_COLUMNS = ('loan_ref', 'loan_number', 'borrower_ref', 'borrower_name', 'borrower_phone',
+    'original_date', 'closed_on', 'original_principal', 'monthly_rate_percent', 'tenure_months',
+    'outstanding_principal', 'unpaid_interest', 'unpaid_fees', 'collateral_returned')
+TEMPLATES = {PROFILE: COLUMNS, CHECKPOINT_PROFILE: CHECKPOINT_COLUMNS, CLOSED_PROFILE: CLOSED_COLUMNS}
 
 
 def source_namespace(workspace_id, source_key):
@@ -81,13 +90,15 @@ def integer(value, label, maximum):
 
 
 def loan_inputs(*, batch, ref, rows, settings, borrower_id, product_id, workspace_id):
-    """Translate reviewed rows to the unchanged Loans v2 opening contract."""
+    """Translate explicit register facts to their existing Loans opening contract."""
+    checkpoint_profile = batch.document['profile'] == CHECKPOINT_PROFILE
     first = rows[0][1]
-    if any(any(row.get(key, '').strip() != first.get(key, '').strip() for key in LOAN_FIELDS) for _, row in rows):
+    repeated = tuple(k for k in LOAN_FIELDS if k != 'first_month_paid') + CHECKPOINT_FIELDS if checkpoint_profile else LOAN_FIELDS
+    if any(any(row.get(key, '').strip() != first.get(key, '').strip() for key in repeated) for _, row in rows):
         raise PortabilityError('Repeat identical loan and borrower details on every collateral row for this loan.')
     if len(rows) > 20:
         raise PortabilityError('A loan supports at most 20 distinct collateral items.')
-    if first['first_month_paid'].strip().lower() != 'yes':
+    if not checkpoint_profile and first['first_month_paid'].strip().lower() != 'yes':
         raise PortabilityError('This profile requires evidence that the first month was paid upfront. Other interest rules need a separate review.')
     try:
         original = datetime.strptime(first['original_date'].strip(), '%d/%m/%Y').date()
@@ -110,8 +121,8 @@ def loan_inputs(*, batch, ref, rows, settings, borrower_id, product_id, workspac
         if row['in_vault'].strip().lower() != 'yes':
             raise PortabilityError(f'Row {number}: confirm this collateral is in your vault. Released/repledged items need a separate review.')
         original_p = amount(row['original_principal'].strip(), f'Row {number} original principal', positive=True)
-        remaining = amount(row['outstanding_principal'].strip(), f'Row {number} outstanding principal', positive=True)
-        if Decimal(original_p) != Decimal(remaining):
+        remaining = amount(row['outstanding_principal'].strip(), f'Row {number} outstanding principal', positive=not checkpoint_profile)
+        if not checkpoint_profile and Decimal(original_p) != Decimal(remaining):
             raise PortabilityError(f'Row {number}: principal has changed. This first profile cannot admit a reduced-principal opening.')
         items.append({'id': item_id, 'description': row['description'].strip(),
             'quantity': integer(row['quantity'].strip(), f'Row {number} quantity', 10000),
@@ -127,8 +138,8 @@ def loan_inputs(*, batch, ref, rows, settings, borrower_id, product_id, workspac
     unpaid = amount(first['unpaid_interest'].strip(), 'Unpaid interest')
     fees = amount(first['unpaid_fees'].strip(), 'Unpaid fees')
     monthly = sum(Decimal(i['original_principal']) * Decimal(i['monthly_rate']) / 100 for i in items)
-    checkpoint = aggregate_collection_interest(original, cutoff, monthly)
-    if Decimal(unpaid) > Decimal(checkpoint['additional_interest']):
+    checkpoint = aggregate_collection_interest(original, cutoff, monthly) if not checkpoint_profile else {'additional_months': 0, 'additional_interest': '0'}
+    if not checkpoint_profile and Decimal(unpaid) > Decimal(checkpoint['additional_interest']):
         raise PortabilityError('Unpaid interest exceeds the supported charge through handover. Check the date, rate, paid coverage or choose an assisted review.')
     namespace = str(source_namespace(workspace_id, batch.source_key))
     review = {
@@ -161,6 +172,9 @@ def loan_inputs(*, batch, ref, rows, settings, borrower_id, product_id, workspac
     # This register explicitly retains the original review/2 calculation rule.
     # Changing today's defaults must not relabel that older evidence contract.
     policy['policy_version'] = 1
+    if checkpoint_profile:
+        from .position_register import apply_checkpoint
+        apply_checkpoint(review, rows, first, policy)
     setup = {'tenure_months': tenure, 'source_license_number': settings['license_number'],
              'local_loan_number': first['loan_number'].strip(), 'policy': policy}
     if settings.get('legacy_reference'):

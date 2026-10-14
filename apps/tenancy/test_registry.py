@@ -10,10 +10,10 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
     def test_registry_accounts_for_every_surviving_business_model(self):
         models = workspace_owned_models()
 
-        self.assertEqual(len(models), 143)
+        self.assertEqual(len(models), 155)
         self.assertEqual(
             {model._meta.app_label for model in models},
-            {"party", "loans", "notify_v2", "rates", "orgs", "data_portability"},
+            {"party", "loans", "notify_v2", "rates", "orgs", "data_portability", "platform_whatsapp"},
         )
         for model in models:
             with self.subTest(model=model._meta.label):
@@ -24,7 +24,16 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
     def test_rls_rollout_registry_covers_every_surviving_model(self):
         labels = {model._meta.label_lower for model in rls_protected_models()}
 
-        self.assertEqual(len(labels), 143)
+        self.assertEqual(len(labels), 155)
+        self.assertIn("platform_whatsapp.attempt", labels)
+        self.assertIn("platform_whatsapp.receiptlink", labels)
+        self.assertIn("platform_whatsapp.setuprequest", labels)
+        self.assertIn("platform_whatsapp.delivery", labels)
+        self.assertIn("platform_whatsapp.preference", labels)
+        self.assertIn("platform_whatsapp.consentevent", labels)
+        self.assertNotIn("platform_whatsapp.contact", labels)
+        self.assertIn("data_portability.businesspackagereceipt", labels)
+        self.assertIn("data_portability.loanrestorebatch", labels)
         self.assertIn("loans.paperbacklogcheckpoint", labels)
         self.assertIn("loans.loantransactionreview", labels)
         self.assertIn("loans.khataseriesstatuschange", labels)
@@ -32,11 +41,23 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
         self.assertIn("loans.loanoriginationsettings", labels)
         self.assertEqual(
             {label.split(".", 1)[0] for label in labels},
-            {"loans", "notify_v2", "party", "rates", "orgs", "data_portability"},
+            {"loans", "notify_v2", "party", "rates", "orgs", "data_portability", "platform_whatsapp"},
         )
 
 
 class WorkspaceDataPlaneMetadataTests(TestCase):
+    def test_model_specific_rls_migration_does_not_need_an_app_fallback(self):
+        from .checks import check_workspace_rls
+        model=SimpleNamespace(_meta=SimpleNamespace(app_label='registered_control',
+            label_lower='registered_control.position',db_table='missing_registered_position'))
+        with patch('apps.tenancy.checks.rls_protected_models',return_value=[model]), patch.dict(
+            'apps.tenancy.checks.RLS_MIGRATION_BY_MODEL',{'registered_control.position':'0001_initial'}
+        ), patch('apps.tenancy.checks.MigrationRecorder.applied_migrations',
+                 return_value={('registered_control','0001_initial')}):
+            # A registered model without an app-wide fallback must reach the
+            # actual table/isolation check, rather than crash or skip it.
+            self.assertEqual([error.id for error in check_workspace_rls(None,databases=['default'])],['tenancy.E011'])
+
     def test_new_model_rls_check_waits_for_its_migration_and_reports_missing_table(self):
         from .checks import check_workspace_rls
         from .registry import RLS_MIGRATION_BY_MODEL

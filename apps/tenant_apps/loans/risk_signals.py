@@ -81,6 +81,7 @@ def _rate_signature(rate):
     metal = {
         Rate.Metal.GOLD: "GOLD",
         Rate.Metal.SILVER: "SILVER",
+        Rate.Metal.BRONZE: "BRONZE",
     }.get(rate.metal)
     if metal is None or rate.effective_at is None:
         return None

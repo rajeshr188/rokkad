@@ -14,7 +14,7 @@ from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenant_apps.loans.domain.monthly_contract import anniversary
 from apps.tenant_apps.loans.models import (
-    LoanLicense, LoanNumberSequence, LoanSeries, PawnLoan, PawnLoanEvent,
+    LoanLicense, LoanNumberSequence, LoanSeries, LoanMonitoringPolicy, PawnLoan, PawnLoanEvent,
     PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy, PawnLoanFeePolicy,
 )
 from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
@@ -128,6 +128,46 @@ class BusinessJourneyTests(WorkspaceTestCase):
         self.assertTrue(setup["ready"])
         self.assertNotIn("borrower", [step["key"] for step in setup["steps"]])
         self.assertEqual(["GOLD"], [metal["metal"] for metal in setup["series_rows"][0]["metals"]])
+
+    def monitoring_policy(self, **changes):
+        values = dict(workspace=self.tenant, version=1, effective_from=self.today,
+            compliance_profile="Reviewed test monitoring", maturity_warning_days=30,
+            dpd_watch_threshold=1, dpd_substandard_threshold=90, ltv_warning_ratio=Decimal(".7"),
+            ltv_breach_ratio=Decimal(".8"), ltv_critical_ratio=Decimal(".9"),
+            rate_freshness_days=7, appraisal_freshness_days=90,
+            eligible_custody_states=["IN_VAULT", "WITH_FUNDING_LENDER"], severity_mapping={"strategy":"derived-v1"})
+        return LoanMonitoringPolicy.objects.create(**{**values, **changes})
+
+    def test_lending_can_be_ready_without_silently_configuring_monitoring(self):
+        self.configure()
+        setup = build_business_setup(workspace=self.tenant)
+        self.assertTrue(setup["ready"])
+        self.assertFalse(setup["monitoring"]["ready"])
+        self.assertEqual(setup["monitoring"]["total_count"], 1)
+        before = (LoanMonitoringPolicy.objects.count(), PawnLoan.objects.count(), PawnLoanEvent.objects.count())
+        page = self.client.get(self.url, {"step":"review"})
+        self.assertContains(page,"Monitoring readiness")
+        self.assertContains(page,"Create your first loan")
+        self.assertEqual(before,(LoanMonitoringPolicy.objects.count(),PawnLoan.objects.count(),PawnLoanEvent.objects.count()))
+
+    def test_monitoring_readiness_resolves_current_workspace_default_and_license_override(self):
+        first, _, _ = self.configure()
+        second, _, _ = self.configure(code="B")
+        default = self.monitoring_policy()
+        override = self.monitoring_policy(license=second)
+        setup = build_business_setup(workspace=self.tenant)
+        by_license = {row["series"].license_id:row["monitoring_policy"] for row in setup["series_rows"]}
+        self.assertTrue(setup["monitoring"]["ready"])
+        self.assertEqual(by_license[first.pk].pk,default.pk)
+        self.assertEqual(by_license[second.pk].pk,override.pk)
+
+    def test_future_monitoring_policy_does_not_make_today_complete(self):
+        first, _, _ = self.configure()
+        self.configure(code="B")
+        self.monitoring_policy(license=first)
+        self.monitoring_policy(effective_from=self.today+timedelta(days=1))
+        setup = build_business_setup(workspace=self.tenant)
+        self.assertEqual(setup["monitoring"],{"ready":False,"available_count":1,"total_count":2})
 
     def test_readiness_does_not_mix_interest_and_quotes_across_series(self):
         self.configure(valuation="CALCULATED_METAL_VALUE")

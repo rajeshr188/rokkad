@@ -36,6 +36,16 @@ def dispatch_with_transaction_review(job, deliver):
     if notice is None:
         return deliver()
     loan = PawnLoan.objects.select_for_update().get(pk=notice.loan_id, workspace_id=job.workspace_id)
+    job.refresh_from_db()
+    if job.status in ("SENT", "CANCELLED"):
+        return job.status == "SENT"
+    from .borrower_corrections import borrower_notice_identity
+    frozen_identity = notice.payload_snapshot.get('borrower_identity')
+    changed = (frozen_identity != borrower_notice_identity(loan) if frozen_identity is not None
+        else loan.change_log.filter(event_kind='BORROWER_CORRECTED', created_at__gte=notice.created_at).exists())
+    if changed:
+        job.mark_failed(reason="Borrower identity was corrected after this notice. Prepare a new reminder.")
+        return False
     coverage = transaction_completeness(loan, timezone.localdate())
     if not coverage.required and not notice.payload_snapshot.get("transaction_review"):
         return deliver()

@@ -1,8 +1,18 @@
-{% load i18n %}
+{% load i18n onboarding_tags %}
 {% load orgs_tags %}
 {% navigation_actions as nav_actions %}
 {% with effective_workspace=request.workspace %}
 {% if effective_workspace %}
+{% setup_navigation_context as setup_journey %}
+{% if journey or setup_journey %}
+<nav class="workspace-nav p-3" aria-label="{% translate 'Business setup navigation' %}">
+  <div class="workspace-nav-group-label">{% translate "Getting started" %}</div>
+  <a class="workspace-nav-link active" href="{% if setup_journey %}{{ setup_journey.return_url }}{% else %}{% url 'workspace_slug_settings_setup' effective_workspace.slug %}{% endif %}">{% translate "Business setup" %}</a>
+  <a class="workspace-nav-link" href="{% url 'app_workspaces' %}">{% translate "My Workspaces" %}</a>
+  {% if workspace_can_write %}<a class="workspace-nav-link" href="{% url 'workspace_slug_dashboard' effective_workspace.slug %}">{% translate "Dashboard" %}</a>{% endif %}
+</nav>
+<details class="mx-3 mb-3"><summary>{% translate "All workspace navigation" %}</summary>
+{% endif %}
 <nav class="workspace-nav p-3" aria-label="{% translate 'Workspace navigation' %}">
   <div class="workspace-nav-group-label">{% translate "Work" %}</div>
   <a class="workspace-nav-link {% if request.resolver_match.url_name == 'workspace_slug_dashboard' %}active{% endif %}" href="{% url 'workspace_slug_dashboard' workspace_slug=effective_workspace.slug %}"><i aria-hidden="true" class="bi bi-speedometer2"></i> {% translate "Dashboard" %}</a>
@@ -33,5 +43,6 @@
   </details>
   {% endif %}
 </nav>
+{% if journey or setup_journey %}</details>{% endif %}
 {% endif %}
 {% endwith %}

@@ -33,15 +33,20 @@ class SaaSRouteIntentTests(SimpleTestCase):
 
         self.assertEqual(shared_urlpatterns, expected)
 
-    def test_global_authenticated_routes_start_with_canonical_aliases(self):
+    def test_global_authenticated_routes_keep_billing_entries_and_canonical_aliases(self):
+        # Existing public paid-entry routes precede the canonical alias block.
+        # Keep their exact identities and the full contiguous alias ordering.
+        self.assertEqual([pattern.name for pattern in GLOBAL_AUTHENTICATED_URLPATTERNS[:2]],
+            ["public-prepaid-start", "public-recurring-start"])
+        start = 2
         self.assertEqual(
-            GLOBAL_AUTHENTICATED_URLPATTERNS[: len(CANONICAL_CONTROL_PLANE_URLPATTERNS)],
+            GLOBAL_AUTHENTICATED_URLPATTERNS[start : start + len(CANONICAL_CONTROL_PLANE_URLPATTERNS)],
             CANONICAL_CONTROL_PLANE_URLPATTERNS,
         )
         self.assertEqual(
             GLOBAL_AUTHENTICATED_URLPATTERNS[
-                len(CANONICAL_CONTROL_PLANE_URLPATTERNS) :
-                len(CANONICAL_CONTROL_PLANE_URLPATTERNS)
+                start + len(CANONICAL_CONTROL_PLANE_URLPATTERNS) :
+                start + len(CANONICAL_CONTROL_PLANE_URLPATTERNS)
                 + len(CANONICAL_WORKSPACE_SLUG_URLPATTERNS)
             ],
             CANONICAL_WORKSPACE_SLUG_URLPATTERNS,

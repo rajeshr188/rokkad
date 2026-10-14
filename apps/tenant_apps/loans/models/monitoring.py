@@ -7,6 +7,12 @@ from .core import current_tenant_workspace_id
 
 
 class LoanMonitoringPolicy(models.Model):
+    class ValuationBasis(models.TextChoices):
+        ORIGINAL_AGREEMENT = "ORIGINAL_AGREEMENT", "Use each loan's saved valuation method"
+        CALCULATED_METAL_VALUE = "CALCULATED_METAL_VALUE", "Current calculated metal value"
+        LATEST_APPRAISAL = "LATEST_APPRAISAL", "Latest approved appraisal"
+        LOWER_OF_CALCULATED_AND_APPRAISAL = "LOWER_OF_CALCULATED_AND_APPRAISAL", "Lower of current metal value and approved appraisal"
+
     workspace = models.ForeignKey("orgs.Company", on_delete=models.PROTECT, related_name="loan_monitoring_policies")
     license = models.ForeignKey("loans.LoanLicense", null=True, blank=True, on_delete=models.PROTECT, related_name="monitoring_policies")
     version = models.PositiveIntegerField()
@@ -15,6 +21,8 @@ class LoanMonitoringPolicy(models.Model):
     supersedes = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="successor")
     amendment_reason = models.TextField(blank=True)
     compliance_profile = models.CharField(max_length=120)
+    valuation_basis = models.CharField(max_length=40, choices=ValuationBasis.choices,
+        default=ValuationBasis.ORIGINAL_AGREEMENT, db_default=ValuationBasis.ORIGINAL_AGREEMENT)
     maturity_warning_days = models.PositiveSmallIntegerField(default=30)
     operational_grace_days = models.PositiveSmallIntegerField(default=3)
     dpd_watch_threshold = models.PositiveSmallIntegerField(default=1)
@@ -32,6 +40,7 @@ class LoanMonitoringPolicy(models.Model):
     class Meta:
         ordering = ("workspace_id", "license_id", "effective_from", "version")
         constraints = [
+            models.CheckConstraint(condition=Q(valuation_basis__in=("ORIGINAL_AGREEMENT", "CALCULATED_METAL_VALUE", "LATEST_APPRAISAL", "LOWER_OF_CALCULATED_AND_APPRAISAL")), name="loans_monitor_valuation_basis_valid"),
             models.UniqueConstraint(fields=("workspace", "license", "version"), name="loans_monitor_policy_scope_version_uniq", nulls_distinct=False),
             models.CheckConstraint(condition=Q(effective_until__isnull=True) | Q(effective_until__gte=F("effective_from")), name="loans_monitor_policy_dates_valid"),
             models.CheckConstraint(condition=Q(ltv_warning_ratio__gt=0) & Q(ltv_warning_ratio__lte=1), name="loans_monitor_ltv_warning_range"),

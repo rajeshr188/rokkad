@@ -182,7 +182,7 @@ def _apply_capture(*, invoice_id, payment, actor=None, workspace=None):
         "actor_id": getattr(actor, "pk", None),
     })
     from .notifications import send_checkout_receipt
-    send_checkout_receipt(invoice.pk)
+    send_checkout_receipt(invoice.pk, capture_whatsapp=True)
     return invoice
 
 

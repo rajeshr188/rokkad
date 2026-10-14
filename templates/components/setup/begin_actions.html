@@ -1,0 +1,12 @@
+{% load i18n %}
+<div class="d-flex flex-wrap gap-2 mb-3" id="setup-begin-actions">
+{% if business_setup.ready and can_create_loan %}
+  <a class="btn btn-primary" href="{% url 'workspace_slug_loan_create' company.slug %}">{% if setup_review.has_loans %}{% translate "Create a loan" %}{% else %}{% translate "Create your first loan" %}{% endif %}</a>
+{% elif activation_required %}
+  <a class="btn btn-primary" href="{% url 'workspace_subscriptions:plan-list' company.slug %}?setup_step=review&amp;setup_path={{ journey.path }}">{% translate "Review free trial and access" %}</a>
+{% else %}
+  <p class="small text-muted mb-0">{% translate "Complete the unavailable lending settings before creating a new loan. You can return to any step above." %}</p>
+{% endif %}
+  <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:document_layout_list' company.slug %}">{% translate "Documents and printing (customization optional)" %}</a>
+</div>
+<p class="small">{% translate "Review the saved settings below. The actual loan review still checks the borrower, collateral, agreement and payout." %}</p>

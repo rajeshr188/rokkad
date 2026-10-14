@@ -240,6 +240,12 @@ def export_archive(*, workspace, actor):
                 if count > MAX_ROWS:
                     raise ValueError("Ordinary Loans archive exceeds the bounded row count; use full database/media recovery.")
                 rows.append(_row(obj))
+                if model._meta.model_name == "loanchangelog" and obj.event_kind == "BORROWER_CORRECTED":
+                    from apps.tenant_apps.party.models import Party
+                    evidence = obj.metadata["borrower_correction"]
+                    for key in ("before", "after"):
+                        party = Party.objects.get(workspace=workspace, pk=evidence[key]["id"])
+                        references[(party._meta.label, party.pk)] = _reference(party)
                 for field in model._meta.concrete_fields:
                     if field.is_relation and field.related_model not in models and getattr(obj, field.attname) is not None:
                         related = getattr(obj, field.name)

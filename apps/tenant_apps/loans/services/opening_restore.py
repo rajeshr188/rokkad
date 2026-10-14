@@ -65,6 +65,9 @@ def parse_opening_export(content):
             _require(type(rows) is list and len(rows) <= MAX_RECORDS, "Opening evidence exceeds record bounds.")
             count += len(rows)
             objects[kind] = [decode_row(kind, row, profile=manifest["profile"]) for row in rows]
+            if kind == 'change_log':
+                _require(all(row.event_kind != 'BORROWER_CORRECTED' and 'borrower_correction' not in row.metadata
+                    for row in objects[kind]), 'Borrower correction requires servicing bundle version 5 with both Party identities.')
             ids = [row.id for row in objects[kind]]
             _require(len(ids) == len(set(ids)), "Duplicate source identity in " + kind)
             if kind != "events":

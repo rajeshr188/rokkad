@@ -2,6 +2,7 @@
 
 from django.core.paginator import Paginator
 from django.shortcuts import render
+from django.views.decorators.http import require_GET
 
 from apps.tenant_apps.loans.access import loans_setup_required
 from apps.tenant_apps.loans.filters import (
@@ -41,6 +42,13 @@ def pawn_operations_console(request):
         "latest_risk_notice_failure": next((row for row in risk_notice_rows if row.status in {"FAILED", "MISSING"}), None),
         "risk_email_pilot": risk_email_pilot,
     })
+
+
+@loans_setup_required
+@require_GET
+def pawn_risk_guide(request):
+    """Owner reference only; never calculate, refresh or post loan activity."""
+    return render(request, "loans/setup/risk_guide.html")
 
 
 @loans_setup_required
@@ -112,6 +120,7 @@ __all__ = [
     "pawn_loan_notice_list",
     "pawn_operations_console",
     "pawn_operations_runbook",
+    "pawn_risk_guide",
     "pawn_risk_portfolio",
     "pawn_risk_whatsapp_pilot",
 ]

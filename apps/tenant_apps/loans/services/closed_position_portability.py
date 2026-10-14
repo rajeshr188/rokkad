@@ -30,10 +30,16 @@ def _sha(content):
 
 
 @transaction.atomic
-def export_closed_position(*, workspace_id, actor, loan_id):
+def export_closed_position(*, workspace_id, actor, loan_id, _consistent_snapshot=False):
     workspace = require_history_setup_access(workspace_id, actor, read_only=True)
     resolve_workspace_access(actor=actor, workspace=workspace).require("data.export")
-    loan = m.PawnLoan.objects.select_for_update().get(workspace_id=workspace_id, pk=loan_id)
+    query = m.PawnLoan.objects
+    if _consistent_snapshot:
+        from apps.tenant_apps.data_portability.services import require_export_snapshot
+        require_export_snapshot()
+    else:
+        query = query.select_for_update()
+    loan = query.get(workspace_id=workspace_id, pk=loan_id)
     document = deepcopy(read_position(loan))
     archive = loan.historical_import.archive_evidence
     media = list(archive.attachments.filter(workspace_id=workspace_id).order_by("pk")) if archive else []
@@ -128,12 +134,15 @@ def preview_closed_position_file(*, content, **mapping):
     return summary, signing.dumps(dict(sha256=_sha(content), review=review), salt=SALT, compress=True)
 
 
-def admit_closed_position_file(*, content, review_token, confirmed=False, **mapping):
+def admit_closed_position_file(*, content, review_token, confirmed=False, _outer_saved_files=None, **mapping):
     saved_files = []
     try:
         with transaction.atomic():
-            return _admit_closed_position_file(content=content, review_token=review_token, confirmed=confirmed,
+            result = _admit_closed_position_file(content=content, review_token=review_token, confirmed=confirmed,
                 saved_files=saved_files, **mapping)
+            if _outer_saved_files is not None:
+                _outer_saved_files.extend(saved_files)
+            return result
     except Exception:
         for storage, name in saved_files:
             storage.delete(name)

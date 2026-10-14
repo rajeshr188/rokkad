@@ -35,7 +35,7 @@ def direct_entry_layout_context(request, form):
                   direct_valuation_method=policy.valuation_method)
     result["direct_tenure_open"] = bool(form["tenure_months"].errors) or not policy.default_tenure_months or (
         str(form["tenure_months"].value()) != str(policy.default_tenure_months))
-    for metal in ("GOLD", "SILVER"):
+    for metal in ("GOLD", "SILVER", "BRONZE"):
         try:
             rate = resolve_pawn_metal_interest_rate_policy(**values, metal=metal)
         except ValueError:

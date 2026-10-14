@@ -1,0 +1,121 @@
+{% extends "base_tenant.html" %}
+{% block title %}Loan monitoring guide{% endblock %}
+{% block workspace_content %}
+{% include "loans/setup/_navigation.html" %}
+<div class="app-heading">
+  <div><h1 class="h3 mb-1">Loan monitoring guide</h1><p class="text-muted mb-0">An owner's reference for understanding debt, repayment, collateral cover and the evidence behind each result.</p></div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'workspace_loans:pawn_risk_portfolio' request.workspace.slug %}">Open Loan health</a>
+    <a class="btn btn-outline-secondary" href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}">Monitoring policy setup</a>
+  </div>
+</div>
+<p class="small text-muted">Reference reviewed 12 October 2026. Examples are fictional, not your Workspace's amounts or recommended lending limits. Reading this guide changes no loan, policy, assessment or customer message.</p>
+<nav class="card card-body mb-4" aria-label="Monitoring guide contents">
+  <div class="d-flex flex-wrap gap-3">
+    <a href="#process">After origination</a><a href="#amounts">Financial amounts</a><a href="#repayment">Repayment and maturity</a><a href="#valuation">Appraisal and valuation</a><a href="#coverage">LTV and worked example</a><a href="#evidence">Evidence and paper books</a><a href="#refresh">Assessment refresh</a><a href="#alerts">Alerts and actions</a><a href="#dashboard">Dashboard totals</a><a href="#routine">Owner's review routine</a><a href="#limits">Limits</a>
+  </div>
+</nav>
+
+<section id="process" class="card card-body mb-4" aria-labelledby="process-title">
+  <h2 id="process-title" class="h5">What happens after origination?</h2>
+  <p>Origination establishes the agreement and the actual starting position. Monitoring checks what is still owed, whether contractual payments are late, whether eligible collateral covers the loan, and whether the evidence is complete and fresh enough to trust the result.</p>
+  <ol><li>Read the established position and subsequent transactions.</li><li>Calculate debt, contractual dues, days past due and maturity distance.</li><li>Value collateral using the applicable method, evidence dates and custody rules.</li><li>Save today's assessment, explanations and material risk changes.</li><li>Staff verify the facts, take the appropriate action and reassess its effect.</li></ol>
+  <p>Direct, paper-origin and imported active loans share this monitoring process. Their original terms and evidence remain distinct. A closed loan leaves active monitoring but stays available for browsing; a supported reopening needs another assessment.</p>
+  <p class="mb-0"><strong>Two policies have different jobs.</strong> The loan's frozen agreement controls interest and servicing. The effective monitoring policy controls current valuation, attention thresholds and evidence age limits. Amending monitoring policy does not rewrite the customer's agreed debt.</p>
+</section>
+
+<section id="amounts" class="card card-body mb-4" aria-labelledby="amounts-title">
+  <h2 id="amounts-title" class="h5">Understand the financial amounts</h2>
+  <div class="table-responsive"><table class="table align-middle"><caption>Different amounts answer different business questions.</caption><thead><tr><th scope="col">Amount</th><th scope="col">Meaning and use</th></tr></thead><tbody>
+    <tr><th scope="row">Principal outstanding</th><td>Principal remaining after applicable payments. It shows capital still tied up in the loan.</td></tr>
+    <tr><th scope="row">Recorded unpaid interest</th><td>Interest already recognized in the loan records that remains unpaid.</td></tr>
+    <tr><th scope="row">Estimated unfinalized interest</th><td>Additional eligible interest through the assessment date that has not been finalized as a recorded charge. It is separate from recorded unpaid interest.</td></tr>
+    <tr><th scope="row">Total economic exposure</th><td>Recorded outstanding principal, interest and fees, plus estimated unfinalized interest.</td></tr>
+    <tr><th scope="row">Due now</th><td>Unpaid contractual obligations due on or before today.</td></tr>
+    <tr><th scope="row">Overdue</th><td>Unpaid contractual obligations whose due dates are before today.</td></tr>
+    <tr><th scope="row">Maturity payoff</th><td>Remaining scheduled principal and interest, plus outstanding fees. It supplies the collateral comparison basis for bullet and flexible partial-payment loans.</td></tr>
+  </tbody></table></div>
+  <p class="mb-0">Amortizing loans use economic exposure for collateral monitoring. Always read the displayed <strong>Coverage exposure</strong> and its basis. It is not necessarily principal alone or the amount payable today. Estimated interest is not collected cash or realized profit. Viewing Loan health does not finalize interest.</p>
+</section>
+
+<section id="repayment" class="card card-body mb-4" aria-labelledby="repayment-title">
+  <h2 id="repayment-title" class="h5">Repayment performance and maturity</h2>
+  <p><strong>Days past due (DPD)</strong> is the number of days since the oldest unpaid overdue obligation's due date. If ₹500 was due on 10 October, it is two days past due on 12 October. Paying ₹300 leaves ₹200 against that same obligation, so DPD remains two. Clear that obligation and the next unpaid overdue date determines DPD, or it becomes zero.</p>
+  <p>Interest becoming chargeable is different from payment becoming overdue. For the shared monthly contract, a loan dated 5 April with its first month paid upfront starts its next charge on 6 May. Its product and contractual schedule determine when payment is due. A flexible loan is not automatically a monthly instalment loan.</p>
+  <p><strong>Days to maturity</strong> is positive before maturity, zero on maturity and negative afterward. An approaching-maturity warning helps staff prepare repayment, renewal or settlement before the deadline.</p>
+  <p>The model defaults label repayment Standard below one DPD, Watch from one through 89, and Substandard from 90. Your applicable monitoring policy can differ. DPD buckets are current, 1–29, 30–59, 60–89 and 90-plus days. These are operational labels, not a regulatory NPA classification.</p>
+  <p class="mb-0"><strong>Grace does not change DPD or due dates.</strong> The calculator derives a grace-based escalation indicator from the frozen product or accepted opening agreement. Current risk flags and staff alerts do not use it as a general suppression rule; do not assume every alert waits for grace to expire.</p>
+</section>
+
+<section id="valuation" class="card card-body mb-4" aria-labelledby="valuation-title">
+  <h2 id="valuation-title" class="h5">Appraisal, valuation and assessment</h2>
+  <p>An <strong>appraisal</strong> is an approved estimate of an item's value with an effective date. <strong>Valuation</strong> selects or calculates the collateral value used now. A <strong>risk assessment</strong> combines debt, repayment, maturity, collateral value and evidence quality.</p>
+  <div class="table-responsive"><table class="table"><caption>Current monitoring valuation choices</caption><thead><tr><th scope="col">Method</th><th scope="col">Required evidence</th></tr></thead><tbody>
+    <tr><th scope="row">Use each loan's saved method</th><td>Preserves the selected method, not a permanently fixed original rupee value. For paper/imported loans the saved method need not prove the original lending valuation.</td></tr>
+    <tr><th scope="row">Current calculated metal value</th><td>Usable buying rate × net weight × purity percentage ÷ 100, with applicable rounding.</td></tr>
+    <tr><th scope="row">Latest approved appraisal</th><td>The latest applicable approved appraisal, within the policy's age limit.</td></tr>
+    <tr><th scope="row">Lower of calculated value and appraisal</th><td>Both usable evidence sources; selects the smaller value for each item.</td></tr>
+  </tbody></table></div>
+  <p>Model defaults allow seven-day-old rates and 90-day-old appraisals; the effective policy controls the actual limits. Age limits use inclusive local calendar days. Refreshing an assessment does not renew a price, inspect jewellery or approve a new appraisal.</p>
+  <p>Calculated value supports gold, silver and bronze. Rates must be INR buying prices per gram at the 100% reference grade. For bronze, quote the bronze material itself; no copper price or alloy conversion is substituted. The recorded net weight and percentage remain the inputs. A missing or stale bronze price leaves coverage unknown.</p>
+  <p>Only collateral in supported, policy-permitted custody can provide cover. Returned jewellery does not secure an outstanding loan. A missing or unusable required item can make the whole loan's coverage unknown; Rokkad does not present an incomplete item total as full cover.</p>
+  <p class="mb-0">To change current monitoring, open <a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}">Calculation, fees and monitoring</a>, find Monitoring policy history and choose <strong>Amend</strong> for the intended scope. A licence override replaces the Workspace monitoring policy as a whole. Review the effective date and reason, then reassess. Enter fresh quotes through Rates or use authorized collateral reassessment on the relevant loan.</p>
+</section>
+
+<section id="coverage" class="card card-body mb-4" aria-labelledby="coverage-title">
+  <h2 id="coverage-title" class="h5">LTV, policy headroom and full shortfall</h2>
+  <ul><li><strong>LTV</strong> = coverage exposure ÷ eligible collateral value.</li><li><strong>Policy headroom</strong> = eligible value × the loan's saved maximum LTV − coverage exposure.</li><li><strong>Full shortfall</strong> = the greater of zero and coverage exposure − eligible value.</li></ul>
+  <p><strong>Fictional example:</strong> assume coverage exposure of ₹10,000 and a saved maximum LTV of 80%. The exposure is the screen's chosen debt basis, not necessarily principal alone. A displayed decimal LTV ratio of 0.80 means 80%.</p>
+  <div class="table-responsive"><table class="table"><caption>Falling collateral value can create risk even when payments are current.</caption><thead><tr><th scope="col">Eligible value</th><th scope="col">LTV</th><th scope="col">Headroom</th><th scope="col">Full shortfall</th></tr></thead><tbody>
+    <tr><td>₹14,000</td><td>71.4%</td><td>₹1,200</td><td>₹0</td></tr><tr><td>₹12,000</td><td>83.3%</td><td>−₹400</td><td>₹0</td></tr><tr><td>₹11,000</td><td>90.9%</td><td>−₹1,200</td><td>₹0</td></tr><tr><td>₹9,000</td><td>111.1%</td><td>−₹2,800</td><td>₹1,000</td></tr>
+  </tbody></table></div>
+  <p class="mb-0">Negative headroom warns that the intended margin has been exceeded before a full shortfall exists. The saved maximum LTV determines headroom; the current monitoring policy independently supplies warning, breach and critical thresholds. Eligible value is an estimate, not guaranteed sale proceeds. A payment-current loan can have poor cover, while an overdue loan can have ample collateral.</p>
+</section>
+
+<section id="evidence" class="card card-body mb-4" aria-labelledby="evidence-title">
+  <h2 id="evidence-title" class="h5">Four separate checks: how much can you trust the result?</h2>
+  <div class="table-responsive"><table class="table"><caption>One successful check does not replace the others.</caption><thead><tr><th scope="col">Dimension</th><th scope="col">Question</th></tr></thead><tbody>
+    <tr><th scope="row">Assessment freshness</th><td>Was the saved result calculated for today under the current rules?</td></tr><tr><th scope="row">Financial support</th><td>Do the recorded facts consistently support the financial amounts?</td></tr><tr><th scope="row">Transaction completeness</th><td>Are relevant receipts and other activity captured through the required date?</td></tr><tr><th scope="row">Valuation coverage</th><td>Is there usable evidence for eligible collateral value and LTV?</td></tr>
+  </tbody></table></div>
+  <p>A current assessment may have unknown valuation or provisional paper books. A fresh appraisal cannot repair inconsistent debt. Complete receipts cannot make an old appraisal fresh.</p>
+  <p>Ordinary direct entry assumes activity is captured through normal Rokkad actions. It does not prove that nobody transacted outside the application. Ongoing paper entry uses book review and a checked-through date. If checked only through 10 October, a calculation on 12 October may be provisional because later paper activity could be missing.</p>
+  <p class="mb-0">Provisional paper loans remain calculable and monitorable from entered records. Verify the relevant paper activity before reminders or recovery decisions. After checking a loan completely, staff can optionally choose per-loan Rokkad-only future capture if every subsequent transaction will actually be entered directly. Later paper activity or historical corrections can require another review. An accepted imported opening position does not invent earlier receipts.</p>
+</section>
+
+<section id="refresh" class="card card-body mb-4" aria-labelledby="refresh-title">
+  <h2 id="refresh-title" class="h5">When assessments refresh</h2>
+  <p>Repayments and reversals, loan/collateral changes, appraisals, applicable rates and monitoring-policy changes can make an assessment outdated. A new local calendar day also changes DPD, maturity distance, calculated interest and evidence age.</p>
+  <p>The background worker processes loans needing assessment in bounded turns. Current operating settings use ten candidates per Workspace turn, a five-second busy pause and a five-minute idle pause. This is not a promise of immediate refresh or a requirement to recalculate every already-current loan every five minutes. An authorized individual refresh is also available.</p>
+  <dl><dt>Unassessed</dt><dd>No saved assessment exists.</dd><dt>Stale / outdated</dt><dd>The date, rules or source evidence changed; refresh before relying on the saved amounts.</dd><dt>Error / failed</dt><dd>The attempt failed. Read the explanation, resolve the blocker and refresh.</dd><dt>Current</dt><dd>Today's calculation succeeded under the current rules. <strong>Current does not mean healthy.</strong></dd></dl>
+  <p class="mb-0">Rokkad checks that source evidence did not change during calculation and retries changed positions instead of accepting them. Live refresh saves today's position only. Loan details can calculate an individual position; dashboard Financial health uses saved assessments. Historical calculations restate available records and do not prove what staff knew at that time.</p>
+</section>
+
+<section id="alerts" class="card card-body mb-4" aria-labelledby="alerts-title">
+  <h2 id="alerts-title" class="h5">How findings become alerts and actions</h2>
+  <p>Repayment performance, individual flags and overall severity describe different things. Standard repayment can coexist with High severity when valuation is unknown. Overall severity prioritizes attention; it does not predict a certain loss.</p>
+  <ul><li><strong>Low:</strong> no identified attention condition.</li><li><strong>Medium:</strong> early overdue payment, maturity approaching or an LTV warning.</li><li><strong>High:</strong> LTV breach, unknown valuation, past maturity or differing overdue interpretations.</li><li><strong>Critical:</strong> critical LTV or the configured Substandard DPD threshold.</li></ul>
+  <div class="table-responsive"><table class="table"><caption>Review the cause before choosing an action.</caption><thead><tr><th scope="col">Finding</th><th scope="col">Staff response</th></tr></thead><tbody>
+    <tr><th scope="row">Maturity approaching</th><td>Discuss repayment, renewal or settlement readiness.</td></tr><tr><th scope="row">Overdue obligations</th><td>Check receipt history and follow up on the actual unpaid amounts.</td></tr><tr><th scope="row">Rising LTV / negative headroom</th><td>Verify valuation evidence and review whether exposure needs reducing.</td></tr><tr><th scope="row">Full shortfall</th><td>Prioritize review of the loan and permitted recovery options.</td></tr><tr><th scope="row">Missing / old valuation</th><td>Obtain suitable price or approved appraisal evidence.</td></tr><tr><th scope="row">Unconfirmed paper activity</th><td>Compare entered transactions with the books.</td></tr><tr><th scope="row">Financial calculation error</th><td>Resolve the reported inconsistency or setup problem before relying on the result.</td></tr>
+  </tbody></table></div>
+  <p>Internal alerts cover delinquency, LTV breaches, maturity and assessment failures. An LTV breach becoming critical stays open with higher severity. Unknown evidence does not prove recovery. A successful assessment confirming clearance resolves the alert with a supporting event; a later return can become a new incident.</p>
+  <p class="mb-0">A principal payment can improve cover, a payment allocated to overdue obligations can improve DPD, and updated evidence can resolve uncertainty. Rokkad records the effect through reassessment. Monitoring itself does not collect money, renew loans, auction collateral or send borrower messages. Borrower notices require their separate authorized preview, confirmation and readiness checks.</p>
+</section>
+
+<section id="dashboard" class="card card-body mb-4" aria-labelledby="dashboard-title">
+  <h2 id="dashboard-title" class="h5">Read Financial health without mistaking a subset for the whole book</h2>
+  <p>The dashboard summarizes saved ordinary-loan assessments. Financial amounts use the usable current financial subset; collateral amounts and known shortfall counts use the usable coverage subset. It shows affected counts and provisional books. Unavailable means suitable evidence is absent, not that the amount is zero.</p>
+  <p>Financial completeness requires usable amounts for every active loan and no provisional transaction coverage. Coverage completeness additionally requires usable collateral coverage for every active loan. Thus all loans can be Current while coverage remains incomplete.</p>
+  <p class="mb-0">Shortfall is calculated per loan and then summed. Surplus jewellery on one customer's loan does not cancel another customer's shortfall. Khata has its own cover and overdue rules in the khata register; it is not included in this ordinary pawn-loan assessment portfolio.</p>
+</section>
+
+<section id="routine" class="card card-body mb-4" aria-labelledby="routine-title">
+  <h2 id="routine-title" class="h5">A practical owner's review routine</h2>
+  <ol class="mb-0"><li>Open Loan health and check Current, outdated, unassessed and failed counts.</li><li>Resolve assessment errors and evidence blockers; refresh affected loans.</li><li>Review critical/high conditions, arrears and approaching maturities. Open each relevant loan to inspect its latest position.</li><li>For paper-first business, enter outstanding receipts and check book coverage through the relevant date.</li><li>Perform the appropriate authorized servicing or communication action; record what actually happened.</li><li>Reassess to confirm the effect. A closed loan leaves the active queue; keep its financial and custody evidence.</li></ol>
+</section>
+
+<section id="limits" class="card card-body mb-4" aria-labelledby="limits-title">
+  <h2 id="limits-title" class="h5">What monitoring cannot establish on its own</h2>
+  <p>Rokkad cannot detect an unentered paper payment, inspect jewellery, independently verify purity, or guarantee sale proceeds. It does not currently provide borrower default probabilities, a full collections case-management workflow, regulatory NPA/provisioning rules or automatic recovery decisions.</p>
+  <p class="mb-0">Its purpose is a consistent, explainable review queue supported by recorded facts. Staff verify the relevant evidence, carry out the business action and use the next assessment to check whether that specific risk reduced or cleared.</p>
+</section>
+{% endblock %}

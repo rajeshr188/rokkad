@@ -41,6 +41,7 @@ ECONOMIC_LABELS = {
     "advance_interest_periods": _("Months of interest collected upfront"), "interest_method": _("Interest calculation"),
     "default_tenure_months": _("Standard loan tenure (months)"),
     "gold_monthly_interest_rate": _("Gold: monthly interest (%)"), "silver_monthly_interest_rate": _("Silver: monthly interest (%)"),
+    "bronze_monthly_interest_rate": _("Bronze: monthly interest (%) — optional"),
     "partial_month_method": _("Charging for part of a month"), "partial_month_cutoff_days": _("Part-month cutoff (days)"),
     "partial_month_lower_fraction": _("Month fraction through the cutoff"),
     "capitalization_interval_periods": _("Compound interest interval (months)"),
@@ -59,9 +60,10 @@ ECONOMIC_LABELS = {
 class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     groups = (
         (_("1. Scope and dates"), ("license", "series", "effective_from", "effective_until", "default_entry_purpose")),
-        (_("2. Monthly interest and tenure"), ("metals_to_configure", "gold_monthly_interest_rate", "silver_monthly_interest_rate", "interest_method", "advance_interest_periods", "default_tenure_months")),
-        (_("3. Part-month and compound rules"), ("partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction", "capitalization_interval_periods")),
-        (_("4. Collateral value and rounding"), ("valuation_method", "maximum_ltv_ratio", "rounding_method", "currency_quantum")),
+        (_("2. Monthly interest and tenure"), ("metals_to_configure", "gold_monthly_interest_rate", "silver_monthly_interest_rate", "bronze_monthly_interest_rate", "interest_method", "advance_interest_periods", "default_tenure_months")),
+        (_("3. Collateral value and lending limit"), ("valuation_method", "maximum_ltv_ratio")),
+        (_("4. Part-month and compound rules"), ("partial_month_method", "partial_month_cutoff_days", "partial_month_lower_fraction", "capitalization_interval_periods")),
+        (_("5. Rounding"), ("rounding_method", "currency_quantum")),
     )
     license = forms.ModelChoiceField(
         queryset=LoanLicense.objects.none(),
@@ -77,6 +79,7 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
                  (ValuationMethod.LATEST_APPRAISAL.value, _("Latest Appraisal")),
                  (ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value, _("Lower Of Calculated And Appraisal"))],
         initial=ValuationMethod.LOWER_OF_CALCULATED_AND_APPRAISAL.value,
+        help_text=_("Metal value uses buying prices, weight and purity. Appraisal uses staff's approved value. Lower-of requires both and uses the smaller value."),
     )
     maximum_ltv_ratio = forms.DecimalField(
         max_digits=7,
@@ -141,7 +144,7 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
         help_text=_("Use 0.01 for paise-level currency rounding."),
     )
     metals_to_configure = forms.ChoiceField(required=False, initial="BOTH",
-        label=_("Metals to configure"), choices=(("BOTH", _("Gold and silver")), ("GOLD", _("Gold only")), ("SILVER", _("Silver only"))),
+        label=_("Metals to configure"), choices=(("BOTH", _("Gold and silver")), ("GOLD", _("Gold only")), ("SILVER", _("Silver only")), ("BRONZE", _("Bronze only"))),
         help_text=_("Only the chosen metals receive a new interest-rate version. Earlier rates for other metals stay unchanged."))
     gold_monthly_interest_rate = forms.DecimalField(
         max_digits=9, decimal_places=6, min_value=0, max_value=100,
@@ -150,6 +153,10 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     silver_monthly_interest_rate = forms.DecimalField(
         max_digits=9, decimal_places=6, min_value=0, max_value=100,
         required=False, initial=Decimal("4"), help_text=_("Monthly percentage. Starts at 4%; change before saving if needed."),
+    )
+    bronze_monthly_interest_rate = forms.DecimalField(
+        max_digits=9, decimal_places=6, min_value=0, max_value=100,
+        required=False, help_text=_("Enter only when offering bronze loans. Leave blank to keep existing bronze rates unchanged; no gold or silver rate is substituted."),
     )
     effective_from = forms.DateField(widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
     effective_until = forms.DateField(required=False, label=_("Applies through (optional)"),
@@ -175,6 +182,8 @@ class PawnEconomicConfigurationForm(GroupedPolicyForm, forms.Form):
     def clean(self):
         data = super().clean()
         selected = data.pop("metals_to_configure", None) or "BOTH"
+        if selected == "BRONZE" and data.get("bronze_monthly_interest_rate") is None and "bronze_monthly_interest_rate" not in self.errors:
+            self.add_error("bronze_monthly_interest_rate", _("Enter a monthly rate for each chosen metal."))
         for metal in ("GOLD", "SILVER"):
             field = f"{metal.lower()}_monthly_interest_rate"
             if selected in ("BOTH", metal):
@@ -210,14 +219,14 @@ class PawnSeriesInterestForm(GroupedPolicyForm, forms.Form):
 class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
     groups = (
         (_("1. Scope and version"), ("license", "effective_from", "compliance_profile", "amendment_reason")),
-        (_("2. Maturity and overdue warnings"), ("maturity_warning_days", "operational_grace_days", "dpd_watch_threshold", "dpd_substandard_threshold")),
-        (_("3. Collateral risk and evidence age"), ("ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio", "rate_freshness_days", "appraisal_freshness_days")),
+        (_("2. Maturity and overdue warnings"), ("maturity_warning_days", "dpd_watch_threshold", "dpd_substandard_threshold")),
+        (_("3. Collateral risk and evidence age"), ("valuation_basis", "ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio", "rate_freshness_days", "appraisal_freshness_days")),
     )
     class Meta:
         model = LoanMonitoringPolicy
         fields = (
             "license", "effective_from", "compliance_profile", "supersedes", "amendment_reason",
-            "maturity_warning_days", "operational_grace_days",
+            "maturity_warning_days", "valuation_basis",
             "dpd_watch_threshold", "dpd_substandard_threshold",
             "ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio",
             "rate_freshness_days", "appraisal_freshness_days",
@@ -231,6 +240,10 @@ class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
         self.instance.created_by = actor
         self.fields["supersedes"].queryset = LoanMonitoringPolicy.objects.filter(workspace=workspace)
         self.fields["amendment_reason"].help_text = _("Required when amending an existing policy. Previous versions remain in history.")
+        self.fields["valuation_basis"].label = _("Current monitoring valuation method")
+        self.fields["valuation_basis"].help_text = _("The default preserves each loan's saved method. For paper/imported loans that method need not prove the original lending valuation. An explicit choice applies to current monitoring in this scope, including existing loans; it does not change approval, interest, fees or frozen valuation evidence. A license policy overrides the complete workspace policy.")
+        # Older submissions remain compatible. Absence never resets an amendment's basis.
+        self.fields["valuation_basis"].required = False
         self.instance.eligible_custody_states = ["IN_VAULT", "WITH_FUNDING_LENDER"]
         self.instance.severity_mapping = {"strategy": "derived-v1"}
         self.fields["rate_freshness_days"].help_text = _("Maximum quote age for current collateral monitoring, inclusive in calendar days. Zero requires same-day prices.")
@@ -248,6 +261,11 @@ class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
                 if isinstance(field, (forms.ModelChoiceField, forms.ChoiceField))
                 else "form-control",
             )
+
+    def clean_valuation_basis(self):
+        value = self.cleaned_data.get("valuation_basis")
+        predecessor = self.cleaned_data.get("supersedes")
+        return value or (predecessor.valuation_basis if predecessor else LoanMonitoringPolicy.ValuationBasis.ORIGINAL_AGREEMENT)
 
 
 class PawnFeePolicyForm(GroupedPolicyForm, forms.Form):

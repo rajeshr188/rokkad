@@ -28,7 +28,7 @@ class RateForm(forms.ModelForm):
             if workspace_id is not None
             else RateSource.objects.none()
         )
-        self.fields["purity"].help_text = _("Loans uses INR Pure metal buying prices for gold and silver. Enter the item's actual purity on the loan.")
+        self.fields["purity"].help_text = _("Loans uses INR buying prices per gram at the 100% reference grade: pure gold/silver, or the quoted bronze material. Enter the item's actual percentage on the loan; no alloy conversion is performed.")
         self.fields["reason"].required = bool(self.instance.pk)
         self.fields["reason"].help_text = _("Required for corrections. The previous quote remains in history.")
         for name in ("buying_rate", "selling_rate"):
@@ -41,6 +41,8 @@ class RateForm(forms.ModelForm):
             field.widget.attrs["class"] = "form-select" if isinstance(field, forms.ChoiceField) else "form-control"
         for name in ("metal", "currency", "purity"):
             self.fields[name].choices = [(value, _(label)) for value, label in self.fields[name].choices]
+        self.fields["purity"].choices = [(value, f"{_('Pure metal (100%)')} / {_('Bronze reference grade (100%)')}" if value == Rate.Purity.K24 else label)
+                                         for value, label in self.fields["purity"].choices]
         self.fields["rate_source"].empty_label = _("Select a rate source")
         self.fields["reason"].widget = forms.Textarea(attrs={"rows": 3, "class": "form-control"})
 

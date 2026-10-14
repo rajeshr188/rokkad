@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-10
+updated: 2026-10-14
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -21,6 +21,13 @@ plans; shelving an idea must not hide a release blocker.
 
 ## Register
 
+The [14 October onboarding audit](../implementation/new-user-journey-audit-20261014.md)
+records the tested empty-business journey and proposed repair/refinement order.
+The owner subsequently approved NJ-01 through NJ-05; the
+[completed refinement](../implementation/new-user-journey-refinement-20261014.md)
+is verified locally. Deployment, real staff and mail-provider acceptance remain
+separate; the original audit is retained as before-change evidence.
+
 | ID | Idea | State | Resume trigger | Where it stopped |
 | --- | --- | --- | --- | --- |
 | FW-001 | Optional owner-configurable license scope | Shelved; review and owner approval required | Owner chooses to revisit staff access across licenses | Direction documented; no license assignments or restrictions implemented |
@@ -29,12 +36,12 @@ plans; shelving an idea must not hide a release blocker.
 | FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
 | FW-005 | Broader historical loan admission and quote-age policy | Partial scope implemented; remaining work unscheduled | Missing historical evidence or a guided import contract is needed | Native earlier payouts and explicit daily confirmations are implemented; wider exceptions remain deferred |
 | FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
-| FW-007 | Guided customer-facing legacy migration and ordinary paper recording | Supported paper workflow accepted/released; guided register remains bounded | Select staff restore integration or additional reviewed source/position profiles | Current coverage: architecture/data-portability-review-20261010.md; reduced-principal spreadsheet admission and broader profiles remain future work |
+| FW-007 | Guided customer-facing legacy migration and ordinary paper recording | Supported paper workflow released; PC-01 through PC-06 restore/adapters/operator exchange/package/continuation verified locally within bounds | Controlled release and real source acceptance remain separate | Scope/order: plans/data-portability-completion-20261010.md; broader vendor/calculation profiles and unsupported Khata/physical-verification graphs remain pending |
 | FW-008 | Servicing-only subscription restriction | Deferred beyond the pre-cutover continuity increment | Owner selects a collections-only stage after read-only/grace acceptance | Full access, seven-day grace, read-only and audited administrator decisions implemented; action-level servicing exceptions undesigned |
 | FW-009 | Consent-based borrower identity verification / Aadhaar-assisted onboarding | Provider enquiries sent; implementation pending | Written lender/platform eligibility, hosting terms and comparable quotes | Digio/Surepass/Cashfree compared; optional-guidance JCL pilot agreed; approved enquiries sent 30 September, answers pending |
 | FW-010 | Platform administrator role, operational workflows and UI | Console and guided lifecycle increment delivered; broader scope remains | Owner selects next action/delegation increment | Overview, directory/detail, suspend/restore review and operator guide; existing authority retained |
-| FW-011 | Platform and Workspace WhatsApp messaging and phone verification | Recorded at owner request; unscheduled discovery | Owner selects messaging product/policy review and integration acceptance | Workspace Cloud API foundation and acceptance plan exist; broader platform/workspace experience and verification need definition |
-| FW-012 | Complete Workspace export and guided restore into a fresh Workspace | Coverage review complete; whole-package implementation not started | Select phased volume/configuration/package delivery and continuation acceptance | Current gaps/order: architecture/data-portability-review-20261010.md; existing partial Party and loan profiles do not deliver full transfer |
+| FW-011 | Platform and Workspace WhatsApp messaging and phone verification | PW-01–PW-04 and PW-05 local tools verified; live pending | Sender/template setup, compatible deployment and consented JCL pilot | 424 distinct cases and 12 screen states pass; deployed owner verified read-only, support monitored; tariff/cap/retention and live acceptance remain inputs |
+| FW-012 | Complete Workspace export and guided restore into a fresh Workspace | PC-01 through PC-06 verified locally; wider bounded atomic operator package and continuation delivered, universal transfer unaccepted | Controlled release and remaining unsupported graphs/user workflow | Selected order: plans/data-portability-completion-20261010.md; package coverage/exclusions and empty unactivated destination bounds remain explicit |
 | FW-013 | Tamil Nadu prescribed forms and pledge book in English/Tamil | Further work paused by owner, 30 September | Establish import confidence, then owner chooses to resume | Statutory notices, Form E and administrative auctioneer lists deployed; E-1 opened, first print batch pending |
 | FW-014 | Domain-owned email and reliable platform/Workspace communication | Active: SES production access approved | Paid-receipt delivery and monitored activation | Mumbai approval verified 28 September; 50,000/day and 14/second; health monitoring enabled, dispatch disabled |
 | FW-015 | Safe orphan-media cleanup and Workspace storage usage | Core delivered; commercial extensions deferred | Select pricing/quotas/billing or online cleanup separately when needed | Inventory/usage, retention protection, offline reviewed cleanup and restoration delivered; no automatic purge or charges |
@@ -919,6 +926,36 @@ inventory; no forms, filings or production changes are authorised by this captur
 
 ## FW-012: Complete Workspace export and guided restore into a fresh Workspace
 
+**MR-05 compatibility, 12 October:** add a reviewed new business setup profile for
+explicit current monitoring valuation choices before claiming their fresh-business
+package transfer. Published profiles 1/2 retain their exact schemas; original-method
+policies remain compatible, but export is held when a policy contains an explicit
+override, rather than silently losing its choice. Ordinary supported loan-file
+exchange remains separate. See [MR-05](../implementation/current-monitoring-valuation-mr05.md).
+
+**14 October follow-up:** the owner selected closing that monitoring-choice gap.
+Setup/business-package version 3 is now implemented locally, retaining the exact
+older contracts and preserving scopes, dates and predecessor links. See the
+[follow-up evidence](../implementation/monitoring-portability-followup-20261014.md).
+Production rollout, wider business graphs and real transfer acceptance remain
+separate. Current monitoring configuration is still an explicit owner decision.
+
+**10 October implementation selection:** the owner accepts the
+[PC-01 through PC-06 plan](data-portability-completion-20261010.md).
+The capability catalog and browser restoration of existing supported loan files
+are implemented locally. Wider source adapters, representative-volume exchange,
+configuration/package delivery and continuation acceptance remain ordered work.
+PC-03 now adds explicitly reviewed active checkpoints and closed-position register
+templates within documented bounds. PC-04 now adds verified operator-assisted
+volume/resumable exchange. PC-05 now adds a verified bounded atomic operator
+package with setup and customer files, reviewed reconciliation and an immutable
+receipt. PC-06 now adds [verified wider graphs and continuation](../implementation/portable-graphs-pc06.md),
+retained zero-item and source-only licence/quote adapters. All selected local
+slices are verified within their bounds; complete customer-controlled transfer
+is not yet accepted. Khata/physical-verification and broader source profiles remain held.
+This supersedes the earlier unscheduled status below; production deployment is
+not authorized by development alone.
+
 **10 October review:** [current architecture and coverage](../architecture/data-portability-review-20261010.md)
 is audited. Existing financial services exceed staff restore coverage; known
 portfolios exceed Party and exact native recovery bounds. Whole-package
@@ -1026,9 +1063,12 @@ by this storage example. No real data transfer is authorised by this entry.
 ## FW-011: Platform and Workspace WhatsApp messaging and phone verification
 
 **Captured:** 2026-09-26. **Decision owner:** project owner.
-**State:** Future work; unscheduled discovery. **Implementation approval:** not
-granted. No account connection, provider submission, test message or automation is
-authorised by recording this idea.
+**State:** Product direction and delivery order accepted on 2026-10-14; phase-one
+design subsequently requested and completed. PW-01 implementation was then
+authorised and verified locally; PW-02 source intents are also verified after explicit instruction; PW-03 transport/status is also verified after continuation; PW-04 controls are also verified after continuation; PW-05 local tools are verified while live acceptance remains pending. The owner accepted the recommended
+three audience/use-case groups and phased delivery order. This acceptance records
+product scope; account connections, provider submissions, test messages and live
+automation are separate execution steps.
 
 **Problem and intended value.** The owner wants WhatsApp to become a useful product
 differentiator: platform operators communicate operational/subscription events to
@@ -1036,6 +1076,102 @@ Workspace owners, while each lending business communicates with its borrowers
 through its own business number. Phone verification is a related need. The overall
 onboarding, workflows and UI are not yet defined. Validate customer value and
 permitted uses before publishing the capability as an available USP.
+
+**Phase-one design (2026-10-14).** The owner instructed the agent to proceed
+with the stated design step. The [completed design](platform-owner-whatsapp-phase1-20261014.md)
+defines optional owner enrollment/consent, setup/trial/paid confirmations, one
+trial-ending reminder, reviewed service announcements and PW-01 through PW-05.
+The [accepted ADR](../adr/2026-10-14-platform-whatsapp-delivery-boundary.md)
+keeps platform WhatsApp delivery separate from SES mail and Workspace borrower
+Notify. Support initially hands off to existing monitored channels; the shared
+inbox remains phase three. No runtime/provider change or message send occurred.
+
+**PW-01 implementation (2026-10-14).** The owner authorised the stated next
+slice. [Local implementation/evidence](../implementation/platform-whatsapp-enrollment-pw01.md)
+covers optional enrollment/consent, forced-RLS Workspace preferences/history,
+signed inbound pairing/STOP and drafts with sending unavailable. All 102 distinct
+regressions and six desktop/phone states pass; task databases are removed.
+No provider setup, real delivery or review/production migration occurred.
+PW-02 was subsequently authorised and verified locally.
+
+**PW-02 implementation (2026-10-14).** The owner explicitly requested this slice.
+[Source intents and verification](../implementation/platform-whatsapp-source-intents-pw02.md)
+cover immutable forced-RLS setup/trial/paid previews in source transactions, signed
+setup review, source/consent rechecks and independent existing email. All 313
+distinct selected cases, populated PW-01 upgrade preservation and ten desktop/phone
+states pass. Both task databases are removed; no provider send or deployment.
+PW-03 was subsequently authorised and verified locally.
+
+**PW-03 implementation (2026-10-14).** The continuation instruction authorised
+[Cloud transport/status work](../implementation/platform-whatsapp-transport-pw03.md).
+Durable restricted-role claims, minimal authenticated global receipts, scoped immutable
+correlations and conservative unknown/retry rules pass 360 distinct regressions.
+Populated source preservation and eight phone/desktop states pass. Both task databases
+are removed. Native captures cannot become live; no flags bypass PW-04's missing
+cohort/count/spend controls. No real message, provider setup or deployment occurred.
+PW-04 was subsequently authorised and verified locally.
+
+**PW-04 implementation (2026-10-14).** Continuation authorised
+[current reminders, reviewed notices and caps](../implementation/platform-whatsapp-controls-pw04.md).
+Four new directly owned/forced-RLS models retain reminder/target/reservation/cost
+evidence; global publication and aggregates stay separate. Signed reviews bind
+exact recipients; broadcast jobs use successive explicit scopes. Immutable atomic
+reservations enforce named pilot/quiet/count/spend limits, with uncertain pricing
+held. All 399 distinct selected cases, PW-03 populated preservation/blocked
+PW-04 downgrade and eight desktop/phone states pass; task DBs are removed.
+Creation/sending flags default off; old captures never promote. No provider setup,
+actual send, shared migration or deployment. PW-05 diagnostics and a specifically
+consented bounded pilot follow operational release review.
+
+**PW-05 local tools (2026-10-14).** Owner/platform diagnostics, independent invoice
+channel status, signed reviewed retries/reconciliation and masked preflight are
+[verified locally](../implementation/platform-whatsapp-pilot-pw05.md). All 424
+distinct selected cases, twelve desktop/phone states and populated source/email/
+message preservation pass; exact task DBs are removed. No new schema is added.
+Deployed JCL canonical owner matches the supplied account in a restricted read-only
+check. The owner monitors support@rokkad.com. Production lacks app/tables and sender/
+template setup is still needed. [Concrete handoff](platform-whatsapp-sender-setup-20261014.md)
+precedes compatible deployment and real consented acceptance. Pricing uncertainty
+remains held; no hold correction, billed-cost or retention automation is implemented.
+No real send, provider registration, shared migration or deployment occurred.
+
+**Accepted use-case groups (2026-10-14).**
+
+| Audience | Accepted product direction | Intended benefit |
+| --- | --- | --- |
+| Platform administrators | Owner onboarding/support, subscription confirmations and service announcements; designated operator alerts and messaging health/spend visibility | Faster onboarding/support and operational response |
+| Workspace owners | Eligible transaction receipts, requested documents and collateral pickup coordination; staff inbox, owner summaries, internal risk/task alerts and contact verification | Less repetitive communication and better oversight |
+| Workspace customers | Convenient receipt/statement requests, confirmed pickup arrangements, human support and supported language/preferences | Easier access to records and clearer service |
+
+These are three beneficiary groups, not three shared sender identities. Preserve
+the two existing sender/audience scopes below: Rokkad to owners/operators, and each
+authorised Workspace business to its own customers. Detailed ownership for internal
+owner alerts remains to be designed.
+
+**Accepted delivery order (2026-10-14).**
+
+1. Platform-to-owner communication: onboarding, subscription confirmations, support
+   and important service updates.
+2. Small Workspace pilot: requested documents, transaction receipts and pickup
+   coordination, after pawn-lending and individual use-case eligibility confirmation.
+3. Two-way service: authorised staff inbox, customer preferences, contact verification
+   and secure self-service document access.
+4. Selective automation: owner summaries and internal exception alerts, with frequency
+   and spending limits.
+
+Prepare the first phase by mapping events, sender/recipient ownership, consent,
+approved template needs, reply handling, access and spending controls. Reuse the
+existing integration-acceptance dependency for the Workspace pilot. Do not publish
+a capability as available before its actual provider/recipient acceptance.
+
+Borrower messaging remains conditional on policy eligibility; approved templates
+alone are not an exemption. Automated overdue demands, recovery campaigns and
+auction threats are outside the initial scope. Read receipts are not statutory
+service. Customer replies or payment screenshots must not establish repayment,
+release collateral or change loan state; canonical source workflows retain authority.
+Contact verification proves access to the account at that time, not legal identity.
+Measure staff time saved, resolved requests, delivery success, opt-outs and cost per
+useful interaction.
 
 **Two distinct sender/audience scopes to design.**
 
@@ -1309,6 +1445,14 @@ required before real paid onboarding. See the
 [continuity decision](../adr/2026-09-24-subscription-access-continuity.md).
 
 ## FW-007: Guided customer-facing legacy migration
+
+**10 October implementation selection:** supported loan-file restore now has a
+unified browser entry and capability guidance under PC-01/02. The existing
+outstanding-register template remains bounded. PC-03 now offers versioned
+essential-position adapters for reduced-principal checkpoints and closed loans,
+reusing the existing financial commands. No vendor mapping or new interest
+calculation is inferred from this interface work. See the
+[selected plan](data-portability-completion-20261010.md).
 
 **10 October coverage update:** supported ordinary paper servicing and source/staff
 acceptance have proceeded through the production releases. The

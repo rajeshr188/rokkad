@@ -2,13 +2,13 @@
         {% if messages %}
             <div class="{{ messages_container_class|default:'container-lg mt-3' }}">
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}alert-success{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
                         <strong>
-                            {% if message.tags == 'error' %}
+                            {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
                                 <i class="bi bi-exclamation-circle"></i> {% trans "Error" %}
-                            {% elif message.tags == 'success' %}
+                            {% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}
                                 <i class="bi bi-check-circle"></i> {% trans "Success" %}
-                            {% elif message.tags == 'warning' %}
+                            {% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
                                 <i class="bi bi-exclamation-triangle"></i> {% trans "Warning" %}
                             {% else %}
                                 <i class="bi bi-info-circle"></i> {% trans "Info" %}

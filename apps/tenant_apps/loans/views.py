@@ -22,6 +22,7 @@ from apps.tenant_apps.loans.web.operations import (
     pawn_loan_notice_list,
     pawn_operations_console,
     pawn_operations_runbook,
+    pawn_risk_guide,
     pawn_risk_portfolio,
     pawn_risk_whatsapp_pilot,
 )

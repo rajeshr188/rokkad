@@ -1099,6 +1099,119 @@ class PartyUITests(WorkspaceTestCase):
         self.assertContains(response, "Select a valid choice")
         self.assertFalse(PartyRelationship.objects.filter(from_party=party).exists())
 
+
+    def test_merge_picker_loads_only_selected_options_and_search_assets(self):
+        from apps.tenant_apps.party.widgets import PartyMergeAutocompleteWidget
+        target = Party.objects.create(display_name="Picker target")
+        source = Party.objects.create(display_name="Unselected duplicate")
+        response = self.client.get(reverse("party:party_detail", args=[target.pk]), {"tab": "merge"})
+        field = response.context["merge_form"].fields["source_party"]
+        self.assertIsInstance(field.widget, PartyMergeAutocompleteWidget)
+        self.assertContains(response, field.widget.get_url())
+        self.assertContains(response, 'django-select2-heavy')
+        self.assertContains(response, 'django_select2/django_select2.js')
+        self.assertNotIn(f'<option value="{source.pk}"', str(response.context["merge_form"]["source_party"]))
+        from django.core.cache import cache
+        cache.clear()
+        token = field.widget.field_id
+        result = self.client.get(field.widget.get_url(), {"field_id": token, "term": "Unselected"})
+        self.assertEqual([item["id"] for item in result.json()["results"]], [source.pk])
+
+    def test_merge_search_includes_inactive_and_blocked_but_excludes_target_and_archived(self):
+        from django.core import signing
+        from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
+        target = Party.objects.create(display_name="Duplicate target")
+        inactive = Party.objects.create(display_name="Duplicate inactive", status="INACTIVE",
+            party_code="DUP-I", primary_phone="+919999999999", relation_name="Ramesh", primary_email="duplicate@example.test")
+        blocked = Party.objects.create(display_name="Duplicate blocked", status="BLOCKED")
+        Party.objects.create(display_name="Duplicate archived", status="ARCHIVED")
+        url = reverse("workspace_party:party_merge_autocomplete", args=[self.tenant.slug, target.pk])
+        token = signing.dumps(url, salt=PartyAutocompleteWidget.token_salt)
+        result = self.client.get(url, {"field_id": token, "term": "Duplicate"})
+        self.assertEqual(result.status_code, 200)
+        self.assertIn("no-store", result["Cache-Control"])
+        self.assertEqual({item["id"] for item in result.json()["results"]}, {inactive.pk, blocked.pk})
+        for term in ("DUP-I", "999999", "Ramesh", "duplicate@example"):
+            with self.subTest(term=term):
+                response = self.client.get(url, {"field_id": token, "term": term})
+                self.assertEqual([item["id"] for item in response.json()["results"]], [inactive.pk])
+        borrower_url = reverse("workspace_party:party_autocomplete", args=[self.tenant.slug])
+        borrower_token = signing.dumps(borrower_url, salt=PartyAutocompleteWidget.token_salt)
+        self.assertEqual(self.client.get(borrower_url, {"field_id": borrower_token,
+            "term": "Duplicate"}).json()["results"], [{"id": target.pk,
+                "text": PartyAutocompleteWidget().label_from_instance(target)}])
+
+    def test_merge_search_tokens_are_bound_to_target_workspace_and_expiry(self):
+        from django.core import signing
+        from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
+        import time
+        target = Party.objects.create(display_name="Token target")
+        other = Party.objects.create(display_name="Other target")
+        url = reverse("workspace_party:party_merge_autocomplete", args=[self.tenant.slug, target.pk])
+        for signed_url in (
+            reverse("workspace_party:party_merge_autocomplete", args=[self.tenant.slug, other.pk]),
+            reverse("workspace_party:party_merge_autocomplete", args=["another-workspace", target.pk]),
+            reverse("workspace_party:party_autocomplete", args=[self.tenant.slug]),
+        ):
+            token = signing.dumps(signed_url, salt=PartyAutocompleteWidget.token_salt)
+            self.assertEqual(self.client.get(url, {"field_id": token, "term": "target"}).status_code, 404)
+        self.assertEqual(self.client.get(url, {"field_id": "invalid", "term": "target"}).status_code, 404)
+        token = signing.dumps(url, salt=PartyAutocompleteWidget.token_salt)
+        with patch("django.core.signing.time.time", return_value=time.time()+86401):
+            self.assertEqual(self.client.get(url, {"field_id": token, "term": "target"}).status_code, 404)
+
+    def test_merge_search_and_post_reject_other_workspace_parties(self):
+        from django.core import signing
+        from apps.orgs.models import Company
+        from apps.tenancy.context import without_workspace_context, workspace_context
+        from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
+        target = Party.objects.create(display_name="Scoped target")
+        other_workspace = Company.objects.create(name="Other merge workspace", owner=self.user, creator=self.user)
+        with without_workspace_context(), workspace_context(other_workspace.pk):
+            foreign = Party.objects.create(display_name="Foreign duplicate")
+        url = reverse("workspace_party:party_merge_autocomplete", args=[self.tenant.slug, target.pk])
+        token = signing.dumps(url, salt=PartyAutocompleteWidget.token_salt)
+        self.assertEqual(self.client.get(url, {"field_id": token, "term": "Foreign"}).json()["results"], [])
+        foreign_url = reverse("workspace_party:party_merge_autocomplete", args=[self.tenant.slug, foreign.pk])
+        foreign_token = signing.dumps(foreign_url, salt=PartyAutocompleteWidget.token_salt)
+        self.assertEqual(self.client.get(foreign_url, {"field_id": foreign_token, "term": "Foreign"}).status_code, 404)
+        response = self.client.post(reverse("party:party_merge", args=[target.pk]),
+            {"source_party": foreign.pk, "confirm": "on"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("source_party", response.context["merge_form"].errors)
+        self.assertEqual(self.client.post(reverse("party:party_merge", args=[target.pk]),
+            {"source_party": target.pk, "confirm": "on"}).status_code, 200)
+        with without_workspace_context(), workspace_context(other_workspace.pk):
+            foreign.refresh_from_db()
+        self.assertEqual(foreign.status, "ACTIVE")
+
+    def test_merge_selection_survives_missing_confirmation_and_can_merge_inactive_party(self):
+        target = Party.objects.create(display_name="Confirmation target")
+        source = Party.objects.create(display_name="Selected duplicate", status="INACTIVE")
+        url = reverse("party:party_merge", args=[target.pk])
+        response = self.client.post(url, {"source_party": source.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'<option value="{source.pk}" selected>')
+        self.assertContains(response, "Selected duplicate")
+        self.assertIn("confirm", response.context["merge_form"].errors)
+        source.refresh_from_db()
+        self.assertEqual(source.status, "INACTIVE")
+        response = self.client.post(url, {"source_party": source.pk, "confirm": "on"})
+        self.assertEqual(response.status_code, 302)
+        source.refresh_from_db()
+        self.assertEqual(source.status, "ARCHIVED")
+
+    def test_merge_search_requires_edit_permission_and_sign_in(self):
+        from django.core import signing
+        from apps.tenant_apps.party.widgets import PartyAutocompleteWidget
+        target = Party.objects.create(display_name="Permission target")
+        url = reverse("workspace_party:party_merge_autocomplete", args=[self.tenant.slug, target.pk])
+        token = signing.dumps(url, salt=PartyAutocompleteWidget.token_salt)
+        self._login_workspace_user("merge-search-viewer", "Viewer")
+        self.assertEqual(self.client.get(url, {"field_id": token, "term": "target"}).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.get(url, {"field_id": token, "term": "target"}).status_code, 302)
+
     def test_party_merge_view_archives_duplicate(self):
         target = Party.objects.create(party_code="P1018", display_name="Merge Target")
         source = Party.objects.create(party_code="P1019", display_name="Merge Source")

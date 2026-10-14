@@ -82,6 +82,10 @@ def create_risk_borrower_notice(alert_id, *, actor, expected_fingerprint, channe
         request_key += f"-review{preview.payload['transaction_review']['review_id']}"
     if preview.payload.get("transaction_review", {}).get("status") == "ROKKAD_ONLY":
         request_key = request_key[:95] + "-position" + preview.payload["transaction_review"]["source_fingerprint"][:16]
+    correction = alert.loan.change_log.filter(event_kind="BORROWER_CORRECTED").order_by("pk").last()
+    if correction:
+        suffix = f"-borrower{correction.pk}"
+        request_key = request_key[:120-len(suffix)] + suffix
     return create_pawn_loan_notice(
         alert.loan_id,
         notice_kind=preview.readiness.notice_kind,
@@ -128,7 +132,9 @@ def _communication_evidence(preview, actor):
 
 
 def _payload(alert, balance):
+    from .borrower_corrections import borrower_notice_identity
     return {
+        'borrower_identity': borrower_notice_identity(alert.loan),
         "customer": {"name": alert.loan.borrower.display_name, "email": alert.loan.borrower.primary_email},
         "loans": [{
             "pk": alert.loan_id, "loan_id": alert.loan.loan_number,

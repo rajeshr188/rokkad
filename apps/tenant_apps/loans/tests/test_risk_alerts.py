@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase
 
 from apps.tenant_apps.loans.models import LoanRiskAlert, LoanRiskSnapshot
-from apps.tenant_apps.loans.services.risk_alerts import _active_kinds, _alert_kind
+from apps.tenant_apps.loans.services.risk_alerts import _active_kinds, _alert_kind, _can_resolve, _severity
 
 
 class RiskAlertProjectionTests(SimpleTestCase):
@@ -52,3 +52,19 @@ class RiskAlertProjectionTests(SimpleTestCase):
             _active_kinds(snapshot),
             set(LoanRiskAlert.Kind.values),
         )
+
+    def test_unknown_or_failed_evidence_cannot_resolve_existing_risk(self):
+        for status in ("ERROR", "STALE"):
+            snapshot = SimpleNamespace(status=status, days_past_due=0, ltv_ratio=None, flags=[])
+            self.assertTrue(all(not _can_resolve(kind, snapshot) for kind in LoanRiskAlert.Kind.values))
+        unknown = SimpleNamespace(status="CURRENT", days_past_due=None, ltv_ratio=None, flags=["VALUATION_UNKNOWN"])
+        self.assertFalse(_can_resolve(LoanRiskAlert.Kind.DPD_WORSENING, unknown))
+        self.assertFalse(_can_resolve(LoanRiskAlert.Kind.LTV_BREACH, unknown))
+
+    def test_alert_severity_uses_its_own_condition(self):
+        snapshot = SimpleNamespace(flags=["LTV_CRITICAL", "MATURITY_APPROACHING"])
+        self.assertEqual(_severity(LoanRiskAlert.Kind.LTV_BREACH, snapshot), "CRITICAL")
+        self.assertEqual(_severity(LoanRiskAlert.Kind.MATURITY, snapshot), "MEDIUM")
+        snapshot.flags = ["DPD_SUBSTANDARD", "PAST_MATURITY"]
+        self.assertEqual(_severity(LoanRiskAlert.Kind.DPD_WORSENING, snapshot), "CRITICAL")
+        self.assertEqual(_severity(LoanRiskAlert.Kind.MATURITY, snapshot), "HIGH")

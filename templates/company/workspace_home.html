@@ -5,10 +5,11 @@
 {% block title %}My Workspaces - Rokkad{% endblock %}
 
 {% block mgmt_content %}
+{% include 'components/setup/account_verification.html' %}
 <div class="mgmt-workspace-hero">
     <div>
         <div class="mgmt-kicker mb-1">Workspaces</div>
-        <h1 class="h3 fw-bold mb-1">My Workspaces</h1>
+        <h1 class="h3 fw-bold mb-1">{% if has_workspace_history %}My Workspaces{% else %}Welcome to Rokkad{% endif %}</h1>
         <p class="text-muted mb-0">
             {% if has_workspaces %}
             Choose the business workspace you want to operate or manage.
@@ -17,15 +18,15 @@
             {% endif %}
         </p>
     </div>
-    <a class="btn btn-primary" href="{% url 'app_workspace_create' %}">
+    {% if has_workspaces %}<a class="btn btn-primary" href="{% url 'app_workspace_create' %}">
         <i class="bi bi-plus-circle me-1"></i>Set up your business
-    </a>
-    <a class="btn btn-outline-secondary" href="{% url 'archived_workspaces' %}">
+    </a>{% endif %}
+    {% if has_workspace_history %}<a class="btn btn-outline-secondary" href="{% url 'archived_workspaces' %}">
         <i class="bi bi-archive me-1"></i>Archived Workspaces
-    </a>
+    </a>{% endif %}
 </div>
 
-<div class="mgmt-workspace-summary">
+{% if has_workspaces %}<div class="mgmt-workspace-summary">
     <div class="mgmt-summary-tile">
         <div class="mgmt-kicker mb-2">Workspaces</div>
         <div class="mgmt-summary-value">{{ workspace_count }}</div>
@@ -41,11 +42,11 @@
         <div class="mgmt-summary-value">{{ sent_invitations_count }}</div>
         <div class="small text-muted mt-1">open invitations you sent</div>
     </div>
-</div>
+</div>{% endif %}
 
 <div class="row g-4">
     <div class="col-xl-8">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        {% if has_workspaces %}<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
                 <h2 class="h5 fw-bold mb-1">Workspace access</h2>
                 <p class="small text-muted mb-0">Choose a Workspace to open its apps and settings.</p>
@@ -53,7 +54,7 @@
             <a href="{% url 'app_invitations' %}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-envelope me-1"></i>Invitations
             </a>
-        </div>
+        </div>{% endif %}
 
         <div>
             {% if has_workspaces %}
@@ -113,11 +114,12 @@
             {% else %}
             <div class="mgmt-empty-state">
                 <div class="mb-3"><i class="bi bi-inbox fs-1 text-muted"></i></div>
-                <h2 class="h5 fw-bold mb-2">No workspaces yet</h2>
-                <p class="text-muted mb-3">Create a Workspace to set up pawn lending and team access, or accept an invitation to an existing business.</p>
+                <h2 class="h5 fw-bold mb-2">{% if has_workspace_history %}No active workspaces{% else %}Set up your first business{% endif %}</h2>
+                <p class="text-muted mb-3">A Workspace is the separate space for a business's borrowers, loans and staff. Start with your business name, then follow the guided lending setup.</p>
                 <a href="{% url 'app_workspace_create' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-1"></i>Set up your business
                 </a>
+                <p class="small mt-3 mb-0">Joining an existing business? <a href="{% url 'app_invitations' %}">Review your invitations</a>.</p>
             </div>
             {% endif %}
         </div>
@@ -173,7 +175,7 @@
         </aside>
         {% endif %}
 
-        <aside class="mgmt-side-card">
+        {% if has_workspaces %}<aside class="mgmt-side-card">
             <div class="p-3 border-bottom">
                 <h2 class="h6 fw-bold mb-1">Account overview</h2>
                 <p class="small text-muted mb-0">Manage your personal account and invitations here.</p>
@@ -202,7 +204,7 @@
                     </li>
                 </ul>
             </div>
-        </aside>
+        </aside>{% endif %}
     </div>
 </div>
 {% endblock mgmt_content %}

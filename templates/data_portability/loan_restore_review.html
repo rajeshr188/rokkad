@@ -1,0 +1,28 @@
+{% extends 'base_tenant.html' %}
+{% block title %}Review loan records{% endblock %}
+{% block extra_css %}{{ block.super }}{% if forms_rows %}{{ forms_rows.0.form.media.css }}{% endif %}{% endblock %}
+{% block workspace_content %}
+<h1 class="h3">Review loan records</h1>
+<p>Status: {{ batch.state }} · {{ batch.document.loans|length }} loan record{{ batch.document.loans|length|pluralize }} · {{ batch.document.files }} supporting file{{ batch.document.files|pluralize }}.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if unfinished %}
+<p>Match every source loan to its destination customer and setup. The import preserves the source agreement and checks compatible servicing; it does not reprice the original transaction using today's quotes.</p>
+{% if batch.profile == 'loan-closed-position/1' or batch.profile == 'loan-closed-position-bundle/1' %}<p>These records establish a closed, zero-debt position with collateral returned to the borrower. Earlier transactions remain unavailable. Original terms that were not recorded stay unknown.</p>{% endif %}
+<form method="post" class="card card-body">{% csrf_token %}
+{% for row in forms_rows %}<fieldset class="mb-3"><legend class="h5">Source loan {{ row.source.number }} · {{ row.source.state }}</legend><p>Customer source reference: {{ row.source.borrower.system }} / {{ row.source.borrower.id }}. Import the source customer first; names alone are not matched.</p>{{ row.form.as_p }}</fieldset>{% endfor %}
+<button class="btn btn-outline-primary" name="action" value="prepare">Save matches for owner review</button>
+{% if owner_review %}<button class="btn btn-primary" name="action" value="preview">Validate and review import</button>{% else %}<p>The Workspace owner must review the destination mappings and confirm this import.</p>{% endif %}
+</form>
+{% endif %}
+{% if batch.preview %}<section class="card card-body mt-3"><h2 class="h5">Reconciliation</h2>
+{% if batch.preview.summary.loans and not batch.preview.summary.already_restored %}<div class="table-responsive"><table class="table"><thead><tr><th>Source loan</th><th>Destination number</th><th>State</th><th>Principal</th><th>Interest</th><th>Fees</th></tr></thead><tbody>{% for row in batch.preview.summary.loans %}<tr><td>{{ row.source_number }}</td><td>{{ row.local_number }}</td><td>{{ row.state }}</td><td>{{ row.position.principal }}</td><td>{{ row.position.interest }}</td><td>{{ row.position.fees }}</td></tr>{% endfor %}</tbody></table></div>
+{% elif batch.preview.summary.balance %}<p>Destination number: {{ batch.preview.summary.loan_number }} · {{ batch.preview.summary.state }} · position at {{ batch.preview.summary.as_of }}.</p><p>Principal {{ batch.preview.summary.balance.principal }}, interest {{ batch.preview.summary.balance.interest }}, fees {{ batch.preview.summary.balance.fees }}.</p>
+{% elif batch.preview.summary.balances %}<p>Closed position at {{ batch.preview.summary.as_of }}: principal {{ batch.preview.summary.balances.principal }}, interest {{ batch.preview.summary.balances.interest }}, fees {{ batch.preview.summary.balances.fees }}. Returned collateral; earlier transactions unavailable.</p>{% elif batch.preview.summary.already_restored %}<p>The same source and mappings have already been restored. Confirmation will link this attempt to the existing loans.</p>{% endif %}
+<details><summary>Full reconciliation details</summary><pre class="mt-2 text-wrap">{{ summary }}</pre></details>
+{% if approval %}<p class="mt-3">This review has created no loan. Confirmation repeats the checks and restores the entire supported package. The review expires in one hour.</p><form method="post">{% csrf_token %}<input type="hidden" name="action" value="commit"><input type="hidden" name="approval" value="{{ approval }}"><label><input type="checkbox" name="confirmed" value="yes" required> I reviewed the customer matches, destination setup, source coverage and reconciled positions.</label><button class="btn btn-primary d-block mt-2">Confirm loan import</button></form>{% elif unfinished %}<p>Validate again to obtain a fresh confirmation.</p>{% endif %}
+</section>{% endif %}
+{% if batch.state == 'COMPLETED' %}<p class="alert alert-success mt-3">The supported records were restored. No new cash payout or collection was performed.</p><ul>{% for loan in imported_loans %}<li><a href="{% url 'workspace_loans:pawn_loan_detail' workspace_slug=request.workspace.slug pk=loan.pk %}">{{ loan.loan_number }} · {{ loan.state }}</a></li>{% endfor %}</ul>{% endif %}
+{% if unfinished and owner_review %}<form method="post" class="mt-4">{% csrf_token %}<input type="hidden" name="action" value="cancel"><label><input type="checkbox" name="confirmed" value="yes" required> Cancel this attempt and remove its staged source file.</label><button class="btn btn-outline-danger d-block mt-2">Cancel import</button></form>{% endif %}
+<p class="mt-3"><a href="{% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug %}">Loan imports</a></p>
+{% endblock %}
+{% block extra_js %}{{ block.super }}{% if forms_rows %}{{ forms_rows.0.form.media.js }}{% endif %}{% endblock %}

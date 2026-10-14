@@ -3,6 +3,9 @@ from django.urls import path
 from apps.tenant_apps.loans import views, browse
 from apps.tenant_apps.loans.web import workflow, release_batches, paper_closures, journey, closing
 from apps.tenant_apps.loans.web import paper_backlog
+from apps.tenant_apps.loans.web.series_reservations import reserve_register
+from apps.tenant_apps.loans.web.loan_corrections import correction_review
+from apps.tenant_apps.loans.web.recorded_borrower_corrections import borrower_correction
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
 from apps.tenant_apps.loans.web.rate_readiness import pawn_valuation_readiness
@@ -146,6 +149,9 @@ urlpatterns = [
     path("internal/<int:pk>/record-paper-closure/", recorded_servicing.closure, name="pawn_loan_record_paper_closure"),
     path("internal/<int:pk>/close/", closing.close, name="pawn_loan_close"),
     path("internal/<int:pk>/correct-paper-contract/", recorded_corrections.contract_correction, name="pawn_loan_correct_paper_contract"),
+    path("internal/<int:pk>/correct-paper-borrower/", borrower_correction, name="pawn_loan_correct_paper_borrower"),
+    path("internal/<int:pk>/correct-borrower/", borrower_correction, name="pawn_loan_correct_borrower"),
+    path("internal/<int:pk>/correct/", correction_review, name="pawn_loan_correction_review"),
     path("internal/<int:pk>/correct-paper-closing/", recorded_corrections.settlement_facts, name="pawn_loan_correct_paper_closing"),
     path("internal/<int:pk>/confirm-paper-handover/", recorded_servicing.handover, name="pawn_loan_confirm_paper_handover"),
     path("internal/renewals/<int:renewal_pk>/reverse/", views.pawn_loan_renewal_reverse, name="pawn_loan_renewal_reverse"),
@@ -160,6 +166,7 @@ urlpatterns = [
     path("setup/economics/", views.pawn_economics_setup, name="pawn_economics_setup"),
     path("setup/operations/", views.pawn_operations_console, name="pawn_operations_console"),
     path("setup/operations/risk/", views.pawn_risk_portfolio, name="pawn_risk_portfolio"),
+    path("setup/operations/risk/guide/", views.pawn_risk_guide, name="pawn_risk_guide"),
     path("setup/operations/risk/refresh/", views.pawn_risk_refresh_batch, name="pawn_risk_refresh_batch"),
     path("setup/operations/risk/<int:pk>/refresh/", views.pawn_risk_refresh_one, name="pawn_risk_refresh_one"),
     path("setup/operations/risk/alerts/<int:pk>/borrower-notice/", views.pawn_risk_borrower_notice_create, name="pawn_risk_borrower_notice_create"),
@@ -235,4 +242,5 @@ urlpatterns = [
     path("setup/licenses/<int:pk>/activate/", views.license_activate, name="license_activate"),
     path("setup/licenses/<int:license_pk>/series/create/", views.series_create, name="series_create"),
     path("setup/series/<int:pk>/edit/", views.series_update, name="series_update"),
+    path("setup/series/<int:pk>/reserve/", reserve_register, name="series_reserve_register"),
 ]

@@ -269,7 +269,7 @@ class LoanHistoryTests(PortabilityFixture):
         with override_settings(ALLOWED_HOSTS=["testserver"],STORAGES={"default":{"BACKEND":"django.core.files.storage.FileSystemStorage"},"staticfiles":{"BACKEND":"django.contrib.staticfiles.storage.StaticFilesStorage"}}):
             client=Client(enforce_csrf_checks=True);client.force_login(self.actor)
             upload=reverse("workspace_portability:loan_upload",kwargs={"workspace_slug":self.a.slug})
-            page=client.get(upload);self.assertContains(page,"Stage loan history")
+            page=client.get(upload);self.assertContains(page,"Upload and review")
             self.assertIn("no-store",page["Cache-Control"])
             self.assertEqual(client.post(upload,{}).status_code,403)
             csrf={"csrfmiddlewaretoken":client.cookies["csrftoken"].value}

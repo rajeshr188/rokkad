@@ -67,8 +67,8 @@ def check_workspace_rls(app_configs, databases=None, **kwargs):
             model
             for model in rls_protected_models()
             if (model._meta.app_label, RLS_MIGRATION_BY_MODEL.get(
-                model._meta.label_lower, RLS_MIGRATION_BY_APP[model._meta.app_label]
-            ))
+                model._meta.label_lower
+            ) or RLS_MIGRATION_BY_APP[model._meta.app_label])
             in applied
         )
         with connection.cursor() as cursor:

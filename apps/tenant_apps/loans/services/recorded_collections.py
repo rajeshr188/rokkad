@@ -12,16 +12,23 @@ PROFILE = "recorded-anniversary/1"
 ZERO = Decimal("0")
 
 
-def recording_for(loan):
+def recording_for(loan, *, _evidence=None):
+    if _evidence is not None:
+        _evidence.require_loan(loan)
     if loan.policy_snapshot_id is None or loan.policy_snapshot.basis != "RECORDED_CONTRACT":
         return None
-    event = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
+    if _evidence is not None:
+        reversed_ids = _evidence.reversal_dates()
+        event = max((row for row in _evidence.events if row.event_kind in ("DISBURSAL", "RENEWAL_OPENING")
+            and row.pk not in reversed_ids), key=lambda row: row.pk, default=None)
+    else:
+        event = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
     recording = event.payload.get("recording", {}) if event else {}
     return recording if recording.get("collection_profile") in (PROFILE, "recorded-anniversary/2", RECORDED_PROFILE) else None
 
 
-def collection_state(loan, day, *, known_through=None):
-    recording = recording_for(loan)
+def collection_state(loan, day, *, known_through=None, _evidence=None):
+    recording = recording_for(loan, _evidence=_evidence)
     if recording is None or day < loan.loan_date:
         raise ValueError("Recorded collection requires its agreed contract on or after the original date.")
     if (day - loan.loan_date).days > 36600:
@@ -33,9 +40,12 @@ def collection_state(loan, day, *, known_through=None):
         raise ValueError("The inclusive monthly contract requires its captured supported economic policy.")
     quantum = loan.policy_snapshot.currency_quantum.normalize() if corrected else Decimal("0.01")
     known_through = min(day, known_through or day)
-    balance = get_pawn_loan_balance(loan, as_of_date=known_through)
-    events = tuple(loan.loan_events.filter(effective_date__lte=known_through).order_by("effective_date", "pk"))
-    items = tuple(loan.collateral_items.all())
+    balance = (_evidence.balance(known_through) if _evidence is not None
+        else get_pawn_loan_balance(loan, as_of_date=known_through))
+    events = (tuple(sorted((row for row in _evidence.events if row.effective_date <= known_through),
+        key=lambda row: (row.effective_date, row.pk))) if _evidence is not None
+        else tuple(loan.loan_events.filter(effective_date__lte=known_through).order_by("effective_date", "pk")))
+    items = _evidence.collateral if _evidence is not None else tuple(loan.collateral_items.all())
     reversed_ids = {e.reversal_of_id for e in events if e.reversal_of_id}
     end = min((e.effective_date for e in events if e.event_kind in ("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY")
                and e.pk not in reversed_ids), default=day)
@@ -53,10 +63,17 @@ def collection_state(loan, day, *, known_through=None):
         item_charges = None
         if recording["collection_profile"] in ("recorded-anniversary/2", RECORDED_PROFILE):
             from .pawn_tranches import get_pawn_principal_tranche_balances
-            bases = get_pawn_principal_tranche_balances(loan, as_of_date=loan.loan_date if month == 0 else min(start - timedelta(days=1), known_through))
+            bases = get_pawn_principal_tranche_balances(loan, as_of_date=loan.loan_date if month == 0 else min(start - timedelta(days=1), known_through),
+                _evidence=_evidence)
             if month == 0:
-                origin = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"),
-                    reversed_by_event__isnull=True).order_by("-pk").first()
+                if _evidence is not None:
+                    all_reversed = _evidence.reversal_dates()
+                    origin = max((row for row in _evidence.events
+                        if row.event_kind in ("DISBURSAL", "RENEWAL_OPENING") and row.pk not in all_reversed),
+                        key=lambda row: row.pk, default=None)
+                else:
+                    origin = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"),
+                        reversed_by_event__isnull=True).order_by("-pk").first()
                 detail = origin.payload["disbursal"] if origin.event_kind == "DISBURSAL" else origin.payload["renewal"]["successor_economics"]
                 original = {row["collateral_item_id"]: Decimal(row["allocated_principal"]) for row in detail["tranches"]}
             else:

@@ -42,8 +42,8 @@ def assess_pawn_loan_risk(*, as_of_date, maturity_date, days_past_due, ltv_ratio
         performance = "WATCH"; flags.append("PAYMENT_OVERDUE"); explanations.append(f"Oldest unpaid obligation is {days_past_due} day(s) past due.")
     else:
         performance = "STANDARD"
-    if valuation_blockers:
-        flags.append("VALUATION_UNKNOWN"); explanations.append("Collateral valuation is unavailable: " + ", ".join(valuation_blockers) + ".")
+    if valuation_blockers or ltv_ratio is None:
+        flags.append("VALUATION_UNKNOWN"); explanations.append("Collateral valuation is unavailable: " + (", ".join(valuation_blockers) or "LTV is unknown") + ".")
     elif ltv_ratio is not None:
         if ltv_ratio >= policy.ltv_critical_ratio: code = "LTV_CRITICAL"
         elif ltv_ratio > policy.ltv_breach_ratio: code = "LTV_BREACH"

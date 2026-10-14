@@ -335,7 +335,7 @@ class ConcurrentCheckoutTests(TransactionTestCase):
         with patch("apps.subscriptions.notifications.send_checkout_receipt") as receipt:
             with ThreadPoolExecutor(max_workers=2) as pool:
                 results = list(pool.map(lambda _: capture(), range(2)))
-            receipt.assert_called_once_with(invoice.pk)
+            receipt.assert_called_once_with(invoice.pk, capture_whatsapp=True)
         self.assertEqual(results, [invoice.pk, invoice.pk])
         self.assertEqual(Payment.objects.count(), 1)
 

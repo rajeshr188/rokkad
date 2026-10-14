@@ -25,7 +25,7 @@ from .services import record_quote, withdraw_quote, confirm_quote_unchanged
 @never_cache
 def get_latest_rate(request):
     summary = get_workspace_rate_dashboard_summary()
-    latest_rates = [quote for quote in (summary["gold_rate"], summary["silver_rate"]) if quote]
+    latest_rates = [quote for quote in (summary["gold_rate"], summary["silver_rate"], summary["bronze_rate"]) if quote]
 
     rates = []
     for rate in latest_rates:
@@ -54,7 +54,7 @@ def rate_list(request):
     fragment = (request.headers.get("HX-Request") == "true" and request.headers.get("HX-Target") == "reference-results"
                 and request.headers.get("HX-History-Restore-Request") != "true" and request.headers.get("HX-Boosted") != "true")
     summary = get_workspace_rate_dashboard_summary()
-    daily_quotes = [row for row in (summary["gold_rate"], summary["silver_rate"]) if row]
+    daily_quotes = [row for row in (summary["gold_rate"], summary["silver_rate"], summary["bronze_rate"]) if row]
     for row in daily_quotes:
         row.is_today = timezone.localdate(row.effective_at) == timezone.localdate()
     response = render(

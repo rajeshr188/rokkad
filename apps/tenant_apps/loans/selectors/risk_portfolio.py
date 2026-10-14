@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
 
 
-SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V6"
+SNAPSHOT_CONTRACT = "LOAN_RISK_SNAPSHOT_V9"
 
 
 def snapshot_is_current(snapshot, as_of_date):
@@ -103,7 +103,7 @@ def get_risk_portfolio_summary(*, as_of_date=None):
         unknown_coverage_count=Count("pk", filter=current & Q(risk_snapshot__ltv_ratio__isnull=True)),
         provisional_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__complete=False)),
         assumed_capture_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__transactions__capture_basis="SYSTEM_CAPTURE_ASSUMPTION")),
-        inconsistent_calculation_count=Count("pk", filter=current & Q(risk_snapshot__source_provenance__financial__calculation_status="INCONSISTENT")),
+        inconsistent_calculation_count=Count("pk", filter=Q(assessment_status__in=("CURRENT", "ERROR"), risk_snapshot__source_provenance__financial__calculation_status="INCONSISTENT")),
         unavailable_count=Count("pk", filter=~usable | Q(risk_snapshot__exposure__isnull=True) | Q(risk_snapshot__overdue__isnull=True)),
         total_exposure=Sum("risk_snapshot__exposure", filter=usable),
         total_overdue=Sum("risk_snapshot__overdue", filter=usable),

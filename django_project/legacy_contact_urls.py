@@ -1,11 +1,14 @@
 """Temporary bookmark redirects for the retired Contact application."""
 
 from django.shortcuts import redirect
-from django.urls import path
+from django.urls import path, reverse
 
 
 def party_list_redirect(request, *args, **kwargs):
-    """Open the canonical Party application for every legacy Contact URL."""
+    """Keep tenant bookmarks while serving the exact global support page."""
+    if getattr(request, "workspace", None) is None and request.path == reverse("contact"):
+        from pages.views import ContactPageView
+        return ContactPageView.as_view()(request)
     return redirect("party:party_list")
 
 

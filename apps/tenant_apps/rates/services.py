@@ -63,14 +63,14 @@ def withdraw_quote(*, workspace, actor, quote_id, reason):
 @transaction.atomic
 def confirm_quote_unchanged(*, workspace, actor, quote_id):
     """Append today's explicit affirmation. The Workspace lock serializes writes."""
-    from .facade import get_latest_commodity_valuation_rate
+    from .facade import COMMODITY_TO_RATE_METAL, get_latest_commodity_valuation_rate
     _authorize(workspace, actor, "data.create")
     try:
         original = Rate.objects.get(workspace=workspace, pk=quote_id)
     except Rate.DoesNotExist as exc:
         raise ValidationError("Select a quote in this Workspace.") from exc
-    if original.metal not in ("Gold", "Silver") or original.currency != "INR" or original.purity != "24k":
-        raise ValidationError("Daily loan-price confirmation requires an INR pure gold or silver quote.")
+    if original.metal not in COMMODITY_TO_RATE_METAL.values() or original.currency != "INR" or original.purity != "24k":
+        raise ValidationError("Daily loan-price confirmation requires an INR 100% reference quote for gold, silver or bronze.")
     now = timezone.now()
     today = timezone.localdate(now)
     current = get_latest_commodity_valuation_rate(commodity_code=original.metal.upper(), as_of=now).rate

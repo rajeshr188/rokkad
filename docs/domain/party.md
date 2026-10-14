@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-08
+updated: 2026-10-10
 tags: [domain, party]
 ---
 
@@ -107,6 +107,16 @@ without Redis widget state. See [cache configuration](../implementation/cache-co
 License-scoped staff access remains optional and shelved as
 [FW-001](../plans/future-work.md#fw-001-optional-owner-configurable-license-scope).
 
+The detail page's Merge tab uses the same type-to-search picker as new-loan
+customer selection. Its fixed merge search includes active, inactive and blocked
+Parties, excludes the current target and archived duplicates, and returns the
+same identifying labels. Results are paginated; the full Workspace directory is
+not rendered into the form. The dedicated target-bearing endpoint requires Party
+edit permission and a timestamp-signed exact URL token, with ordinary Workspace,
+commercial/lifecycle and RLS checks. The submitted source is revalidated against
+the same Workspace and eligibility constraints. Confirmation, conflict checks
+and the existing merge service remain authoritative.
+
 Matching names do not automatically merge source customer records. Party import
 now supports explicit per-batch decisions to keep reviewed source IDs separate,
 with names unchanged, warnings, reasons and audit. Duplicate source IDs and stronger
@@ -122,6 +132,22 @@ Party still owns phone/email/website validation, one primary/default per type an
 primary contact summary synchronization. Imported verification claims remain
 provenance, not local verification. Portable child identities survive native
 child deletion as tombstones; imports never resurrect them automatically.
+
+PC-04 also resolves exact earlier borrower references from immutable completed
+native Party master rows' `source_refs` when no explicit SourceIdentity exists.
+The accepted reference must identify exactly one local Party identity; pending,
+foreign and ambiguous claims do not resolve. Explicit source bindings remain
+authoritative, and no name match or local verification flag is inferred. This
+lets a re-exported closed position find its imported borrower without rewriting
+its original evidence. See the [exchange decision](../adr/2026-10-10-bounded-volume-exchange.md).
+
+PC-05's [fresh business package](../implementation/fresh-business-package-pc05.md)
+can additionally preserve original customer codes/counter, metadata, profile and
+gallery bytes, document bytes and identifier relationships into an empty target.
+It uses the same master/child validation and explicit role mappings; ambiguous
+identity conflicts remain held. Customer document verification is retained as a
+source claim rather than performed afresh. Other Party imports retain their
+existing generated-code behavior. No portal or staff access travels with files.
 
 
 Identifiers without documents also use the

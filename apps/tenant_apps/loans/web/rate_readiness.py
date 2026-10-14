@@ -22,8 +22,8 @@ class RateReadinessForm(forms.Form):
 
     def clean_metals(self):
         metals = tuple(dict.fromkeys(self.cleaned_data["metals"].split(",")))
-        if not metals or any(metal not in {"GOLD", "SILVER"} for metal in metals):
-            raise forms.ValidationError("Select gold or silver collateral.")
+        if not metals or any(metal not in {"GOLD", "SILVER", "BRONZE"} for metal in metals):
+            raise forms.ValidationError("Select gold, silver or bronze collateral.")
         return metals
 
 

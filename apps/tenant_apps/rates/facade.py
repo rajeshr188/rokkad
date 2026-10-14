@@ -18,6 +18,7 @@ class CommodityRateLookupResult:
 COMMODITY_TO_RATE_METAL = {
     "GOLD": "Gold",
     "SILVER": "Silver",
+    "BRONZE": "Bronze",
 }
 
 RATE_FOUND = "FOUND"
@@ -33,6 +34,7 @@ def get_workspace_rate_dashboard_summary():
     return {
         "gold_rate": get_latest_commodity_valuation_rate(commodity_code="GOLD").rate,
         "silver_rate": get_latest_commodity_valuation_rate(commodity_code="SILVER").rate,
+        "bronze_rate": get_latest_commodity_valuation_rate(commodity_code="BRONZE").rate,
         "has_rate_sources": RateSource.objects.filter(workspace_id=current_workspace_id()).exists(),
     }
 

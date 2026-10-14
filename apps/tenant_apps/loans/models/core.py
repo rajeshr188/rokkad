@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Q
+from django.db.models.functions import Coalesce
 from django.db.models.fields.json import KeyTextTransform, KeyTransform
 from django.utils import timezone
 
@@ -641,6 +642,7 @@ class PawnLoan(models.Model):
     class Meta:
         ordering = ("loan_date", "loan_number")
         constraints = [
+            models.UniqueConstraint(fields=("workspace", "id"), name="loans_pawn_workspace_id_uniq"),
             models.UniqueConstraint(fields=("workspace", "creation_submission_id"),
                 condition=Q(creation_submission_id__isnull=False), name="loans_draft_submission_uniq"),
             models.UniqueConstraint(
@@ -836,8 +838,8 @@ class PawnCollateralItem(WorkspaceOwnedModel):
             ),
             models.CheckConstraint(
                 condition=Q(allocated_principal__isnull=True)
-                | Q(allocated_principal__gt=0),
-                name="loans_item_allocation_positive",
+                | Q(allocated_principal__gte=0),
+                name="loans_item_allocation_nonnegative",
             ),
             models.CheckConstraint(
                 condition=Q(monthly_interest_rate__isnull=True)
@@ -2132,8 +2134,15 @@ class PawnLoanNotice(models.Model):
                 fields=("loan", "request_key"),
                 name="loans_notice_loan_request_uniq",
             ),
+            models.CheckConstraint(
+                condition=(Q(source_risk_alert__isnull=True, source_risk_event__isnull=True)
+                           | Q(source_risk_alert__isnull=False, source_risk_event__isnull=False)),
+                name="loans_notice_risk_pair_complete",
+            ),
             models.UniqueConstraint(
-                fields=("source_risk_event", "notice_kind", "channel", "notification_template_version"),
+                F('source_risk_event'), F('notice_kind'), F('channel'), F('notification_template_version'),
+                Coalesce(KeyTextTransform('correction_id', KeyTransform('borrower_identity', 'payload_snapshot')),
+                    models.Value('0'), output_field=models.CharField()),
                 condition=Q(source_risk_event__isnull=False, transaction_review__isnull=True),
                 name="loans_risk_notice_intent_uniq",
             ),

@@ -144,6 +144,10 @@ def _assess_channel(alert, mapping, channel, locale, policy, coverage):
     existing = PawnLoanNotice.objects.filter(
         source_risk_event=alert.source_event, notice_kind=notice_kind, channel=channel,
         notification_template_version=template.version if template else None, transaction_review_id=coverage.review_id)
+    correction = alert.loan.change_log.filter(event_kind='BORROWER_CORRECTED').order_by('pk').last()
+    if correction:
+        existing = existing.filter(payload_snapshot__borrower_identity__correction_id=correction.pk,
+            payload_snapshot__borrower_identity__party_id=alert.loan.borrower_id)
     if coverage.status == "ROKKAD_ONLY":
         from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint
         existing = existing.filter(payload_snapshot__transaction_review__source_fingerprint=transaction_fingerprint(alert.loan))

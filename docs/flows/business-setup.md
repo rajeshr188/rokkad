@@ -1,11 +1,27 @@
 ---
 status: active
 owner: project
-updated: 2026-10-10
+updated: 2026-10-14
 tags: [onboarding, workspace, loans]
 ---
 
 # Set up your business
+
+The [14 October refinement](../implementation/new-user-journey-refinement-20261014.md)
+is verified locally, pending a separate release. Existing accounts support email
+or username signin. Verify the account email through the visible task/resend page
+before explicit trial activation; configuration can be saved first. Confirmation
+returns through normal signin and current owned membership to business setup.
+Invitations and ordinary counter navigation keep their existing authorization.
+
+Guided setup focuses its menu on the journey, with the full authorized menu still
+available. Owners explicitly select either existing combined review/payout or
+separate approval/payment in How you lend. Review and begin puts the first-loan
+action before detailed terms; the worked example is optional. Monitoring readiness
+is shown separately from lending readiness and requires staff to save an applicable
+policy. It does not claim evidence completeness or a fresh portfolio assessment.
+For earlier paper/imported loans, review when standing terms actually applied;
+choosing the paper setup path does not change a series's entry default.
 
 From My Workspaces, choose **Set up your business**. The existing creation service
 creates the Workspace and Owner membership, then opens that business's setup page.

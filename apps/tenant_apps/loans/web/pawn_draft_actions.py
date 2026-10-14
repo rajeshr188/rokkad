@@ -388,8 +388,8 @@ def get_pawn_draft_readiness(workspace):
     ).exists():
         return {
             "ready": False,
-            "message": "Create an active Party before starting a pawn-loan draft.",
-            "action_label": "Create Party",
+            "message": "Add a customer before starting your first loan draft.",
+            "action_label": "Add customer",
             "action_url": reverse(
                 "workspace_party:party_create",
                 kwargs={"workspace_slug": workspace.slug},

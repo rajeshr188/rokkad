@@ -17,11 +17,14 @@ from apps.tenant_apps.loans import models as loans
 from apps.tenant_apps.loans.services.history_contract import digest
 from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access, validate_preparation_mapping
 from apps.tenant_apps.loans.services.opening_import import commit_opening_import, PROFILE as OPENING_PROFILE
+from apps.tenant_apps.loans.services.closed_position import preview_closed_position, admit_closed_position
+from apps.tenant_apps.loans.domain.monthly_contract import RULE as MONTHLY_RULE
 from apps.tenant_apps.loans.services.product_catalog import create_product_version_draft, activate_product_version, retire_product_version
 from .contracts import party_form, semantic, source_digest
 from .models import GuidedOpeningBatch, PartyIdentity, SourceIdentity
 from .parsers import parse_source, PortabilityError
 from . import opening_register as register
+from .position_register import closed_document
 
 SALT = 'guided-outstanding-register-v1'
 
@@ -44,8 +47,9 @@ def stage(*, workspace_id, actor, source_key, content, filename):
     if not isinstance(source_key, str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,47}', source_key):
         raise PortabilityError('Use a stable register key of lowercase letters, numbers and hyphens (up to 48 characters).')
     name, kind, headers, rows = parse_source(content, filename)
-    if kind not in {'xlsx', 'csv'} or set(headers) != set(register.COLUMNS):
-        raise PortabilityError('Use the outstanding-loans template with all its headers. XLSX and CSV are supported; arbitrary loan sheets need mapping first.')
+    profile = next((key for key, columns in register.TEMPLATES.items() if set(headers) == set(columns)), None)
+    if kind not in {'xlsx', 'csv'} or profile is None:
+        raise PortabilityError('Use a supported active-position or closed-loan template with all its headers. XLSX and CSV are supported; arbitrary loan sheets need mapping first.')
     register.groups(rows)
     register.borrowers(rows)
     sha = hashlib.sha256(content).hexdigest()
@@ -57,20 +61,22 @@ def stage(*, workspace_id, actor, source_key, content, filename):
         raise PortabilityError('Finish or cancel an unfinished register import before uploading more (limit 20).')
     batch = GuidedOpeningBatch.objects.create(workspace_id=workspace_id, source_key=source_key,
         source_name=name, source_sha256=sha, created_by=actor,
-        document={'profile': register.PROFILE, 'rows': rows})
+        document={'profile': profile, 'rows': rows})
     AuditLog.log('DATA_IMPORT', company=workspace, user=actor, content_object=batch,
         description='Staged an outstanding loan register for owner review.', data={'phase': 'GUIDED_STAGE', 'sha256': sha})
     return batch
 
 
-def _product(workspace_id, actor, grace):
+def _product(workspace_id, actor, grace, profile=register.PROFILE):
     """Reuse catalog commands; only a retired servicing definition is retained."""
     expected = dict(repayment_structure='FLEXIBLE_PARTIAL_PAYMENT', amortisation_method='NONE',
         payment_frequency='FLEXIBLE', minimum_tenor_months=1, maximum_tenor_months=1200,
         operational_grace_days=grace, extra_payment_rule='REDUCE_PRINCIPAL',
-        calculation_contract_version=register.AGGREGATE_RULE, available_from=None, available_until=None)
-    product, created = loans.LoanProduct.objects.get_or_create(workspace_id=workspace_id, code=f'IMPORT-UPFRONT-{grace}',
-        defaults={'name': f'Imported upfront-interest loans ({grace} grace days)', 'created_by': actor, 'updated_by': actor})
+        calculation_contract_version=MONTHLY_RULE if profile == register.CHECKPOINT_PROFILE else register.AGGREGATE_RULE,
+        available_from=None, available_until=None)
+    prefix = 'IMPORT-MONTHLY' if profile == register.CHECKPOINT_PROFILE else 'IMPORT-UPFRONT'
+    product, created = loans.LoanProduct.objects.get_or_create(workspace_id=workspace_id, code=f'{prefix}-{grace}',
+        defaults={'name': f"Imported {'monthly-checkpoint' if profile == register.CHECKPOINT_PROFILE else 'upfront-interest'} loans ({grace} grace days)", 'created_by': actor, 'updated_by': actor})
     if created:
         version = create_product_version_draft(product.pk, actor=actor, **expected)
         activate_product_version(version.pk, actor=actor)
@@ -89,8 +95,8 @@ def _bind_borrower(batch, ref, values, choice, workspace_id, actor):
         source_system=system, external_id=ref).first()
     if source:
         party = Party.objects.select_for_update().get(pk=source.identity.party_id, workspace_id=workspace_id)
-        if party.status != 'ACTIVE':
-            raise PortabilityError('The previously matched customer is not active. Review their profile before importing.')
+        if not _eligible_customer(batch, party):
+            raise PortabilityError('The previously matched customer is not active or eligible for this profile. Review their profile before importing.')
         if choice != party.party_code or source.accepted_digest != source_digest(record):
             raise PortabilityError('This borrower reference is already bound to a customer. Keep that match; changed source details need review.')
         return party, {'mode': 'bound', 'party_id': party.pk, 'fingerprint': digest(semantic(party))}
@@ -106,8 +112,8 @@ def _bind_borrower(batch, ref, values, choice, workspace_id, actor):
             party = Party.objects.select_for_update().get(workspace_id=workspace_id, party_code=choice)
         except Party.DoesNotExist:
             raise PortabilityError('Choose NEW or an existing customer code from this Workspace.') from None
-        if party.status != 'ACTIVE':
-            raise PortabilityError('The selected customer is not active. Review their profile before importing.')
+        if not _eligible_customer(batch, party):
+            raise PortabilityError('The selected customer is not active or eligible for this profile. Review their profile before importing.')
         binding = {'mode': 'existing', 'party_id': party.pk, 'fingerprint': digest(semantic(party))}
     identity, _ = PartyIdentity.objects.get_or_create(workspace_id=workspace_id, party=party)
     SourceIdentity.objects.create(workspace_id=workspace_id, source_system=system, external_id=ref,
@@ -115,19 +121,25 @@ def _bind_borrower(batch, ref, values, choice, workspace_id, actor):
     return party, binding
 
 
-def _prepared_settings(mapping, workspace_id):
+def _eligible_customer(batch, party):
+    return party.status != 'ARCHIVED' if batch.document['profile'] == register.CLOSED_PROFILE else party.status == 'ACTIVE'
+
+
+def _prepared_settings(mapping, workspace_id, profile=register.PROFILE):
     if not isinstance(mapping, dict) or not isinstance(mapping.get('settings'), dict) or not isinstance(mapping.get('borrowers'), dict):
         raise PortabilityError('Review destination settings and customer matches before importing.')
     settings, choices = mapping['settings'], mapping['borrowers']
-    if set(settings) != {'revision_id', 'series_id', 'cutover', 'grace_days', 'reference', 'rule_confirmed'}:
+    closed = profile == register.CLOSED_PROFILE
+    fields = {'series_id', 'cutover', 'reference', 'rule_confirmed'} if closed else {'revision_id', 'series_id', 'cutover', 'grace_days', 'reference', 'rule_confirmed'}
+    if set(settings) != fields:
         raise PortabilityError('Supply the complete destination and handover settings.')
-    if any(type(settings[k]) is not int or settings[k] <= 0 for k in ('revision_id', 'series_id')) or type(settings['grace_days']) is not int:
+    if any(type(settings[k]) is not int or settings[k] <= 0 for k in (('series_id',) if closed else ('revision_id', 'series_id'))) or (not closed and type(settings['grace_days']) is not int):
         raise PortabilityError('Select a valid licence, series and original grace period.')
     if not isinstance(settings['reference'], str) or not 1 <= len(settings['reference'].strip()) <= 180:
         raise PortabilityError('Supply a source / reconciliation reference (up to 180 characters).')
     if settings.get('rule_confirmed') is not True:
-        raise PortabilityError('Confirm that the supported interest and bullet-maturity rule matches these source loans.')
-    if not 0 <= settings['grace_days'] <= 30:
+        raise PortabilityError('Confirm the supported source position and rules before importing.')
+    if not closed and not 0 <= settings['grace_days'] <= 30:
         raise PortabilityError('Grace days must be between 0 and 30.')
     from datetime import date
     try:
@@ -136,8 +148,12 @@ def _prepared_settings(mapping, workspace_id):
         raise PortabilityError('Supply a valid handover date.') from None
     if cutoff >= timezone.localdate():
         raise PortabilityError('Use a completed handover date before today. Rokkad servicing starts on the following day.')
-    revision = validate_preparation_mapping(workspace_id, revision_id=settings['revision_id'], series_id=settings['series_id'])
-    settings = {**settings, 'license_number': revision.license_number, 'legacy_reference': revision.kind == 'LEGACY_REFERENCE'}
+    if closed:
+        if not loans.LoanSeries.objects.filter(workspace_id=workspace_id, pk=settings['series_id']).exists():
+            raise PortabilityError('Choose a destination series from this Workspace.')
+    else:
+        revision = validate_preparation_mapping(workspace_id, revision_id=settings['revision_id'], series_id=settings['series_id'])
+        settings = {**settings, 'license_number': revision.license_number, 'legacy_reference': revision.kind == 'LEGACY_REFERENCE'}
     return settings, choices
 
 
@@ -148,12 +164,14 @@ def prepare(*, workspace_id, actor, batch_id, mapping):
     batch = get_batch(workspace_id=workspace_id, actor=actor, batch_id=batch_id, lock=True)
     if batch.state not in {'STAGED', 'READY'}:
         raise PortabilityError('Only unfinished imports can be prepared.')
-    settings, choices = _prepared_settings(mapping, workspace_id)
+    settings, choices = _prepared_settings(mapping, workspace_id, batch.document['profile'])
     customers = register.borrowers(batch.document['rows'])
     if set(choices) != set(customers):
         raise PortabilityError('Match every source borrower before preparing the loans.')
     for choice in choices.values():
-        if choice != 'NEW' and not Party.objects.filter(workspace_id=workspace_id, party_code=choice, status='ACTIVE').exists():
+        query = Party.objects.filter(workspace_id=workspace_id, party_code=choice)
+        query = query.exclude(status='ARCHIVED') if batch.document['profile'] == register.CLOSED_PROFILE else query.filter(status='ACTIVE')
+        if choice != 'NEW' and not query.exists():
             raise PortabilityError('Choose NEW or an existing active customer in this Workspace.')
     batch.mapping, batch.state, batch.approval_digest = mapping, 'STAGED', ''
     batch.preview = {'profile': 'loan-import-preparation/1', 'prepared_by': actor.pk,
@@ -165,8 +183,11 @@ def prepare(*, workspace_id, actor, batch_id, mapping):
 
 def _evaluate(batch, mapping, workspace_id, actor):
     """Caller either rolls back every write or commits the complete reviewed graph."""
-    settings, choices = _prepared_settings(mapping, workspace_id)
-    product = _product(workspace_id, actor, settings['grace_days'])
+    profile = batch.document['profile']
+    if profile not in register.TEMPLATES:
+        raise PortabilityError('Unsupported source register profile.')
+    settings, choices = _prepared_settings(mapping, workspace_id, profile)
+    product = None if profile == register.CLOSED_PROFILE else _product(workspace_id, actor, settings['grace_days'], profile)
     customers = register.borrowers(batch.document['rows'])
     if set(choices) != set(customers):
         raise PortabilityError('Match every source borrower before reviewing the loans.')
@@ -188,6 +209,18 @@ def _evaluate(batch, mapping, workspace_id, actor):
             continue
         try:
             with transaction.atomic():
+                if profile == register.CLOSED_PROFILE:
+                    document = closed_document(batch=batch, ref=ref, rows=source_rows, settings=settings, workspace_id=workspace_id)
+                    args = dict(workspace_id=workspace_id, actor=actor, document=document, borrower_id=party.pk, series_id=settings['series_id'])
+                    summary, token = preview_closed_position(**args)
+                    loan, _ = admit_closed_position(**args, review_token=token, confirmed=True)
+                    result = loan.historical_import
+                    rows.append(dict(reference=ref, number=loan.loan_number, borrower=party.display_name,
+                        original_date=date.fromisoformat(document['loan']['original_date']).strftime('%d/%m/%Y') if document['loan']['original_date'] else None,
+                        closed_on=document['loan']['closed_on'], items=None, balance=summary['balances'],
+                        known_details=document['loan'], missing_original_details=summary['missing_original_details'], state='CLOSED'))
+                    results.append(dict(origin_id=result.pk, loan_id=loan.pk, number=loan.loan_number, source_sha256=result.source_sha256))
+                    continue
                 inputs = register.loan_inputs(batch=batch, ref=ref, rows=source_rows, settings=settings,
                     borrower_id=party.pk, product_id=product.pk, workspace_id=workspace_id)
                 document = {'profile': OPENING_PROFILE, **inputs}
@@ -198,7 +231,8 @@ def _evaluate(batch, mapping, workspace_id, actor):
                     'maturity_date': date.fromisoformat(inputs['review']['terms']['maturity_date']).strftime('%d/%m/%Y'),
                     'tenure_months': inputs['setup']['tenure_months'],
                     'collateral': inputs['review']['collateral'], 'items': summary['collateral'],
-                    'balance': summary['balance'], 'monthly_interest': str(sum(Decimal(i['original_principal']) * Decimal(i['monthly_rate']) / 100 for i in inputs['review']['collateral']))})
+                    'balance': summary['balance'], 'checkpoint': inputs['review']['continuation'] if profile == register.CHECKPOINT_PROFILE else None,
+                    'monthly_interest': str(sum(Decimal(i['remaining_principal'] if profile == register.CHECKPOINT_PROFILE else i['original_principal']) * Decimal(i['monthly_rate']) / 100 for i in inputs['review']['collateral']))})
                 for key in totals:
                     totals[key] += Decimal(summary['balance'][key])
                 results.append({'origin_id': result.pk, 'loan_id': result.loan_id, 'number': summary['loan_number'], 'source_sha256': result.source_sha256})

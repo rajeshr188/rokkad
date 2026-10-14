@@ -1,14 +1,19 @@
 import uuid
+from datetime import timedelta
+from io import StringIO
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.contrib.auth import get_user_model
 from django.db import connection, connections, DatabaseError, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.forms.models import model_to_dict
 from django.test import TransactionTestCase
+from django.utils import timezone
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.context import workspace_context, current_workspace_id
@@ -103,6 +108,39 @@ class MonitoringConcurrencyTests(TransactionTestCase):
         self.assertEqual(sum(result["current"] for result in results), 1)
         with workspace_context(self.tenant.pk):
             self.assertEqual(LoanRiskSnapshot.objects.filter(loan=self.loan).count(), 1)
+
+    def test_denied_workspace_turn_does_not_stop_actual_other_workspace_refresh(self):
+        from types import SimpleNamespace
+        from apps.subscriptions.access_policy import record_access_decision
+        foreign = Company.objects.create(name=uuid.uuid4().hex, schema_name=uuid.uuid4().hex,
+            owner=self.actor, creator=self.actor)
+        Membership.objects.create(user=self.actor, company=foreign,
+            role=Role.objects.get_or_create(name="Owner")[0])
+        with workspace_context(foreign.pk):
+            holder = SimpleNamespace(tenant=foreign, actor=self.actor)
+            fixtures.CollateralReappraisalTests.make_loan(holder)
+        self.actor.is_superuser = True
+        self.actor.save(update_fields=["is_superuser"])
+        record_access_decision(workspace=self.tenant, actor=self.actor,
+            mode="read_only",
+            expires_at=timezone.now() + timedelta(days=1), reason="Test commercial restriction")
+        with workspace_context(self.tenant.pk):
+            financial_before = list(self.loan.loan_events.values())
+        output, errors = StringIO(), StringIO()
+        with self.assertRaisesMessage(CommandError, "1 PawnLoan"):
+            call_command("reassess_pawn_loans", workspace_id=[self.tenant.pk, foreign.pk],
+                batch_size=5, stdout=output, stderr=errors)
+        self.assertIn(f"workspace={self.tenant.pk}", errors.getvalue())
+        self.assertIn(f"workspace={foreign.pk} selected=1 current=1 errors=0", output.getvalue())
+        self.assertIsNone(current_workspace_id())
+        self.assertFalse(connection.in_atomic_block)
+        with workspace_context(self.tenant.pk):
+            self.assertFalse(LoanRiskSnapshot.objects.filter(workspace=self.tenant).exists())
+            self.assertFalse(self.loan.risk_events.exists())
+            self.assertFalse(self.loan.risk_alerts.exists())
+            self.assertEqual(list(self.loan.loan_events.values()), financial_before)
+        with workspace_context(foreign.pk):
+            self.assertEqual(LoanRiskSnapshot.objects.get(loan=holder.loan).status, "CURRENT")
 
     def test_concurrent_closure_discards_success_and_error_assessments(self):
         from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure

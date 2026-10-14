@@ -19,6 +19,7 @@ from apps.tenant_apps.loans.services import (
     reassess_pawn_loans_batch,
     refresh_loan_risk_snapshot,
 )
+from apps.tenant_apps.loans.services.risk_snapshots import require_current_assessment_date
 
 
 @require_POST
@@ -29,6 +30,7 @@ def pawn_risk_refresh_batch(request):
         messages.error(request, "Risk assessment date must use YYYY-MM-DD.")
     else:
         try:
+            require_current_assessment_date(as_of_date)
             result = reassess_pawn_loans_batch(
                 workspace_id=request.loans_workspace.pk,
                 as_of_date=as_of_date,
@@ -66,6 +68,7 @@ def pawn_risk_refresh_one(request, pk):
         messages.error(request, "Risk assessment date must use YYYY-MM-DD.")
     else:
         try:
+            require_current_assessment_date(as_of_date)
             refresh_loan_risk_snapshot(loan.pk, as_of_date=as_of_date)
         except RiskSnapshotRefreshError as exc:
             messages.error(request, str(exc))
@@ -79,7 +82,10 @@ def pawn_risk_refresh_one(request, pk):
 
 def _risk_refresh_date(request):
     raw = (request.POST.get("as_of") or timezone.localdate().isoformat()).strip()
-    return parse_date(raw)
+    try:
+        return parse_date(raw)
+    except ValueError:
+        return None
 
 
 def _risk_portfolio_redirect(request):

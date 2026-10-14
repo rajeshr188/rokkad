@@ -38,6 +38,7 @@ class PawnEconomicConfiguration:
     economic_policy: PawnLoanEconomicPolicy
     gold_rate_policy: PawnMetalInterestRatePolicy | None
     silver_rate_policy: PawnMetalInterestRatePolicy | None
+    bronze_rate_policy: PawnMetalInterestRatePolicy | None = None
 
 
 @transaction.atomic
@@ -46,12 +47,13 @@ def create_pawn_economic_configuration(
     workspace,
     gold_monthly_interest_rate: Decimal | None,
     silver_monthly_interest_rate: Decimal | None,
+    bronze_monthly_interest_rate: Decimal | None = None,
     actor=None,
     **policy_values,
 ) -> PawnEconomicConfiguration:
     """Append one complete operator configuration as an atomic policy set."""
     require_setup_administration(workspace.pk, actor)
-    if gold_monthly_interest_rate is None and silver_monthly_interest_rate is None:
+    if gold_monthly_interest_rate is None and silver_monthly_interest_rate is None and bronze_monthly_interest_rate is None:
         raise PawnEconomicPolicyError("Configure an interest rate for at least one metal.")
 
     economic_policy = create_pawn_loan_economic_policy(
@@ -75,6 +77,11 @@ def create_pawn_economic_configuration(
         monthly_interest_rate=silver_monthly_interest_rate,
         **rate_scope,
     ) if silver_monthly_interest_rate is not None else None
+    bronze_rate_policy = create_pawn_metal_interest_rate_policy(
+        metal=CollateralMetal.BRONZE,
+        monthly_interest_rate=bronze_monthly_interest_rate,
+        **rate_scope,
+    ) if bronze_monthly_interest_rate is not None else None
     from apps.orgs.audit import AuditLog
     AuditLog.log("SETTINGS_UPDATE", user=actor, company=workspace,
         description="Saved a new calculation policy revision and monthly rates.",
@@ -87,11 +94,13 @@ def create_pawn_economic_configuration(
               "default_entry_purpose": economic_policy.default_entry_purpose,
               "maximum_ltv_ratio": str(economic_policy.maximum_ltv_ratio),
               "gold_rate_policy_id": gold_rate_policy.pk if gold_rate_policy else None,
-              "silver_rate_policy_id": silver_rate_policy.pk if silver_rate_policy else None})
+              "silver_rate_policy_id": silver_rate_policy.pk if silver_rate_policy else None,
+              "bronze_rate_policy_id": bronze_rate_policy.pk if bronze_rate_policy else None})
     return PawnEconomicConfiguration(
         economic_policy=economic_policy,
         gold_rate_policy=gold_rate_policy,
         silver_rate_policy=silver_rate_policy,
+        bronze_rate_policy=bronze_rate_policy,
     )
 
 

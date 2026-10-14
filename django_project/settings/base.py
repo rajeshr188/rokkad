@@ -64,6 +64,7 @@ SHARED_APPS = [
     "accounts",
     "apps.configuration",
     "apps.platform_mail.apps.PlatformMailConfig",
+    "apps.platform_whatsapp.apps.PlatformWhatsAppConfig",
     "apps.tenancy.apps.TenancyConfig",
     "apps.onboarding",  # User onboarding flow
     "apps.subscriptions",
@@ -286,7 +287,7 @@ AUTHENTICATION_BACKENDS = (
 
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 # ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_LOGIN_METHOD = {"email"}
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*"]
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_EMAIL_VERIFICATION = "optional"  # optional: unverified users can still login; mandatory: requires email confirmation
@@ -414,3 +415,26 @@ BILLING_RECURRING_WORKSPACE_IDS = env.list("BILLING_RECURRING_WORKSPACE_IDS", de
 
 THOUSAND_SEPARATOR = ","
 DECIMAL_SEPARATOR = "."
+
+# Platform WhatsApp controls remain disabled until the deployment sender is approved.
+PLATFORM_WHATSAPP_INBOUND_ENABLED = env.bool("PLATFORM_WHATSAPP_INBOUND_ENABLED", default=False)
+PLATFORM_WHATSAPP_PHONE_ID = env("PLATFORM_WHATSAPP_PHONE_ID", default="")
+PLATFORM_WHATSAPP_WABA_ID = env("PLATFORM_WHATSAPP_WABA_ID", default="")
+PLATFORM_WHATSAPP_APP_SECRET = env("PLATFORM_WHATSAPP_APP_SECRET", default="")
+PLATFORM_WHATSAPP_VERIFY_TOKEN = env("PLATFORM_WHATSAPP_VERIFY_TOKEN", default="")
+PLATFORM_WHATSAPP_SENDER_NUMBER = env("PLATFORM_WHATSAPP_SENDER_NUMBER", default="")
+PLATFORM_WHATSAPP_BASE_URL = env("PLATFORM_WHATSAPP_BASE_URL", default="")
+PLATFORM_WHATSAPP_VERSION = env("PLATFORM_WHATSAPP_VERSION", default="1")
+PLATFORM_WHATSAPP_DISPATCH_ENABLED = env.bool("PLATFORM_WHATSAPP_DISPATCH_ENABLED", default=False)
+PLATFORM_WHATSAPP_ACCESS_TOKEN = env("PLATFORM_WHATSAPP_ACCESS_TOKEN", default="")
+PLATFORM_WHATSAPP_API_VERSION = env("PLATFORM_WHATSAPP_API_VERSION", default="")
+# Approved English mappings are private deployment inputs, never owner-authored JSON.
+PLATFORM_WHATSAPP_TEMPLATES = env.json("PLATFORM_WHATSAPP_TEMPLATES", default={})
+
+# PW-04 capture eligibility and transport activation remain separate and default off.
+PLATFORM_WHATSAPP_INTENTS_ENABLED = env.bool("PLATFORM_WHATSAPP_INTENTS_ENABLED", default=False)
+PLATFORM_WHATSAPP_PILOT = env.json("PLATFORM_WHATSAPP_PILOT", default={})
+
+# Reviewed operational references, never provider credentials or acceptance proof.
+PLATFORM_WHATSAPP_RETENTION_REFERENCE = env("PLATFORM_WHATSAPP_RETENTION_REFERENCE", default="")
+PLATFORM_WHATSAPP_SUPPORT_MONITOR = env("PLATFORM_WHATSAPP_SUPPORT_MONITOR", default="")

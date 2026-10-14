@@ -448,6 +448,9 @@ def assert_series_can_issue(
         raise LicenseSeriesError("The selected loan series is stopped for new loans.")
     if not series.license.is_active:
         raise LicenseSeriesError("The selected loan license is inactive.")
+    latest = series.license.revisions.order_by('-revision_number').first()
+    if latest is not None and latest.kind == LoanLicenseRevision.Kind.IMPORTED_SOURCE:
+        raise LicenseSeriesError('Review and save the imported licence in setup before issuing a new loan. Its source evidence is retained separately.')
     if series.license.is_expired(as_of_date):
         raise LicenseSeriesError("The selected loan license has expired.")
     if series.license.issued_on and series.license.issued_on > (as_of_date or timezone.localdate()):

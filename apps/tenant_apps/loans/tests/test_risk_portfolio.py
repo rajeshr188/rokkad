@@ -58,7 +58,7 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
 
             result = reassess_pawn_loans_batch(
                 workspace_id=5,
-                as_of_date=date(2026, 8, 13),
+                as_of_date=timezone.localdate(),
                 batch_size=50,
             )
 
@@ -82,6 +82,7 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         )
         manager = MagicMock()
         manager.get_or_create.return_value = (SimpleNamespace(), False)
+        manager.filter.return_value.order_by.return_value.values_list.return_value.first.return_value = 9
         with patch(
             "apps.tenant_apps.loans.services.risk_snapshots.detect_risk_transitions",
             return_value=(transition,),
@@ -123,6 +124,11 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
             eligible_collateral_value=Decimal("2000.00"),
             ltv=SimpleNamespace(ltv_ratio=Decimal("0.625"), exposure=Decimal("1250"), headroom=Decimal("350"), full_shortfall=Decimal("0"), status="WITHIN_LIMIT", blockers=()),
             compliance_profile="loan-policy-snapshot:91",
+            valuation_method="CALCULATED_METAL_VALUE",
+            valuation_method_label="Calculated metal value",
+            valuation_basis="CALCULATED_METAL_VALUE",
+            original_valuation_method="LATEST_APPRAISAL",
+            monitoring_policy_id=4, rate_freshness_days=7, appraisal_freshness_days=90,
             items=(
                 SimpleNamespace(collateral_item_id=8, appraisal_id=31, rate_id=12, rate_effective_at=assessed_at, appraisal_effective_at=assessed_at, rate_status="CURRENT", appraisal_status="CURRENT", blocker_messages=()),
                 SimpleNamespace(collateral_item_id=7, appraisal_id=30, rate_id=12, rate_effective_at=assessed_at, appraisal_effective_at=assessed_at, rate_status="CURRENT", appraisal_status="CURRENT", blocker_messages=()),
@@ -161,6 +167,8 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         self.assertEqual(values["source_provenance"]["valuation_rate_ids"], [12])
         self.assertEqual(values["source_provenance"]["collateral_item_ids"], [7, 8])
         self.assertEqual(values["source_provenance"]["coverage"]["basis"], "Economic exposure")
+        self.assertEqual(values["source_provenance"]["valuation"]["method"], "CALCULATED_METAL_VALUE")
+        self.assertEqual(values["source_provenance"]["valuation"]["original_method"], "LATEST_APPRAISAL")
         self.assertEqual(values["source_provenance"]["financial"], {
             "projected_interest": "50.00", "recorded_total_due": "1200.00",
             "integrity_findings": [],

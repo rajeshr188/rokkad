@@ -168,9 +168,13 @@ class LegacyOpeningTests(OpeningImportFixture):
             self.assertIn(payment, evidence['records'])
             self.assertEqual(evidence['payment_exclusion']['payment_hashes'], decision['payment_hashes'])
             from django.template.loader import render_to_string
-            from types import SimpleNamespace
+            from django.test import RequestFactory
+            request = RequestFactory().get('/data-portability/legacy-opening/review/')
+            request.workspace = self.a
+            request.user = self.actor
             page = render_to_string('data_portability/legacy_opening_review.html', {
-                'batch':batch, 'review':self.review, 'request':SimpleNamespace(workspace=self.a),
+                'batch':batch, 'review':self.review,
+                'request':request,
             })
             self.assertIn('Reviewed payment exclusion', page)
             self.assertIn('girvi_loanpayment:1', page)

@@ -27,25 +27,31 @@
 </form>
 </div>
 </section>
-{% if counter_work.queues.review.count %}
-<div class="alert alert-warning" role="status">
-Payment queues are incomplete: {{ counter_work.queues.review.count }} active loan{{ counter_work.queues.review.count|pluralize }} could not be included because their repayment schedules need review.
-<a href="?{{ dashboard_query }}&amp;queue=review" class="alert-link">Review affected loans</a> before relying on the payment counts and scheduled amounts.
-</div>
-{% endif %}
-<div class="row g-3 mb-4" aria-label="Loan work queues">{% for queue in work_queues %}<div class="col-6 col-lg">
-<a class="card h-100 text-decoration-none {% if selected_queue.key == queue.key and queue.key != 'overdue' %}border-primary{% endif %}" href="{% if queue.key == 'overdue' %}{% url 'workspace_loans:overdue_payments' workspace.slug %}?{{ dashboard_query }}{% else %}?{{ dashboard_query }}&amp;queue={{ queue.key }}{% endif %}" {% if selected_queue.key == queue.key and queue.key != 'overdue' %}aria-current="page"{% endif %}>
-<div class="card-body">
-<div class="text-muted small">{{ queue.title }}</div>
-<div class="h3 mb-0">{{ queue.count }}</div>
-{% if queue.key == 'overdue' %}<div class="small mt-2">View overdue payments <i class="bi bi-arrow-right" aria-hidden="true"></i></div>{% endif %}
-</div>
-</a>
-</div>{% endfor %}</div>
-{% if selected_queue.key != 'overdue' %}
-{% include 'company/_counter_queue.html' %}
-{% endif %}
+{% if dashboard_full %}
+{% include 'company/_dashboard_queues.html' %}
 {% include 'company/_business_overview.html' %}
+{% else %}
+<div id="dashboard-queues" aria-busy="true"
+     hx-get="{{ dashboard_url }}?{{ dashboard_query }}&amp;queue={{ request.GET.queue|urlencode }}&amp;page={{ request.GET.page|urlencode }}&amp;section=queues"
+     hx-trigger="load" hx-swap="innerHTML">
+  <section class="card mb-4"><div class="card-body"><h2 class="h5">Loan work queues</h2>
+  <p class="text-muted mb-0" role="status">Loading payment queues…</p></div></section>
+</div>
+<div class="alert alert-warning" id="dashboard-queues-error" hidden role="alert">
+  Payment queues could not be loaded. <button type="button" class="btn btn-sm btn-outline-primary" data-dashboard-retry="dashboard-queues">Retry</button>
+</div>
+<div id="dashboard-overview" aria-busy="true"
+     hx-get="{{ dashboard_url }}?{{ dashboard_query }}&amp;queue={{ request.GET.queue|urlencode }}&amp;section=overview"
+     hx-trigger="dashboard-overview-load" hx-swap="innerHTML">
+  <section class="card mb-4"><div class="card-body"><h2 class="h5" id="business-overview-title">Business overview</h2>
+  <p class="text-muted mb-0" role="status">Portfolio totals will load when this section is in view.</p></div></section>
+</div>
+<div class="alert alert-warning" id="dashboard-overview-error" hidden role="alert">
+  Business overview could not be loaded. <button type="button" class="btn btn-sm btn-outline-primary" data-dashboard-retry="dashboard-overview">Retry</button>
+</div>
+<p class="small"><a href="{{ dashboard_url }}?{{ dashboard_query }}&amp;queue={{ request.GET.queue|urlencode }}&amp;page={{ request.GET.page|urlencode }}&amp;section=full">Open complete dashboard</a></p>
+<noscript><p class="text-muted">Open the complete dashboard to view payment queues and portfolio totals.</p></noscript>
+{% endif %}
 {% else %}<div class="alert alert-info">Your role does not include access to loan operations. Use the available Workspace navigation or ask your owner to review your access.</div>{% endif %}
 {% if setup_state.should_show_dashboard_card %}
 <section class="mgmt-setup-hero mb-4" aria-labelledby="dashboard-setup-title">
@@ -87,3 +93,4 @@ Payment queues are incomplete: {{ counter_work.queues.review.count }} active loa
 {% if 'team.invite' in dashboard_actions %}<a href="{% url 'workspace_slug_settings_invite' workspace_slug=workspace.slug %}">Invite team member</a>{% endif %}
 {% if 'data.view' in dashboard_actions %}<a href="{% url 'workspace_slug_rates' workspace_slug=workspace.slug %}">Review metal rates</a>{% endif %}</div>
 {% endblock %}
+{% block extra_js %}{{ block.super }}{% if can_use_counter and not dashboard_full %}<script src="{% static 'js/workspace-dashboard.js' %}" defer></script>{% endif %}{% endblock %}

@@ -44,7 +44,7 @@ class InitialBusinessSetupAccessTests(TestCase):
                 response = self.client.get(self.url("workspace_slug_settings_setup"), {"step": step})
                 self.assertContains(response, "setup-stepper")
                 if step == "review":
-                    self.assertContains(response, "Activate access when you are ready")
+                    self.assertContains(response, "Review free trial and access")
                     self.assertNotContains(response, "Create your first loan")
         for route in ("workspace_loans:license_create", "workspace_loans:loan_product_list",
                       "workspace_loans:pawn_economics_setup", "workspace_loans:origination_settings",

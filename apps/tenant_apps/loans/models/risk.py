@@ -35,6 +35,7 @@ class LoanRiskSnapshot(models.Model):
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(fields=("workspace", "loan", "id"), name="loans_risk_snapshot_identity_uniq"),
             models.UniqueConstraint(fields=("workspace", "loan"), name="loans_risk_snapshot_workspace_loan_uniq"),
             models.CheckConstraint(condition=Q(status="ERROR") | ~Q(assessment_fingerprint=""), name="loans_risk_current_has_assessment"),
         ]
@@ -61,7 +62,10 @@ class LoanRiskEvent(models.Model):
 
     class Meta:
         ordering = ("occurred_at", "pk")
-        constraints = [models.UniqueConstraint(fields=("workspace", "loan", "trigger_key"), name="loans_risk_event_trigger_uniq")]
+        constraints = [
+            models.UniqueConstraint(fields=("workspace", "loan", "id"), name="loans_risk_event_identity_uniq"),
+            models.UniqueConstraint(fields=("workspace", "loan", "trigger_key"), name="loans_risk_event_trigger_uniq"),
+        ]
         indexes = [models.Index(fields=("workspace", "as_of_date", "event_type"), name="loans_risk_event_portfolio_idx")]
 
     def save(self, *args, **kwargs):
@@ -110,6 +114,9 @@ class LoanRiskAlert(models.Model):
     class Meta:
         ordering = ("-created_at", "-pk")
         constraints = [
+            models.UniqueConstraint(
+                fields=("workspace", "loan", "id", "source_event"), name="loans_risk_alert_identity_uniq",
+            ),
             models.UniqueConstraint(
                 fields=("source_event", "alert_kind"),
                 name="loans_risk_alert_event_kind_uniq",

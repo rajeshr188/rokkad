@@ -32,6 +32,7 @@ class RiskAssessmentTests(SimpleTestCase):
         result = self.assess(ltv_ratio=None, valuation_blockers=("STALE_RATE",))
         self.assertIn("VALUATION_UNKNOWN", result.flags)
         self.assertEqual(result.severity, "HIGH")
+        self.assertIn("VALUATION_UNKNOWN", self.assess(ltv_ratio=None).flags)
 
     def test_cure_and_fingerprint_are_deterministic(self):
         first = self.assess(days_past_due=0, ltv_ratio=Decimal("0.60"), maturity_date=date(2027, 8, 11))
@@ -47,6 +48,7 @@ class RiskAssessmentTests(SimpleTestCase):
         self.assertIn("LTV_BREACH", self.assess(ltv_ratio=Decimal("0.750001")).flags)
 
     @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_collateral_valuation")
+    @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_exposure")
     @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_delinquency")
     @patch("apps.tenant_apps.loans.selectors.risk.resolve_monitoring_policy")
     @patch("apps.tenant_apps.loans.selectors.risk.get_active_repayment_schedule_as_of")
@@ -54,7 +56,7 @@ class RiskAssessmentTests(SimpleTestCase):
     @patch("apps.tenant_apps.loans.selectors.risk.current_tenant_workspace_id", return_value=7)
     def test_selector_uses_schedule_maturity_not_nonexistent_loan_field(
         self, _workspace, get_loan, active_schedule, resolve_policy,
-        delinquency, collateral,
+        delinquency, exposure, collateral,
     ):
         loan = SimpleNamespace(pk=11, license_id=3, policy_snapshot_id=None,
             _prefetched_objects_cache={"transaction_reviews": (), "loan_events": ()})
@@ -72,6 +74,7 @@ class RiskAssessmentTests(SimpleTestCase):
         collateral.return_value = SimpleNamespace(
             ltv=SimpleNamespace(ltv_ratio=Decimal("0.60"), blockers=())
         )
+        exposure.return_value = SimpleNamespace(integrity_findings=())
 
         result = get_pawn_loan_risk_assessment(11, as_of_date=date(2026, 8, 12))
 

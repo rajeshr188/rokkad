@@ -1,14 +1,36 @@
 ---
 status: audit
 owner: project
-updated: 2026-10-10
+updated: 2026-10-14
 tags: [loans, constraints, invariants, portability, audit]
 ---
 
 # Loans constraints and applicability
 
+Servicing bundle [version 5](../contracts/loan-servicing-bundle-v5.md) adds exact
+former/current Party references around a supported published v1–4 graph. Correction
+identity cannot be collapsed to the current borrower during transfer. Destination
+Party imports must precede restore; original approval/opening identities map
+separately from the current association. Earlier financial history, completeness,
+consent and approval authority remain independent. Old profile meanings are unchanged.
+
+PC-03's versioned register adapters now expose reduced-principal monthly
+checkpoints and owner-reviewed closed positions through the ordinary guided
+import. Earlier financial history is unavailable, not fabricated. Essential
+active checkpoint amounts/bases remain required; unknown closed original terms
+stay unknown. Neither template reuses the source-specific JCL missing-release
+exception or weakens ordinary loan/custody guards. See the
+[adapter decision](../adr/2026-10-10-essential-position-registers.md).
+
 For current delivered profile coverage and staff/volume gaps, see the
 [10 October completeness review](../architecture/data-portability-review-20261010.md).
+
+PC-05 adds the [fresh business package](../implementation/fresh-business-package-pc05.md)
+around existing loan files, with a fixed setup contract, reserved counters and
+files. It restores supported dependencies and reconciles in one transaction into
+an empty unactivated destination. Source licences remain inactive until ordinary
+destination review; source book approval is not inherited. Unsupported financial
+graphs and legacy licence/quote transfer evidence stay held, not omitted or weakened.
 The dated audit matrix below is not a universal admission rule: newer position,
 interest and servicing contracts supersede some earlier implementation limits.
 
@@ -228,3 +250,22 @@ remain compulsory. Export/restore supports original and later receipts/closure;
 unknown handover and original actor remain unknown. Verified coverage is required,
 and compensated, linked or connected custody/funding graphs remain outside this
 bounded full-history replay. Earlier profile semantics are unchanged.
+
+## PC-06 supported graph extension (10 October)
+
+The bounded history wires above keep their meanings. Servicing versions 2–4 add
+retained neutral origination corrections, referenced physical storage and connected
+FundingLoan evidence through a fixed inventory. Funding debt stays separate from
+borrower debt; exact lender identities, original valuation/activation limits,
+recording-time returns and final custody/financial positions reconcile. Ordinary
+subsequent payments, returns, closures and monitoring use the existing aggregates.
+
+An accepted explicit opening checkpoint may retain a jewellery item with zero
+remaining principal. Its original positive principal, remaining zero and custody
+are preserved. The deferred SQL guard requires the accepted review/4 or review/5
+mapping; ordinary new zero allocations remain invalid. Source licence attestation
+is a source claim, never local owner consent, and historical quote definitions and
+dates remain unchanged. Current risk assessment can use current evidence without
+rewriting the original agreement. See the
+[PC-06 record](../implementation/portable-graphs-pc06.md) for fixed bounds, remaining
+exclusions and release/verification evidence.

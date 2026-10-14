@@ -52,7 +52,7 @@ class LoanContinuation:
         return replace(balance, **changes)
 
 
-def resolve_loan_continuation(loan, *, as_of_date, include_legacy_projection=False, forecast_through=None):
+def resolve_loan_continuation(loan, *, as_of_date, include_legacy_projection=False, forecast_through=None, _accrual_evidence=None):
     """Select frozen semantics once for collection previews and exposure reads.
 
     Opening calculation starts at the verified checkpoint, not original payout.
@@ -60,11 +60,14 @@ def resolve_loan_continuation(loan, *, as_of_date, include_legacy_projection=Fal
     Operation-specific chronology/schedule checks remain with servicing callers.
     Coverage and valuation quality remain independent of supported arithmetic.
     """
+    if _accrual_evidence is not None:
+        _accrual_evidence.require_loan(loan)
     contract = resolve_servicing_contract(loan, as_of_date=as_of_date)
     horizon = as_of_date if forecast_through is None else forecast_through
     if type(horizon) is not date or horizon < as_of_date:
         raise ValueError("Forecast horizon must be on or after the reporting date.")
-    balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+    balance = (_accrual_evidence.balance(as_of_date) if _accrual_evidence is not None
+        else get_pawn_loan_balance(loan, as_of_date=as_of_date))
     periods, calculation, extra = (), None, ZERO
     eligible = False
     adapter = "RECORDED_ONLY"
@@ -81,7 +84,7 @@ def resolve_loan_continuation(loan, *, as_of_date, include_legacy_projection=Fal
         adapter, eligible, rule = "OPENING_CHECKPOINT", True, calculation.rule
     elif contract.profile in RECORDED_PROFILES:
         from apps.tenant_apps.loans.services.recorded_collections import collection_state
-        calculation = collection_state(loan, horizon, known_through=as_of_date)
+        calculation = collection_state(loan, horizon, known_through=as_of_date, _evidence=_accrual_evidence)
         extra = Decimal(calculation["additional"])
         periods = ((loan.loan_date, horizon, extra),) if extra else ()
         adapter, eligible, rule = "RECORDED_CUMULATIVE", True, contract.profile
@@ -89,7 +92,7 @@ def resolve_loan_continuation(loan, *, as_of_date, include_legacy_projection=Fal
         from apps.tenant_apps.loans.services.pawn_interest import preview_pawn_loan_accruals, started_month_charge_allowed
         rule = "original-anniversary-policy/1"
         if loan.state == "ACTIVE":
-            calculation = preview_pawn_loan_accruals(loan.pk, as_of_date=horizon, known_through=as_of_date)
+            calculation = preview_pawn_loan_accruals(loan.pk, as_of_date=horizon, known_through=as_of_date, _evidence=_accrual_evidence)
             periods = tuple((row.period_start, row.period_end, row.recognized_interest) for row in calculation)
             extra = sum((row[2] for row in periods), ZERO)
             adapter, eligible = "NATIVE_PERIODS", started_month_charge_allowed(loan.policy_snapshot)

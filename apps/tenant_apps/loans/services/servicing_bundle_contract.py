@@ -1,4 +1,4 @@
-"""Fixed source-local row and ZIP boundary for loan-servicing-bundle/1."""
+"""Fixed source-local row and ZIP boundaries for servicing bundle versions 1–4."""
 import json
 import hashlib
 from datetime import date, datetime
@@ -15,13 +15,30 @@ from django.utils.dateparse import parse_date, parse_datetime
 from .history_contract import HistoryError, _pairs, dump
 
 PROFILE = "loan-servicing-bundle/1"
+CORRECTION_PROFILE = "loan-servicing-bundle/2"
+STORAGE_PROFILE = "loan-servicing-bundle/3"
+FUNDING_PROFILE = "loan-servicing-bundle/4"
+BORROWER_PROFILE = "loan-servicing-bundle/5"
+PROFILES = {PROFILE, CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE, BORROWER_PROFILE}
+
+
+def financial_profile(document):
+    if document["profile"] != BORROWER_PROFILE:
+        return document["profile"]
+    value = document.get("financial_profile")
+    require(value in PROFILES - {BORROWER_PROFILE}, "Select a published underlying financial profile.")
+    return value
 MAX_BYTES = 32 * 1024 * 1024
 MAX_ROWS = 5000
 MAX_LOANS = 20
 MAX_FILES = 200
-ROWS = json.loads((Path(settings.BASE_DIR) / "docs/contracts/loan-servicing-bundle-v1-rows.json").read_text())
+BASE_ROWS = json.loads((Path(settings.BASE_DIR) / "docs/contracts/loan-servicing-bundle-v1-rows.json").read_text())
+STORAGE_ROWS = json.loads((Path(settings.BASE_DIR) / "docs/contracts/loan-servicing-bundle-v3-rows.json").read_text())
+ROWS = json.loads((Path(settings.BASE_DIR) / "docs/contracts/loan-servicing-bundle-v4-rows.json").read_text())
 MANIFEST_FIELDS = {"profile", "namespace", "workspace_id", "root_loan_id", "as_of", "coverage", "exclusions", "tables", "setup", "positions", "files", "documents", "sha256"}
 EXCLUSIONS = ["workspace_configuration", "party_master", "funding", "storage", "outbound_notification_jobs"]
+STORAGE_EXCLUSIONS = ["workspace_configuration_except_referenced_storage_locations", "party_master", "funding", "outbound_notification_jobs"]
+FUNDING_EXCLUSIONS = ["workspace_configuration_except_referenced_storage_and_funding_counter", "party_master", "outbound_notification_jobs"]
 ISSUE_FIELDS = ('id','workspace_id','document_type','issue_kind','source_type','source_id','source_fingerprint','revision_id',
     'print_profile_revision_id','print_profile_name','print_profile_version','print_profile_hash','print_profile_source_scope',
     'fixed_renderer_version','source_snapshot','payload_schema_version','payload_hash','layout_hash','asset_hashes','pdf_hash',
@@ -84,9 +101,14 @@ def row(kind, obj):
     return result
 
 
-def decode(kind, value):
+def decode(kind, value, *, profile=None):
     require(type(value) is dict and set(value) == set(ROWS[kind]), "Unexpected fields in portable " + kind)
-    return {key: scalar(value[key], spec) for key, spec in ROWS[kind].items()}
+    result = {}
+    for key, spec in ROWS[kind].items():
+        if profile == BORROWER_PROFILE and kind == 'LoanChangeLog' and key == 'event_kind':
+            spec = dict(spec, choices=[*spec['choices'], 'BORROWER_CORRECTED'])
+        result[key] = scalar(value[key], spec)
+    return result
 
 
 def read_bundle(content):
@@ -101,22 +123,27 @@ def read_bundle(content):
             def invalid(value):
                 raise HistoryError("Non-finite JSON is unsupported.")
             document = json.loads(archive.read("manifest.json"), object_pairs_hook=_pairs, parse_constant=invalid)
-            require(type(document) is dict and set(document) == MANIFEST_FIELDS and document["profile"] == PROFILE, "Unsupported servicing bundle profile.")
-            require(document["coverage"] == "SOURCE_FINANCIAL_AND_CUSTODY_GRAPH" and document["exclusions"] == EXCLUSIONS, "Portable coverage must be explicit.")
+            require(type(document) is dict and document.get('profile') in PROFILES and set(document) ==
+                (MANIFEST_FIELDS | ({'financial_profile','agreement_parties'} if document['profile']==BORROWER_PROFILE else set()) | ({'funding_setup','funding_positions'} if financial_profile(document)==FUNDING_PROFILE else set())), "Unsupported servicing bundle profile.")
+            require(document["coverage"] == "SOURCE_FINANCIAL_AND_CUSTODY_GRAPH" and document["exclusions"] ==
+                (FUNDING_EXCLUSIONS if financial_profile(document)==FUNDING_PROFILE else STORAGE_EXCLUSIONS if financial_profile(document) == STORAGE_PROFILE else EXCLUSIONS), "Portable coverage must be explicit.")
             require(document["sha256"] == sha(dump({k:v for k,v in document.items() if k != "sha256"}).encode()), "Portable manifest checksum differs.")
             UUID(document["namespace"])
             require(type(document["workspace_id"]) is int and document["workspace_id"] > 0, "Invalid source Workspace.")
             as_of = date.fromisoformat(document["as_of"])
             require(as_of <= timezone.localdate(), "Portable cutover cannot be in the future.")
             tables = document["tables"]
-            require(type(tables) is dict and set(tables) == set(ROWS), "Portable row inventory differs.")
+            require(type(tables) is dict and set(tables) == set(ROWS if financial_profile(document)==FUNDING_PROFILE else STORAGE_ROWS if financial_profile(document) == STORAGE_PROFILE else BASE_ROWS), "Portable row inventory differs.")
             require(all(type(rows) is list for rows in tables.values()), "Portable tables must be lists.")
             require(sum(len(rows) for rows in tables.values()) <= MAX_ROWS and 1 <= len(tables["PawnLoan"]) <= MAX_LOANS, "Portable graph exceeds its bounds.")
             for kind, rows in tables.items():
                 require(type(rows) is list and len({r["id"] for r in rows}) == len(rows), "Duplicate portable row identity.")
                 require([r["id"] for r in rows] == sorted(r["id"] for r in rows), "Portable rows must retain source recording order.")
                 for source in rows:
-                    decode(kind, source)
+                    decode(kind, source, profile=document['profile'])
+                    if kind == "LoanChangeLog" and document["profile"] != BORROWER_PROFILE:
+                        require(source["event_kind"] != "BORROWER_CORRECTED" and "borrower_correction" not in source["metadata"],
+                            "Borrower correction evidence requires a profile that maps both Party identities.")
                     require(source["workspace_id"] == document["workspace_id"], "Foreign Workspace row in servicing bundle.")
             require(type(document["root_loan_id"]) is int and document["root_loan_id"] in {r["id"] for r in tables["PawnLoan"]}, "Missing root loan.")
             require(type(document["setup"]) is dict and type(document["positions"]) is dict and type(document["documents"]) is list, "Invalid portable setup/position/document inventory.")

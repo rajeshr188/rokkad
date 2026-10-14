@@ -231,7 +231,10 @@ class NativeActionPurposeTests(WorkspaceTestCase):
         self.assertContains(response, "Collection balance includes eligible unposted interest")
         self.assertEqual(response.context["evidence_quality"]["calculation"]["status"], "SUPPORTED")
         self.assertEqual(response.context["evidence_quality"]["transactions"]["capture_basis"], "SYSTEM_CAPTURE_ASSUMPTION")
-        self.assertContains(client.get(reverse("workspace_loans:pawn_loan_detail", kwargs=kwargs)), "Record paper closure")
+        self.assertContains(client.get(reverse("workspace_loans:pawn_loan_detail", kwargs=kwargs)), "Close / release loan")
+        closing = reverse('workspace_loans:pawn_loan_close', kwargs=kwargs)
+        self.assertContains(client.get(closing), 'Record a settlement already completed')
+        self.assertEqual(client.get(closing, {'purpose':'PAPER'}).context['closure_purpose'], 'PAPER')
 
 
 @override_settings(STORAGES={"default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},

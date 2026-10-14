@@ -1,11 +1,16 @@
 from datetime import date
+import signal
+import threading
 import time
 
 from django.core.management.base import BaseCommand, CommandError
+from django.core.exceptions import PermissionDenied
 from django.db import close_old_connections, DatabaseError
 from django.utils import timezone
 
-from apps.tenant_apps.loans.services.risk_snapshots import RiskSnapshotRefreshError
+from apps.tenant_apps.loans.services.risk_snapshots import (
+    RiskSnapshotRefreshError, require_current_assessment_date,
+)
 from apps.tenant_apps.loans.services.risk_jobs import reassess_pawn_loans_pass
 
 
@@ -15,7 +20,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--workspace-id", type=int, action="append", nargs="+", required=True,
                             help="Explicit Workspace ID; repeat this option to process a bounded turn for each.")
-        parser.add_argument("--as-of", type=date.fromisoformat)
+        parser.add_argument("--as-of", type=date.fromisoformat,
+                            help="Live refresh date; only today's local date is accepted.")
         parser.add_argument("--batch-size", type=int, default=100)
         parser.add_argument("--repeat-seconds", type=int, default=0,
                             help="Idle/error retry interval, 60-86400 seconds. Zero runs one pass per Workspace.")
@@ -35,6 +41,15 @@ class Command(BaseCommand):
             raise CommandError("Use positive Workspace IDs and a batch size from 1 to 1000.")
         if not workspace_ids or not 1 <= busy <= 60:
             raise CommandError("Specify a Workspace and a busy interval from 1 to 60 seconds.")
+        if options["as_of"] is not None:
+            try:
+                require_current_assessment_date(options["as_of"])
+            except RiskSnapshotRefreshError as exc:
+                raise CommandError(str(exc)) from exc
+        previous_handler = None
+        handles_termination = threading.current_thread() is threading.main_thread()
+        if handles_termination:
+            previous_handler = signal.signal(signal.SIGTERM, self._stop)
         try:
             while True:
                 progress, failures = False, 0
@@ -56,14 +71,23 @@ class Command(BaseCommand):
                 time.sleep(busy if progress else interval)
         except KeyboardInterrupt:
             self.stdout.write("Monitoring stopped.")
+        finally:
+            if handles_termination:
+                signal.signal(signal.SIGTERM, previous_handler)
+
+    @staticmethod
+    def _stop(signum, frame):
+        raise KeyboardInterrupt
 
     def _run_batch(self, options):
+        started = time.monotonic()
+        assessment_date = options["as_of"] or timezone.localdate()
         try:
             result = reassess_pawn_loans_pass(workspace_id=options["workspace_id"],
-                as_of_date=options["as_of"] or timezone.localdate(), batch_size=options["batch_size"])
-        except (RiskSnapshotRefreshError, DatabaseError) as exc:
+                as_of_date=assessment_date, batch_size=options["batch_size"])
+        except (RiskSnapshotRefreshError, DatabaseError, PermissionDenied) as exc:
             raise CommandError(str(exc)) from exc
-        self.stdout.write(self.style.SUCCESS(f"workspace={options['workspace_id']} selected={result['selected']} current={result['current']} errors={len(result['errors'])}"))
+        self.stdout.write(self.style.SUCCESS(f"workspace={options['workspace_id']} selected={result['selected']} current={result['current']} errors={len(result['errors'])} as_of={assessment_date} elapsed_seconds={time.monotonic() - started:.3f}"))
         for row in result["errors"]:
             self.stderr.write(f"workspace={options['workspace_id']} loan={row['loan_id']} error={row['error']}")
         return result

@@ -107,7 +107,7 @@ def validate_input(data, *, historical_source=False):
         value[field] = _amount(value[field], field, places=4, positive=True)
     if Decimal(value["net_weight"]) > Decimal(value["gross_weight"]) or Decimal(value["purity"]) > 100:
         raise ValueError("Net weight cannot exceed gross weight; purity cannot exceed 100%.")
-    if value["metal"] not in ("GOLD", "SILVER") or value["monitoring_method"] not in (
+    if value["metal"] not in ("GOLD", "SILVER", "BRONZE") or value["monitoring_method"] not in (
             "CALCULATED_METAL_VALUE", "LATEST_APPRAISAL", "LOWER_OF_CALCULATED_AND_APPRAISAL"):
         raise ValueError("Select a supported metal and monitoring method.")
     value["monitoring_ltv"] = _amount(value["monitoring_ltv"], "monitoring LTV ratio", places=6, positive=True)

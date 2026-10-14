@@ -1,6 +1,6 @@
 {% load i18n %}
-<section class="border-top pt-4 mt-4" aria-labelledby="worked-example-heading">
-<h3 class="h5" id="worked-example-heading">{% translate "Try your saved terms with an example" %}</h3>
+<details class="mt-4" {% if setup_review.example_requested %}open{% endif %}>
+<summary id="worked-example-heading">{% translate "Try your saved terms with an example" %}</summary>
 <p class="small text-muted">{% translate "Illustration only: one item, unchanged principal, no repayments or concessions. Uses today's saved terms for the selected series and metal. It does not check collateral value or create a loan." %}</p>
 <p class="small text-muted">{% translate "This example shows calculation settings; repayment schedules depend on the loan product. Use the real loan review for the actual agreement." %}</p>
 {% include 'components/forms/accessible.html#errors' with form=setup_review.form %}
@@ -17,4 +17,4 @@
 {% for quote in example.settlements %}{% if quote.date == example.end %}<details><summary>{% translate "How the selected date was calculated" %}</summary><div class="table-responsive mt-2"><table class="table table-sm"><thead><tr><th scope="col">{% translate "Period" %}</th><th scope="col">{% translate "Interest" %}</th><th scope="col">{% translate "Upfront credit" %}</th><th scope="col">{% translate "Additional" %}</th></tr></thead><tbody>{% for period in quote.rows %}<tr><td>{{ period.start }} – {{ period.end }}</td><td>{{ period.interest|floatformat:2 }}</td><td>{{ period.credit|floatformat:2 }}</td><td>{{ period.additional|floatformat:2 }}</td></tr>{% endfor %}</tbody></table></div>{% if quote.unused_advance %}<p class="small">{% translate "Unused upfront credit" %}: INR {{ quote.unused_advance|floatformat:2 }}. {% translate "This illustration does not determine refund eligibility." %}</p>{% endif %}</details>{% endif %}{% endfor %}{% endif %}
 <div class="setup-preview-ticket mt-4"><div class="badge text-bg-secondary mb-2">{% translate "EXAMPLE · NOT AN ISSUED DOCUMENT" %}</div><h4 class="h6">{{ company.name }}</h4><p class="small">{% translate "Example ticket summary" %} · {{ setup_review.selected.series.license.license_number }} · {{ setup_review.selected.series.pawn_display_name }}</p><p>{% translate "Principal" %}: INR {{ example.principal|floatformat:2 }}<br>{% translate "Amount handed to the borrower" %}: INR {{ example.payout|floatformat:2 }}</p><p class="small mb-0">{% translate "Actual tickets include the borrower, collateral and confirmed agreement. Review your document layout before issuing a real ticket." %}</p></div>
 </div>{% endwith %}{% endif %}
-</section>
+</details>

@@ -11,11 +11,11 @@ from django.utils import timezone
 
 from apps.orgs.models import Company, Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
-from apps.tenant_apps.loans.models import LoanMonitoringPolicy, LoanRiskSnapshot, PawnLoan
+from apps.tenant_apps.loans.models import LoanMonitoringPolicy, LoanRiskSnapshot, LoanRiskEvent, LoanRiskAlert, PawnLoan
 from apps.tenant_apps.loans.selectors.monitoring_policy import resolve_monitoring_policy
 from apps.tenant_apps.loans.selectors.risk_portfolio import get_risk_portfolio, get_risk_portfolio_summary
 from apps.tenant_apps.loans.services.monitoring_policies import create_loan_monitoring_policy
-from apps.tenant_apps.loans.services.risk_snapshots import refresh_loan_risk_snapshot, reassess_pawn_loans_batch, RiskSnapshotRefreshError
+from apps.tenant_apps.loans.services.risk_snapshots import refresh_loan_risk_snapshot, reassess_pawn_loans_batch, rebuild_current_risk_snapshots, RiskSnapshotRefreshError
 from apps.tenant_apps.loans.tests import test_collateral_reappraisal as fixtures
 from apps.tenant_apps.loans.web.economic_forms import LoanMonitoringPolicyForm
 from apps.tenant_apps.loans.web.economic_setup import pawn_economics_setup
@@ -113,9 +113,64 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
         third = reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today, batch_size=1)
         self.assertEqual(third["errors"][0]["loan_id"], later.pk)
         # An old error attempt moves behind an older pending assessment.
-        fourth = reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today + timedelta(days=1), batch_size=1)
+        with patch("django.utils.timezone.localdate", return_value=self.today + timedelta(days=1)):
+            fourth = reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=self.today + timedelta(days=1), batch_size=1)
         self.assertEqual(fourth["current"], 1)
         self.assertEqual(LoanRiskSnapshot.objects.get(loan=self.loan).as_of_date, self.today + timedelta(days=1))
+
+    def test_non_today_refresh_preserves_live_snapshot_alerts_and_financial_evidence(self):
+        self.refresh()
+        def retained():
+            return (
+                list(LoanRiskSnapshot.objects.values()),
+                list(LoanRiskEvent.objects.values()),
+                list(LoanRiskAlert.objects.values()),
+                list(self.loan.loan_events.values()),
+                list(self.loan.repayment_schedules.values()),
+            )
+        before = retained()
+        for days in (-1, 1):
+            day = self.today + timedelta(days=days)
+            actions = (
+                lambda: refresh_loan_risk_snapshot(self.loan.pk, as_of_date=day),
+                lambda: reassess_pawn_loans_batch(workspace_id=self.tenant.pk, as_of_date=day),
+                lambda: rebuild_current_risk_snapshots(as_of_date=day),
+            )
+            for action in actions:
+                with self.subTest(days=days, action=action), self.assertRaisesMessage(
+                    RiskSnapshotRefreshError, "only be refreshed for today"
+                ):
+                    action()
+                self.assertEqual(retained(), before)
+        # Dated calculations remain read-only; they are not captured past decisions.
+        from apps.tenant_apps.loans.selectors.risk import get_pawn_loan_risk_assessment
+        get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today - timedelta(days=1))
+        self.assertEqual(retained(), before)
+
+    def test_non_today_first_attempt_creates_no_error_snapshot_or_alert(self):
+        with self.assertRaises(RiskSnapshotRefreshError):
+            refresh_loan_risk_snapshot(self.loan.pk, as_of_date=self.today - timedelta(days=1))
+        self.assertFalse(LoanRiskSnapshot.objects.exists())
+        self.assertFalse(LoanRiskEvent.objects.exists())
+        self.assertFalse(LoanRiskAlert.objects.exists())
+
+    def test_date_change_during_calculation_discards_projection_and_error_writes(self):
+        for failing in (False, True):
+            with self.subTest(failing=failing), patch(
+                "apps.tenant_apps.loans.services.risk_snapshots.require_current_assessment_date",
+                side_effect=[None, RiskSnapshotRefreshError("Day changed; retry today")],
+            ):
+                if failing:
+                    with patch("apps.tenant_apps.loans.services.risk_snapshots.get_pawn_loan_exposure",
+                               side_effect=ValueError("Unavailable source")):
+                        with self.assertRaisesMessage(RiskSnapshotRefreshError, "Day changed"):
+                            self.refresh()
+                else:
+                    with self.assertRaisesMessage(RiskSnapshotRefreshError, "Day changed"):
+                        self.refresh()
+            self.assertFalse(LoanRiskSnapshot.objects.exists())
+            self.assertFalse(LoanRiskEvent.objects.exists())
+            self.assertFalse(LoanRiskAlert.objects.exists())
 
     def test_source_invalidation_is_transactional_and_rolls_back_with_source(self):
         snapshot = self.refresh()

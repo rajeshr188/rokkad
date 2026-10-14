@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db import IntegrityError
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_GET
@@ -67,22 +67,25 @@ def review(request, batch_id):
     return render(request, 'data_portability/guided_review.html', {'batch': batch, 'form': form,
         'owner_review': request.workspace.owner_id == request.user.pk or request.user.is_superuser,
         'preparation': batch.preview.get('profile') == 'loan-import-preparation/1',
+        'closed_position': batch.document.get('profile') == register.CLOSED_PROFILE,
+        'checkpoint_position': batch.document.get('profile') == register.CHECKPOINT_PROFILE,
         'approval': approval, 'error': error, 'unfinished': batch.state in {'STAGED', 'READY'},
         'cutover_date': date.fromisoformat(batch.mapping['settings']['cutover']) if batch.mapping else None})
 
 
-def template_bytes():
+def template_bytes(profile=register.PROFILE):
     # The application already uses openpyxl for its hardened values-only reader.
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = 'Outstanding loans'
-    sheet.append(register.COLUMNS)
+    columns = register.TEMPLATES[profile]
+    sheet.title = 'Closed loans' if profile == register.CLOSED_PROFILE else 'Active checkpoints' if profile == register.CHECKPOINT_PROFILE else 'Outstanding loans'
+    sheet.append(columns)
     sheet.freeze_panes = 'D2'
     sheet.row_dimensions[1].height = 42
-    for col in range(1, len(register.COLUMNS) + 1):
+    for col in range(1, len(columns) + 1):
         sheet.column_dimensions[get_column_letter(col)].width = 22 if col in (4, 9) else 18
         cell = sheet.cell(1, col)
         cell.fill, cell.font = PatternFill('solid', fgColor='17365D'), Font(color='FFFFFF', bold=True)
@@ -101,8 +104,12 @@ def template_bytes():
 @require_GET
 def template(request):
     require_history_preparation_access(request.workspace.pk, request.user, read_only=True)
-    response = HttpResponse(template_bytes(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="rokkad-outstanding-loans.xlsx"'
+    profile = request.GET.get('profile', register.PROFILE)
+    if profile not in register.TEMPLATES:
+        raise Http404('Unknown register template.')
+    response = HttpResponse(template_bytes(profile), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    name = 'closed-loans' if profile == register.CLOSED_PROFILE else 'active-checkpoints' if profile == register.CHECKPOINT_PROFILE else 'outstanding-loans'
+    response['Content-Disposition'] = f'attachment; filename="rokkad-{name}.xlsx"'
     return response
 
 

@@ -1,6 +1,6 @@
 from django.urls import path
 from apps.orgs.route_adapters import workspace_view
-from . import views, loan_setup, loan_history_views, legacy_opening_views, loan_archive_views, guided_opening_views
+from . import views, loan_setup, loan_history_views, legacy_opening_views, loan_archive_views, guided_opening_views, loan_restore_views
 
 app_name = "workspace_portability"
 urlpatterns = [
@@ -18,6 +18,8 @@ urlpatterns = [
     path("openings/", workspace_view(legacy_opening_views.listing), name="opening_list"),
     path("openings/<uuid:batch_id>/", workspace_view(legacy_opening_views.review), name="opening_batch"),
     path("loans/", workspace_view(loan_history_views.upload), name="loan_upload"),
+    path("loans/restore/customers/", workspace_view(loan_restore_views.borrowers), name="restore_borrowers"),
+    path("loans/restore/<uuid:batch_id>/", workspace_view(loan_restore_views.review), name="restore_batch"),
     path("loans/schema/", workspace_view(loan_history_views.schema), name="loan_schema"),
     path("loans/<uuid:batch_id>/", workspace_view(loan_history_views.review), name="loan_batch"),
     path("export/loans/<int:loan_id>/", workspace_view(loan_history_views.export), name="loan_export"),

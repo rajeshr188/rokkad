@@ -1,11 +1,729 @@
 ---
 status: active
 owner: project
-updated: 2026-10-10
+updated: 2026-10-15
 tags: [status, architecture]
 ---
 
 # Status
+
+## Combined source review and deployment (15 October, in progress)
+
+The owner now explicitly authorises review, commit, push and production deployment
+of the accumulated source work, superseding the earlier origination-only software
+scope. Integration and CI checks, a clean committed image, production-copy
+rehearsal and encrypted image recovery gate the coordinated reader switch.
+WhatsApp remains disabled and the existing grace extensions remain preserved.
+See the [combined release record](implementation/reviewed-production-release-20261015.md).
+
+## JCL / JSK / Lakshmi grace-access extension (15 October)
+
+The owner requested one additional week for these three production Workspaces.
+Their existing grace deadline was 15 October 2026 at 23:39:08 IST. Audited platform
+normal-access decisions 1/2/3 now extend JCL/JSK/Lakshmi to **22 October 2026 at
+23:39:08 IST**, preserving each original timestamp's fractional seconds. The
+existing active platform administrator (9) records the reason through the ordinary
+access service under the restricted runtime role. All three commit atomically;
+independent read-only verification confirms full access and the latest decisions.
+Original Subscription, entitlement, SubscriptionEvent, Invoice and Payment rows
+remain exact. Expiry-boundary checks return to normal read-only policy at the new
+deadline for the current trial facts. No code, schema or global grace-policy change.
+
+## Origination release (15 October, completed in production)
+
+The owner approved proceeding with software rollout. A scoped 94-file candidate
+preserves the deployed risk/valuation readers and excludes unrelated pending work.
+Its isolated production-copy rehearsal passes sixteen owner migrations and keeps
+all 199 original business projections exact across 1,066,774 restored rows.
+Restricted startup, model consistency, real read-only business/preparation views,
+risk preflight, bounded monitoring and exact encrypted image recovery pass.
+Migration 0077 also corrects native reminder uniqueness after a borrower correction,
+retaining former notice evidence and independent current-Party consent.
+The 195-case compatibility selection and final 76-case affected suite pass. All
+sixteen owner migrations apply; the same 199 original production projections remain
+exact. Compatible web/monitoring start at 04:22:45 IST; four scheduled readers and
+six active timers complete at 04:25:18 IST. Initial Env list ordering is resolved
+by verifying both original environment hashes; configuration values stay exact.
+Final source/role/schema/HTTPS health and full-reader-lifetime logs pass. Post-release
+backup, encrypted remote download verification and retention pass at 04:26:42 IST.
+About 7.67 GiB is free: below the 8 GiB capacity warning and above the 5 GiB guard;
+protected older checkpoints remain retained. Actual customer/register changes
+remain separate. See the
+[release record](implementation/origination-production-release-20261015.md).
+
+## Origination consolidation (14 October, verified locally)
+
+The owner subsequently approved implementation. Ordinary series setup now offers
+signed existing-register reservation. Real synthetic admission issues AA05001,
+admits AA05000/AA00001 without rewinding, then issues AA05002. It creates no dummy
+loans or completeness attestation. Common servicing capability reads saved terms.
+**Correct loan** preparation and customer correction cover eligible direct, paper,
+accepted-history and opening agreements. Native/paper documents and notices bind
+their identity to corrections while original approvals/events/issued copies stay
+preserved. Bundle v5 and fresh business packages separately map both customers;
+published financial row schemas retain their meaning. Connected corrections remain
+guarded. Same-evidence four-origin risk comparison passes for exposure, DPD/maturity,
+valuation/LTV, classification and alerts. The final 205-case affected confirmation
+and two HTTP/capture checks pass after the baseline/wider runs. All observed
+failures are resolved; eight styled captures and model/system/migration/import/
+link/whitespace checks pass. See the
+[implementation](implementation/loan-origination-consolidation-20261014.md) and
+[plan](plans/loan-origination-consolidation-20261014.md). No production configuration,
+migration, real borrower change, bulk conversion or deployment occurred.
+The exact local consolidation test database is removed; logs/captures remain in
+the ignored task folder. Production rollout is completed on 15 October as recorded above.
+
+## Initial architecture review (14 October, superseded in implementation status above)
+
+The owner asks for ordinary direct lending and gradual paper backlog admission in
+one licence/series, exemplified by AA05001 onward alongside AA00001-AA05000.
+Source review confirms reservation/allocation/older-number claims preserve the live
+counter, while normal series setup lacks an ordinary historical-range action;
+the existing last-used UI is tied to legacy licence verification. One PawnLoan,
+shared monthly arithmetic and continuation already exist. Remaining fragmentation
+is in admission product boundaries, origin-selected recognition adapters, separate
+correction applicability and exchange shapes that cannot map both borrowers.
+
+The [review and proposed sequence](architecture/loan-origination-review-20261014.md)
+recommend completing the existing consolidation direction: register-adoption setup,
+real capability/acceptance characterization, common supported agreement/correction
+evidence, familiar preparation/review and impact-based correction. It preserves
+new-advance approval, checkpoint history boundaries and immutable completed facts.
+The monitoring follow-up adds an explicit preservation contract for balances,
+exposure, obligations/DPD, valuation/LTV, coverage and alert/recovery decisions at
+the same evidence/policy/date. Common input consolidation must prove risk parity;
+new evidence versions may require compatible readers and ordinary reassessment.
+This turn changes documentation only; no architecture implementation, new test DB,
+production inspection/configuration, migration, loan edit or deployment occurred.
+
+## Active paper borrower correction (14 October, verified locally)
+
+Active admitted paper loans now offer **Correct borrower** with the ordinary
+customer search, source/reason, signed before/after review and separate confirmation.
+The typed immutable audit retains both Party identities; current borrower lists
+follow the correction while amounts, financial events, schedules, collateral and
+prior issued documents stay intact. New contract/receipt copies identify the audit.
+Existing paper coverage/reminder fingerprints and monitoring invalidate normally.
+Known renewal/funding/auction graphs require broader reconciliation; published
+cross-Workspace exchange profiles explicitly refuse unsupported borrower remapping.
+Exact recovery includes both Party prerequisites and the complete correction.
+
+All 311 distinct selected cases are verified across the broader/final runs,
+including restricted-role isolation/immutability, source preservation, document
+retention, exact recovery, signed staleness and concurrent retry/competing review.
+All observed fixture and locking errors are resolved. Empty guard reverse/reapply,
+retained-evidence downgrade refusal, model/system/import checks and four styled
+phone/desktop captures pass. Migration 0075 branches from deployed 0073; empty
+0076 joins local portability work. The exact disposable DB is removed. Production
+release, migration and any actual borrower change remain separate; no commit or
+deployment occurred. See [implementation and limits](implementation/recorded-borrower-correction-20261014.md)
+and [decision](adr/2026-10-14-recorded-borrower-correction.md).
+
+## Platform WhatsApp PW-05 (14 October, local tools verified; live pending)
+
+Owner/platform diagnostics, independent invoice channel status, signed reviewed
+rejection retry/reconciliation and masked read-only pilot preflight are implemented.
+Canonical owner/global authority, explicit RLS scope, durable attempt/capacity rules
+and capture history are preserved. All 424 distinct selected cases pass, plus the
+final affected invoice check; twelve desktop/phone states and populated source/
+email/message preservation, model/import checks pass. Both exact task databases
+are removed. No new schema is added.
+
+Deployed JCL's recorded active owner matches the privately supplied account in a
+restricted READ ONLY check. Its production app/tables are absent; local JCL differs.
+The owner monitors support@rokkad.com and confirms sender/template setup is needed.
+No send, registration, shared/production migration, commit or deployment occurred.
+Actual sender/templates, compatible deployment, tariff/cap, adopted retention,
+fresh phone pairing/consent and real callbacks/opt-out remain required. Pricing-hold
+correction, billed-cost and retention automation are not implemented; uncertainty
+stays fail-closed. See [local evidence and limits](implementation/platform-whatsapp-pilot-pw05.md)
+and [sender/template handoff](plans/platform-whatsapp-sender-setup-20261014.md).
+
+## Bronze reference-price support (14 October, verified locally)
+
+The owner selected current calculated metal monitoring and bronze support. The
+existing enums now run through dated quote lookup/eligibility, Rates latest/daily
+confirmation, paper collateral entry and optional explicit bronze standing interest.
+Prices retain per-gram reference-grade meaning, append-only provenance and freshness.
+V9 makes earlier risk projections outdated; web/worker must switch together.
+No new schema, financial posting, historical appraisal or per-loan override is added.
+The 283 passing broader cases and 164 passing affected rerun cases are supplemented
+by a final passing 16-case confirmation resolving the observed harness/Hindi issues
+(overlapping counts). System/model/contract/import/document checks pass; the exact
+isolated database is removed. The owner supplied INR 3,000/kg (INR 3/g); selling
+price/source confirmation remains pending. No production policy, quote or
+deployment has changed. See the
+[ordered plan](plans/bronze-monitoring-20261014.md) and
+[implementation](implementation/bronze-monitoring-20261014.md).
+
+## Platform WhatsApp PW-04 (14 October, verified locally)
+
+The owner authorised continuation. One current trial-ending reminder reads the
+accepted end and canonical access policy, with no late catch-up or obsolete
+override/conversion reminder. Reviewed service notices bind exact affected
+Workspaces/recipients and deduplicate owners, retaining scoped target evidence.
+Global jobs use successive explicit Workspace contexts. Atomic immutable
+reservations enforce named pilot, local quiet hours and daily count/spend limits;
+unknown/conflicting pricing pauses further sends. Callback tariff estimates remain
+separate from invoiced charges. New intent and dispatch flags default off; captured
+history never promotes.
+
+All 399 distinct selected cases pass across broader/focused runs, plus three final
+affected HTTP checks. Populated PW-03 source/accepted/read preservation and blocked
+PW-04 downgrade, eight desktop/phone states, model/import/document checks pass.
+Both exact task databases are removed. See
+[implementation and limits](implementation/platform-whatsapp-controls-pw04.md).
+No provider setup, real send, review/production migration, commit or deployment.
+PW-05 diagnostics, operational resolution and a consented bounded pilot are next;
+actual sender/templates/tariff/cap/retention and live acceptance remain inputs.
+
+## Platform WhatsApp PW-03 (14 October, verified locally)
+
+The owner authorised transport/status implementation. A bounded Cloud template
+adapter, committed scoped attempts, authenticated global receipts and immutable
+forced-RLS receipt links now preserve acceptance/delivery/read/unknown distinctions.
+Early and out-of-order callbacks reconcile only to recorded provider IDs and exact
+sender/recipient/source scope. Unknown or interrupted acceptance never auto-resends;
+definite transient rejections have bounded backoff. Native source writers still
+capture only, and an unconditional release gate blocks dispatch until PW-04 controls.
+
+All 360 distinct selected cases pass, including 47 PW-03 tests. Populated PW-02
+upgrade/reverse/reapply preserves source/email hashes; populated-evidence downgrade
+is refused. Eight desktop/phone status states, model/import/document checks pass.
+Both exact task databases are removed. See
+[implementation and limits](implementation/platform-whatsapp-transport-pw03.md).
+No provider setup, real send, review/production migration, commit or deployment.
+PW-04 scheduling/announcements/caps is next; live acceptance remains separate.
+
+## Platform WhatsApp PW-02 (14 October, verified locally)
+
+The owner authorised durable source intents. Setup requests, trial starts and
+newly captured one-off/recurring subscription payments now save immutable,
+Workspace-owned previews in their source transaction. Both new tables have forced
+RLS, typed source uniqueness and database ownership/source guards; existing email
+receipts remain independent. Setup uses a signed reviewed POST. Saved previews
+recheck ownership, consent, source facts and expiry; capture_only cannot become live.
+
+All 313 distinct selected regressions are verified, including the final 38 PW-02
+cases, restricted-role concurrency and direct foreign billing-source rejection.
+Populated PW-01 upgrade/empty-new-table reverse/reapply preserve source and email
+hashes exactly; ten desktop/phone states and model/import/document checks pass.
+Both exact task databases are removed. See
+[implementation and evidence](implementation/platform-whatsapp-source-intents-pw02.md).
+No commit, deployment, review/production migration, provider setup or send occurred.
+PW-03 transport/status is next; scheduling/caps and live acceptance remain pending.
+
+## Monitoring-choice portability and JCL coverage (14 October)
+
+MR-05's package-profile gap is fixed and verified locally by setup/business-package
+version 3. It retains explicit monitoring choices, scopes, dates and predecessor
+links; published profiles 1/2 and frozen loan valuation stay unchanged. Migration
+0026 extends only the immutable receipt's allowed profiles and blocks downgrade
+with retained v3 receipts. All 257 wider selected cases are verified across the
+broader run and final 60-case affected rerun; 74 initial focused cases also pass
+(overlapping counts). Two fixture issues were corrected without changing the real
+quote-age rule. System/model/contract/guard/boundary/document checks pass.
+
+Live restricted READ ONLY JCL diagnosis finds all 2,680 active assessments current,
+with zero stale/error/unassessed. All 2,376 unknown-cover loans lack required
+appraisals under the preserving monitoring choice; 2,378 have provisional paper
+books. Recurring web/worker settings remain the deployed ten-loan turns with
+five-second busy/300-second idle pauses. Current metal inputs are available for
+most of that cohort; the nine remaining price gaps are BRONZE collateral, not
+weight/purity failures. Both licences also contain lower-of loans, so changing
+a licence/Workspace method affects more than the unavailable cohort. Current
+method selection has no per-loan/per-metal exception; a metal-only amendment
+would still leave bronze unknown even if an appraisal were added. No production
+policy/evidence change, refresh write, commit or deployment occurred. The optional
+individual-record review export awaits explicit permission; aggregate diagnosis
+and the code fix are complete. See
+[implementation and diagnosis](implementation/monitoring-portability-followup-20261014.md).
+
+## Platform WhatsApp PW-01 (14 October, verified locally)
+
+The owner authorised enrollment/consent implementation. The new platform_whatsapp
+app adds account settings, phone validation, hashed single-use pairing, unchecked
+per-Workspace categories, pause/disconnect and read-only drafts. Preference and
+ConsentEvent have direct ownership, forced RLS and registry coverage; immutable
+history and database owner/contact guards protect consent evidence. The exact
+global inbound callback verifies HMAC/WABA/phone identity and is disabled by
+default. STOP, stale number revisions and ownership transfer invalidate eligibility.
+There is no outbound delivery or source-intent integration in PW-01.
+
+The broader 100 tests and four final UI/consent checks pass (102 distinct cases),
+including restricted-role isolation and existing account/mail/billing/Notify paths.
+All-model drift/new-source import checks, empty-new-table migration reverse/reapply
+and six desktop/390px Chromium states pass. Both disposable databases are removed.
+See [implementation and limits](implementation/platform-whatsapp-enrollment-pw01.md).
+No commit, review/production migration, provider configuration, actual pairing
+acceptance or message send occurred. PW-02 durable source intents are next; later
+transport, scheduling/caps and live acceptance remain pending.
+
+## Platform-to-owner WhatsApp design (14 October, complete)
+
+Following the owner's instruction to proceed with phase-one design, the
+[plan](plans/platform-owner-whatsapp-phase1-20261014.md) now defines optional
+owner enrollment/pairing and consent, source-backed setup/trial/paid confirmations,
+one trial-ending reminder, reviewed service announcements and independent caps/
+receipt diagnostics. Existing source hooks and authorization were inspected.
+A [proposed ADR](adr/2026-10-14-platform-whatsapp-delivery-boundary.md) keeps the
+new control-plane channel separate from platform SES mail and Workspace Notify.
+Five pending implementation slices start with capture-mode enrollment/readiness.
+Local document/reference checks pass; application tests were not needed for this
+design-only change. No runtime, database, provider or sending changes occurred.
+Actual sender/templates, tariff/cap, consented pilot and retention remain rollout
+inputs. Shared inbox and borrower communications retain their later phases.
+
+## WhatsApp product direction accepted (14 October, planning)
+
+The owner accepted FW-011's three audience/use-case groups: platform administrators,
+Workspace owners and Workspace customers. Delivery proceeds in the agreed order:
+platform-to-owner communication, an eligible small Workspace document/receipt/pickup
+pilot, two-way service and contact verification, then selective owner/internal-alert
+automation. Sender separation, policy eligibility, consent, cost controls and
+source-state authority remain required. Phase-one design is now complete in the
+section above; implementation remains pending. No provider connection or message dispatch occurred. See the
+[accepted scope and sequence](plans/future-work.md#fw-011-platform-and-workspace-whatsapp-messaging-and-phone-verification).
+
+## New-user journey refinement (14 October, verified locally)
+
+Live public pricing/FAQ/contact navigation and an isolated empty-business journey
+were checked. Actual local signup, verification, trial activation, licence/series,
+product/standing terms, quotes, borrower, draft, approval and payout produce an
+ordinary active fictional loan. Monitoring succeeds after a separately saved
+policy. The review found public contact routing, username/email guidance and
+verification/activation handoffs needing repair, plus setup showing 6/6 available
+without monitoring. Desktop/phone presentation findings and ordered recommendations
+are in the [audit](implementation/new-user-journey-audit-20261014.md).
+The owner then approved the recommended order. NJ-01 through NJ-05 repair exact
+public contact routing, compatible email/username signin, verification/trial
+handoffs and supporting account screens. Guided setup has an independent monitoring
+card, explicit existing workflow choice, clearer valuation/date guidance, focused
+navigation and first actions before detailed review. Existing accounts, full
+ordinary navigation, consent, access checks and financial validation remain.
+All 340 distinct selected regressions are verified across the broad run and a
+corrected existing route-intent rerun; the 70 focused checks overlap that set.
+The fictional restricted-runtime walkthrough reaches a combined reviewed payout
+and ordinary active loan, with STANDARD/LOW current risk. Earlier paper entry
+retains dated terms and reaches its separate review. English/Hindi phone layout
+checks show no horizontal overflow; first-loan actions are within the first screen.
+See [completed plan](plans/new-user-journey-improvements-20261014.md) and
+[implementation evidence](implementation/new-user-journey-refinement-20261014.md).
+No commit or production deployment. Actual mail-provider delivery and real
+owner/staff acceptance remain separate. The exact disposable databases/server are
+removed after verification; production and existing local review services remain
+unchanged.
+At the owner's subsequent request, an empty fictional review was reopened from the
+current checkout on loopback port 8112 and left running for their review. Port 8000
+continues to serve its older snapshot. See the implementation's local-review note.
+
+## Dashboard sections (12 October, deployed)
+
+Production web and monitoring now use rokkad:dashboard-sections-20261012-fb9c494297df
+on the verified batching/MR-07 checkpoint. Five runtime files separate the initial
+search/actions/setup page from independently authorized queues and visible overview.
+Fragments require matching request/RLS Workspace context, repeat data.view checks,
+use no-store/header validation and preserve navigation preferences. Retry, expired
+login and complete JavaScript-free fallback flows pass. All 28 distinct focused
+HTTP/display/desktop/mobile Chromium cases pass. An isolated 202-table/967,885-row
+restore, section/full-result parity on all three datasets, native/closed readers,
+financial-row preservation, rollback readers and exact encrypted-image recovery
+pass. Existing 242 asset mappings remain unchanged; a separate collected volume
+adds the verified loader. No schema, policy, financial calculation or cache changes.
+Both containers and six timers are healthy; both backups and final capacity checks
+pass. Live READ ONLY section/full-result parity holds across all three Workspaces.
+A fresh diagnostic process measured JCL's first shell at 0.900 seconds; repeated
+shells took 0.035–0.041 seconds (view/template only; browser/middleware excluded).
+Section calculations retain their portfolio cost; independent access checks can
+increase aggregate query work. See
+[implementation and release evidence](implementation/dashboard-section-loading-20261012.md).
+
+## Owner monitoring guide and developer reference (12 October, verified locally)
+
+The new GET-only Loan monitoring guide sits beside Loan health and is linked from
+Operations console and the owner/admin Financial health block. Existing setup
+permission and Workspace routing apply. It explains metrics, the valuation/LTV
+example, independent evidence dimensions, paper-book coverage, refresh, alerts,
+staff actions and implemented limits without calculating or changing any loan.
+The [developer reference](architecture/post-origination-loan-monitoring.md) maps
+the same behavior to source services/selectors, formulas, safeguards and tests.
+The README now describes current product coverage, runtime/CI, delivered monitoring
+and dashboard work, pending PC rollout and held capabilities; retired app/workflow
+links and obsolete dependency instructions are removed. New references are included
+in the existing documentation link checker.
+
+Grace wording is corrected in operator/domain/memory guidance: frozen terms supply
+an escalation indicator, but current classification/alerts do not use it as a
+general suppression gate. No risk, interest, policy, posting, schema or permission
+behavior changed. All 13 affected guide/permission/dashboard checks pass after
+aligning the nonmember expectation with existing redirect middleware. No financial,
+assessment, event or policy records are created by reading or POSTing to the guide.
+Python syntax, all 11 guide anchors, imports and documentation links pass; the
+disposable test DB is removed. These changes are local and not deployed.
+
+## Shared dashboard performance fix (12 October, deployed)
+
+Production web and monitoring now share rokkad:dashboard-20261012-f10d9c9c609e on top of MR-07. Only the six
+verified monthly evidence batching files are delivered. Fresh restricted READ ONLY
+comparisons preserve all queue rows and amounts across JCL/JSK/Lakshmi; deployed
+queue reads are 13 queries each. 114 exact-source financial/dashboard/current
+monitoring regressions pass. Populated restore, financial source preservation,
+actual bounded worker turns, graceful shutdown, MR-07 rollback readers, exact
+image recovery and both backups pass. No migration, policy change, financial post
+or cross-request cache is introduced. Settings/caps are preserved; six timers are
+active, and isolated artifacts are removed. Direct live measurements and remaining
+synchronous overview cost are recorded in
+[release evidence](implementation/dashboard-performance-release-20261012.md).
+
+## MR-07 measured monitoring efficiency (12 October, deployed)
+
+The composed refresh reuses scoped financial inputs and transaction coverage;
+collateral valuation reads the latest item appraisals together and looks up each
+metal once per call. Source fingerprint/locking, today-only writes, financial
+integrity, unknown coverage and recovery semantics are retained. No cross-call
+cache, history table, financial event or migration was added. Book errors retain
+supported financial diagnostics while unsafe current risk metrics stay unavailable.
+
+Seven READ ONLY live comparisons on the exact MR-06 baseline have identical
+source/output fingerprints. Calculation queries fall from 380 to 247 overall
+(35%), including 91→56 for each paper example. These narrow measurements exclude
+source checks/persistence and do not establish full worker/site capacity. All
+79 broader and 25 final affected checks pass (80 distinct cases); exact candidate,
+model/migration, boundaries and whitespace checks pass. Disposable DBs are removed.
+At the MR-07 checkpoint web/worker shared
+`rokkad:monitoring-mr07-20261012-25610cd8b33a`; the dashboard release above
+subsequently overlays it
+(image ID `d5842197af3e...`). Exact-image recovery, isolated source-preserving
+rehearsal, MR-06 reader recovery, graceful worker shutdown, coordinated switch,
+HTTPS/readers and both backups pass. No migration, policy reassignment or financial
+posting occurred. Final 3 turns have zero errors; current assessments:
+JCL 2,637/2,637, JSK 1,601/1,601, Lakshmi 2,515/2,515. Missing valuation/provisional books still leave totals incomplete.
+A temporary post-backup capacity warning cleared after rehearsal cleanup and
+a fresh remote-byte/capacity verification.
+All six timers are active, both containers have zero restarts, the isolated DB is
+removed and free disk is 8.991 GiB. Unrelated work remains excluded.
+See [MR-07 evidence and limits](implementation/monitoring-efficiency-mr07.md).
+
+## MR-06 monitoring release (12 October, deployed)
+
+Production web and the bounded continuous worker now share verified image
+`rokkad:monitoring-mr06-20261012-f4c02261abd0` (immutable ID `36dcac76cf8b…`).
+Only monitoring changes and migrations 0072–0073 were delivered; pending
+portability/Party work remains excluded. Owner preflight, isolated preservation,
+restricted readers, temporary prior-image reader recovery, exact encrypted image
+recovery and pre/post-switch backups passed. The 68 targeted, 39 compatibility and
+17 shutdown/startup test runs passed (overlapping cases). Graceful SIGTERM was
+corrected and verified; permanent policy column defaults preserve online upgrade
+compatibility. Source financial rows/agreements remained intact in rehearsal.
+
+One restricted worker serves explicit JCL/JSK/Lakshmi IDs, ten loans per turn,
+five-second busy/300-second idle pauses, 0.35 CPU and 512 MiB. All six existing
+timers resumed. The sampled switch interruption was bounded by 15.651 seconds;
+HTTPS and direct/paper/health/closed readers pass. Representative active loans
+have supported current calculations; closed 06716 stays closed. No financial
+posting or valuation-policy reassignment occurred. At 20:32:08 UTC, 38 turns had
+zero errors and 394/6,753 loans were current; initial catch-up continues. Missing
+valuation and unchecked paper books remain explicit, so totals are not yet
+complete. Final narrow summary reads peaked at 0.058 seconds; free disk was
+9.063 GiB. MR-07 subsequently released the measured correction above.
+See [MR-06 release evidence and limits](implementation/monitoring-release-mr06.md).
+
+## MR-05 current monitoring valuation (12 October, locally verified)
+
+An immutable monitoring policy can explicitly choose current metal value,
+approved appraisal or their lower value. The default preserves each loan's saved
+method; paper/imported method labels do not imply original valuation proof.
+Approval, agreements, interest, debt, schedules and source evidence are unchanged.
+Migration 0073 preserves existing policies and adds a permitted-value guard.
+V8 provenance and setup/health/dashboard presentation distinguish freshness,
+financial support, paper-book coverage and valuation. Ineffective policy grace
+is removed from routine setup; actual grace remains frozen product/opening terms.
+The 207-case broader run passes. All 13 final MR-05 cases and five corrected
+projection checks pass, including a populated preserving upgrade and independent
+paper coverage. All fifteen candidates match verified source; syntax, imports,
+whitespace and model/migration consistency pass, and the disposable DB is removed.
+Published business setup profiles remain compatible with the preserving default;
+explicit overrides are held until a newer profile can retain them (FW-012).
+No production/shared review migration, policy choice or worker activation was made.
+MR-06 coordinated release/recurring monitoring is next, with live owner preflight
+and representative acceptance still required. See
+[MR-05 validation](implementation/current-monitoring-valuation-mr05.md).
+
+## MR-04 risk evidence guards (11 October, locally verified)
+
+Migration 0072 adds immutable risk events, fixed projection/alert anchors and
+composite Workspace/loan reference protection, including exact risk-linked notice
+sources. An owner-only read-only preflight shares the migration checks; invalid
+links stop the upgrade, while legacy missing cure links remain explicit and
+unchanged. The broad run passed 119 existing cases; all eight new guard/upgrade
+cases pass after correcting multi-loan/raw-notice fixtures (127 cases covered).
+They prove runtime bulk/raw/no-op mutation rejection, matching source/recovery
+links, normal reassessment and notification routing, populated preservation and
+safe refusal of all five invalid reference categories. All five candidates match
+tested source; syntax, import boundaries and model/migration state pass. Database
+metadata confirms validated immediate FKs, forced RLS and invoker-only guards.
+The disposable database is removed and 1,310 documentation links pass.
+No live schema, policy or worker was changed. Live preflight/migration remain part
+of MR-06; MR-05 current monitoring valuation is next. See
+[MR-04](implementation/risk-evidence-guards-mr04.md).
+
+## MR-03 financial integrity and recovery (11 October, locally verified)
+
+Local changes reject inconsistent financial risk/DPD, clear unsafe failed metrics
+under ERROR and mark older saved projections outdated through the V7 contract.
+LTV escalation no longer records a false cure; unknown/failed evidence retains
+alerts, known risk updates severity, and genuine recovery links its confirming
+event. A persisted predecessor distinguishes identical later incidents. The 29
+focused and seven notice-boundary checks pass. The broad run passed 203 cases;
+a zero-debt reversed-renewal compatibility failure was fixed and passes in the
+affected rerun. After correcting the new full-payment fixture to use the ordinary
+current servicing balance, the final 34-case rerun passes, including actual
+DPD recovery. All 16 candidates match tested source; syntax and application
+boundaries pass. Source financial records, frozen agreements and production
+remain unchanged. MR-04 database evidence guards are next. See
+[MR-03](implementation/risk-integrity-recovery-mr03.md).
+
+## Combined monitoring correction (11 October, local work)
+
+The owner accepted the [MR-01 through MR-07 combined plan](plans/combined-loan-monitoring-20261011.md)
+for the September risk audit and current JCL Financial health diagnosis. Source
+revalidation confirms the live-date and denied-Workspace failure gaps. MR-02's
+today-only live-write boundary, command turn isolation and HTTP/date handling are
+verified locally: 22 focused checks pass; the broad run passed 255 of 257, then
+both corrected test expectations pass in a 26-case affected-class/extra acceptance
+rerun (280 cases covered). The fixes preserve source financial evidence and dated
+read-only calculations. All 12 candidate files match the tested source; syntax,
+app boundaries and 1,267 documentation links pass. The disposable DB is removed.
+Financial integrity,
+alert recovery, database evidence guards, explicit monitoring valuation and
+recurring-worker rollout follow in that order. No live deployment or policy
+change has been made. See [MR-02](implementation/live-risk-boundaries-mr02.md).
+
+## JCL Financial health diagnosis (11 October)
+
+Restricted READ ONLY production checks find zero current saved assessments for
+2,631 active loans: 52 stale and 2,579 unassessed. The 52 last saved assessments
+report missing approved appraisals. Active frozen valuation methods include 2,377
+appraisal-only loans; only 257 of 2,650 active collateral items have an approved
+appraisal. No dedicated reassessment worker was found in inspected service units
+or container commands; the six existing timers do not run pawn-risk assessment.
+The dashboard therefore has no usable current health totals. Review imported
+monitoring basis and establish recurring bounded refresh; do not invent original
+appraisals or cash history. No live changes were made. See the
+[diagnosis and recommendations](implementation/financial-health-jcl-20261011.md).
+
+## PC-06 wider graphs and continuation (verified locally, 10 October)
+
+Local implementation adds explicit servicing versions 2–4 for retained origination
+corrections, referenced physical storage/movement chains and connected funding,
+with unchanged version-1 meaning. Package version 2 adds the fixed 24-model setup
+and source-only licence/quote adapters. The opening writer admits an explicitly
+reviewed zero-debt retained item; migration 0069 requires an accepted checkpoint
+through a deferred database guard. Migration 0071 makes the return projection
+check follow exact retained reversal/custody evidence. New lending still requires
+local licence review, and quotes retain their actual dates. The isolated broad run
+passes 322 regressions; its one fresh-workspace fixture error was corrected and
+that acceptance passes separately (323 cases covered). Continuation includes
+ordinary receipts/closure, current monitoring, PDF rendering, original source
+files, numbering and fresh direct lending after separate local activation/review.
+All 51 candidate files pass syntax/app-boundary checks and model/migration
+consistency; the disposable database is removed. These are bounded fictional
+acceptances, not certification of real books or a large production transfer.
+The shared/live databases and independent local review server remain unchanged.
+See the [decision](adr/2026-10-10-portable-corrections-and-physical-storage.md) and
+[implementation record](implementation/portable-graphs-pc06.md).
+
+## PC-05 fresh business package (10 October)
+
+Verified local implementation adds `rokkad-business-package/1`: a fixed 22-model setup
+contract, existing Party/financial exchange, customer files/register codes and
+business presentation, with private checksummed media. Preview rolls back the
+complete dependency-ordered restore; confirmation commits one atomic transaction
+and immutable forced-RLS receipt. Migration 0023 and its predecessors are required.
+The destination must have empty business tables, no subscription/access decision
+and no non-owner staff access. Normal HTTP remains recovery-only; licensing and
+commercial activation are separate. Source users/setup author IDs are excluded.
+
+Existing domain posting/parsing/ownership guards remain enabled. Source licences
+stay inactive, financial source coverage remains a claim, and unsupported funding,
+storage/correction/Khata, licence continuation and legacy/changed-source quote
+evidence are held. The operator path is not a universal Workspace transfer or a
+large production migration acceptance. All 177 broader isolated regressions and
+12 final changed-path checks pass. Actual command/retry, setup/counter/code and
+file restoration, rollback cleanup, financial positions and RLS are covered.
+The disposable test DB is removed; all twenty candidate files match the verified
+snapshot. Model/migration consistency, app boundaries and documentation links pass.
+The PC-06 record above supersedes these initial held graph/licence/quote limitations
+within its explicit profiles. No shared/production database or local review server
+was changed. See the
+[implementation record](implementation/fresh-business-package-pc05.md).
+
+## PC-04 bounded volume exchange (10 October)
+
+The selected slice adds an operator `rokkad-exchange/1` manifest/private-directory
+workflow. Export uses a fresh repeatable-read transaction, streams bounded domain
+files to temporary storage and publishes after commit. Source lending writes can
+continue without a portfolio row lock. Party chunks preserve parent groups and
+primary-summary ordering; connected financial/media graphs remain intact. Missing
+files, unsupported graphs and overflow abort export. Inspect verifies each file;
+stage reuses protected ordinary import receipts and browser review/confirmation.
+Financial chunks need completed Party dependencies, not a scan of every prior
+financial receipt. Whole-directory import is not atomic or a complete Workspace
+transfer. PC-05/06 remain selected later work.
+
+Exact legacy borrower references also resolve through one immutable completed
+native Party master's source references when no explicit SourceIdentity exists;
+unaccepted/foreign/ambiguous claims are held. No aliases or financial actions are
+invented. Migration 0022 adds a partial JSONB GIN lookup index, not a new table or
+weaker financial guard. Envelope bounds are 200,000 rows per Party profile,
+50,000 admitted loans, 60,000 chunks, 32 MiB manifest, one million source rows and
+20 GiB file bytes; released per-file bounds remain.
+
+All 213 broader isolated regressions pass, including audited-size synthetic Party
+cohorts (JCL 5,887 / Lakshmi 2,104), 1,001 contacts, 26,649 validated synthetic
+closed files, actual 25-loan closed admission/counters, current graph/media
+compatibility and nonblocking snapshot writes. The 26,649-file check is layout
+validation, not a complete financial roundtrip or production benchmark. All 12
+final changed-path checks also pass, including byte-based splitting, independent
+financial receipt staging and transaction timestamp capture. The disposable
+test database was removed. The frozen source excludes concurrent
+Party/dashboard changes. App boundaries and model/migration consistency pass.
+No shared/production database was migrated or application deployed. See the
+[implementation and operator steps](implementation/bounded-volume-exchange-pc04.md).
+
+## PC-03 essential-position register adapters (10 October)
+
+The owner selected PC-03. Import existing loans now offers an explicit active
+checkpoint template (`outstanding-register/2`) and a closed-loan template
+(`closed-register/1`), alongside unchanged `outstanding-register/1` semantics.
+Reduced-principal facts feed the existing review/4 opening contract; closed rows
+feed the existing owner-reviewed zero-debt, returned-collateral position command.
+Missing original closed terms remain unknown. No JCL exception or invented earlier
+cash/physical event is used. Source identities, signed confirmation, atomic commit,
+ordinary number claims and Workspace isolation remain authoritative.
+
+Migration 0021 adds only those profile/result pairs to the existing guided batch
+guard. Current-period advance is supported; nonzero future advance is held for
+the existing explicit per-period review. Retained items at zero are explicitly
+held under the existing positive-initial-allocation constraint; ordinary later
+repayment to zero remains supported. All 123 broader compatibility checks and
+29 final adapter checks pass against the frozen baseline plus portability files,
+excluding concurrent Party/dashboard work. The final guard specifically requires
+review/4 for outstanding-register/2 results. Model/migration consistency, app
+boundaries and documentation links pass. No shared or production database was
+migrated. PC-04 follows as recorded above. See the
+[implementation record](implementation/essential-position-registers-pc03.md).
+
+## Shared dashboard read optimization implemented locally (10 October)
+
+All three live lending Workspaces reproduce repeated monthly evidence reads.
+The shared fix batches source events, collateral, disbursal/accrual/advance facts
+and principal allocations for selected monthly loans, then reuses the existing
+canonical calculations across dates and periods. It covers native monthly,
+recorded anniversary and supported opening continuation; no interest formula,
+posting authority, persisted evidence, schema or cross-request cache changes.
+
+Separate read-only production diagnostic processes loaded the candidate modules
+in memory under the restricted runtime role and compared every queue row/date/
+amount/note against existing code in a repeatable-read snapshot:
+
+| Workspace | Existing queue queries | Candidate queue queries |
+| --- | --- | --- |
+| JCL | 3,296 | 13 |
+| JSK | 600 | 13 |
+| Lakshmi | 4,594 | 13 |
+
+All queue digests match. JCL's measured candidate view/template took 3.932 seconds
+and 77 queries versus the earlier 8.864-second/3,360-query baseline. Candidate
+views for JSK and Lakshmi used 73 and 72 queries; host-load-sensitive timings are
+recorded in the [investigation](implementation/dashboard-performance-jcl-20261010.md).
+These exclude middleware/browser time and are not a production deployment.
+
+70 focused monthly/continuation/dashboard regressions pass across the final code,
+including five new query-scaling, canonical parity, legacy /1-/2 and restricted-RLS
+tests. Other interest/settlement/business/health regressions also pass. App
+boundaries and scoped diff formatting pass. Local restricted-role dashboard and
+authenticated HTTP checks return 200; the temporary session and exact inactive
+disposable regression database are removed.
+
+Port 8000 now serves the committed-source review snapshot plus the verified
+Party picker and six dashboard implementation files against the existing isolated
+review database. Existing accounts, cookies and media remain available. No
+production files/web processes/records, migration or deployment were changed.
+
+## PC-01/02 supported loan-file browser restoration (10 October)
+
+The owner selected the review's ordered PC-01 through PC-06 development plan.
+Current capability guidance and unified supported loan-file restoration are
+implemented locally. Import Loans detects published history/opening JSONL,
+servicing ZIP and closed-position JSON/ZIP, validates through existing Loans
+services, prepares explicit destination matches and requires a signed, exact
+owner/platform financial review before confirmation. Closed-position imports
+do not ask staff to invent unavailable historic terms or cash transactions.
+
+New private source files have direct Workspace ownership, forced RLS, storage
+inventory coverage and immutable source/results guards. Migration
+`data_portability/0020_loan_restore_batch` is required before serving this code;
+its dependency is valid and model/migration checks pass. No shared development
+or production database was migrated. The port-8000 committed-source review
+snapshot must be refreshed deliberately before it can show this local slice.
+
+All 128 isolated regression checks pass against committed baseline `6dc71e4a`
+plus the portability files, excluding unrelated concurrent Party and dashboard
+changes. Model/migration consistency, app boundaries and documentation links pass.
+Wider position adapters, representative-volume exchange,
+complete Workspace package and continuation acceptance remain PC-03 through
+PC-06. See the [implementation record](implementation/browser-loan-file-restoration-pc02.md)
+and [ordered plan](plans/data-portability-completion-20261010.md).
+
+## Live JCL dashboard slowdown measured (10 October)
+
+Read-only production profiling confirms a substantial backend delay on JCL:
+2,619 active and 26,713 closed loans. The actual dashboard view/template took
+8.864 seconds and 3,360 queries, excluding middleware and browser/network time.
+A separate selector probe took 10.189 seconds: business overview 2.546 seconds
+and counter queues 7.643 seconds. Inside queues, 57 monthly continuation calls
+consumed 6.024 seconds and 3,177 queries through repeated per-period evidence reads.
+
+The existing schedule batching is bypassed by later dynamic monthly continuation;
+pagination occurs after all queues are calculated. First optimize evidence loading
+and reuse within the canonical interest calculators, preserving dated forecast,
+advance, repayment/reversal and tenant semantics. The old five-query synthetic
+benchmark does not cover this modern monthly profile path.
+
+Only read-only SQL under the restricted runtime role ran in production. No live
+sessions, profile/financial records, migration or deployment were written.
+The follow-on local implementation is recorded above.
+See [measurements and proposed remedy](implementation/dashboard-performance-jcl-20261010.md).
+
+## Searchable Party merge picker implemented locally (10 October)
+
+The Party detail Merge tab reuses the new-loan customer picker, with asynchronous
+search by name, code, phone, relation or email and the same identifying labels.
+Its fixed query includes inactive/blocked duplicates and excludes the current
+target and archived Parties. No complete directory is loaded into the merge field.
+
+The dedicated target-bearing search route requires Party edit permission, a valid
+24-hour exact-URL signed token, explicit matching Workspace filters and ordinary
+commercial/lifecycle/RLS checks. Merge POST eligibility, confirmation and domain
+conflict/archiving behavior remain authoritative. No schema change or production
+deployment is performed.
+
+69 affected Party UI/merge/RLS and new-loan picker regressions pass, including
+six new merge-picker tests. Desktop and phone browser interactions pass with
+fictional rendered/search fixtures: hidden-tab initialization, identifying labels,
+selection, required confirmation and no horizontal overflow. Authenticated local
+detail and autocomplete HTTP checks pass without submitting a merge; temporary
+sessions and the exact disposable regression database are removed.
+
+Unrelated unfinished portability migration work currently prevents ordinary
+shared-checkout startup. Port 8000 therefore runs the committed-source snapshot
+plus the four verified Party implementation files and the shared dashboard fix,
+against the existing isolated
+review database and cookies/media. The shared checkout and unfinished work remain
+untouched; this snapshot must be refreshed deliberately for later local changes.
+See [Party behavior](domain/party.md) and
+[stateless search details](implementation/cache-configuration.md).
 
 ## Fresh portability completeness review (10 October)
 

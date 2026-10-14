@@ -6,8 +6,9 @@ from django.apps import apps
 WORKSPACE_APP_LABELS = frozenset({"party", "loans", "notify_v2", "rates"})
 # Infrastructure is RLS-owned without exposing it through legacy generic data tools.
 RLS_PROTECTED_APP_LABELS = WORKSPACE_APP_LABELS | {"data_portability"}
-CONTROL_PLANE_OWNED_MODELS = frozenset({"orgs.workspacerole", "orgs.workspacerolegrant", "orgs.workspacestorageusage"})
+CONTROL_PLANE_OWNED_MODELS = frozenset({"orgs.workspacerole", "orgs.workspacerolegrant", "orgs.workspacestorageusage", "platform_whatsapp.preference", "platform_whatsapp.consentevent", "platform_whatsapp.setuprequest", "platform_whatsapp.delivery", "platform_whatsapp.attempt", "platform_whatsapp.receiptlink", "platform_whatsapp.trialreminder", "platform_whatsapp.announcementtarget", "platform_whatsapp.reservation", "platform_whatsapp.costevidence"})
 RLS_MIGRATION_BY_APP = {
+
     "data_portability": "0002_workspace_guards",
     "orgs": "0008_companyinvitation_role_fingerprint_workspacerole_and_more",
     "loans": "0003_enable_workspace_rls",
@@ -17,6 +18,18 @@ RLS_MIGRATION_BY_APP = {
 }
 # Models introduced after their app's original RLS rollout have their own gate.
 RLS_MIGRATION_BY_MODEL = {
+    "platform_whatsapp.trialreminder": "0004_release_controls",
+    "platform_whatsapp.announcementtarget": "0004_release_controls",
+    "platform_whatsapp.reservation": "0004_release_controls",
+    "platform_whatsapp.costevidence": "0004_release_controls",
+    "platform_whatsapp.attempt": "0003_attempts_and_receipts",
+    "platform_whatsapp.receiptlink": "0003_attempts_and_receipts",
+    "platform_whatsapp.setuprequest": "0002_source_intents",
+    "platform_whatsapp.delivery": "0002_source_intents",
+    "platform_whatsapp.preference": "0001_initial",
+    "platform_whatsapp.consentevent": "0001_initial",
+    "data_portability.businesspackagereceipt": "0023_business_package_receipt",
+    "data_portability.loanrestorebatch": "0020_loan_restore_batch",
     "loans.paperbacklogcheckpoint": "0047_paper_backlog_checkpoint",
     "loans.loantransactionreview": "0043_loan_transaction_review",
     "loans.khatadocumentissue": "0042_khata_label_batches",

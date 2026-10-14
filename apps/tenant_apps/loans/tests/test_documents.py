@@ -37,6 +37,12 @@ class _Manager:
     def first(self):
         return self.values[0] if self.values else None
 
+    def last(self):
+        return self.values[-1] if self.values else None
+
+    def filter(self, **filters):
+        return _Manager(*(row for row in self.values if all(getattr(row, key) == value for key, value in filters.items())))
+
 
 class PawnLoanDocumentServiceTests(SimpleTestCase):
     def setUp(self):
@@ -84,6 +90,7 @@ class PawnLoanDocumentServiceTests(SimpleTestCase):
             },
         )
         self.loan = SimpleNamespace(
+            change_log=_Manager(),
             policy_snapshot_id=None,
             pk=19,
             workspace=workspace,

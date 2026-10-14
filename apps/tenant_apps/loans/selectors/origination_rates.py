@@ -7,7 +7,7 @@ from django.utils.dateparse import parse_datetime
 from apps.tenancy.context import current_workspace_id
 from apps.tenant_apps.loans.domain import ValuationMethod
 from apps.tenant_apps.loans.domain.valuation_freshness import evidence_freshness
-from apps.tenant_apps.rates.facade import RATE_FOUND, get_latest_commodity_valuation_rate
+from apps.tenant_apps.rates.facade import COMMODITY_TO_RATE_METAL, RATE_FOUND, get_latest_commodity_valuation_rate
 
 
 LEGACY_RULE = "same-day-origination-v1"
@@ -50,7 +50,7 @@ def get_origination_quote_rows(*, workspace_id, loan_date, metals, at=None, maxi
     cutoff = origination_quote_cutoff(loan_date, at=at)
     rows = []
     for metal in dict.fromkeys(metals):
-        if metal not in {"GOLD", "SILVER"}:
+        if metal not in COMMODITY_TO_RATE_METAL:
             raise ValueError("Unsupported collateral metal.")
         lookup = get_latest_commodity_valuation_rate(commodity_code=metal, as_of=cutoff)
         rate = lookup.rate

@@ -1,0 +1,19 @@
+{% extends "base_tenant.html" %}
+{% block title %}Use an existing register{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:900px">
+<a href="{% url 'workspace_loans:license_detail' request.workspace.slug series.license_id %}">Back to {{ series.license.name }}</a>
+<h1 class="h3 mt-3">Use an existing register: {{ series.code }}</h1>
+<p>Start new lending after the numbers already used in your book. Record earlier loans gradually with their original numbers.</p>
+<p>For example, reserve AA through 5000 to issue new loans from AA05001. Entering AA00001 later keeps the next new number unchanged.</p>
+<ul>{% for sequence in sequences %}<li>{{ sequence.get_document_kind_display }}: prefix {{ sequence.prefix|default:"none" }}, {{ sequence.width }} digits, next counter {{ sequence.next_number }}, last counter {{ sequence.maximum_number }}.</li>{% endfor %}</ul>
+<form method="post">{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.name != 'confirmed' %}{% include "components/forms/accessible.html#field" with field=field %}{% endif %}{% endfor %}
+<button class="btn btn-primary" name="action" value="preview">Review register range</button>
+{% if review %}<section class="card card-body mt-3"><h2 class="h5">Review before reserving</h2>
+<p>Reserve through {{ review.last_used_number }}. Next new number: <strong>{{ review.next_number }}</strong>.</p>
+<p>Reference: {{ review.reference }}. This reserves numbering; it does not create loans or confirm that earlier transactions have been entered.</p>
+{% include "components/forms/accessible.html#field" with field=form.confirmed %}
+<button class="btn btn-success" name="action" value="confirm">Confirm register range</button></section>{% endif %}
+</form></div>
+{% endblock %}

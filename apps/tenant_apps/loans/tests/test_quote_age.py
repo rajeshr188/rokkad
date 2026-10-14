@@ -342,6 +342,9 @@ class QuoteAgeTests(WorkspaceTestCase):
         other = Company.objects.create(name="Other quote owner", schema_name="quote-other", owner=self.actor, creator=self.actor)
         with self.assertRaises(PermissionDenied):
             maximum_quote_age_days(other.pk)
+        # Validate deferred fixture collateral guards before switching to the
+        # settings-only role; its intended grants do not include collateral.
+        connection.check_constraints()
         role = connection.ops.quote_name("quote_age_rls_" + uuid4().hex)
         with connection.cursor() as cursor:
             cursor.execute(f"CREATE ROLE {role} NOLOGIN NOSUPERUSER NOBYPASSRLS")

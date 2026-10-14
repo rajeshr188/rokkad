@@ -95,14 +95,21 @@ def preview_pawn_loan_accruals(
     as_of_date: date,
     include_partial: bool = True,
     known_through: date | None = None,
+    _evidence=None,
 ) -> tuple[AccrualPeriodPreview, ...]:
-    loan = _tenant_loan(loan_id)
+    loan = _tenant_loan(loan_id) if _evidence is None else _evidence.loan
+    if _evidence is not None:
+        _evidence.require_loan(loan)
+        if loan.pk != loan_id:
+            raise PawnInterestError("Accrual evidence belongs to another loan.")
     from .recorded_collections import recording_for
     if recording_for(loan):
         # This profile recognizes cumulative anniversary charges at collection;
         # it does not manufacture completed calendar-period accrual rows.
         return ()
-    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+    from apps.tenant_apps.loans.selectors.accrual_evidence import load_pawn_accrual_evidence
+    evidence = _evidence or load_pawn_accrual_evidence((loan,))[loan.pk]
+    if any(event.event_kind == "MIGRATION_OPENING" for event in evidence.events):
         raise PawnInterestError("Migration opening interest continuation is not enabled; historical periods cannot be replayed.")
     if loan.state != PawnLoanState.ACTIVE.value:
         raise PawnInterestError("Only an active PawnLoan can accrue interest.")
@@ -119,20 +126,21 @@ def preview_pawn_loan_accruals(
     quantum = policy.currency_quantum.normalize() if (
         policy.minimum_first_month or policy.basis == "RECORDED_CONTRACT" or policy.policy_version == POLICY_VERSION
     ) else policy.currency_quantum
-    eligible_accruals = loan.interest_accruals
-    if policy.policy_version == POLICY_VERSION:
-        eligible_accruals = eligible_accruals.filter(period_end__lte=known_through)
-        if eligible_accruals.filter(loan_event__reversed_by_event__effective_date__lte=known_through).exclude(
-                release_catch_up__reversal__isnull=False).exists():
-            raise PawnInterestError("Review the reversed monthly charge before continuing this loan; its retained calculation cannot be silently reused.")
-    last_finalized = (
-        eligible_accruals.exclude(
-            release_catch_up__reversal__isnull=False
-        )
-        .order_by("-period_number")
-        .first()
-    )
-    capitalized_boundaries = _capitalized_boundaries(loan)
+    eligible_accruals = tuple(row for row in evidence.accruals
+        if policy.policy_version != POLICY_VERSION or row.period_end <= known_through)
+    reversed_on = evidence.reversal_dates()
+    def catch_up_reversed(row):
+        return hasattr(row, "release_catch_up") and hasattr(row.release_catch_up, "reversal")
+    if policy.policy_version == POLICY_VERSION and any(
+            reversed_on.get(row.loan_event_id, date.max) <= known_through
+            and not catch_up_reversed(row) for row in eligible_accruals):
+        raise PawnInterestError("Review the reversed monthly charge before continuing this loan; its retained calculation cannot be silently reused.")
+    last_finalized = next((row for row in eligible_accruals if not catch_up_reversed(row)), None)
+    capitalized_boundaries = {
+        int(event.payload["capitalization"]["through_period_number"])
+        for event in evidence.events if event.event_kind == TransactionKind.INTEREST_CAPITALIZATION.value
+        and event.payload.get("capitalization")
+    }
     if (
         last_finalized
         and policy.interest_method == InterestMethod.COMPOUND.value
@@ -174,7 +182,7 @@ def preview_pawn_loan_accruals(
         basis_date = period_start - timedelta(days=1) if policy.policy_version == POLICY_VERSION and period_number > 1 else period_start
         if policy.policy_version == POLICY_VERSION:
             basis_date = min(basis_date, known_through)
-        balance = get_pawn_loan_balance(loan.pk, as_of_date=basis_date)
+        balance = evidence.balance(basis_date)
         base = balance.principal_outstanding
         lines = _itemized_accrual_lines(
             loan,
@@ -184,6 +192,7 @@ def preview_pawn_loan_accruals(
             currency_quantum=quantum,
             pending_advance_applied=pending_advance_applied,
             use_original_principal=policy.policy_version == POLICY_VERSION and period_number == 1,
+            _evidence=evidence,
         )
         if lines:
             base = sum((line.principal_base for line in lines), Decimal("0"))
@@ -272,19 +281,28 @@ def _itemized_accrual_lines(
     currency_quantum,
     pending_advance_applied,
     use_original_principal=False,
+    _evidence=None,
 ):
     from apps.tenant_apps.loans.selectors.disbursal import effective_disbursal_snapshot
-    disbursal = effective_disbursal_snapshot(loan, as_of_date=as_of_date)
+    disbursal = (_evidence.disbursal_at(as_of_date) if _evidence is not None
+        else effective_disbursal_snapshot(loan, as_of_date=as_of_date))
     if disbursal is None:
-        opening_event = loan.loan_events.filter(
-            event_kind=TransactionKind.RENEWAL_OPENING.value,
-            reversed_by_event__isnull=True,
-        ).first()
-        opening_lines = (
-            tuple(opening_event.principal_opening_lines.order_by("allocation_order"))
-            if opening_event
-            else ()
-        )
+        if _evidence is not None:
+            reversed_ids = _evidence.reversal_dates()
+            opening_event = next((event for event in _evidence.events
+                if event.event_kind == TransactionKind.RENEWAL_OPENING.value
+                and event.pk not in reversed_ids), None)
+            opening_lines = tuple(row for row in _evidence.opening_lines
+                if opening_event and row.loan_event_id == opening_event.pk)
+        else:
+            opening_event = loan.loan_events.filter(
+                event_kind=TransactionKind.RENEWAL_OPENING.value,
+                reversed_by_event__isnull=True,
+            ).first()
+            opening_lines = (
+                tuple(opening_event.principal_opening_lines.order_by("allocation_order"))
+                if opening_event else ()
+            )
         opening_economics = (
             (opening_event.payload.get("renewal") or {}).get(
                 "successor_economics"
@@ -323,12 +341,12 @@ def _itemized_accrual_lines(
         principal_balances = {
             item.collateral_item_id: item
             for item in get_pawn_principal_tranche_balances(
-                loan, as_of_date=as_of_date
+                loan, as_of_date=as_of_date, _evidence=_evidence
             )
         }
     except PawnTrancheBalanceError as exc:
         raise PawnInterestError(str(exc)) from exc
-    consumed = {
+    consumed = _evidence.advance_consumed(as_of_date) if _evidence is not None else {
         row["collateral_item_id"]: row["total"] or Decimal("0")
         for row in (
             PawnLoanInterestAccrualLine.objects.filter(accrual__loan=loan,

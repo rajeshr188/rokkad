@@ -29,6 +29,7 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
         LEGACY_REFERENCE = "LEGACY_REFERENCE", "Legacy reference (validity unknown)"
         VERIFICATION = "VERIFICATION", "Verified legacy license continuation"
         ATTESTATION = "ATTESTATION", "Owner attestation (document pending)"
+        IMPORTED_SOURCE = "IMPORTED_SOURCE", "Imported source evidence (review for new lending)"
 
     license = models.ForeignKey(
         LoanLicense,
@@ -80,7 +81,7 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
                 name="loans_license_revision_dates_valid",
             ),
             models.CheckConstraint(
-                condition=(Q(kind="LEGACY_REFERENCE", issued_on__isnull=True, expires_on__isnull=True)
+                condition=(Q(kind__in=("LEGACY_REFERENCE","IMPORTED_SOURCE"), issued_on__isnull=True, expires_on__isnull=True)
                            | (~Q(kind="LEGACY_REFERENCE") & Q(issued_on__isnull=False, expires_on__isnull=False))),
                 name="loans_licrev_validity_evidence",
             ),
@@ -125,6 +126,12 @@ class LoanLicenseRevision(WorkspaceOwnedModel):
                 )
         if self.pk:
             raise ValidationError("License revision evidence is immutable.")
+        if self.kind == self.Kind.IMPORTED_SOURCE:
+            from apps.tenant_apps.loans.services.portable_licence_evidence import validate_source
+            validate_source(self.verification_evidence)
+            if self.license.is_active:
+                raise ValidationError('Imported licence evidence cannot activate destination lending.')
+            return
         if self.kind == self.Kind.ATTESTATION:
             if (not self.license.is_legacy_reference or self.has_document or self.supporting_document
                     or self.created_by_id != self.license.workspace.owner_id

@@ -217,7 +217,7 @@ def record_paid_cycle(*, agreement_id, provider_invoice_id, payment_id=None, act
             "actor_id": getattr(actor, "pk", None), "reason": reason})
         RecurringAgreementEvent.objects.create(agreement=agreement, actor=actor, event_type="cycle.paid",
             detail={"cycle_id": cycle.pk, "access_action": action, "reason": reason})
-        send_checkout_receipt(invoice.pk)
+        send_checkout_receipt(invoice.pk, capture_whatsapp=True)
         return cycle
 
 

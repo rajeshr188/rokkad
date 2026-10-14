@@ -7,11 +7,35 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
+    'docs/plans/loan-origination-consolidation-20261014.md',
+    'docs/implementation/loan-origination-consolidation-20261014.md',
+    'docs/architecture/loan-origination-review-20261014.md',
+    'docs/adr/2026-10-14-origination-consolidation.md',
+    'docs/contracts/loan-servicing-bundle-v5.md',
+    "docs/plans/bronze-monitoring-20261014.md",
+    "docs/implementation/bronze-monitoring-20261014.md",
+    "docs/adr/2026-10-14-bronze-reference-price-valuation.md",
+    "docs/implementation/platform-whatsapp-pilot-pw05.md",
+    "docs/plans/platform-whatsapp-sender-setup-20261014.md",
+    "docs/implementation/platform-whatsapp-controls-pw04.md",
+    "docs/implementation/platform-whatsapp-transport-pw03.md",
+    "docs/implementation/platform-whatsapp-source-intents-pw02.md",
+    "docs/implementation/platform-whatsapp-enrollment-pw01.md",
+    "docs/plans/platform-owner-whatsapp-phase1-20261014.md",
+    "docs/adr/2026-10-14-platform-whatsapp-delivery-boundary.md",
+    "docs/architecture/control-plane-contracts.md",
+    "README.md", "docs/architecture/post-origination-loan-monitoring.md",
     "docs/README.md", "docs/AGENT_MEMORY.md", "docs/STATUS.md", "docs/ROADMAP.md",
     "docs/plans/active.md", "docs/plans/project-hardening.md", "docs/plans/future-work.md",
     "docs/implementation/dependency-policy.md", "docs/implementation/testing-and-migrations.md",
     "docs/domain/party.md", "docs/domain/notifications.md", "docs/archive/context/README.md",
     "docs/flows/loan-journey.md",
+    "docs/implementation/new-user-journey-audit-20261014.md",
+    "docs/implementation/new-user-journey-refinement-20261014.md",
+    "docs/plans/new-user-journey-improvements-20261014.md",
+    "docs/adr/2026-10-14-new-user-journey-handoffs.md",
+    "docs/adr/2026-10-14-monitoring-choice-business-package.md",
+    "docs/implementation/monitoring-portability-followup-20261014.md",
 )
 
 

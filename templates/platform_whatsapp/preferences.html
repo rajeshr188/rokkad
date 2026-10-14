@@ -1,0 +1,100 @@
+{% extends "base_global.html" %}
+{% load i18n %}
+{% block title %}{% trans "WhatsApp preferences" %} - Rokkad{% endblock %}
+{% block mgmt_content %}
+<div class="container py-3" style="max-width: 850px; overflow-wrap: anywhere">
+  <h1 class="h3">{% trans "WhatsApp from Rokkad" %}</h1>
+  <p>{% trans "Choose how Rokkad contacts you about your workspace. Your shop's customer messaging is a separate connection." %}</p>
+  <div class="alert alert-info" role="status">{% if dispatch_configured %}{% trans "Pilot dispatch is configured. Each new message still requires current consent and source checks." %}{% else %}{% trans "Preview only. Messages are not being sent." %}{% endif %}</div>
+  {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+  <p><a href="{% url 'contact' %}">{% trans "Contact Rokkad support" %}</a> · <a href="{% url 'account_settings' %}">{% trans "Account settings" %}</a></p>
+  {% if contact %}
+  <section class="card mb-3"><div class="card-body">
+    <h2 class="h5">{% trans "Your connection" %}</h2>
+    <p>{{ contact.masked_phone }} — {{ contact.get_state_display }}</p>
+    {% if contact.state == "pending" %}<p>{% trans "Pairing is required before your preferences can become eligible." %}</p>{% endif %}
+    <form method="post" class="d-flex flex-wrap gap-2">{% csrf_token %}
+      <button class="btn btn-outline-secondary" name="action" value="pause">{% trans "Pause" %}</button>
+      <button class="btn btn-outline-danger" name="action" value="disconnect">{% trans "Disconnect" %}</button>
+    </form>
+  </div></section>
+  {% endif %}
+  {% if workspace_rows %}
+  <section class="card mb-3"><div class="card-body">
+    <h2 class="h5">{% trans "Connect or change your number" %}</h2>
+    <p>{% trans "Changing your number clears pairing and requires you to review your choices again. Connecting a number does not opt you into messages." %}</p>
+    <form method="post">{% csrf_token %}{{ enrollment.as_p }}
+      <button class="btn btn-primary" name="action" value="enroll">{% trans "Create pairing request" %}</button>
+    </form>
+    {% if pairing_code %}
+      <div class="alert alert-secondary mt-3"><p>{% trans "Your pairing code is shown once and expires in 15 minutes." %}</p>
+        <code style="overflow-wrap: anywhere">{{ pairing_code }}</code>
+        {% if readiness.inbound_ready %}<p>{{ readiness.sender_number }}</p><p>{% trans "Send this code from your entered number to the configured Rokkad WhatsApp sender." %}</p>
+        {% else %}<p>{% trans "Pairing reception is not configured yet. Keep using Rokkad normally while this connection is pending." %}</p>{% endif %}
+      </div>
+    {% endif %}
+  </div></section>
+  {% for row in workspace_rows %}
+    <section class="card mb-3"><div class="card-body">
+      <h2 class="h5">{{ row.workspace.name }}</h2>
+      <p><a href="{% url 'platform_whatsapp_history' workspace_slug=row.workspace.slug %}">Delivery history and independent email status</a></p>
+      {% if contact and contact.state != "disconnected" %}
+      <form method="post">{% csrf_token %}{{ row.form.workspace_slug }}{{ row.form.contact_revision }}
+        {% for field in row.form.visible_fields %}
+          <div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+        {% endfor %}
+        <p class="small">{% trans "I choose to receive the selected categories from Rokkad on my connected number. I can pause, disconnect, or opt out with STOP. English is the currently supported message language." %}</p>
+        <button class="btn btn-primary" name="action" value="preferences">{% trans "Save my choices" %}</button>
+      </form>
+      <form method="post" class="mt-3">{% csrf_token %}
+        <input type="hidden" name="workspace_slug" value="{{ row.workspace.slug }}">
+        <label for="preview-{{ row.workspace.pk }}">{% trans "Preview a message" %}</label>
+        <select name="category" id="preview-{{ row.workspace.pk }}" class="form-select mb-2">
+          <option value="setup">{% trans "Setup assistance" %}</option>
+          <option value="subscription">{% trans "Subscription update" %}</option>
+          <option value="service">{% trans "Service information" %}</option>
+        </select>
+        <button class="btn btn-outline-primary" name="action" value="preview">{% trans "Show preview" %}</button>
+      </form>
+      <form method="post" class="mt-3">{% csrf_token %}
+        <input type="hidden" name="workspace_slug" value="{{ row.workspace.slug }}">
+        <button class="btn btn-outline-primary" style="min-height: 44px" name="action" value="review_setup">{% trans "Prepare setup guidance" %}</button>
+      </form>
+      {% else %}<p>{% trans "Connect your number before choosing message categories." %}</p>{% endif %}
+      {% if row.deliveries %}
+      <h3 class="h6 mt-4">{% trans "Saved message previews" %}</h3>
+      {% for delivery in row.deliveries %}
+        <div class="border rounded p-3 mb-2">
+          <strong>{{ delivery.purpose }}</strong><p class="small mb-1">{{ delivery.created_at }} · {{ delivery.recipient }}</p>
+          <p class="small">{{ delivery.status }}</p>
+          <form method="post">{% csrf_token %}
+            <input type="hidden" name="workspace_slug" value="{{ row.workspace.slug }}">
+            <input type="hidden" name="delivery_id" value="{{ delivery.id }}">
+            <button class="btn btn-outline-secondary" style="min-height: 44px" name="action" value="delivery_preview">{% trans "Review saved message" %}</button>
+          </form>
+        </div>
+      {% endfor %}
+      {% endif %}
+    </div></section>
+  {% endfor %}
+  {% else %}<p>{% trans "WhatsApp enrollment is available to workspace owners. Your existing account and workspace access are unchanged." %}</p>{% endif %}
+  {% if setup_review %}
+  <section class="card mb-3"><div class="card-body">
+    <h2 class="h5">{% trans "Review setup guidance" %}</h2>
+    <p>{{ setup_review.recipient }}</p><blockquote>{{ setup_review.body }}</blockquote>
+    <p><a href="{{ setup_review.link }}">{% trans "Open business setup" %}</a></p>
+    <p>{% trans "Confirmation records your request. New eligible requests may enter the configured pilot; saved previews remain unsent." %}</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="token" value="{{ setup_review.token }}">
+      <button class="btn btn-primary" style="min-height: 44px" name="action" value="confirm_setup">{% trans "Confirm setup guidance" %}</button>
+    </form>
+  </div></section>
+  {% endif %}
+  {% if preview %}<section class="card mb-3"><div class="card-body">
+    <h2 class="h5">{% trans "Message preview" %}</h2><p>{{ preview.recipient }}</p><blockquote>{{ preview.body }}</blockquote>
+    {% if preview.status %}<p>{{ preview.status }}</p>{% endif %}
+    {% if preview.receipt_conflict %}<p>{% trans "Conflicting provider updates need review; confirmed delivery remains recorded." %}</p>{% endif %}
+    {% if preview.link %}<p><a href="{{ preview.link }}">{% trans "Open the source in Rokkad" %}</a></p>{% endif %}
+    <p>{% if preview.eligible %}{% trans "Contact and source checks pass. Delivery status is shown above; configuration and dispatch checks still apply." %}{% else %}{% trans "This preview needs current consent and source review before it could be delivered." %}{% endif %}</p>
+  </div></section>{% endif %}
+</div>
+{% endblock %}

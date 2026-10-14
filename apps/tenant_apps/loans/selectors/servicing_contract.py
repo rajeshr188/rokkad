@@ -27,6 +27,8 @@ class ServicingContract:
     rounding_mode: str
     anniversary_rule: str
     principal_reduction_rule: str
+    repayment_structure: str | None = None
+    amortisation_method: str | None = None
     recognized_interest_at_cutover: Decimal | None = None
     unpaid_interest_at_cutover: Decimal | None = None
     checkpoint_period_number: int | None = None
@@ -35,6 +37,15 @@ class ServicingContract:
     checkpoint_current_unpaid_interest: Decimal | None = None
     checkpoint_advance_coverage: tuple[tuple[int, Decimal], ...] = ()
     checkpoint_next_increase_on: date | None = None
+
+    @property
+    def supports_completed_monthly_servicing(self):
+        """Capability of the saved agreement, independent of its entry label."""
+        return (self.interest_method == "SIMPLE" and self.partial_month_method == "FULL_MONTH"
+            and self.currency_quantum is not None and self.currency_quantum.normalize() in (Decimal("0.01"), Decimal("1"))
+            and self.repayment_structure in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT")
+            and self.amortisation_method == "NONE"
+            and self.anniversary_rule in ("DAY_AFTER_ORIGINAL_ANNIVERSARY", "ON_ORIGINAL_ANNIVERSARY"))
 
 
 @dataclass(frozen=True)
@@ -67,9 +78,12 @@ def resolve_servicing_contract(loan, *, as_of_date):
     policy = loan.policy_snapshot if loan.policy_snapshot_id else None
     if policy and policy.policy_version not in (1, 2):
         raise ServicingContractError("This loan has an unsupported frozen interest policy version.")
+    product = getattr(loan, 'product_version', None)
     common = dict(original_date=loan.loan_date, policy_snapshot_id=loan.policy_snapshot_id,
                   interest_method=getattr(policy, "interest_method", None),
-                  partial_month_method=getattr(policy, "partial_month_method", None))
+                  partial_month_method=getattr(policy, "partial_month_method", None),
+                  repayment_structure=getattr(product, "repayment_structure", None),
+                  amortisation_method=getattr(product, "amortisation_method", None))
     if openings:
         from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
         from apps.tenant_apps.loans.services.opening_validation import COLLECTION_PROFILES, POLICY_COLLECTION_PROFILES

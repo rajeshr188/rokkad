@@ -40,8 +40,14 @@ def read_opening_evidence(loan, event):
     elif not validate_opening(review)["document_reconciled"]:
         raise OpeningEvidenceError("Migration opening review does not reconcile.")
     mapping = review["mapping"]
+    if mapping['borrower_id'] != loan.borrower_id:
+        from .borrower_corrections import corrected_ticket_source
+        try:
+            corrected_ticket_source(loan, {"borrower_id": mapping["borrower_id"]})
+        except (ValueError, AttributeError) as exc:
+            raise OpeningEvidenceError('Migration opening destination references do not match this loan.') from exc
     if any(mapping[key] != getattr(loan, attr, None) for key, attr in (
-            ("workspace_id", "workspace_id"), ("borrower_id", "borrower_id"),
+            ("workspace_id", "workspace_id"),
             ("licence_revision_id", "license_revision_id"), ("series_id", "series_id"),
             ("product_version_id", "product_version_id"))):
         raise OpeningEvidenceError("Migration opening destination references do not match this loan.")

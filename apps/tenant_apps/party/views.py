@@ -56,10 +56,8 @@ PARTY_EXPORT_FORMATS = {
 }
 
 
-@party_action_required("view")
-def party_autocomplete(request):
+def _party_autocomplete_response(request, widget):
     from django.core import signing
-    from django.http import Http404
     from django_select2.views import AutoResponseView
     from .widgets import PartyAutocompleteWidget
 
@@ -75,11 +73,27 @@ def party_autocomplete(request):
                 raise Http404("Invalid or expired borrower search token.") from exc
             if url != request.path:
                 raise Http404("Borrower search token belongs to another URL.")
-            widget = PartyAutocompleteWidget(data_url=request.path)
             self.queryset = widget.get_queryset()
             return widget
 
     return PartyResponseView.as_view()(request)
+
+
+@party_action_required("view")
+def party_autocomplete(request):
+    from .widgets import PartyAutocompleteWidget
+
+    return _party_autocomplete_response(request, PartyAutocompleteWidget(data_url=request.path))
+
+
+@never_cache
+@party_action_required("edit")
+def party_merge_autocomplete(request, pk):
+    from .widgets import PartyMergeAutocompleteWidget
+
+    target = get_object_or_404(Party, pk=pk, workspace=request.workspace)
+    return _party_autocomplete_response(request,
+        PartyMergeAutocompleteWidget(target_party=target, data_url=request.path))
 
 
 def _party_detail_url(request, party, tab="overview"):

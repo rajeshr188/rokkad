@@ -14,7 +14,7 @@ from .models import SourceIdentity
 class UploadRegisterForm(forms.Form):
     source_key = forms.RegexField(r'^[a-z0-9][a-z0-9-]{0,47}$', max_length=48, label='Source register key',
         help_text='For example old-ledger. Reuse this key for later batches from the same register, even when the filename changes.')
-    file = forms.FileField(label='Outstanding loans (.xlsx or .csv)',
+    file = forms.FileField(label='Existing loan register (.xlsx or .csv)',
         help_text='Use the template. Maximum 5 MiB, 20 loans and 200 collateral rows; one licence/series per batch.')
 
     def __init__(self, *args, **kwargs):
@@ -53,7 +53,17 @@ class ReviewRegisterForm(forms.Form):
         initial.setdefault('cutover', timezone.localdate() - timedelta(days=1))
         kwargs.setdefault('initial', initial)
         super().__init__(*args, **kwargs)
-        self.fields['revision_id'].queryset = LoanLicenseRevision.objects.filter(workspace=workspace).order_by('license_number', '-revision_number')
+        self.closed_position = batch.document['profile'] == register.CLOSED_PROFILE
+        if self.closed_position:
+            del self.fields['revision_id'], self.fields['grace_days']
+            self.fields['rule_confirmed'].label = 'I checked that every loan is closed with zero principal, interest and fees, and all collateral was returned to the borrower.'
+            self.fields['rule_confirmed'].help_text = 'This source confirmation does not invent payments, physical handover events or unknown original terms.'
+            self.fields['cutover'].help_text = 'Use a completed date before today at which these loans were already closed with all collateral returned.'
+        else:
+            self.fields['revision_id'].queryset = LoanLicenseRevision.objects.filter(workspace=workspace).order_by('license_number', '-revision_number')
+        if batch.document['profile'] == register.CHECKPOINT_PROFILE:
+            self.fields['rule_confirmed'].label = 'I checked the reduced-principal checkpoints and confirm simple full-month interest on each original anniversary, using period-start principal and per-item half-up rounding.'
+            self.fields['rule_confirmed'].help_text = 'The sheet supplies the source rounding quantum and current-period bases, recognized/unpaid interest and advance. Future advance coverage must be explicitly zero for this template.'
         self.fields['series_id'].queryset = LoanSeries.objects.filter(workspace=workspace).select_related('license').prefetch_related('number_sequences').order_by('license_id', 'code')
         self.borrower_fields = []
         self.refs = list(register.borrowers(batch.document['rows']).items())
@@ -64,10 +74,14 @@ class ReviewRegisterForm(forms.Form):
             mode, party = f'mode_{index}', f'party_{index}'
             self.fields[mode] = forms.ChoiceField(label='Customer match', choices=[('', 'Choose an action'),
                 ('EXISTING', 'Use an existing customer'), ('NEW', 'Create a new customer from this row')])
-            self.fields[party] = forms.ModelChoiceField(queryset=Party.objects.filter(workspace=workspace, status='ACTIVE'),
+            query = Party.objects.filter(workspace=workspace).exclude(status='ARCHIVED') if self.closed_position else Party.objects.filter(workspace=workspace, status='ACTIVE')
+            from .loan_restore_views import RestoreBorrowerWidget
+            self.fields[party] = forms.ModelChoiceField(queryset=query,
                 required=False, label='Find existing customer', widget=PartyAutocompleteWidget(
                     attrs={'data-width': '100%'},
                     data_url=reverse('workspace_party:party_autocomplete', kwargs={'workspace_slug': workspace.slug})))
+            if self.closed_position:
+                self.fields[party].widget = RestoreBorrowerWidget(data_url=reverse('workspace_portability:restore_borrowers', kwargs={'workspace_slug': workspace.slug}), attrs={'data-width': '100%'})
             bound = sources.get(ref)
             choice = saved.get('borrowers', {}).get(ref)
             if bound:
@@ -97,7 +111,8 @@ class ReviewRegisterForm(forms.Form):
 
     def mapping(self):
         data = self.cleaned_data
+        keys = ('series_id', 'cutover', 'reference', 'rule_confirmed') if self.closed_position else ('revision_id', 'series_id', 'cutover', 'grace_days', 'reference', 'rule_confirmed')
         return {'settings': {key: data[key].pk if key.endswith('_id') else data[key].isoformat() if key == 'cutover' else data[key]
-            for key in ('revision_id', 'series_id', 'cutover', 'grace_days', 'reference', 'rule_confirmed')},
+            for key in keys},
             'borrowers': {ref: 'NEW' if data[f'mode_{index}'] == 'NEW' else data[f'party_{index}'].party_code
                          for index, (ref, _) in enumerate(self.refs)}}

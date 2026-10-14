@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-08
+updated: 2026-10-10
 tags: [cache, redis, deployment]
 ---
 
@@ -33,6 +33,15 @@ After deploying this change, reload loan forms opened before the deployment.
 Search tokens expire after 24 hours; retain unsaved values before reloading a
 long-open form. Invalid, expired, or wrong-Workspace tokens return 404; denied
 Party access remains 403. Ordinary borrower selection is revalidated on POST.
+
+The Party detail Merge picker reuses the stateless widget at
+`/w/<workspace>/parties/<target>/merge/autocomplete/`. Its fixed query includes
+non-archived Parties other than the target, so inactive duplicates remain
+selectable. The exact target-bearing URL is signed using the same 24-hour token
+contract; tokens cannot be reused for another target or Workspace. Requests
+require Party edit permission and return non-cacheable results. Selection is
+validated again on the merge POST; clearing the display cache does not break
+search. This is an existing-widget extension, not a client-defined queryset.
 
 The remaining `workspace_member_count` helper caches display counts for five
 minutes. Per-process caching is acceptable for that display, not for authorization,

@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from django.db import connection
 from django.test import TestCase
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.orgs.models import Company
@@ -32,6 +34,17 @@ class DashboardHealthTests(TestCase):
 
     def summary(self):
         return get_dashboard_health_summary(workspace=self.workspace)
+
+    def test_monitoring_guide_link_follows_health_management_visibility(self):
+        with workspace_context(self.workspace.pk):
+            health = self.summary()
+        url = reverse("workspace_loans:pawn_risk_guide", kwargs={"workspace_slug": self.workspace.slug})
+        context = dict(workspace=self.workspace, business_overview={"health": health}, can_manage_health=True)
+        html = render_to_string("company/_financial_health.html", context)
+        self.assertIn(url, html)
+        self.assertIn("Loan monitoring guide", html)
+        context["can_manage_health"] = False
+        self.assertNotIn(url, render_to_string("company/_financial_health.html", context))
 
     def test_empty_then_many_loans_use_one_query_without_netting_shortfalls(self):
         with workspace_context(self.workspace.pk):

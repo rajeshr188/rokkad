@@ -1,3 +1,5 @@
+{% load onboarding_tags %}
+{% account_journey_context as account_journey %}
 {% if public_trial_plan and not current_subscription %}
 <section class="card mb-4" aria-labelledby="public-trial-heading">
     <div class="card-body">
@@ -12,10 +14,16 @@
             requires your separate subscription consent. Contact Rokkad support for an access review while payments are unavailable.</p>
         {% endif %}
         {% if public_trial_used %}
-        <p>Your account has already used its public trial. {% if public_monthly_offer %}Use Review monthly subscription above to start paid billing for this Workspace.{% else %}Contact Rokkad support for another Workspace.{% endif %}</p>
+        <p>Your account has already used its public trial. {% if public_monthly_offer %}Use Review monthly subscription to start paid billing for this Workspace.{% else %}Contact Rokkad support for another Workspace.{% endif %}</p>
+        {% elif not account_journey.verified %}
+        <div class="alert alert-warning" role="status"><strong>Verify your account email first.</strong>
+            <p class="mb-2">Verification is required to start the trial. Your saved business setup stays available.</p>
+            <a class="btn btn-primary" href="{% url 'account_email' %}?setup_workspace={{ request.workspace.slug|urlencode }}">Verify email or re-send the link</a>
+        </div>
         {% else %}
         <form method="post" action="{% url 'workspace_subscriptions:start-trial' workspace_slug=request.workspace.slug plan_id=public_trial_plan.pk %}">
             {% csrf_token %}
+            {% include 'components/setup/journey_fields.html' %}
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" name="accepted_terms"
                     id="accept-public-trial" value="{{ public_trial_terms }}" required>

@@ -5,7 +5,7 @@ from apps.tenant_apps.party.models import Party, PartyAddress, PartyContactMetho
 from apps.tenant_apps.party.services.contact_details import save_address_form, save_contact_form, save_identifier_form, save_role_form, save_relationship_form
 from . import child_contracts as contract
 from .contracts import digest, issue, source_digest
-from .models import ChildIdentity, ChildSourceIdentity, PartyIdentity, SourceIdentity, WorkspaceNamespace
+from .models import ChildIdentity, ChildSourceIdentity, PartyIdentity, SourceIdentity, WorkspaceNamespace, ImportRow
 from .parsers import PortabilityError
 
 
@@ -18,7 +18,19 @@ def parent_for(record, workspace_id):
         except ValueError:
             return None
     source = SourceIdentity.objects.select_related("identity__party").filter(workspace_id=workspace_id, source_system=system, external_id=external).first()
-    return source.identity if source else None
+    if source:
+        return source.identity
+    # A native master re-export retains earlier exact source aliases as claims.
+    # Only immutable, successfully accepted master rows can establish this link;
+    # names, pending rows and unreviewed files cannot. Never guess ambiguity.
+    ids = list(ImportRow.objects.filter(workspace_id=workspace_id,
+        committed_at__isnull=False, batch__state="COMPLETED", batch__source_type="jsonl",
+        batch__contract_version="party-master/1",
+        canonical__contains={"source_refs": [{"system": system, "external_id": external}]})
+        .values_list("identity_id", flat=True).distinct()[:2])
+    if len(ids) != 1:
+        return None
+    return PartyIdentity.objects.select_related("party").filter(workspace_id=workspace_id, pk=ids[0]).first()
 
 
 def related_parent_for(record, workspace_id):

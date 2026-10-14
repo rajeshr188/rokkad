@@ -21,10 +21,11 @@
     <section class="auth-form-wrap">
         <div class="auth-card">
             <h2 class="auth-card-title">Log in</h2>
-            <p class="auth-card-copy">Use your account credentials to enter your workspace manager.</p>
+            <p class="auth-card-copy">Sign in with your email address or existing username. Then open your business or continue its setup.</p>
 
             <form method="post" class="mb-0">
                 {% csrf_token %}
+                {{ redirect_field }}
                 {{ form|crispy }}
                 <button class="btn btn-primary w-100" type="submit">
                     <i class="bi bi-box-arrow-in-right me-2"></i>Log in

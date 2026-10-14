@@ -10,18 +10,19 @@ from django.views.decorators.http import require_http_methods
 from apps.tenant_apps.loans.services.history_contract import HistoryError, MAX_BYTES, dump, SCHEMA, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4
 from apps.tenant_apps.loans.services.opening_export import export_loan_data
 from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
-from . import loan_history
+from . import loan_history, loan_restore
+from .capabilities import LOAN_CAPABILITIES
 from .loan_setup import HistorySetupForm
-from .models import LoanHistoryBatch
+from .models import LoanHistoryBatch, LoanRestoreBatch
 
 
 class UploadForm(forms.Form):
-    source = forms.FileField(label="Complete loan history (.jsonl)")
+    source = forms.FileField(label="Rokkad loan export (JSONL, JSON or ZIP)")
 
     def clean_source(self):
         value = self.cleaned_data["source"]
-        if value.size > MAX_BYTES:
-            raise forms.ValidationError("The maximum file size is 5 MiB.")
+        if value.size > loan_restore.MAX_BYTES:
+            raise forms.ValidationError("The maximum file size is 32 MiB. JSONL profiles retain their 5 MiB limit.")
         return value
 
 
@@ -47,12 +48,21 @@ def upload(request):
     form = UploadForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         try:
-            batch = loan_history.stage(**args, content=form.cleaned_data["source"].read(MAX_BYTES + 1))
-            return redirect("workspace_portability:loan_batch", workspace_slug=request.workspace.slug, batch_id=batch.public_id)
+            content = form.cleaned_data["source"].read(loan_restore.MAX_BYTES + 1)
+            profile, _ = loan_restore.classify(content)
+            if profile in loan_restore.SUPPORTED:
+                batch = loan_restore.stage(**args, content=content)
+                target = "workspace_portability:restore_batch"
+            else:
+                batch = loan_history.stage(**args, content=content)
+                target = "workspace_portability:loan_batch"
+            return redirect(target, workspace_slug=request.workspace.slug, batch_id=batch.public_id)
         except HistoryError as exc:
             form.add_error(None, exc.user_message)
     batches = LoanHistoryBatch.objects.filter(workspace_id=request.workspace.pk, profile__in=("loan-history/1", "loan-history/2", "loan-history/3", "loan-history/4")).order_by("-created_at", "-pk")[:20]
-    return render(request, "data_portability/loan_history_upload.html", dict(form=form, batches=batches))
+    restores = LoanRestoreBatch.objects.filter(workspace_id=request.workspace.pk).order_by("-created_at", "-pk")[:20]
+    return render(request, "data_portability/loan_history_upload.html", dict(form=form, batches=batches,
+        restores=restores, capabilities=LOAN_CAPABILITIES))
 
 
 @login_required

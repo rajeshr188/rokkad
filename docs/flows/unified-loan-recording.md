@@ -1,11 +1,20 @@
 ---
 status: accepted-design
 owner: project
-updated: 2026-10-07
+updated: 2026-10-14
 tags: [loans, paper-entry, workflow, historical-evidence, risk]
 ---
 
 # Record business when it happens or enter it afterward
+
+The approved [14 October consolidation](../implementation/loan-origination-consolidation-20261014.md)
+adds **Use an existing register** to ordinary series setup: review the last used
+counter and book reference, confirm, then begin new lending above that range.
+Record earlier paper loans with their original numbers; the live counter does not
+rewind. Reserving numbers does not create loans or attest to missing transactions.
+Active loan detail offers **Correct loan**, including signed mistaken-customer
+correction on eligible direct, paper, accepted-history and opening agreements.
+Financial/custody corrections keep their existing reviewed dependency rules.
 
 ## An unpaid draft whose payout already happened (LD-03, local)
 
@@ -325,6 +334,17 @@ Financial settlement does not prove physical collateral return. Record each actu
 fact and apply the ordinary lifecycle rules to derive the resulting state.
 
 ### Reviewed correction of an active paper contract
+
+For a customer selected by mistake during entry, open **Correct borrower** from
+the active paper loan. Search for the correct active customer, enter the original
+book/page reference and a reason, then **Review borrower correction**. Check both
+customer names/codes, tick the confirmation and **Record reviewed borrower
+correction**. The loan number, amounts, payments and jewellery stay intact; the
+audit retains both borrowers. This is a transcription correction, not debt transfer.
+Known renewal links, auction/funding evidence, closed loans and imported openings
+require their own reconciliation. Recheck the paper transactions before reminders;
+prior issued copies retain their original facts. See the
+[borrower correction decision](../adr/2026-10-14-recorded-borrower-correction.md).
 
 An administrator opens **Review paper history correction** from the ordinary loan
 detail or repayment screen. Select a missing receipt, replacement of a mistaken

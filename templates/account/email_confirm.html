@@ -1,0 +1,19 @@
+{% extends 'account/base_task.html' %}
+{% load i18n %}
+{% block title %}{% translate "Confirm email address" %} · Rokkad{% endblock %}
+{% block account_task %}
+<h1 class="auth-card-title" id="account-task-title">{% translate "Confirm email address" %}</h1>
+{% if confirmation and can_confirm %}
+  <p>{% translate "Confirm this address belongs to your Rokkad account:" %}</p>
+  <p class="fw-semibold text-break">{{ confirmation.email_address.email }}</p>
+  <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">{% csrf_token %}{{ redirect_field }}
+    <button class="btn btn-primary w-100" type="submit">{% translate "Confirm email" %}</button>
+  </form>
+{% elif confirmation %}
+  <p class="alert alert-warning">{% translate "This address cannot be confirmed for this account. Review your email addresses or contact support." %}</p>
+  <a class="btn btn-primary" href="{% url 'account_email' %}">{% translate "Review email addresses" %}</a>
+{% else %}
+  <p class="alert alert-warning">{% translate "This verification link has expired or is invalid. Sign in and request another verification email." %}</p>
+  <a class="btn btn-primary" href="{% url 'account_email' %}">{% translate "Request another verification email" %}</a>
+{% endif %}
+{% endblock %}

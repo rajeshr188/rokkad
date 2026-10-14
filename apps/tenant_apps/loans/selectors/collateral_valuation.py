@@ -54,6 +54,17 @@ class PawnLoanCollateralValuation:
     rate_freshness_days: int | None = None
     appraisal_freshness_days: int | None = None
     policy_error: str = ""
+    valuation_method: str = ""
+    valuation_basis: str = "ORIGINAL_AGREEMENT"
+    original_valuation_method: str = ""
+
+    @property
+    def valuation_method_label(self):
+        return self.valuation_method.replace("_", " ").capitalize()
+
+    @property
+    def saved_valuation_method_label(self):
+        return self.original_valuation_method.replace("_", " ").capitalize()
 
 
 def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
@@ -64,15 +75,22 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
         raise ValueError("Prepared exposure must match the scoped loan and assessment date.")
     if loan.policy_snapshot is None:
         raise ValueError("Loan is missing its frozen disbursal policy.")
-    method = ValuationMethod(loan.policy_snapshot.valuation_method)
-    quantum = Decimal(str(loan.policy_snapshot.currency_quantum))
+    original_method = loan.policy_snapshot.valuation_method
+    quantum = Decimal(str(loan.policy_snapshot.currency_quantum)).normalize()
     policy_error = ""
     try:
         policy = resolve_monitoring_policy(workspace_id=workspace_id, license_id=loan.license_id, as_of_date=as_of_date)
     except LoanRiskAssessmentError as exc:
         policy, policy_error = None, str(exc)
-    results = []
-    for item in loan.collateral_items.all():
+    basis = policy.valuation_basis if policy else "ORIGINAL_AGREEMENT"
+    method = ValuationMethod(original_method if basis == "ORIGINAL_AGREEMENT" else basis)
+    items = tuple(loan.collateral_items.all())
+    appraisals = {row.collateral_item_id: row for row in CollateralAppraisal.objects.filter(
+        workspace_id=workspace_id, collateral_item_id__in=[item.pk for item in items],
+        effective_at__date__lte=as_of_date, status=CollateralAppraisal.Status.APPROVED,
+    ).order_by("collateral_item_id", "-effective_at", "-version").distinct("collateral_item_id")}
+    results, rates = [], {}
+    for item in items:
         eligible = item.custody_state in {CollateralCustodyState.IN_VAULT.value, CollateralCustodyState.WITH_FUNDING_LENDER.value}
         blockers = [] if eligible else ["CUSTODY_NOT_ELIGIBLE"]
         if policy is None:
@@ -81,11 +99,13 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
             eligible = False
             if "CUSTODY_NOT_ELIGIBLE" not in blockers:
                 blockers.append("CUSTODY_NOT_ELIGIBLE")
-        lookup = get_latest_commodity_valuation_rate(commodity_code=item.metal, as_of=as_of_date)
+        if item.metal not in rates:
+            rates[item.metal] = get_latest_commodity_valuation_rate(commodity_code=item.metal, as_of=as_of_date)
+        lookup = rates[item.metal]
         calculated = None
         if lookup.status == RATE_FOUND and lookup.rate.buying_rate.is_finite() and lookup.rate.buying_rate > 0:
             calculated = (lookup.rate.buying_rate * item.net_weight * item.purity_percentage / Decimal("100")).quantize(quantum, rounding=ROUND_DOWN)
-        appraisal = CollateralAppraisal.objects.filter(collateral_item=item, effective_at__date__lte=as_of_date, status=CollateralAppraisal.Status.APPROVED).order_by("-effective_at", "-version").first()
+        appraisal = appraisals.get(item.pk)
         appraisal_value = appraisal.appraised_value if appraisal else None
         rate_at = lookup.rate.effective_at if lookup.rate else None
         appraisal_at = appraisal.effective_at if appraisal else None
@@ -114,8 +134,11 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
     blockers = tuple(code for row in results for code in row.blockers)
     total = None if blockers else sum((row.selected_value for row in results), Decimal("0"))
     exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date)
+    if exposure.integrity_findings:
+        blockers += ("FINANCIAL_EVIDENCE_INCONSISTENT",)
     ltv = calculate_ltv(exposure=exposure.ltv_exposure_basis, collateral_value=total, allowed_ltv_ratio=loan.policy_snapshot.maximum_ltv_ratio, blockers=blockers)
     basis = "recorded-monitoring-basis" if loan.policy_snapshot.basis == "RECORDED_CONTRACT" else "loan-policy-snapshot"
     return PawnLoanCollateralValuation(loan.pk, as_of_date, tuple(results), total, ltv,
         f"{basis}:{loan.policy_snapshot.pk}", policy.pk if policy else None,
-        policy.rate_freshness_days if policy else None, policy.appraisal_freshness_days if policy else None, policy_error)
+        policy.rate_freshness_days if policy else None, policy.appraisal_freshness_days if policy else None, policy_error,
+        method.value, policy.valuation_basis if policy else "ORIGINAL_AGREEMENT", original_method)

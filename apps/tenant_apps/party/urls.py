@@ -12,6 +12,7 @@ urlpatterns = [
     path("create/", views.party_create, name="party_create"),
     path("<int:pk>/", views.party_detail, name="party_detail"),
     path("<int:pk>/edit/", views.party_update, name="party_update"),
+    path("<int:pk>/merge/autocomplete/", views.party_merge_autocomplete, name="party_merge_autocomplete"),
     path("<int:pk>/merge/", views.party_merge, name="party_merge"),
     path("<int:pk>/photo/", views.party_profile_photo_update, name="party_photo_update"),
     path(

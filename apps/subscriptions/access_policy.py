@@ -71,6 +71,12 @@ def require_business_write(workspace):
         raise PermissionDenied(decision.reason)
 
 
+def is_unactivated_destination(workspace):
+    """Portability precondition, not permission to bypass commercial policy."""
+    return not (Subscription.objects.filter(company=workspace).exists()
+        or WorkspaceAccessDecision.objects.filter(workspace=workspace).exists())
+
+
 @transaction.atomic
 def record_access_decision(*, workspace, actor, mode, expires_at=None, reason, plan=None):
     if not actor or not is_platform_admin(actor) or not actor.is_active:

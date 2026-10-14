@@ -1,16 +1,24 @@
 ---
 status: implemented
 owner: loans
-updated: 2026-09-12
+updated: 2026-10-12
 tags: [dashboard, metrics, loans]
 ---
 
 # Business dashboard
 
-Open the Workspace **Dashboard**. Business overview, Financial health and Lending activity appear
-above the existing search and work queues, for users with the existing `data.view`
-permission. These are operational lending figures, not general-ledger accounts.
+Open the Workspace **Dashboard**. Search and daily work precede Business overview,
+Financial health and Lending activity. Loan sections require the existing
+`data.view` permission. These are operational lending figures, not general-ledger accounts.
 Every query uses the current Workspace and its RLS context.
+
+Search, New loan and navigation appear first. Payment queues load independently;
+Business overview, Financial health and Lending activity load after the queues
+settle and their section becomes visible. Sections show loading/retry states;
+loading values are not presented as zero. Open **Open complete dashboard** for a
+fully rendered page, including when JavaScript is disabled. Its queue pagination
+and activity forms preserve that mode. Each section rechecks current permissions.
+See [implementation and measured limits](../implementation/dashboard-section-loading-20261012.md).
 
 ## Current portfolio
 
@@ -52,9 +60,12 @@ these cards. Viewing the page does not refresh assessments or finalize interest.
 
 Coverage retains the existing basis: maturity payoff for bullet/flexible loans,
 economic exposure for amortizing loans. It is not a formal regulatory NPA label.
-Whole-portfolio financial amounts require usable current financial evidence on
-every active loan. Coverage has its own completeness requirement. Incomplete
-amounts show **Unavailable**; a partial affected-loan count is labelled **known**.
+Amounts sum the usable current assessments and show their covered-loan count;
+unavailable assessments are excluded. If none are usable, amounts show
+**Unavailable**. Whole-portfolio completeness requires usable evidence on every
+active loan and no provisional transaction verification. Coverage has its own
+usable count and completeness requirement. A partial affected-loan count is
+labelled **known**; zero across zero evaluated loans does not prove full coverage.
 A successful assessment can still have unknown coverage because quotes or
 appraisals are missing or outdated. Valid financial totals remain available then.
 
@@ -102,7 +113,8 @@ batches of 1,000 events. There are no per-loan database lookups, persistent cach
 new tables or migrations. The recorded-balance and activity cards need no worker.
 `selectors/dashboard_health.py` adds one aggregate over saved assessments and
 does not recalculate health on GET. The existing projection now also preserves
-the canonical interest breakdown and integrity findings under V3; see the
+the canonical interest breakdown and integrity findings (introduced under V3;
+current assessment contract V6); see the
 [decision](../adr/2026-09-12-dashboard-assessment-financial-evidence.md).
 
 Database reads are batched, but calculation time still grows with active loans and

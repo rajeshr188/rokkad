@@ -14,8 +14,10 @@ supply a price for a loan.
 1. Add a source if needed, with its name and location. The source's tax flag only
    describes its published prices; Rokkad does not calculate a tax adjustment.
 2. Select **Add Rate**, source, metal and currency. For loan valuation select
-   **INR** and **Pure metal (100%)**, including for silver. Enter an item's actual
-   purity separately on the loan; do not enter an ornament's price as pure-metal price.
+   **INR** and **100% reference grade**. For gold/silver use pure-metal prices;
+   for bronze use a quote for the bronze material itself, not pure copper.
+   Enter the item's actual percentage separately on the loan. No alloy or tax
+   conversion is inferred; do not enter an ornament's price as a pure-metal price.
 3. Enter positive buying and selling prices **per gram**, excluding taxes and
    making charges. Buying price is used for collateral valuation. Selling price
    is reference information. Convert a price per 10 grams by dividing by 10, or
@@ -48,8 +50,10 @@ shown as unknown, and their source snapshot was captured at migration. Verify th
 units, purity and tax basis before relying on them; use a correction when necessary.
 Current-loan monitoring enforces its configured quote/appraisal age limits; see
 [collateral reassessment](collateral-reassessment.md). Saving a new-loan draft
-checks quote availability. Approval requires a positive **same-day quote** for
-each metal used by calculated/lower-of valuation. The loan and disbursal dates
+checks quote availability. Approval requires a positive quote within the Workspace
+loan-entry age limit (default seven inclusive calendar days) for each metal used
+by calculated/lower-of valuation. Existing approvals with the older rule retain
+their same-day requirement. The loan and disbursal dates
 must be today for those methods; appraisal-only loans retain their existing rules.
 Quotes effective later today are excluded from suggestions and approval.
 
@@ -70,3 +74,10 @@ The directory supports source-snapshot/notes search and a metal filter with
 records. Entry groups source and metal, per-gram prices, then effective time and
 notes. English/Hindi forms retain native datetime values and linked validation
 errors. Empty withdrawal submissions require a reason and leave the quote intact.
+
+Gold, silver and bronze appear in the dated reference-price and daily confirmation
+screens. **Confirm price unchanged for today** is an explicit staff action that
+records the user and a new dated quote; it does not silently redraft old evidence.
+Bronze collateral is selectable in direct and paper entry. If issuing new bronze
+loans, configure an explicit bronze monthly rate in standing economic setup; it
+does not inherit gold/silver interest. Existing loans retain their agreed rates.

@@ -67,6 +67,23 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
         return " | ".join(parts)
 
 
+class PartyMergeAutocompleteWidget(PartyAutocompleteWidget):
+    """Search the merge-eligible identities without loading the full directory."""
+
+    active_only = False
+
+    def __init__(self, *args, target_party, **kwargs):
+        self.target_party = target_party
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            workspace_id=self.target_party.workspace_id
+        ).exclude(
+            pk=self.target_party.pk
+        ).exclude(status=Party.PartyStatus.ARCHIVED)
+
+
 class PrivateFileInput(forms.ClearableFileInput):
     """Keep replacement/clear controls without publishing a storage URL."""
 

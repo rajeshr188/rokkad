@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -226,7 +226,7 @@ def preview_import(*, workspace_id, actor, batch_id):
 
 
 @transaction.atomic
-def commit_import(*, workspace_id, actor, batch_id, approval_digest, acknowledge_warnings=False):
+def commit_import(*, workspace_id, actor, batch_id, approval_digest, acknowledge_warnings=False, _preserve_business_codes=False):
     workspace = require_access(workspace_id, actor, "import")
     # Bounded Workspace serialization covers competing source imports/identity allocation.
     Company.all_objects.select_for_update().get(pk=workspace_id)
@@ -267,7 +267,8 @@ def commit_import(*, workspace_id, actor, batch_id, approval_digest, acknowledge
         elif row.disposition == "EXISTING":
             identity = PartyIdentity.objects.get(workspace_id=workspace_id, public_id=row.external_id)
         else:
-            party = create_party_from_form(form=party_form(row.canonical), workspace_id=workspace_id, actor=actor)
+            party = create_party_from_form(form=party_form(row.canonical), workspace_id=workspace_id, actor=actor,
+                _business_code=row.canonical.get("business_code") if _preserve_business_codes and batch.source_type == "jsonl" else None)
             identity = PartyIdentity.objects.create(workspace_id=workspace_id, party=party)
         if not source:
             SourceIdentity.objects.create(workspace_id=workspace_id, source_system=batch.source_system,
@@ -304,27 +305,55 @@ class PartyExport:
     sha256: str
 
 
+def _export_selection(query, record_ids):
+    """Internal chunk selection keeps the released per-file contract bounded."""
+    if record_ids is None:
+        return query
+    if (type(record_ids) is not list or not 0 < len(record_ids) <= MAX_ROWS
+            or any(type(pk) is not int or pk <= 0 for pk in record_ids)
+            or len(set(record_ids)) != len(record_ids)):
+        raise PortabilityError("Choose up to 1,000 distinct records for a chunk.")
+    query = query.filter(pk__in=record_ids)
+    if query.count() != len(record_ids):
+        raise PortabilityError("A selected export record is missing from this Workspace.")
+    return query
+
+
+def require_export_snapshot():
+    """Only the dedicated operator transaction may bypass export row locks."""
+    with connection.cursor() as cursor:
+        cursor.execute("SHOW transaction_isolation")
+        if cursor.fetchone()[0] != "repeatable read":
+            raise PortabilityError("Large exchange requires a fresh REPEATABLE READ transaction.")
+
+
 @transaction.atomic
-def export_parties(*, workspace_id, actor):
+def export_parties(*, workspace_id, actor, record_ids=None, _consistent_snapshot=False):
     workspace = require_access(workspace_id, actor, "export")
-    Company.all_objects.select_for_update().get(pk=workspace_id)
+    if _consistent_snapshot:
+        require_export_snapshot()
+    else:
+        Company.all_objects.select_for_update().get(pk=workspace_id)
     workspace = require_access(workspace_id, actor, "export")
     # One materialized Party query is the master-field snapshot. No lazy reads after response.
-    parties = list(Party.objects.filter(workspace_id=workspace_id).order_by("pk")[:MAX_ROWS + 1])
+    query = _export_selection(Party.objects.filter(workspace_id=workspace_id), record_ids)
+    parties = list(query.order_by("pk")[:MAX_ROWS + 1])
     if len(parties) > MAX_ROWS:
         raise PortabilityError("This bounded Party export supports at most 1,000 Parties; no partial truncation was exported.")
     namespace, _ = WorkspaceNamespace.objects.get_or_create(workspace_id=workspace_id)
-    identities = {i.party_id: i for i in PartyIdentity.objects.filter(workspace_id=workspace_id)}
+    identities = {i.party_id: i for i in PartyIdentity.objects.filter(workspace_id=workspace_id, party_id__in=[p.pk for p in parties]).prefetch_related("sources")}
+    provenance = {row.identity_id: row for row in ImportRow.objects.filter(workspace_id=workspace_id,
+        identity_id__in=[i.pk for i in identities.values()], committed_at__isnull=False,
+        batch__contract_version=PROFILE).order_by("identity_id", "committed_at", "pk").distinct("identity_id")}
     records = []
     for party in parties:
         identity = identities.get(party.pk)
         if identity is None:
             identity = PartyIdentity.objects.create(workspace_id=workspace_id, party=party)
-        sources = list(identity.sources.order_by("source_system", "external_id"))
+        sources = sorted(identity.sources.all(), key=lambda s: (s.source_system, s.external_id))
         if len(sources) > 10:
             raise PortabilityError("A Party has more than ten source aliases; this profile cannot export it losslessly.")
-        provenance = identity.import_rows.filter(committed_at__isnull=False, batch__contract_version=PROFILE).order_by("committed_at", "pk").first()
-        records.append(export_record(party, identity, sources, provenance))
+        records.append(export_record(party, identity, sources, provenance.get(identity.pk)))
     content = ("".join(dump(r) + "\n" for r in sorted(records, key=lambda r: r["id"]))).encode("utf-8")
     if len(content) > MAX_BYTES:
         raise PortabilityError("The export exceeds the 5 MiB import boundary; no truncated file was exported.")
@@ -337,26 +366,34 @@ def export_parties(*, workspace_id, actor):
 
 
 @transaction.atomic
-def export_children(*, workspace_id, actor, profile):
+def export_children(*, workspace_id, actor, profile, record_ids=None, _consistent_snapshot=False):
     from apps.tenant_apps.party.models import PartyContactMethod, PartyAddress, PartyIdentifier, PartyRole, PartyRoleType, PartyRelationship
     from .models import ChildIdentity
     workspace = require_access(workspace_id, actor, "export")
     if profile not in child_contracts.PROFILES:
         raise PortabilityError("Unsupported child profile.")
-    Company.all_objects.select_for_update().get(pk=workspace_id)
+    if _consistent_snapshot:
+        require_export_snapshot()
+    else:
+        Company.all_objects.select_for_update().get(pk=workspace_id)
     require_access(workspace_id, actor, "export")
     model = {child_contracts.CONTACT: PartyContactMethod, child_contracts.ADDRESS: PartyAddress, child_contracts.IDENTIFIER: PartyIdentifier, child_contracts.ROLE: PartyRole, child_contracts.RELATIONSHIP: PartyRelationship}[profile]
     # Use the same parent-before-child lock order as native Party writes.
     parent_field = "from_party" if profile == child_contracts.RELATIONSHIP else "party"
-    candidates = list(model.objects.filter(workspace_id=workspace_id).order_by("pk").values_list("pk", parent_field + "_id")[:MAX_ROWS + 1])
+    query = _export_selection(model.objects.filter(workspace_id=workspace_id), record_ids)
+    candidates = list(query.order_by("pk").values_list("pk", parent_field + "_id")[:MAX_ROWS + 1])
     party_ids = [p for _, p in candidates]
     if profile == child_contracts.RELATIONSHIP:
         party_ids += list(model.objects.filter(workspace_id=workspace_id, pk__in=[pk for pk, _ in candidates]).values_list("to_party_id", flat=True))
-    list(Party.objects.select_for_update().filter(workspace_id=workspace_id, pk__in=party_ids).order_by("pk"))
-    if profile == child_contracts.ROLE:
+    if not _consistent_snapshot:
+        list(Party.objects.select_for_update().filter(workspace_id=workspace_id, pk__in=party_ids).order_by("pk"))
+    if profile == child_contracts.ROLE and not _consistent_snapshot:
         role_ids = model.objects.filter(workspace_id=workspace_id, pk__in=[pk for pk, _ in candidates]).values_list("role_type_id", flat=True)
         list(PartyRoleType.objects.select_for_update().filter(workspace_id=workspace_id, pk__in=role_ids).order_by("pk"))
-    objects = list(model.objects.select_related(parent_field).select_for_update(of=("self",)).filter(workspace_id=workspace_id, pk__in=[pk for pk, _ in candidates]).order_by("pk")[:MAX_ROWS + 1])
+    query = model.objects.select_related(parent_field).filter(workspace_id=workspace_id, pk__in=[pk for pk, _ in candidates]).order_by("pk")
+    if not _consistent_snapshot:
+        query = query.select_for_update(of=("self",))
+    objects = list(query[:MAX_ROWS + 1])
     if len(objects) > MAX_ROWS:
         raise PortabilityError("Child exports support at most 1,000 records; nothing was truncated.")
     if profile == child_contracts.CONTACT:

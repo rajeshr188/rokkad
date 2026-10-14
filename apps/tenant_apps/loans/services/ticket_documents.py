@@ -57,13 +57,14 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
         raise ValueError("Extended ticket evidence requires a precision ticket layout.")
     approval = loan.approval_snapshots.order_by("-version").first()
     payload = PawnLoanDocumentProjectionBuilder.loan_ticket(loan)
-    source = approval.payload
-    if source["borrower_id"] != loan.borrower_id:
-        raise ValueError("Approved borrower does not match this loan.")
+    from .borrower_corrections import corrected_ticket_source, borrower_document_fingerprint
+    source, correction = corrected_ticket_source(loan, approval.payload)
     return _prepare_ticket_display(
         loan=loan, layout=layout, actor=actor, address_id=address_id, preview=preview,
         payload=payload, source=source,
-        evidence={"approval_id": approval.pk, "approval_fingerprint": approval.fingerprint},
+        evidence={"approval_id": approval.pk, "approval_fingerprint": approval.fingerprint,
+            "document_fingerprint": borrower_document_fingerprint(loan, approval.fingerprint),
+            "borrower_correction_id": correction.pk if correction else None},
     )
 
 

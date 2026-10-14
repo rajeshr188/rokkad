@@ -3,7 +3,8 @@ from django.core.validators import URLValidator, validate_email
 from django.utils.translation import gettext_lazy as _
 from .phone_numbers import PHONE_CONTACT_TYPES, PartyPhoneNumberField
 
-from .widgets import PrivateFileInput
+from django.urls import reverse
+from .widgets import PartyMergeAutocompleteWidget, PrivateFileInput
 from .models import (
     Party,
     PartyAddress,
@@ -353,7 +354,17 @@ class PartyMergeForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.target_party = kwargs.pop("target_party")
         super().__init__(*args, **kwargs)
-        self.fields["source_party"].queryset = Party.objects.exclude(
+        self.fields["source_party"].widget = PartyMergeAutocompleteWidget(
+            target_party=self.target_party,
+            data_url=reverse("workspace_party:party_merge_autocomplete", kwargs={
+                "workspace_slug": self.target_party.workspace.slug, "pk": self.target_party.pk,
+            }),
+            attrs={"data-placeholder": _("Search by name, party code, phone, relation, or email")},
+            select2_options={"width": "100%"},
+        )
+        self.fields["source_party"].queryset = Party.objects.filter(
+            workspace_id=self.target_party.workspace_id
+        ).exclude(
             pk=self.target_party.pk
         ).exclude(status=Party.PartyStatus.ARCHIVED).order_by(
             "display_name",

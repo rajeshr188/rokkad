@@ -1,0 +1,30 @@
+{% extends "base_tenant.html" %}
+{% block title %}Correct loan customer{% endblock %}
+{% block extra_css %}{{ block.super }}{{ form.media.css }}{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:900px">
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.loan_number }}</a>
+  <h1 class="h3 mt-3">Correct loan customer</h1>
+  <p>Correct a customer selected by mistake when entering the loan agreement.</p>
+  <p>Current borrower: <strong>{{ loan.borrower.display_name }} ({{ loan.borrower.party_code }})</strong>.</p>
+  <p>The loan number, agreed amounts, payments and jewellery stay the same. Previously issued documents remain available with their original details. Existing transaction confirmations and queued reminders may require fresh review.</p>
+  {% if blockers %}<div class="alert alert-warning"><ul class="mb-0">{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
+  <form method="post">{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      {% if field.is_hidden %}{{ field }}
+      {% elif field.name == 'confirmed' %}{% if review %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% endif %}
+      {% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}
+    {% endfor %}
+    <button class="btn btn-primary" name="action" value="preview">Review borrower correction</button>
+    {% if review %}<section class="border rounded p-3 mt-4" aria-label="Review borrower correction">
+      <h2 class="h5">Review before recording</h2>
+      <p><strong>{{ review.before.name }} ({{ review.before.code }})</strong> &rarr; <strong>{{ review.after.name }} ({{ review.after.code }})</strong></p>
+      <p>Loan {{ review.loan_number }}; {{ review.receipt_count }} retained payment entries.</p>
+      <p>Supporting reference: {{ review.reference }}. Reason: {{ review.reason }}.</p>
+      <button class="btn btn-success" name="action" value="confirm">Record reviewed borrower correction</button>
+    </section>{% endif %}
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}{{ block.super }}{{ form.media.js }}{% endblock %}

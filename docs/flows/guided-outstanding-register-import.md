@@ -1,11 +1,41 @@
 ---
 status: implemented
 owner: project
-updated: 2026-09-30
+updated: 2026-10-10
 tags: [portability, fw-007, workspace-guide]
 ---
 
 # Guided import of outstanding legacy loans
+
+## Current templates: PC-03
+
+The same upload, customer matching, reconciliation and owner confirmation flow
+now accepts `outstanding-register/2` active checkpoints and `closed-register/1`
+closed loans. Download the corresponding template from **Import existing loans**;
+exact headers select its version. The original template described below keeps
+its original meaning. Each batch uses one template, with the existing 20-loan,
+200-row and 5 MiB bounds.
+
+Active checkpoints explicitly capture each retained item's original principal,
+remaining principal and current-period principal base, whole-loan cumulative and
+current recognized/unpaid interest, current advance and source rounding quantum.
+The contract is simple full-month original-anniversary interest, per-item HALF_UP;
+future advance must be known zero in this template. Nonzero future coverage uses
+the existing explicit per-period opening review. Earlier receipts are unavailable,
+not reconstructed, and unknown checkpoint amounts are held. Fully repaid items
+still in custody are held for assisted review because initial retained-item
+allocations currently must be positive; never drop collateral or invent principal.
+
+Closed rows supply stable customer/loan references, full number, explicit zero
+principal/interest/fees and checked returned custody. Use one row per loan; known
+original terms are optional and blank unknown terms remain unknown. Review asks
+for customer, series, position date and source reference rather than a historical
+economic policy. Confirmation creates ordinary closed loans without collections
+or handover events. Series number claims and duplicate identities remain enforced.
+
+See the [PC-03 implementation and limits](../implementation/essential-position-registers-pc03.md).
+
+## Original unchanged-principal template
 
 The first customer-facing loan-register adapter is `outstanding-register/1`.
 An existing operating Workspace can admit supported old outstanding loans without

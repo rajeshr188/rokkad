@@ -1,0 +1,8 @@
+{% extends 'account/base_task.html' %}
+{% load i18n %}
+{% block title %}{% translate "Check your email" %} · Rokkad{% endblock %}
+{% block account_task %}
+<h1 class="auth-card-title" id="account-task-title">{% translate "Check your email" %}</h1>
+<p>{% translate "Open the verification link we sent to your email address. Check your spam folder if it does not arrive." %}</p>
+<a class="btn btn-primary" href="{% url 'account_email' %}">{% translate "Review address or re-send verification" %}</a>
+{% endblock %}

@@ -40,7 +40,7 @@ class StorageInventoryTests(TestCase):
             return Party.objects.create(workspace=workspace, display_name="Private customer", profile_photo=key)
 
     def test_registry_has_every_file_field_and_rls_model(self):
-        self.assertEqual(len(validate_coverage()), 16)
+        self.assertEqual(len(validate_coverage()), 18)
         self.assertIn(WorkspaceStorageUsage, rls_protected_models())
         with patch.dict("apps.orgs.services.storage_references.FILE_FIELDS", {("party.party", "new_photo"): "unknown"}):
             with self.assertRaises(ValidationError):

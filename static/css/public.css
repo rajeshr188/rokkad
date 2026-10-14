@@ -463,6 +463,9 @@
     font-weight: 700;
 }
 
+.auth-task-wrap { padding: 2rem 1rem; }
+.auth-task-card { max-width: 680px; margin-inline: auto; }
+
 @media (max-width: 991.98px) {
     .public-hero-grid,
     .auth-panel {
@@ -470,11 +473,12 @@
     }
 
     .auth-story {
-        padding-bottom: 3rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
-        padding-top: 3rem;
+        padding: 1.5rem;
     }
+
+    .auth-check-list { display: none; }
+    .auth-story-copy { margin-bottom: 0; }
+    .auth-form-wrap { padding: 1.5rem 1rem; }
 
     .public-title {
         font-size: 3.2rem;

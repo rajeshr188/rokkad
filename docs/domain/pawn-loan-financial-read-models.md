@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-08
+updated: 2026-10-12
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -96,7 +96,32 @@ appraisal/prices and verified current debt. Coverage cannot substitute for valua
 Current notices freeze checked and current fingerprints and recheck amount/date/risk
 at dispatch. See [LD-06](../implementation/servicing-operations-ld06.md).
 
+## MR-05 independent current valuation
+
+Current monitoring policy can explicitly select calculated metal value, approved
+appraisal or their lower value; its default preserves the saved loan method.
+For paper/imported origins that basis does not prove an unavailable original valuation.
+Resolution is effective-dated with a complete licence override. Original approval,
+agreement, interest, principal and accepted opening facts remain unchanged.
+Freshness and custody requirements still apply to the selected evidence. V8
+assessment provenance identifies actual/original methods and the monitoring policy;
+CURRENT does not certify complete paper books or adequate collateral. Policy grace
+is hidden from setup. The calculator derives a grace-based escalation indicator
+from frozen product/opening terms, but current classification/alerts do not consume
+it as a general suppression gate. See the [decision](../adr/2026-10-12-current-monitoring-valuation-policy.md)
+and [current implementation reference](../architecture/post-origination-loan-monitoring.md).
+
 ## Current read implementation
+
+MR-07 shares private financial inputs within one source-checked risk refresh:
+the scoped loan/date, continuation, recorded balance, schedule, obligations and
+book coverage. Consumers validate Workspace, loan and date; nothing persists or
+survives the call as a cache. Initial/final source fingerprints and all write
+guards remain. Current valuation reads each metal once and latest appraisals
+together for that loan, retaining item evidence, dates, freshness and rounding.
+Financial results and risk fingerprints remain identical. Dated reads still
+restate available knowledge; no full captured assessment history is introduced.
+See [MR-07 evidence](../implementation/monitoring-efficiency-mr07.md).
 
 LD-04 adds review/4 opening checkpoints with reduced remaining item principal,
 explicit current-period bases and separate cumulative/current recognized/unpaid
@@ -154,6 +179,23 @@ coverage, eligible valuation and calculation support are separate dimensions.
 Refreshing cannot certify absent paper activity or repair stale valuation. Recorded
 reports retain their recorded-balance basis and show saved assessment quality
 separately; repayment previews show supported collection amounts.
+
+MR-03's V7 saved assessment rejects financial integrity findings, clearing unsafe
+money/DPD/LTV metrics under ERROR instead of presenting a healthy classification.
+An active unsettled loan or unpaid position without a schedule, and negative/over-allocated obligations,
+cannot establish current risk. Independently supported collateral value may
+remain known while LTV is unknown. Missing prior cash history at an accepted
+checkpoint and unconfirmed later paper-book coverage are separate from these
+financial inconsistencies. See the
+[integrity/recovery decision](../adr/2026-10-11-risk-integrity-and-confirmed-recovery.md).
+
+MR-04 enforces append-only risk transitions and matching Workspace/loan references
+in PostgreSQL. Snapshot values remain mutable current projections, while their
+loan identity stays fixed. Alerts retain their original source and reference a
+same-loan event for recovery; risk-linked notices retain the alert's exact source
+event. The upgrade preserves existing evidence, including legacy resolutions
+without cure links, and refuses inconsistent retained references before adding
+the guards. See [the database decision](../adr/2026-10-11-risk-evidence-database-protection.md).
 
 LD-01 centralizes read-side servicing selection in
 `selectors/servicing_contract.py`. Repayment preview, reminder balance and repayment

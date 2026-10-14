@@ -114,6 +114,8 @@ class RiskCommunicationReadinessTests(SimpleTestCase):
             primary_phone="+919999999999",
         )
         loan = SimpleNamespace(pk=9, borrower=borrower, borrower_id=7, state="ACTIVE", risk_snapshot=snapshot, policy_snapshot_id=None)
+        loan.change_log = MagicMock()
+        loan.change_log.filter.return_value.order_by.return_value.last.return_value = None
         event = SimpleNamespace(pk=11)
         alert = SimpleNamespace(
             pk=12,

@@ -8,7 +8,7 @@ from apps.tenant_apps.loans.services.portability_validation import PortabilityVa
 from apps.tenant_apps.loans.services.history_contract import parse, digest, HistoryError
 from apps.tenant_apps.loans.services.history_import import import_complete_history, require_history_access
 from apps.tenant_apps.loans.services.history_setup import require_history_setup_access, require_history_preparation_access
-from .models import LoanHistoryBatch
+from .models import LoanHistoryBatch, LoanRestoreBatch
 from .children import parent_for
 
 SALT = "loan-history-approval-v1"
@@ -29,7 +29,9 @@ def stage(*, workspace_id, actor, content):
     document = parse(content)
     Company.all_objects.select_for_update().get(pk=workspace_id)
     require_history_preparation_access(workspace_id, actor)
-    if LoanHistoryBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED","READY"]).count() >= 20:
+    unfinished = LoanHistoryBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED","READY"]).count()
+    unfinished += LoanRestoreBatch.objects.filter(workspace_id=workspace_id, state__in=["STAGED","READY"]).count()
+    if unfinished >= 20:
         raise HistoryError("Finish or cancel an unfinished Loans import before staging another (limit 20).")
     return LoanHistoryBatch.objects.create(workspace_id=workspace_id, created_by=actor,
         document=document, profile=document["manifest"]["profile"], source_sha256=digest(document))

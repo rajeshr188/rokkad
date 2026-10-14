@@ -26,7 +26,7 @@ from apps.orgs.models import Company
 from apps.tenant_apps.loans import models as m
 from .history_setup import require_history_setup_access, _number, _check_number
 from .history_contract import digest, dump, HistoryError
-from .servicing_bundle_contract import PROFILE, ROWS, MAX_ROWS, MAX_BYTES, MAX_LOANS, EXCLUSIONS, ISSUE_FIELDS, row, decode, require, sha, read_bundle
+from .servicing_bundle_contract import PROFILE, CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE, BORROWER_PROFILE, financial_profile, PROFILES, ROWS, BASE_ROWS, STORAGE_ROWS, MAX_ROWS, MAX_BYTES, MAX_LOANS, EXCLUSIONS, STORAGE_EXCLUSIONS, FUNDING_EXCLUSIONS, ISSUE_FIELDS, row, decode, require, sha, read_bundle
 
 KINDS = {name: apps.get_model("loans", name) for name in ROWS}
 ACTORS = "accounts.CustomUser"
@@ -52,15 +52,20 @@ def _connected(workspace_id, loan_id):
             ids.update(pair)
         batches = m.PawnReleaseBatchLine.objects.filter(workspace_id=workspace_id, release__loan_id__in=ids).values_list("batch_id", flat=True)
         ids.update(m.PawnReleaseBatchLine.objects.filter(workspace_id=workspace_id, batch_id__in=batches).values_list("release__loan_id", flat=True))
+        pledges=m.FundingPledgeItem.objects.filter(workspace_id=workspace_id,collateral_item__loan_id__in=ids).values_list('funding_pledge_id',flat=True)
+        ids.update(m.FundingPledgeItem.objects.filter(workspace_id=workspace_id,funding_pledge_id__in=pledges).values_list('collateral_item__loan_id',flat=True))
+        drafts=m.FundingLoanDraftCollateral.objects.filter(workspace_id=workspace_id,collateral_item__loan_id__in=ids).values_list('funding_loan_id',flat=True)
+        ids.update(m.FundingLoanDraftCollateral.objects.filter(workspace_id=workspace_id,funding_loan_id__in=drafts).values_list('collateral_item__loan_id',flat=True))
         require(len(ids) <= MAX_LOANS, "Connected renewal/release graph exceeds twenty loans; use exact Workspace recovery.")
         if ids == old:
             return ids
     raise HistoryError("Connected servicing graph exceeds its bound.")
 
 
-def _collect(workspace_id, ids):
+def _collect(workspace_id, ids, *, consistent_snapshot=False):
     selected = {kind: {} for kind in KINDS}
-    selected["PawnLoan"] = {o.pk:o for o in m.PawnLoan.objects.select_for_update().filter(workspace_id=workspace_id, pk__in=ids)}
+    query = m.PawnLoan.objects.filter(workspace_id=workspace_id, pk__in=ids)
+    selected["PawnLoan"] = {o.pk:o for o in (query if consistent_snapshot else query.select_for_update())}
     require(set(selected["PawnLoan"]) == ids, "A connected loan is missing from this Workspace.")
     # Follow only the frozen inventory's typed relationships. Root closure is
     # explicit above; this never pulls an unrelated loan into an accepted graph.
@@ -72,9 +77,14 @@ def _collect(workspace_id, ids):
             query = Q(pk__in=selected[kind])
             for key, spec in ROWS[kind].items():
                 parent = spec.get("reference", "").removeprefix("loans.")
+                if parent == 'PawnStorageLocation':
+                    continue  # Shared locations are ancestors, never loan graph edges.
                 if parent in selected and selected[parent]:
                     query |= Q(**{key+"__in": list(selected[parent])})
-            selected[kind].update({o.pk:o for o in model.objects.select_for_update().filter(workspace_id=workspace_id).filter(query)[:MAX_ROWS+1]})
+            records = model.objects.filter(workspace_id=workspace_id).filter(query)
+            if not consistent_snapshot:
+                records = records.select_for_update()
+            selected[kind].update({o.pk:o for o in records[:MAX_ROWS+1]})
         # Include referenced ancestors such as retained archives and release batches.
         for kind, objects in tuple(selected.items()):
             for obj in tuple(objects.values()):
@@ -88,6 +98,8 @@ def _collect(workspace_id, ids):
                     require(value is not None, "Missing or foreign servicing ancestor.")
                     selected[parent][pk] = value
         count = sum(map(len, selected.values()))
+        if selected['FundingLoan']:
+            selected['FundingLoanSequence']={r.pk:r for r in m.FundingLoanSequence.objects.filter(workspace_id=workspace_id)}
         for evidence in tuple(selected['HistoricalLoanEvidence'].values()):
             selected['HistoricalLoanEvidence'].update({r.pk:r for r in m.HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id, source_namespace=evidence.source_namespace, source_system=evidence.source_system, source_id=evidence.source_id)})
         count = sum(map(len, selected.values()))
@@ -98,9 +110,9 @@ def _collect(workspace_id, ids):
 
 
 def _position(loan, day):
-    require(not any(snapshot.evidence.get("recording", {}).get("origination_correction")
-        for snapshot in loan.disbursal_snapshots.all()),
-        "Origination correction retains native source IDs; use exact Workspace recovery until a remapping profile is supported.")
+    from .origination_corrections import validate_correction_evidence
+    for snapshot in loan.disbursal_snapshots.all():
+        validate_correction_evidence(snapshot)
     from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
     from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
     from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
@@ -147,19 +159,26 @@ def _add_file(files, claims, value, *, expected=None):
 
 
 @transaction.atomic
-def export_servicing_bundle(*, workspace_id, actor, loan_id):
+def export_servicing_bundle(*, workspace_id, actor, loan_id, _consistent_snapshot=False):
     workspace = _access(workspace_id, actor, exporting=True)
-    Company.all_objects.select_for_update().get(pk=workspace_id)
+    if _consistent_snapshot:
+        from apps.tenant_apps.data_portability.services import require_export_snapshot
+        require_export_snapshot()
+    else:
+        Company.all_objects.select_for_update().get(pk=workspace_id)
     _access(workspace_id, actor, exporting=True)
     m.PawnLoan.objects.get(pk=loan_id, workspace_id=workspace_id)
-    selected = _collect(workspace_id, _connected(workspace_id, loan_id))
-    require(not any(snapshot.evidence.get("recording", {}).get("origination_correction")
-        for snapshot in selected['PawnLoanDisbursalSnapshot'].values()),
-        "Origination correction retains native source IDs; use exact Workspace recovery until a remapping profile is supported.")
-    require(not any(item.funding_pledge_items.exists() or item.storage_movements.exists() for item in selected['PawnCollateralItem'].values()), 'Funding or storage history requires exact Workspace recovery; this servicing profile cannot omit it.')
+    selected = _collect(workspace_id, _connected(workspace_id, loan_id), consistent_snapshot=_consistent_snapshot)
+    borrower_corrected = any(log.event_kind == 'BORROWER_CORRECTED' for log in selected['LoanChangeLog'].values())
+    corrected = any(snapshot.evidence.get("recording", {}).get("origination_correction")
+        for snapshot in selected['PawnLoanDisbursalSnapshot'].values())
     from apps.tenant_apps.data_portability.models import WorkspaceNamespace, PartyIdentity
     namespace, _ = WorkspaceNamespace.objects.get_or_create(workspace_id=workspace_id)
     tables = {kind:[row(kind, obj) for obj in sorted(objects.values(), key=lambda o:o.pk)] for kind, objects in selected.items()}
+    stored = bool(tables['PawnStorageLocation'] or tables['PawnCollateralStorageMovement'])
+    funded = bool(tables['FundingLoan'])
+    if not funded:
+        tables = {kind:rows for kind,rows in tables.items() if kind in (STORAGE_ROWS if stored else BASE_ROWS)}
     for kind, objects in selected.items():
         for obj in objects.values():
             for key, spec in ROWS[kind].items():
@@ -195,9 +214,18 @@ def export_servicing_bundle(*, workspace_id, actor, loan_id):
             licence_evidence='REVISION' if loan.license_revision_id else 'SOURCE_REFERENCE',
             product={key:getattr(product,key) for key in ("repayment_structure", "amortisation_method", "payment_frequency", "extra_payment_rule", "calculation_contract_version", "operational_grace_days")})
         positions[str(loan.pk)] = _position(loan, timezone.localdate())
-    document = dict(profile=PROFILE, namespace=str(namespace.public_id), workspace_id=workspace_id, root_loan_id=loan_id,
-        as_of=timezone.localdate().isoformat(), coverage="SOURCE_FINANCIAL_AND_CUSTODY_GRAPH", exclusions=EXCLUSIONS,
+    document = dict(profile=FUNDING_PROFILE if funded else STORAGE_PROFILE if stored else CORRECTION_PROFILE if corrected else PROFILE, namespace=str(namespace.public_id), workspace_id=workspace_id, root_loan_id=loan_id,
+        as_of=timezone.localdate().isoformat(), coverage="SOURCE_FINANCIAL_AND_CUSTODY_GRAPH", exclusions=FUNDING_EXCLUSIONS if funded else STORAGE_EXCLUSIONS if stored else EXCLUSIONS,
         tables=tables, setup=setup, positions=positions, files=claims, documents=documents)
+    if funded:
+        from .servicing_funding import source_setup, funding_position
+        document['funding_setup']=source_setup(workspace_id,namespace,selected['FundingLoan'])
+        document['funding_positions']={str(pk):funding_position(loan) for pk,loan in selected['FundingLoan'].items()}
+    if borrower_corrected:
+        from .servicing_borrowers import source_parties
+        document['financial_profile'] = document['profile']
+        document['profile'] = BORROWER_PROFILE
+        document['agreement_parties'] = {str(pk): source_parties(loan, namespace) for pk, loan in selected['PawnLoan'].items()}
     _source_graph(document)
     document["sha256"] = sha(dump(document).encode())
     raw = dump(document).encode()
@@ -209,7 +237,7 @@ def export_servicing_bundle(*, workspace_id, actor, loan_id):
             archive.writestr("files/"+key, content)
     result = buffer.getvalue()
     read_bundle(result)
-    AuditLog.log("DATA_EXPORT", company=workspace, user=actor, description="Exported bounded connected Loans servicing evidence and original file bytes.", data=dict(root_loan=loan_id, loans=len(positions), profile=PROFILE, sha256=sha(result)))
+    AuditLog.log("DATA_EXPORT", company=workspace, user=actor, description="Exported bounded connected Loans servicing evidence and original file bytes.", data=dict(root_loan=loan_id, loans=len(positions), profile=document['profile'], sha256=sha(result)))
     return result
 
 
@@ -292,9 +320,18 @@ def _validate_source_graph(document):
                 require(source['source_sha256']==digest(source['document']), 'Source accepted-document hash differs.')
             if kind == 'StatutoryAuctionNotice':
                 require(source['snapshot_sha256']==digest(source['snapshot']), 'Source statutory snapshot hash differs.')
+    if document['profile'] == BORROWER_PROFILE:
+        from .servicing_borrowers import validate_parties
+        validate_parties(document)
     loans = {r["id"]:r for r in tables["PawnLoan"]}
     items = {r["id"]:r for r in tables["PawnCollateralItem"]}
     events = {r["id"]:r for r in tables["PawnLoanEvent"]}
+    for snapshot in tables['PawnLoanDisbursalSnapshot']:
+        correction = snapshot['evidence'].get('recording', {}).get('origination_correction')
+        if correction is not None:
+            require(financial_profile(document) in {CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE}, 'Origination correction requires servicing bundle version 2 or later.')
+            from .servicing_origination_correction import validate_source_correction
+            validate_source_correction(snapshot, tables)
     for event in events.values():
         target = event["reversal_of_id"]
         if target:
@@ -308,6 +345,12 @@ def _validate_source_graph(document):
             if source.get("loan_event_id"):
                 loan_ids.add(events[source["loan_event_id"]]["loan_id"])
             require(kind in {"PawnLoanRenewal", "PawnLoanPrincipalOpeningLine"} or len(loan_ids) <= 1, "Portable child crosses loan ownership.")
+    if financial_profile(document) in {STORAGE_PROFILE,FUNDING_PROFILE}:
+        from .servicing_storage import validate_source_storage
+        validate_source_storage(document)
+    if financial_profile(document)==FUNDING_PROFILE:
+        from .servicing_funding import validate_source_funding
+        validate_source_funding(document)
     # Original aliases and proof remain unchanged; only explicit destination keys
     # will be adapted. Never trust a recomputed ZIP digest as financial validation.
     return loans
@@ -337,12 +380,18 @@ def _mapping(document, workspace_id, mapping):
             require(source['licence_evidence'] == 'REVISION' and loans[int(source_id)]['license_revision_id'] is not None, 'Native approval requires an evidenced original licence revision.')
             require(revision.kind != "LEGACY_REFERENCE" and revision.issued_on and revision.issued_on <= original <= revision.expires_on, "A native approved source needs a matching evidenced original licence revision.")
         result[source_id] = dict(values, license_id=revision.license_id)
+        if document['profile'] == BORROWER_PROFILE:
+            from .servicing_borrowers import destination_parties
+            result[source_id]['party_refs'] = destination_parties(document, source_id, workspace_id, borrower.pk)
+
     return result
 
 
 # Named JSON keys are owned by the supported evidence profiles. Unrecognised
 # numeric source claims are retained as claims, never assigned as foreign keys.
 JSON_REFS = {
+    'source_pawn_loan_id':'PawnLoan','pawn_loan_id':'PawnLoan','funding_loan_id':'FundingLoan',
+    'funding_pledge_id':'FundingPledge','funding_return_id':'FundingReturn','pledge_item_id':'FundingPledgeItem',
     "loan_id":"PawnLoan", "source_loan_id":"PawnLoan", "successor_loan_id":"PawnLoan",
     "collateral_item_id":"PawnCollateralItem", "item_id":"PawnCollateralItem", "predecessor_collateral_item_id":"PawnCollateralItem",
     "opening_event_id":"PawnLoanEvent", "original_event_id":"PawnLoanEvent", "source_event_id":"PawnLoanEvent", "loan_event_id":"PawnLoanEvent", "loan_event":"PawnLoanEvent",
@@ -385,6 +434,15 @@ def _adapt(value, *, refs, external, numbers, event_keys, opaque=False):
         elif key == 'batch_correction' and isinstance(val, dict):
             result[key] = deepcopy(val)
             result[key]['id'] = refs['PawnReleaseBatch'][val['id']]
+        elif key == 'borrower_correction':
+            from .servicing_borrowers import remap_correction
+            result[key] = remap_correction(val, external['party_refs'], external['source_workspace_id'])
+        elif key in {'borrower_id', 'party_id'} and type(val) is int and 'party_refs' in external:
+            require(str(val) in external['party_refs'], 'Unmapped source borrower identity.')
+            result[key] = external['party_refs'][str(val)]
+        elif key == 'origination_correction':
+            from .servicing_origination_correction import remap_correction
+            result[key] = remap_correction(val, refs=refs, workspace_id=external['workspace_id'])
         elif key in JSON_REFS and type(val) is int:
             require(val in refs[JSON_REFS[key]], "Unresolved named financial reference: " + key)
             result[key] = refs[JSON_REFS[key]][val]
@@ -398,6 +456,8 @@ def _adapt(value, *, refs, external, numbers, event_keys, opaque=False):
                 result[key] = {str(refs["PawnCollateralItem"][int(pk)]):amount for pk, amount in val.items()}
                 continue
             result[key] = {name:refs["PawnCollateralItem"][pk] for name, pk in val.items()}
+        elif key == 'returned_collateral_item_ids' and type(val) is list:
+            result[key]=[refs['PawnCollateralItem'][pk] for pk in val]
         elif key == "original_idempotency_key":
             require(val in event_keys, "Unresolved original financial event key.")
             result[key] = event_keys[val]
@@ -425,14 +485,14 @@ def _allocate(tables):
     return refs
 
 
-ORDER = ("PawnLoan", "PawnCollateralItem", "LoanPolicySnapshot", "PawnLoanApprovalSnapshot", "PawnLoanAuction",
+ORDER = ("PawnLoan", "PawnStorageLocation", "PawnCollateralItem", "LoanPolicySnapshot", "PawnLoanApprovalSnapshot", "PawnLoanAuction",
     "PawnLoanEvent", "PawnLoanDisbursalSnapshot", "RepaymentScheduleVersion", "RepaymentObligation",
     "PawnLoanInterestAccrual", "PawnLoanInterestAccrualLine", "PawnLoanRepaymentAllocationLine",
     "PawnLoanPrincipalClosingLine", "PawnLoanPrincipalOpeningLine", "PawnLoanRelease", "PawnLoanReleaseItem",
     "PawnLoanReleaseReversal", "PawnLoanAuctionItem", "PawnLoanAuctionReversal", "PawnLoanRenewal", "PawnLoanRenewalReversal",
     "ObligationAllocation", "RepaymentScheduleChange", "CollateralAppraisal", "PawnReleaseBatch", "PawnReleaseBatchLine",
     "HistoricalLoanEvidence", "HistoricalLoanAttachment", "StatutoryAuctionNotice", "StatutoryNoticeEvidence",
-    "PawnCollateralCustodyEvent", "PawnCollateralPhoto", "LoanChangeLog", "LoanTransactionReview")
+    "PawnCollateralCustodyEvent", "PawnCollateralStorageMovement", "PawnCollateralPhoto", "LoanChangeLog", "LoanTransactionReview")
 LOCAL_TIMES = {"created_at", "updated_at", "approved_at", "imported_at", "accepted_at", "reviewed_at", "finalized_at"}
 
 
@@ -477,7 +537,10 @@ def _new_row(kind, values):
             "A blank collector requires exactly bound unspecified completed-closure evidence.")
         unknown.append("collector_name")
     obj.full_clean(exclude=unknown, validate_unique=False, validate_constraints=False)
-    KINDS[kind].objects.bulk_create([obj])
+    if kind in {'PawnStorageLocation','PawnCollateralStorageMovement'} or kind.startswith('Funding'):
+        obj.save_base(raw=True, force_insert=True)
+    else:
+        KINDS[kind].objects.bulk_create([obj])
     return obj
 
 
@@ -498,22 +561,26 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
             numbers[(field,source[field])] = _number(namespace, kind+":"+str(source["id"]), kind)
     event_keys, deferred_loans, deferred_auctions = {}, {}, {}
     objects = {kind:{} for kind in KINDS}
+    funding=None
+    if financial_profile(document)==FUNDING_PROFILE:
+        from .servicing_funding import FundingRestore
+        funding=FundingRestore(workspace,actor,document,refs,objects)
     source_origins = {r["loan_id"]:r for r in tables["HistoricalLoanImport"]}
     terminal_loans = {r["loan_id"] for r in tables["PawnLoanEvent"] if r["payload"].get("opening", {}).get("profile") == "loan-terminal-evidence/1"}
     source_file_keys = {name:key for key, claim in document["files"].items() for name in claim["source_names"]}
     for kind in ORDER:
-        for source in tables[kind]:
+        for source in tables.get(kind, []):
             owner = _loan_for(kind, source, tables)
             selected_mapping = mapping[str(owner)] if owner is not None else next(iter(mapping.values()))
             external = dict(selected_mapping, workspace_id=workspace.pk, licence_revision_id=selected_mapping["revision_id"],
                 license_revision_id=selected_mapping["revision_id"], party_id=selected_mapping["borrower_id"],
                 source_workspace_id=document["workspace_id"])
             current_numbers = dict(numbers)
-            values = decode(kind, source)
+            values = decode(kind, source, profile=document['profile'])
             values["id"] = refs[kind][source["id"]]
             values["workspace_id"] = workspace.pk
             for key, spec in ROWS[kind].items():
-                if key in LOCAL_TIMES:
+                if key in LOCAL_TIMES and kind not in {'PawnStorageLocation','PawnCollateralStorageMovement'}:
                     values.pop(key, None)
                 elif spec.get("reference") == ACTORS:
                     values[key] = actor.pk
@@ -531,6 +598,7 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                 deferred_loans[source["id"]] = {k:values[k] for k in ("policy_snapshot_id", "disbursal_snapshot_id", "state")}
                 values.update(policy_snapshot_id=None, disbursal_snapshot_id=None, state="ACTIVE", creation_submission_id=uuid4())
             if kind == "PawnCollateralItem":
+                values['current_storage_location_id'] = None
                 values["custody_state"] = source["custody_state"] if source["loan_id"] in terminal_loans else "IN_VAULT"
                 # The frozen per-item agreement travels; the source's standing
                 # setup row is retained as a claim, not a destination FK.
@@ -539,6 +607,15 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                 values["payload"].setdefault("historical_approval", dict(at=source["approved_at"], actor=str(source["approved_by_id"]) if source["approved_by_id"] else None,
                     reference="servicing-source:"+source["fingerprint"]))
                 values["fingerprint"] = digest(values["payload"])
+            if kind == 'PawnStorageLocation':
+                from .servicing_storage import existing_location
+                existing = existing_location(workspace.pk, namespace, source, values)
+                if existing is not None:
+                    refs[kind][source['id']] = existing.pk
+                    objects[kind][source['id']] = existing
+                    continue
+            if kind=='PawnCollateralCustodyEvent' and funding is not None:
+                funding.before_custody(source)
             if kind == "PawnLoanAuction":
                 deferred_auctions[source["id"]] = {k:values[k] for k in ("state", "loan_event_id", "catch_up_accrual_id", "recovery_amount", "principal_amount", "interest_amount", "fee_amount", "completed_at", "started_at", "cancelled_at", "cancellation_reason")}
                 values.update(state="INITIATED", loan_event_id=None, catch_up_accrual_id=None,
@@ -613,6 +690,10 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                     setattr(projection,key,value)
                 projection.save(update_fields=list(fields))
             objects[kind][source["id"]] = obj
+            if kind == 'PawnCollateralStorageMovement':
+                item = objects['PawnCollateralItem'][source['collateral_item_id']]
+                item.current_storage_location_id = obj.to_location_id
+                item.save(update_fields=['current_storage_location_id'])
             if kind == "LoanPolicySnapshot" and source["id"] == source_loans[source["loan_id"]]["policy_snapshot_id"]:
                 loan = objects["PawnLoan"][source["loan_id"]]
                 loan.policy_snapshot_id = obj.pk
@@ -625,6 +706,8 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                 item = objects["PawnCollateralItem"][source["collateral_item_id"]]
                 item.custody_state = obj.to_state
                 item.save(update_fields=["custody_state"])
+    if funding is not None:
+        funding.finish()
     for pk, fields in deferred_auctions.items():
         m.PawnLoanAuction.objects.filter(pk=refs["PawnLoanAuction"][pk], workspace=workspace).update(**fields)
     for pk, fields in deferred_loans.items():
@@ -635,11 +718,13 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
     for source in tables["PawnCollateralItem"]:
         item = objects["PawnCollateralItem"][source["id"]]
         require(item.custody_state == source["custody_state"], "Rebuilt collateral custody differs from its source graph.")
+        require(item.current_storage_location_id == refs['PawnStorageLocation'].get(source['current_storage_location_id']),
+            'Rebuilt physical location differs from its source movement chain.')
     # Retain every original row, original actor/time/review choice, issued PDF and
     # source claim independently from local imported operational records.
     retained_files = {key:base64.b64encode(value).decode() for key,value in files.items()}
     origins = []
-    summary = dict(profile=PROFILE, source_sha256=document["sha256"], loans=[])
+    summary = dict(profile=document['profile'], source_sha256=document["sha256"], loans=[])
     for source_id, loan in objects["PawnLoan"].items():
         original = source_origins.get(source_id)
         source_identity = str(uuid5(namespace, f"loan:{source_id}"))
@@ -686,7 +771,7 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
     return origins, summary
 
 
-def restore_servicing_bundle(*, workspace_id, actor, content, mapping, expected_sha256=None, confirmed=False):
+def restore_servicing_bundle(*, workspace_id, actor, content, mapping, expected_sha256=None, confirmed=False, _outer_saved_files=None):
     workspace = _access(workspace_id, actor)
     document, files = read_bundle(content)
     request_sha = digest(dict(source=sha(content), workspace_id=workspace_id, actor_id=actor.pk, mapping=mapping))
@@ -723,6 +808,8 @@ def restore_servicing_bundle(*, workspace_id, actor, content, mapping, expected_
             else:
                 transaction.set_rollback(True)
         committed = confirmed
+        if committed and _outer_saved_files is not None:
+            _outer_saved_files.extend(saved_files)
         return result
     finally:
         if not committed:

@@ -98,6 +98,7 @@ class PawnLoanDocumentProjectionBuilder:
         "Lifecycle state": "loan.lifecycle_state", "Principal": "loan.principal",
         "Monthly interest rate": "loan.monthly_interest_rate", "Tenure": "loan.tenure",
         "Borrower": "borrower.display", "Borrower source ID": "borrower.source_id",
+        "Borrower correction": "borrower.correction",
         "Repayment source ID": "repayment.source_id", "Event fingerprint": "event.fingerprint",
         "Paper receipt reference": "repayment.paper_reference",
         "Receipt entered at": "repayment.recorded_at",
@@ -173,12 +174,15 @@ class PawnLoanDocumentProjectionBuilder:
             references = loan.historical_import.references.get('items', {})
             if not original.get('collateral'):
                 raise DocumentProjectionError('Imported approval is missing its retained original agreement.')
-            source.update(loan_number=loan.loan_number, loan_date=original['disbursed_on'], borrower_id=loan.borrower_id,
+            source.update(loan_number=loan.loan_number, loan_date=original['disbursed_on'],
+                borrower_id=loan.historical_import.references['mapping']['borrower_id'],
                 monthly_interest_rate=str(loan.monthly_interest_rate), tenure_months=original['tenure_months'],
                 collateral=[dict(item_id=references[r['id']], description=r['description'], metal=r['metal'],
                     net_weight=r['net_weight'], purity_percentage=r['purity'], latest_appraised_value=r['appraised_value']) for r in original['collateral']])
+        from apps.tenant_apps.loans.services.borrower_corrections import corrected_ticket_source, borrower_document_fingerprint
+        source, borrower_correction = corrected_ticket_source(loan, source)
         verification = cls._verification(
-            loan, f"approval:{approval.pk}:v{approval.version}:{approval.fingerprint}"
+            loan, f"approval:{approval.pk}:v{approval.version}:{borrower_document_fingerprint(loan, approval.fingerprint)}"
         )
         details = cls._identity_rows(loan) + (
             ("Document", "Pawn loan ticket"),
@@ -195,6 +199,8 @@ class PawnLoanDocumentProjectionBuilder:
             ("Borrower source ID", f"Party:{source['borrower_id']}"),
             ("Approval fingerprint", approval.fingerprint),
         )
+        if borrower_correction:
+            details += (("Borrower correction", f"Audit #{borrower_correction.pk}; {borrower_correction.reason}; original approval retained"),)
         if historical:
             details += (("Document status", "Imported source agreement; this copy does not attest to a new retrospective lending approval"),
                 ("Original approval time (source claim)", historical.get('at') or 'Unknown'),
@@ -226,7 +232,8 @@ class PawnLoanDocumentProjectionBuilder:
         if schedule is None:
             raise DocumentProjectionError("A key-facts schedule requires a persisted repayment schedule.")
         product_version = loan.product_version
-        verification = cls._verification(loan, f"schedule:{schedule.pk}:{schedule.fingerprint}")
+        from apps.tenant_apps.loans.services.borrower_corrections import borrower_document_fingerprint
+        verification = cls._verification(loan, f"schedule:{schedule.pk}:{borrower_document_fingerprint(loan, schedule.fingerprint)}")
         total = schedule.principal + schedule.contractual_interest + schedule.rounding_adjustment
         details = cls._identity_rows(loan) + (
             ("Document", "Key facts and repayment schedule"),
@@ -241,6 +248,9 @@ class PawnLoanDocumentProjectionBuilder:
             ("Maturity date", schedule.maturity_date),
             ("Schedule fingerprint", schedule.fingerprint),
         )
+        correction = loan.change_log.filter(event_kind='BORROWER_CORRECTED').order_by('pk').last()
+        if correction:
+            details += (("Borrower correction", f"Audit #{correction.pk}; {correction.reason}; original schedule retained"),)
         rows = [("Sequence", "Due date", "Opening principal", "Principal due", "Interest due", "Closing principal")]
         rows.extend((row.sequence, row.due_date, cls._money(row.opening_principal), cls._money(row.principal_due), cls._money(row.interest_due), cls._money(row.closing_principal)) for row in schedule.obligations.order_by("sequence"))
         return cls._payload("loan_kfs_schedule", "Key Facts and Repayment Schedule", f"pawn_loan_kfs_{loan.loan_number}.pdf", verification, details, (("Repayment schedule", rows),))
@@ -264,6 +274,11 @@ class PawnLoanDocumentProjectionBuilder:
         terms, day = recording["terms"], as_of_date or timezone.localdate()
         identity = cls.recorded_position_fingerprint(loan, day) if position else origin.payload_fingerprint
         status = f"Recorded from paper; source {recording['source_reference']}; entered {origin.created_at.isoformat()}; generated {timezone.now().isoformat()}; original digital approval absent"
+        borrower_correction = loan.change_log.filter(event_kind="BORROWER_CORRECTED").order_by("pk").last()
+        if borrower_correction:
+            evidence = borrower_correction.metadata["borrower_correction"]
+            identity += f":borrower-correction:{borrower_correction.pk}"
+            status += f"; borrower corrected; audit #{borrower_correction.pk}; checked source {evidence['reference']}; reason {borrower_correction.reason}"
         if recording.get("origination_correction"):
             correction = recording["origination_correction"]
             status += f"; actual-paper origination correction; reversed digital attempts retained; reason {correction['reason']}"
@@ -328,7 +343,12 @@ class PawnLoanDocumentProjectionBuilder:
             status += (f"; historical correction recorded {event.created_at.isoformat()}; "
                        f"{correction.get('description', 'Revised historical evidence')}; source event {correction.get('source_event_id') or 'missing receipt'}; "
                        "not a new cash collection")
-        verification = cls._verification(loan, f"repayment:{event.pk}:{event.payload_fingerprint}")
+        source = f"repayment:{event.pk}:{event.payload_fingerprint}"
+        borrower_correction = loan.change_log.filter(event_kind="BORROWER_CORRECTED").order_by("pk").last()
+        if borrower_correction:
+            status += f"; borrower corrected; audit #{borrower_correction.pk}; payment facts unchanged"
+            source += f":borrower-correction:{borrower_correction.pk}"
+        verification = cls._verification(loan, source)
         details = cls._identity_rows(loan) + (
             ("Document", "Repayment receipt"),
             ("Repayment source ID", f"PawnLoanEvent:{event.pk}"),

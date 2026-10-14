@@ -115,7 +115,7 @@ def start_trial(*, workspace, plan, actor, accepted_terms=None):
         )
         ensure_billing_account_for_subscription(subscription)
         ensure_entitlements_for_subscription(subscription)
-        SubscriptionEvent.objects.create(
+        event = SubscriptionEvent.objects.create(
             subscription=subscription,
             event_type="trial.started",
             payload={
@@ -125,4 +125,6 @@ def start_trial(*, workspace, plan, actor, accepted_terms=None):
                 **({"accepted_terms": accepted_terms} if accepted_terms is not None else {}),
             },
         )
+        from apps.platform_whatsapp.intents import _capture_trial_started
+        _capture_trial_started(event)
     return subscription

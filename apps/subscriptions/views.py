@@ -109,16 +109,19 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
             )
         except ValidationError as exc:
             messages.error(request, exc.messages[0])
-            return redirect(
-                "workspace_subscriptions:plan-list",
-                workspace_slug=workspace.slug,
-            )
+            from apps.onboarding.navigation import setup_link
+            return redirect(setup_link(request, reverse("workspace_subscriptions:plan-list",
+                kwargs={"workspace_slug": workspace.slug})))
 
         messages.success(
             request,
             "Your free trial is active until "
             f"{subscription.trial_end_date:%d %b %Y}.",
         )
+        from apps.onboarding.navigation import setup_navigation, setup_saved_redirect
+        navigation = setup_navigation(request)
+        if navigation:
+            return setup_saved_redirect(request, step=navigation["step"])
         from apps.onboarding.models import OnboardingProgress
         from apps.orgs.tenant_context import resolve_preferred_workspace
         preferred = resolve_preferred_workspace(request.user)
@@ -128,7 +131,7 @@ class StartTrialView(LoginRequiredMixin, BillingPermissionMixin, View):
         ).exists():
             return redirect("onboarding_team")
         return redirect(
-            "workspace_slug_dashboard",
+            "workspace_slug_settings_setup",
             workspace_slug=workspace.slug,
         )
 
@@ -336,6 +339,8 @@ class InvoiceDetailView(LoginRequiredMixin, BillingPermissionMixin, DetailView):
         context["subscription"] = invoice.subscription
         context["gst_percentage"] = invoice.gst_rate
         context["review_revision"] = invoice.subscription.updated_at.isoformat()
+        from apps.platform_whatsapp.diagnostics import invoice_delivery_status
+        context["message_delivery"] = invoice_delivery_status(actor=self.request.user, invoice=invoice)
         return context
 
 

@@ -2,10 +2,38 @@
 import uuid
 
 from django.conf import settings
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from django.utils import timezone
 
 from apps.tenancy.models import WorkspaceOwnedModel
+
+
+def loan_restore_source_path(instance, filename):
+    return f"loan_restore/{instance.workspace_id}/{instance.public_id}/source"
+
+
+class LoanRestoreBatch(WorkspaceOwnedModel):
+    """Bounded file review; financial origins remain exclusively Loans-owned."""
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    profile = models.CharField(max_length=32)
+    source = models.FileField(upload_to=loan_restore_source_path, max_length=255, blank=True)
+    source_sha256 = models.CharField(max_length=64)
+    document = models.JSONField()
+    mapping = models.JSONField(default=dict)
+    preview = models.JSONField(default=dict)
+    approval_digest = models.CharField(max_length=64, blank=True)
+    state = models.CharField(max_length=12, default="STAGED",
+        choices=[(s, s) for s in ("STAGED", "READY", "COMPLETED", "CANCELLED")])
+    results = models.JSONField(default=list)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    committed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT, related_name="+")
+    committed_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["workspace", "source_sha256"],
+            condition=~models.Q(state="CANCELLED"), name="port_restore_source_active_uniq")]
 
 
 class WorkspaceNamespace(WorkspaceOwnedModel):
@@ -89,6 +117,9 @@ class ImportRow(WorkspaceOwnedModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["workspace", "batch", "source_row"], name="port_batch_row_uniq")]
+        indexes = [GinIndex(
+            fields=["canonical"], name="port_row_canonical_gin", opclasses=["jsonb_path_ops"],
+            condition=models.Q(committed_at__isnull=False))]
 
 
 class ChildIdentity(WorkspaceOwnedModel):
@@ -218,3 +249,22 @@ class GuidedOpeningBatch(WorkspaceOwnedModel):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["workspace", "source_key", "source_sha256"],
             condition=~models.Q(state="CANCELLED"), name="port_guided_source_active_uniq")]
+
+
+def business_package_source_path(instance, filename):
+    return f"business_package/{instance.workspace_id}/{instance.public_id}/source.json"
+
+
+class BusinessPackageReceipt(WorkspaceOwnedModel):
+    """Completed atomic transfer evidence; not an editable job or a lending grant."""
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    source_sha256 = models.CharField(max_length=64)
+    source = models.FileField(upload_to=business_package_source_path, max_length=255)
+    source_file_sha256 = models.CharField(max_length=64)
+    summary = models.JSONField()
+    results = models.JSONField(default=list)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("workspace",), name="port_business_package_ws_uniq")]

@@ -1,6 +1,7 @@
 import hashlib
 import json
 from datetime import date
+from dataclasses import replace
 
 from django.db import transaction
 from django.db.models import Count, F, Max, Q
@@ -11,7 +12,7 @@ from apps.tenant_apps.loans.domain import PawnLoanState
 from apps.tenant_apps.loans.models import LoanRiskEvent, LoanRiskSnapshot, PawnLoan, current_tenant_workspace_id
 from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_collateral_valuation
 from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
-from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
+from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure, require_consistent_exposure, _read_financial_inputs
 from apps.tenant_apps.loans.selectors.risk import get_pawn_loan_risk_assessment
 from apps.tenant_apps.loans.selectors.risk_portfolio import SNAPSHOT_CONTRACT, current_snapshot_filter
 from apps.orgs.models import Company
@@ -21,7 +22,18 @@ class RiskSnapshotRefreshError(ValueError):
     pass
 
 
+def require_current_assessment_date(as_of_date: date):
+    """The single live projection and its alerts represent today's position."""
+    today = timezone.localdate()
+    if as_of_date != today:
+        raise RiskSnapshotRefreshError(
+            f"Live risk assessments can only be refreshed for today ({today.isoformat()}). "
+            "Use read-only calculations to inspect another date."
+        )
+
+
 def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
+    require_current_assessment_date(as_of_date)
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise RiskSnapshotRefreshError("Risk refresh requires an explicit Workspace context.")
@@ -35,17 +47,23 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
             "Only an active PawnLoan in the current workspace can be assessed."
         )
     before = _source_fingerprint(loan_id, workspace_id, as_of_date)
+    exposure = None
     try:
-        exposure = get_pawn_loan_exposure(loan_id, as_of_date=as_of_date)
-        delinquency = get_pawn_loan_delinquency(loan_id, as_of_date=as_of_date)
+        inputs = _read_financial_inputs(loan_id, as_of_date=as_of_date)
+        exposure = get_pawn_loan_exposure(loan_id, as_of_date=as_of_date, _inputs=inputs)
+        require_consistent_exposure(exposure)
+        delinquency = get_pawn_loan_delinquency(loan_id, as_of_date=as_of_date, _inputs=inputs)
         collateral = get_pawn_loan_collateral_valuation(loan_id, as_of_date=as_of_date, _exposure=exposure)
+        from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+        inputs = replace(inputs, transaction_coverage=transaction_completeness(inputs.loan, as_of_date))
         assessment = get_pawn_loan_risk_assessment(loan_id, as_of_date=as_of_date,
-            _delinquency=delinquency, _collateral=collateral)
+            _delinquency=delinquency, _collateral=collateral, _exposure=exposure, _inputs=inputs)
     except Exception as exc:
-        _record_error(loan_id, workspace_id, as_of_date, before, exc)
+        _record_error(loan_id, workspace_id, as_of_date, before, exc, exposure=exposure)
         raise RiskSnapshotRefreshError(str(exc)) from exc
     with transaction.atomic():
         loan = PawnLoan.objects.select_for_update().get(pk=loan_id, workspace_id=workspace_id)
+        require_current_assessment_date(as_of_date)
         if loan.state != PawnLoanState.ACTIVE.value:
             raise RiskSnapshotRefreshError("Loan is no longer active; assessment discarded.")
         snapshot = LoanRiskSnapshot.objects.select_for_update().filter(loan=loan).first()
@@ -67,8 +85,7 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
             input_fingerprint=after,
             assessed_at=timezone.now(),
         )
-        from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
-        values["source_provenance"]["transactions"] = transaction_completeness(loan, as_of_date).evidence()
+        values["source_provenance"]["transactions"] = inputs.transaction_coverage.evidence()
         if snapshot is None:
             snapshot = LoanRiskSnapshot.objects.create(loan=loan, **values)
         else:
@@ -80,6 +97,7 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
 
 def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
                      collateral, assessment, input_fingerprint, assessed_at):
+    require_consistent_exposure(exposure)
     return dict(
             workspace_id=workspace_id, as_of_date=as_of_date,
             exposure=exposure.total_economic_exposure, due=exposure.due_now.total,
@@ -91,14 +109,15 @@ def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
             explanations=list(assessment.explanations), policy_identity=assessment.policy_identity,
             source_provenance={
                 "calculation_contract": SNAPSHOT_CONTRACT,
-                "financial": {
-                    "projected_interest": format(exposure.projected_interest, "f"),
-                    "recorded_total_due": format(exposure.recorded_total_due, "f"),
-                    "integrity_findings": list(exposure.integrity_findings),
-                    "calculation_status": "INCONSISTENT" if exposure.integrity_findings else "SUPPORTED",
-                    "principal_history_basis": exposure.principal_history_basis,
-                    "history_from": exposure.financial_history_from.isoformat() if exposure.financial_history_from else None,
-                    "servicing_profile": exposure.servicing_profile,
+                "financial": _financial_evidence(exposure),
+                "valuation": {
+                    "method": collateral.valuation_method,
+                    "method_label": collateral.valuation_method_label,
+                    "basis": collateral.valuation_basis,
+                    "original_method": collateral.original_valuation_method,
+                    "monitoring_policy_id": collateral.monitoring_policy_id,
+                    "rate_freshness_days": collateral.rate_freshness_days,
+                    "appraisal_freshness_days": collateral.appraisal_freshness_days,
                 },
                 "coverage": {
                     "exposure": str(collateral.ltv.exposure),
@@ -137,7 +156,20 @@ def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
         )
 
 
+def _financial_evidence(exposure):
+    return {
+        "projected_interest": format(exposure.projected_interest, "f"),
+        "recorded_total_due": format(exposure.recorded_total_due, "f"),
+        "integrity_findings": list(exposure.integrity_findings),
+        "calculation_status": "INCONSISTENT" if exposure.integrity_findings else "SUPPORTED",
+        "principal_history_basis": exposure.principal_history_basis,
+        "history_from": exposure.financial_history_from.isoformat() if exposure.financial_history_from else None,
+        "servicing_profile": exposure.servicing_profile,
+    }
+
+
 def rebuild_current_risk_snapshots(*, as_of_date: date, loan_ids=None):
+    require_current_assessment_date(as_of_date)
     workspace_id = current_tenant_workspace_id()
     queryset = PawnLoan.objects.filter(workspace_id=workspace_id, state=PawnLoanState.ACTIVE.value).order_by("pk")
     if loan_ids is not None: queryset = queryset.filter(pk__in=loan_ids)
@@ -157,6 +189,7 @@ def reassess_pawn_loans_batch(*, workspace_id: int, as_of_date: date, batch_size
     active_workspace_id = current_tenant_workspace_id()
     if active_workspace_id is None or int(workspace_id) != int(active_workspace_id):
         raise RiskSnapshotRefreshError("Explicit workspace does not match the active tenant schema.")
+    require_current_assessment_date(as_of_date)
     _require_active_workspace(workspace_id)
     with transaction.atomic():
         candidates = _pending_loans(
@@ -192,14 +225,28 @@ def _require_active_workspace(workspace_id):
     require_business_write(Company.objects.get(pk=workspace_id))
 
 
-def _record_error(loan_id, workspace_id, as_of_date, fingerprint, exc):
+def _record_error(loan_id, workspace_id, as_of_date, fingerprint, exc, *, exposure=None):
     with transaction.atomic():
         loan = PawnLoan.objects.select_for_update().get(pk=loan_id, workspace_id=workspace_id)
+        require_current_assessment_date(as_of_date)
         if loan.state != PawnLoanState.ACTIVE.value:
             return  # A concurrent closure ends monitoring, including error attempts.
         existing = LoanRiskSnapshot.objects.select_for_update().filter(loan=loan).first()
         old_projection = _projection(existing)
-        snapshot, _ = LoanRiskSnapshot.objects.update_or_create(loan=loan, defaults={"workspace_id": workspace_id, "as_of_date": as_of_date, "status": LoanRiskSnapshot.Status.ERROR, "input_fingerprint": fingerprint, "error_message": str(exc)})
+        snapshot, _ = LoanRiskSnapshot.objects.update_or_create(loan=loan, defaults={
+            "workspace_id": workspace_id, "as_of_date": as_of_date,
+            "status": LoanRiskSnapshot.Status.ERROR, "input_fingerprint": fingerprint,
+            "error_message": str(exc), "assessment_fingerprint": "",
+            "exposure": None, "due": None, "overdue": None, "days_past_due": None,
+            "days_to_maturity": None, "collateral_value": None, "ltv_ratio": None,
+            "performance_class": "UNKNOWN", "severity": "HIGH", "action_hint": "PRIORITY_REVIEW",
+            "flags": [], "explanations": [str(exc)], "assessed_at": timezone.now(),
+            "source_provenance": {
+                "calculation_contract": SNAPSHOT_CONTRACT,
+                "financial": _financial_evidence(exposure) if exposure is not None else {"calculation_status": "FAILED"},
+                "coverage": {"status": "UNKNOWN", "blockers": ["ASSESSMENT_FAILED"]},
+            },
+        })
         _persist_transitions(snapshot, old_projection, _projection(snapshot))
 
 
@@ -210,19 +257,23 @@ def _projection(snapshot):
         "performance_class": snapshot.performance_class, "severity": snapshot.severity,
         "policy_identity": snapshot.policy_identity, "flags": tuple(snapshot.flags or ()),
         "assessment_fingerprint": snapshot.assessment_fingerprint,
+        "ltv_ratio": snapshot.ltv_ratio,
     }
 
 
 def _persist_transitions(snapshot, old, new):
     old_fp = old.get("assessment_fingerprint", "") if old else ""
     new_fp = new.get("assessment_fingerprint", "") if new else ""
+    previous_event_id = LoanRiskEvent.objects.filter(
+        workspace_id=snapshot.workspace_id, loan_id=snapshot.loan_id,
+    ).order_by("-pk").values_list("pk", flat=True).first()
     transitions_and_events = []
     for transition in detect_risk_transitions(old, new):
-        material = json.dumps({"type": transition.event_type, "old_fp": old_fp, "new_fp": new_fp, "old": transition.old_value, "new": transition.new_value, "as_of": snapshot.as_of_date.isoformat()}, sort_keys=True, default=str, separators=(",", ":"))
+        material = json.dumps({"type": transition.event_type, "old_fp": old_fp, "new_fp": new_fp, "old": transition.old_value, "new": transition.new_value, "as_of": snapshot.as_of_date.isoformat(), "previous_event_id": previous_event_id}, sort_keys=True, default=str, separators=(",", ":"))
         trigger = hashlib.sha256(material.encode()).hexdigest()
         event, _ = LoanRiskEvent.objects.get_or_create(
             workspace_id=snapshot.workspace_id, loan_id=snapshot.loan_id, trigger_key=trigger,
-            defaults={"snapshot": snapshot, "event_type": transition.event_type, "as_of_date": snapshot.as_of_date, "old_value": {"value": transition.old_value}, "new_value": {"value": transition.new_value}, "old_fingerprint": old_fp, "new_fingerprint": new_fp, "policy_identity": snapshot.policy_identity, "metadata": {"projection_status": snapshot.status}},
+            defaults={"snapshot": snapshot, "event_type": transition.event_type, "as_of_date": snapshot.as_of_date, "old_value": {"value": transition.old_value}, "new_value": {"value": transition.new_value}, "old_fingerprint": old_fp, "new_fingerprint": new_fp, "policy_identity": snapshot.policy_identity, "metadata": {"projection_status": snapshot.status, "previous_event_id": previous_event_id}},
         )
         transitions_and_events.append((transition, event))
     from apps.tenant_apps.loans.services.risk_alerts import sync_risk_alerts
@@ -267,6 +318,7 @@ def _source_fingerprint(loan_id, workspace_id, as_of_date):
     rate_metals = {
         "GOLD": Rate.Metal.GOLD,
         "SILVER": Rate.Metal.SILVER,
+        "BRONZE": Rate.Metal.BRONZE,
     }
     applicable_metals = {
         rate_metals[metal]

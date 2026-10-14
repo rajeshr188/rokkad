@@ -36,6 +36,8 @@ def _export_history(*, workspace_id, actor, loan_id):
     workspace=require_history_setup_access(workspace_id,actor,read_only=True)
     resolve_workspace_access(actor=actor,workspace=workspace).require("data.export")
     loan=m.PawnLoan.objects.select_for_update(of=("self",)).select_related("product_version","license_revision","policy_snapshot","disbursal_snapshot__approval_snapshot").get(workspace_id=workspace_id,pk=loan_id)
+    if loan.change_log.filter(event_kind="BORROWER_CORRECTED").exists():
+        raise HistoryError("Borrower correction evidence requires both Party identities. Use Export loan records (servicing bundle version 5) or exact Workspace recovery backup.")
     if hasattr(loan, 'historical_import') and 'portable' in loan.historical_import.references:
         raise HistoryError('Retained servicing bundles require loan-servicing-bundle/1; use Export loan records.')
     if loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists():

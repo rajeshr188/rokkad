@@ -82,10 +82,12 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date, occurred_
                 block("CUTOVER_DATE", str(exc))
         else:
             block("CUTOVER_DATE", "Opening servicing must be strictly after cutover.")
-    if purpose == "PAPER" and contract.origin_kind != "MIGRATION_OPENING" and not contract.profile.startswith("recorded-anniversary/"):
-        shared_monthly = contract.profile == "native-monthly-policy/2" and shared_monthly_bullet(loan) and loan.disbursal_snapshot_id
+    if purpose == "PAPER" and not contract.supports_completed_monthly_servicing:
+        # Old opening checkpoints retain their published admission/continuation
+        # meanings; compatible readers are the only place that selects them.
+        reviewed_checkpoint = contract.checkpoint_period_number is not None or contract.recognized_interest_at_cutover is not None
         legacy_release = operation == "FULL_RELEASE" and contract.profile == "native-event-fold/1" and contract.policy_snapshot_id
-        if not (shared_monthly or legacy_release):
+        if not (reviewed_checkpoint or legacy_release):
             block("PAPER_CONTRACT", "Completed paper entry needs a supported saved monthly contract. Review the frozen contract before recording this transaction.")
     if operation == "FULL_RELEASE":
         items = tuple(loan.collateral_items.all())

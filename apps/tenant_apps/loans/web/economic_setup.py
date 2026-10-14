@@ -59,7 +59,7 @@ def pawn_economics_setup(request):
             configuration_initial.update(model_to_dict(source_policy, fields=tuple(PawnEconomicConfigurationForm.base_fields)))
             configuration_initial["effective_from"] = max(timezone.localdate(), source_policy.effective_from)
             configured_metals = []
-            for metal in ("GOLD", "SILVER"):
+            for metal in ("GOLD", "SILVER", "BRONZE"):
                 try:
                     rate = resolve_pawn_metal_interest_rate_policy(workspace_id=request.loans_workspace.pk,
                         license_id=source_policy.license_id, metal=metal,
@@ -70,7 +70,8 @@ def pawn_economics_setup(request):
                 configuration_initial[f"{metal.lower()}_monthly_interest_rate"] = rate.monthly_interest_rate
                 configured_metals.append(metal)
             if configured_metals:
-                configuration_initial["metals_to_configure"] = "BOTH" if len(configured_metals) == 2 else configured_metals[0]
+                precious = [metal for metal in configured_metals if metal != "BRONZE"]
+                configuration_initial["metals_to_configure"] = "BOTH" if len(precious) == 2 else precious[0] if precious else "BRONZE"
     configuration_form = PawnEconomicConfigurationForm(
         request.POST if request.method == "POST" and action not in {"fee", "monitoring", "series_rates"} else None,
         workspace=request.loans_workspace,

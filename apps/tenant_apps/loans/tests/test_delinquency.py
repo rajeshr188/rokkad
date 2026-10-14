@@ -38,3 +38,9 @@ class DelinquencyCalculationTests(SimpleTestCase):
         result = calculate_delinquency([self.row(date(2026, 1, 1), "0")], as_of_date=date(2026, 8, 1))
         self.assertEqual(result.days_past_due, 0)
         self.assertFalse(result.escalation_eligible)
+
+    def test_negative_components_are_not_netted_into_plausible_dpd(self):
+        for principal, interest in (("-1", "10"), ("10", "-1"), ("-10", "0")):
+            with self.subTest(principal=principal, interest=interest), self.assertRaisesMessage(ValueError, "cannot be negative"):
+                calculate_delinquency([UnpaidObligation(date(2026, 1, 1), Decimal(principal), Decimal(interest))],
+                                      as_of_date=date(2026, 2, 1))

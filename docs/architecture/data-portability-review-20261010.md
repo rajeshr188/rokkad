@@ -7,6 +7,22 @@ tags: [architecture, portability, completeness, fw-007, fw-012]
 
 # Data portability: current capability and completion review
 
+**Subsequent delivery:** the owner accepts this review and selects the
+[PC-01 through PC-06 plan](../plans/data-portability-completion-20261010.md).
+PC-01/02 implement current capability guidance and the browser integration for
+existing opening, servicing and closed-position files. The audit below records
+the preceding checkpoint; its missing-browser-path findings are addressed by
+those slices. PC-03 adds essential-position register adapters; PC-04 now adds
+[operator-assisted bounded volume exchange](../implementation/bounded-volume-exchange-pc04.md),
+without claiming aggregate fresh-Workspace restoration. PC-05 now adds the
+[verified bounded fresh-business package](../implementation/fresh-business-package-pc05.md)
+for empty unactivated destinations, through an atomic operator path. Universal
+customer-controlled transfer remains open. PC-06 now adds
+[verified wider graphs and operational continuation](../implementation/portable-graphs-pc06.md),
+including retained zero-item and source-only licence/quote evidence. Khata and
+physical-verification graphs and broader source contracts remain held. The dated audit below retains
+the original per-file capacity findings.
+
 ## Conclusion and evidence boundary
 
 Rokkad has a sound domain-owned exchange foundation and several working import/

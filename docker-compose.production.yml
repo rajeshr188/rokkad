@@ -24,7 +24,16 @@ services:
     env_file: .env.production.runtime
     environment:
       DJANGO_SETTINGS_MODULE: ${ROKKAD_PRODUCTION_SETTINGS:-django_project.settings.prod}
-    command: ["python", "scripts/start_web.py", "python", "manage.py", "reassess_pawn_loans", "--workspace-id", "${ROKKAD_MONITOR_WORKSPACE_ID:-0}", "--batch-size", "50", "--repeat-seconds", "300"]
+      ROKKAD_MONITOR_WORKSPACE_IDS: ${ROKKAD_MONITOR_WORKSPACE_IDS:-${ROKKAD_MONITOR_WORKSPACE_ID:-}}
+      ROKKAD_MONITOR_BATCH_SIZE: ${ROKKAD_MONITOR_BATCH_SIZE:-10}
+      ROKKAD_MONITOR_BUSY_SECONDS: ${ROKKAD_MONITOR_BUSY_SECONDS:-5}
+      ROKKAD_MONITOR_REPEAT_SECONDS: ${ROKKAD_MONITOR_REPEAT_SECONDS:-300}
+      PYTHONDONTWRITEBYTECODE: "1"
+    command: ["python", "-u", "scripts/start_monitoring.py"]
+    cpus: "0.35"
+    mem_limit: 512m
+    pids_limit: 128
+    stop_grace_period: 60s
     restart: unless-stopped
 volumes:
   media:

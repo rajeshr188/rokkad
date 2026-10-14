@@ -157,8 +157,8 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                     expect(page.get_by_text("No items in this queue.", exact=True)).to_be_visible()
                     page.locator("#counter-search").fill("BROWSER-WORK-022")
                     page.get_by_role("button", name="Find loan / repayment", exact=True).click()
-                    expect(page.locator("tbody")).to_contain_text("BROWSER-WORK-022")
-                    expect(page.locator("tbody")).not_to_contain_text("BROWSER-WORK-021")
+                    expect(page.locator("#loan-results")).to_contain_text("BROWSER-WORK-022")
+                    expect(page.locator("#loan-results")).not_to_contain_text("BROWSER-WORK-021")
                     self.assertEqual(errors, [])
                     context.close()
             finally:
@@ -625,3 +625,122 @@ class BrowserAcceptanceTests(StaticLiveServerTestCase):
                 (artifacts / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         self.assertEqual(report["page_errors"], [])
         self.assertEqual(report["failed_requests"], [])
+
+    def test_dashboard_sections_show_navigation_before_financial_data(self):
+        from playwright.sync_api import sync_playwright, expect
+        from apps.tenancy.context import workspace_context
+        from apps.tenant_apps.loans.models import PawnLoan
+        party = MVPOperatorJourneyTests._party(self)
+        with workspace_context(self.workspace.pk):
+            for index in range(23):
+                PawnLoan.objects.create(workspace=self.workspace, product_version=self.product,
+                    license_id=self.series.license_id, series=self.series, borrower=party,
+                    loan_number=f"ASYNC-{index:03d}", state="DRAFT", principal_amount=1000,
+                    monthly_interest_rate=2, loan_date=self.today, created_by=self.owner)
+        artifacts = Path.cwd() / ".tmp/dashboard-sections-20261012/browser"
+        artifacts.mkdir(parents=True, exist_ok=True)
+        url = self.live_server_url + reverse("workspace_slug_dashboard", args=[self.workspace.slug])
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                context = browser.new_context(viewport={"width": 1440, "height": 800})
+                context.add_cookies([{"name": "sessionid", "value": self.client.cookies["sessionid"].value, "url": self.live_server_url}])
+                page = context.new_page()
+                pending, requests, errors = [], [], []
+                page.on("request", lambda request: requests.append(request.url))
+                page.on("pageerror", lambda error: errors.append(str(error)))
+                def hold_queues(route):
+                    if not pending:
+                        pending.append(route)
+                    else:
+                        route.continue_()
+                page.route("**/*section=queues*", hold_queues)
+                page.goto(url, wait_until="domcontentloaded")
+                expect(page.get_by_role("button", name="Find loan / repayment", exact=True)).to_be_visible()
+                expect(page.get_by_role("link", name="New loan", exact=True).first).to_be_visible()
+                expect(page.locator("#dashboard-queues")).to_have_attribute("aria-busy", "true")
+                page.locator("#counter-search").fill("Search remains usable")
+                page.screenshot(path=str(artifacts / "navigation-ready.png"), full_page=True)
+                page.wait_for_timeout(100)
+                self.assertEqual(len(pending), 1)
+                pending[0].continue_()
+                expect(page.get_by_role("link", name="ASYNC-000", exact=True)).to_be_visible()
+                expect(page.locator("#dashboard-queues")).to_have_attribute("aria-busy", "false")
+                page.wait_for_timeout(200)
+                self.assertFalse(any("section=overview" in request for request in requests))
+                page.get_by_role("link", name="Business overview", exact=True).click()
+                expect(page.get_by_text("Recorded interest outstanding", exact=True)).to_be_visible()
+                page.get_by_label("Period", exact=True).select_option("today")
+                page.get_by_role("button", name="Apply", exact=True).click()
+                expect(page.locator("#queue-title")).to_have_text("Drafts to review")
+                page.get_by_role("link", name="Business overview", exact=True).click()
+                expect(page.locator("#lending-activity-title")).to_be_visible()
+                self.assertIn("period=today", page.url)
+                page.screenshot(path=str(artifacts / "overview-loaded.png"), full_page=True)
+                self.assertEqual(errors, [])
+                context.close()
+                context = browser.new_context(java_script_enabled=False)
+                context.add_cookies([{"name": "sessionid", "value": self.client.cookies["sessionid"].value, "url": self.live_server_url}])
+                page = context.new_page()
+                page.goto(url)
+                page.get_by_role("link", name="Open complete dashboard", exact=True).click()
+                expect(page.get_by_text("Recorded interest outstanding", exact=True)).to_be_visible()
+                page.get_by_role("link", name="Next", exact=True).click()
+                expect(page.get_by_role("link", name="ASYNC-022", exact=True)).to_be_visible()
+                self.assertIn("section=full", page.url)
+                context.close()
+            finally:
+                browser.close()
+
+    def test_dashboard_section_failures_retry_and_expired_login(self):
+        from playwright.sync_api import sync_playwright, expect
+        url = self.live_server_url + reverse("workspace_slug_dashboard", args=[self.workspace.slug])
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            try:
+                context = browser.new_context(viewport={"width": 390, "height": 844})
+                context.add_cookies([{"name": "sessionid", "value": self.client.cookies["sessionid"].value, "url": self.live_server_url}])
+                page = context.new_page()
+                failures = {"queues": 0, "overview": 0}
+                def fail_once(route):
+                    key = "queues" if "section=queues" in route.request.url else "overview"
+                    failures[key] += 1
+                    if failures[key] == 1:
+                        route.fulfill(status=503, body="Temporary test failure")
+                    else:
+                        route.continue_()
+                page.route("**/*section=queues*", fail_once)
+                page.route("**/*section=overview*", fail_once)
+                page.goto(url)
+                expect(page.locator("#dashboard-queues-error")).to_be_visible()
+                page.get_by_role("link", name="Business overview", exact=True).click()
+                expect(page.locator("#dashboard-overview-error")).to_be_visible()
+                page.locator("#dashboard-queues-error").get_by_role("button", name="Retry").click()
+                expect(page.locator("#dashboard-queues-error")).to_be_hidden()
+                expect(page.get_by_text("No items in this queue.", exact=True)).to_be_visible()
+                page.locator("#dashboard-overview-error").get_by_role("button", name="Retry").click()
+                expect(page.locator("#dashboard-overview-error")).to_be_hidden()
+                expect(page.get_by_text("Recorded interest outstanding", exact=True)).to_be_visible()
+                self.assertLessEqual(page.evaluate("document.documentElement.scrollWidth"), 391)
+                page.unroute("**/*section=queues*", fail_once)
+                page.unroute("**/*section=overview*", fail_once)
+                page.route("**/*section=queues*", lambda route: route.fulfill(status=200, content_type="text/html", body="<h1>Wrong fragment sentinel</h1>"))
+                page.goto(url)
+                expect(page.locator("#dashboard-queues-error")).to_be_visible()
+                expect(page.get_by_text("Wrong fragment sentinel", exact=True)).to_have_count(0)
+                page.unroute("**/*section=queues*")
+                pending = []
+                page.route("**/*section=queues*", lambda route: pending.append(route))
+                page.goto(url, wait_until="domcontentloaded")
+                expect(page.locator("#dashboard-queues")).to_have_attribute("aria-busy", "true")
+                page.wait_for_timeout(100)
+                self.assertEqual(len(pending), 1)
+                context.clear_cookies()
+                headers = {key: value for key, value in pending[0].request.headers.items() if key.lower() != "cookie"}
+                pending[0].continue_(headers=headers)
+                page.wait_for_url("**/accounts/login/**")
+                self.assertNotIn("section%3Dqueues", page.url)
+                self.assertNotIn("section=queues", page.url)
+                context.close()
+            finally:
+                browser.close()

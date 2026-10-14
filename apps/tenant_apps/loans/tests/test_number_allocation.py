@@ -190,6 +190,29 @@ class NumberAllocationTests(WorkspaceTestCase):
 
 
 class NumberAllocationConcurrencyTests(TransactionTestCase):
+    def test_two_reviewed_register_confirmations_reserve_once(self):
+        from threading import Barrier
+        from apps.tenant_apps.loans.services.series_reservations import preview_register_reservation, confirm_register_reservation
+        values = dict(actor=self.user, kind='PAWN_LOAN', last_used=5000, reference='Existing signed AA register')
+        with workspace_context(self.tenant.pk):
+            configure_sequence(series=self.series, document_kind='PAWN_LOAN', prefix='AA', width=5,
+                maximum_number=10000, actor=self.user)
+            _, token = preview_register_reservation(self.series.pk, **values)
+        ready = Barrier(2)
+        def confirm(_):
+            close_old_connections()
+            try:
+                with workspace_context(self.tenant.pk):
+                    ready.wait(timeout=10)
+                    return confirm_register_reservation(self.series.pk, **values, review_token=token, confirmed=True)
+            finally:
+                close_old_connections()
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(confirm, range(2)))
+        self.assertEqual(sorted(results), [False, True])
+        with workspace_context(self.tenant.pk):
+            self.assertEqual(self.series.number_sequences.get(document_kind='PAWN_LOAN').next_number,5001)
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

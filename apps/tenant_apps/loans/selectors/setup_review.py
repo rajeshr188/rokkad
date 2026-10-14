@@ -13,7 +13,7 @@ from apps.tenant_apps.loans.services.setup_examples import calculate_setup_examp
 
 class SetupExampleForm(forms.Form):
     series = forms.ChoiceField(label=_("Numbering series"))
-    metal = forms.ChoiceField(label=_("Collateral metal"), choices=(("GOLD", _("Gold")), ("SILVER", _("Silver"))))
+    metal = forms.ChoiceField(label=_("Collateral metal"), choices=(("GOLD", _("Gold")), ("SILVER", _("Silver")), ("BRONZE", _("Bronze"))))
     principal = forms.DecimalField(label=_("Example principal (INR)"), initial=10000,
         min_value=Decimal("0.01"), max_value=Decimal("999999999"), max_digits=11, decimal_places=2)
     closing_date = forms.DateField(label=_("Example closing date"), widget=forms.DateInput(attrs={"type": "date"}))
@@ -54,4 +54,5 @@ def build_setup_review(*, workspace, setup, query):
             except ValueError as exc:
                 form.add_error(None, str(exc))
     return {"form": form, "selected": selected, "example": example, "fees": fees,
+        "example_requested": "example" in query,
         "has_loans": PawnLoan.objects.filter(workspace=workspace).exists()}

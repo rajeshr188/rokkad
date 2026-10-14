@@ -7,8 +7,8 @@ from django.utils import timezone
 
 from apps.orgs.models import Membership, Role
 from apps.tenancy.testing import WorkspaceTestCase
-from .models import Rate, RateSource
-from .services import record_quote
+from apps.tenant_apps.rates.models import Rate, RateSource
+from apps.tenant_apps.rates.services import record_quote
 
 
 @override_settings(STORAGES={"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"}, "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})

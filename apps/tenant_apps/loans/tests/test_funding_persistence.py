@@ -443,15 +443,11 @@ class FundingLoanPersistenceTests(WorkspaceTestCase):
             self.collateral.custody_state = CollateralCustodyState.IN_VAULT.value
             self.collateral.save(update_fields=["custody_state", "updated_at"])
 
-        pledge_reversal = FundingPledgeReversal.objects.create(
-            funding_pledge=pledge,
-            effective_date=date(2026, 9, 9),
-            request_key="late-pledge-reversal",
-            request_fingerprint="late-pledge-reversal",
-            reason="Database guard test",
-            actor=self.actor,
-        )
         with self.assertRaises(DatabaseError), transaction.atomic():
+            pledge_reversal = FundingPledgeReversal.objects.create(
+                funding_pledge=pledge, effective_date=date(2026, 9, 9),
+                request_key="late-pledge-reversal", request_fingerprint="late-pledge-reversal",
+                reason="Database guard test", actor=self.actor)
             PawnCollateralCustodyEvent.objects.bulk_create(
                 [
                     PawnCollateralCustodyEvent(
@@ -465,15 +461,11 @@ class FundingLoanPersistenceTests(WorkspaceTestCase):
                 ]
             )
 
-        return_reversal = FundingReturnReversal.objects.create(
-            funding_return=funding_return,
-            effective_date=date(2026, 9, 9),
-            request_key="return-guard-reversal",
-            request_fingerprint="return-guard-reversal",
-            reason="Database guard test",
-            actor=self.actor,
-        )
         with self.assertRaises(DatabaseError), transaction.atomic():
+            return_reversal = FundingReturnReversal.objects.create(
+                funding_return=funding_return, effective_date=date(2026, 9, 9),
+                request_key="return-guard-reversal", request_fingerprint="return-guard-reversal",
+                reason="Database guard test", actor=self.actor)
             PawnCollateralCustodyEvent.objects.bulk_create(
                 [
                     PawnCollateralCustodyEvent(
@@ -487,6 +479,21 @@ class FundingLoanPersistenceTests(WorkspaceTestCase):
                 ]
             )
 
+        # Retain a valid inverse for the immutability check, rather than leaving
+        # an unposted reversal header behind at deferred-constraint validation.
+        return_reversal = FundingReturnReversal.objects.create(
+            funding_return=funding_return, effective_date=date(2026, 9, 9),
+            request_key="valid-return-reversal", request_fingerprint="valid-return-reversal",
+            reason="Exact inverse", actor=self.actor)
+        PawnCollateralCustodyEvent.objects.create(
+            collateral_item=self.collateral, funding_return=funding_return,
+            funding_return_reversal=return_reversal,
+            from_state=CollateralCustodyState.IN_VAULT.value,
+            to_state=CollateralCustodyState.WITH_FUNDING_LENDER.value,
+            effective_date=date(2026, 9, 9), actor=self.actor)
+        FundingPledgeItem.objects.filter(pk=pledge_item.pk).update(released_at=None)
+        self.collateral.custody_state = CollateralCustodyState.WITH_FUNDING_LENDER.value
+        self.collateral.save(update_fields=['custody_state','updated_at'])
         with self.assertRaises(DatabaseError), transaction.atomic():
             FundingReturnReversal.objects.filter(pk=return_reversal.pk).update(
                 reason="Mutated"

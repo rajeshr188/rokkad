@@ -8,7 +8,7 @@
     {% if field.name == 'photograph' %}<div class="form-text">{% if photos_required %}Required before approval; optional for a draft.{% else %}Optional current photograph.{% endif %}</div>{% endif %}{{ field.errors }}
   </div>{% endif %}{% endfor %}
 </div>
-<div class="small mt-3" data-item-policy-rate>Policy default: {% if item_form.metal.value == 'SILVER' and direct_silver_rate != None %}{{ direct_silver_rate|compact_decimal }}% / month{% elif item_form.metal.value != 'SILVER' and direct_gold_rate != None %}{{ direct_gold_rate|compact_decimal }}% / month{% else %}check the selected series and date{% endif %}</div>
+<div class="small mt-3" data-item-policy-rate>Policy default: {% if item_form.metal.value == 'SILVER' and direct_silver_rate != None %}{{ direct_silver_rate|compact_decimal }}% / month{% elif item_form.metal.value == 'BRONZE' and direct_bronze_rate != None %}{{ direct_bronze_rate|compact_decimal }}% / month{% elif item_form.metal.value == 'GOLD' and direct_gold_rate != None %}{{ direct_gold_rate|compact_decimal }}% / month{% else %}check the selected series and date{% endif %}</div>
 <div data-direct-valuation-guidance class="mt-2"></div>
 <details class="mt-3" data-direct-appraisal data-policy-required="{% if direct_valuation_method == 'CALCULATED_METAL_VALUE' %}false{% else %}true{% endif %}" {% if direct_valuation_method != 'CALCULATED_METAL_VALUE' or item_form.latest_appraised_value.value != None and item_form.latest_appraised_value.value != '' or item_form.latest_appraised_value.errors %}open{% endif %}>
   <summary><span data-direct-appraisal-label>{% if direct_valuation_method == 'CALCULATED_METAL_VALUE' %}Staff appraisal (optional){% else %}Staff appraisal — needed for valuation{% endif %}</span></summary>

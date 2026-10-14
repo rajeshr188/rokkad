@@ -1,0 +1,13 @@
+{% load i18n %}
+<section class="border rounded p-3 mb-3" aria-labelledby="setup-monitoring-title">
+  <div class="d-flex flex-wrap justify-content-between gap-2">
+    <h3 class="h6" id="setup-monitoring-title">{% translate "Monitoring readiness" %}</h3>
+    <span class="badge {% if business_setup.monitoring.ready %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if business_setup.monitoring.ready %}{% translate "Policy configured" %}{% else %}{% translate "Needs attention" %}{% endif %}</span>
+  </div>
+  {% if business_setup.monitoring.total_count %}
+    <p class="small mb-2">{{ business_setup.monitoring.available_count }}/{{ business_setup.monitoring.total_count }} {% translate "running series have a monitoring policy for today." %}</p>
+    {% if not business_setup.monitoring.ready %}<p class="small">{% translate "Lending setup does not configure monitoring automatically. Review and save a policy before relying on loan health for these series." %}</p>{% endif %}
+  {% else %}<p class="small">{% translate "Add a running series to review its monitoring policy." %}</p>{% endif %}
+  <p class="small text-muted">{% translate "Policy coverage is separate from permission to lend. Actual loan health also needs usable financial and collateral evidence; portfolio assessments must be refreshed." %}</p>
+  <a href="{% url 'workspace_loans:pawn_economics_setup' company.slug %}?setup_step=terms&amp;setup_path={{ journey.path }}#monitoring-policy">{% translate "Review monitoring policy" %}</a>
+</section>

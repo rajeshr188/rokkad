@@ -65,6 +65,7 @@ AUTH_URLPATTERNS = [
 # Canonical SaaS control-plane aliases. These are additive aliases for the
 # current orgs routes; old /orgs/... paths remain the compatibility surface.
 CANONICAL_CONTROL_PLANE_URLPATTERNS = [
+    path("", include("apps.platform_whatsapp.urls")),
     path("app/platform/", platform_console.overview, name="platform_console"),
     path("app/platform/storage/", storage_views.platform_storage, name="platform_storage"),
     path("w/<str:workspace_slug>/settings/storage/", storage_views.workspace_storage, name="workspace_storage"),

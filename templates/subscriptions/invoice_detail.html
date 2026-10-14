@@ -178,7 +178,16 @@
         color: #856404;
     }
     
+    .invoice-number { overflow-wrap: anywhere; }
+    .invoice-status { min-width: 0; }
+    @media screen and (max-width: 576px) {
+        .invoice-header { flex-direction: column; gap: 1rem; }
+        .invoice-status { text-align: left; }
+        .invoice-info { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+        .action-buttons { flex-wrap: wrap; }
+    }
     @media print {
+        .no-print { display: none; }
         .action-buttons {
             display: none;
         }
@@ -389,6 +398,16 @@
                 <button class="btn btn-primary mt-2">Record final decision</button>
             </form>
         </details>
+        {% endif %}
+
+        {% if message_delivery %}
+        <section class="notes-section no-print" aria-labelledby="message-delivery-title">
+            <h5 id="message-delivery-title">Receipt messages</h5>
+            <p>Email: {{ message_delivery.email_status }}.</p>
+            <p>WhatsApp: {% if message_delivery.whatsapp %}{{ message_delivery.whatsapp.status }}{% else %}No WhatsApp intent recorded{% endif %}.</p>
+            <p class="small">Message delivery does not change this invoice or payment.</p>
+            <a class="btn btn-outline-primary" style="min-height:44px" href="{% url 'platform_whatsapp_history' workspace_slug=message_delivery.workspace.slug %}">View WhatsApp history</a>
+        </section>
         {% endif %}
 
         <!-- Payment Instructions -->

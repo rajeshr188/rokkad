@@ -1,0 +1,21 @@
+{% load orgs_tags %}
+{% navigation_actions as dashboard_actions %}
+<p class="small text-muted">Work queues for {{ counter_work.as_of_date }}.</p>
+{% if counter_work.queues.review.count %}
+<div class="alert alert-warning" role="status">
+Payment queues are incomplete: {{ counter_work.queues.review.count }} active loan{{ counter_work.queues.review.count|pluralize }} could not be included because their repayment schedules need review.
+<a href="?{{ dashboard_query }}&amp;queue=review" class="alert-link">Review affected loans</a> before relying on the payment counts and scheduled amounts.
+</div>
+{% endif %}
+<div class="row g-3 mb-4" aria-label="Loan work queues">{% for queue in work_queues %}<div class="col-6 col-lg">
+<a class="card h-100 text-decoration-none {% if selected_queue.key == queue.key and queue.key != 'overdue' %}border-primary{% endif %}" href="{% if queue.key == 'overdue' %}{% url 'workspace_loans:overdue_payments' workspace.slug %}?{{ dashboard_query }}{% else %}?{{ dashboard_query }}&amp;queue={{ queue.key }}{% endif %}" {% if selected_queue.key == queue.key and queue.key != 'overdue' %}aria-current="page"{% endif %}>
+<div class="card-body">
+<div class="text-muted small">{{ queue.title }}</div>
+<div class="h3 mb-0">{{ queue.count }}</div>
+{% if queue.key == 'overdue' %}<div class="small mt-2">View overdue payments <i class="bi bi-arrow-right" aria-hidden="true"></i></div>{% endif %}
+</div>
+</a>
+</div>{% endfor %}</div>
+{% if selected_queue.key != 'overdue' %}
+{% include 'company/_counter_queue.html' %}
+{% endif %}

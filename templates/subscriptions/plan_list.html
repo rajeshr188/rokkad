@@ -1,5 +1,5 @@
 {% extends 'base_workspace_settings.html' %}
-{% load static %}
+{% load static onboarding_tags %}
 
 {% block title %}Subscription Plans - Rokkad{% endblock %}
 
@@ -77,13 +77,16 @@
 {% endblock %}
 
 {% block mgmt_content %}
+{% setup_navigation_context as setup_journey %}
+{% if setup_journey %}<p><a href="{{ setup_journey.return_url }}">Continue business setup</a></p>{% endif %}
 {% include "subscriptions/_navigation.html" %}
 {% if public_annual_offer %}<p class="alert alert-info">Prefer to pay once? <a href="{% url 'workspace_subscriptions:annual-prepaid' workspace_slug=request.workspace.slug %}">Review annual prepayment — ₹14,990, no automatic renewal</a>.</p>{% endif %}
 
 <div class="container py-5">
     <div class="row mb-5">
         <div class="col-12">
-            <h1 class="mb-2">Subscription plans</h1>
+            <h1 class="mb-2">{% if public_trial_plan and not current_subscription and not public_trial_used %}Start your free trial{% else %}Subscription plans{% endif %}</h1>
+            {% include "subscriptions/_public_trial.html" %}
             {% if billing_checkout_enabled %}
             <p class="text-muted">One subscription per Workspace. Prices shown before applicable tax.</p>
             {% elif public_monthly_offer %}
@@ -91,14 +94,12 @@
             <a class="btn btn-primary" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review monthly subscription</a>
             {% else %}
             <p>Subscriptions are arranged with Rokkad support. Review any agreement prepared for your Workspace in Recurring payments.</p>
-            <a class="btn btn-primary" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review recurring payments</a>
+            <a class="btn btn-outline-secondary" href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Review recurring payments</a>
             <a class="btn btn-outline-secondary" href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}">View billing dashboard</a>
             {% endif %}
         </div>
     </div>
     
-    {% include "subscriptions/_public_trial.html" %}
-
     {% if billing_checkout_enabled %}
     <!-- Plans Display -->
     <div class="row">

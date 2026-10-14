@@ -1,7 +1,8 @@
-<nav class="app-section-nav" aria-label="Billing navigation">
+{% load onboarding_tags %}{% setup_navigation_context as setup_journey %}
+{% if not setup_journey %}<nav class="app-section-nav" aria-label="Billing navigation">
 <a href="{% url 'workspace_subscriptions:dashboard' workspace_slug=request.workspace.slug %}">Subscription &amp; invoices</a>
 {% if request.user.is_superuser %}<a href="{% url 'workspace_subscriptions:access-controls' request.workspace.slug %}">Platform access controls</a>{% endif %}
 <a href="{% url 'workspace_subscriptions:plan-list' workspace_slug=request.workspace.slug %}">Available plans</a>
 <a href="{% url 'workspace_subscriptions:recurring' workspace_slug=request.workspace.slug %}">Recurring payments</a>
 <a href="{% url 'workspace_slug_settings' workspace_slug=request.workspace.slug %}">Workspace settings</a>
-</nav>
+</nav>{% endif %}

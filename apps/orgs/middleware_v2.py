@@ -412,6 +412,11 @@ class SecureWorkspaceMiddleware(MiddlewareMixin):
 
     def _requires_workspace(self, path):
         """Check if URL requires workspace context"""
+        # Public support shares the old retired Contact app prefix. Only this
+        # exact page is public; domain/path resolution and neighboring routes
+        # retain their ordinary Workspace requirements.
+        if path == "/contact/":
+            return False
         return any(
             path.startswith(required) for required in self.WORKSPACE_REQUIRED_URLS
         )

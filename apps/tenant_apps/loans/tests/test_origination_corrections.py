@@ -231,11 +231,18 @@ class OriginationCorrectionTests(WorkspaceTestCase):
         with self.assertRaisesMessage(ValueError, "different date"):
             correction_source(self.loan, actor=self.actor)
 
-    def test_exact_backup_retains_attempts_bounded_export_refuses_to_drop_them(self):
+    def test_exact_backup_and_bounded_export_retain_original_attempts(self):
         from apps.tenant_apps.loans.services.servicing_bundle import export_servicing_bundle
+        from apps.tenant_apps.loans.services.servicing_bundle_contract import read_bundle, CORRECTION_PROFILE
         loan, _ = self.confirm()
-        with self.assertRaisesMessage(ValueError, "exact Workspace recovery"):
-            export_servicing_bundle(workspace_id=self.tenant.pk, actor=self.actor, loan_id=loan.pk)
+        content = export_servicing_bundle(workspace_id=self.tenant.pk, actor=self.actor, loan_id=loan.pk)
+        document, _ = read_bundle(content)
+        self.assertEqual(document["profile"], CORRECTION_PROFILE)
+        retained = retained_attempt_event_ids(loan)
+        exported_events = {row["id"]: row for row in document["tables"]["PawnLoanEvent"]}
+        self.assertTrue(set(retained).issubset(exported_events))
+        for event in loan.loan_events.filter(pk__in=retained):
+            self.assertEqual(exported_events[event.pk]["payload_fingerprint"], event.payload_fingerprint)
         original = backups.PawnRecoveryTests.export(self)
         backups.PawnRecoveryTests.empty(self)
         self.assertTrue(backups.PawnRecoveryTests.restore(self, commit=True)["committed"])

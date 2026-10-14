@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-10-10
+updated: 2026-10-14
 tags: [architecture, saas, control-plane, workspace, rls, rbac, billing]
 related:
   - saas-control-plane-architecture-audit.md
@@ -804,3 +804,79 @@ across database rollback; AuditLog summarizes successful phases. Exact manifest
 approval, independent recovery and create-only restoration are required. Inventory
 alone never grants deletion authority. No pricing, quotas, billing or automatic
 expiry is enabled. See the [cleanup decision](../adr/2026-09-30-reviewed-offline-media-cleanup.md).
+
+## 19. Platform owner WhatsApp enrollment and source intents
+
+PW-01 uses global account-owned Contact, ContactEvent, Suppression and minimal
+InboundReceipt records. Preference and ConsentEvent are directly Workspace-owned,
+forced-RLS and registered. Account routes remain global; services resolve an
+explicit target, enter matching workspace_context, use canonical billing-owner
+authorization and require the owner to be the recipient. Platform override cannot
+grant consent on another account's behalf. Account-level opt-out remains available
+when business access is restricted, without granting any business action.
+
+The exact platform inbound callback authenticates HMAC, configured WABA and phone
+identity in global context. It is default-disabled and handles only pairing/opt-out.
+Workspace callbacks/credentials remain independent. PW-02 adds directly
+Workspace-owned SetupRequest/Delivery with forced RLS and registry coverage.
+Immutable typed source intent commits with setup/trial/new payment facts; independent
+email intent shares the existing payment boundary. Global subscription sources must
+match the recorded Workspace; composite consent/setup relations, source uniqueness
+and database write guards enforce that correspondence under the restricted role.
+
+Signed reviewed setup POSTs never replace canonical owner authority. Previews
+recheck contact/consent/source revisions and expiry. Ownership transfer does not
+expose the predecessor's saved recipient/source history to the new owner. Migration,
+enrollment, replay and email retry do not backfill messages. capture_only=True is
+immutable and cannot become live by enabling a flag. No outgoing transport is
+implemented and readiness never claims delivery.
+See [the accepted ADR](../adr/2026-10-14-platform-whatsapp-delivery-boundary.md)
+and verified [PW-01](../implementation/platform-whatsapp-enrollment-pw01.md) /
+[PW-02](../implementation/platform-whatsapp-source-intents-pw02.md).
+
+
+PW-03 adds directly owned forced-RLS Attempt/ReceiptLink. Attempt claims commit
+before IO, hold immutable sender/source/template snapshots and complete once;
+captured source modes cannot claim. Global ProviderReceipt contains authenticated
+minimal unmatched facts and no inferred Workspace authority. A known scoped attempt
+must prove exact provider ID, sender, recipient hash and time correspondence before
+an immutable link is written. Status projection never downgrades delivered/read
+proof due to later failed/deleted callbacks. Late evidence after opt-out is accepted
+without sending; unknown acceptance blocks automatic retries.
+
+At the PW-03 checkpoint, writers remained capture-only. New non-capture creation was reserved for a
+later controlled source activation; flags cannot mutate history or bypass missing
+PW-04 release controls. Explicit Workspace/delivery operator commands run outside
+caller transactions under the restricted role. Reconciliation never changes access,
+consent or business source state. Populated new evidence/non-capture intents block
+schema downgrade. See [PW-03](../implementation/platform-whatsapp-transport-pw03.md).
+
+PW-04 adds forced-RLS TrialReminder/AnnouncementTarget/Reservation/CostEvidence.
+The global Announcement is a reviewed platform publication; its eligible targets
+retain direct Workspace evidence. BudgetDay/ContactDay contain global capped
+aggregates and hashed-phone counts, not tenant business data. A global source job
+locks reviewed Workspaces in order and uses successive explicit scoped units; it
+never suspends an active identity to read a different Workspace. Callback scope
+continues to require the recorded attempt/provider/sender/recipient match.
+
+New non-capture creation now requires a separate default-off intent flag, exact
+Workspace/owner cohort, purpose and a current dated pilot. History cannot change
+mode. Each new attempt requires an immutable owned reservation with a deferred
+composite reference; its trigger increments global count/spend under one lock.
+Reservations cannot be released. Signed ten-minute announcement reviews bind
+targets, authority, configuration and estimated cost; urgency only bypasses quiet
+hours. Current trial reminders read the canonical access policy, never extend it.
+Pricing uncertainty stops sending and never changes financial/access/source truth.
+Retained PW-04 evidence blocks schema downgrade. See
+[PW-04](../implementation/platform-whatsapp-controls-pw04.md).
+
+PW-05 diagnostics retain the same boundary: global active-platform authority,
+bounded explicitly selected successive Workspace contexts and canonical-owner-only
+account/invoice history. Read-only projections never ingest callbacks or send.
+Signed ten-minute operations bind actor, exact route/source, consent/configuration
+and attempt evidence. Confirmations run outside request transactions; the durable
+service rechecks current source/caps before IO. Operator reconciliation cannot send
+or fabricate receipt IDs. Invoice channels are independent of financial truth.
+Private retention/support references gate transport, without proving actual
+adoption. No schema or isolation bypass is added; actual JCL deployment and live
+acceptance remain pending. See [PW-05](../implementation/platform-whatsapp-pilot-pw05.md).
