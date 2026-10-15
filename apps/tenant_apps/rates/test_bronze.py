@@ -2,6 +2,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.test import override_settings
 
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenant_apps.rates import test_quote_evidence as fixtures
@@ -55,6 +56,10 @@ class BronzeQuoteTests(WorkspaceTestCase):
         self.assertEqual(get_latest_commodity_valuation_rate(commodity_code="BRONZE").rate.pk, current.pk)
 
 
+@override_settings(STORAGES={
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+})
 class BronzeRateUiTests(WorkspaceTestCase):
     setup_tenant = classmethod(ui.RateReferenceUiTests.setup_tenant.__func__)
     setUp = ui.RateReferenceUiTests.setUp

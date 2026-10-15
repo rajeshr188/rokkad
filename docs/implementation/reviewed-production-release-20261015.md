@@ -45,6 +45,11 @@ six groups now run as ordinary parallel matrix jobs with independent PostgreSQL
 services, schema/runtime checks and a 60-minute limit per group. Fail-fast is
 disabled and no coverage is removed. This also makes a completed group's failure
 diagnostics available while the remaining groups continue.
+The isolated bronze UI fixture also needs the storage override from the setup
+class whose methods it reuses. Native-settings confirmation passes after adding
+it. Test settings now explicitly use local media and unhashed assets so ordinary
+test uploads cannot inherit a developer's real R2 backend. Production static
+manifest collection remains covered by the independent image/rehearsal gates.
 
 ## Release gates
 

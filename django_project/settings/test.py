@@ -21,6 +21,14 @@ CACHES = {
     },
 }
 
+# Unit and HTTP tests use local media and unhashed assets. Production manifest
+# collection is verified separately in the application-image release checks.
+# A developer's .env must not turn ordinary test uploads into real R2 writes.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 # Do not inherit platform WhatsApp reception or credentials from a local .env.
 PLATFORM_WHATSAPP_INBOUND_ENABLED = False
 PLATFORM_WHATSAPP_PHONE_ID = ""
