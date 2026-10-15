@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-10
+updated: 2026-10-15
 tags: [domain, subscriptions, monetization]
 related: [../flows/workspace-onboarding.md, ../plans/backlog.md]
 ---
@@ -26,7 +26,12 @@ plus five staff and at most twelve collections, independently of the private
 annual/one-off catalog. A verified canonical owner must accept a signed current
 offer; active trials must expire first. Consent and the durable provider attempt
 commit together before provider creation. Unknown outcomes require recovery, never
-a second mandate. Existing billing/access-exception history requires support review.
+a second mandate. Existing billing/access-exception history requires support review,
+except plain full-access extensions without a separate plan or entitlement snapshot.
+Such extensions preserve operations while the owner pays; they do not add free time
+to the verified paid period or change the stored trial dates. Restrictions and
+separately provisioned grants still need review. See the
+[grace-payment decision](../adr/2026-10-15-payment-during-grace-extension.md).
 See the [self-service decision](../adr/2026-09-30-owner-monthly-self-service.md).
 The first real payment/receipt and wider public activation remain pending. The optional
 BILLING_RECURRING_WORKSPACE_IDS gate limits offer visibility, creation and new

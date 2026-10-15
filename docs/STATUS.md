@@ -7,6 +7,44 @@ tags: [status, architecture]
 
 # Status
 
+## JSK payment during extended grace (15 October, deployed)
+
+The owner reported the monthly payment option missing again. A restricted,
+read-only production check confirmed that today's plain full-access grant (JSK
+decision 2) blocked both monthly and annual consent through the blanket
+access-history guard. There were no pending invoices or recorded payments.
+
+The shared purchase guard now permits history containing only full-access
+extensions with no separate plan or entitlement snapshot. Restrictions and
+separately provisioned grants still require review; all other purchase boundaries
+remain. Existing grace grants and trial dates are immutable and preserved.
+See the [decision](adr/2026-10-15-payment-during-grace-extension.md).
+
+All **55 monthly, annual and access-policy tests pass** (278.970 seconds), including
+monthly and annual capture during grace, unchanged grant evidence, paid access
+after grant expiry, stale consent after restrictions, and separate-plan rejection.
+Provider and email interactions are mocked. Whitespace checks pass.
+
+At **16:19 IST**, the three-file web-only fix is deployed as
+`rokkad:grace-payment-20261015-0bd55f104fed`, based on the current loan-export image
+`rokkad:loan-export-20261015-0dfd15cc7d0f`. Candidate and deployed restricted read-only
+page checks show both JSK consent choices ready and the monthly Continue button.
+Subscription and grant fingerprints remain exact; one closed historical agreement
+and zero cycles/invoices/payments remain. Runtime configuration, mounts, public
+rollout scope and mail worker configuration are unchanged; HTTPS and mail timers
+pass. No schema, provider operation, new mandate, order or payment was performed.
+Other worker images remain on the preceding compatible release; no worker uses
+the changed purchase-preparation path. The previous image is retained for recovery.
+
+JSK's extension still expires **22 October 2026 at 23:39:08 IST**. The owner can
+start the INR 1,499 monthly option now; paid time starts with verified payment,
+not at the end of that extension. First real capture/invoice/receipt acceptance
+remains pending. Evidence is in ignored `outputs/grace-payment-20261015/` and
+`outputs/grace-payment-regression-20261015.log`, with private server deployment
+records under the matching release folder. The completed billing fix is preserved
+in Git with the collateral release, with both public purchase suites included in
+the release CI billing group. Combined deployment validation is in progress.
+
 ## Filtered Excel collateral details (15 October, follow-up)
 
 The owner confirmed the existing Loan column was present and requested the

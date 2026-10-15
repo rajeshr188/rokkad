@@ -10,7 +10,8 @@ from django.utils import timezone
 
 from apps.orgs.models import Company, Membership
 from .checkout import require_billing_owner
-from .models import Invoice, RecurringAgreement, RecurringPlanBinding, Subscription, WorkspaceAccessDecision
+from .models import Invoice, RecurringAgreement, RecurringPlanBinding, Subscription
+from .access_policy import require_purchase_access_history
 from .recurring import _offer, recurring_provider_mode, require_recurring_workspace
 from .services import get_workspace_member_usage
 
@@ -60,9 +61,9 @@ def require_eligible(workspace):
         provider_status="cancelled", events__event_type="reservation.unpaid_released",
     )
     if (agreements.exclude(pk__in=released_unused.values("pk")).exists()
-            or Invoice.objects.filter(subscription__company=workspace).exists()
-            or WorkspaceAccessDecision.objects.filter(workspace=workspace).exists()):
+            or Invoice.objects.filter(subscription__company=workspace).exists()):
         raise ValidationError("This Workspace has billing or access history to review. Contact support.")
+    require_purchase_access_history(workspace)
     subscription = Subscription.objects.filter(company=workspace).first()
     if subscription and (subscription.status != "trial" or not subscription.trial_end_date
                          or subscription.razorpay_subscription_id):

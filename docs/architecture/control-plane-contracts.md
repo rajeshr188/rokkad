@@ -1,7 +1,7 @@
 ---
 status: accepted
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [architecture, saas, control-plane, workspace, rls, rbac, billing]
 related:
   - saas-control-plane-architecture-audit.md
@@ -386,6 +386,14 @@ reason. Expiry re-evaluates the original subscription policy, never older grants
 Suspension/archive and ordinary RBAC/RLS remain stronger boundaries. Grants do not
 change billing records. See the
 [accepted decision](../adr/2026-09-24-subscription-access-continuity.md).
+
+Selected monthly/annual purchase eligibility permits access history consisting only
+of full-access extensions without separate plan/entitlement terms. Recheck this
+under the same Company lock used to append decisions. Preserve all grant evidence
+and expiry dates; verified payment starts its ordinary paid term independently.
+Restrictions and separately provisioned access still need review. This exception
+does not permit repeated free trials. See the
+[grace-payment decision](../adr/2026-10-15-payment-during-grace-extension.md).
 
 The owner monthly self-service POST at `/app/billing/recurring/start/` is a global
 control-plane adapter. Login, CSRF and a signed current owner/Workspace/offer review

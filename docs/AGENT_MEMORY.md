@@ -7,6 +7,19 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+Plain full-access extensions must not prevent selected monthly/annual purchases.
+Only access history consisting of full grants with no separate Plan and an empty
+entitlement snapshot is compatible; restrictions/default decisions and separately
+provisioned grants still need review. Recheck under the Company lock and preserve
+immutable grants/trial dates. Payment starts its ordinary paid period immediately
+on verification, independently of the extension; valid paid access survives grant
+expiry. This correction is live in the web-only image
+`rokkad:grace-payment-20261015-0bd55f104fed` from 15 October 16:19 IST, based on the
+loan-export release. Worker images are unchanged and compatible. All 55 selected
+billing/access tests pass; live JSK monthly and annual consent are ready, no payment
+was taken, and grace remains through 22 October 23:39:08 IST. See the
+[decision](adr/2026-10-15-payment-during-grace-extension.md).
+
 The filtered-loan Excel follow-up adds collateral descriptions, recorded quantities
 and current custody, plus separate held gross/net grams for every supported metal.
 Use current item-row weights without multiplying by quantity; exclude returned,

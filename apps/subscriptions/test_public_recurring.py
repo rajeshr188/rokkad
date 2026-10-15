@@ -355,6 +355,11 @@ class PublicRecurringTests(TransactionTestCase):
             subscription = Subscription.objects.create(company=self.workspace, plan=self.plan, status="trial")
             Subscription.objects.filter(pk=subscription.pk).update(trial_end_date=timezone.now() - timedelta(days=1))
         old, old_token = self.release_unused_attempt()
+        from .access_policy import record_access_decision, workspace_activity
+        from .models import WorkspaceAccessDecision
+        grant = record_access_decision(workspace=self.workspace, actor=self.admin,
+            mode="full", expires_at=timezone.now() + timedelta(days=7), reason="Temporary grace extension")
+        grant_before = WorkspaceAccessDecision.objects.values().get(pk=grant.pk)
         before = RecurringAgreement.objects.values().get(pk=old.pk)
         with override_settings(BILLING_PUBLIC_PREPAID_PLAN_ID=self.plan.pk, BILLING_PREPAID_WORKSPACE_IDS=[]):
             page = self.client.get(self.url)
@@ -380,6 +385,30 @@ class PublicRecurringTests(TransactionTestCase):
         self.assert_captured_cycle_and_receipt(fresh)
         subscription.refresh_from_db()
         self.assertEqual(subscription.status, "active")
+        self.assertEqual(WorkspaceAccessDecision.objects.values().get(pk=grant.pk), grant_before)
+        self.assertEqual(workspace_activity(self.workspace, at=grant.expires_at).mode, "full")
+
+    def test_restriction_after_review_blocks_monthly_even_after_later_grant(self):
+        from .access_policy import record_access_decision
+        token = self.token()
+        Subscription.objects.create(company=self.workspace, plan=self.plan, status="trial")
+        Subscription.objects.filter(company=self.workspace).update(trial_end_date=timezone.now() - timedelta(days=1))
+        record_access_decision(workspace=self.workspace, actor=self.admin,
+            mode="read_only", expires_at=timezone.now() + timedelta(days=1), reason="Review required")
+        record_access_decision(workspace=self.workspace, actor=self.admin,
+            mode="full", expires_at=timezone.now() + timedelta(days=7), reason="Temporary access")
+        self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+        self.submit(token)
+        self.provider_create.assert_not_called()
+
+    def test_separate_entitlement_grant_still_requires_monthly_review(self):
+        from .access_policy import record_access_decision
+        token = self.token()
+        record_access_decision(workspace=self.workspace, actor=self.admin, mode="full", plan=self.plan,
+            expires_at=timezone.now() + timedelta(days=7), reason="Provisioned with separate plan terms")
+        self.assertNotContains(self.client.get(self.url), 'name="offer_token"')
+        self.submit(token)
+        self.provider_create.assert_not_called()
 
     def test_cancellation_and_other_release_history_do_not_allow_new_monthly_consent(self):
         from .models import RecurringAgreementEvent

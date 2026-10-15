@@ -137,6 +137,8 @@ jobs:
           apps.subscriptions.test_recurring_access
           apps.subscriptions.test_recurring_refunds
           apps.subscriptions.test_recurring_release
+          apps.subscriptions.test_public_recurring
+          apps.subscriptions.test_public_prepaid
           apps.platform_mail.tests apps.platform_mail.test_operations
           apps.platform_mail.test_watchdog
           apps.platform_mail.test_rehearsal

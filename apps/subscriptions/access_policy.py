@@ -77,6 +77,20 @@ def is_unactivated_destination(workspace):
         or WorkspaceAccessDecision.objects.filter(workspace=workspace).exists())
 
 
+def require_purchase_access_history(workspace):
+    """Plain access extensions do not reserve or replace a paid purchase.
+
+    Restrictions and grants with separate plan/entitlement terms still require
+    review. Never delete or shorten an extension when the owner starts paying.
+    Call under the purchase's Company lock; access decisions use the same lock.
+    """
+    if WorkspaceAccessDecision.objects.filter(workspace=workspace).exclude(
+        mode=WorkspaceAccessDecision.Mode.FULL, plan__isnull=True,
+        entitlement_snapshot=[],
+    ).exists():
+        raise ValidationError("An existing access decision needs billing review before paying.")
+
+
 @transaction.atomic
 def record_access_decision(*, workspace, actor, mode, expires_at=None, reason, plan=None):
     if not actor or not is_platform_admin(actor) or not actor.is_active:

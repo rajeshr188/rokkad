@@ -84,6 +84,11 @@ class AnnualPrepaidTests(TransactionTestCase):
 
     def test_http_expired_trial_order_capture_and_duplicate_callback(self):
         subscription = self.trial()
+        from .access_policy import record_access_decision, workspace_activity
+        from .models import WorkspaceAccessDecision
+        grant = record_access_decision(workspace=self.workspace, actor=self.admin, mode='full',
+            expires_at=timezone.now() + timedelta(days=7), reason='Temporary grace extension')
+        grant_before = WorkspaceAccessDecision.objects.values().get(pk=grant.pk)
         before = subscription.trial_end_date
         token = self.token()
         self.assertContains(self.client.get(self.url), 'No automatic renewal')
@@ -108,11 +113,26 @@ class AnnualPrepaidTests(TransactionTestCase):
         self.assertFalse(subscription.auto_renew)
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(SubscriptionEvent.objects.filter(event_type='checkout.completed').count(), 1)
+        self.assertEqual(WorkspaceAccessDecision.objects.values().get(pk=grant.pk), grant_before)
+        self.assertEqual(workspace_activity(self.workspace, at=grant.expires_at).mode, 'full')
         self.assertEqual(Delivery.objects.count(), 1)
         page = self.client.get(reverse('workspace_subscriptions:dashboard', kwargs={'workspace_slug': self.workspace.slug}))
         self.assertContains(page, 'Rokkad Workspace Annual Prepaid')
         self.assertContains(page, 'Annual prepayment — no automatic renewal')
         self.assertNotContains(page, 'Self-service plan purchases are unavailable')
+
+    def test_restriction_blocks_saved_annual_consent_and_capture(self):
+        from .access_policy import record_access_decision
+        self.trial()
+        token = self.token()
+        self.assertEqual(self.submit(token).status_code, 200)
+        invoice = Invoice.objects.get()
+        record_access_decision(workspace=self.workspace, actor=self.admin, mode='read_only',
+            expires_at=timezone.now() + timedelta(days=7), reason='Needs billing review')
+        with self.assertRaises(ValidationError):
+            _apply_capture(invoice_id=invoice.pk, payment=self.payment(invoice))
+        self.assertFalse(Payment.objects.exists())
+        self.assertFalse(self.client.get(self.url).context.get('annual_consent'))
 
     def test_unknown_order_is_durable_and_fresh_token_cannot_repost(self):
         token, second = self.token(), self.token()

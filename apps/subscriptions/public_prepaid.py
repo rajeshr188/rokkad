@@ -11,7 +11,8 @@ from django.utils import timezone
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context
 from .models import (BillingAccount, Invoice, Payment, Plan, RecurringAgreement,
-                     Subscription, SubscriptionEvent, WorkspaceAccessDecision)
+                     Subscription, SubscriptionEvent)
+from .access_policy import require_purchase_access_history
 from .provider_configuration import provider_mode, require_invoice_mode
 from .public_recurring import require_public_owner
 from .razorpay_service import RazorpayService
@@ -48,8 +49,7 @@ def require_eligible(workspace, *, plan_id, excluding_invoice=None):
     for agreement in RecurringAgreement.objects.filter(workspace=workspace):
         if not agreement.events.filter(event_type='reservation.unpaid_released').exists():
             raise ValidationError('Previous recurring billing needs review before annual prepayment.')
-    if WorkspaceAccessDecision.objects.filter(workspace=workspace).exists():
-        raise ValidationError('An existing access decision needs billing review before paying.')
+    require_purchase_access_history(workspace)
     invoices = Invoice.objects.filter(subscription__company=workspace).exclude(pk=excluding_invoice)
     for invoice in invoices:
         if (invoice.status != 'paid' or invoice.checkout_snapshot.get('kind') != KIND
