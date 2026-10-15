@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, override_settings
+from django.urls import reverse
 
 from apps.orgs.audit import AuditLog
 from apps.tenancy.testing import start_workspace_trial
@@ -97,7 +98,9 @@ class OpeningPilotReadinessTests(OpeningImportFixture):
             response = pawn_loan_detail(request, origin.loan_id)
             html = response.content.decode()
             self.assertEqual(response.status_code, 200)
-            self.assertIn("Collect and release", html)
+            self.assertIn("Close / release loan", html)
+            self.assertIn(reverse("workspace_loans:pawn_loan_close",
+                kwargs={"workspace_slug": self.a.slug, "pk": origin.loan_id}), html)
             self.assertIn("Amount to collect for full release", html)
             self.assertIn("Imported balance and history", html)
             self.assertNotIn("Accrual preview unavailable", html)

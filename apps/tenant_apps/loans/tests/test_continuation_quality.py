@@ -19,6 +19,12 @@ from .test_continuation_admissions import AdmissionFixture
 class ContinuationQualityTests(AdmissionFixture):
     on = date(2026, 7, 21)  # Beyond the standing 90-day appraisal freshness limit.
 
+    def setUp(self):
+        super().setUp()
+        # A live refresh must represent today; keep this dated scenario's clock
+        # aligned without bypassing the production current-date guard.
+        self.enterContext(patch("django.utils.timezone.localdate", return_value=self.on))
+
     def test_current_supported_calculation_is_independent_of_books_and_valuation(self):
         with self.scoped():
             snapshot = refresh_loan_risk_snapshot(self.opening.pk, as_of_date=self.on)

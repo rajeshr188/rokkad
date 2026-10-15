@@ -50,6 +50,11 @@ class whose methods it reuses. Native-settings confirmation passes after adding
 it. Test settings now explicitly use local media and unhashed assets so ordinary
 test uploads cannot inherit a developer's real R2 backend. Production static
 manifest collection remains covered by the independent image/rehearsal gates.
+The full 2,478-case Loans group exposes three dated continuation fixtures that
+must align their clock with the live-only refresh boundary, plus two assertions
+for the former release label. Six focused confirmations pass with the clock
+aligned and the common Close / release loan route asserted. The current-date
+guard, settlement, custody, export and financial assertions remain intact.
 
 ## Release gates
 
