@@ -33,43 +33,36 @@ Subscription and grant fingerprints remain exact; one closed historical agreemen
 and zero cycles/invoices/payments remain. Runtime configuration, mounts, public
 rollout scope and mail worker configuration are unchanged; HTTPS and mail timers
 pass. No schema, provider operation, new mandate, order or payment was performed.
-Other worker images remain on the preceding compatible release; no worker uses
-the changed purchase-preparation path. The previous image is retained for recovery.
+At that initial deployment, worker images remained on the preceding compatible
+release; no worker uses the changed purchase-preparation path. The previous image
+is retained for recovery.
 
-JSK's extension still expires **22 October 2026 at 23:39:08 IST**. The owner can
-start the INR 1,499 monthly option now; paid time starts with verified payment,
-not at the end of that extension. First real capture/invoice/receipt acceptance
-remains pending. Evidence is in ignored `outputs/grace-payment-20261015/` and
+JSK's extension still expires **22 October 2026 at 23:39:08 IST**. At that initial
+check the INR 1,499 monthly option was available; paid time starts with verified
+payment, not at the end of the extension. Real customer payment/invoice/receipt
+acceptance is separate from this deployment. Evidence is in ignored
+`outputs/grace-payment-20261015/` and
 `outputs/grace-payment-regression-20261015.log`, with private server deployment
 records under the matching release folder. The completed billing fix is preserved
 in Git with the collateral release, with both public purchase suites included in
-the release CI billing group. Combined deployment validation is in progress.
+the release CI billing group. The fix is preserved in deployed combined source
+`b029d4a52771` with full CI, read-only billing checks and encrypted recovery/backup
+acceptance. See the [release record](implementation/collateral-summary-release-20261015.md).
 
-## Filtered Excel collateral details (15 October, follow-up)
+## Collateral Excel and loan-list summaries (15 October, deployed)
 
-The owner confirmed the existing Loan column was present and requested the
-missing collateral summary and weights by metal. The working export now appends
-item descriptions, recorded quantities and custody, with separate current held
-gross/net gram columns for Gold, Silver, Bronze and Other. Returned/disposed/
-transferred rows are excluded from held weights; unknown paper-closing handover,
-missing gross, absent evidence and undisbursed records remain explicit unknowns.
-Weights are item-row totals and are never multiplied by quantity. Existing loan
-numbers, financial columns, filters, permissions and risk calculations are unchanged.
-Collateral hydration is bounded with the existing 250-record export batches.
-All 31 focused Excel, financial-summary, directory and isolation tests pass,
-alongside four directory JavaScript checks, import boundaries and documentation
-links. This follow-up is not yet deployed.
-
-The owner additionally requested small collateral details on the loan directory
-and Party Loans tab. A shared preview now shows up to two recorded items, with
-description, quantity, metal, net grams and current custody, plus a count of the
-remaining entries. Draft/approval custody is not asserted. Both active and closed
-Party tables use the preview; Khata uses its own return operations. Directory
-items are prefetched per visible page; Party item details load after pagination.
-All 60 focused export, directory, Party pagination/history and Khata integration
-tests pass, including escaped previews, borrower scoping and returned/unknown
-handover labels. Four directory JavaScript checks, import boundaries and current
-documentation links also pass. This additional UI work is not yet deployed.
+Source `b029d4a52771` is committed, pushed and deployed as `rokkad:collateral-production-20261015-b029d4a52771` at
+15 October 2026, 17:27:41 IST. All six CI groups pass, including 2,491 Loans cases;
+61 affected local cases and four directory JavaScript checks also pass.
+The production-copy rehearsal and live switch preserve all
+219 original business projections,
+with no migration. Read-only checks reconcile collateral and financial Excel
+values across three Workspaces and verify both directory/Party list previews.
+Both live readers match 1871 runtime files. Restricted roles,
+HTTPS, full-reader logs, six timers, independent image recovery and pre/post
+encrypted backups pass. Unknown weights/handover stay explicit; returned items
+do not inflate held weights. Risk rules, grace grants and disabled WhatsApp are
+preserved. See the [release record](implementation/collateral-summary-release-20261015.md).
 
 ## Filtered loan Excel and customer balance breakdown (15 October, deployed)
 

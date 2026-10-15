@@ -13,12 +13,16 @@ entitlement snapshot is compatible; restrictions/default decisions and separatel
 provisioned grants still need review. Recheck under the Company lock and preserve
 immutable grants/trial dates. Payment starts its ordinary paid period immediately
 on verification, independently of the extension; valid paid access survives grant
-expiry. This correction is live in the web-only image
+expiry. This correction was initially deployed in the web-only image
 `rokkad:grace-payment-20261015-0bd55f104fed` from 15 October 16:19 IST, based on the
-loan-export release. Worker images are unchanged and compatible. All 55 selected
-billing/access tests pass; live JSK monthly and annual consent are ready, no payment
-was taken, and grace remains through 22 October 23:39:08 IST. See the
+loan-export release. Worker images were initially unchanged and compatible. All 55
+selected billing/access tests passed; both JSK consent choices were ready at that
+initial check. The deployment created no payment, and the grace grants remain
+through 22 October 23:39:08 IST. See the
 [decision](adr/2026-10-15-payment-during-grace-extension.md).
+The correction is now preserved in combined source `b029d4a52771` on every compatible
+reader, with full CI, restored-data, recovery and pre/post backup acceptance.
+See the [release record](implementation/collateral-summary-release-20261015.md).
 
 The filtered-loan Excel follow-up adds collateral descriptions, recorded quantities
 and current custody, plus separate held gross/net grams for every supported metal.
@@ -26,7 +30,10 @@ Use current item-row weights without multiplying by quantity; exclude returned,
 disposed and transferred rows. Preserve unknown gross and paper-closing handover
 instead of asserting zero holdings. Drafts and missing item evidence do not
 establish custody. The owner confirmed the existing loan-number column was present.
-This collateral follow-up is not yet deployed.
+This follow-up is deployed from `b029d4a52771` after all six CI groups,
+production-copy/live preservation, exact-source checks and encrypted recovery/
+backup acceptance, with no migration or risk-policy change. See the
+[release record](implementation/collateral-summary-release-20261015.md).
 The follow-up also gives each ordinary loan card and Party active/closed loan row
 a shared two-item recorded-collateral preview: description, quantity, metal, net
 grams and current custody, plus a remaining-entry count. Provisional records do
