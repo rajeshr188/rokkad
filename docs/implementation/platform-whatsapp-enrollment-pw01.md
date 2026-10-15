@@ -1,7 +1,7 @@
 ---
 status: verified-local
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [implementation, whatsapp, consent, control-plane, rls]
 related:
   - ../plans/platform-owner-whatsapp-phase1-20261014.md
@@ -11,6 +11,8 @@ related:
 ---
 
 # PW-01: owner WhatsApp enrollment and consent
+
+Later software delivery is complete in the [15 October combined release](reviewed-production-release-20261015.md). This dated note retains its local implementation evidence. Production activation remains disabled; live sender and pilot acceptance are separate.
 
 ## Delivered locally
 

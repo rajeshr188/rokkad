@@ -1,12 +1,14 @@
 ---
 status: verified-local
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [rates, monitoring, bronze, validation]
 related: [../plans/bronze-monitoring-20261014.md, ../adr/2026-10-14-bronze-reference-price-valuation.md]
 ---
 
 # Bronze monitoring delivery
+
+Later software delivery is complete in the [15 October combined release](reviewed-production-release-20261015.md). This dated note retains its local implementation evidence. Actual bronze quote facts and monitoring-policy amendment remain pending.
 
 The existing BRONZE collateral and Bronze quote enums are reused. The facade,
 dated origination quote guard, Rates latest/daily screens and unchanged-price

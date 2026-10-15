@@ -7,14 +7,21 @@ tags: [status, architecture]
 
 # Status
 
-## Combined source review and deployment (15 October, in progress)
+## Combined source review and deployment (15 October, completed)
 
-The owner now explicitly authorises review, commit, push and production deployment
-of the accumulated source work, superseding the earlier origination-only software
-scope. Integration and CI checks, a clean committed image, production-copy
-rehearsal and encrypted image recovery gate the coordinated reader switch.
-WhatsApp remains disabled and the existing grace extensions remain preserved.
-See the [combined release record](implementation/reviewed-production-release-20261015.md).
+The reviewed backlog is committed and pushed. All six parallel CI groups pass,
+including the full 2,478-case Loans run. Source `26badab21a4c`
+is deployed as `rokkad:review-20261015-26badab21a4c` to web, monitoring and compatible scheduled
+readers at 15 October 2026, 09:52:50 IST. The final rehearsal preserves 201 original business projections
+across 1,066,815 restored rows; live owner-only migration applies
+the same four WhatsApp migrations with all original business projections exact.
+Both readers match all 1,867 committed runtime files. Restricted role, owner
+refusal, schema, HTTPS, full-lifetime logs, six timers and post-release encrypted
+backup/remote retention pass. About 19.25 GiB is free after regenerable builder
+cache cleanup; every image, volume and protected older checkpoint is retained.
+The three grace grants remain through 22 October, 23:39:08 IST. WhatsApp remains
+disabled, while bronze quote/policy configuration and actual customer/register
+changes remain separate. See the [release record](implementation/reviewed-production-release-20261015.md).
 
 ## JCL / JSK / Lakshmi grace-access extension (15 October)
 
@@ -46,7 +53,7 @@ six active timers complete at 04:25:18 IST. Initial Env list ordering is resolve
 by verifying both original environment hashes; configuration values stay exact.
 Final source/role/schema/HTTPS health and full-reader-lifetime logs pass. Post-release
 backup, encrypted remote download verification and retention pass at 04:26:42 IST.
-About 7.67 GiB is free: below the 8 GiB capacity warning and above the 5 GiB guard;
+At that earlier checkpoint, about 7.67 GiB is free: below the 8 GiB capacity warning and above the 5 GiB guard;
 protected older checkpoints remain retained. Actual customer/register changes
 remain separate. See the
 [release record](implementation/origination-production-release-20261015.md).

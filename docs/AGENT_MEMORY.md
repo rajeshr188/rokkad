@@ -7,13 +7,18 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
-The owner's later 15 October instruction explicitly authorises review, commit,
-push and deployment of all accumulated project source changes. This supersedes
-the earlier origination-only software rollout scope. Gate the combined release
-on CI, exact committed image, production-copy migration and encrypted recovery.
-Preserve the three grace grants and runtime configuration; WhatsApp activation
-and actual customer/register/provider actions remain separate. See the
-[combined release record](implementation/reviewed-production-release-20261015.md).
+The owner's later 15 October instruction authorises the combined source review,
+commit, push and deployment, superseding the earlier origination-only scope.
+That release is complete: application source `26badab21a4c`,
+image `rokkad:review-20261015-26badab21a4c`, matching web/monitoring/scheduled readers, four owner
+WhatsApp migrations and 201 preserved original business projections. All six CI
+groups (including 2,478 Loans cases), exact 1,867-file checks per reader, restricted
+startup/owner refusal, HTTPS, six timers, clean reader logs, independent image
+recovery and post-release backup/remote retention pass. Builder-cache cleanup
+clears the prior capacity warning while retaining every image, volume and
+protected checkpoint. Preserve grace grants through 22 October, 23:39:08 IST.
+WhatsApp activation, bronze quote/policy configuration and real borrower/register
+actions remain separate. See the [release record](implementation/reviewed-production-release-20261015.md).
 
 On 15 October the owner explicitly requested one more week of production grace
 access for JCL, JSK and Lakshmi. Use existing audited platform extensions rather
@@ -36,7 +41,7 @@ projections stay exact, compatible web/monitoring start at 04:22:45 IST and
 scheduled readers/six timers complete at 04:25:18 IST. Environment ordering differs
 but both original value hashes match; configuration values stay unchanged. Final
 source/role/schema/HTTPS/full-lifetime logs and post-release backup/remote download/
-retention pass. About 7.67 GiB is free; the existing 8 GiB capacity warning remains
+retention pass. At that earlier checkpoint, about 7.67 GiB is free; the existing 8 GiB capacity warning remains
 above the 5 GiB guard, and protected older checkpoints are retained.
 Actual borrower, register and financial business actions remain separate. See the
 [15 October release record](implementation/origination-production-release-20261015.md).

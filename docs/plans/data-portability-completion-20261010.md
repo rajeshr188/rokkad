@@ -1,17 +1,19 @@
 ---
 status: active
 owner: project
-updated: 2026-10-10
+updated: 2026-10-15
 tags: [plans, portability, fw-007, fw-012]
 ---
 
 # Complete the existing portability workflows
 
+Software is deployed on 15 October in the [combined release](../implementation/reviewed-production-release-20261015.md). Existing operator/profile bounds and actual business acceptance remain separate.
+
 The [14 October borrower correction](../implementation/recorded-borrower-correction-20261014.md)
 adds a later exchange boundary: histories with BORROWER_CORRECTED evidence retain
-both former/current Party identities. Published loan-history and servicing-bundle
-profiles refuse them until a separately versioned two-Party remapping contract is
-selected and verified. Exact Workspace recovery already retains both prerequisites.
+both former/current Party identities. Older loan-history and servicing-bundle profiles retain their refusal.
+The current servicing-bundle v5 and business-package paths separately map both
+Parties; their two-Party remapping contract is verified and deployed. Exact Workspace recovery already retains both prerequisites.
 Do not drop the correction or map both IDs to the current borrower to bypass this.
 
 The owner accepts the [10 October review](../architecture/data-portability-review-20261010.md)
@@ -22,12 +24,12 @@ verified sequence.
 
 | Slice | Scope | Acceptance | State |
 | --- | --- | --- | --- |
-| PC-01 | Current staff capability catalog | Formats, limits, coverage, permissions and restore availability displayed honestly; full Workspace transfer not claimed | Verified locally; not deployed |
-| PC-02 | Unified supported loan-file restore | Upload/profile detection → explicit mappings → non-posting reconciliation → exact confirmation → ordinary loan links; opening/history/servicing/closed wires retain their meanings | Verified locally; not deployed |
-| PC-03 | Essential-position source adapters | Reviewed reduced-principal active checkpoints and closed-register templates; no invented earlier transactions or reuse of the JCL exception | Verified locally within documented bounds; not deployed |
-| PC-04 | Representative-volume exchange | Bounded, consistent, resumable Party/financial/media chunks; real JCL/Lakshmi size, connected identity and numbering checks | Verified locally within documented operator bounds; not deployed |
-| PC-05 | Fresh-Workspace business package | Applicable customers/configuration/loans/media restored in dependency order; empty compatible destination; clear exclusions and reconciliation before operations | Verified locally within documented operator/profile bounds; not deployed |
-| PC-06 | Remaining graph coverage and continuation | Required funding/storage/correction support and reviewed zero initial retained-item allocation; export/restore/re-export equality and future servicing, monitoring, document and numbering acceptance | Verified locally within documented graph/operator bounds; not deployed |
+| PC-01 | Current staff capability catalog | Formats, limits, coverage, permissions and restore availability displayed honestly; full Workspace transfer not claimed | Verified locally; code deployed 15 October |
+| PC-02 | Unified supported loan-file restore | Upload/profile detection → explicit mappings → non-posting reconciliation → exact confirmation → ordinary loan links; opening/history/servicing/closed wires retain their meanings | Verified locally; code deployed 15 October |
+| PC-03 | Essential-position source adapters | Reviewed reduced-principal active checkpoints and closed-register templates; no invented earlier transactions or reuse of the JCL exception | Verified locally within documented bounds; code deployed 15 October |
+| PC-04 | Representative-volume exchange | Bounded, consistent, resumable Party/financial/media chunks; real JCL/Lakshmi size, connected identity and numbering checks | Verified locally within documented operator bounds; code deployed 15 October |
+| PC-05 | Fresh-Workspace business package | Applicable customers/configuration/loans/media restored in dependency order; empty compatible destination; clear exclusions and reconciliation before operations | Verified locally within documented operator/profile bounds; code deployed 15 October |
+| PC-06 | Remaining graph coverage and continuation | Required funding/storage/correction support and reviewed zero initial retained-item allocation; export/restore/re-export equality and future servicing, monitoring, document and numbering acceptance | Verified locally within documented graph/operator bounds; code deployed 15 October |
 
 PC-01/02 reuse existing history staging and the Loans opening, servicing and
 closed-position restore commands. Wider files use one small Workspace-owned file

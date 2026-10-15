@@ -1,11 +1,13 @@
 ---
 status: local-verified-live-pending
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [implementation, whatsapp, diagnostics, pilot]
 ---
 
 # PW-05 diagnostics, reviewed operations and pilot readiness
+
+Later software delivery is complete in the [15 October combined release](reviewed-production-release-20261015.md). This dated note retains its local implementation evidence. Production activation remains disabled; live sender and pilot acceptance are separate.
 
 PW-05 adds local owner/platform diagnostics and a concrete first-pilot handoff.
 The real JCL pilot awaits sender/template setup and compatible deployment. The

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [implementation, whatsapp, control-plane, scheduling, limits]
 related:
   - platform-whatsapp-transport-pw03.md
@@ -11,6 +11,8 @@ related:
 ---
 
 # Platform WhatsApp scheduling and release controls: PW-04
+
+Later software delivery is complete in the [15 October combined release](reviewed-production-release-20261015.md). This dated note retains its local implementation evidence. Production activation remains disabled; live sender and pilot acceptance are separate.
 
 The owner authorised continuation after PW-03. This local change implements current
 trial-ending reminders, reviewed service announcements and count/spend reservations.

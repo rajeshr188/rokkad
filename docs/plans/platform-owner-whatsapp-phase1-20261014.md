@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [plans, whatsapp, control-plane, onboarding, billing]
 related:
   - future-work.md
@@ -12,6 +12,8 @@ related:
 ---
 
 # Platform-to-owner WhatsApp: phase-one design
+
+The software is deployed on 15 October in the [combined release](../implementation/reviewed-production-release-20261015.md), with all activation flags disabled. Live sender configuration, registration and pilot acceptance remain pending.
 
 ## Mandate and completion
 

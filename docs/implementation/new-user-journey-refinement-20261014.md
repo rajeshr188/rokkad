@@ -1,12 +1,14 @@
 ---
 status: verified-local
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [onboarding, ux, authentication, regression]
 related: [../plans/new-user-journey-improvements-20261014.md, ../adr/2026-10-14-new-user-journey-handoffs.md, ../STATUS.md]
 ---
 
 # New-user journey refinement
+
+Later software delivery is complete in the [15 October combined release](reviewed-production-release-20261015.md). This dated note retains its local implementation evidence.
 
 The owner approved implementing the [journey audit's recommendations](new-user-journey-audit-20261014.md)
 in the existing workflow. NJ-01 through NJ-05 are implemented and verified locally.

@@ -1,5 +1,5 @@
 ---
-status: active
+status: complete
 owner: project
 updated: 2026-10-15
 tags: [release, review, production]
@@ -11,6 +11,58 @@ The owner requests review, commit, push and deployment of the accumulated source
 changes. This authorises the combined software release and supersedes the earlier
 origination-only rollout scope. Actual customer edits, register reservations,
 WhatsApp activation and provider configuration remain separate business actions.
+
+## Completed production result
+
+The coordinated switch completes on **15 October 2026, 09:52:50 IST**. Application source
+`26badab21a4c264022cee412ddcf923a44450b8b` is pushed on `work/loan-servicing-contract-ld01`.
+All six groups pass in [the complete CI run](https://github.com/rajeshr188/rokkad/actions/runs/38676529405): foundation/image,
+Workspace/first-loan, billing/mail, Rates, portability/WhatsApp and Loans. The full
+Loans group includes 2,478 cases; group counts can overlap and are not summed as
+distinct tests. All observed integration failures are resolved.
+
+Web and monitoring run `rokkad:review-20261015-26badab21a4c` with image ID
+`sha256:e09f5847034add44eb68d7ecff2fca3ddb008c522d1a9c83e86fcf485a3bd918`. Exact committed-source verification passes for all 1,867
+runtime files in each reader. Three mail commands and the health reader use the
+same image and verified static volume. Runtime environment values and protected
+configuration stay exact; only the reviewed image/static bindings change.
+
+Post-start acceptance initially stopped because Docker names the new image's user
+`app`, while the older derivative expressed the same UID as `10001`. Forward
+acceptance verifies the effective UID is 10001 in both readers and proves their
+original environment values, commands and mounts. Compose's null command is
+resolved to the inherited image command. No configuration values change and no
+database restore or downgrade occurs; timers resume after compatible reader
+checks complete.
+
+The final production-copy rehearsal restores 1,066,815 rows in
+204 tables and preserves all 201
+original business projections. Its four owner migrations take
+55.727 seconds. Live deployment applies those same four
+WhatsApp migrations, preserves all 201
+original business projections, refuses owner startup, and passes restricted
+read-only readers before restarting compatible services. The private checkpoint,
+raw diagnostics and row fingerprints remain on the server. Only non-customer
+verification metadata is collected locally.
+
+Independent encrypted remote download, local decryption and exact image reload
+pass; the recovery key never leaves the owner's machine. Final HTTPS, role,
+schema, source and full-reader-lifetime log checks pass with six active timers.
+The post-release operational backup, encrypted remote verification and retention
+pass. About 19.25 GiB remains free, clearing the earlier capacity warning.
+Regenerable builder cache cleanup preserves every image and volume; protected
+older backup checkpoints remain retained. The verified disposable rehearsal DB
+is removed while all backups and proofs remain.
+
+The JCL/JSK/Lakshmi audited grants remain full through 22 October, 23:39:08 IST
+(fractional seconds retained). Subscription dates, entitlements, invoices and
+payments remain unchanged by the release. WhatsApp inbound, intent and dispatch
+activation remain disabled; live sender approval/pilot acceptance is separate.
+Bronze software is available without creating a quote or amending a policy.
+V9 assessments refresh through the ordinary bounded monitoring worker; this does
+not attest that books are complete or collateral coverage is sufficient. Actual
+borrower corrections, number reservations and other financial business actions
+are not performed by the deployment.
 
 ## Reviewed scope
 
@@ -84,4 +136,4 @@ Final acceptance requires exact committed runtime source, no pending migrations,
 restricted database roles, healthy HTTPS, six restored timers, clean reader logs
 and a successful operational backup with verified encrypted remote retention.
 Protected older checkpoints must remain retained despite the existing disk-space
-warning. Deployment results will be recorded here after these gates complete.
+warning. The completed result above records acceptance of these gates.

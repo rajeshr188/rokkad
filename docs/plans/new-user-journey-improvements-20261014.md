@@ -1,12 +1,14 @@
 ---
 status: complete
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [onboarding, ux, authentication, validation]
 related: [../implementation/new-user-journey-audit-20261014.md, ../STATUS.md]
 ---
 
 # Improve the existing new-user journey
+
+Software is deployed on 15 October in the [combined release](../implementation/reviewed-production-release-20261015.md). Existing operator/profile bounds and actual business acceptance remain separate.
 
 The owner approved the audit's recommended order on 14 October, with regression
 protection. Implement in the current checkout; commit, deployment, real mail
@@ -14,10 +16,10 @@ delivery and staff acceptance remain separate actions.
 
 | Slice | Scope | Status |
 | --- | --- | --- |
-| NJ-01 | Public contact and compatible email/username signin (NU-01/02) | Implemented and verified locally |
-| NJ-02 | Verification, explicit trial activation and supporting account screens (NU-03/08) | Implemented and verified locally |
-| NJ-03 | Separate monitoring readiness and clear workflow/valuation choices (NU-04/06) | Implemented and verified locally |
-| NJ-04 | Focused setup navigation, phone actions and current public copy (NU-05/07/09) | Implemented and verified locally |
+| NJ-01 | Public contact and compatible email/username signin (NU-01/02) | Deployed 15 October; verified locally |
+| NJ-02 | Verification, explicit trial activation and supporting account screens (NU-03/08) | Deployed 15 October; verified locally |
+| NJ-03 | Separate monitoring readiness and clear workflow/valuation choices (NU-04/06) | Deployed 15 October; verified locally |
+| NJ-04 | Focused setup navigation, phone actions and current public copy (NU-05/07/09) | Deployed 15 October; verified locally |
 | NJ-05 | Restricted-role regressions and empty-business desktop/phone acceptance | Completed with fictional local data; real staff/provider acceptance separate |
 
 Keep existing accounts/usernames, invitations, normal staff navigation, standing
@@ -43,4 +45,4 @@ review with the original date, standing tenure and agreed amounts; reviewing
 consumes no additional number. Desktop and 390px English/Hindi checks pass.
 See [implementation and acceptance evidence](../implementation/new-user-journey-refinement-20261014.md)
 and the [handoff decision](../adr/2026-10-14-new-user-journey-handoffs.md).
-No production deployment, provider email or paid subscription occurs in this work.
+The local implementation did not deploy or activate paid/provider actions. The later combined software release is complete; real staff/provider acceptance remains separate.

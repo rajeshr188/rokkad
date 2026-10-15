@@ -1,7 +1,7 @@
 ---
 status: verified-local
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [implementation, whatsapp, source-intents, control-plane, rls]
 related:
   - platform-whatsapp-enrollment-pw01.md
@@ -12,6 +12,8 @@ related:
 ---
 
 # PW-02: durable owner WhatsApp source intents and previews
+
+Later software delivery is complete in the [15 October combined release](reviewed-production-release-20261015.md). This dated note retains its local implementation evidence. Production activation remains disabled; live sender and pilot acceptance are separate.
 
 ## Delivered locally
 

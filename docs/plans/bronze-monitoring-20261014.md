@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [monitoring, rates, evidence, rollout]
 related: [../adr/2026-10-14-bronze-reference-price-valuation.md]
 ---
@@ -16,9 +16,10 @@ Do the work in this order:
    bronze interest optional and explicit; preserve gold/silver behavior.
 2. **Complete locally:** verify real loan lifecycle, source retention, current/live-saved parity,
    freshness, corrections/invalidation, scope guards and package compatibility.
-3. Prepare a coordinated matching web/monitoring release with V9 and the existing
-   business-package v3 follow-up. Keep unrelated pending work out of the release.
-   Rehearse prior-reader recovery and verify backup/capacity before switching.
+3. **Completed 15 October:** coordinated matching V9 web/monitoring delivery and
+   the business-package follow-up pass preserving rehearsal, backup, capacity and
+   exact encrypted runtime recovery. See the
+   [combined release](../implementation/reviewed-production-release-20261015.md).
 4. Record the owner's real positive bronze buying/selling quote, source and
    effective time through ordinary authorized Rates. No fictional production quote.
 5. Amend JCL's current Workspace monitoring policy to CALCULATED_METAL_VALUE,
