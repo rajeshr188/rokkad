@@ -35,6 +35,11 @@ page shell needs a session and isolates account guidance from its fake user, and
 archive navigation now uses the existing Completed closures label. The fixes
 retain financial lifecycle assertions and check both permitted and denied archive
 links. The release remains gated on a new complete passing CI run.
+The next run passes all 364 Workspace/first-loan checks and exposes the isolated
+pricing template engine's missing navigation library. Its real request fixture
+now supplies anonymous authentication and session state; all five pricing tests
+pass. Independent CI test groups continue after a failure once schema setup
+succeeds, while any failure still fails the job.
 
 ## Release gates
 

@@ -4,7 +4,8 @@ from types import SimpleNamespace
 from django.conf import settings
 from django.template import Context, Engine
 from django.contrib.auth import get_user_model
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.contrib.auth.models import AnonymousUser
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from apps.orgs.models import Company, Membership, Role
@@ -25,10 +26,17 @@ class PlanPricingTests(SimpleTestCase):
                 "base_workspace_settings.html": "{% block mgmt_content %}{% endblock %}",
                 "subscriptions/_navigation.html": "",
             }), "django.template.loaders.filesystem.Loader"],
-            libraries={"static": "django.templatetags.static"},
+            libraries={
+                "static": "django.templatetags.static",
+                "onboarding_tags": "apps.onboarding.templatetags.onboarding_tags",
+            },
         )
+        request = RequestFactory().get('/w/pricing/settings/billing/plans/')
+        request.workspace = SimpleNamespace(slug="pricing")
+        request.user = AnonymousUser()
+        request.session = {}
         return engine.get_template("subscriptions/plan_list.html").render(Context({
-            "plans": [plan], "request": SimpleNamespace(workspace=SimpleNamespace(slug="pricing")),
+            "plans": [plan], "request": request,
             "billing_checkout_enabled": False, "trial_start_enabled": False, **context,
         }, use_l10n=False))
 
