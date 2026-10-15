@@ -40,6 +40,11 @@ pricing template engine's missing navigation library. Its real request fixture
 now supplies anonymous authentication and session state; all five pricing tests
 pass. Independent CI test groups continue after a failure once schema setup
 succeeds, while any failure still fails the job.
+The expanded combined suite approaches the former 45-minute job limit. The same
+six groups now run as ordinary parallel matrix jobs with independent PostgreSQL
+services, schema/runtime checks and a 60-minute limit per group. Fail-fast is
+disabled and no coverage is removed. This also makes a completed group's failure
+diagnostics available while the remaining groups continue.
 
 ## Release gates
 

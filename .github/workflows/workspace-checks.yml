@@ -39,8 +39,13 @@ env:
 
 jobs:
   foundation:
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [foundation, boundary, billing, rates, portability, loans]
     services:
       postgres:
         image: postgres:16-bookworm
@@ -63,12 +68,15 @@ jobs:
           python -m pip install -r requirements.txt -c requirements.lock
           python -m pip check
       - name: Check current documentation links
+        if: matrix.suite == 'foundation'
         run: python scripts/check_current_docs.py
       - name: Check supported-app import boundaries
+        if: matrix.suite == 'foundation'
         run: |
           python scripts/check_app_boundaries.py
           python -m unittest scripts.test_app_boundaries
       - name: Check loan preflight and payment retry interactions
+        if: matrix.suite == 'foundation'
         run: >-
           node --test scripts/test_pawn_rate_readiness.cjs
           scripts/test_pawn_draft_submit.cjs
@@ -76,6 +84,7 @@ jobs:
           scripts/test_routine_loan_editor.cjs
           scripts/test_checkout_confirmation.js scripts/test_recurring_checkout.js
       - name: Check isolated billing rehearsal helpers
+        if: matrix.suite == 'foundation'
         run: >-
           python -m unittest scripts.test_billing_rehearsal_credentials
           scripts.test_billing_rehearsal_webhook scripts.test_razorpay_test_key_form
@@ -96,7 +105,7 @@ jobs:
           fi
           grep 'tenancy.E020' owner-check.log
       - name: Boundary and first-loan checks
-        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' && matrix.suite == 'boundary' }}
         run: >-
           python manage.py test --settings django_project.settings.test --noinput
           apps.tenancy.tests apps.tenancy.test_registry
@@ -116,7 +125,7 @@ jobs:
           apps.configuration.tests.test_legacy_preference_retention
           apps.configuration.tests.test_workspace_preferences_view
       - name: Recurring billing and platform mail regressions
-        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' && matrix.suite == 'billing' }}
         run: >-
           python manage.py test --settings django_project.settings.test --noinput
           apps.subscriptions.test_plan_pricing
@@ -139,7 +148,7 @@ jobs:
           apps.onboarding.tests_team_invites
           django_project.test_invitation_team_flow_intent
       - name: Quote history, migration and isolation regressions
-        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' && matrix.suite == 'rates' }}
         run: >-
           python manage.py test --settings django_project.settings.test --noinput
           apps.tenant_apps.rates.test_quote_evidence
@@ -152,18 +161,20 @@ jobs:
           apps.tenant_apps.rates.test_access_conformance
           apps.tenant_apps.rates.test_reference_ui apps.tenant_apps.rates.test_bronze
       - name: Owner WhatsApp and portable origination regressions
-        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' && matrix.suite == 'portability' }}
         run: >-
           python manage.py test --settings django_project.settings.test --noinput --top-level-directory .
           apps.platform_whatsapp apps.tenant_apps.data_portability.tests
       - name: Loans regressions
-        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' && matrix.suite == 'loans' }}
         run: >-
           python manage.py test --settings django_project.settings.test --noinput --top-level-directory .
           apps.tenant_apps.loans.tests
       - name: Build application image (never publish)
+        if: matrix.suite == 'foundation'
         run: docker build -t rokkad-ci .
       - name: Verify image runtime and static assets with no owner credentials
+        if: matrix.suite == 'foundation'
         run: |
           docker run --rm --network host \
             -e SECRET_KEY -e DJANGO_ALLOWED_HOSTS -e DEBUG \
