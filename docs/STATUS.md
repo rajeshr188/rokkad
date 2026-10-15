@@ -7,21 +7,20 @@ tags: [status, architecture]
 
 # Status
 
-## Filtered loan Excel and customer balance breakdown (15 October, verified locally)
+## Filtered loan Excel and customer balance breakdown (15 October, deployed)
 
-The Loans list exports all filtered pages to Excel with Loans/Summary sheets,
-principal, pending interest, fees, outstanding and separate age/unpaid-interest
-month columns. Party detail adds the principal/interest/fees summary and an active
-ordinary-loan export shortcut. Amounts share existing collection selectors;
-unpaid-month reporting uses actual monthly charge coverage and preserves unknown
-opening attribution. Export is read-only and permission checked. The 58-case
-directory/portal/report/four-origin servicing selection and final 93-case
-export/Khata/Party selection pass, alongside four directory JavaScript checks,
-import boundaries (including new files), documentation links and whitespace.
-These selections overlap; counts are not distinct totals. No migration is required.
-The owner now authorises safe production deployment; the scoped release is being
-prepared with exact-source CI, production-copy read checks, recovery and backup.
-See the [decision](adr/2026-10-15-filtered-loan-excel-summary.md).
+Source `0dfd15cc7d0f` is committed, pushed and deployed as `rokkad:loan-export-20261015-0dfd15cc7d0f` at
+15 October 2026, 14:19:08 IST. All six exact-source CI groups pass. Production-copy rehearsal
+preserves 219 original business projections across
+1,067,188 rows; the live checkpoint/read checks preserve all
+219 business projections with no migration.
+Real XLSX/Party reads pass in all three Workspaces, and both readers match all
+1870 runtime files. Restricted roles, HTTPS, complete reader logs,
+six timers, independent image recovery and pre/post encrypted R2 backups pass.
+The filtered Excel, separate age/unpaid-month columns and Party principal/interest/
+fees breakdown are available. Grace grants and disabled WhatsApp are preserved.
+See the [release record](implementation/loan-summary-export-release-20261015.md)
+and [reporting decision](adr/2026-10-15-filtered-loan-excel-summary.md).
 
 ## Combined source review and deployment (15 October, completed)
 

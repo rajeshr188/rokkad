@@ -14,6 +14,11 @@ shortcut and principal/interest/fees totals. Unpaid months are explicitly disclo
 oldest-first monthly charge coverage, not an invented saved receipt allocation;
 unknown opening attribution remains unavailable. No posting or monitoring rules
 change. See the [decision](adr/2026-10-15-filtered-loan-excel-summary.md).
+This feature is deployed from `0dfd15cc7d0f` after all six CI groups, a 219-projection
+production-copy rehearsal and live row-preservation/read checks. Exact source,
+restricted roles, HTTPS, six timers, independent image recovery and pre/post
+encrypted backups pass. No migration, financial action or risk-policy change.
+See the [release record](implementation/loan-summary-export-release-20261015.md).
 
 The owner's later 15 October instruction authorises the combined source review,
 commit, push and deployment, superseding the earlier origination-only scope.
