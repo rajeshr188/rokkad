@@ -46,3 +46,16 @@ their own row type and unavailable current amounts and never enter debt totals.
 Khata remains in its own register/export; the customer shortcut exports active
 ordinary loans. Customer names/references are literal Excel text, not formulas.
 The workbook has Loans and Summary sheets with numeric money and dated context.
+
+The collateral follow-up appends an item summary (description, recorded quantity,
+current custody) and separate held gross/net grams for Gold, Silver, Bronze and
+Other. It uses current canonical items, with export-only bounded prefetching;
+it does not reinterpret original collateral snapshots or change valuation/risk.
+Held means in vault or with funding lender. Returned, auction-disposed and
+renewal-transferred/reversed rows remain visible in descriptions but do not
+inflate holdings. PAPER_CLOSED does not prove handover: that metal's holdings
+remain unavailable. Missing gross makes the complete gross total unavailable
+without hiding known net; absent evidence and undisbursed records are unavailable.
+Known absent metals are zero. Item weights already represent their recorded
+quantity and must not be multiplied by it. Gram cells preserve four decimals,
+money keeps two, and the workbook documents the current-holdings basis.

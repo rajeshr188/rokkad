@@ -7,6 +7,19 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The filtered-loan Excel follow-up adds collateral descriptions, recorded quantities
+and current custody, plus separate held gross/net grams for every supported metal.
+Use current item-row weights without multiplying by quantity; exclude returned,
+disposed and transferred rows. Preserve unknown gross and paper-closing handover
+instead of asserting zero holdings. Drafts and missing item evidence do not
+establish custody. The owner confirmed the existing loan-number column was present.
+This collateral follow-up is not yet deployed.
+The follow-up also gives each ordinary loan card and Party active/closed loan row
+a shared two-item recorded-collateral preview: description, quantity, metal, net
+grams and current custody, plus a remaining-entry count. Provisional records do
+not claim custody; Khata Party rows derive return status from their own operations.
+Load Party preview items only after pagination; keep full totals independent.
+
 The owner's filtered-loan Excel request includes both completed loan-age months
 and months with unpaid interest as separate columns. Use shared validated directory
 filters/order/admission checks and existing collection balances, with a customer

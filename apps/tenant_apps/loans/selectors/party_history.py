@@ -33,6 +33,7 @@ class PartyPawnLoanRow:
     document_links: tuple
     account_state: str = ""
     fees_due: Decimal | None = None
+    collateral_preview: dict | None = None
 
 
 def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:

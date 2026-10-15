@@ -6,12 +6,60 @@ from decimal import Decimal
 
 from django.db.models import Q
 
+from apps.tenant_apps.loans.domain.vocabulary import CollateralMetal
 from .balances import PawnLoanBalance, get_pawn_loan_balance
 from .continuation import RECORDED_PROFILES
 from .servicing_contract import get_servicing_position
 
 ZERO = Decimal("0")
 MONTHS_BASIS = "Oldest monthly charges covered first; a partly unpaid month counts as one."
+
+
+def collateral_preview(items, *, provisional=False):
+    """Small recorded-item preview shared by the directory and Party lists."""
+    items = tuple(items)
+    preview = []
+    for item in items[:2]:
+        custody = ""
+        if not provisional:
+            if hasattr(item, "get_custody_state_display"):
+                custody = "Handover unconfirmed" if item.custody_state == "PAPER_CLOSED" else item.get_custody_state_display()
+            elif hasattr(item, "preview_returned"):
+                custody = "Returned" if item.preview_returned else "Held"
+        preview.append(dict(description=item.description, quantity=item.quantity,
+            metal=item.get_metal_display(), net_weight=item.net_weight, custody=custody))
+    return {"items": tuple(preview), "more_count": max(0, len(items) - 2)}
+
+
+def get_loan_collateral_summary(loan):
+    """Recorded descriptions and current holdings, not original/historical stock.
+
+    Each item's weights already describe its entire quantity. Never multiply
+    weights by piece count, or infer missing gross from net.
+    """
+    items = tuple(loan.collateral_items.all())
+    descriptions = []
+    weights = {metal.value: [ZERO, ZERO] for metal in CollateralMetal}
+    uncertain_metals = set()
+    for item in items:
+        quantity = "not recorded" if item.quantity is None else str(item.quantity)
+        descriptions.append(f"{item.description}; {item.get_metal_display()}; "
+            f"qty {quantity}; {item.get_custody_state_display()}")
+        if item.custody_state == "PAPER_CLOSED":
+            uncertain_metals.add(item.metal)
+        if item.custody_state not in {"IN_VAULT", "WITH_FUNDING_LENDER"}:
+            continue
+        group = weights[item.metal]
+        group[0] = None if group[0] is None or item.gross_weight is None else group[0] + item.gross_weight
+        group[1] += item.net_weight
+    for metal in uncertain_metals:
+        weights[metal] = [None, None]
+    # No items is incomplete evidence, not proof of empty holdings. Drafts and
+    # approvals have provisional item rows but do not establish disbursed custody.
+    values = tuple(value for metal in CollateralMetal for value in weights[metal.value])
+    if not items or loan.state in {"DRAFT", "APPROVED", "CANCELLED"}:
+        values = (None,) * len(values)
+    return ("\n".join(descriptions) or "Not recorded", *values)
 
 
 @dataclass(frozen=True)

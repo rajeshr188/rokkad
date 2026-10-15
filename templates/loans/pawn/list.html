@@ -61,6 +61,7 @@
           <div class="col-6 col-md-3"><dl class="mb-0"><dt class="small text-body-secondary fw-normal">{% if loan.is_imported_closed_position %}Original principal{% else %}{% translate "Principal at entry" %}{% endif %}</dt><dd class="mb-1">{% if loan.principal_amount != None %}₹{{ loan.principal_amount|indian_money }}{% else %}Unknown{% endif %}</dd><dt class="small text-body-secondary fw-normal">{% translate "Loan date" %}</dt><dd class="mb-0">{{ loan.loan_date|default_if_none:"Unknown" }}</dd></dl></div>
           <div class="col-6 col-md-4">{% include "loans/pawn/_state_badge.html" %}<p class="small mt-2 mb-0">{% if loan.is_imported_closed_position %}Open the accepted closed position and retained source documents. Earlier financial transactions are unavailable.{% elif loan.state == 'DRAFT' %}{% translate "Open to review the draft." %}{% elif loan.state == 'APPROVED' %}{% translate "Open to review payment readiness." %}{% elif loan.state == 'ACTIVE' %}{% translate "Open for balances and collection options." %}{% else %}{% translate "Open to review the loan history." %}{% endif %}</p></div>
         </div>
+        {% include "loans/pawn/_collateral_preview.html" with preview=row.collateral_preview only %}
       </li>{% endwith %}{% else %}
       <li class="card p-3" data-historical-record>
         <div class="row g-3 align-items-center">

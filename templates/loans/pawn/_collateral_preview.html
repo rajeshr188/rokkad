@@ -1,0 +1,10 @@
+{% load loans_display i18n %}
+<div class="small text-body-secondary text-break mt-1" data-collateral-summary>
+  <div>{% translate "Recorded collateral" %}</div>
+  {% for item in preview.items %}
+    <div><span class="text-body">{{ item.description|truncatechars:50 }}</span> · {% translate "qty" %} {{ item.quantity|default_if_none:"not recorded" }} · {{ item.metal }} {{ item.net_weight|compact_decimal }} g {% translate "net" %}{% if item.custody %} · {{ item.custody }}{% endif %}</div>
+  {% empty %}
+    <div>{% translate "Details not recorded" %}</div>
+  {% endfor %}
+  {% if preview.more_count %}<div>{% blocktranslate count total=preview.more_count %}+ {{ total }} more item entry — open loan for all details{% plural %}+ {{ total }} more item entries — open loan for all details{% endblocktranslate %}</div>{% endif %}
+</div>

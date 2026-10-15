@@ -380,7 +380,8 @@
                             </td>
                             <td>{{ row.notice_count }}</td>
                             <td>
-                                <div>{{ row.collateral_items_count }} items</div>
+                                <div>{{ row.collateral_items_count }} {% if row.loan_type == "Khata" %}held item records{% else %}item records{% endif %}</div>
+                                {% include "loans/pawn/_collateral_preview.html" with preview=row.collateral_preview only %}
                             </td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
@@ -431,7 +432,8 @@
                                 {% endfor %}
                             </td>
                             <td>
-                                <div>{{ row.collateral_items_count }} items</div>
+                                <div>{{ row.collateral_items_count }} {% if row.loan_type == "Khata" %}held item records{% else %}item records{% endif %}</div>
+                                {% include "loans/pawn/_collateral_preview.html" with preview=row.collateral_preview only %}
                             </td>
                             <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ row.detail_url }}"><i class="bi bi-box-arrow-up-right"></i></a></td>
                         </tr>

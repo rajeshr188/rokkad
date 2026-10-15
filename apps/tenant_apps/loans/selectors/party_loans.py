@@ -1,12 +1,34 @@
 """Compose distinct loan kinds without changing pawn-only selector contracts."""
 from decimal import Decimal
+from collections import defaultdict
+from dataclasses import replace
 
 from django.core.paginator import Paginator
+from django.db.models import Exists, OuterRef
 from django.urls import reverse
 from django.utils import timezone
 
 from .party_history import PartyPawnLoanRow, get_party_pawn_loan_history_summary
 from .khata_summary import portfolio_summary, LIVE_STATES
+from .loan_summary import collateral_preview
+from apps.tenant_apps.loans.models import KhataCollateralItem, KhataOperation, PawnCollateralItem
+
+
+def _with_collateral_previews(rows, *, workspace_id):
+    """Fetch item details for displayed rows only, independently of full totals."""
+    items = defaultdict(list)
+    for kind, model, field in (("PawnLoan", PawnCollateralItem, "loan_id"),
+                               ("Khata", KhataCollateralItem, "account_id")):
+        ids = [row.pk for row in rows if row.loan_type == kind]
+        if ids:
+            records = model.objects.filter(workspace_id=workspace_id, **{field + "__in": ids}).order_by("pk")
+            if kind == "Khata":
+                records = records.annotate(preview_returned=Exists(KhataOperation.objects.filter(
+                    workspace_id=workspace_id, item_id=OuterRef("pk"), kind__in=("RETURN", "HANDOVER"))))
+            for item in records:
+                items[(kind, getattr(item, field))].append(item)
+    return [replace(row, collateral_preview=collateral_preview(items[(row.loan_type, row.pk)],
+        provisional=row.account_state in {"DRAFT", "APPROVED", "CANCELLED"})) for row in rows]
 
 
 def get_party_loan_history_summary(party, *, limit=20, page_size=None,
@@ -49,4 +71,9 @@ def get_party_loan_history_summary(party, *, limit=20, page_size=None,
         active, closed = a.object_list, c.object_list
     else:
         active, closed = active[:limit], closed[:limit]
+    visible = _with_collateral_previews([*active, *closed], workspace_id=party.workspace_id)
+    active, closed = visible[:len(active)], visible[len(active):]
+    if pages:
+        pages["active_page"].object_list = active
+        pages["closed_page"].object_list = closed
     return dict(**pages, sort=sort, active_loans=active, closed_loans=closed, counts=counts)

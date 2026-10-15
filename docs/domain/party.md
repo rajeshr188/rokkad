@@ -16,6 +16,14 @@ active loans (Excel)** shortcut uses the same filtered ordinary-loan directory
 export as the Loans list, with `report.export` permission. Khata exports remain
 in the Khata register. See the [reporting decision](../adr/2026-10-15-filtered-loan-excel-summary.md).
 
+The active and closed loan rows include a compact recorded-collateral preview,
+shared with the ordinary Loans directory. It shows up to two descriptions with
+recorded quantities, metal, net grams and current custody, then the number of
+remaining item entries. It does not infer piece counts or multiply row weights
+by quantity. Draft/approval rows do not assert physical custody. Unknown quantities
+stay explicit; Khata return labels use its own actual return/handover operations.
+Item details load for displayed rows only, without changing complete balance totals.
+
 Party is the canonical borrower/counterparty identity inside a Workspace, implemented
 at `apps/tenant_apps/party`. Loans refers to Party; no Contact backfill or DEA account
 mapping is part of the supported product. The old migration-era description is

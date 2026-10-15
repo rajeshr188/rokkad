@@ -81,6 +81,8 @@ class KhataIntegrationTests(CorrectionFixture, TestCase):
             khata = next(r for r in all_rows if r.loan_type == "Khata")
             self.assertIn("/khata/", khata.detail_url)
             self.assertFalse(khata.repayment_url)
+            self.assertEqual(khata.collateral_preview["items"][0]["description"], self.first.description)
+            self.assertEqual(khata.collateral_preview["items"][0]["custody"], "Held")
             self.assertEqual(PawnLoan.objects.count(), 1)
 
     def test_pagination_does_not_truncate_totals_or_draft_limit_become_debt(self):
@@ -106,6 +108,11 @@ class KhataIntegrationTests(CorrectionFixture, TestCase):
             self.assertEqual(summary["counts"]["khata_pending_returns"], 1)
         self.handover(self.first, settlement)
         self.assertEqual(self.summary()["pending_returns"], 0)
+        with workspace_context(self.workspace.pk):
+            history = get_party_loan_history_summary(self.borrower)
+            rows = [*history["active_loans"], *history["closed_loans"]]
+            khata = next(row for row in rows if row.loan_type == "Khata" and row.pk == self.account.pk)
+            self.assertEqual(khata.collateral_preview["items"][0]["custody"], "Returned")
 
     def test_known_shortfall_and_correction_reservations_do_not_hide_items(self):
         replacement = self.replacement("1")

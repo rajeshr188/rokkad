@@ -108,6 +108,133 @@ class FilteredDirectoryExportTests(WorkspaceTestCase):
                 {"loan_date_from": "2026-06-01", "loan_date_to": "2026-05-01"}, {"borrower": 999999999}):
             self.assertEqual(self.client.get(self.url, {**invalid, "export": "xlsx"}).status_code, 400)
 
+    def test_collateral_export_separates_metals_and_excludes_returned_weights(self):
+        loan = self.make_loan("COLLATERAL")
+        m.PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+
+        def item(description, metal, gross, net, quantity=1, custody="IN_VAULT"):
+            return m.PawnCollateralItem.objects.create(workspace=self.tenant, loan=loan,
+                description=description, metal=metal, gross_weight=gross, net_weight=net,
+                purity_percentage=90, quantity=quantity, custody_state=custody)
+
+        item("=Gold bangles", "GOLD", "12.3456", "10.1234", quantity=2)
+        item("Chain with lender", "GOLD", "6.1111", "5.1111", custody="WITH_FUNDING_LENDER")
+        item("Returned ring", "GOLD", "100", "90", custody="WITH_CUSTOMER")
+        item("Silver anklets", "SILVER", "80", "75", quantity=2)
+        item("Bronze vessel", "BRONZE", None, "200.9876", quantity=None)
+        item("Other article", "OTHER", "15", "14")
+        self.make_loan("OUTSIDE-COLLATERAL-FILTER")
+        book = self.export(borrower=self.party.pk, state="ACTIVE")
+        sheet = book["Loans"]
+        rows = list(sheet.values)
+        self.assertEqual(len(rows), 2)
+        data = dict(zip(rows[0], rows[1]))
+        self.assertEqual(data["Loan"], "COLLATERAL")
+        # Weights belong to an entire item row, even when quantity > 1.
+        self.assertEqual(Decimal(str(data["Held gold gross weight (g)"])), Decimal("18.4567"))
+        self.assertEqual(Decimal(str(data["Held gold net weight (g)"])), Decimal("15.2345"))
+        self.assertEqual(data["Held silver net weight (g)"], 75)
+        self.assertEqual(data["Held bronze gross weight (g)"], "Unavailable")
+        self.assertEqual(Decimal(str(data["Held bronze net weight (g)"])), Decimal("200.9876"))
+        self.assertEqual(data["Held other net weight (g)"], 14)
+        self.assertIn("=Gold bangles; Gold; qty 2; In Vault", data["Collateral summary"])
+        self.assertIn("Returned ring", data["Collateral summary"])
+        self.assertIn("With Customer", data["Collateral summary"])
+        self.assertIn("qty not recorded", data["Collateral summary"])
+        self.assertEqual(sheet["Q2"].data_type, "s")
+        self.assertEqual(sheet["R2"].number_format, "#,##0.0000")
+        self.assertEqual(sheet["K2"].number_format, "General")  # Unavailable balance.
+        self.assertEqual(sheet.auto_filter.ref, "A1:Y2")
+
+    def test_missing_gross_and_released_holdings_remain_distinct(self):
+        loan = self.make_loan("WEIGHT-UNKNOWN")
+        m.PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
+        for gross, net in ((None, "2"), ("4", "3")):
+            m.PawnCollateralItem.objects.create(workspace=self.tenant, loan=loan,
+                description="Chain", metal="GOLD", gross_weight=gross, net_weight=net,
+                purity_percentage=90)
+        rows = list(self.export(q="WEIGHT-UNKNOWN")["Loans"].values)
+        data = dict(zip(rows[0], rows[1]))
+        self.assertEqual(data["Held gold gross weight (g)"], "Unavailable")
+        self.assertEqual(data["Held gold net weight (g)"], 5)
+        self.assertEqual(data["Held silver net weight (g)"], 0)
+        # Exercise the read projection after a completed custody transition.
+        m.PawnCollateralItem.objects.filter(loan=loan).update(custody_state="WITH_CUSTOMER")
+        rows = list(self.export(q="WEIGHT-UNKNOWN")["Loans"].values)
+        data = dict(zip(rows[0], rows[1]))
+        self.assertEqual(data["Held gold gross weight (g)"], 0)
+        self.assertEqual(data["Held gold net weight (g)"], 0)
+        self.assertIn("With Customer", data["Collateral summary"])
+        m.PawnCollateralItem.objects.filter(loan=loan).update(custody_state="PAPER_CLOSED")
+        rows = list(self.export(q="WEIGHT-UNKNOWN")["Loans"].values)
+        data = dict(zip(rows[0], rows[1]))
+        self.assertEqual(data["Held gold gross weight (g)"], "Unavailable")
+        self.assertEqual(data["Held gold net weight (g)"], "Unavailable")
+        self.assertEqual(data["Held silver net weight (g)"], 0)
+
+    def test_no_collateral_evidence_and_undisbursed_records_do_not_claim_zero_holdings(self):
+        empty = self.make_loan("EMPTY-COLLATERAL")
+        m.PawnLoan.objects.filter(pk=empty.pk).update(state="ACTIVE")
+        draft = self.make_loan("DRAFT-COLLATERAL")
+        m.PawnCollateralItem.objects.create(workspace=self.tenant, loan=draft,
+            description="Draft ring", metal="GOLD", gross_weight=3, net_weight=2,
+            purity_percentage=90)
+        self.accept(key="SOURCE-COLLATERAL", amount=None)
+        rows = list(self.export()["Loans"].values)
+        for row in rows[1:]:
+            self.assertEqual(row[17:], ("Unavailable",) * 8)
+        records = {row[1]: row for row in rows[1:]}
+        self.assertEqual(records[empty.loan_number][16], "Not recorded")
+        self.assertIn("Draft ring", records[draft.loan_number][16])
+
+    def test_collateral_previews_are_compact_escaped_and_borrower_scoped_on_both_lists(self):
+        active = self.make_loan("PREVIEW-ACTIVE")
+        closed = self.make_loan("PREVIEW-CLOSED")
+        m.PawnLoan.objects.filter(pk=active.pk).update(state="ACTIVE")
+        m.PawnLoan.objects.filter(pk=closed.pk).update(state="CLOSED")
+        for loan, description, metal, custody in (
+                (active, "<script>Ring</script>", "GOLD", "IN_VAULT"),
+                (active, "Silver anklets", "SILVER", "WITH_FUNDING_LENDER"),
+                (active, "Third item beyond compact preview", "BRONZE", "IN_VAULT"),
+                (closed, "Returned chain", "GOLD", "WITH_CUSTOMER")):
+            m.PawnCollateralItem.objects.create(workspace=self.tenant, loan=loan,
+                description=description, metal=metal, gross_weight=3, net_weight="2.1234",
+                purity_percentage=90, quantity=None if loan == closed else 2, custody_state=custody)
+        other = Party.objects.create(display_name="Other preview borrower")
+        foreign = self.make_loan("OTHER-PREVIEW-LOAN")
+        m.PawnLoan.objects.filter(pk=foreign.pk).update(borrower=other)
+        m.PawnCollateralItem.objects.create(workspace=self.tenant, loan=foreign,
+            description="OTHER-BORROWER-COLLATERAL", metal="GOLD", gross_weight=3,
+            net_weight=2, purity_percentage=90)
+        before = m.PawnLoanEvent.objects.count()
+        responses = [self.client.get(self.url, {"borrower": self.party.pk}),
+            self.client.get(self.url, {"borrower": self.party.pk},
+                HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results"),
+            self.client.get(reverse("party:party_detail", args=[self.party.pk]), {"tab": "loans"})]
+        for response in responses:
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "data-collateral-summary", count=2)
+            self.assertContains(response, "&lt;script&gt;Ring&lt;/script&gt;")
+            self.assertNotContains(response, "<script>Ring</script>")
+            self.assertContains(response, "Gold 2.1234 g net")
+            self.assertContains(response, "Silver 2.1234 g net")
+            self.assertContains(response, "qty 2")
+            self.assertContains(response, "+ 1 more item entry")
+            self.assertNotContains(response, "Third item beyond compact preview")
+            self.assertContains(response, "Returned chain")
+            self.assertContains(response, "With Customer")
+            self.assertContains(response, "qty not recorded")
+            self.assertNotContains(response, "OTHER-BORROWER-COLLATERAL")
+        m.PawnCollateralItem.objects.filter(loan=closed).update(custody_state="PAPER_CLOSED")
+        response = self.client.get(reverse("party:party_detail", args=[self.party.pk]), {"tab": "loans"})
+        self.assertContains(response, "Handover unconfirmed")
+        m.PawnLoan.objects.filter(pk=active.pk).update(state="DRAFT")
+        response = self.client.get(self.url, {"q": active.loan_number})
+        self.assertContains(response, "Silver anklets")
+        self.assertNotContains(response, "In Vault")
+        self.assertNotContains(response, "With Funding Lender")
+        self.assertEqual(m.PawnLoanEvent.objects.count(), before)
+
     def test_foreign_workspace_records_and_filter_ids_are_not_exported(self):
         from uuid import uuid4
         from apps.tenant_apps.data_portability.tests.test_loan_archive import document

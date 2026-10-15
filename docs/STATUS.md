@@ -7,6 +7,32 @@ tags: [status, architecture]
 
 # Status
 
+## Filtered Excel collateral details (15 October, follow-up)
+
+The owner confirmed the existing Loan column was present and requested the
+missing collateral summary and weights by metal. The working export now appends
+item descriptions, recorded quantities and custody, with separate current held
+gross/net gram columns for Gold, Silver, Bronze and Other. Returned/disposed/
+transferred rows are excluded from held weights; unknown paper-closing handover,
+missing gross, absent evidence and undisbursed records remain explicit unknowns.
+Weights are item-row totals and are never multiplied by quantity. Existing loan
+numbers, financial columns, filters, permissions and risk calculations are unchanged.
+Collateral hydration is bounded with the existing 250-record export batches.
+All 31 focused Excel, financial-summary, directory and isolation tests pass,
+alongside four directory JavaScript checks, import boundaries and documentation
+links. This follow-up is not yet deployed.
+
+The owner additionally requested small collateral details on the loan directory
+and Party Loans tab. A shared preview now shows up to two recorded items, with
+description, quantity, metal, net grams and current custody, plus a count of the
+remaining entries. Draft/approval custody is not asserted. Both active and closed
+Party tables use the preview; Khata uses its own return operations. Directory
+items are prefetched per visible page; Party item details load after pagination.
+All 60 focused export, directory, Party pagination/history and Khata integration
+tests pass, including escaped previews, borrower scoping and returned/unknown
+handover labels. Four directory JavaScript checks, import boundaries and current
+documentation links also pass. This additional UI work is not yet deployed.
+
 ## Filtered loan Excel and customer balance breakdown (15 October, deployed)
 
 Source `0dfd15cc7d0f` is committed, pushed and deployed as `rokkad:loan-export-20261015-0dfd15cc7d0f` at

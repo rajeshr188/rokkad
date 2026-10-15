@@ -1,12 +1,13 @@
 """Paged ordinary loans and retained closed source records, without admission."""
 from django.core.paginator import Paginator
-from django.db.models import BinaryField, BooleanField, Case, CharField, Exists, F, Func, IntegerField, OuterRef, Q, Value, When
+from django.db.models import BinaryField, BooleanField, Case, CharField, Exists, F, Func, IntegerField, OuterRef, Prefetch, Q, Value, When
 from django.db.models.fields.json import KT
 from django.db.models.functions import Cast, Coalesce, Concat, Length, Replace
 
-from apps.tenant_apps.loans.models import HistoricalLoanEvidence, HistoricalLoanImport, PawnLoan
+from apps.tenant_apps.loans.models import HistoricalLoanEvidence, HistoricalLoanImport, PawnCollateralItem, PawnLoan
 from apps.tenant_apps.loans.models import current_tenant_workspace_id
 from .archive import historical_loan_summary
+from .loan_summary import collateral_preview
 
 
 ARCHIVE_CANDIDATE_LIMIT = 500
@@ -121,13 +122,25 @@ def loan_directory_references(*, workspace_id, loan_filter):
     return references, bool(mapped_filters)
 
 
-def _directory_rows(workspace_id, selected):
+def _directory_rows(workspace_id, selected, *, for_export=False):
     loan_ids = [r['directory_pk'] for r in selected if r['directory_kind']=='ordinary']
     archive_ids = [r['directory_pk'] for r in selected if r['directory_kind']=='historical']
-    local = PawnLoan.objects.filter(workspace_id=workspace_id,pk__in=loan_ids).select_related('borrower','license','series').prefetch_related('series__number_sequences').in_bulk()
+    local = PawnLoan.objects.filter(workspace_id=workspace_id,pk__in=loan_ids).select_related('borrower','license','series').prefetch_related('series__number_sequences')
+    local = local.prefetch_related(Prefetch('collateral_items',
+        queryset=PawnCollateralItem.objects.filter(workspace_id=workspace_id).order_by('pk')))
+    local = local.in_bulk()
     retained = HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id,pk__in=archive_ids).in_bulk()
-    return [dict(kind=r['directory_kind'],loan=local[r['directory_pk']]) if r['directory_kind']=='ordinary'
-        else dict(kind='historical',evidence=retained[r['directory_pk']],summary=historical_loan_summary(retained[r['directory_pk']].document)) for r in selected]
+    rows = []
+    for reference in selected:
+        if reference['directory_kind'] == 'ordinary':
+            loan = local[reference['directory_pk']]
+            preview = None if for_export else collateral_preview(loan.collateral_items.all(),
+                provisional=loan.state in {'DRAFT', 'APPROVED', 'CANCELLED'})
+            rows.append(dict(kind='ordinary', loan=loan, collateral_preview=preview))
+        else:
+            evidence = retained[reference['directory_pk']]
+            rows.append(dict(kind='historical', evidence=evidence, summary=historical_loan_summary(evidence.document)))
+    return rows
 
 
 def loan_directory_page(*, workspace_id, loan_filter, page):
@@ -145,4 +158,4 @@ def loan_directory_export_rows(*, workspace_id, loan_filter):
         raise ValueError('Correct the loan filters before exporting.')
     references, _ = loan_directory_references(workspace_id=workspace_id, loan_filter=loan_filter)
     for selected in batched(references.iterator(chunk_size=250), 250):
-        yield from _directory_rows(workspace_id, selected)
+        yield from _directory_rows(workspace_id, selected, for_export=True)
