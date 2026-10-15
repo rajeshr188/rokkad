@@ -26,3 +26,11 @@ roles, unchanged financial evidence, working exports/totals, restored timers and
 a successful post-release encrypted backup verification. Raw customer rows and
 downloaded workbooks stay on the private server; only verification metadata is
 published here. Deployment results will be recorded after these gates pass.
+
+The first full CI run finds one stale isolation assertion among 2,487 Loans
+cases: the new export link preserves the user's search query, while the test
+rejects that text anywhere in the response. The loan results are correctly empty.
+The assertion now checks visible result text and absence of result cards, and
+also inspects the actual Excel rows and rejects foreign licence/series filters.
+The existing unknown/cross-Workspace detail and document checks remain intact.
+Production has not switched; the corrected exact-source release gates must pass.

@@ -1954,8 +1954,21 @@ class PawnDraftUiTests(WorkspaceTestCase):
         for query in ({"q": loan.loan_number}, {"license": license.pk}, {"series": series.pk}):
             page = self.client.get(reverse("loans:pawn_loan_list"), query, HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
             self.assertEqual(list(page.context["loans"]), [])
-            self.assertNotContains(page, loan.loan_number)
+            # The export link preserves user-entered search text in its query
+            # string. That is not a returned loan identity or financial row.
+            from django.utils.html import strip_tags
+            self.assertNotIn(loan.loan_number, strip_tags(page.content.decode()))
+            self.assertNotContains(page, 'class="directory-name"')
             self.assertEqual(page["X-Rokkad-Fragment"], "loan-results")
+            exported = self.client.get(reverse("loans:pawn_loan_list"), {**query, "export": "xlsx"})
+            if "q" in query:
+                from io import BytesIO
+                from openpyxl import load_workbook
+                self.assertEqual(exported.status_code, 200)
+                workbook = load_workbook(BytesIO(exported.content), read_only=True)
+                self.assertEqual(len(list(workbook["Loans"].values)), 1)
+            else:
+                self.assertEqual(exported.status_code, 400)
 
         scoped_routes = (
             reverse("loans:pawn_loan_detail", args=[loan.pk]),
