@@ -129,7 +129,11 @@ class ArchiveAdmissionTests(fixtures.RecordedOriginationTests):
             queryset=m.PawnLoan.objects.filter(workspace=self.tenant),workspace=self.tenant)
         page, _ = loan_directory_page(workspace_id=self.tenant.pk,loan_filter=filtered,page=1)
         self.assertEqual(page.paginator.count,1)
-        self.assertEqual(page.object_list,[dict(kind='ordinary',loan=loan)])
+        self.assertEqual([(row['kind'], row['loan']) for row in page.object_list], [('ordinary', loan)])
+        preview = page.object_list[0]['collateral_preview']
+        self.assertEqual(preview['more_count'], 0)
+        self.assertEqual(preview['items'][0]['description'], 'Ring')
+        self.assertEqual(preview['items'][0]['custody'], 'With Customer')
         self.assertEqual(m.HistoricalLoanEvidence.objects.count(),2)
 
     def test_invalid_legacy_scope_cannot_hide_archive_using_an_unscoped_match(self):
