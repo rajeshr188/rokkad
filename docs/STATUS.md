@@ -7,6 +7,22 @@ tags: [status, architecture]
 
 # Status
 
+## Filtered loan Excel and customer balance breakdown (15 October, verified locally)
+
+The Loans list exports all filtered pages to Excel with Loans/Summary sheets,
+principal, pending interest, fees, outstanding and separate age/unpaid-interest
+month columns. Party detail adds the principal/interest/fees summary and an active
+ordinary-loan export shortcut. Amounts share existing collection selectors;
+unpaid-month reporting uses actual monthly charge coverage and preserves unknown
+opening attribution. Export is read-only and permission checked. The 58-case
+directory/portal/report/four-origin servicing selection and final 93-case
+export/Khata/Party selection pass, alongside four directory JavaScript checks,
+import boundaries (including new files), documentation links and whitespace.
+These selections overlap; counts are not distinct totals. No migration is required.
+The owner now authorises safe production deployment; the scoped release is being
+prepared with exact-source CI, production-copy read checks, recovery and backup.
+See the [decision](adr/2026-10-15-filtered-loan-excel-summary.md).
+
 ## Combined source review and deployment (15 October, completed)
 
 The reviewed backlog is committed and pushed. All six parallel CI groups pass,

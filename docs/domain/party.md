@@ -1,11 +1,20 @@
 ---
 status: active
 owner: project
-updated: 2026-10-10
+updated: 2026-10-15
 tags: [domain, party]
 ---
 
 # Party
+
+The Loans tab now breaks total outstanding into principal, pending interest and
+fees across every displayed loan kind, independently of pagination. Active
+ordinary loans use the existing collection position, including eligible unposted
+interest; Khata retains accrued unpaid interest including amounts not yet due.
+Unavailable financial evidence prevents a misleading partial total. The **Export
+active loans (Excel)** shortcut uses the same filtered ordinary-loan directory
+export as the Loans list, with `report.export` permission. Khata exports remain
+in the Khata register. See the [reporting decision](../adr/2026-10-15-filtered-loan-excel-summary.md).
 
 Party is the canonical borrower/counterparty identity inside a Workspace, implemented
 at `apps/tenant_apps/party`. Loans refers to Party; no Contact backfill or DEA account

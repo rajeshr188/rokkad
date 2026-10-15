@@ -27,7 +27,8 @@ def get_party_loan_history_summary(party, *, limit=20, page_size=None,
             payment_count=0, total_payment_amount=Decimal(0), unposted_payment_count=0, notice_count=0,
             collateral_items_count=summary.get("held_count", 0), collateral_loan_amount=None,
             detail_url=reverse("workspace_loans:khata_detail", kwargs={"workspace_slug": party.workspace.slug, "pk": account.pk}),
-            repayment_url="", document_links=(), account_state=account.state)
+            repayment_url="", document_links=(), account_state=account.state,
+            fees_due=Decimal(0) if known and opened else None)
         (active if account.state in LIVE_STATES else closed).append(row)
     unavailable += khata["unavailable"]
     sort = pawn["sort"]
@@ -40,6 +41,8 @@ def get_party_loan_history_summary(party, *, limit=20, page_size=None,
         collateral_items=pawn["counts"]["collateral_items"] + sum(s.get("held_count", 0) for s in khata["rows"]),
         collateral_loan_amount=None, unavailable_balances=unavailable,
         khata_active=khata["active_count"], khata_interest=khata["interest"], khata_pending_returns=khata["pending_returns"])
+    for key, field in (("active_principal", "principal_due"), ("active_interest", "interest_due"), ("active_fees", "fees_due")):
+        counts[key] = None if unavailable else sum((getattr(row, field) for row in active if getattr(row, field) is not None), Decimal(0))
     if page_size is not None:
         a, c = Paginator(active, page_size).get_page(active_page), Paginator(closed, page_size).get_page(closed_page)
         pages = dict(active_page=a, closed_page=c)

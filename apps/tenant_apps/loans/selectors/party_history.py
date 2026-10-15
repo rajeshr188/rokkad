@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.tenant_apps.loans.domain import PawnLoanState
 from apps.tenant_apps.loans.models import PawnLoan
 
-from .balances import PawnLoanBalanceSelectorError, get_pawn_loan_balance
+from .loan_summary import get_loan_summary
 
 
 @dataclass(frozen=True)
@@ -32,15 +32,12 @@ class PartyPawnLoanRow:
     repayment_url: str
     document_links: tuple
     account_state: str = ""
+    fees_due: Decimal | None = None
 
 
 def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
-    balance = None
-    if loan.state == PawnLoanState.ACTIVE.value:
-        try:
-            balance = get_pawn_loan_balance(loan.pk, as_of_date=as_of_date)
-        except (PawnLoanBalanceSelectorError, ValueError):
-            balance = None
+    summary = get_loan_summary(loan, as_of_date=as_of_date) if loan.state == PawnLoanState.ACTIVE.value else None
+    balance = summary.balance if summary else None
 
     return PartyPawnLoanRow(
         pk=loan.pk,
@@ -61,6 +58,7 @@ def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
         repayment_url=reverse("workspace_loans:pawn_loan_repay", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
         document_links=(),
         account_state=loan.state,
+        fees_due=getattr(balance, "fees_outstanding", None),
     )
 
 
@@ -89,6 +87,8 @@ def get_party_pawn_loan_history_summary(
         (row.total_outstanding for row in active_rows if row.total_outstanding is not None),
         Decimal("0"),
     )
+    if any(row.account_state == "ACTIVE" and row.total_outstanding is None for row in active_rows):
+        outstanding = None
     pages = {}
     if page_size is not None:
         active_page = Paginator(active_rows, page_size).get_page(active_page)

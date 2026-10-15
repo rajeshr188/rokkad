@@ -9,11 +9,14 @@ from django.core.exceptions import (
 )
 from django.db.models import Q
 from django.shortcuts import render
+from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET
+from django.utils.http import content_disposition_header
 from django.views.decorators.vary import vary_on_headers
 from apps.tenant_apps.loans.services.loan_workflow import make_review
 from apps.tenant_apps.loans.services.pawn_disbursal import preview_approved_disbursal
@@ -54,9 +57,15 @@ from apps.tenant_apps.loans.web.pawn_read_helpers import (
 
 
 @loans_workspace_required
+@require_GET
 @never_cache
 @vary_on_headers("HX-Request", "HX-Target", "HX-History-Restore-Request", "HX-Boosted")
 def pawn_loan_list(request):
+    export_format = request.GET.get("export")
+    if export_format is not None:
+        request.loans_workspace_access.require("report.export")
+        if export_format != "xlsx":
+            return HttpResponse("Choose Excel (xlsx) for the filtered loan export.", status=400)
     loans = PawnLoan.objects.filter(workspace=request.loans_workspace).select_related(
         "borrower", "license", "series"
     ).prefetch_related("series__number_sequences").order_by("-created_at", "-pk")
@@ -66,6 +75,15 @@ def pawn_loan_list(request):
         workspace=request.loans_workspace,
     )
     valid = loan_filter.is_valid()
+    if export_format:
+        if not valid:
+            return HttpResponse("Correct the loan filters before exporting.", status=400)
+        from apps.tenant_apps.loans.services.directory_export import export_loan_directory
+        today = timezone.localdate()
+        content = export_loan_directory(workspace=request.loans_workspace, loan_filter=loan_filter, as_of_date=today)
+        response = HttpResponse(content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = content_disposition_header(True, f"filtered-loans-{today}.xlsx")
+        return response
     page_obj, historical_mapping_filter = loan_directory_page(workspace_id=request.loans_workspace.pk,
         loan_filter=loan_filter,page=request.GET.get('page'))
     fragment = (
@@ -83,6 +101,7 @@ def pawn_loan_list(request):
         "loan_filter": loan_filter,
         "selected_borrower": loan_filter.form.cleaned_data.get("borrower") if valid else None,
         "page_obj": page_obj,
+        "can_export": request.loans_workspace_access.can("report.export"),
     }
     if not fragment:
         context.update({

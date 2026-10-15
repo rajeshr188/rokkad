@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-12
+updated: 2026-10-15
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -9,6 +9,16 @@ related:
 ---
 
 # PawnLoan Financial Read Models
+
+The filtered directory Excel and Party ordinary-loan summaries share the existing
+collection position for active agreements. Exporting does not recognize interest.
+Principal/interest/fees remain separate, with complete totals unavailable if a
+required balance cannot be established. The Excel includes separate completed
+loan-age months and unpaid monthly charge coverage on an explicitly disclosed
+oldest-first reporting convention. It uses actual variable monthly charges;
+unknown opening-period attribution stays unavailable. This metric changes no
+payment allocations, obligations, DPD, exposure, valuation or monitoring. See the
+[reporting decision](../adr/2026-10-15-filtered-loan-excel-summary.md).
 
 IP-03 adds the minimal loan-closed-position/1 admission basis. It is an ordinary
 CLOSED PawnLoan whose unavailable original principal/date/rate/tenure/product

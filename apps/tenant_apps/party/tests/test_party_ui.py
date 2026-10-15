@@ -135,9 +135,11 @@ class PartyUITests(WorkspaceTestCase):
             borrower=other, product_version=product, loan_number="OTHER-BORROWER",
             state="ACTIVE", principal_amount=100, monthly_interest_rate=2, tenure_months=12)
         url = reverse("party:party_detail", args=[party.pk])
-        balance = SimpleNamespace(total_due=Decimal("100"),
+        from apps.tenant_apps.loans.selectors.loan_summary import LoanSummary
+        balance = SimpleNamespace(total_due=Decimal("100"), fees_outstanding=Decimal("0"),
             principal_outstanding=Decimal("90"), interest_outstanding=Decimal("10"))
-        with patch("apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", return_value=balance):
+        summary = LoanSummary(balance, 5, 1, "Monthly coverage", "Collection")
+        with patch("apps.tenant_apps.loans.selectors.party_history.get_loan_summary", return_value=summary):
             for sort, active_page, closed_page in (("newest", 1, 1), ("newest", 2, 2), ("oldest", 2, 3)):
                 with self.subTest(sort=sort, active_page=active_page, closed_page=closed_page):
                     response = self.client.get(url, {"tab": "loans", "loan_sort": sort,
@@ -145,6 +147,12 @@ class PartyUITests(WorkspaceTestCase):
                     self.assertEqual(response.status_code, 200)
                     history = response.context["loan_history"]
                     self.assertEqual(history["counts"]["active_outstanding"], Decimal("4100"))
+                    self.assertEqual(history["counts"]["active_principal"], Decimal("3690"))
+                    self.assertEqual(history["counts"]["active_interest"], Decimal("410"))
+                    self.assertEqual(history["counts"]["active_fees"], Decimal("0"))
+                    self.assertContains(response, "Principal outstanding")
+                    self.assertContains(response, "Interest pending")
+                    self.assertContains(response, f'borrower={party.pk}&amp;state=ACTIVE&amp;records=ordinary&amp;export=xlsx')
                     self.assertEqual(history["counts"]["active_loans"], 41)
                     for kind, state, number in (("active", "ACTIVE", active_page), ("closed", "CLOSED", closed_page)):
                         ordered = sorted(groups[state], key=lambda loan: (loan.loan_date, loan.pk), reverse=sort == "newest")

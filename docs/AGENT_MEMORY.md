@@ -7,6 +7,14 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+The owner's filtered-loan Excel request includes both completed loan-age months
+and months with unpaid interest as separate columns. Use shared validated directory
+filters/order/admission checks and existing collection balances, with a customer
+shortcut and principal/interest/fees totals. Unpaid months are explicitly disclosed
+oldest-first monthly charge coverage, not an invented saved receipt allocation;
+unknown opening attribution remains unavailable. No posting or monitoring rules
+change. See the [decision](adr/2026-10-15-filtered-loan-excel-summary.md).
+
 The owner's later 15 October instruction authorises the combined source review,
 commit, push and deployment, superseding the earlier origination-only scope.
 That release is complete: application source `26badab21a4c`,

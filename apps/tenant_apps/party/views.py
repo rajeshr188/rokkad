@@ -254,6 +254,7 @@ def _party_detail_context(
         "document_form": document_form,
         "can_edit_customer": can_edit_customer,
         "can_start_customer_loan": access.can("data.view") and access.can("data.create"),
+        "can_export_customer_loans": access.can("data.view") and access.can("report.export"),
         "can_manage_customer_setup": workspace_activity(request.workspace).can_write and access.can("workspace.settings.manage"),
         "relationship_form": relationship_form
         or PartyRelationshipForm(instance=edit_relationship, from_party=party),

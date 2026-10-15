@@ -68,8 +68,8 @@ def unadmitted_historical_records(workspace_id, *, candidate_ids=None):
         Q(admitted=False) | Q(valid_binding=False))
 
 
-def loan_directory_page(*, workspace_id, loan_filter, page):
-    """Filter/sort references in SQL, then hydrate only the selected 25 cards."""
+def loan_directory_references(*, workspace_id, loan_filter):
+    """One filter and ordering contract for paginated screens and full exports."""
     if current_tenant_workspace_id() != workspace_id:
         raise ValueError('Loan browsing requires the active Workspace.')
     archives = HistoricalLoanEvidence.objects.none()
@@ -118,12 +118,31 @@ def loan_directory_page(*, workspace_id, loan_filter, page):
         directory_rank=Value(1, output_field=IntegerField()), directory_day=Coalesce('search_opened_on',Value(''),output_field=CharField()),
         directory_at=F('accepted_at'), directory_pk=F('pk')).values(*columns)
     references = ordinary.union(historical,all=True).order_by('directory_rank','-directory_day','-directory_at','directory_kind','-directory_pk')
-    result = Paginator(references,25).get_page(page)
-    selected = list(result.object_list)
+    return references, bool(mapped_filters)
+
+
+def _directory_rows(workspace_id, selected):
     loan_ids = [r['directory_pk'] for r in selected if r['directory_kind']=='ordinary']
     archive_ids = [r['directory_pk'] for r in selected if r['directory_kind']=='historical']
     local = PawnLoan.objects.filter(workspace_id=workspace_id,pk__in=loan_ids).select_related('borrower','license','series').prefetch_related('series__number_sequences').in_bulk()
     retained = HistoricalLoanEvidence.objects.filter(workspace_id=workspace_id,pk__in=archive_ids).in_bulk()
-    result.object_list = [dict(kind=r['directory_kind'],loan=local[r['directory_pk']]) if r['directory_kind']=='ordinary'
+    return [dict(kind=r['directory_kind'],loan=local[r['directory_pk']]) if r['directory_kind']=='ordinary'
         else dict(kind='historical',evidence=retained[r['directory_pk']],summary=historical_loan_summary(retained[r['directory_pk']].document)) for r in selected]
-    return result, bool(mapped_filters)
+
+
+def loan_directory_page(*, workspace_id, loan_filter, page):
+    """Filter/sort references in SQL, then hydrate only the selected 25 cards."""
+    references, mapped_filters = loan_directory_references(workspace_id=workspace_id, loan_filter=loan_filter)
+    result = Paginator(references,25).get_page(page)
+    result.object_list = _directory_rows(workspace_id, list(result.object_list))
+    return result, mapped_filters
+
+
+def loan_directory_export_rows(*, workspace_id, loan_filter):
+    """Every matching record, in screen order, with bounded model hydration."""
+    from itertools import batched
+    if not loan_filter.is_valid():
+        raise ValueError('Correct the loan filters before exporting.')
+    references, _ = loan_directory_references(workspace_id=workspace_id, loan_filter=loan_filter)
+    for selected in batched(references.iterator(chunk_size=250), 250):
+        yield from _directory_rows(workspace_id, selected)

@@ -325,14 +325,18 @@
 
     <div class="tab-pane fade {% if active_tab == 'loans' %}show active{% endif %}" id="loans" role="tabpanel" aria-labelledby="tab-loans" tabindex="0">
         <div class="row g-3 mb-3">
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Principal outstanding</div><div class="h4 mb-0">{% if loan_history.counts.active_principal != None %}{{ loan_history.counts.active_principal|indian_money }}{% else %}Unavailable{% endif %}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Interest pending</div><div class="h4 mb-0">{% if loan_history.counts.active_interest != None %}{{ loan_history.counts.active_interest|indian_money }}{% else %}Unavailable{% endif %}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Fees pending</div><div class="h4 mb-0">{% if loan_history.counts.active_fees != None %}{{ loan_history.counts.active_fees|indian_money }}{% else %}Unavailable{% endif %}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{% if loan_history.counts.active_outstanding != None %}{{ loan_history.counts.active_outstanding|indian_money }}{% else %}Unavailable{% endif %}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Loans</div><div class="h4 mb-0">{{ loan_history.counts.active_loans }}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Closed Loans</div><div class="h4 mb-0">{{ loan_history.counts.closed_loans }}</div></div></div>
-            <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Active Outstanding</div><div class="h4 mb-0">{% if loan_history.counts.active_outstanding != None %}{{ loan_history.counts.active_outstanding|indian_money }}{% else %}Unavailable{% endif %}</div></div></div>
             <div class="col-md-3"><div class="border rounded p-3"><div class="text-muted small">Collateral Items</div><div class="h4 mb-0">{{ loan_history.counts.collateral_items }}</div></div></div>
         </div>
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <p class="text-muted small mb-0">{% translate "Outstanding includes ordinary-loan recorded debt and accrued unpaid khata interest, including amounts not yet due. Khata limits and unused entitlement are not debt. Open records can include drafts and settled khatas awaiting collateral return." %}</p>
+            <p class="text-muted small mb-0">{% translate "Outstanding includes ordinary-loan collection interest, including eligible charges awaiting recognition, and accrued unpaid khata interest, including amounts not yet due. Legacy agreements retain recorded-debt calculations. Khata limits and unused entitlement are not debt. Open records can include drafts and settled khatas awaiting collateral return." %}</p>
+            {% if can_export_customer_loans %}<a class="btn btn-outline-primary btn-sm" href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ party.pk }}&amp;state=ACTIVE&amp;records=ordinary&amp;export=xlsx" hx-boost="false">Export active loans (Excel)</a><span class="small text-muted">Ordinary loans; Khata accounts use the Khata register export.</span>{% endif %}
             <form method="get" action="#loans" class="d-flex flex-wrap align-items-center gap-2">
                 <input type="hidden" name="tab" value="loans">
                 <label for="party-loan-sort" class="small">{% translate "Loan date" %}</label>
@@ -362,6 +366,7 @@
                                 {% if row.total_outstanding != None %}
                                 <div class="fw-semibold">{{ row.total_outstanding|indian_money }}</div>
                                 <div class="text-muted small">Principal {{ row.principal_due|indian_money }} | Interest {{ row.interest_due|indian_money }}</div>
+                                {% if row.fees_due %}<div class="text-muted small">Fees {{ row.fees_due|indian_money }}</div>{% endif %}
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}

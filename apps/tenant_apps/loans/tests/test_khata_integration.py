@@ -17,6 +17,7 @@ from apps.tenancy.context import workspace_context
 from apps.tenant_apps.loans.models import KhataDocumentIssue, PawnLoan, PawnLoanEvent
 from apps.tenant_apps.loans.selectors.khata_summary import portfolio_summary, summary_accounts, account_summary, collateral_cover
 from apps.tenant_apps.loans.selectors.party_loans import get_party_loan_history_summary
+from apps.tenant_apps.loans.selectors.loan_summary import LoanSummary
 from apps.tenant_apps.loans.selectors.business_overview import get_business_overview
 from apps.tenant_apps.loans.services import khata_documents as documents, khata_accounts as drafts
 from apps.tenant_apps.loans.web import khata_views
@@ -72,6 +73,9 @@ class KhataIntegrationTests(CorrectionFixture, TestCase):
             self.assertEqual(overview["interest_outstanding"], 0)
             summary = get_party_loan_history_summary(self.borrower, page_size=1)
             self.assertEqual(summary["counts"]["active_outstanding"], Decimal("201234"))
+            self.assertEqual(summary["counts"]["active_principal"], Decimal("101234"))
+            self.assertEqual(summary["counts"]["active_interest"], Decimal("100000"))
+            self.assertEqual(summary["counts"]["active_fees"], 0)
             self.assertEqual(summary["counts"]["active_loans"], 2)
             all_rows = get_party_loan_history_summary(self.borrower, limit=None)["active_loans"]
             khata = next(r for r in all_rows if r.loan_type == "Khata")
@@ -129,9 +133,13 @@ class KhataIntegrationTests(CorrectionFixture, TestCase):
             loan.borrower = self.borrower
             loan.save(update_fields=["borrower"])
             with patch.object(PawnLoan, "get_state_display", return_value="Translated active label"), patch(
-                "apps.tenant_apps.loans.selectors.party_history.get_pawn_loan_balance", side_effect=ValueError("Missing opening evidence")):
+                "apps.tenant_apps.loans.selectors.party_history.get_loan_summary",
+                return_value=LoanSummary(None, None, None, "Unavailable", "Unavailable")):
                 summary = get_party_loan_history_summary(self.borrower)
             self.assertIsNone(summary["counts"]["active_outstanding"])
+            self.assertIsNone(summary["counts"]["active_principal"])
+            self.assertIsNone(summary["counts"]["active_interest"])
+            self.assertIsNone(summary["counts"]["active_fees"])
             self.assertEqual(summary["counts"]["unavailable_balances"], 1)
 
     def test_statement_and_voucher_persist_verified_exact_bytes(self):
