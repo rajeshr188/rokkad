@@ -53,7 +53,7 @@ separate; the original audit is retained as before-change evidence.
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
 | FW-023 | Database backup capacity and evidence storage | BS-03/04/05 live and accepted; ongoing growth/old-coverage follow-up | Monitor space/service failures and preserve uncovered old points | BS-05 release record confirms renewed recovery acceptance, 12 remote/38 local points and 9.155 GiB free; future admissions compact, old snapshots unchanged |
-| FW-024 | Repository hygiene and reproducible development artifacts | Core cleanup committed/pushed; individual retention/pruning selected, 17 October | Continue provenance-based mixed-artifact review; remote-default transition stays separate | Exact documents and Git recovery preserved; redundant build copies/local names individually reviewed |
+| FW-024 | Repository hygiene and reproducible development artifacts | Completed, 17 October; exact cleanup revision passes all six CI groups | Routine retention and a separately reviewed canonical-main transition | Full document preservation and verified Git/source recovery; no production or remote-default changes |
 
 ## FW-024: Repository hygiene and reproducible development artifacts
 
@@ -61,6 +61,11 @@ The owner recorded the [cleanup review](../implementation/repository-cleanup-rev
 on 16 October, then authorized execution on 17 October with explicit document
 preservation. The [implementation record](../implementation/repository-hygiene-20261017.md)
 and manifests retain all originals, reference assets and local retention decisions.
+**Closed 17 October:** `693031a7` passes all six CI groups, including 2,695 Loans
+tests in 2,069.620 seconds. The core cleanup and selected artifact/local-branch
+pruning meet the recorded acceptance. See [completed work](completed.md#fw-024-repository-hygiene-and-reviewed-retention-2026-10-17).
+Ongoing retention and any canonical-main/default transition remain separately
+reviewed maintenance, not unfinished cleanup or authorization to discard evidence.
 The core source/organization pass is committed/pushed at `d4a5d5ed`: offline fixtures, clean
 static regeneration/untracking, compact current context, archived obsolete material,
 checksummed reference/log moves, source-bytecode cleanup and CI coverage. The owner

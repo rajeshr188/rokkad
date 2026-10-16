@@ -1,5 +1,5 @@
 ---
-status: completed-local
+status: completed
 owner: project
 updated: 2026-10-17
 tags: [repository, retention, recovery, cleanup]
@@ -117,3 +117,9 @@ original inventory hash. Source base/override hashes and preservation manifests
 verify for all eight builds; the independent full-source restore also passes.
 Current documentation links and repository guards pass. The pushed cleanup's CI
 automatically runs on the integration branch; no production deployment follows.
+
+Final closure: exact commit `693031a7` passes all six groups in
+[run 38978549791](https://github.com/rajeshr188/rokkad/actions/runs/38978549791),
+including 2,695 Loans tests in 2,069.620 seconds. FW-024's selected cleanup and
+retention/pruning scope is complete. Routine future retention and canonical-main
+alignment remain separate maintenance rather than an unbounded cleanup obligation.

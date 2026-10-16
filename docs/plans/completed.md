@@ -8,6 +8,22 @@ related: [../STATUS.md, ../archive/]
 
 # Completed Work
 
+## FW-024 repository hygiene and reviewed retention (2026-10-17)
+
+Core cleanup `d4a5d5ed` and reviewed retention record `693031a7` are committed/pushed.
+The exact latter revision passes all six CI groups, including 2,695 Loans tests
+in 2,069.620 seconds. Pinned offline fixtures, clean static regeneration/untracking,
+current documentation compaction and complete original/reference preservation,
+generated-file guards and integration-push/JavaScript CI are verified. Selected
+local pruning preserves all original branch tips in a restored/integrity-checked
+bundle. Eight build copies remain exactly recoverable from retained base ZIPs and
+translation overrides. Both dirty trees and unmerged histories remain intact.
+See [cleanup](../implementation/repository-hygiene-20261017.md),
+[retention](../implementation/repository-retention-20261017.md) and
+[successful CI](https://github.com/rajeshr188/rokkad/actions/runs/38978549791).
+Routine mixed-artifact retention and a reviewed canonical-main transition are
+separate maintenance. No production/default-branch change is part of completion.
+
 ## Counter workflows and consolidated monitoring release (2026-10-17)
 
 EC-01 through EC-07, LA-01 through LA-06's implemented scope, and represented-position

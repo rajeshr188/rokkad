@@ -7,16 +7,20 @@ tags: [plans, active]
 
 # Active work
 
-## FW-024 repository hygiene
+## Completed repository cleanup
 
-Owner authorized 17 October. Follow the [execution record](../implementation/repository-hygiene-20261017.md)
-and [original review](../implementation/repository-cleanup-review-20261016.md).
-Preserve original documents, customer/source exports, media, recovery material
-and dirty worktrees. The core offline fixtures/static regeneration, context/archive
-organization, bounded local cleanup and CI safeguards are committed/pushed at `d4a5d5ed`.
-[Individual retention/pruning](../implementation/repository-retention-20261017.md)
-now retires verified redundant copies and local names while preserving exact recovery.
-Any remote-default transition and other mixed-artifact review remain follow-up.
+FW-024 is [completed](completed.md#fw-024-repository-hygiene-and-reviewed-retention-2026-10-17).
+Exact revision `693031a7` passes all six CI groups, including 2,695 Loans tests.
+Original documents and reviewed Git/source recovery are retained. Routine artifact
+retention and a separately planned canonical-main transition remain maintenance.
+
+## Current sequence
+
+The owner selected dependency/tooling review and integration next, then JSK WH
+original-rate correction preparation. Review the finished dependency snapshot
+without treating its proposed development workflow as adopted GitHub policy.
+For JSK, use paper/payment records and hold uncertain opening balances; preserve
+the saved upfront-interest evidence and do not infer receipts or refunds.
 
 ## Work that remains separate
 
