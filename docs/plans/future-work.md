@@ -53,7 +53,7 @@ separate; the original audit is retained as before-change evidence.
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
 | FW-023 | Database backup capacity and evidence storage | BS-03/04/05 live and accepted; ongoing growth/old-coverage follow-up | Monitor space/service failures and preserve uncovered old points | BS-05 release record confirms renewed recovery acceptance, 12 remote/38 local points and 9.155 GiB free; future admissions compact, old snapshots unchanged |
-| FW-024 | Repository hygiene and reproducible development artifacts | Core cleanup implemented locally, 17 October; retention/default-branch follow-up retained | Review individual mixed artifacts and any explicit remote-default transition | Originals/checksums preserved, generated assets untracked, fixtures/CI/docs repaired; no bulk deletion |
+| FW-024 | Repository hygiene and reproducible development artifacts | Core cleanup committed/pushed; individual retention/pruning selected, 17 October | Continue provenance-based mixed-artifact review; remote-default transition stays separate | Exact documents and Git recovery preserved; redundant build copies/local names individually reviewed |
 
 ## FW-024: Repository hygiene and reproducible development artifacts
 
@@ -61,11 +61,14 @@ The owner recorded the [cleanup review](../implementation/repository-cleanup-rev
 on 16 October, then authorized execution on 17 October with explicit document
 preservation. The [implementation record](../implementation/repository-hygiene-20261017.md)
 and manifests retain all originals, reference assets and local retention decisions.
-The core source/organization pass is implemented locally: offline fixtures, clean
+The core source/organization pass is committed/pushed at `d4a5d5ed`: offline fixtures, clean
 static regeneration/untracking, compact current context, archived obsolete material,
-checksummed reference/log moves, source-bytecode cleanup and CI coverage. Mixed
-recovery/source artifacts and all worktrees/branches are retained. An explicit
-remote-default transition and further individually reviewed retention remain open.
+checksummed reference/log moves, source-bytecode cleanup and CI coverage. The owner
+then selected [individual retention/pruning](../implementation/repository-retention-20261017.md):
+restore-verified preservation of all 17 branch tips, eight merged local names and
+two clean worktrees retired, and dated expanded build duplicates reviewed against
+retained originals/overrides. Dirty/unmerged work and mixed recovery/source evidence
+stay preserved. Remote-default transition and other mixed-artifact review remain open.
 
 The local inventory finds 661 tracked collected-static files, required-reading
 STATUS/MEMORY at 14,319/4,561 lines, and 9.16 GiB under ignored `.tmp`/`outputs`.

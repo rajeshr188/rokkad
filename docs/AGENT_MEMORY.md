@@ -138,6 +138,8 @@ See [testing](implementation/testing-and-migrations.md) and
 Maintained integration is `work/loan-servicing-contract-ld01`; main remains a
 historical remote default until an explicitly reviewed transition. CI includes
 integration pushes, PRs and manual dispatch. Preserve checkpoints and dirty trees.
+Local pruning uses a self-contained, restore-verified recovery bundle; keep
+unmerged history and dirty worktrees. See [retention decisions](implementation/repository-retention-20261017.md).
 Static source lives in `static/`/app static folders; `staticfiles/` is collected
 output. Browser fixtures are versioned under `scripts/fixtures/`; old outputs are
 not prerequisites. Logs belong in `.tmp/<dated-task>/`; synthetic visual output

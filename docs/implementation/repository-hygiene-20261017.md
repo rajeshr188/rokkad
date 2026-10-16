@@ -1,5 +1,5 @@
 ---
-status: implemented-local
+status: committed
 owner: project
 updated: 2026-10-17
 tags: [repository, preservation, development, cleanup]
@@ -7,6 +7,10 @@ related: [repository-cleanup-review-20261016.md, ../plans/future-work.md, ../STA
 ---
 
 # FW-024 repository hygiene and preservation
+
+Core cleanup is committed/pushed as `d4a5d5ed`. The subsequent owner-authorized
+[individual retention and pruning](repository-retention-20261017.md) supersedes
+this initial pass's keep-all-branches/worktrees decision with verified recovery.
 
 The owner authorized the [recorded cleanup](../plans/future-work.md#fw-024-repository-hygiene-and-reproducible-development-artifacts)
 on 17 October, with particular care to preserve important documents. Work began
@@ -39,7 +43,7 @@ business-data, loan calculation or customer-source mutation is part of this work
   associated reading copies. Scoped `.gitattributes` rules prevent Git newline
   conversion from corrupting these identities across Windows/Linux checkouts.
 
-Current Status is 65 lines instead of 14,364; memory is 145 instead of 4,595;
+After initial compaction, Status is 65 lines instead of 14,364; memory 145 instead of 4,595;
 active work is 39 instead of 501 at capture. The complete chronology remains
 searchable in the archive. Current guidance reconciles the deployed 1889/V13
 release with older failed/local-only candidates and preserves separate JSK,

@@ -13,8 +13,10 @@ Owner authorized 17 October. Follow the [execution record](../implementation/rep
 and [original review](../implementation/repository-cleanup-review-20261016.md).
 Preserve original documents, customer/source exports, media, recovery material
 and dirty worktrees. The core offline fixtures/static regeneration, context/archive
-organization, bounded local cleanup and CI safeguards are implemented locally.
-Individual retention review and any remote-default transition remain follow-up.
+organization, bounded local cleanup and CI safeguards are committed/pushed at `d4a5d5ed`.
+[Individual retention/pruning](../implementation/repository-retention-20261017.md)
+now retires verified redundant copies and local names while preserving exact recovery.
+Any remote-default transition and other mixed-artifact review remain follow-up.
 
 ## Work that remains separate
 

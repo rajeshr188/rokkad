@@ -38,9 +38,12 @@ historical notes are superseded by this release.
 The owner authorized execution on 17 October, emphasizing document preservation.
 [Execution record](implementation/repository-hygiene-20261017.md) records snapshots,
 reference moves, reproducible fixtures/static collection, documentation compaction,
-local retention and CI alignment. Changes are local until separately committed
-and released. No loan behavior, database schema or production data changes are
-part of this cleanup. [Active plan](plans/active.md) records retained follow-up.
+local retention and CI alignment. Core cleanup is committed/pushed as `d4a5d5ed`.
+The owner then selected [individual retention and pruning](implementation/repository-retention-20261017.md):
+verified Git recovery, eight merged local branches, two clean worktrees and
+recoverable duplicate build copies. Dirty/unmerged work and customer/recovery
+evidence stay preserved. No loan behavior, schema or production deployment changes
+are part of cleanup. [Active plan](plans/active.md) records retained follow-up.
 
 ## Open business and acceptance work
 

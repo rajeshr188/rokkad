@@ -17,6 +17,7 @@ not an instruction to reintroduce it.
 - [Counter and monitoring production release](implementation/counter-release-20261016.md): commit 1889e488, V13/policy lifecycle/represented coverage and counter workflows deployed 17 October after full CI and recovery acceptance.
 
 - [Repository hygiene](implementation/repository-hygiene-20261017.md): preservation manifests, offline browser fixtures, generated-file guard, compact current guidance and local retention; [original review](implementation/repository-cleanup-review-20261016.md).
+- [Individual retention and branch pruning](implementation/repository-retention-20261017.md): verified Git recovery, retired merged local names/clean worktrees and recoverable build-copy reduction; important source/recovery and dirty work remain preserved.
 
 - [Status](STATUS.md): checkpoint, validation and remaining acceptance.
 - [Everyday counter improvements](implementation/everyday-counter-improvements-20261016.md): delivered truthful amounts/assurance, navigation, shared reads, list/entry usability and daily Dashboard activity; [original review](implementation/everyday-counter-workflow-review-20261016.md).

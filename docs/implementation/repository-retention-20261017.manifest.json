@@ -1,0 +1,340 @@
+{
+  "source_cleanup_commit": "d4a5d5ed6e805f356656d6b4ab4665b14d2af2b7",
+  "scope": "Local Git/storage only; no remote ref deletion or production changes",
+  "bundle": {
+    "bundle": ".local-backups/repository-retention-20261017/local-refs-before-pruning.bundle",
+    "bytes": 36866177,
+    "sha256": "fcbd62b7643771fcb89a673d4f50dfdb8bb7130e4e6ce347041ef8c29152fe5a",
+    "restored_branch_tips": 17,
+    "self_contained": true,
+    "clone_and_full_fsck": "PASS",
+    "disposable_mirror": "removed after full integrity and all-tip equality checks; recovery bundle retained"
+  },
+  "local_branches": [
+    {
+      "name": "agents/rokkar-branch-query",
+      "tip": "846534575653c2902d0e09d802b77cc16c458a65",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "checkpoint/rls-mvp-before-ticket-designer-20260922",
+      "tip": "8b0e1ba37dcc73ce81d76ed91c42a32d3da9bbfe",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "dea-core-phase-1-4",
+      "tip": "5687ad59a161c2a25e3301bf219c5a852de8b796",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "dea-kiss",
+      "tip": "f5894471bc4b004616baa36b283c845cf763b4ad",
+      "upstream": "origin/dea-kiss",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "feature/ticket-template-designer",
+      "tip": "e2fae88de3add1acf1d4b2e0b0648deaf3343055",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "girvi-django6-partials-refactor",
+      "tip": "98d0a1624fc3146b19bda219bd270aec531e299a",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "loan-risk-roadmap",
+      "tip": "dc9a1696b3c63408102caf1a9995a914ab1782d3",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "main",
+      "tip": "846534575653c2902d0e09d802b77cc16c458a65",
+      "upstream": "origin/main",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "no-tenants",
+      "tip": "84d2f5efe442d6a609b5c51ffb420004d0b8bca2",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "no-tenants-no-acc",
+      "tip": "3e3db9b1e45e12dbcb67e77c4a4033caf876d124",
+      "upstream": "origin/no-tenants-no-acc",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "orgs-phase-d-workspace-mgmt",
+      "tip": "c1f1fe345557e4e0475030b6328c7d1d52944f14",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "release/2026-09-24-rc1",
+      "tip": "4b93f67fe9412f6f401db97707e78d7ffaca9566",
+      "upstream": "origin/release/2026-09-24-rc1",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "rls",
+      "tip": "c54824c2d766be9f35a9233f3320f58e7b9f8d93",
+      "upstream": "",
+      "merged_into_current": false,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "rls-mvp",
+      "tip": "a9f793fc40fbc6d3f295acdc7cd16fdbe579e5bd",
+      "upstream": "origin/rls-mvp",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "tenants",
+      "tip": "d66920654b77173f3e3918090d59e9bb8c2b7f73",
+      "upstream": "",
+      "merged_into_current": true,
+      "decision": "prune local name after verified bundle recovery; fully merged and inactive",
+      "result": "local branch name removed without force; exact tip retained in verified recovery bundle"
+    },
+    {
+      "name": "tenants_workspace",
+      "tip": "2540d040e7ee4d59f921306ce7158160e77f789e",
+      "upstream": "origin/tenants_workspace",
+      "merged_into_current": false,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    },
+    {
+      "name": "work/loan-servicing-contract-ld01",
+      "tip": "d4a5d5ed6e805f356656d6b4ab4665b14d2af2b7",
+      "upstream": "origin/work/loan-servicing-contract-ld01",
+      "merged_into_current": true,
+      "decision": "retain: current/default/integration, checkpoint, dirty tree or unmerged history"
+    }
+  ],
+  "worktrees": [
+    {
+      "path": "C:\\Users\\rajes\\OneDrive\\Desktop\\rokkad\\.tmp\\linode-cutover-clean-20260921",
+      "tip": "da3c91ecbc37323572dcc8df88cd9a6140f1cfae",
+      "tracked_files": 2385,
+      "ignored_generated_files": 487,
+      "ignored_generated_bytes": 4621735,
+      "result": "removed via Git without force; committed tip recoverable from verified bundle"
+    },
+    {
+      "path": "C:\\Users\\rajes\\OneDrive\\Desktop\\rokkad.worktrees\\agents-rokkar-branch-query",
+      "tip": "846534575653c2902d0e09d802b77cc16c458a65",
+      "tracked_files": 90,
+      "ignored_generated_files": 0,
+      "ignored_generated_bytes": 0,
+      "result": "removed via Git without force; committed tip recoverable from verified bundle"
+    }
+  ],
+  "artifacts": [
+    {
+      "source": ".tmp/lc07-publish-20261006/build-13be3ae9/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-13be3ae9/source.zip",
+      "archive_sha256": "b56ea0205b17b938fab309adaf0c096aeeff677c2de2fd9d4939d6cbc06beaa6",
+      "archive_bytes": 15716007,
+      "overlay": ".tmp/lc07-publish-20261006/build-13be3ae9/source-retained-overrides.zip",
+      "overlay_sha256": "8327b0851f9900fe1db90676cdb50ee4416ff729ffa5de014f4f5f35e2c5fd9f",
+      "overlay_bytes": 41213,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3215,
+      "expanded_bytes_removed": 36298185,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-13be3ae9/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "785105031a71e27069f94ebb50f82dedbfa984508654d1cb5f54c57f81d1e94b",
+      "new_preservation_bytes": 208440
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-422763d5/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-422763d5/source.zip",
+      "archive_sha256": "19dcbbb896a7ff85687d11d20224d6bf036e0c818249101207e6f27d8c3f7faf",
+      "archive_bytes": 15712555,
+      "overlay": ".tmp/lc07-publish-20261006/build-422763d5/source-retained-overrides.zip",
+      "overlay_sha256": "a695b8650fed1bd53b5feb0273c4319d8c14f04e34c9c0df1c78b3460e8e3b42",
+      "overlay_bytes": 41213,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3215,
+      "expanded_bytes_removed": 36287260,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-422763d5/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "04d2d40e75f6a98fc333a4a0ef9ac1433ff44415476cfc3e97eaba9d07162f5a",
+      "new_preservation_bytes": 208438
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-59f62107/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-59f62107/source.zip",
+      "archive_sha256": "3b63a25890e9e4aec28bc9348d823ecfc26c3bd287be6bd1f6ec2406f4439e94",
+      "archive_bytes": 15718708,
+      "overlay": ".tmp/lc07-publish-20261006/build-59f62107/source-retained-overrides.zip",
+      "overlay_sha256": "8327b0851f9900fe1db90676cdb50ee4416ff729ffa5de014f4f5f35e2c5fd9f",
+      "overlay_bytes": 41213,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3216,
+      "expanded_bytes_removed": 36305142,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-59f62107/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "3d6d6e77d758c64112832e1aa43c58366498b58ebb362ee92958379b4b92bbc3",
+      "new_preservation_bytes": 208504
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-5f10b597/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-5f10b597/source.zip",
+      "archive_sha256": "9444de9434a53757ad356d09d3ea194e76c1f312f72d76d40c863b7f855a2047",
+      "archive_bytes": 15822735,
+      "overlay": ".tmp/lc07-publish-20261006/build-5f10b597/source-retained-overrides.zip",
+      "overlay_sha256": "c91ec67ff8fd9f0be76c630a9060b94c9a23c3551ab40fd38f1c9ca4e073cfd0",
+      "overlay_bytes": 41219,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3244,
+      "expanded_bytes_removed": 36597093,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-5f10b597/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "a5409bad3a8d04fd978f5a39ed58e53daf07d300b2dd166dc53061c8bdbf3dde",
+      "new_preservation_bytes": 210108
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-7a7bc8e6/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-7a7bc8e6/source.zip",
+      "archive_sha256": "355d341acf073607673d8e6bed8cf82b7170c2698234aa53ebfbaa9d99ed57a1",
+      "archive_bytes": 15810059,
+      "overlay": ".tmp/lc07-publish-20261006/build-7a7bc8e6/source-retained-overrides.zip",
+      "overlay_sha256": "b2ec260b8418d27a42ac16002a3ecc5118c4fbbd98d155d961c19c25c18c4b4d",
+      "overlay_bytes": 41219,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3242,
+      "expanded_bytes_removed": 36568002,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-7a7bc8e6/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "483be57045677076bfd0e57b8685e2c9c976c7788b3cf8bf7eb1a7fc7c398a3a",
+      "new_preservation_bytes": 210011
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-b172c7bb/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-b172c7bb/source.zip",
+      "archive_sha256": "6c67802de1f4f87f5b6f47dc35fe5d1e23949c8f449966ae694f3b278ea8c6d0",
+      "archive_bytes": 15820714,
+      "overlay": ".tmp/lc07-publish-20261006/build-b172c7bb/source-retained-overrides.zip",
+      "overlay_sha256": "9ee852042aad53e9887761a38f7c095e1ef94a7a3eef8d419148e1aa9942cc7e",
+      "overlay_bytes": 41219,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3244,
+      "expanded_bytes_removed": 36591686,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-b172c7bb/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "b525055d3a8d9532b87744906b6f33d657a6750873dca9e0e6b587848c1afd50",
+      "new_preservation_bytes": 210127
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-dce0d00a/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-dce0d00a/source.zip",
+      "archive_sha256": "1e665d28e1e7fe63945f39c37f065ecc23e455ec9bd621dbc48ef0212221d2e2",
+      "archive_bytes": 15710535,
+      "overlay": ".tmp/lc07-publish-20261006/build-dce0d00a/source-retained-overrides.zip",
+      "overlay_sha256": "a695b8650fed1bd53b5feb0273c4319d8c14f04e34c9c0df1c78b3460e8e3b42",
+      "overlay_bytes": 41213,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3215,
+      "expanded_bytes_removed": 36281883,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-dce0d00a/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "50f7c1f99a59fa5566ef4f5fdbc0d42ee99f5c18a317812fec8a5e6c840e9e11",
+      "new_preservation_bytes": 208452
+    },
+    {
+      "source": ".tmp/lc07-publish-20261006/build-e3c95ba4/source",
+      "retained_archive": ".tmp/lc07-publish-20261006/build-e3c95ba4/source.zip",
+      "archive_sha256": "2785c6e9d7ee2b366a1824a5345f35d5e9e553cffe70694de6fbdffafd285023",
+      "archive_bytes": 15717753,
+      "overlay": ".tmp/lc07-publish-20261006/build-e3c95ba4/source-retained-overrides.zip",
+      "overlay_sha256": "8327b0851f9900fe1db90676cdb50ee4416ff729ffa5de014f4f5f35e2c5fd9f",
+      "overlay_bytes": 41213,
+      "result": "removed inventoried files; original ZIP, exact override and reconstruction manifest retained",
+      "expanded_files_removed": 3216,
+      "expanded_bytes_removed": 36302205,
+      "preservation_manifest": ".tmp/lc07-publish-20261006/build-e3c95ba4/source-preservation.manifest.json.gz",
+      "preservation_manifest_sha256": "8b9abac52230f9b87a84adf0bc01e693483796fc9013e41f3766a79d8ae236c0",
+      "new_preservation_bytes": 208499
+    }
+  ],
+  "metadata_compression": {
+    "source": ".tmp/repository-hygiene-20261017/local-retention.jsonl",
+    "destination": ".tmp/repository-hygiene-20261017/local-retention.jsonl.gz",
+    "source_bytes": 86178702,
+    "archive_bytes": 5338182,
+    "source_sha256": "0506cdd015569299001d4ea2036425695d61bd3618da976294375d3e7ec4106d",
+    "archive_sha256": "79fe4b4c5d895b192298db5c1f5e36aaf1e4ac6cc54678d825ffe923861938a9",
+    "decision": "lossless metadata compression; exact original stream verified",
+    "result": "raw duplicate removed after exact decompression hash parity"
+  },
+  "totals": {
+    "local_branch_names_removed": 8,
+    "local_branches_retained": 9,
+    "clean_worktrees_retired": 2,
+    "registered_worktrees_retained": 3,
+    "expanded_files_removed": 25807,
+    "expanded_logical_bytes_removed": 291231456,
+    "metadata_logical_reduction": 80840520,
+    "new_bundle_bytes": 36866177,
+    "new_build_preservation_bytes": 1672579
+  },
+  "private_evidence": {
+    "directory": ".tmp/repository-retention-20261017",
+    "sha256": {
+      "branch-review.json": "af6e7c9d0578f67e3d990869455312b862dd95b9993bfe17e6887de4b75b146b",
+      "worktree-removal-review.json": "e1828df8bb30dfecb969c6221cc2b681e59453c58711730a7a89edd851578299",
+      "bundle-recovery-proof.json": "413e404880b49c04a7225400f6abfbe0abd0be6d04e7177931a156533d3a4d33",
+      "build-duplicate-review.json": "d18c50a7ca4cb9c45dde95063ee3295615d498e9deb39b57d2c238096a1a75ce",
+      "build-cleanup-actions.json": "9448e3c8af6fbd4deb616d212000d7974226c9ab7cdc718cc7c0c3d639e5e7eb",
+      "metadata-compression.json": "5d9bf07cdd5a3eb8ab27c96aa42ac2d441314ecf485af13d9302f2bd1ed76f3c",
+      "source-restore-proof.json": "a2a3cf0db12c44454b7f88050b505c83cea488f695e136187b65e2dfdb7a29ac",
+      "review_build_duplicates.py": "604581384b29acd8bfa0f23f7c2c496f3fa970e31c305e725efb888e45e1544b",
+      "apply_build_cleanup.py": "06df2eb281e03dce2ea1b0e7d9189c68f8f36cdcb8d2720c95b9f4ac89396ce7"
+    }
+  },
+  "preserved": [
+    "All 22 document/reference originals and reading-copy hashes",
+    "Twenty untracked ticket-designer files and seven changed Girvi entries",
+    "Current/main/rls-mvp/checkpoint/release refs and both unmerged histories",
+    "All remote refs and default/protection settings",
+    "Customer/source exports, media, recovery images/keys, database archives, active environments and unrelated dependency trees"
+  ],
+  "verification": {
+    "source_restore": {
+      "source": ".tmp/lc07-publish-20261006/build-13be3ae9/source",
+      "restored_files": 3215,
+      "restored_bytes": 36298185,
+      "result": "PASS: original ZIP plus preserved translation override reconstructs every file exactly",
+      "disposable_restore": "removed only verified files and empty directories after equality check"
+    },
+    "archived_originals": 22,
+    "dirty_worktree_entries_preserved": [
+      20,
+      7
+    ],
+    "private_evidence_digests": "SHA-256 of pre-action/verification records",
+    "scope": "No application model, migration, template or static source changes"
+  }
+}

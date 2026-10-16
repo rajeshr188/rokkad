@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
     "CONTRIBUTING.md",
     "docs/implementation/repository-hygiene-20261017.md",
+    "docs/implementation/repository-retention-20261017.md",
     "docs/implementation/repository-cleanup-review-20261016.md",
     "docs/implementation/browser-layout-verification.md",
     "docs/archive/context/2026-10-17/INDEX.md",
