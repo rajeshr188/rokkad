@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages import constants as message_levels
@@ -13,6 +14,7 @@ from django.urls import reverse
 def _request(path="/", *, url_name="home", namespace=""):
     request = RequestFactory().get(path)
     request.user = AnonymousUser()
+    request.session = {}
     request.resolver_match = SimpleNamespace(url_name=url_name, namespace=namespace)
     return request
 
@@ -63,12 +65,17 @@ def _membership(workspace):
     return SimpleNamespace(company=workspace)
 
 
-def _authenticated_request(path="/workspace/", *, url_name="workspace_selector", namespace=""):
+def _authenticated_request(
+    path="/workspace/", *, url_name="workspace_selector", namespace=""
+):
     workspace = _workspace()
     request = _request(path, url_name=url_name, namespace=namespace)
     request.user = _AuthenticatedUser(
         workspace=workspace,
-        memberships=[_membership(workspace), _membership(_workspace(2, "Beta Bullion", "beta"))],
+        memberships=[
+            _membership(workspace),
+            _membership(_workspace(2, "Beta Bullion", "beta")),
+        ],
     )
     if "/settings/" in path:
         request.workspace = workspace
@@ -84,7 +91,15 @@ def _render(source, context=None, request=None, *, use_request_processors=True):
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
-    with override_settings(STORAGES=storages):
+    # These are database-free shell fixtures. Account journey behavior is covered
+    # by onboarding HTTP/service tests with real users, sessions and memberships.
+    with (
+        override_settings(STORAGES=storages),
+        patch(
+            "apps.onboarding.services.account_journey.account_journey",
+            return_value=None,
+        ),
+    ):
         if use_request_processors:
             template = engines["django"].from_string(source)
             return template.render(context, request=request)
@@ -103,14 +118,17 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
                     '{% extends "' + layout + '" %}',
                     request=_request(),
                     context={
-                        "workspace": None, "user_workspace": None,
+                        "workspace": None,
+                        "user_workspace": None,
                         "messages": [Message(message_levels.SUCCESS, notification)],
                     },
                 )
                 self.assertEqual(html.count(notification), 1)
                 self.assertIn('id="toasts"', html)
                 if layout == "base_global.html":
-                    self.assertLess(html.index('class="mgmt-content"'), html.index(notification))
+                    self.assertLess(
+                        html.index('class="mgmt-content"'), html.index(notification)
+                    )
                     self.assertNotIn("Account &amp; Workspace Management", html)
 
     def test_background_toast_fragment_retains_message(self):
@@ -173,7 +191,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             {% block title %}Global Auth Smoke{% endblock %}
             {% block mgmt_content %}<section id="global-auth-smoke">Global shell</section>{% endblock %}
             """,
-            request=_authenticated_request("/workspace/", url_name="workspace_selector"),
+            request=_authenticated_request(
+                "/workspace/", url_name="workspace_selector"
+            ),
             context={"workspace": None, "user_workspace": None},
             use_request_processors=False,
         )
@@ -184,17 +204,31 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
 
     def test_authenticated_management_shell_renders_expected_nav_routes(self):
         from apps.orgs.permissions import get_permissions_for_role
+
         workspace = _workspace()
-        request = _authenticated_request("/w/acme/settings/", url_name="workspace_slug_settings")
+        request = _authenticated_request(
+            "/w/acme/settings/", url_name="workspace_slug_settings"
+        )
         html = _render(
-            '{% extends "base_global.html" %}', request=request,
-            context={"user_permissions": get_permissions_for_role("Owner"), "user_role": "Owner", "workspace_can_write": True},
+            '{% extends "base_global.html" %}',
+            request=request,
+            context={
+                "user_permissions": get_permissions_for_role("Owner"),
+                "user_role": "Owner",
+                "workspace_can_write": True,
+            },
             use_request_processors=False,
         )
         for name in (
-            "workspace_slug_dashboard", "workspace_slug_loan_create", "workspace_slug_loan_list",
-            "workspace_slug_parties", "workspace_slug_rates", "workspace_slug_notifications",
-            "workspace_slug_settings", "workspace_slug_settings_team", "workspace_slug_settings_numbering",
+            "workspace_slug_dashboard",
+            "workspace_slug_loan_create",
+            "workspace_slug_loan_list",
+            "workspace_slug_parties",
+            "workspace_slug_rates",
+            "workspace_slug_notifications",
+            "workspace_slug_settings",
+            "workspace_slug_settings_team",
+            "workspace_slug_settings_numbering",
             "workspace_subscriptions:dashboard",
         ):
             href = reverse(name, kwargs={"workspace_slug": workspace.slug})
@@ -209,21 +243,25 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         request.workspace = _workspace(2, "Beta Bullion", "beta")
         html = _render(
             '{% include "components/navigation/workspace_switcher.html" with workspace_switcher_variant="navbar" %}',
-            request=request, use_request_processors=False,
+            request=request,
+            use_request_processors=False,
         )
-        label = html.split('id="workspaceDropdown"', 1)[1].split('</button>', 1)[0]
+        label = html.split('id="workspaceDropdown"', 1)[1].split("</button>", 1)[0]
         self.assertIn("Beta Bullion", label)
         self.assertNotIn("Acme Jewellers", label)
         request.workspace = None
         html = _render(
             '{% include "components/navigation/workspace_switcher.html" with workspace_switcher_variant="navbar" %}',
-            request=request, use_request_processors=False,
+            request=request,
+            use_request_processors=False,
         )
-        label = html.split('id="workspaceDropdown"', 1)[1].split('</button>', 1)[0]
+        label = html.split('id="workspaceDropdown"', 1)[1].split("</button>", 1)[0]
         self.assertIn("Workspaces", label)
         self.assertNotIn("Acme Jewellers", label)
 
-    def test_authenticated_management_shell_omits_retired_preferences_for_admin_role(self):
+    def test_authenticated_management_shell_omits_retired_preferences_for_admin_role(
+        self,
+    ):
         workspace = _workspace()
         html = _render(
             """
@@ -231,7 +269,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             {% block title %}Management Admin Smoke{% endblock %}
             {% block mgmt_content %}<section id="management-admin-smoke">Management shell</section>{% endblock %}
             """,
-            request=_authenticated_request("/workspace/1/settings/", url_name="workspace_settings_home"),
+            request=_authenticated_request(
+                "/workspace/1/settings/", url_name="workspace_settings_home"
+            ),
             context={
                 "workspace": workspace,
                 "user_workspace": workspace,
@@ -248,7 +288,12 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         )
         self.assertNotIn(f'href="{preferences_href}"', html)
         self.assertNotIn("Preferences", html)
-        self.assertIn(reverse("workspace_slug_settings", kwargs={"workspace_slug": workspace.slug}), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_settings", kwargs={"workspace_slug": workspace.slug}
+            ),
+            html,
+        )
 
     def test_workspace_selector_renders_global_workspace_manager_surface(self):
         workspace = _workspace()
@@ -257,7 +302,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             """
             {% include "company/workspace_home.html" %}
             """,
-            request=_authenticated_request("/app/workspaces/", url_name="app_workspaces"),
+            request=_authenticated_request(
+                "/app/workspaces/", url_name="app_workspaces"
+            ),
             context={
                 "workspace": workspace,
                 "user_workspace": workspace,
@@ -292,7 +339,10 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
         self.assertIn("Switch Workspace", html)
         self.assertIn(reverse("app_workspace_create"), html)
         self.assertIn(reverse("app_invitations"), html)
-        self.assertIn(reverse("workspace_select", kwargs={"workspace_id": other_workspace.id}), html)
+        self.assertIn(
+            reverse("workspace_select", kwargs={"workspace_id": other_workspace.id}),
+            html,
+        )
         self.assertIn(
             reverse(
                 "workspace_slug_settings",
@@ -328,7 +378,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             {% block title %}Portal Smoke{% endblock %}
             {% block portal_content %}<section id="portal-smoke">Portal shell</section>{% endblock %}
             """,
-            request=_authenticated_request("/portal/", url_name="customer_portal_dashboard"),
+            request=_authenticated_request(
+                "/portal/", url_name="customer_portal_dashboard"
+            ),
             context={
                 "portal_party_name": "Asha Customer",
                 "portal_workspace_name": "Acme Jewellers",
@@ -490,7 +542,12 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             ),
             html,
         )
-        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}
+            ),
+            html,
+        )
 
     def test_workspace_settings_setup_page_renders_checklist(self):
         workspace = _workspace()
@@ -566,4 +623,9 @@ class SaaSShellRenderSmokeTests(SimpleTestCase):
             ),
             html,
         )
-        self.assertIn(reverse("workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}), html)
+        self.assertIn(
+            reverse(
+                "workspace_slug_parties", kwargs={"workspace_slug": workspace.slug}
+            ),
+            html,
+        )

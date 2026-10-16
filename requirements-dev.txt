@@ -1,0 +1,5 @@
+# Local/CI tooling only; never install this file in the production image.
+black==26.10.1
+ruff==0.17.1
+uv==0.13.1
+pip-audit==2.10.1

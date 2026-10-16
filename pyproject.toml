@@ -1,0 +1,18 @@
+# Tool configuration only. requirements*.txt remain the dependency entry points.
+[tool.black]
+required-version = "26.10.1"
+target-version = ["py314"]
+line-length = 88
+force-exclude = '''
+/(\.venv[^/]*|\.tmp|\.worktrees|\.local-backups|docs|staticfiles|media|outputs?|migrations)/
+'''
+
+[tool.ruff]
+required-version = "0.17.1"
+target-version = "py314"
+line-length = 88
+extend-exclude = [".venv*", ".tmp", ".worktrees", ".local-backups", "docs", "migrations", "staticfiles", "media", "outputs", "output"]
+
+[tool.ruff.lint]
+# Start with correctness checks. Broader style/import cleanup is a separate task.
+select = ["E9", "F63", "F7", "F82"]

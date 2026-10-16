@@ -126,8 +126,21 @@ See [private media](implementation/private-media-access.md) and
 
 ## Development and repository conventions
 
-Python 3.14, Django 6.1.1, PostgreSQL 16 development/CI baseline; use pinned direct
-requirements and constraints. Owner-only migrations use
+The [development workflow proposal](implementation/development-workflow.md) connects
+task isolation, verification, PR integration, dependency maintenance and releases.
+It remains proposed pending owner adoption; do not claim its remote checks/protection
+or new merge/release policy are active merely because the guide exists.
+
+Python 3.14 and PostgreSQL 16 development/CI baseline; use pinned direct
+runtime requirements plus the uv-generated universal `requirements.lock`.
+Current local requirements advance Django to 6.1.2; production stays on its verified
+release until a reviewed deployment. Development tools have separate pinned
+requirements/constraints and must not enter application images. Use project-local
+uv/Black/Ruff, `scripts/check_dependencies.py --installed` and
+`scripts/check_python_quality.py` (Ruff correctness plus changed-file Black).
+Never freeze accumulated environment extras into runtime requirements. See the
+[17 October dependency audit](implementation/python-dependency-audit-20261017.md).
+Owner-only migrations use
 `python manage.py migrate --settings django_project.settings.migration`.
 Web/workers always use restricted runtime credentials. Tests use
 `--settings django_project.settings.test`; adversarial DML must run restricted.

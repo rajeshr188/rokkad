@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-09
+updated: 2026-10-17
 tags: [implementation, dependencies, architecture]
 ---
 
@@ -59,3 +59,13 @@ template tags/inheritance, dynamic names, commands and tests. See the [R13 reach
 bounded removals and retained dependencies. Verify a clean install and `pip check`; neither alone is a
 security audit. Redis is optional; see [cache configuration](cache-configuration.md).
 No blanket dependency upgrades are part of documentation cleanup.
+
+Runtime direct dependencies belong in `requirements.txt`; generated transitive
+pins belong in `requirements.lock`, with explicit extras for dynamically loaded
+formats/backends. Keep development tools in `requirements-dev.txt` and its separate
+lock, outside application images. Preserve shared runtime constraints when resolving
+tool dependencies. Use pinned project-local uv to regenerate locks and check direct
+pin/installed-version consistency with `scripts/check_dependencies.py`. Never freeze
+an accumulated developer environment back into runtime requirements. See the
+[package and tooling audit](python-dependency-audit-20261017.md) for commands,
+retained dependencies, update candidates and compatibility limits.

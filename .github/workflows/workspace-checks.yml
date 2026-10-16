@@ -38,6 +38,30 @@ env:
   CLOUDFLARE_R2_BUCKET_ENDPOINT: http://localhost:9000
 
 jobs:
+  python-quality:
+    name: Python dependencies and quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install pinned quality tools
+        run: |
+          python -m pip install uv==0.13.1
+          uv pip sync --python "$(which python)" requirements-dev.lock
+      - name: Verify pins and Python quality
+        env:
+          CHANGE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python scripts/check_dependencies.py
+          if ! git rev-parse --verify "${CHANGE_BASE}^{commit}" >/dev/null 2>&1; then
+            CHANGE_BASE=HEAD^
+          fi
+          python scripts/check_python_quality.py --base "$CHANGE_BASE"
   foundation:
     name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
@@ -67,6 +91,7 @@ jobs:
         run: |
           python -m pip install -r requirements.txt -c requirements.lock
           python -m pip check
+          python scripts/check_dependencies.py --installed
       - name: Check current documentation links
         if: matrix.suite == 'foundation'
         run: python scripts/check_current_docs.py --all-current
@@ -132,6 +157,7 @@ jobs:
           apps.tenant_apps.party.tests
           apps.configuration.tests.test_legacy_preference_retention
           apps.configuration.tests.test_workspace_preferences_view
+          apps.tenant_apps.notify_v2.test_delivery_credentials
       - name: Recurring billing and platform mail regressions
         if: ${{ !cancelled() && steps.schema.outcome == 'success' && matrix.suite == 'billing' }}
         run: >-

@@ -21,7 +21,7 @@ test rows, and temporary media are cleaned up. Development data is untouched.
 ## Run
 
 ```powershell
-.\.venv314\Scripts\python.exe -m pip install -r requirements-browser.txt
+.\.venv314\Scripts\python.exe -m pip install -r requirements-browser.txt -c requirements-browser.lock
 .\.venv314\Scripts\python.exe -m playwright install chromium
 .\.venv314\Scripts\python.exe manage.py test django_project.browser_acceptance.BrowserAcceptanceTests --settings django_project.settings.test --noinput --keepdb -v 1
 ```

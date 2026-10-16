@@ -33,7 +33,35 @@ See the [release record](implementation/counter-release-20261016.md) and
 The failed `a68dbcb0` candidate was never deployed; older V11/local-only claims in
 historical notes are superseded by this release.
 
-## Current work: repository hygiene (FW-024)
+## Current work: Python dependency and tooling audit
+
+The owner also raised the need for a consistent agent/development process.
+The [proposed workflow](implementation/development-workflow.md) now covers scoped
+task branches/worktrees, change-specific checks, PR/CI integration, immutable
+release candidates, hotfix reconciliation and separate data-repair authority.
+It is a reviewable draft; no default-branch, GitHub protection, merge policy or
+production-authorization changes have been applied. The owner confirmed the source
+session is finished and authorized independent review/integration. The frozen
+24-file snapshot passes pin/tool/document checks, seven guard tests and all 18
+shell/credential tests; exact-revision Linux CI/release remain separate gates.
+
+The [17 October audit](implementation/python-dependency-audit-20261017.md) inventories
+84 installed packages and separates 41 direct runtime requirements from 65 resolved
+runtime distributions. Requirements/lock now include Django 6.1.2, cryptography
+50.0.2, PyJWT 2.15.1 and refreshed certificate/timezone data. Twelve unused/retired
+local packages are removed from `.venv314`; dynamic app/backend/export dependencies are retained.
+Pinned uv/Black/Ruff/pip-audit tooling has a separate development lock and a CI
+quality job. Ruff found an active Notify credential lookup using an undefined
+legacy connection; it now uses canonical Workspace context, with fail-closed tests.
+Clean-install, pin/version, Django system and runtime advisory checks passed
+(65 packages, no known advisories). The focused run passed 353 of 355 tests; two
+pre-existing session-less rendering fixtures also failed on Django 6.1.1, were
+corrected, and all 18 shell/credential rerun tests passed. Seven boundary/hygiene
+tests passed. The 96-package local runtime/dev/browser environment passes pip,
+pin, Ruff and changed-file Black checks. Full Linux CI/image/release acceptance
+remains separate. No production deployment is part of this audit.
+
+## Repository hygiene (FW-024)
 
 The owner authorized execution on 17 October, emphasizing document preservation.
 [Execution record](implementation/repository-hygiene-20261017.md) records snapshots,
@@ -43,7 +71,9 @@ The owner then selected [individual retention and pruning](implementation/reposi
 verified Git recovery, eight merged local branches, two clean worktrees and
 recoverable duplicate build copies. Dirty/unmerged work and customer/recovery
 evidence stay preserved. No loan behavior, schema or production deployment changes
-are part of cleanup. [Active plan](plans/active.md) records retained follow-up.
+are part of cleanup. Exact revision `693031a7` passes all six CI groups, including
+2,695 Loans tests. FW-024 is [completed](plans/completed.md#fw-024-repository-hygiene-and-reviewed-retention-2026-10-17);
+routine retention and a reviewed canonical-main transition remain separate work.
 
 ## Open business and acceptance work
 

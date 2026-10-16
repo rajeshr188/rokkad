@@ -141,6 +141,12 @@ python -m pip install -r requirements.txt -c requirements.lock
 python -m pip check
 ```
 
+For development tools, also install `requirements-dev.txt` with
+`requirements-dev.lock` constraints. Run `python scripts/check_dependencies.py --installed`
+and `python scripts/check_python_quality.py` before submitting changes. The
+[dependency/tooling audit](docs/implementation/python-dependency-audit-20261017.md)
+lists package usage, available upgrades and the pinned uv workflow.
+
 `manage.py` defaults to `django_project.settings.dev`. Configure `.env` using the
 [PostgreSQL role guide](docs/implementation/postgresql-runtime-role.md). Web and
 worker must never use owner-only migration settings.

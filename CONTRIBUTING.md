@@ -12,6 +12,11 @@ Read [AGENTS.md](AGENTS.md), [agent memory](docs/AGENT_MEMORY.md) and
 services, selectors and tests; preserve domain authority, immutable evidence and
 Workspace isolation. Check the relevant ADR and domain guide first.
 
+The [proposed development workflow](docs/implementation/development-workflow.md)
+connects task scope, branches, validation, PRs, dependency updates and production
+releases. It is under owner review; existing agent/domain/release contracts remain
+authoritative until adoption and repository enforcement are configured.
+
 ## Development and checks
 
 Use Python 3.14 with pinned requirements and a disposable PostgreSQL database.
@@ -20,7 +25,19 @@ and [testing guide](docs/implementation/testing-and-migrations.md) describe setu
 Keep owner-only migration credentials separate from restricted web/worker roles.
 Never aim tests at normal development or production business data.
 
+Install development tools with
+`python -m pip install -r requirements-dev.txt -c requirements-dev.lock`.
+The project pins uv 0.13.1, Black 26.10.1, Ruff 0.17.1 and pip-audit 2.10.1;
+activate the project virtual environment to avoid older global executables.
+`python scripts/check_python_quality.py` runs Ruff correctness checks over
+maintained source and Black over changed Python files (including new files).
+Use `--base <revision>` for a branch/PR comparison. Historical migrations and
+archived docs/prototypes are excluded. Broader style/import/type checks remain
+future work; this is not a claim of full lint or typing coverage.
+
 ```sh
+python scripts/check_dependencies.py --installed
+python scripts/check_python_quality.py
 python scripts/check_current_docs.py --all-current
 python scripts/check_repository_hygiene.py
 python scripts/check_app_boundaries.py

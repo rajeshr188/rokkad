@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-09-24
+updated: 2026-10-17
 tags: [deployment, docker, ci, rls]
 related: [postgresql-runtime-role.md, ../plans/project-hardening.md]
 ---
@@ -23,6 +23,14 @@ identity in the image. Retain the final image digest, since apt repositories and
 other build infrastructure are not fully hermetic. The bound cutover template
 installer is included; private template packs and target manifests stay outside.
 See the [candidate report](release-candidate-20260924.md) for current promotion gates.
+
+The [17 October audit](python-dependency-audit-20261017.md) separates 41 direct
+runtime requirements from the 65-package uv-generated universal Python 3.14 lock.
+Development tools have their own `requirements-dev.txt`/`requirements-dev.lock`;
+Docker's allowlist excludes them. The dependency checker rejects mismatched direct
+pins and checks installed runtime versions in every CI suite. A separate quality
+job installs pinned tools, runs Ruff correctness checks and Black on changed Python
+files; it needs no database. The existing pip-based Docker/runtime install remains.
 
 ## Local development, separate from the existing local database
 
