@@ -1,0 +1,18 @@
+{% if monitoring_review %}
+<section class="border rounded p-3 mb-3 text-break" aria-labelledby="monitoring-review-title">
+  <h3 class="h5" id="monitoring-review-title">Review monitoring impact</h3>
+  <p>{{ monitoring_review.scope }} · {{ monitoring_review.action }} · from {{ monitoring_review.effective_from }}.</p>
+  <p>{{ monitoring_review.affected }} active loan(s) in this scope, out of {{ monitoring_review.total_active }} in this Workspace. Other scopes and applicable licence overrides are excluded.</p>
+  {% if monitoring_review.fallback_unavailable %}<p class="alert alert-warning">No fallback monitoring policy will apply in this scope. Coverage will remain unavailable until a policy is configured.</p>{% endif %}
+  <ul>{% for change in monitoring_review.changes %}<li>{{ change.field }}: {{ change.before }} → {{ change.after }}</li>{% empty %}<li>The retained settings are unchanged; review the scope, date and reason.</li>{% endfor %}</ul>
+  {% if monitoring_review.displaced %}<p class="fw-semibold">These scheduled changes are replaced from the chosen date onward:</p><ul>{% for row in monitoring_review.displaced %}<li>v{{ row.version }}, scheduled {{ row.effective_from }}</li>{% endfor %}</ul>{% endif %}
+  {% if monitoring_review.preceding %}<p class="alert alert-info">These existing scheduled versions still take effect before this new version starts. Cancel the schedule first if you intend to postpone them.</p><ul>{% for row in monitoring_review.preceding %}<li>v{{ row.version }}, scheduled {{ row.effective_from }}</li>{% endfor %}</ul>{% endif %}
+  {% if monitoring_review.quotes %}<h4 class="h6">Today's buying-price evidence for held collateral</h4><ul>{% for row in monitoring_review.quotes %}<li>{{ row.metal }}: {{ row.items }} item(s); {{ row.status }}{% if row.age != None %}, {{ row.age }} day(s) old{% endif %}.</li>{% endfor %}</ul>{% endif %}
+  <h4 class="h6">Collateral evidence sample</h4>
+  <p>Checked {{ monitoring_review.sample|length }} loan(s), up to 25. {{ monitoring_review.sample_loses_coverage }} currently usable loan(s) in this sample would lose usable collateral evidence under the proposed settings.</p>
+  <p class="small text-body-secondary">This uses today's available evidence and does not forecast future prices or appraisals, recalculate financial balances, or simulate the whole portfolio's risk. {% if monitoring_review.future %}Evidence will be checked again when the future policy applies.{% endif %} Complete-book confirmation is separate.</p>
+  <ul>{% for row in monitoring_review.sample %}<li>{{ row.number }}: {% if row.before_usable %}usable{% else %}unavailable{% endif %} → {% if row.after_usable %}usable{% else %}unavailable{% endif %}{% if row.blockers %}; {{ row.blockers|join:", " }}{% endif %}.</li>{% empty %}<li>No active loans are affected yet.</li>{% endfor %}</ul>
+  <input type="hidden" name="monitoring_review_token" value="{{ monitoring_review_token }}">
+  <div class="form-check"><input id="monitoring-acknowledged" class="form-check-input" type="checkbox" name="monitoring_acknowledged"><label class="form-check-label" for="monitoring-acknowledged">I reviewed the changed settings, affected scope, evidence limitations and any replaced schedule.</label></div>
+</section>
+{% endif %}

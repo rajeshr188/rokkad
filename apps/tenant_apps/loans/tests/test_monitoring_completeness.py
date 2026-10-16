@@ -266,6 +266,10 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
             risk.assert_not_called()
             valuation.assert_not_called()
             delinquency.assert_not_called()
+        from apps.tenant_apps.loans.selectors.evidence_quality import loan_evidence_quality
+        quality = loan_evidence_quality(self.loan, as_of_date=self.today)
+        self.assertEqual(quality["assessment"]["status"], "NOT_REQUIRED")
+        self.assertEqual(quality["capture"]["status"], "NOT_REQUIRED")
         with patch("apps.tenant_apps.loans.web.operations.assess_risk_alert_communication_readiness") as readiness:
             pawn_risk_portfolio(request)
             readiness.assert_not_called()
@@ -292,7 +296,8 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
             delinquency = get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today)
             collateral = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
             risk = get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today)
-            self.assertEqual(collateral, get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today, _exposure=exposure))
+            self.assertEqual(collateral, get_pawn_loan_collateral_valuation(self.loan.pk,
+                as_of_date=self.today, evidence_at=collateral.evidence_at, _exposure=exposure))
             self.assertEqual(risk, get_pawn_loan_risk_assessment(self.loan.pk, as_of_date=self.today,
                 _delinquency=delinquency, _collateral=collateral))
             snapshot = self.refresh()
@@ -310,8 +315,8 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
         request = RequestFactory().get("/")
         request.user, request.workspace = self.actor, self.tenant
         page = pawn_economics_setup(request)
-        self.assertContains(page, "Monitoring policies are already saved")
-        self.assertContains(page, 'href="#policy-history"')
+        self.assertContains(page, "You are amending the latest policy for")
+        self.assertContains(page, "Add a policy for another scope")
         self.assertContains(page, f"?amend_monitoring={self.policy.pk}#monitoring-policy")
         request = RequestFactory().get("/", {"amend_monitoring": self.policy.pk})
         request.user, request.workspace = self.actor, self.tenant

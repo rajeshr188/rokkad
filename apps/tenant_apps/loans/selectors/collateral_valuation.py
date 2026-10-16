@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, time
 from decimal import Decimal, ROUND_DOWN
 from django.utils import timezone
 
@@ -7,7 +7,7 @@ from apps.tenant_apps.rates.facade import RATE_FOUND, get_latest_commodity_valua
 from apps.tenant_apps.loans.domain import CollateralCustodyState, ValuationMethod, calculate_ltv
 from apps.tenant_apps.loans.models import CollateralAppraisal, PawnLoan, current_tenant_workspace_id
 from .exposure import get_pawn_loan_exposure
-from .monitoring_policy import LoanRiskAssessmentError, resolve_monitoring_policy
+from .monitoring_inputs import MonitoringValuationInputs, resolve_monitoring_valuation_inputs
 from apps.tenant_apps.loans.domain.valuation_freshness import evidence_freshness
 
 
@@ -36,11 +36,23 @@ class CollateralItemValuation:
             "MISSING_RATE": "A usable metal price is required.",
             "MISSING_APPRAISAL": "An approved appraisal is required.",
             "APPRAISAL_BEFORE_CORRECTION": "Earlier appraisals describe the uncorrected collateral details. Record a fresh appraisal.",
+            "SAVED_VALUATION_METHOD_UNAVAILABLE": "Choose a current monitoring method; no saved loan method is available.",
             "MONITORING_POLICY_UNAVAILABLE": "Configure a monitoring policy to assess freshness.",
             "CUSTODY_NOT_ELIGIBLE": "This collateral's custody state is excluded from coverage.",
             "INCOMPLETE_LOWER_OF_EVIDENCE": "Both a metal price and approved appraisal are required.",
         }
         return tuple(messages.get(code, code.replace("_", " ").capitalize()) for code in self.blockers)
+
+
+@dataclass(frozen=True)
+class PawnLoanCollateralObservation:
+    loan_id: int
+    as_of_date: date
+    items: tuple[CollateralItemValuation, ...]
+    eligible_collateral_value: Decimal | None
+    inputs: MonitoringValuationInputs
+    evidence_at: datetime
+    next_evidence_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -58,6 +70,11 @@ class PawnLoanCollateralValuation:
     valuation_method: str = ""
     valuation_basis: str = "ORIGINAL_AGREEMENT"
     original_valuation_method: str = ""
+    evidence_at: datetime | None = None
+    next_evidence_at: datetime | None = None
+    currency_quantum: Decimal | None = None
+    precision_source: str = ""
+    reference_limit_source: str = ""
 
     @property
     def valuation_method_label(self):
@@ -68,34 +85,50 @@ class PawnLoanCollateralValuation:
         return self.original_valuation_method.replace("_", " ").capitalize()
 
 
-def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
-    """Private prepared inputs are reused only within one source-checked refresh."""
+def get_pawn_loan_collateral_observation(loan_id, *, as_of_date, evidence_at=None, _inputs=None):
+    """Read current collateral evidence independently of debt or original approval."""
+    now = timezone.now()
+    live = as_of_date == timezone.localdate(now)
+    if evidence_at is None:
+        # Dated reads restate available knowledge at the local day's end.
+        evidence_at = now if live else timezone.make_aware(datetime.combine(as_of_date, time.max))
+    if (not isinstance(evidence_at, datetime) or timezone.is_naive(evidence_at)
+            or timezone.localdate(evidence_at) != as_of_date
+            or (live and evidence_at > now)):
+        raise ValueError("Evidence cutoff must be an aware instant on the assessment date, no later than now for live monitoring.")
     workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise ValueError("Collateral observation requires an active Workspace context.")
     loan = PawnLoan.objects.select_related("policy_snapshot").prefetch_related("collateral_items").get(pk=loan_id, workspace_id=workspace_id)
-    if _exposure is not None and (_exposure.loan_id != loan.pk or _exposure.as_of_date != as_of_date):
-        raise ValueError("Prepared exposure must match the scoped loan and assessment date.")
-    if loan.policy_snapshot is None:
-        raise ValueError("Loan is missing its frozen disbursal policy.")
-    original_method = loan.policy_snapshot.valuation_method
-    quantum = Decimal(str(loan.policy_snapshot.currency_quantum)).normalize()
-    policy_error = ""
-    try:
-        policy = resolve_monitoring_policy(workspace_id=workspace_id, license_id=loan.license_id, as_of_date=as_of_date)
-    except LoanRiskAssessmentError as exc:
-        policy, policy_error = None, str(exc)
-    basis = policy.valuation_basis if policy else "ORIGINAL_AGREEMENT"
-    method = ValuationMethod(original_method if basis == "ORIGINAL_AGREEMENT" else basis)
+    inputs = _inputs or resolve_monitoring_valuation_inputs(loan, as_of_date=as_of_date)
+    if (not isinstance(inputs, MonitoringValuationInputs) or inputs.loan_id != loan.pk
+            or inputs.as_of_date != as_of_date or (inputs.policy is not None
+                and (inputs.policy.workspace_id != workspace_id
+                    or inputs.policy.license_id not in (None, loan.license_id)))):
+        raise ValueError("Prepared monitoring inputs must match this loan, date and Workspace.")
+    policy, method, quantum = inputs.policy, inputs.method, inputs.currency_quantum
     items = tuple(loan.collateral_items.all())
-    appraisals = {row.collateral_item_id: row for row in CollateralAppraisal.objects.filter(
+    appraisal_rows = CollateralAppraisal.objects.filter(
         workspace_id=workspace_id, collateral_item_id__in=[item.pk for item in items],
-        effective_at__date__lte=as_of_date, status=CollateralAppraisal.Status.APPROVED,
+        status=CollateralAppraisal.Status.APPROVED,
+    )
+    appraisals = {row.collateral_item_id: row for row in appraisal_rows.filter(
+        effective_at__lte=evidence_at,
     ).order_by("collateral_item_id", "-effective_at", "-version").distinct("collateral_item_id")}
+    changes = []
+    if live and method != ValuationMethod.CALCULATED_METAL_VALUE:
+        next_appraisal = (appraisal_rows.filter(effective_at__gt=evidence_at)
+            .order_by("effective_at").values_list("effective_at", flat=True).first())
+        if next_appraisal is not None:
+            changes.append(next_appraisal)
     results, rates = [], {}
     from apps.tenant_apps.loans.services.collateral_corrections import invalidated_appraisal_versions
     invalidated = invalidated_appraisal_versions(loan)
     for item in items:
         eligible = item.custody_state in {CollateralCustodyState.IN_VAULT.value, CollateralCustodyState.WITH_FUNDING_LENDER.value}
         blockers = [] if eligible else ["CUSTODY_NOT_ELIGIBLE"]
+        if method is None:
+            blockers.append("SAVED_VALUATION_METHOD_UNAVAILABLE")
         if policy is None:
             blockers.append("MONITORING_POLICY_UNAVAILABLE")
         elif item.custody_state not in policy.eligible_custody_states:
@@ -103,7 +136,11 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
             if "CUSTODY_NOT_ELIGIBLE" not in blockers:
                 blockers.append("CUSTODY_NOT_ELIGIBLE")
         if item.metal not in rates:
-            rates[item.metal] = get_latest_commodity_valuation_rate(commodity_code=item.metal, as_of=as_of_date)
+            lookup = get_latest_commodity_valuation_rate(commodity_code=item.metal, as_of=evidence_at,
+                include_next_effective_at=live and method != ValuationMethod.LATEST_APPRAISAL)
+            rates[item.metal] = lookup
+            if lookup.next_effective_at is not None:
+                changes.append(lookup.next_effective_at)
         lookup = rates[item.metal]
         calculated = None
         if lookup.status == RATE_FOUND and lookup.rate.buying_rate.is_finite() and lookup.rate.buying_rate > 0:
@@ -139,13 +176,27 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
             getattr(lookup.rate, "pk", None), appraisal.pk if appraisal else None, eligible, tuple(dict.fromkeys(blockers)),
             rate_at, appraisal_at, rate_age, appraisal_age, rate_status, appraisal_status))
     blockers = tuple(code for row in results for code in row.blockers)
-    total = None if blockers else sum((row.selected_value for row in results), Decimal("0"))
-    exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date)
+    total = None if blockers or method is None or policy is None else sum((row.selected_value for row in results), Decimal("0"))
+    return PawnLoanCollateralObservation(loan.pk, as_of_date, tuple(results), total,
+        inputs, evidence_at, min(changes, default=None))
+
+
+def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, evidence_at=None, _exposure=None):
+    """Combine the current observation with supported debt, without reapproval."""
+    if _exposure is not None and (_exposure.loan_id != loan_id or _exposure.as_of_date != as_of_date):
+        raise ValueError("Prepared exposure must match the scoped loan and assessment date.")
+    observed = get_pawn_loan_collateral_observation(loan_id, as_of_date=as_of_date, evidence_at=evidence_at)
+    inputs, policy = observed.inputs, observed.inputs.policy
+    exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan_id, as_of_date=as_of_date)
+    blockers = tuple(code for row in observed.items for code in row.blockers)
     if exposure.integrity_findings:
         blockers += ("FINANCIAL_EVIDENCE_INCONSISTENT",)
-    ltv = calculate_ltv(exposure=exposure.ltv_exposure_basis, collateral_value=total, allowed_ltv_ratio=loan.policy_snapshot.maximum_ltv_ratio, blockers=blockers)
-    basis = "recorded-monitoring-basis" if loan.policy_snapshot.basis == "RECORDED_CONTRACT" else "loan-policy-snapshot"
-    return PawnLoanCollateralValuation(loan.pk, as_of_date, tuple(results), total, ltv,
-        f"{basis}:{loan.policy_snapshot.pk}", policy.pk if policy else None,
-        policy.rate_freshness_days if policy else None, policy.appraisal_freshness_days if policy else None, policy_error,
-        method.value, policy.valuation_basis if policy else "ORIGINAL_AGREEMENT", original_method)
+    ltv = calculate_ltv(exposure=exposure.ltv_exposure_basis,
+        collateral_value=observed.eligible_collateral_value,
+        allowed_ltv_ratio=inputs.reference_ltv_ratio, blockers=blockers)
+    return PawnLoanCollateralValuation(loan_id, as_of_date, observed.items, observed.eligible_collateral_value, ltv,
+        inputs.compatibility_identity, policy.pk if policy else None,
+        policy.rate_freshness_days if policy else None, policy.appraisal_freshness_days if policy else None, inputs.policy_error,
+        inputs.method.value if inputs.method else "", inputs.valuation_basis, inputs.saved_method,
+        observed.evidence_at, observed.next_evidence_at, inputs.currency_quantum,
+        inputs.precision_source, inputs.reference_limit_source)

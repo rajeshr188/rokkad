@@ -1,11 +1,39 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-12
+updated: 2026-10-16
 tags: [loans, monitoring, operations]
 ---
 
 # Review loan health and change monitoring limits
+
+## Prepared workflow improvements
+
+The [locally prepared hardening release](../implementation/loans-architecture-hardening-20261016.md)
+adds policy preview/confirmation, future-schedule cancellation/replacement and
+licence-override retirement within ordinary setup. Inspect affected scopes, changed
+settings and the limited collateral sample before confirming. Re-review when source
+facts or evidence deadlines change. The sample uses today's evidence; it does not
+predict future debt or risk.
+
+Setup, onboarding and Loan health show readiness for active portfolios, including
+stopped/legacy registers. Assignment means process configuration, not a worker
+heartbeat. For an explicitly scoped read-only operator report, use
+`python manage.py monitoring_status --workspace-id <id>` under runtime settings.
+Pending assessment timestamps do not claim an exact invalidation time.
+
+Loan health adds measured-risk, valuation-repair, transaction-check and pending
+assessment views. Open alerts are paginated, with critical and older work first.
+Any overdue obligation may warrant collection attention; configured DPD watch and
+substandard limits classify risk rather than delaying ordinary collections.
+
+Optional batch book review accepts explicit loan numbers or an imported cohort
+identified by series and retained import namespace. Each cohort preview contains at
+most 50 active loans, exceptions and an explicit next-batch cursor. Confirm only
+facts actually checked and choose future recording practice deliberately. A later
+batch requires its own review. Supported represented-position coverage does not
+require this optional assurance. No transaction or missing historical receipt is
+created by the review.
 
 Open **Loan setup → Operations console → Loan health**. This remains an
 administration screen requiring workspace settings permission. Every active loan
@@ -21,18 +49,139 @@ reference content: opening it does not calculate or refresh loans, change policy
 or send messages. Its route is `/w/<workspace-slug>/loans/setup/operations/risk/guide/`.
 The new guide requires an application release before it appears on production.
 Developers should read the [architecture reference](../architecture/post-origination-loan-monitoring.md).
+The [worker lifecycle reference](../architecture/monitoring-worker-lifecycle-and-scaling.md)
+explains actual timing, daily expiry, failure recovery and proposed scaling; the
+[JCL coverage review](../implementation/jcl-monitoring-coverage-review-20261016.md)
+provides separate remedies for incomplete valuation and transaction coverage.
+
+## Read the separate checks
+
+Loan detail can show a **live calculation** while **Saved assessment** is
+unassessed/outdated. Viewing a loan does not refresh its saved result. Open
+**Evidence behind these amounts** to distinguish financial support, usable
+valuation, transaction coverage and future recording practice. Its status summary
+remains visible when collapsed. Current observations without supported debt do not
+supply a usable LTV or complete risk assessment. Closed loans need no active
+monitoring; their earlier history limits remain.
+
+An advisory can describe measured risk, missing evidence, both or unavailable
+risk. Severity and operational alerts retain their meaning. An unknown result
+does not clear an earlier breach. Dashboard and Loan health totals use the same
+guarded evidence checks and disclose excluded/provisional loans. On Financial
+health, use the four completeness indicators to distinguish assessment refresh,
+financial calculation, valuation evidence and represented-position coverage.
+
+**Future recording practice** is separate from entry origin. Ordinary system
+capture is an assumption. **Check paper transactions** shows the current
+expectation; a complete signed check through today can explicitly select future
+Rokkad-only capture. These are optional additional assurances. A later paper entry
+or historical correction may suspend that reviewed assurance; it does not itself
+invalidate a supported recorded position. No receipt, correction, price or loan
+term is changed by this choice.
+See the [LS-05 decision](../adr/2026-10-16-consistent-monitoring-disclosures.md).
+
+## Confirm the represented position and future recording
+
+Transaction coverage now uses an accepted origination/opening and consistent
+recorded activity, without compulsory individual or bulk book confirmation. Known
+missing activity still requires resolution; unsupported balances stay unavailable.
+Earlier unavailable receipts remain unavailable. The treatment is prepared locally
+and needs coordinated deployment before it changes production.
+
+For an optional check on an active loan, open **Workspace → Loans → the loan →
+Overview → Optional book reconciliation → Check paper transactions**. An ordinary
+loan without a previous requirement offers **Check paper transactions for this loan**.
+The action requires the existing Loans `data.edit` permission.
+
+1. Check the accepted opening position and every subsequent transaction against
+   the relevant source records. For a migrated opening, start at its opening
+   checkpoint, not the original loan date. Unavailable earlier receipts remain
+   unavailable; this does not reconstruct or certify them.
+2. Set **Paper activity checked through** to today. Choose **All transactions
+   through this date are entered** only when that statement is supported. Otherwise
+   record **Activity is missing or unresolved** and describe what remains missing.
+3. Enter a genuine reference under **Paper book / receipts checked, or missing
+   activity**. Choose **From now on, every transaction will be entered directly in
+   Rokkad** only if that is the actual future practice for this loan. Loans still
+   using paper retain **Continue paper or mixed capture; check the book when needed**.
+4. Select **Review**, compare the displayed records, acknowledge **I checked the
+   source records and the displayed loan activity**, then **Confirm reviewed records**.
+
+The Rokkad-only transition requires an active supported position, a complete check
+through today and no future-dated activity. Confirmation rechecks the exact reviewed
+source state. It retains who checked, when, the reference and the baseline; it does
+not post money, change agreed terms or certify collateral prices. The saved
+assessment becomes outdated and normal refresh incorporates the review.
+
+**When a warning is warranted:** prices answer what collateral is worth. A staff
+report of unresolved activity or unsupported/conflicting financial evidence means
+the represented position needs attention. Paper/import origin and absent, aged or
+changed optional book assurance alone no longer make transaction coverage incomplete.
+Opening an accepted position does not certify transactions that were never imported.
+
+After a valid Rokkad-only transition, supported ordinary Rokkad activity can continue
+that baseline without daily paper checks. Later paper entry, historical corrections
+or changes to the reviewed agreement can require a new check. A paper/mixed review
+can become behind as its checked-through date ages. Do not select Rokkad-only just
+to claim a practice that the business does not follow. Aged optional assurance does
+not block supported-position monitoring or servicing. An explicit missing-activity
+report stays provisional until a later supported review resolves it.
+
+### Controlled bulk confirmation (proposal; not implemented)
+
+One-loan-at-a-time confirmation is burdensome for an accepted migration cohort.
+Such confirmation is optional assurance, not a prerequisite for usable coverage.
+The current up-to-50-loan paper/mixed batch review already exists; the wider
+future-capture transition below remains a proposal.
+Offer one explicit business confirmation for a defined group, backed by separate
+per-loan reviews with the same safeguards as today's action:
+
+1. Select one Workspace and an explicit loan set, such as an import batch or
+   licence/series cohort. Preview included loans, opening checkpoints, through-date,
+   current positions and exceptions; allow exclusions. Do not select every imported
+   loan merely because its origin is imported.
+2. An authorized reviewer confirms that the accepted opening positions are correct
+   and all activity since those checkpoints through today is entered. Retain the
+   supporting book/cutover reference and an explicit future recording choice. This
+   can use supported cohort-level reconciliation; it does not require recreating
+   unavailable pre-checkpoint history or pretending software checked physical books.
+3. Exclude unsupported positions, unresolved activity and future-dated events.
+   Bind each loan's preview to its exact source state and recheck at commit; changes
+   require another review rather than silent inclusion. Revalidate the date if a
+   batch crosses midnight.
+4. Process bounded, resumable, idempotent chunks under existing Workspace authority,
+   with successful/skipped/failed results and individual audit records linked to
+   the batch. Do not hold a whole-Workspace transaction or describe partial success
+   as complete. Preserve prior checks when later corrections need a new review.
+5. Invalidate affected assessments for normal refresh. Retain individual review
+   for exceptions and continuing paper/mixed loans. No financial or custody event
+   is created; complete transaction coverage does not invent earlier cash history.
+
+For a genuine transition cohort this reduces thousands of clicks to a reviewed
+group confirmation plus exceptions. The choice is independent of origination:
+JCL/JSK may have a supported system-only transition while Lakshmi loans may continue
+mixed capture. Any later implementation should reuse the existing review service
+semantics and record explicit future practice at migration/admission where possible.
+This proposal does not mark any current loan complete or authorize production writes.
 
 ## Choose current monitoring valuation
 
 Open **Loans setup → Calculation, fees and monitoring → Monitoring policy history**.
 Select **Amend** on the latest policy in the intended Workspace/licence scope.
-The **Current monitoring valuation method** defaults to preserving each loan's
-saved method. For paper/imported loans this need not prove the original lending
-valuation. Choose current calculated metal value, latest approved appraisal,
-or their lower value only after reviewing what collateral/evidence the business
-can support. Save a reason and an effective date of today or later. Earlier
+The deployed 16 October default/UI release opens the latest Workspace policy for
+amendment automatically, with a separate link to create a policy for another scope.
+New policies default to **Current calculated metal value**. An existing policy
+retains its choice unless explicitly amended. The preserving option still uses
+each loan's saved method; for paper/imported loans this need not prove the original
+lending valuation. Select the method supported by the business's collateral and
+evidence. Lower-of requires both current metal value and approved appraisal.
+Save a reason and an effective date of today or later. Earlier
 versions and original loan economics remain intact. A licence policy replaces the
 complete Workspace policy; its preserving choice uses each loan's saved method.
+
+The Workspace-default calculated-value amendments for JCL, JSK and Lakshmi are
+already applied. The new-policy default/UI release is deployed; see the
+[release state](../implementation/calculated-monitoring-default-20261016.md).
 
 Metal monitoring needs fresh prices and recorded weight/purity. Appraisal needs
 fresh approved appraisal evidence. Lower-of needs both. Changing the choice does

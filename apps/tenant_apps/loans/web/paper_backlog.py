@@ -12,6 +12,9 @@ from apps.tenant_apps.loans.services.paper_backlog import record_backlog_checkpo
 from apps.tenant_apps.loans.services.batch_transaction_reviews import preview_batch_transaction_review, confirm_batch_transaction_review
 from .recorded_history import _style
 from .transaction_reviews import TransactionReviewForm
+from apps.tenant_apps.loans.services.batch_transaction_reviews import (
+    preview_cohort_transaction_review, confirm_cohort_transaction_review,
+)
 
 
 class BacklogForm(forms.Form):
@@ -46,11 +49,28 @@ def backlog(request):
 
 class BatchReviewForm(TransactionReviewForm):
     def __init__(self, *args, **kwargs):
+        workspace = kwargs.pop('workspace')
         super().__init__(*args, **kwargs)
-        self.fields.pop("future_capture")
+        self.fields['series'].queryset = m.LoanSeries.objects.filter(workspace=workspace).select_related('license')
 
-    numbers = forms.CharField(max_length=4000, label="Loan numbers (one per line)", widget=forms.Textarea(attrs={"rows": 6}),
+    selection = forms.ChoiceField(required=False, choices=(('NUMBERS','Named loans'),('COHORT','Imported source cohort')))
+    series = forms.ModelChoiceField(required=False,queryset=m.LoanSeries.objects.none(),label='Cohort series')
+    source_namespace = forms.UUIDField(required=False,label='Imported source namespace',
+        help_text='Use the retained import source UUID. This selects source evidence, not a claim that the books are complete.')
+    after_loan_id = forms.IntegerField(required=False,min_value=0,initial=0,label='Continue after loan ID',
+        help_text='Each cohort batch contains at most 50 active loans, in loan ID order.')
+    numbers = forms.CharField(required=False,max_length=4000, label="Loan numbers (one per line)", widget=forms.Textarea(attrs={"rows": 6}),
         help_text="Enter at most 50 numbers. If a number exists in multiple series, review those loans individually.")
+
+    def clean(self):
+        values=super().clean()
+        if values.get('selection') == 'COHORT':
+            for name in ('series','source_namespace'):
+                if not values.get(name):
+                    self.add_error(name,'Select the source cohort and its series explicitly.')
+        elif not values.get('numbers'):
+            self.add_error('numbers','Enter the loan numbers to review.')
+        return values
 
 
 def _selected(workspace, numbers):
@@ -73,24 +93,46 @@ def _selected(workspace, numbers):
 @require_http_methods(["GET", "POST"])
 def batch_review(request):
     form = BatchReviewForm(request.POST if request.method == "POST" else None,
-        initial=dict(through_date=timezone.localdate(), request_key=uuid4().hex))
+        workspace=request.loans_workspace,
+        initial=dict(through_date=timezone.localdate(), request_key=uuid4().hex,
+            **{key:request.GET[key] for key in ('selection','series','source_namespace','after_loan_id','future_capture') if key in request.GET}))
     _style(form)
-    review = None
+    review,cohort_review,cohort_completed = None,None,False
     if request.method == "POST" and form.is_valid():
         try:
             data = dict(form.cleaned_data)
-            selected = _selected(request.loans_workspace, data.pop("numbers"))
+            numbers=data.pop('numbers')
+            selection=data.pop('selection')
+            cohort=dict(workspace=request.loans_workspace,series=data.pop('series'),
+                source_namespace=data.pop('source_namespace'),after_loan_id=data.pop('after_loan_id') or 0)
             token, acknowledged = data.pop("review_token"), data.pop("acknowledged")
-            if request.POST.get("action") == "confirm":
-                result = confirm_batch_transaction_review(selected, actor=request.user, **data, review_token=token, acknowledged=acknowledged)
-                messages.success(request, f"Reviewed {len(result)} loans; {sum(created for _, created in result)} new confirmations recorded.")
-                return redirect("workspace_loans:paper_backlog", workspace_slug=request.workspace.slug)
-            review, token = preview_batch_transaction_review(selected, actor=request.user, **data)
-            form.data = form.data.copy()
-            form.data["review_token"] = token
+            if 'future_capture' not in request.POST and data.get('future_capture') == 'PAPER_MIXED':
+                # Already-issued v1 batch tokens bind the submitted argument shape.
+                data.pop('future_capture')
+            if selection == 'COHORT':
+                if request.POST.get('action') == 'confirm':
+                    result,cohort_review=confirm_cohort_transaction_review(**cohort,actor=request.user,
+                        review_token=token,acknowledged=acknowledged,**data)
+                    cohort_completed=True
+                    messages.success(request,f'Reviewed {len(result)} eligible loans. Listed exceptions remain unresolved.')
+                else:
+                    cohort_review,token=preview_cohort_transaction_review(**cohort,actor=request.user,**data)
+                    form.data=form.data.copy()
+                    form.data['review_token']=token
+                review=cohort_review['rows']
+            else:
+                selected = _selected(request.loans_workspace, numbers)
+                if request.POST.get("action") == "confirm":
+                    result = confirm_batch_transaction_review(selected, actor=request.user, **data, review_token=token, acknowledged=acknowledged)
+                    messages.success(request, f"Reviewed {len(result)} loans; {sum(created for _, created in result)} new confirmations recorded.")
+                    return redirect("workspace_loans:paper_backlog", workspace_slug=request.workspace.slug)
+                review, token = preview_batch_transaction_review(selected, actor=request.user, **data)
+                form.data = form.data.copy()
+                form.data["review_token"] = token
         except (ValueError, ObjectDoesNotExist) as exc:
             form.add_error(None, str(exc))
-    return render(request, "loans/pawn/batch_transaction_review.html", dict(form=form, review=review))
+    return render(request, "loans/pawn/batch_transaction_review.html", dict(form=form, review=review,
+        cohort_review=cohort_review,cohort_completed=cohort_completed))
 
 
 @loans_action_required("data.export")

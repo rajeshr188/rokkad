@@ -230,7 +230,7 @@ class NativeActionPurposeTests(WorkspaceTestCase):
         self.assertContains(response, "Evidence behind these amounts")
         self.assertContains(response, "Collection balance includes eligible unposted interest")
         self.assertEqual(response.context["evidence_quality"]["calculation"]["status"], "SUPPORTED")
-        self.assertEqual(response.context["evidence_quality"]["transactions"]["capture_basis"], "SYSTEM_CAPTURE_ASSUMPTION")
+        self.assertEqual(response.context["evidence_quality"]["transactions"]["capture_basis"], "RECORDED_POSITION")
         self.assertContains(client.get(reverse("workspace_loans:pawn_loan_detail", kwargs=kwargs)), "Close / release loan")
         closing = reverse('workspace_loans:pawn_loan_close', kwargs=kwargs)
         self.assertContains(client.get(closing), 'Record a settlement already completed')

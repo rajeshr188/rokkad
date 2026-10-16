@@ -1,20 +1,43 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-12
+updated: 2026-10-16
 tags: [architecture, monitoring, pawn-loan, risk, evidence]
 related: [../flows/loan-health-monitoring.md, ../domain/pawn-loan-financial-read-models.md]
 ---
 
 # Post-origination loan risk monitoring
 
+The [16 October hardening candidate](../implementation/loans-architecture-hardening-20261016.md)
+completes policy lifecycle/review, readiness, staff work views and optional cohort
+assurance without changing the canonical financial calculator or posting boundary.
+Combined source uses snapshot V13 and package/setup profile 4. Its Loans 0089 and
+both independent 0090 guard migrations join at 0091; data_portability 0030 carries
+the compatible profile. Compatible web, worker and scheduled readers must be
+released together. These local acceptance results are not production deployment
+evidence. Worker assignment visibility and bounded measurements are delivered;
+indexed scheduling, reuse and pool changes remain gated by representative evidence.
+
 Developer reference for implemented ordinary PawnLoan monitoring, including
 MR-02–07. The owner reference is the in-app **Loan monitoring guide**, linked from
 Loan health, Operations console and dashboard Financial health after its release.
 Its content is [risk_guide.html](../../templates/loans/setup/risk_guide.html).
 Operational instructions remain in [Loan health](../flows/loan-health-monitoring.md).
+For worker timing, failure/restart behaviour, daily expiry and proposed scaling,
+see the [worker lifecycle reference](monitoring-worker-lifecycle-and-scaling.md).
+The [16 October JCL coverage review](../implementation/jcl-monitoring-coverage-review-20261016.md)
+distinguishes completed refresh from missing valuation and book evidence.
 
 ## Purpose and boundaries
+
+LS-05 uses a shared evidence disclosure for live loan calculations and saved
+portfolio results. Saved freshness is separate from live financial support;
+advisory cause separates measured conditions from missing evidence without changing
+severity. Recording practice comes from ordinary capture assumptions or existing
+reviewed choices, independently of origination label. Dashboard and Loan health
+share [aggregate usability checks](../../apps/tenant_apps/loans/selectors/assessment_evidence.py).
+Missing recording basis is unknown; partial totals disclose their exclusions.
+See the [decision](../adr/2026-10-16-consistent-monitoring-disclosures.md).
 
 Origination establishes an actual agreement and supported starting position.
 Monitoring repeatedly checks debt, contractual repayment performance, eligible
@@ -44,14 +67,28 @@ Preserving a saved valuation method does not freeze its original rupee value.
 For paper/imported loans, an admitted monitoring method need not prove original
 lending valuation. Changing current monitoring must not rewrite original economics.
 
+LS-04's [monitoring input reader](../../apps/tenant_apps/loans/selectors/monitoring_inputs.py)
+separates current choices from saved compatibility references. Independent current
+collateral observation requires no original approval or saved disbursal policy.
+The combined LTV/risk read still needs supported financial exposure. Existing
+precision is preserved from the saved agreement; observation without one uses an
+explicit paise default, not invented borrower terms. Saved reference maximum LTV
+determines reference headroom, while current policy thresholds classify risk.
+Unknown reference limits supply no headroom or limit-status claim; they do not
+erase a known exposure/value ratio or full shortfall. Preserving an unknown saved
+method leaves valuation unavailable until an explicit current method is chosen.
+See the [decision](../adr/2026-10-16-independent-monitoring-inputs.md).
+
 ## Pipeline and source map
 
 ```mermaid
 flowchart TD
     A[Active scoped loan and reporting date] --> B[Continuation and obligations]
     B --> C[Exposure and delinquency]
-    C --> D[Current collateral valuation and LTV]
-    D --> E[Risk classification and book coverage]
+    A --> D[Independent current collateral observation]
+    C --> L[LTV from supported debt and current value]
+    D --> L
+    L --> E[Risk classification and book coverage]
     E --> F[Source-checked current snapshot]
     F --> G[Immutable transitions and staff alerts]
     F --> H[Loan health and Financial health summaries]
@@ -59,23 +96,27 @@ flowchart TD
 
 | Responsibility | Source / entry point |
 |---|---|
+| Supported per-calculation financial inputs and normalized opening obligations/grace | [financial_inputs.py](../../apps/tenant_apps/loans/selectors/financial_inputs.py), `get_pawn_loan_financial_inputs` |
 | Resolve contract, recorded position and recognition preview | [continuation.py](../../apps/tenant_apps/loans/selectors/continuation.py), `resolve_loan_continuation` |
 | Fold schedule/dated allocations | [obligation_state.py](../../apps/tenant_apps/loans/selectors/obligation_state.py), `calculate_obligation_state_as_of` |
 | Financial exposure and integrity findings | [exposure.py](../../apps/tenant_apps/loans/selectors/exposure.py), `get_pawn_loan_exposure` |
 | Contractual DPD/grace | [delinquency selector](../../apps/tenant_apps/loans/selectors/delinquency.py), [calculator](../../apps/tenant_apps/loans/domain/delinquency.py) |
 | Effective monitoring policy | [monitoring_policy.py](../../apps/tenant_apps/loans/selectors/monitoring_policy.py) |
+| Current method, compatibility precision and saved reference limit | [monitoring_inputs.py](../../apps/tenant_apps/loans/selectors/monitoring_inputs.py) |
 | Per-item value and evidence | [collateral_valuation.py](../../apps/tenant_apps/loans/selectors/collateral_valuation.py) |
 | LTV/headroom/shortfall | [ltv.py](../../apps/tenant_apps/loans/domain/ltv.py) |
 | Classification/action hint | [risk selector](../../apps/tenant_apps/loans/selectors/risk.py), [domain](../../apps/tenant_apps/loans/domain/risk.py) |
-| Independent transaction coverage | [transaction_completeness.py](../../apps/tenant_apps/loans/selectors/transaction_completeness.py) |
+| Represented-position coverage and optional book assurance | [transaction_coverage.py](../../apps/tenant_apps/loans/selectors/transaction_coverage.py), [transaction_completeness.py](../../apps/tenant_apps/loans/selectors/transaction_completeness.py) |
 | Today-only persistence | [risk_snapshots.py](../../apps/tenant_apps/loans/services/risk_snapshots.py) |
 | Transitions and incidents | [risk_transitions.py](../../apps/tenant_apps/loans/domain/risk_transitions.py), [risk_alerts.py](../../apps/tenant_apps/loans/services/risk_alerts.py) |
 | Bounded worker | [risk_jobs.py](../../apps/tenant_apps/loans/services/risk_jobs.py) |
 | Source invalidation | [risk_signals.py](../../apps/tenant_apps/loans/risk_signals.py) |
 | Projection summaries | [risk_portfolio.py](../../apps/tenant_apps/loans/selectors/risk_portfolio.py), [dashboard_health.py](../../apps/tenant_apps/loans/selectors/dashboard_health.py) |
 
-MR-07 reuses one private loan/date/Workspace-checked financial input set within a
-composed refresh. Book coverage is computed once after financial/valuation reads.
+MR-07 introduced per-calculation financial reuse; LS-03 promotes it into the
+supported loan/date/Workspace-checked interface within a composed refresh.
+Represented-position coverage reuses those financial inputs after financial/valuation
+reads, retaining optional book assurance separately without another financial read.
 Appraisals use one per-loan query; each metal quote is read once per call.
 Standalone selectors still work independently. There is no cross-request cache
 or financial-result change. See [MR-07](../implementation/monitoring-efficiency-mr07.md).
@@ -115,8 +156,15 @@ not consume it as a suppression gate. Do not promise grace-delayed alerts.
 
 ## Valuation, freshness and custody
 
-The selector reads the latest APPROVED appraisal effective on/before the date,
-ordered by effective time then version. Rates comes through its existing facade.
+The selector reads the latest APPROVED appraisal effective on/before the captured
+assessment instant, ordered by effective time then version. Rates comes through
+its existing facade using the same instant. Today's live valuation excludes
+later-today evidence; dated read-only reports default to local day-end restatement.
+Evidence age still uses inclusive local calendar days. V10 also retains the next
+required quote/appraisal effective time so saved results expire when scheduled
+evidence becomes applicable. See the [decision](../adr/2026-10-16-monitoring-evidence-instant.md).
+This implementation awaits coordinated release; the prior production contract
+remains unchanged until that release.
 
 Calculated value supports GOLD, SILVER and BRONZE. The buying quote is INR per
 gram at a 100% reference grade: pure gold/silver or the bronze material itself.
@@ -205,25 +253,39 @@ and preview/confirmation. Monitoring itself performs no borrower communication.
 
 | Dimension | Meaning |
 |---|---|
-| Freshness | CURRENT status, today's local date and current snapshot contract (V9, including bronze reference-price support) |
+| Freshness | CURRENT status, today's local date, current snapshot contract (V13) and no reached scheduled-evidence deadline |
 | Financial support | Consistent continuation/obligation evidence supports amounts |
-| Transaction completeness | Ordinary capture assumption, checked paper prefix and/or supported Rokkad-only continuation |
+| Transaction coverage | Accepted origination/checkpoint and consistent recorded activity support the represented position, without explicitly unresolved activity |
 | Valuation coverage | Required per-item evidence and custody support value/LTV |
 
-Direct capture's SYSTEM_RECORDED marks complete under an explicit assumption,
-not outside-book verification. Paper/opening activity requires review; missing,
-incomplete, changed or behind coverage is provisional but supported calculations
-remain available. Optional ROKKAD_ONLY future capture validates the exact reviewed
-prefix and supported subsequent events. Later paper facts/corrections can require
-another review. An accepted opening does not fabricate earlier receipt history.
+The owner's later treatment decision supersedes compulsory paper/opening book
+reviews. Direct, paper and imported origins use the same represented-position
+coverage contract. Missing, aged or changed positive book assurance is informational;
+an explicit unresolved-activity report remains provisional and unsupported financial
+evidence remains unavailable. A supported opening does not fabricate earlier receipts.
+Optional ROKKAD_ONLY declarations and book checks retain their original exact
+meanings and immutable rows. Published portable profiles still carry their original
+book-coverage claims, not a newly asserted lifetime cash history. See the
+[decision](../adr/2026-10-16-represented-position-transaction-coverage.md).
 
 Loan health sums the usable current financial subset and discloses provisional
 and unavailable counts. Its monetary `totals_complete` does not require every
 collateral valuation known. Dashboard health separates financial and coverage
 subsets. Financial completeness requires all loans financially usable and no
-provisional books; coverage completeness also requires every loan's cover usable.
+known unresolved activity; coverage completeness also requires every loan's cover usable.
 Unknown is not zero. Subset sums/counts must not claim whole-portfolio certainty.
 Sum per-loan shortfalls: surplus on another loan must never offset them.
+
+New supported-position borrower intents use an explicit versioned position claim
+without inventing a review. The compatibility JSON key is `transaction_review`;
+`contract=recorded-position-coverage/1`, `review_id=null` identifies the new meaning.
+Genuinely current review-bound intents and already issued intents retain their old
+contract. New intents freeze exact financial source/date/amount; dispatch remains
+loan-locked and checks consent, current risk, contact, provider and confirmed content.
+Migration 0090 preserves prior uniqueness while adding position-specific identity
+and immutable new content; downgrade refuses retained position intents. Auction
+readiness uses supported positions but retains statutory/custody/settlement gates.
+Neither monitoring nor an auction without book assurance manufactures a book review.
 
 ## Refresh, concurrency and isolation
 
@@ -235,9 +297,20 @@ by atomic persistence; the worker wraps it in its per-loan Workspace transaction
 
 Source-save invalidation runs inside the source transaction under active RLS.
 Loan/schedule/allocation/item/appraisal changes invalidate the loan; applicable
-rate/policy changes invalidate their scope. New-day staleness is derived even
-without an update. Raw SQL/QuerySet.update does not emit post_save; supported
+rate/policy changes invalidate their scope. New-day and scheduled-evidence
+staleness are derived even without an update. Raw SQL/QuerySet.update does not emit post_save; supported
 mutation paths must preserve explicit invalidation.
+
+LS-06 measures these guards locally before changing them. A separate-lock,
+CURRENT-only scope update does not demonstrate a useful improvement at 2,500
+synthetic rows and is removed; simply skipping stale rows would miss a worker
+about to publish CURRENT. Keep existing transactional updates and worker claims.
+The measured policy/worker deadlock is addressed by FOR NO KEY UPDATE on the
+policy setup Workspace lock, in both service and database guard (migration 0086).
+This retains writer serialization while allowing KEY SHARE checks for appended
+risk evidence. Joining 0087 changes no data. No financial contract, V11 or source
+scope changes. See the [decision](../adr/2026-10-16-measured-monitoring-invalidation.md)
+and [bounded measurements](../implementation/loan-boundary-ls06-20261016.md).
 
 The worker requires explicit positive Workspace IDs and restricted runtime. Each
 candidate is claimed/rechecked with skip-locked row locking in a separate committed

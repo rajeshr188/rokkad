@@ -52,6 +52,32 @@ class TransactionCompleteness:
         return result
 
 
+def capture_expectation(loan, completeness):
+    """Explain current recording practice without changing any coverage claim."""
+    from apps.tenant_apps.loans.models import current_tenant_workspace_id
+    if current_tenant_workspace_id() is None or loan.workspace_id != current_tenant_workspace_id():
+        raise ValueError("Capture expectations require the loan's active Workspace.")
+    if loan.state == "CLOSED":
+        return dict(status="NOT_REQUIRED", source="CLOSED_POSITION", label="Closed loan; no future recording expected",
+            message="This does not complete missing earlier history or change the loan's correction rules.")
+    reviews = getattr(loan, "_prefetched_objects_cache", {}).get("transaction_reviews")
+    review = max(reviews, key=lambda row: row.pk, default=None) if reviews is not None else loan.transaction_reviews.order_by("-pk").first()
+    if review and review.future_capture == "ROKKAD_ONLY":
+        ready = completeness.status == "ROKKAD_ONLY"
+        return dict(status="ROKKAD_ONLY" if ready else "REVIEW_REQUIRED", source="REVIEWED_CHOICE",
+            label="Reviewed Rokkad-only capture" if ready else "Earlier Rokkad-only declaration; book assurance needs review",
+            message=completeness.message if ready else "The earlier book assurance no longer covers the current records. Supported recorded positions remain usable; reconcile the books again when needed.")
+    if completeness.status == "TERMINAL_POSITION":
+        return dict(status="NOT_REQUIRED", source="TERMINAL_POSITION", label="Closed position",
+            message="No future activity is expected; earlier unavailable transactions remain unavailable.")
+    if not completeness.required:
+        return dict(status="SYSTEM_CAPTURE_ASSUMPTION", source="OPERATING_ASSUMPTION",
+            label="Ordinary system capture assumed", message=completeness.message)
+    return dict(status="PAPER_MIXED" if review else "UNDECLARED", source="REVIEWED_CHOICE" if review else "UNDECLARED",
+        label="Continuing paper or mixed capture" if review else "Future recording practice not declared",
+        message="Book reconciliation is optional assurance, separate from the supported recorded position. Entry origin does not establish future recording practice.")
+
+
 def transaction_completeness(loan, as_of_date):
     if getattr(loan, "is_imported_closed_position", False):
         from apps.tenant_apps.loans.services.closed_position import read_position

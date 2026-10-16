@@ -1,0 +1,13 @@
+{% with readiness=monitoring_readiness %}
+<details class="border rounded p-3 mb-3">
+  <summary>Monitoring readiness for existing active loans ({{ readiness.summary.loan_count }})</summary>
+  <p class="small mt-2">Current assessments: {{ readiness.summary.current_count }}. Awaiting refresh: {{ readiness.pending_count }}. Failed: {{ readiness.summary.error_count }}. Usable collateral coverage: {{ readiness.summary.coverage_count }}. Provisional transaction coverage: {{ readiness.summary.provisional_count }}.</p>
+  <p class="small">Configured worker scope: {{ readiness.assignment }}. Last successful assessment: {{ readiness.last_success|default:"Not observed" }}. Configuration visibility does not prove the worker is running; UNVERIFIED means this process has no assignment information.</p>
+  {% for scope in readiness.scopes %}<div class="border-top pt-2 mt-2 small">
+    <strong>{{ scope.license.license_number }} · {{ scope.loans }} active loan(s)</strong>
+    {% if scope.policy %}<p class="mb-1">{% if scope.policy.license_id %}Licence override{% else %}Workspace default{% endif %} v{{ scope.policy.version }}: {{ scope.policy.get_valuation_basis_display }}.{% if scope.appraisal_required %} Approved appraisal evidence is required for at least some loans.{% endif %}</p>{% else %}<p>{{ scope.error }}</p>{% endif %}
+    {% for metal in scope.metals %}<div>{{ metal.metal }}: {{ metal.items }} held item(s); price {{ metal.price_status }}{% if metal.price_age != None %}, {{ metal.price_age }} day(s) old{% endif %}{% if not metal.price_required %} (price not required by this method){% endif %}.</div>{% endfor %}
+  </div>{% empty %}<p class="small mb-0">No active loan portfolio yet. New-lending setup remains separate.</p>{% endfor %}
+  <p class="small mt-2 mb-0">Includes active loans in expired or old registers. Evidence and assessment coverage do not certify unentered paper transactions. Open Loan health to repair evidence and review pending work.</p>
+</details>
+{% endwith %}

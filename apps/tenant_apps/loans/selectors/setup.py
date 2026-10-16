@@ -15,7 +15,7 @@ from apps.tenant_apps.loans.services import (
 )
 
 
-def get_pawn_setup_checklist(workspace):
+def get_pawn_setup_checklist(workspace, *, include_monitoring_portfolio=False):
     if current_tenant_workspace_id() != workspace.pk:
         raise ValueError("Loan setup must belong to the active Workspace.")
     today = timezone.localdate()
@@ -102,7 +102,9 @@ def get_pawn_setup_checklist(workspace):
         "action_url": reverse("workspace_rates:rate_list", kwargs={"workspace_slug": workspace.slug}),
     })
     monitoring_count = sum(row["monitoring_policy"] is not None for row in series_rows)
+    from .monitoring_readiness import get_monitoring_readiness
     return {"steps": steps, "ready": all(step["complete"] for step in steps), "as_of_date": today,
+        "monitoring_portfolio": get_monitoring_readiness(workspace=workspace) if include_monitoring_portfolio else None,
         "series_rows": series_rows, "quote_rows": quote_rows,
         "monitoring": {"ready": bool(series_rows) and monitoring_count == len(series_rows),
             "available_count": monitoring_count, "total_count": len(series_rows)}}

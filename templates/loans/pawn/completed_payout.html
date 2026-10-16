@@ -1,0 +1,47 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}Record completed payout · {{ loan.loan_number }}{% endblock %}
+{% block content %}
+<div class="container py-4" data-completed-payout>
+  <h1 class="h3">Record completed payout</h1>
+  <p>Record the money already paid on {{ loan.loan_date|date:"d/m/Y" }}. Your signed-in identity and today's recording time are retained separately.</p>
+  <p>Recording as <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>.</p>
+  {% if review_error %}<div class="alert alert-warning" role="alert">{{ review_error }}</div>{% endif %}
+  <ol class="list-inline small" aria-label="Recording steps"><li class="list-inline-item"{% if not review %} aria-current="step"{% endif %}>{% if not review %}<strong>{% endif %}1. Check completed facts{% if not review %}</strong>{% endif %}</li><li class="list-inline-item"{% if review %} aria-current="step"{% endif %}>{% if review %}<strong>{% endif %}2. Review and record{% if review %}</strong>{% endif %}</li></ol>
+  <section class="card card-body mb-3" aria-labelledby="completed-agreement-title">
+    <h2 id="completed-agreement-title" class="h5">{% if review %}Review completed agreement{% else %}Saved agreement{% endif %}</h2>
+    {% include "loans/pawn/_agreement_review.html" %}
+    {% if not review %}<p class="mb-0 small"><a href="{% url 'workspace_loans:pawn_loan_update' request.workspace.slug loan.pk %}">Correct draft date, terms or collateral</a> before reviewing this payout.</p>{% endif %}
+  </section>
+  {% if approval_evidence %}<section class="card card-body mb-3" aria-labelledby="retained-approval-title">
+    <h2 id="retained-approval-title" class="h5">Retained approval evidence</h2>
+    <p>The original approval stays unchanged. This action records completed facts and does not create a new historical lending approval.</p>
+    {% for approval in approval_evidence %}<p class="mb-1">Approval #{{ approval.approval_id }} · version {{ approval.version }}</p>
+      <ul>{% for quote in approval.quotes %}<li>{{ quote.metal }} quote #{{ quote.rate_id|default:"unknown" }}: <strong>{% if quote.status == "RETAINED" %}Retained{% elif quote.status == "CORRECTED_OR_WITHDRAWN" %}Corrected or withdrawn{% elif quote.status == "WITHDRAWN" %}Withdrawn{% elif quote.status == "MISSING" %}Source record unavailable{% else %}Differs from the saved evidence{% endif %}</strong>{% if quote.status != "RETAINED" %}. Review this evidence change against the actual agreement.{% endif %}</li>{% empty %}<li>No retained quote is claimed by this approval.</li>{% endfor %}</ul>
+    {% endfor %}
+  </section>{% endif %}
+  {% include "loans/pawn/_entry_monitoring.html" %}
+  <form method="post" action="{% url 'workspace_loans:pawn_loan_record_completed_payout' request.workspace.slug loan.pk %}" class="card card-body">{% csrf_token %}
+    <input type="hidden" name="completed_payout_form" value="1"><input type="hidden" name="intent_token" value="{{ intent_token }}">
+    {{ form.non_field_errors }}
+    {% if review %}
+      <h2 class="h5">Review before recording</h2>
+      {% for field in form %}{{ field.as_hidden }}{% endfor %}
+      <input type="hidden" name="review_token" value="{{ review_token }}">
+      <p>Original reference: <strong>{{ form.cleaned_data.source_reference }}</strong><br>Recording explanation: {{ form.cleaned_data.reason }}</p>
+      <p>This records one completed payout. Later receipts and closure can be entered on the ordinary loan. Complete paper-book verification is not claimed.</p>
+      <p class="small">Monthly charges follow the original loan anniversary. The next charge starts the following day; principal reductions apply from that boundary.</p>
+      <div class="form-check mb-3"><input id="confirm-completed-payout" type="checkbox" class="form-check-input" name="confirm_review" required><label class="form-check-label" for="confirm-completed-payout">I confirm this agreement is correct and the borrower already received the net amount shown on the actual payout date.</label></div>
+      <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" name="action" value="confirm">Record completed payout</button><button class="btn btn-outline-secondary" name="action" value="edit" formnovalidate>Back to facts</button></div>
+    {% else %}
+      <h2 class="h5">Completed payout facts</h2>
+      {% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% elif field.name != "reviewed_evidence" or approval_evidence %}<div class="mb-3">
+        {% if field.field.widget.input_type == 'checkbox' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}
+      </div>{% endif %}{% endfor %}
+      <button class="btn btn-primary" name="action" value="preview">Review completed payout</button>
+    {% endif %}
+    <a class="mt-3" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan</a>
+  </form>
+</div>
+{% endblock %}

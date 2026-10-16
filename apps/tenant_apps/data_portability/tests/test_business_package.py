@@ -252,7 +252,7 @@ class BusinessPackageTests(OpeningImportFixture):
                 series=self.series,effective_from=date(2020,1,1),default_tenure_months=12,
                 default_entry_purpose='PAPER',currency_quantum=Decimal('1'))
             monitor=loans.LoanMonitoringPolicy.objects.create(workspace=self.a,license=self.series.license,version=1,
-                effective_from=date(2020,1,1),compliance_profile='owner review',ltv_warning_ratio='.7',
+                effective_from=date(2020,1,1),compliance_profile='owner review',valuation_basis='ORIGINAL_AGREEMENT',ltv_warning_ratio='.7',
                 ltv_breach_ratio='.8',ltv_critical_ratio='1',eligible_custody_states=['IN_VAULT'],severity_mapping={'WATCH':'WARNING'})
             source=RateSource.objects.create(workspace=self.a,name='Owner quote',location='Town')
             quote=Rate.objects.create(workspace=self.a,rate_source=source,buying_rate=100,selling_rate=110)
@@ -308,7 +308,7 @@ class BusinessPackageTests(OpeningImportFixture):
             original_quote=dict(quote.source_snapshot)
             source.name='Updated source name'
             source.save(update_fields=['name'])
-            values=dict(effective_from=date(2020,1,1),compliance_profile='Source monitoring',
+            values=dict(effective_from=date(2020,1,1),compliance_profile='Source monitoring',valuation_basis='ORIGINAL_AGREEMENT',
                 ltv_warning_ratio='.7',ltv_breach_ratio='.8',ltv_critical_ratio='.9',
                 rate_freshness_days=7,appraisal_freshness_days=90)
             first=create_loan_monitoring_policy(workspace=self.a,actor=self.actor,**values)
@@ -399,6 +399,42 @@ class BusinessPackageTests(OpeningImportFixture):
             start_workspace_trial(workspace=self.b)
             with self.assertRaisesMessage(ValueError,'without subscription'):
                 self.restore(exported,review)
+
+    def test_lifecycle_package_retains_cancelled_schedule_and_retired_override(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.tenant_apps.loans.services.monitoring_policies import create_loan_monitoring_policy, cancellation_values
+        from apps.tenant_apps.loans.selectors.monitoring_policy import resolve_monitoring_policy
+        today=timezone.localdate()
+        with self.scoped():
+            origin=self.write()
+            settings=dict(compliance_profile='Reviewed source monitoring',valuation_basis='ORIGINAL_AGREEMENT',
+                ltv_warning_ratio='.7',ltv_breach_ratio='.8',ltv_critical_ratio='.9')
+            first=create_loan_monitoring_policy(workspace=self.a,actor=self.actor,effective_from=today,**settings)
+            future=create_loan_monitoring_policy(workspace=self.a,actor=self.actor,
+                supersedes=first,effective_from=today+timedelta(days=7),amendment_reason='Scheduled',**settings)
+            cancelled=create_loan_monitoring_policy(workspace=self.a,actor=self.actor,
+                **dict(cancellation_values(future),amendment_reason='Cancel scheduled changes'))
+            override=create_loan_monitoring_policy(workspace=self.a,actor=self.actor,
+                license=self.series.license,effective_from=today,**settings)
+            create_loan_monitoring_policy(workspace=self.a,actor=self.actor,license=self.series.license,
+                supersedes=override,effective_from=today,amendment_reason='Return to default',
+                **dict(settings,scope_action='RETIRE'))
+            with self.assertRaisesMessage(ValueError,'profile 4'):
+                setup.export_setup(workspace_id=self.a.pk,actor=self.actor,save_file=lambda field:None,version=3)
+            exported=self.export()
+            self.assertEqual(exported['profile'],package.LIFECYCLE_PROFILE)
+        with self.scoped(self.b):
+            preview=self.preview(exported)
+            receipt=self.restore(exported,preview)
+            self.assertEqual(receipt.summary['profile'],package.LIFECYCLE_PROFILE)
+            copied=loans.PawnLoan.objects.get()
+            resolved=resolve_monitoring_policy(workspace_id=self.b.pk,license_id=copied.license_id,
+                as_of_date=today+timedelta(days=10))
+            self.assertIsNone(resolved.license_id)
+            self.assertEqual(resolved.version,cancelled.version)
+            self.assertTrue(resolved.replaces_scheduled)
+            self.assertEqual(loans.LoanMonitoringPolicy.objects.filter(scope_action='RETIRE').count(),1)
 
     def test_printing_configuration_and_assets_restore_without_new_document_issue(self):
         from apps.tenant_apps.loans.documents import starter_layout, built_in_print_profile

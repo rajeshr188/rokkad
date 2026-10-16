@@ -12,7 +12,8 @@ from apps.tenant_apps.loans.domain import PawnLoanState
 from apps.tenant_apps.loans.models import LoanRiskEvent, LoanRiskSnapshot, PawnLoan, current_tenant_workspace_id
 from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_collateral_valuation
 from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
-from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure, require_consistent_exposure, _read_financial_inputs
+from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure, require_consistent_exposure
+from apps.tenant_apps.loans.selectors.financial_inputs import get_pawn_loan_financial_inputs
 from apps.tenant_apps.loans.selectors.risk import get_pawn_loan_risk_assessment
 from apps.tenant_apps.loans.selectors.risk_portfolio import SNAPSHOT_CONTRACT, current_snapshot_filter
 from apps.orgs.models import Company
@@ -34,6 +35,7 @@ def require_current_assessment_date(as_of_date: date):
 
 def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
     require_current_assessment_date(as_of_date)
+    evidence_at = timezone.now()
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
         raise RiskSnapshotRefreshError("Risk refresh requires an explicit Workspace context.")
@@ -49,15 +51,17 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
     before = _source_fingerprint(loan_id, workspace_id, as_of_date)
     exposure = None
     try:
-        inputs = _read_financial_inputs(loan_id, as_of_date=as_of_date)
-        exposure = get_pawn_loan_exposure(loan_id, as_of_date=as_of_date, _inputs=inputs)
+        inputs = get_pawn_loan_financial_inputs(loan_id, as_of_date=as_of_date)
+        exposure = get_pawn_loan_exposure(loan_id, as_of_date=as_of_date, financial_inputs=inputs)
         require_consistent_exposure(exposure)
-        delinquency = get_pawn_loan_delinquency(loan_id, as_of_date=as_of_date, _inputs=inputs)
-        collateral = get_pawn_loan_collateral_valuation(loan_id, as_of_date=as_of_date, _exposure=exposure)
-        from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
-        inputs = replace(inputs, transaction_coverage=transaction_completeness(inputs.loan, as_of_date))
+        delinquency = get_pawn_loan_delinquency(loan_id, as_of_date=as_of_date, financial_inputs=inputs)
+        collateral = get_pawn_loan_collateral_valuation(loan_id, as_of_date=as_of_date,
+            evidence_at=evidence_at, _exposure=exposure)
+        from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
+        inputs = replace(inputs, transaction_coverage=recorded_position_coverage(
+            inputs.loan, as_of_date, financial_inputs=inputs, exposure=exposure))
         assessment = get_pawn_loan_risk_assessment(loan_id, as_of_date=as_of_date,
-            _delinquency=delinquency, _collateral=collateral, _exposure=exposure, _inputs=inputs)
+            _delinquency=delinquency, _collateral=collateral, _exposure=exposure, financial_inputs=inputs)
     except Exception as exc:
         _record_error(loan_id, workspace_id, as_of_date, before, exc, exposure=exposure)
         raise RiskSnapshotRefreshError(str(exc)) from exc
@@ -92,6 +96,10 @@ def refresh_loan_risk_snapshot(loan_id: int, *, as_of_date: date):
             for key, value in values.items(): setattr(snapshot, key, value)
             snapshot.save()
         _persist_transitions(snapshot, old_projection, _projection(snapshot))
+        # Crossing a time boundary rolls back the projection and its transitions.
+        require_current_assessment_date(as_of_date)
+        if collateral.next_evidence_at is not None and collateral.next_evidence_at <= timezone.now():
+            raise RiskSnapshotRefreshError("Scheduled valuation evidence became effective during assessment; retry refresh.")
         return snapshot
 
 
@@ -115,9 +123,15 @@ def _snapshot_values(*, workspace_id, as_of_date, exposure, delinquency,
                     "method_label": collateral.valuation_method_label,
                     "basis": collateral.valuation_basis,
                     "original_method": collateral.original_valuation_method,
+                    "currency_quantum": str(collateral.currency_quantum) if collateral.currency_quantum is not None else None,
+                    "precision_source": collateral.precision_source,
+                    "reference_ltv_ratio": str(collateral.ltv.allowed_ltv_ratio) if collateral.ltv.allowed_ltv_ratio is not None else None,
+                    "reference_limit_source": collateral.reference_limit_source,
                     "monitoring_policy_id": collateral.monitoring_policy_id,
                     "rate_freshness_days": collateral.rate_freshness_days,
                     "appraisal_freshness_days": collateral.appraisal_freshness_days,
+                    "evidence_at": collateral.evidence_at.isoformat() if collateral.evidence_at else None,
+                    "next_evidence_at": collateral.next_evidence_at.isoformat() if collateral.next_evidence_at else None,
                 },
                 "coverage": {
                     "exposure": str(collateral.ltv.exposure),

@@ -1,0 +1,121 @@
+{
+  "profile": "rokkad-combined-loans-deployment/1",
+  "state": "PASS",
+  "date": "2026-10-16",
+  "source_parent": "7681aac07b80c9d4c2df617d3872499caf13d790",
+  "source_sha256": "21391df87683feadf0fef3f16b0cde4b59c2060b8c3b7ae744fb38ca775f49ef",
+  "base_image_id": "sha256:9783ad750ce0850379f9b47b16f7a3bd1f589a6a787d75ded2d909640e304468",
+  "image": "rokkad:loans-boundary-20261016-21391df87683",
+  "image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+  "completed_at": "2026-10-16T08:32:24.981195+00:00",
+  "runtime_files": 99,
+  "migrations": [
+    "loans.0078_collateral_fact_corrections",
+    "loans.0079_agreement_financial_corrections",
+    "data_portability.0028_collateral_correction_profile",
+    "data_portability.0029_agreement_correction_profile",
+    "loans.0086_monitoring_policy_lock_mode",
+    "loans.0080_opening_checkpoint_corrections",
+    "loans.0081_agreement_notice_identity",
+    "loans.0083_merge_party_and_agreement_corrections",
+    "loans.0085_merge_party_guard_and_agreement",
+    "loans.0087_merge_monitoring_policy_lock"
+  ],
+  "migration_seconds": 16.356,
+  "coordinated_sequence_seconds": 213.788,
+  "exact_public_outage_duration_measured": false,
+  "paused_balance_parity": true,
+  "encrypted_stopped_writer_checkpoint_remote_verified": true,
+  "restricted_runtime": true,
+  "owner_startup_refused": true,
+  "compatible_scheduled_readers": 4,
+  "operator_financial_posts": false,
+  "operator_loan_or_policy_corrections": false,
+  "operator_messages_created": false,
+  "configuration_preserved": true,
+  "health": {
+    "passed": true,
+    "image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+    "exact_files_verified_per_reader": [
+      99,
+      99
+    ],
+    "restricted_runtime": true,
+    "no_pending_migrations": true,
+    "active_timers": 6,
+    "public_https": true,
+    "new_reader_error_lines": {
+      "rokkad-production-web-1": 0,
+      "rokkad-production-monitoring-1": 0
+    },
+    "public_candidate_javascript_verified": true
+  },
+  "screen_reads": {
+    "passed": true,
+    "read_only": true,
+    "restricted": true,
+    "samples": 14,
+    "profiles": [
+      "loan-closed-position/1",
+      "native-event-fold/1",
+      "original-anniversary-upfront-inclusive/2",
+      "recorded-anniversary/3"
+    ],
+    "screen_checks": 23,
+    "financial_fingerprint": "cd881f25ee6883625ea30d0c5ed9fd9412c786d90c69aa5de91000513de37e66",
+    "contract": "LOAN_RISK_SNAPSHOT_V11"
+  },
+  "monitoring": {
+    "passed": true,
+    "compatible_worker": true,
+    "positive_refresh_observed_in_all_three_workspaces": true,
+    "assessment_errors_observed": 0,
+    "last_bounded_pass_by_workspace": {
+      "1": {
+        "selected": 10,
+        "current": 10,
+        "errors": 0
+      },
+      "2": {
+        "selected": 10,
+        "current": 10,
+        "errors": 0
+      },
+      "3": {
+        "selected": 10,
+        "current": 10,
+        "errors": 0
+      }
+    }
+  },
+  "backups": {
+    "pre": {
+      "phase": "pre",
+      "image_id": "sha256:9783ad750ce0850379f9b47b16f7a3bd1f589a6a787d75ded2d909640e304468",
+      "backup_success": true,
+      "snapshot_sha256": "5a2e52e6cc4a0ee68a6782a727737343af6a5aeec5bbd80b0ede8179555b2643",
+      "remote_download_verified": true,
+      "retention_passed": true
+    },
+    "post": {
+      "phase": "post",
+      "image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+      "backup_success": true,
+      "snapshot_sha256": "11ca2351a488eec43e988747f556df1581f3417da2b8a5b2d362491172b7c130",
+      "remote_download_verified": true,
+      "retention_passed": true
+    }
+  },
+  "cleanup": {
+    "passed": true,
+    "redundant_plaintext_checkpoint_removed": true,
+    "encrypted_release_checkpoint_retained": true,
+    "temporary_runtime_environment_removed": true,
+    "post_backup_https": true,
+    "protected_configuration_unchanged": true,
+    "active_timers": 6,
+    "free_gib": 10.506
+  },
+  "git_commit_or_push_performed": false,
+  "recovery": "Compatible forward recovery; no automatic old-writer rollback or database restore over later transactions"
+}

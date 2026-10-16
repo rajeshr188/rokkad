@@ -81,16 +81,29 @@ def _validate_change(before, after):
         raise ValueError("This correction preserves original dates, source identities, physical facts and the frozen economic rule.")
 
 
-def _source(loan, facts):
+def opening_correction_blockers(loan):
+    """Read-only prerequisites shared with the locked checkpoint writer."""
     events = list(loan.loan_events.order_by("pk"))
     origins = [e for e in events if e.event_kind == "MIGRATION_OPENING"]
+    blockers=[]
     if loan.state != "ACTIVE" or len(origins) != 1 or any(e.event_kind not in {"MIGRATION_OPENING", "OPENING_CORRECTION"} for e in events):
-        raise ValueError("A serviced or settled checkpoint requires connected reconciliation before its baseline can change.")
+        blockers.append("A serviced or settled checkpoint requires connected reconciliation before its baseline can change.")
     if (loan.auctions.exists() or m.PawnLoanRenewal.objects.filter(source_loan=loan).exists()
             or m.FundingPledgeItem.objects.filter(collateral_item__loan=loan).exists()
             or m.FundingLoanDraftCollateral.objects.filter(collateral_item__loan=loan).exists()
             or loan.collateral_items.exclude(custody_state="IN_VAULT").exists()):
-        raise ValueError("Connected custody, renewal, funding or auction evidence requires reconciliation.")
+        blockers.append("Connected custody, renewal, funding or auction evidence requires reconciliation.")
+    if len(origins)==1 and origins[0].payload.get('opening',{}).get('review',{}).get('profile') not in {
+            'loan-opening-review/4','loan-opening-review/5'}:
+        blockers.append('Checkpoint correction requires its retained shared monthly opening profile.')
+    return tuple(blockers)
+
+
+def _source(loan, facts):
+    blockers=opening_correction_blockers(loan)
+    if blockers:
+        raise ValueError(' '.join(blockers))
+    origins=list(loan.loan_events.filter(event_kind='MIGRATION_OPENING'))
     origin = origins[0]
     from .opening_evidence import read_opening_evidence
     opening = read_opening_evidence(loan, origin)

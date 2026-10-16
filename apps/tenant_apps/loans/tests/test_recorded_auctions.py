@@ -107,26 +107,23 @@ class RecordedAuctionTests(WorkspaceTestCase):
         self.assertEqual(collection_balance(self.loan, covered_anniversary).interest_outstanding, 0)
         self.assertEqual(collection_balance(self.loan, covered_anniversary+timedelta(days=1)).interest_outstanding, 164)
 
-    def test_missing_changed_behind_and_incomplete_coverage_block_before_posting(self):
+    def test_optional_assurance_does_not_block_but_known_missing_activity_does(self):
         count = self.loan.loan_events.count()
-        with on(self.notice_day), self.assertRaisesMessage(auctions.PawnAuctionError, "Confirm complete"):
-            auctions.initiate_pawn_loan_auction(self.loan.pk, scheduled_date=self.sale_day, request_key="sale", actor=self.actor)
         with on(self.notice_day):
+            auctions.initiate_pawn_loan_auction(self.loan.pk, scheduled_date=self.sale_day, request_key="sale", actor=self.actor)
             self.review(self.notice_day, complete=False)
-            with self.assertRaisesMessage(auctions.PawnAuctionError, "Confirm complete"):
-                auctions.initiate_pawn_loan_auction(self.loan.pk, scheduled_date=self.sale_day, request_key="sale", actor=self.actor)
+            with self.assertRaisesMessage(auctions.PawnAuctionError, "known missing activity"):
+                auctions.initiate_pawn_loan_auction(self.loan.pk, scheduled_date=self.sale_day, request_key="new-attempt", actor=self.actor)
         self.assertEqual(count, self.loan.loan_events.count())
-        self.assertFalse(self.loan.auctions.exists())
         auction = self.prepare()
-        with on(self.sale_day), self.assertRaisesMessage(auctions.PawnAuctionError, "Confirm complete"):
-            auctions.start_pawn_loan_auction(auction.pk, actor=self.actor)
         with on(self.sale_day):
-            self.review(self.sale_day)
+            # The positive check from notice day is now BEHIND. Its age is
+            # optional assurance, not missing financial activity.
             auctions.start_pawn_loan_auction(auction.pk, actor=self.actor)
             from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
             record_pawn_loan_repayment(self.loan.pk, amount="100", request_key="late-known-receipt", actor=self.actor)
             before = self.loan.loan_events.count()
-            with self.assertRaisesMessage(auctions.PawnAuctionError, "Confirm complete"):
+            with self.assertRaisesMessage(auctions.PawnAuctionError, "exactly clear"):
                 auctions.complete_pawn_loan_auction(auction.pk, recovery_amount="9999", buyer_name="Buyer", actor=self.actor)
             self.assertEqual(before, self.loan.loan_events.count())
 

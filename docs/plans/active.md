@@ -1,11 +1,40 @@
 ---
 status: active
 owner: project
-updated: 2026-10-14
+updated: 2026-10-16
 tags: [plans, active]
 ---
 
 # Active work
+
+**Loans architecture hardening (owner approval, 16 October):** the follow-up
+recommendations are selected for implementation in order. The
+[delivery plan](loans-architecture-hardening-20261016.md) covers entry-policy
+meanings, immutable lifecycle, impact/readiness, shared cohort/correction workflows,
+complete alert visibility and read-only worker diagnostics. Frozen local acceptance
+passes 238 executed cases, including migration rehearsals and 20 browser states;
+see the [acceptance record](../implementation/loans-architecture-hardening-20261016.md).
+Scheduling/reuse/pool optimizations and their measured follow-up actions are
+deferred under [FW-004](future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
+The owner requests committing the completed combined work; production remains on
+the recorded V11/default release and coordinated deployment is pending.
+
+**Represented-position transaction coverage (owner approval, 16 October):** replace
+compulsory origin-based book certification with supported accepted positions and
+recorded activity. Preserve explicit unresolved-activity warnings, optional audited
+book reviews, earlier-history limits and action-specific source/consent/statutory
+guards. Local implementation is verified by the final 235-case affected regression
+and ten desktop/phone states; acceptance is tracked in the
+[record](../implementation/represented-position-coverage-20261016.md). Snapshot V13
+and migration 0090 require a coordinated compatible release; no production change
+is authorized or performed by this implementation task.
+
+The combined Loans release and LS-01 through LS-06 are deployed after separate
+owner authorization. See [completed work](completed.md), the
+[release record](../implementation/loan-boundary-release-20261016.md) and
+[deployment proof](../implementation/loan-boundary-release-20261016.deployment.json).
+Normal bounded monitoring catch-up continues; missing valuation evidence remains
+an independent operational issue, not a reason to invent history or alter policy.
 
 **Origination consolidation (owner approval, 14 October):** common agreement
 capabilities, ordinary register reservation, **Correct loan** and shared customer

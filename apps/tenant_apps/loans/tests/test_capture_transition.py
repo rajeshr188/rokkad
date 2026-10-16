@@ -9,7 +9,7 @@ from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenancy.context import workspace_context, without_workspace_context
 from apps.orgs.models import Company
 from apps.tenant_apps.loans import models as m
-from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness, capture_expectation
 from apps.tenant_apps.loans.services.transaction_reviews import preview_transaction_review, confirm_transaction_review
 from apps.tenant_apps.loans.services.pawn_repayment import record_pawn_loan_repayment
 from apps.tenant_apps.loans.services.pawn_release import preview_pawn_loan_full_release, release_pawn_loan_in_full
@@ -60,6 +60,7 @@ class CaptureTransitionTests(WorkspaceTestCase):
         review = preview_paper_repayment(self.loan.pk, **data)
         record_paper_repayment(self.loan.pk, **data, review_token=review.review_token, confirmed_received=True)
         self.assertEqual(transaction_completeness(self.loan, self.today).status, "CHANGED")
+        self.assertEqual(capture_expectation(self.loan, transaction_completeness(self.loan, self.today))["status"], "REVIEW_REQUIRED")
         mixed = dict(self.facts(), request_key=uuid4().hex, future_capture="PAPER_MIXED")
         self.transition(mixed)
         self.assertEqual(transaction_completeness(self.loan, self.today).status, "CONFIRMED")

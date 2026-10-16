@@ -786,11 +786,14 @@ class LoansSetupUiTests(WorkspaceTestCase):
             },
         )
 
-        self.assertRedirects(
-            response,
-            reverse("loans:pawn_economics_setup"),
-            fetch_redirect_response=False,
-        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Review monitoring impact')
+        self.assertFalse(LoanMonitoringPolicy.objects.exists())
+        data = response.wsgi_request.POST.copy()
+        data.update(monitoring_confirm='1', monitoring_acknowledged='on',
+            monitoring_review_token=response.context['monitoring_review_token'])
+        response = self.tenant_post(reverse('loans:pawn_economics_setup'), data)
+        self.assertRedirects(response, reverse('loans:pawn_economics_setup'), fetch_redirect_response=False)
         policy = LoanMonitoringPolicy.objects.get()
         self.assertEqual(policy.version, 1)
         self.assertEqual(policy.compliance_profile, "Owner-approved pilot")

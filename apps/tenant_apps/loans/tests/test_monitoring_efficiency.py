@@ -12,11 +12,14 @@ from django.utils import timezone
 from apps.orgs.models import Company
 from apps.tenancy.context import workspace_context, without_workspace_context
 from apps.tenancy.testing import WorkspaceTestCase
-from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure, _read_financial_inputs
+from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
+from apps.tenant_apps.loans.selectors.financial_inputs import (
+    get_pawn_loan_financial_inputs, get_pawn_loan_obligation_inputs,
+)
 from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
 from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_collateral_valuation
 from apps.tenant_apps.loans.selectors.risk import get_pawn_loan_risk_assessment
-from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
 from apps.tenant_apps.loans.services.risk_snapshots import refresh_loan_risk_snapshot, RiskSnapshotRefreshError
 from apps.tenant_apps.loans.models import LoanRiskSnapshot
 from . import test_collateral_reappraisal as native
@@ -30,10 +33,10 @@ def assert_input_parity(test, loan, day):
     events = list(loan.loan_events.values())
     expected_exposure = get_pawn_loan_exposure(loan.pk, as_of_date=day)
     expected_delinquency = get_pawn_loan_delinquency(loan.pk, as_of_date=day)
-    inputs = _read_financial_inputs(loan.pk, as_of_date=day)
+    inputs = get_pawn_loan_financial_inputs(loan.pk, as_of_date=day)
     with test.assertNumQueries(0):
-        test.assertEqual(get_pawn_loan_exposure(loan.pk, as_of_date=day, _inputs=inputs), expected_exposure)
-    test.assertEqual(get_pawn_loan_delinquency(loan.pk, as_of_date=day, _inputs=inputs), expected_delinquency)
+        test.assertEqual(get_pawn_loan_exposure(loan.pk, as_of_date=day, financial_inputs=inputs), expected_exposure)
+    test.assertEqual(get_pawn_loan_delinquency(loan.pk, as_of_date=day, financial_inputs=inputs), expected_delinquency)
     test.assertEqual(list(loan.loan_events.values()), events)
 
 
@@ -47,21 +50,21 @@ class MonitoringEfficiencyTests(WorkspaceTestCase):
         native.CollateralReappraisalTests.make_loan(self, method="LATEST_APPRAISAL")
 
     def test_financial_reads_reused_with_equal_risk_and_book_evidence(self):
-        inputs = _read_financial_inputs(self.loan.pk, as_of_date=self.today)
-        inputs = replace(inputs, transaction_coverage=transaction_completeness(inputs.loan, self.today))
-        exposure = get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today, _inputs=inputs)
+        inputs = get_pawn_loan_financial_inputs(self.loan.pk, as_of_date=self.today)
+        inputs = replace(inputs, transaction_coverage=recorded_position_coverage(inputs.loan, self.today, financial_inputs=inputs))
+        exposure = get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today, financial_inputs=inputs)
         with self.assertNumQueries(0):
-            delinquency = get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today, _inputs=inputs)
+            delinquency = get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today, financial_inputs=inputs)
         collateral = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today, _exposure=exposure)
         kwargs = dict(as_of_date=self.today, _exposure=exposure, _delinquency=delinquency, _collateral=collateral)
         with CaptureQueriesContext(connection) as baseline:
             expected = get_pawn_loan_risk_assessment(self.loan.pk, **kwargs)
         with CaptureQueriesContext(connection) as reused:
-            actual = get_pawn_loan_risk_assessment(self.loan.pk, **kwargs, _inputs=inputs)
+            actual = get_pawn_loan_risk_assessment(self.loan.pk, **kwargs, financial_inputs=inputs)
         self.assertEqual(actual, expected)
         self.assertLess(len(reused), len(baseline))
         events = list(self.loan.loan_events.values())
-        with patch("apps.tenant_apps.loans.services.risk_snapshots._read_financial_inputs", wraps=_read_financial_inputs) as read:
+        with patch("apps.tenant_apps.loans.services.risk_snapshots.get_pawn_loan_financial_inputs", wraps=get_pawn_loan_financial_inputs) as read:
             snapshot = refresh_loan_risk_snapshot(self.loan.pk, as_of_date=self.today)
         read.assert_called_once_with(self.loan.pk, as_of_date=self.today)
         self.assertEqual(snapshot.assessment_fingerprint, expected.fingerprint)
@@ -69,25 +72,37 @@ class MonitoringEfficiencyTests(WorkspaceTestCase):
         self.assertEqual(list(self.loan.loan_events.values()), events)
 
     def test_prepared_inputs_refuse_other_loan_date_or_workspace_without_queries(self):
-        inputs = _read_financial_inputs(self.loan.pk, as_of_date=self.today)
+        inputs = get_pawn_loan_financial_inputs(self.loan.pk, as_of_date=self.today)
         for selector in (get_pawn_loan_exposure, get_pawn_loan_delinquency, get_pawn_loan_risk_assessment):
             for loan_id, day in ((self.loan.pk + 1, self.today), (self.loan.pk, self.today + timedelta(days=1))):
                 with self.subTest(selector=selector, loan_id=loan_id, day=day), self.assertNumQueries(0):
                     with self.assertRaisesMessage(ValueError, "Prepared financial inputs"):
-                        selector(loan_id, as_of_date=day, _inputs=inputs)
+                        selector(loan_id, as_of_date=day, financial_inputs=inputs)
         with without_workspace_context():
             other = Company.objects.create(name="Other monitoring", schema_name="other-monitoring", owner=self.actor, creator=self.actor)
         with without_workspace_context(), workspace_context(other.pk):
             for selector in (get_pawn_loan_exposure, get_pawn_loan_delinquency, get_pawn_loan_risk_assessment):
                 with self.assertNumQueries(0), self.assertRaisesMessage(ValueError, "Workspace"):
-                    selector(self.loan.pk, as_of_date=self.today, _inputs=inputs)
+                    selector(self.loan.pk, as_of_date=self.today, financial_inputs=inputs)
         with without_workspace_context(), self.assertNumQueries(0), self.assertRaises(ValueError):
-            get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today, _inputs=inputs)
+            get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today, financial_inputs=inputs)
 
     def test_dated_inputs_match_standalone_financial_readers(self):
         for day in (self.loan.loan_date, self.loan.loan_date + timedelta(days=31), self.today):
             with self.subTest(day=day):
                 assert_input_parity(self, self.loan, day)
+
+    def test_standalone_dpd_does_not_require_a_supported_interest_projection(self):
+        expected = get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today)
+        with patch("apps.tenant_apps.loans.selectors.financial_inputs.resolve_loan_continuation",
+                   side_effect=ValueError("Interest projection unavailable")):
+            inputs = get_pawn_loan_obligation_inputs(self.loan.pk, as_of_date=self.today)
+            with self.assertNumQueries(0):
+                self.assertEqual(get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today,
+                    financial_inputs=inputs), expected)
+            self.assertEqual(get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today), expected)
+            with self.assertRaisesMessage(ValueError, "Interest projection unavailable"):
+                get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today)
 
     def test_book_evidence_failure_retains_financial_support_and_clears_current_metrics(self):
         with patch("apps.tenant_apps.loans.selectors.transaction_completeness.transaction_completeness",
@@ -133,7 +148,8 @@ class MonitoringEfficiencyTests(WorkspaceTestCase):
         self.assertEqual(lookup.call_count, 2)
         self.assertEqual(len(value.items), 10)
         appraisal_queries = [q for q in queries if 'FROM "loans_collateralappraisal"' in q['sql']]
-        self.assertEqual(len(appraisal_queries), 1)
+        # One latest-appraisal read and one bounded scheduled-evidence lookup.
+        self.assertEqual(len(appraisal_queries), 2)
         self.assertEqual({row.appraisal_id for row in value.items}, set(loan.collateral_items.values_list("appraisals__pk", flat=True)))
         item = loan.collateral_items.order_by("pk").first()
         prior = next(row for row in value.items if row.collateral_item_id == item.pk).appraisal_id

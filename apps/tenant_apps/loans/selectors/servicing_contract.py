@@ -1,11 +1,11 @@
 """Read-only selection of frozen servicing semantics; never recognizes interest."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 
 from apps.tenant_apps.loans.models import current_tenant_workspace_id
 from .balances import PawnLoanBalance
-from .transaction_completeness import TransactionCompleteness, transaction_completeness
+from .transaction_coverage import RecordedPositionCoverage, recorded_position_coverage
 
 
 class ServicingContractError(ValueError):
@@ -53,7 +53,7 @@ class ServicingPosition:
     contract: ServicingContract
     balance: PawnLoanBalance
     balance_basis: str
-    transaction_coverage: TransactionCompleteness | None
+    transaction_coverage: RecordedPositionCoverage | None
     continuation: object | None = None
 
 
@@ -181,8 +181,9 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
     contract = continuation.contract
     basis = "RECORDED_DEBT"
     if contract.profile in {"loan-terminal-position/1", "loan-closed-position/1"}:
-        return ServicingPosition(contract, continuation.recorded_balance, "VERIFIED_TERMINAL_POSITION",
-            transaction_completeness(loan, as_of_date) if include_coverage else None, continuation)
+        position = ServicingPosition(contract, continuation.recorded_balance, "VERIFIED_TERMINAL_POSITION", None, continuation)
+        return replace(position, transaction_coverage=recorded_position_coverage(
+            loan, as_of_date, servicing_position=position)) if include_coverage else position
     if (contract.checkpoint_period_number is not None and as_of_date == contract.financial_history_from):
         # The verified checkpoint itself has no post-cutover catch-up. This is
         # a read, not authorization to insert an action on the cutover day.
@@ -201,5 +202,6 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
         balance = continuation.collection_balance
         if continuation.recognition.collection_eligible:
             basis = "COLLECTION_WITH_UNPOSTED_INTEREST"
-    coverage = transaction_completeness(loan, as_of_date) if include_coverage else None
-    return ServicingPosition(contract, balance, basis, coverage, continuation)
+    position = ServicingPosition(contract, balance, basis, None, continuation)
+    return replace(position, transaction_coverage=recorded_position_coverage(
+        loan, as_of_date, servicing_position=position)) if include_coverage else position

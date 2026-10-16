@@ -2,32 +2,26 @@ from datetime import date
 from decimal import Decimal
 
 from apps.tenant_apps.loans.domain import RiskPolicy, assess_pawn_loan_risk
-from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
+from apps.tenant_apps.loans.models import current_tenant_workspace_id
 from .collateral_valuation import get_pawn_loan_collateral_valuation
 from .delinquency import get_pawn_loan_delinquency
-from .balances import get_pawn_loan_balance
 from .exposure import get_pawn_loan_exposure, require_consistent_exposure
-from .obligation_state import get_active_repayment_schedule_as_of
+from .financial_inputs import PawnLoanFinancialInputs, get_pawn_loan_financial_inputs
 
 
 from .monitoring_policy import LoanRiskAssessmentError, resolve_monitoring_policy
 
 
-def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquency=None, _collateral=None, _exposure=None, _inputs=None):
-    """Private prepared inputs are reused only within one source-checked refresh."""
+def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquency=None, _collateral=None, _exposure=None, financial_inputs: PawnLoanFinancialInputs | None = None):
+    """Reuse supported financial inputs within this source-checked calculation."""
     workspace_id = current_tenant_workspace_id()
-    if _inputs is None:
-        try:
-            loan = PawnLoan.objects.get(pk=loan_id, workspace_id=workspace_id)
-        except PawnLoan.DoesNotExist as exc:
-            raise LoanRiskAssessmentError("PawnLoan was not found in the active workspace.") from exc
-    else:
-        _inputs.require(loan_id, as_of_date)
-        loan = _inputs.loan
+    inputs = financial_inputs if financial_inputs is not None else get_pawn_loan_financial_inputs(loan_id, as_of_date=as_of_date)
+    inputs.require(loan_id, as_of_date)
+    loan = inputs.loan
     for prepared in (_delinquency, _collateral, _exposure):
         if prepared is not None and (prepared.loan_id != loan.pk or prepared.as_of_date != as_of_date):
             raise LoanRiskAssessmentError("Prepared assessment must match the scoped loan and date.")
-    exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date, _inputs=_inputs)
+    exposure = _exposure if _exposure is not None else get_pawn_loan_exposure(loan.pk, as_of_date=as_of_date, financial_inputs=inputs)
     require_consistent_exposure(exposure)
     model = resolve_monitoring_policy(workspace_id=workspace_id, license_id=loan.license_id, as_of_date=as_of_date)
     policy = RiskPolicy(
@@ -39,14 +33,13 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquenc
         ltv_breach_ratio=Decimal(model.ltv_breach_ratio),
         ltv_critical_ratio=Decimal(model.ltv_critical_ratio),
     )
-    delinquency = _delinquency if _delinquency is not None else get_pawn_loan_delinquency(loan.pk, as_of_date=as_of_date, _inputs=_inputs)
+    delinquency = _delinquency if _delinquency is not None else get_pawn_loan_delinquency(loan.pk, as_of_date=as_of_date, financial_inputs=inputs)
     collateral = _collateral if _collateral is not None else get_pawn_loan_collateral_valuation(loan.pk, as_of_date=as_of_date, _exposure=exposure)
-    schedule = _inputs.schedule if _inputs is not None else get_active_repayment_schedule_as_of(loan, as_of_date)
+    schedule = inputs.schedule
     maturity_date = (
         schedule.maturity_date
         if schedule is not None
-        else (_inputs.position.recorded_balance if _inputs is not None
-              else get_pawn_loan_balance(loan, as_of_date=as_of_date)).due_date
+        else inputs.position.recorded_balance.due_date
     )
     assessment = assess_pawn_loan_risk(
         as_of_date=as_of_date,
@@ -59,9 +52,9 @@ def get_pawn_loan_risk_assessment(loan_id: int, *, as_of_date: date, _delinquenc
     )
     from dataclasses import replace
     import hashlib
-    from .transaction_completeness import transaction_completeness
-    completeness = (_inputs.transaction_coverage if _inputs is not None
-                    and _inputs.transaction_coverage is not None else transaction_completeness(loan, as_of_date))
+    from .transaction_coverage import recorded_position_coverage
+    completeness = (inputs.transaction_coverage if inputs.transaction_coverage is not None
+                    else recorded_position_coverage(loan, as_of_date, financial_inputs=inputs, exposure=exposure))
     if not completeness.complete:
         assessment = replace(assessment, flags=assessment.flags + ("TRANSACTIONS_UNCONFIRMED",),
             explanations=assessment.explanations + (completeness.message,),

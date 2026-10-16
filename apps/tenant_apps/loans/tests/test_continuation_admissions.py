@@ -7,6 +7,8 @@ from uuid import UUID
 
 from dateutil.relativedelta import relativedelta
 from django.test import override_settings
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.tenant_apps.data_portability import loan_history
@@ -16,6 +18,8 @@ from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.domain.monthly_contract import item_monthly_interest, RULE
 from apps.tenant_apps.loans.selectors.continuation import resolve_loan_continuation
 from apps.tenant_apps.loans.selectors.exposure import get_pawn_loan_exposure
+from apps.tenant_apps.loans.selectors.financial_inputs import get_pawn_loan_financial_inputs
+from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
 from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
 from apps.tenant_apps.loans.services import (
     approve_pawn_loan, disburse_pawn_loan, update_pawn_draft, UpdatePawnDraftCommand, CollateralDraftInput,
@@ -286,7 +290,19 @@ class ContinuationAdmissionTests(AdmissionFixture):
                 for loan in self.loans:
                     with self.subTest(on=on, loan=loan.loan_number):
                         position = get_servicing_position(loan, as_of_date=on, include_coverage=True)
-                        exposure = get_pawn_loan_exposure(loan.pk, as_of_date=on)
+                        with CaptureQueriesContext(connection) as reads:
+                            inputs = get_pawn_loan_financial_inputs(loan.pk, as_of_date=on)
+                        self.assertFalse(any(q["sql"].lstrip().upper().startswith(
+                            ("INSERT ", "UPDATE ", "DELETE ")) for q in reads))
+                        with self.assertNumQueries(0):
+                            exposure = get_pawn_loan_exposure(loan.pk, as_of_date=on, financial_inputs=inputs)
+                            dpd = get_pawn_loan_delinquency(loan.pk, as_of_date=on, financial_inputs=inputs)
+                        self.assertEqual(dpd.assessment.days_past_due, 0)
+                        self.assertEqual(inputs.position.recorded_balance.total_due, self.remaining)
+                        self.assertEqual(inputs.position.collection_balance.total_due, self.remaining + interest)
+                        self.assertEqual(inputs.original_principal, self.remaining if loan == self.opening else self.principal)
+                        self.assertEqual(inputs.principal_history_basis, "OPENING_CHECKPOINT" if loan == self.opening else "ORIGINAL_PAYOUT")
+                        self.assertIsNone(inputs.transaction_coverage)
                         self.assertEqual(position.balance.interest_outstanding, interest)
                         self.assertEqual(position.balance.total_due, self.remaining + interest)
                         self.assertEqual(exposure.recorded_total_due, self.remaining)
@@ -298,7 +314,8 @@ class ContinuationAdmissionTests(AdmissionFixture):
                         economic.append((exposure.principal_outstanding, exposure.cash_receivable_basis,
                             exposure.total_economic_exposure, exposure.maturity_payoff, exposure.ltv_exposure_basis))
                         if loan != self.direct and on == date(2026, 5, 6):
-                            self.assertFalse(position.transaction_coverage.complete)
+                            self.assertTrue(position.transaction_coverage.complete)
+                            self.assertFalse(position.transaction_coverage.book_review.complete)
                 self.assertEqual(economic, [economic[0]]*4)
             self.assertEqual(list(m.PawnLoanEvent.objects.order_by("pk").values_list("pk", "payload_fingerprint")), before)
             self.assertEqual(m.PawnLoanInterestAccrual.objects.count(), accruals)
@@ -344,6 +361,8 @@ class ContinuationAdmissionTests(AdmissionFixture):
         with self.scoped():
             with self.assertRaisesMessage(ValueError, "before the migration cutover"):
                 resolve_loan_continuation(self.opening, as_of_date=date(2026, 4, 19))
+            with self.assertRaisesMessage(ValueError, "before the migration cutover"):
+                get_pawn_loan_financial_inputs(self.opening.pk, as_of_date=date(2026, 4, 19))
             # Shared facts can be read on cutover; writer chronology stays stricter.
             with patch("django.utils.timezone.localdate", return_value=self.cutover):
                 with self.assertRaisesMessage(ValueError, "strictly after cutover"):

@@ -73,6 +73,18 @@ class ClosedPositionAdmissionTests(RecordedOriginationTests):
         self.mapping["evidence_id"] = evidence.public_id
         return evidence
 
+    def test_batch_review_of_a_closed_checkpoint_does_not_require_an_original_date(self):
+        from apps.tenant_apps.loans.services.batch_transaction_reviews import preview_batch_transaction_review,confirm_batch_transaction_review
+        loan,_,_=self.admit_position()
+        self.assertIsNone(loan.loan_date)
+        values=dict(actor=self.actor,through_date=self.today,confirmed_complete=True,
+            source_reference='Accepted zero checkpoint checked; earlier transactions unavailable',request_key=uuid4().hex)
+        review,token=preview_batch_transaction_review([loan.pk],**values)
+        self.assertEqual(review[0]['history_from'],self.today.isoformat())
+        confirm_batch_transaction_review([loan.pk],**values,review_token=token,acknowledged=True)
+        self.assertEqual(loan.loan_events.count(),1)
+        self.assertEqual(loan.transaction_reviews.count(),1)
+
     def test_minimal_closed_loan_has_zero_shared_position_without_dummy_terms_or_financial_history(self):
         before = m.PawnLoan.objects.count()
         summary, token = preview_closed_position(document=self.document, **self.mapping)
@@ -95,6 +107,16 @@ class ClosedPositionAdmissionTests(RecordedOriginationTests):
         self.assertTrue(balance.financially_settled)
         self.assertTrue(balance.collateral_return_complete)
         self.assertEqual(get_pawn_loan_exposure(loan.pk, as_of_date=self.today).total_economic_exposure, 0)
+        from apps.tenant_apps.loans.selectors.financial_inputs import get_pawn_loan_financial_inputs
+        from apps.tenant_apps.loans.selectors.delinquency import get_pawn_loan_delinquency
+        inputs = get_pawn_loan_financial_inputs(loan.pk, as_of_date=self.today)
+        self.assertIsNone(inputs.original_principal)
+        self.assertEqual(inputs.principal_history_basis, "VERIFIED_TERMINAL_POSITION")
+        self.assertEqual(inputs.obligation_state.obligations, ())
+        self.assertEqual(get_pawn_loan_delinquency(loan.pk, as_of_date=self.today,
+            financial_inputs=inputs).assessment.days_past_due, 0)
+        with self.assertRaisesMessage(ValueError, "before the migration cutover"):
+            get_pawn_loan_financial_inputs(loan.pk, as_of_date=self.today - timedelta(days=1))
         self.assertEqual(get_servicing_position(loan, as_of_date=self.today).balance.total_due, 0)
         self.assertFalse(transaction_completeness(loan, self.today).complete)
         self.assertEqual(summary["missing_original_details"], ["original_date", "closed_on", "original_principal", "monthly_rate", "tenure_months"])

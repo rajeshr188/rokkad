@@ -1,7 +1,7 @@
 ---
 status: accepted-design
 owner: project
-updated: 2026-10-14
+updated: 2026-10-16
 tags: [loans, paper-entry, workflow, historical-evidence, risk]
 ---
 
@@ -16,27 +16,34 @@ Active loan detail offers **Correct loan**, including signed mistaken-customer
 correction on eligible direct, paper, accepted-history and opening agreements.
 Financial/custody corrections keep their existing reviewed dependency rules.
 
-## An unpaid draft whose payout already happened (LD-03, local)
+## An unpaid draft whose payout already happened (LS-02, local release pending)
 
 Open the existing draft and select **Record completed payout**. The completed-payout
 editor shows its saved customer, series, product, number, original date and
-collateral. These identity fields and item membership stay fixed; correct them
-explicitly on the draft first if needed. Review dated standing terms or enter a
-supported actual agreement exception, the original source reference and deductions.
-Record known receipts or closure only when supported by the source.
+collateral in one common editor, whether it has an earlier approval or not.
+These identity fields and item membership stay fixed; correct them explicitly
+on the draft first if needed. Supply the original source reference, recording
+explanation and actual deductions. Retained approved amounts take precedence over
+standing defaults. A separate review shows the agreement and net amount already
+paid. Confirm those facts to record one payout, then enter later receipts or
+closure through the ordinary loan actions when supported by the source.
 
 Preview and confirm records the payout against the same loan and collateral IDs.
 It preserves the reserved number, photos, genuine approvals and issued copies.
 It needs no original-day digital Rates or economic-policy rows. Genuine retained
 approval facts cannot be silently changed, and the recorded payout does not create
-a retrospective Rokkad approval. The advanced retained-native earlier-payout route
-remains available separately. Current lending continues its current approval checks.
+a retrospective Rokkad approval. Retained quote corrections/withdrawals are shown
+and acknowledged explicitly; they do not trigger a new historical approval.
+Changed evidence after preview requires a fresh review. Earlier native signed
+submissions retain their original command, and fully reversed/posted histories
+keep their existing correction safeguards. Current lending continues its current
+approval checks.
 
 Missing complete-book attestation remains disclosed; recording a loan does not
 certify absent payments. Monitoring uses current eligible evidence, separately
 from original terms. An evidenced completed payout can use an inactive legacy
-license reference without authorizing new lending. Migration 0058 and controlled
-rollout are still required outside isolated QA; see the
+license reference without authorizing new lending. LS-02 introduces no schema
+migration; its controlled release remains separate from local verification. See the
 [delivery record](../implementation/completed-payout-admission-ld03.md).
 
 The shared-entry extension (UR-19–22) uses a current standing entry-purpose default

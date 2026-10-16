@@ -203,7 +203,7 @@ def build_business_setup(*, workspace):
     """Resume from persisted lending configuration; GET never creates setup records."""
     from django.urls import reverse
     from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
-    lending = get_pawn_setup_checklist(workspace)
+    lending = get_pawn_setup_checklist(workspace, include_monitoring_portfolio=True)
     steps = [{
         "key": "business_profile", "title": _("Business details"), "complete": bool(workspace.name),
         "description": _("Review your business name. Branding is optional."),

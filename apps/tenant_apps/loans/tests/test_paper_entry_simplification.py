@@ -108,6 +108,37 @@ class PaperEntrySimplificationTests(WorkspaceTestCase):
         self.assertEqual(m.PawnLoanEvent.objects.count(), before)
         self.capture("paper-entry-terms", response)
 
+    def test_current_monitoring_is_separate_from_saved_economic_reference(self):
+        from apps.tenant_apps.loans.services.monitoring_policies import create_loan_monitoring_policy
+        from apps.tenant_apps.loans.selectors.monitoring_inputs import resolve_monitoring_valuation_inputs
+        self.configure(valuation_method="LATEST_APPRAISAL", maximum_ltv_ratio=Decimal(".6"))
+        policy = create_loan_monitoring_policy(workspace=self.tenant, actor=self.actor,
+            effective_from=self.today, compliance_profile="Current metal monitoring",
+            valuation_basis="CALCULATED_METAL_VALUE", ltv_warning_ratio=Decimal(".7"),
+            ltv_breach_ratio=Decimal(".8"), ltv_critical_ratio=Decimal(".9"))
+        loan, _, preview = self.admit()
+        self.assertEqual(preview.context["current_monitoring"]["policy"].pk, policy.pk)
+        self.assertContains(preview, "Current calculated metal value")
+        self.assertEqual(loan.policy_snapshot.valuation_method, "LATEST_APPRAISAL")
+        self.assertEqual(loan.policy_snapshot.maximum_ltv_ratio, Decimal(".6"))
+        self.assertEqual(resolve_monitoring_valuation_inputs(loan, as_of_date=self.today).method.value,
+            "CALCULATED_METAL_VALUE")
+        self.assertIn("Saved valuation fallback/reference", loan.disbursal_snapshot.evidence["recording"]["monitoring"]["reason"])
+        self.assertFalse(loan.approval_snapshots.exists())
+
+    def test_missing_monitoring_policy_is_disclosed_without_blocking_completed_facts(self):
+        loan, _, preview = self.admit()
+        self.assertIsNone(preview.context["current_monitoring"]["policy"])
+        self.assertContains(preview, "Monitoring unavailable")
+        self.assertEqual(loan.state, "ACTIVE")
+        self.assertEqual(m.LoanMonitoringPolicy.objects.count(), 0)
+
+    def test_entry_monitoring_context_requires_matching_workspace(self):
+        from apps.tenancy.context import without_workspace_context
+        from apps.tenant_apps.loans.selectors.monitoring_policy import current_monitoring_context
+        with without_workspace_context(), self.assertRaises(ValueError):
+            current_monitoring_context(self.series)
+
     def test_supported_actual_exception_keeps_original_rate_and_source_reason(self):
         values = self.facts(exceptions="on", exception_reason="Actual agreement in book A",
             product_version_id=self.flex.pk, rate="1.5", tenure="9", advance_months="0", document_charge="5",

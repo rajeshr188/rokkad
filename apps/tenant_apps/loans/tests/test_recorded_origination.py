@@ -169,7 +169,7 @@ class RecordedOriginationTests(WorkspaceTestCase):
         snapshot = self.make_snapshot(method="LATEST_APPRAISAL")
         item = snapshot.loan.collateral_items.get()
         m.LoanMonitoringPolicy.objects.create(workspace=self.tenant, effective_from=timezone.localdate(),
-            version=1, compliance_profile="Current coverage review",
+            version=1, compliance_profile="Current coverage review", valuation_basis="LATEST_APPRAISAL",
             ltv_warning_ratio=Decimal("0.7"), ltv_breach_ratio=Decimal("0.8"), ltv_critical_ratio=Decimal("0.9"),
             eligible_custody_states=["IN_VAULT"], severity_mapping={"strategy": "derived-v1"}, created_by=self.actor)
         appraisal = record_collateral_reappraisal(loan_id=snapshot.loan_id, item_id=item.pk, actor=self.actor,

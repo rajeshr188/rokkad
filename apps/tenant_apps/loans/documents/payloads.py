@@ -547,8 +547,12 @@ class PawnLoanDocumentProjectionBuilder:
         )
         collection = getattr(event, "payload", {}).get("auction", {}).get("recorded_collection")
         if collection:
-            details += (("Collection basis", "Agreed paper anniversary interest; actual principal history"),
-                        ("Paper coverage review", str(collection["coverage"]["review_id"])))
+            coverage = collection["coverage"]
+            if coverage.get("contract") == "recorded-position-coverage/1":
+                details += (("Collection basis", "Agreed paper anniversary interest; actual principal history. Supported recorded position; book reconciliation is separate"),)
+            else:
+                details += (("Collection basis", "Agreed paper anniversary interest; actual principal history"),
+                            ("Paper coverage review", str(coverage["review_id"])))
         opening_collection = event.payload.get("opening_collection")
         if opening_collection:
             details += (("Collection basis", "Reviewed opening checkpoint; original anniversary and post-cutover principal history"),

@@ -10,6 +10,43 @@ related:
 
 # PawnLoan Financial Read Models
 
+The owner's later 16 October decision separates represented-position coverage from
+optional book reconciliation. Supported accepted opening/origination plus consistent
+entered activity is usable regardless of entry source or absent/aged book checks.
+Known unresolved activity remains provisional; unsupported balances remain unknown.
+Existing review rows and published portable book claims keep their meanings; earlier
+cash history is not inferred. Snapshot V13 records the distinct position and book
+dimensions. See the [decision](../adr/2026-10-16-represented-position-transaction-coverage.md).
+Older slice descriptions below retain their historical checkpoints where superseded.
+
+LS-05 labels live calculation independently of saved assessment freshness and
+shows financial support, valuation evidence, transaction coverage and future
+recording practice separately. Portfolio/dashboard totals share guarded monetary
+and coverage eligibility. Missing recording-basis evidence stays unknown; ordinary
+system capture remains an assumption. Advisory cause distinguishes measured risk
+from missing evidence without changing severity or alerts. See the
+[decision](../adr/2026-10-16-consistent-monitoring-disclosures.md).
+
+LS-04 separates current collateral observation from debt/LTV assessment. Current
+monitoring inputs select a method independently of original approval; saved method,
+precision and lending/reference limit are explicit compatibility references.
+Existing monetary results are preserved. Unknown saved limits do not become
+today's monitoring thresholds, and observations alone cannot supply financial
+support or complete paper-book coverage. Snapshot V11 records these meanings.
+See the [decision](../adr/2026-10-16-independent-monitoring-inputs.md).
+
+LS-03 provides a supported per-calculation
+[financial input reader](../../apps/tenant_apps/loans/selectors/financial_inputs.py).
+It reuses the existing continuation and obligation calculations for exposure,
+delinquency and risk. Entry origin affects compatible evidence interpretation,
+not the consumer's choice of arithmetic. Recorded balance, unrecognized exposure
+and eligible collection amounts remain distinct. Original principal, checkpoint
+principal and unavailable earlier history retain their existing meanings.
+Standalone DPD uses the narrower obligation reader and does not require a
+supported interest forecast. Frozen inputs are read-only, scoped to one loan/date
+and active Workspace, and never a durable cache or permission to post. See the
+[decision](../adr/2026-10-16-supported-loan-financial-reads.md).
+
 The shared agreement financial correction contract retains source-specific
 recognition while exposing one impact review. Direct corrected snapshots preserve
 original approval as provenance; current native monthly recognition uses its
@@ -120,7 +157,11 @@ at dispatch. See [LD-06](../implementation/servicing-operations-ld06.md).
 ## MR-05 independent current valuation
 
 Current monitoring policy can explicitly select calculated metal value, approved
-appraisal or their lower value; its default preserves the saved loan method.
+appraisal, their lower value or preservation of the saved loan method. The
+16 October owner decision defaults new policies to calculated metal value;
+existing versions retain their choice until an explicit amendment. Older omitted
+amendment fields and published setup profiles retain their defined meanings.
+See the [default decision](../adr/2026-10-16-calculated-monitoring-default.md).
 For paper/imported origins that basis does not prove an unavailable original valuation.
 Resolution is effective-dated with a complete licence override. Original approval,
 agreement, interest, principal and accepted opening facts remain unchanged.

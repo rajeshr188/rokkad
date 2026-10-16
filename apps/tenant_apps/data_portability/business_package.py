@@ -27,7 +27,8 @@ from .parsers import PortabilityError
 PROFILE = 'rokkad-business-package/1'
 GRAPH_PROFILE = 'rokkad-business-package/2'
 MONITORING_PROFILE = 'rokkad-business-package/3'
-SETUP_VERSIONS = {PROFILE:1, GRAPH_PROFILE:2, MONITORING_PROFILE:3}
+LIFECYCLE_PROFILE = 'rokkad-business-package/4'
+SETUP_VERSIONS = {PROFILE:1, GRAPH_PROFILE:2, MONITORING_PROFILE:3, LIFECYCLE_PROFILE:4}
 PROFILES = set(SETUP_VERSIONS)
 SALT = 'fresh-business-package-review-v1'
 MAX_FILE = 32 * 1024 * 1024
@@ -119,10 +120,11 @@ def write_package(*, workspace_id, actor, directory, _consistent_snapshot=False)
             (root/'media'/checksum).write_bytes(data)
         return files[checksum]
 
-    monitoring = setup.needs_version_three(workspace_id)
+    lifecycle = setup.needs_version_four(workspace_id)
+    monitoring = lifecycle or setup.needs_version_three(workspace_id)
     graph = monitoring or setup.needs_version_two(workspace_id) or any(
         entry['profile'] in servicing_bundle.PROFILES-{servicing_bundle.PROFILE} for entry in doc['chunks'])
-    profile = MONITORING_PROFILE if monitoring else GRAPH_PROFILE if graph else PROFILE
+    profile = LIFECYCLE_PROFILE if lifecycle else MONITORING_PROFILE if monitoring else GRAPH_PROFILE if graph else PROFILE
     tables = setup.export_setup(workspace_id=workspace_id, actor=actor, save_file=save_file,version=SETUP_VERSIONS[profile])
     raw = contracts.dump(tables).encode()
     exchange._require(len(raw) <= setup.MAX_BYTES, 'Business setup exceeds 16 MiB.')

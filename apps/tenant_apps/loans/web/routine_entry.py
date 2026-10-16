@@ -61,6 +61,15 @@ def prepare_paper_number_defaults(form):
     form.paper_number_suggestion = suggested
 
 
+def entry_monitoring_context(form):
+    from apps.tenant_apps.loans.selectors.monitoring_policy import current_monitoring_context
+    try:
+        series = form.fields["series_id"].to_python(form["series_id"].value())
+    except ValidationError:
+        series = None
+    return current_monitoring_context(series)
+
+
 def _paper_agreement_context(form):
     defaults = (form.terms or {}).get("values", {})
     monitoring_names = ("monitoring_method", "monitoring_ltv", "monitoring_reason")
@@ -79,13 +88,14 @@ def _paper_agreement_context(form):
     # Item-specific setup messages also matter when the first item's rate exists.
     missing_agreement = form.terms is not None and (any(
         defaults.get(name) is None for name in ("rate", "tenure", "advance_months")) or any(
-        not message.startswith("Choose the current monitoring basis;")
+        not message.startswith("Choose the saved valuation fallback/reference;")
         for message in form.terms.get("messages", [])))
     terms_open = missing_agreement or bool(form["exceptions"].value()) or any(
         name in form.errors for name in (*term_names, "tenure"))
     payout_open = bool(form["cash_paid"].value()) or form["payout_basis"].value() == "CASH" or any(
         name in form.errors for name in ("cash_paid", "payout_basis"))
     return {
+        "current_monitoring": entry_monitoring_context(form),
         "paper_term_fields": [form[name] for name in term_names],
         "paper_monitoring_fields": [form[name] for name in monitoring_names],
         "paper_monitoring_missing": missing_monitoring,

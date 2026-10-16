@@ -5,11 +5,8 @@ from apps.tenant_apps.loans.domain.delinquency import (
     UnpaidObligation,
     calculate_delinquency,
 )
-from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
-from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
-from apps.tenant_apps.loans.selectors.obligation_state import (
-    calculate_obligation_state_as_of,
-    get_active_repayment_schedule_as_of,
+from .financial_inputs import (
+    PawnLoanObligationInputs, PawnLoanFinancialReadError, get_pawn_loan_obligation_inputs,
 )
 
 
@@ -26,32 +23,17 @@ class PawnLoanDelinquency:
     overdue_variance: bool
 
 
-def get_pawn_loan_delinquency(loan_id: int, *, as_of_date: date, _inputs=None):
-    workspace_id = current_tenant_workspace_id()
-    if workspace_id is None:
-        raise PawnLoanDelinquencyError("Delinquency requires an active tenant schema.")
-    if _inputs is None:
-        try:
-            loan = PawnLoan.objects.select_related("product_version").get(
-                pk=loan_id, workspace_id=workspace_id
-            )
-        except PawnLoan.DoesNotExist as exc:
-            raise PawnLoanDelinquencyError("PawnLoan was not found in the active workspace.") from exc
-        schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
-        balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
-    else:
-        _inputs.require(loan_id, as_of_date)
-        loan, schedule, balance = _inputs.loan, _inputs.schedule, _inputs.position.recorded_balance
-    grace_days = loan.product_version.operational_grace_days
-    if balance.financial_history_from is not None:
-        from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
-        origin = loan.loan_events.get(event_kind="MIGRATION_OPENING")
-        from apps.tenant_apps.loans.services.opening_corrections import opening_schedule_source
-        if not balance.financially_settled and (schedule is None or schedule.source_event_id != opening_schedule_source(loan, origin)):
-            raise PawnLoanDelinquencyError("Opening delinquency requires its reviewed remaining obligations.")
-        grace_days = read_opening_evidence(loan, origin)["review"]["terms"]["grace_days"]
-    obligation_state = (_inputs.obligation_state if _inputs is not None
-                        else calculate_obligation_state_as_of(schedule, as_of_date))
+def get_pawn_loan_delinquency(
+    loan_id: int, *, as_of_date: date, financial_inputs: PawnLoanObligationInputs | None = None,
+):
+    try:
+        inputs = financial_inputs if financial_inputs is not None else get_pawn_loan_obligation_inputs(loan_id, as_of_date=as_of_date)
+        inputs.require(loan_id, as_of_date)
+    except PawnLoanFinancialReadError as exc:
+        raise PawnLoanDelinquencyError(str(exc)) from exc
+    loan, schedule, balance = inputs.loan, inputs.schedule, inputs.balance
+    grace_days = inputs.operational_grace_days
+    obligation_state = inputs.obligation_state
     if schedule is None and (
         balance.total_due != 0 or loan.state == "ACTIVE" and not balance.financially_settled
     ):

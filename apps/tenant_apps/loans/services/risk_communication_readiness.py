@@ -73,10 +73,10 @@ def assess_risk_alert_communication_readiness(alert_id: int, *, locale="en"):
     mapping = _ALERT_NOTICE.get(alert.alert_kind)
     policy = PawnLoanCommunicationPolicy.objects.filter(workspace_id=workspace_id).first()
     blockers = []
-    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
-    completeness = transaction_completeness(alert.loan, timezone.localdate())
+    from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
+    completeness = recorded_position_coverage(alert.loan, timezone.localdate())
     if not completeness.complete:
-        blockers.append(_block("PAPER_COMPLETENESS_REVIEW", completeness.message))
+        blockers.append(_block("TRANSACTION_POSITION_UNAVAILABLE", completeness.message))
     elif completeness.required:
         from .notice_delivery_readiness import notice_balance
         try:
@@ -152,7 +152,7 @@ def _assess_channel(alert, mapping, channel, locale, policy, coverage):
     agreement = agreement_notice_identity(alert.loan)
     if agreement:
         existing = existing.filter(payload_snapshot__agreement_identity__correction_id=agreement["correction_id"])
-    if coverage.status == "ROKKAD_ONLY":
+    if coverage.required:
         from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint
         existing = existing.filter(payload_snapshot__transaction_review__source_fingerprint=transaction_fingerprint(alert.loan))
     if template and existing.exists():

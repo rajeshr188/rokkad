@@ -7,6 +7,10 @@ from .core import current_tenant_workspace_id
 
 
 class LoanMonitoringPolicy(models.Model):
+    class ScopeAction(models.TextChoices):
+        APPLY = "APPLY", "Use these monitoring settings"
+        RETIRE = "RETIRE", "Return this scope to its default"
+
     class ValuationBasis(models.TextChoices):
         ORIGINAL_AGREEMENT = "ORIGINAL_AGREEMENT", "Use each loan's saved valuation method"
         CALCULATED_METAL_VALUE = "CALCULATED_METAL_VALUE", "Current calculated metal value"
@@ -21,8 +25,11 @@ class LoanMonitoringPolicy(models.Model):
     supersedes = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="successor")
     amendment_reason = models.TextField(blank=True)
     compliance_profile = models.CharField(max_length=120)
+    scope_action = models.CharField(max_length=8, choices=ScopeAction.choices,
+        default=ScopeAction.APPLY, db_default=ScopeAction.APPLY)
+    replaces_scheduled = models.BooleanField(default=False, db_default=False)
     valuation_basis = models.CharField(max_length=40, choices=ValuationBasis.choices,
-        default=ValuationBasis.ORIGINAL_AGREEMENT, db_default=ValuationBasis.ORIGINAL_AGREEMENT)
+        default=ValuationBasis.CALCULATED_METAL_VALUE, db_default=ValuationBasis.CALCULATED_METAL_VALUE)
     maturity_warning_days = models.PositiveSmallIntegerField(default=30)
     operational_grace_days = models.PositiveSmallIntegerField(default=3)
     dpd_watch_threshold = models.PositiveSmallIntegerField(default=1)
@@ -40,6 +47,8 @@ class LoanMonitoringPolicy(models.Model):
     class Meta:
         ordering = ("workspace_id", "license_id", "effective_from", "version")
         constraints = [
+            models.CheckConstraint(condition=Q(scope_action__in=("APPLY", "RETIRE")), name="loans_monitor_scope_action_valid"),
+            models.CheckConstraint(condition=Q(scope_action="APPLY", replaces_scheduled=False) | Q(supersedes__isnull=False), name="loans_monitor_lifecycle_has_prior"),
             models.CheckConstraint(condition=Q(valuation_basis__in=("ORIGINAL_AGREEMENT", "CALCULATED_METAL_VALUE", "LATEST_APPRAISAL", "LOWER_OF_CALCULATED_AND_APPRAISAL")), name="loans_monitor_valuation_basis_valid"),
             models.UniqueConstraint(fields=("workspace", "license", "version"), name="loans_monitor_policy_scope_version_uniq", nulls_distinct=False),
             models.CheckConstraint(condition=Q(effective_until__isnull=True) | Q(effective_until__gte=F("effective_from")), name="loans_monitor_policy_dates_valid"),
@@ -67,13 +76,15 @@ class LoanMonitoringPolicy(models.Model):
             if prior:
                 if (prior.workspace_id != self.workspace_id or prior.license_id != self.license_id
                         or prior.effective_until is not None or self.effective_until is not None
-                        or self.effective_from < prior.effective_from):
+                        or (self.effective_from < prior.effective_from and not self.replaces_scheduled)):
                     errors["supersedes"] = "Amend the latest open-ended policy in the same scope, from its start date or later."
                 if not self.created_by_id or not self.amendment_reason.strip():
                     errors["amendment_reason"] = "An amendment requires its author and reason."
                 while prior and prior.pk not in ancestors:
                     ancestors.add(prior.pk)
                     prior = prior.supersedes
+            elif self.scope_action == self.ScopeAction.RETIRE or self.replaces_scheduled:
+                errors["supersedes"] = "A lifecycle action requires its latest policy predecessor."
             overlaps = type(self).objects.filter(
                 workspace_id=self.workspace_id,
                 license_id=self.license_id,
@@ -83,7 +94,7 @@ class LoanMonitoringPolicy(models.Model):
             if self.effective_until:
                 overlaps = overlaps.filter(effective_from__lte=self.effective_until)
             if overlaps.exists():
-                errors["effective_from"] = "Monitoring policy periods cannot overlap within a scope."
+                errors["effective_from"] = "A monitoring policy already covers these dates in this scope. Open its latest version and choose Amend."
         if errors:
             raise ValidationError(errors)
 

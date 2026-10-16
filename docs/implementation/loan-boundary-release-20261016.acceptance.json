@@ -1,0 +1,166 @@
+{
+  "profile": "rokkad-combined-loans-release-acceptance/1",
+  "status": "prepared-awaiting-production-authorization",
+  "date": "2026-10-16",
+  "source_parent": "7681aac07b80c9d4c2df617d3872499caf13d790",
+  "source_sha256": "21391df87683feadf0fef3f16b0cde4b59c2060b8c3b7ae744fb38ca775f49ef",
+  "base_image_id": "sha256:9783ad750ce0850379f9b47b16f7a3bd1f589a6a787d75ded2d909640e304468",
+  "candidate_image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+  "runtime_files": 99,
+  "local_regression": {
+    "source_sha256": "21391df87683feadf0fef3f16b0cde4b59c2060b8c3b7ae744fb38ca775f49ef",
+    "runtime_files": 99,
+    "broad": {
+      "selected": 566,
+      "passed": 564,
+      "fixture_errors": 2,
+      "seconds": 901.633
+    },
+    "final_affected": {
+      "selected": 56,
+      "passed": 56,
+      "seconds": 89.556
+    },
+    "selections_overlap": true,
+    "all_selected_cases_verified_after_fixture_followup": true,
+    "runtime_source_unchanged": true,
+    "browser_states": 14,
+    "representative_captures_inspected": true,
+    "production_unchanged": true
+  },
+  "isolated_rehearsal": {
+    "passed": true,
+    "image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+    "migrations": [
+      "loans.0078_collateral_fact_corrections",
+      "loans.0079_agreement_financial_corrections",
+      "data_portability.0028_collateral_correction_profile",
+      "data_portability.0029_agreement_correction_profile",
+      "loans.0086_monitoring_policy_lock_mode",
+      "loans.0080_opening_checkpoint_corrections",
+      "loans.0081_agreement_notice_identity",
+      "loans.0083_merge_party_and_agreement_corrections",
+      "loans.0085_merge_party_guard_and_agreement",
+      "loans.0087_merge_monitoring_policy_lock"
+    ],
+    "migration_seconds": null,
+    "target": "rokkad_ls_release_rehearsal_20261016",
+    "restored_tables": 222,
+    "restored_rows": 1099616,
+    "preserved_tables": 216,
+    "all_original_business_rows_preserved_after_migration": true,
+    "source_financial_rows_preserved_after_worker": true,
+    "readers_restricted": true,
+    "production_unchanged": true,
+    "readers": {
+      "passed": true,
+      "mode": "candidate",
+      "read_only": true,
+      "restricted": true,
+      "samples": 14,
+      "profiles": [
+        "loan-closed-position/1",
+        "native-event-fold/1",
+        "original-anniversary-upfront-inclusive/2",
+        "recorded-anniversary/3"
+      ],
+      "screen_checks": 23,
+      "financial_fingerprint": "cd881f25ee6883625ea30d0c5ed9fd9412c786d90c69aa5de91000513de37e66",
+      "contract": "LOAN_RISK_SNAPSHOT_V11"
+    },
+    "corrections": {
+      "passed": true,
+      "always_rolled_back": true,
+      "agreement_corrections": 2,
+      "collateral_corrections": 2,
+      "retries_idempotent": true,
+      "original_events_preserved": true
+    },
+    "worker": {
+      "passed": true,
+      "workspaces": [
+        {
+          "workspace_id": 1,
+          "selected": 10,
+          "current": 10,
+          "errors": 0,
+          "coverage_unavailable": 10
+        },
+        {
+          "workspace_id": 2,
+          "selected": 10,
+          "current": 10,
+          "errors": 0,
+          "coverage_unavailable": 10
+        },
+        {
+          "workspace_id": 3,
+          "selected": 10,
+          "current": 10,
+          "errors": 0,
+          "coverage_unavailable": 10
+        }
+      ],
+      "maximum_attempts": 30,
+      "only_derived_monitoring_writes": true,
+      "unavailable_coverage_not_invented": true
+    }
+  },
+  "encrypted_recovery": {
+    "verified": {
+      "remote_encrypted_image_downloaded_decrypted_loaded": true,
+      "exact_image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+      "production_container_restarted": false,
+      "private_key_on_server": false,
+      "transient_application_image_removed": true
+    },
+    "encrypted_bytes": 228005913,
+    "encrypted_sha256": "a41cae7a3ef592c7937dda89541900b509636b98011d0a0ca781bd217a0bad9c"
+  },
+  "static": {
+    "passed": true,
+    "static_volume": "rokkad-ls-static-20261016-21391df87683",
+    "base_static_unchanged": true,
+    "candidate_javascript_verified": true,
+    "production_unchanged": true
+  },
+  "prepared": {
+    "ready": true,
+    "image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+    "owner_migrations": 10,
+    "compatible_scheduled_readers": 4,
+    "active_timers": 6,
+    "separate_static_volume": "rokkad-ls-static-20261016-21391df87683",
+    "protected_files_unchanged": true,
+    "production_unchanged": true,
+    "installed": false
+  },
+  "cleanup": {
+    "passed": true,
+    "exact_disposable_database_removed": true,
+    "absence_verified": true,
+    "temporary_settings_and_dump_removed": true,
+    "removed": [
+      "rehearsal.dump",
+      "rehearsal_settings.py",
+      "runtime.tar.gz.age"
+    ],
+    "candidate_and_recovery_proofs_retained": true,
+    "production_unchanged": true
+  },
+  "final_production_check": {
+    "unchanged": true,
+    "source_mismatches": [
+      [],
+      []
+    ],
+    "risk_contract": "LOAN_RISK_SNAPSHOT_V9",
+    "restricted_runtime": true,
+    "active_timers": 6,
+    "https": true,
+    "free_gib": 10.515
+  },
+  "production_switch_authorized": false,
+  "production_deployed": false,
+  "git_commit_or_push_performed": false
+}

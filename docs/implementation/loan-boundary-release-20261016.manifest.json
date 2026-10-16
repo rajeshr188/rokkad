@@ -1,0 +1,516 @@
+{
+  "profile": "rokkad-combined-loans-release/1",
+  "source_parent": "7681aac07b80c9d4c2df617d3872499caf13d790",
+  "base_source_revision": "0bada518f1b3d7c6d8976eb363d673f737371df5508295616b843639d9d02724",
+  "base_image_id": "sha256:9783ad750ce0850379f9b47b16f7a3bd1f589a6a787d75ded2d909640e304468",
+  "source_sha256": "21391df87683feadf0fef3f16b0cde4b59c2060b8c3b7ae744fb38ca775f49ef",
+  "image": "rokkad:loans-boundary-20261016-21391df87683",
+  "files": {
+    "apps/tenant_apps/data_portability/business_package.py": {
+      "sha256": "5be9069f809c8bc3975df1eb7e2d2fae55b5264bc540e9ed295c17f238adf41c",
+      "baseline_sha256": "a0503aaf6986c46a4bc18e1c3d34bf1c997f0ec618885ccf0738a2508a23b7cc",
+      "bytes": 23228
+    },
+    "apps/tenant_apps/data_portability/migrations/0028_collateral_correction_profile.py": {
+      "sha256": "ec8774d4392c95bad4dca6c4d4a1d730a461568602a86ee5a54952c2e100fc56",
+      "baseline_sha256": null,
+      "bytes": 802
+    },
+    "apps/tenant_apps/data_portability/migrations/0029_agreement_correction_profile.py": {
+      "sha256": "23a7c40d11a881e534d87141efd6c07f4ebcc2377fec8b2b05effcc4b86883ce",
+      "baseline_sha256": null,
+      "bytes": 821
+    },
+    "apps/tenant_apps/loans/documents/payloads.py": {
+      "sha256": "1514c4834660e12be46a2093c29f3066d01df683ac59e5ed475990f631e556a4",
+      "baseline_sha256": "5febb66b08214d7157e0c30df5b823ba8aa9ff096f8c3da55cffc69f2d5cd580",
+      "bytes": 46268
+    },
+    "apps/tenant_apps/loans/domain/ltv.py": {
+      "sha256": "60cb8789aea7f9f74c8120423714cf182d0396d1ab3a180be5e5c5545299ddc7",
+      "baseline_sha256": "7d7082797d7b126cb18093fe2db9fe15e001a7cddb9fce6c35bbd343eedbb5b0",
+      "bytes": 1230
+    },
+    "apps/tenant_apps/loans/domain/vocabulary.py": {
+      "sha256": "a6b372ca85c337d389e0473d87a66359930afd56f790342e2a2c44a86b02b7c4",
+      "baseline_sha256": "7662bc4be61ec469ccc374c4e0862fcb7ba0ba1501e9d91807d0e9769307b058",
+      "bytes": 3452
+    },
+    "apps/tenant_apps/loans/migrations/0078_collateral_fact_corrections.py": {
+      "sha256": "dd8550888a89007a108ce7bb4f07567d254e4ea8492be1e5a912a6c4aecb58bf",
+      "baseline_sha256": null,
+      "bytes": 5203
+    },
+    "apps/tenant_apps/loans/migrations/0079_agreement_financial_corrections.py": {
+      "sha256": "072a5dbad1adca500f82707ceb397b055730cc4cff921cbcce85d15ab00bb37e",
+      "baseline_sha256": null,
+      "bytes": 6153
+    },
+    "apps/tenant_apps/loans/migrations/0080_opening_checkpoint_corrections.py": {
+      "sha256": "dafc5adf3a20c5d30178e775ed9e8347268eff0ec8af10d9b06d4ff3bceea4e0",
+      "baseline_sha256": null,
+      "bytes": 5636
+    },
+    "apps/tenant_apps/loans/migrations/0081_agreement_notice_identity.py": {
+      "sha256": "a6a24f445bbc015b5ff1bad663ec3625646124a25286f575bb397ddb5c3c83e3",
+      "baseline_sha256": null,
+      "bytes": 3141
+    },
+    "apps/tenant_apps/loans/migrations/0083_merge_party_and_agreement_corrections.py": {
+      "sha256": "9319dda9e30820a4a12670d0738319f9d39c7842d97e9fa5a4b486b3f54c8bef",
+      "baseline_sha256": null,
+      "bytes": 200
+    },
+    "apps/tenant_apps/loans/migrations/0085_merge_party_guard_and_agreement.py": {
+      "sha256": "8370521cef654dd6eb17d076249f1e07bb1bca0bc53598a20b85b6d1faf12f2d",
+      "baseline_sha256": null,
+      "bytes": 212
+    },
+    "apps/tenant_apps/loans/migrations/0086_monitoring_policy_lock_mode.py": {
+      "sha256": "422bfe64c258c318ef3533fbfdfbd09f9fef331eef702dc21484f0912cfef1e6",
+      "baseline_sha256": null,
+      "bytes": 951
+    },
+    "apps/tenant_apps/loans/migrations/0087_merge_monitoring_policy_lock.py": {
+      "sha256": "bfa316b55fdd81e8e6aa05a93111f7f62324dd1be9596915fde5ba4163dd3f94",
+      "baseline_sha256": null,
+      "bytes": 235
+    },
+    "apps/tenant_apps/loans/models/core.py": {
+      "sha256": "ce0d284907cc748c341d18ae6c555e57c6e4ea4b6e7a25e0bb5c97e9e4123c74",
+      "baseline_sha256": "24cf9aa8e7cab119812faa70a5f5df0bce389e0c8cbfd25e30a52cff8a9f9d13",
+      "bytes": 102322
+    },
+    "apps/tenant_apps/loans/selectors/accrual_evidence.py": {
+      "sha256": "e86babb23b051ecf708714a4be122731113017c1b1735efb874c0420de659d47",
+      "baseline_sha256": "ab645d8304dae7e225b4dcf594dc725fbca708534b5df9e156587e3610edca5a",
+      "bytes": 5305
+    },
+    "apps/tenant_apps/loans/selectors/assessment_evidence.py": {
+      "sha256": "24b1b389cca613b80031a2cb7be864b1947d110acfcab741dda6521e2f2b6c0f",
+      "baseline_sha256": null,
+      "bytes": 3493
+    },
+    "apps/tenant_apps/loans/selectors/balances.py": {
+      "sha256": "018d79acf53f5fdde8bec88025738debfc69d39e4696d6bde4d30276df637e90",
+      "baseline_sha256": "e9533fe005ae189a1accfbb12f6acf585d5c80c9f510d8b97ff3a640aa12dd4d",
+      "bytes": 15983
+    },
+    "apps/tenant_apps/loans/selectors/collateral_valuation.py": {
+      "sha256": "cd4d29a60eda44968f09b7998902fdb180d348fe263882998d9c1624f367fe70",
+      "baseline_sha256": "fd029558ab098ec9f906febc7f154964e0519414ab45fbca1232e7943edeba40",
+      "bytes": 11189
+    },
+    "apps/tenant_apps/loans/selectors/dashboard_health.py": {
+      "sha256": "c69652e400315a56115b915f0941008bba199134cc9b361c92b5d828c45a201b",
+      "baseline_sha256": "e43f3e3ab68983a2489b640844d6fdea5d9eeb085990880c806bcc488eb2d8be",
+      "bytes": 3176
+    },
+    "apps/tenant_apps/loans/selectors/delinquency.py": {
+      "sha256": "820fc818fc739f0e0ea32e305705b3aaa66d36b83c451ec8f90f9a08b9e9dbd3",
+      "baseline_sha256": "edf1f4d4f3c548df216dffd9d4e6a60b6fac4747ff03a1c1d24f35db9854c4b0",
+      "bytes": 2164
+    },
+    "apps/tenant_apps/loans/selectors/evidence_quality.py": {
+      "sha256": "2a6d000ecdc6ccbcb9317523790ffaf1ce48b92ad81e5c94ae66e7a1aab953c8",
+      "baseline_sha256": "8ba8b734908c507858c2ea0c75bcf37fbe906b0f6109d8e8b36ba09ddc3311ad",
+      "bytes": 7420
+    },
+    "apps/tenant_apps/loans/selectors/exposure.py": {
+      "sha256": "0cf4c9bebcea1dfbaa42ae7343c833c34169d91f66b0877019c6b2301c2eb842",
+      "baseline_sha256": "6adbe963f411c10c1e29e6f510536bc113e89f1a9dd853b8571131675df96ed2",
+      "bytes": 6097
+    },
+    "apps/tenant_apps/loans/selectors/financial_inputs.py": {
+      "sha256": "81ca0e10b1b7eb81d37525fe4a5429feab2b9938c118cf016dbc639d8f716a73",
+      "baseline_sha256": null,
+      "bytes": 6263
+    },
+    "apps/tenant_apps/loans/selectors/monitoring_inputs.py": {
+      "sha256": "fd93c1084a97a59c1acdb946e12a4fff02eed8930e80fa88da82ffda6239ffa4",
+      "baseline_sha256": null,
+      "bytes": 2899
+    },
+    "apps/tenant_apps/loans/selectors/operations.py": {
+      "sha256": "d98ab46b8e4083c199ba2036e063fa7206a54d63ef438f76e5d0fa4a7fcba4f3",
+      "baseline_sha256": "f51f3d391a9b10a4539d2daba2fccf9b17f802326b720e99245d34aed32d7e86",
+      "bytes": 5228
+    },
+    "apps/tenant_apps/loans/selectors/pledge_book.py": {
+      "sha256": "5a34b3b39df8d3c72fe72ddb805cfb23042e29a88cec687f83534fafe207de81",
+      "baseline_sha256": "34cd1bfe00bd37f3d9161ac3ff64fa0cc522c69c020ad1bcd145ace80a9152f0",
+      "bytes": 20941
+    },
+    "apps/tenant_apps/loans/selectors/portfolio_analysis.py": {
+      "sha256": "d65942f30f2b229d9e8c4b4b95cb3294c027cace1c5316ec7c0218acd1839803",
+      "baseline_sha256": "0b8e5fa07604459c94d0ccd5226c45f2fbe7fec400b8666be13d9bfd8c856137",
+      "bytes": 9693
+    },
+    "apps/tenant_apps/loans/selectors/recorded_settlements.py": {
+      "sha256": "01a0336128b35bf09e999905077f09410010e0c1a90d4145f437f874cbdbc6ef",
+      "baseline_sha256": "4132f130f53b7bed63e33cf8476239f1f8a7e8ef6efe6e8af2200a4ee82e284b",
+      "bytes": 4426
+    },
+    "apps/tenant_apps/loans/selectors/release_readiness.py": {
+      "sha256": "2fe7ec88794e49c70886c8521cf672e7e57c6620f2e57e28eb7460adccbef176",
+      "baseline_sha256": "5c3c0ca9d4b791b25a25aa6ac3d5920c669dfe989f0fb9f5e02f9882c14051ae",
+      "bytes": 15318
+    },
+    "apps/tenant_apps/loans/selectors/risk.py": {
+      "sha256": "86f585568889cf40bc676ec4ee55a60e9e1ab17b1c8ddf26834efec81f649e37",
+      "baseline_sha256": "2da7c7a59e33382c97de6393ff82e55ca22e876f182fcfa6c70810947bc39f6c",
+      "bytes": 3699
+    },
+    "apps/tenant_apps/loans/selectors/risk_portfolio.py": {
+      "sha256": "4e4202a4561ddade95ad00c3ae1ae5c53fd1879c179deb34f27b46f0cf67a0fc",
+      "baseline_sha256": "511cc1cdfdcfb2ffcaf89153a12d170cf86756083ecbaccd3f27b7fb81a189eb",
+      "bytes": 7772
+    },
+    "apps/tenant_apps/loans/selectors/transaction_completeness.py": {
+      "sha256": "cfe79863493c055a6cabc4fb0da6d2c83159c3b2779d25e88249d75ede9a5193",
+      "baseline_sha256": "bd99455a4e73d5e7ea3402c4e99411c632c4decb31852c7d5fe6013609e5f480",
+      "bytes": 12016
+    },
+    "apps/tenant_apps/loans/services/agreement_corrections.py": {
+      "sha256": "c9a8b0f2d2bedf1096ef5b2323a1f2c727ef67f7b629b93df53ef90596c988d8",
+      "baseline_sha256": null,
+      "bytes": 27551
+    },
+    "apps/tenant_apps/loans/services/borrower_corrections.py": {
+      "sha256": "74d50ed4bc7b1c1d1ce7233251d35b37e550dd5f6a728b660dcf8733e1978b76",
+      "baseline_sha256": "c78237e2a442c2bd786bdb6ec078a69b39183b897305fd3ab8f4d05bb5d3158a",
+      "bytes": 9145
+    },
+    "apps/tenant_apps/loans/services/collateral_corrections.py": {
+      "sha256": "f5378d2c74fa8ec9b90d63c373884cdcd16bec7f8a935c98dc6a693d0d9cf8ec",
+      "baseline_sha256": null,
+      "bytes": 16361
+    },
+    "apps/tenant_apps/loans/services/completed_payouts.py": {
+      "sha256": "beaf494d3df90f93cad7ade077276be645b563247a78ce2af9dd7f91cda99207",
+      "baseline_sha256": "416dd0ddfd01e6e69ab2fa8bb64947083c6628659d5c9762748b8a3130c7dec6",
+      "bytes": 17152
+    },
+    "apps/tenant_apps/loans/services/history_export.py": {
+      "sha256": "4a33f440ed110b9b69ef47a30eac13171a330ce99e9566c918bffccffa22952f",
+      "baseline_sha256": "ab249ec551cae91e36ebc0e52ec56331f77ff5e01c15f9fc353ac80a8f5927b3",
+      "bytes": 18193
+    },
+    "apps/tenant_apps/loans/services/imported_ticket_preview.py": {
+      "sha256": "8d14189c13af474578d5dbfb8057adf719b403901249a6e30a3d68d1ba8a9e63",
+      "baseline_sha256": "0ef334a228bd116549c606dba537b1b341cde0291b8a8d2b8741667005aac9ca",
+      "bytes": 7782
+    },
+    "apps/tenant_apps/loans/services/monitoring_policies.py": {
+      "sha256": "d8cceb1e735cf2224679aa12fdc94cf1adc1991b31db93315c67afa7ad29f70a",
+      "baseline_sha256": "3a6f8a38adb77e5e068b4e0019d8c7d8228fd26b4c1d50bbce014f31c77998b3",
+      "bytes": 2641
+    },
+    "apps/tenant_apps/loans/services/notice_delivery_readiness.py": {
+      "sha256": "784b9cef98192bc6c71d5aeb9825b4905ca73900b933b24d04693ca863529a08",
+      "baseline_sha256": "962eaa7ccf8f942e6d197e8d6621c89baa54f4f6530bd865f831a6865c1457e8",
+      "bytes": 7316
+    },
+    "apps/tenant_apps/loans/services/opening_continuation.py": {
+      "sha256": "f75841f779707762f9a576f6c5dc4c1efab2a19127ef74bfb38026f4ec625601",
+      "baseline_sha256": "66f7054a145f868db9a9339f912388a65d870848bab1bc5e299088dbf952f487",
+      "bytes": 12523
+    },
+    "apps/tenant_apps/loans/services/opening_corrections.py": {
+      "sha256": "0ca8d02bcf2e30a09b78ed9f57c813aa7340485dff229f5e1c6a931a1820d789",
+      "baseline_sha256": null,
+      "bytes": 12609
+    },
+    "apps/tenant_apps/loans/services/opening_evidence.py": {
+      "sha256": "f6c62f38646819cb9dd60d167f410bdb9986ffe1201431dab80868d0edb80d8b",
+      "baseline_sha256": "fff60d8c1dd3e22e2724e90c5968cf2e80939395d1245c30cb7919799cb446b5",
+      "bytes": 5642
+    },
+    "apps/tenant_apps/loans/services/opening_export.py": {
+      "sha256": "b60c08bf6633c7ec4caeff9b3c7fc3882013b52e27c826c3e5341cd0cbfe0fec",
+      "baseline_sha256": "bb7690f82d1fbfe836e6363d7bfe2fcbd9cd032aca034e04274e6a843c7bbc75",
+      "bytes": 16476
+    },
+    "apps/tenant_apps/loans/services/opening_obligations.py": {
+      "sha256": "1f1ab9f976bfad99f4380d30c85e1c78c714b7f763af92fa2f3971d756b02b39",
+      "baseline_sha256": "b527b4dc5c583f52e33c8e1fbe98fa2e90fe0e5d5c1a282e1e98fa9839cd03ff",
+      "bytes": 4451
+    },
+    "apps/tenant_apps/loans/services/opening_payment_evidence.py": {
+      "sha256": "79ef7af8b54c9628dd1c785ec0b0777cda1af99c4eec4a04a6e44e3c02859620",
+      "baseline_sha256": "bba7ac2a27358f7dd15cc42f635592b939b6a64accbe433feef7e4376c4d355c",
+      "bytes": 15216
+    },
+    "apps/tenant_apps/loans/services/opening_precision.py": {
+      "sha256": "aed4e514e7cc4d0fd2ef811218d130324a0eda3f3af1acbd3fd86ac8a08623f0",
+      "baseline_sha256": "108067b705745c57d82b2aaf29ee27e38076949358caa8ae84d93139e7fde8f0",
+      "bytes": 3423
+    },
+    "apps/tenant_apps/loans/services/opening_servicing.py": {
+      "sha256": "cedf73730e3fb28d971e07ad61d3d4d09316eb16188a3714b234935a604dfe32",
+      "baseline_sha256": "8ffc0ffb16d55d162e9f6659f2c7288e129e2d25ba66bb8acb135d9f5ec7c864",
+      "bytes": 10291
+    },
+    "apps/tenant_apps/loans/services/paper_handover.py": {
+      "sha256": "a6d9f73f8bfdc51ab8582d120db2f49bffd0a19a2fe2c609dfb358d7caf7523c",
+      "baseline_sha256": "77e6f7922199f5d1e813b7c32e6706e6d96055d298d66352bc0030fdb3c82075",
+      "bytes": 6457
+    },
+    "apps/tenant_apps/loans/services/pawn_auctions.py": {
+      "sha256": "a5afc2fa7a2511dd0c4083c53ef0aa536de31b56ab27ca3357857265ef9076d8",
+      "baseline_sha256": "004328bada6aa17ed12defff6a95a0f609cbd16352ebab1cc1da17ec067cb25d",
+      "bytes": 26120
+    },
+    "apps/tenant_apps/loans/services/pawn_interest.py": {
+      "sha256": "36dc670d611f3e4c14d14aec46d3f03d5137c56a164bbcf6d98c50009c4eb43b",
+      "baseline_sha256": "40999c2d30a3ed75a4667ba967ae5b59298f56923d232183bd81ffd0e92a4643",
+      "bytes": 31883
+    },
+    "apps/tenant_apps/loans/services/pawn_notices.py": {
+      "sha256": "dbdd608c3882d07d164162bcf75c144e7b24b8cbfed50473724116b7876af851",
+      "baseline_sha256": "b49c0355b2a322f337c83e4053051c84b621b0a100e8cf003b6fdba94c5bc3a1",
+      "bytes": 14091
+    },
+    "apps/tenant_apps/loans/services/pawn_recovery.py": {
+      "sha256": "b0247df4bae20a10c755fcb7267e87cd94674c8f6ea41f3c0288367c02008762",
+      "baseline_sha256": "4f196a850818d99508b930c54fe160dd966fd3b54f6de7a277b17a372e6b564b",
+      "bytes": 22332
+    },
+    "apps/tenant_apps/loans/services/pawn_release.py": {
+      "sha256": "842307d4b1e0935a9f8b01b794cf03588e235d7d99bb989d55003e7c98f5707c",
+      "baseline_sha256": "2c89c70f6f7f4dbd94ea9ec9841e3a14178d8d437c754606fcd1fede9b8f8594",
+      "bytes": 26429
+    },
+    "apps/tenant_apps/loans/services/pawn_renewals.py": {
+      "sha256": "09f4f38ae3c7708aae06aa0db051b8d60e4ff5a2d76899a65cbe4db9dc044ca8",
+      "baseline_sha256": "7b96f7d5edf26497ddf599040c0e906df5149d79515a1e36e6a85f3f778be39c",
+      "bytes": 58575
+    },
+    "apps/tenant_apps/loans/services/pawn_repayment.py": {
+      "sha256": "910a8f05202ad46563f9460c5072aa36aa18c5d040cfd942dfac02516e9cca63",
+      "baseline_sha256": "790cbbd903690d9519c5659035e2daaea6db818e2c95a9c817e72d4afa2c7fdc",
+      "bytes": 23541
+    },
+    "apps/tenant_apps/loans/services/pawn_reversal.py": {
+      "sha256": "8601e9a2235ef1669c2e436fbcf60275d597597a3e41ba55586effb5d0626cca",
+      "baseline_sha256": "81b863b56ddaab6e2e777b9584560dde6a736597978c644145b1676311aa08a0",
+      "bytes": 19485
+    },
+    "apps/tenant_apps/loans/services/recorded_contract_corrections.py": {
+      "sha256": "5a63f28c65871bbce00b9a6e190d92a08002244fe080a3945862b3634303d8dc",
+      "baseline_sha256": "e3963f1bc5a8bdb10277466cd93142c1749657e6fcd865c1caefdf6faf57aa77",
+      "bytes": 22522
+    },
+    "apps/tenant_apps/loans/services/recorded_origination_evidence.py": {
+      "sha256": "a7527edd6cdfdf1e45316b31134cf05d08601eabda5f6efe8b88f739eaa29f16",
+      "baseline_sha256": "95ef3eeb2a1de0572bb02f934ce83a0a1edd88b4b2f5797c973e1109eef22534",
+      "bytes": 9554
+    },
+    "apps/tenant_apps/loans/services/recorded_settlement_corrections.py": {
+      "sha256": "9c90b16747ec2239f67db479eeeb8322689a6ca6c47fb856f5b87b58b12fc1c0",
+      "baseline_sha256": "6b2ffb504f151eda217ecb22994d3c35f6b5bde10ae2c6482c512a4540100d33",
+      "bytes": 17955
+    },
+    "apps/tenant_apps/loans/services/risk_borrower_notices.py": {
+      "sha256": "4840fcfedbee75437d18bb4a38da34bc68c60a11f7017ba0b9c30de4db44ded9",
+      "baseline_sha256": "ed90ad5133e02acae8996bb94face0c13cdc451473cdd3677a484922636ca61f",
+      "bytes": 9613
+    },
+    "apps/tenant_apps/loans/services/risk_communication_readiness.py": {
+      "sha256": "cd25b89fc15f3f6146d8a1427b9232a5bd8b6001f7fd5fc45d72c973e0fece0d",
+      "baseline_sha256": "aefbf15ec4dce8e5a5a3d0d26d8aaaa4f58173aac1ab7d477dfc2952f70e27af",
+      "bytes": 10750
+    },
+    "apps/tenant_apps/loans/services/risk_snapshots.py": {
+      "sha256": "af0dd56585666526c011a27b322d574eb52da9a3e187a810c6e1932eefa56d70",
+      "baseline_sha256": "75ef803530597c82c69f5a13945fe586ccd1c6ea5b5d21d0f481d1452f5d79e9",
+      "bytes": 20050
+    },
+    "apps/tenant_apps/loans/services/servicing_agreements.py": {
+      "sha256": "ec4a77499175e71b75ad0882fcfaa77d68e3a38131a135e5201fe552c51027d4",
+      "baseline_sha256": null,
+      "bytes": 5197
+    },
+    "apps/tenant_apps/loans/services/servicing_bundle.py": {
+      "sha256": "e7368ebcc5adcd938c6e0e8cd569a133f0931f31f12987e3d5d123498444314b",
+      "baseline_sha256": "77109df50093f67bca48c4ecdcce24364d6de0b70d1b367660c6921eba5c7e48",
+      "bytes": 62415
+    },
+    "apps/tenant_apps/loans/services/servicing_bundle_contract.py": {
+      "sha256": "b68c1e9fc74ed954027da49171822710ba8473c86b1850436608e757bdd26cfb",
+      "baseline_sha256": "a95292d21248f4a98eee1291877ad6226e2144059ba5327fff974f1a07a58895",
+      "bytes": 12586
+    },
+    "apps/tenant_apps/loans/services/servicing_bundle_coverage.py": {
+      "sha256": "e134955b1ff5daa4a4f6fe1cbe87f62805b2d916555e54f528bae74e6fdcedad",
+      "baseline_sha256": "2f41b656cecbc3eae7a64f8c3a9c90e22dfcef0f6a9e4bab4720b939f8ba012e",
+      "bytes": 4591
+    },
+    "apps/tenant_apps/loans/services/servicing_bundle_validation.py": {
+      "sha256": "a40e660516a41039c02757d7a3dc06b19397cf8af71119a877346f04e56d873f",
+      "baseline_sha256": "2cc3a2ff5b29415130314005e9248c9f30dad731361ffac221bbebd8dfd14cff",
+      "bytes": 9064
+    },
+    "apps/tenant_apps/loans/services/servicing_collateral.py": {
+      "sha256": "66a0353011afa82e32fd4c83cc4870fb6b5a1bdb8b00228aa9c4c1bbf2ef7f69",
+      "baseline_sha256": null,
+      "bytes": 1701
+    },
+    "apps/tenant_apps/loans/services/ticket_documents.py": {
+      "sha256": "1bdf3e08294caaa1dc0d78a3a44ae102b3d1345765114e460672c41c543122b4",
+      "baseline_sha256": "05d1a505205f2ddd4d42255bb6022d0f9e1cf5aa9b3eee2d69f2f056ba6741c8",
+      "bytes": 9663
+    },
+    "apps/tenant_apps/loans/urls.py": {
+      "sha256": "e9176703f632e7a142a7822181f0c9e5f3b3b9e53763af3be208f7339009a968",
+      "baseline_sha256": "cc67df29abb436c0d6d7c01eb42413a4d017c186aaa6377b2fd9ec1808be47cf",
+      "bytes": 25230
+    },
+    "apps/tenant_apps/loans/web/collateral_corrections.py": {
+      "sha256": "07972317b0d0c10f17af7ab1c7c04eb6ca821a5282a98d30f2c2c006b08070ad",
+      "baseline_sha256": null,
+      "bytes": 4387
+    },
+    "apps/tenant_apps/loans/web/loan_corrections.py": {
+      "sha256": "77333c8a901ad3fe2990642c1935445862445a9de5e2e878a1c14f9ad279bcaa",
+      "baseline_sha256": "e7890a4a1d33ad29cdfc6e543000fe677c70056bfaf474285e6919cf8a5db8aa",
+      "bytes": 800
+    },
+    "apps/tenant_apps/loans/web/opening_agreement_corrections.py": {
+      "sha256": "815c47946ae186c0488f724b94b4e0089d194af9668b45634b73f49cfa478b46",
+      "baseline_sha256": null,
+      "bytes": 8420
+    },
+    "apps/tenant_apps/loans/web/pawn_reads.py": {
+      "sha256": "6f1f11aef19057d385c65de4ac6ecfe2dd36f14b45d88bd9669cd658ad516a50",
+      "baseline_sha256": "5957e222f15833ac610d102e201e87753bb10cbb64d548547113d3611b1cc55a",
+      "bytes": 25726
+    },
+    "apps/tenant_apps/loans/web/reappraisal.py": {
+      "sha256": "462eacfa85ed607b9e8926f2082eae9291d4df6374220bca41279f314406ad48",
+      "baseline_sha256": "8e8389feaf2f6d50e33d538f1f03293796dbf1eb93f8b9df6313485feb7fad7d",
+      "bytes": 3566
+    },
+    "apps/tenant_apps/loans/web/recorded_corrections.py": {
+      "sha256": "df95833fc44e6ea082b6f946ceb6900fe028d0133cdf861dfd1f90b03f06d06a",
+      "baseline_sha256": "d6995414c53e17caed81af390ce726bb70fdfcc53c85d67c459cc6b95561c361",
+      "bytes": 22261
+    },
+    "apps/tenant_apps/loans/web/transaction_reviews.py": {
+      "sha256": "ca4536f7794fd40dda22945a39d3ea4bce0d5dfe42074a9b5142b5b1072c56e7",
+      "baseline_sha256": "1d6c6050e5de786fb0c7566f55930a95ccc7b63e6ca2ee556a7ba9bbba194d0c",
+      "bytes": 3719
+    },
+    "apps/tenant_apps/loans/web/workflow.py": {
+      "sha256": "d25892a1a63b3731c5f17fbbd11c57296e5dfe4321258bd89696d38f8e856e6a",
+      "baseline_sha256": "72fbda24c1216390913d2274d86c5a16addfe686e8c0ce5aca1c19affd294b95",
+      "bytes": 13775
+    },
+    "apps/tenant_apps/rates/facade.py": {
+      "sha256": "2cc011ce603c000743706747df1c5e2588f5ac2ccc0b2b1d6a01dcd17464f678",
+      "baseline_sha256": "e2557f6a222938ef9dab05fbb0902fbc62bb3c54556d31275924e22ec2c2e6ac",
+      "bytes": 4154
+    },
+    "static/js/loan-sections.js": {
+      "sha256": "55815afbf656e58c8991f64d1ba95d5227f05f2b3ae369893a21556ba14dae70",
+      "baseline_sha256": "a55264f444fdd33f7a04b09ea52fb7204b7bdcef89d7e0f1f64a3cc98f600bd1",
+      "bytes": 8116
+    },
+    "templates/company/_financial_health.html": {
+      "sha256": "30844eba8f3da3ade6aaf6550bdc5f3ca82e758be7d3cb473cf40fe347b498a7",
+      "baseline_sha256": "00a6e80af3de63b8b33a6a346388f56e47a7d1cf3466c9e855eebfc3ba7d91b1",
+      "bytes": 6645
+    },
+    "templates/loans/journey.html": {
+      "sha256": "0543b2958d0d7cb0375ac20b63574cc04cc163148f068c6d92aa4f22573a4883",
+      "baseline_sha256": "b33b25d022d7d78d2584f874cab16b06dca562a313a3682d5492d46e381990e4",
+      "bytes": 16917
+    },
+    "templates/loans/pawn/_agreement_correction_history.html": {
+      "sha256": "3dc53752328b3752f414e7a846b6159124ce7e4b67cce8cfe7d4878acc9c6702",
+      "baseline_sha256": null,
+      "bytes": 1691
+    },
+    "templates/loans/pawn/_agreement_review.html": {
+      "sha256": "c2b7ce4182799b4b6bc9d4a10a5d3ea068da14964013bcebac40d92ef808620a",
+      "baseline_sha256": "18940ce7f2b5402a9876490ef2f7fd626bee75b4bb9a0f7ebde1a048060f9a3f",
+      "bytes": 1705
+    },
+    "templates/loans/pawn/_collateral_correction_history.html": {
+      "sha256": "320dc4caf465b2244700e01b4ebfc2f38e673312c44d691263afefc93b1afef4",
+      "baseline_sha256": null,
+      "bytes": 1403
+    },
+    "templates/loans/pawn/_correction_actions.html": {
+      "sha256": "a9cc242cf14300e6b4de00d31bd0e364b713979773af90fa58f87d3b07af46e7",
+      "baseline_sha256": null,
+      "bytes": 1688
+    },
+    "templates/loans/pawn/_evidence_quality.html": {
+      "sha256": "14c89f069f4596d9df785fafa84a80e7ae1affc6dfe944e078aab20cbb25444a",
+      "baseline_sha256": "595fdee03d4ce00ebfabeedff3f532064a99bfb7c2ccff3ba888a22fde489328",
+      "bytes": 3226
+    },
+    "templates/loans/pawn/_monitoring_evidence.html": {
+      "sha256": "a5e7f309ff42f93dbdb8a5ae2f3c2c70c859dc1193d694d83bfb72e0362092df",
+      "baseline_sha256": "918e72977646ab343956a759385e60c0b480ee616ca987829550592f7669a1b6",
+      "bytes": 324
+    },
+    "templates/loans/pawn/checkpoint_correction.html": {
+      "sha256": "fcbce460f0980da0660853858c970bdd5eea97c6efa0a9763f1b4db79216f33a",
+      "baseline_sha256": null,
+      "bytes": 2679
+    },
+    "templates/loans/pawn/collateral_correction.html": {
+      "sha256": "e02198301bfc4196fbf68cad1e0c5966efe7566e76f699b53cf8a4d5c42aa8fe",
+      "baseline_sha256": null,
+      "bytes": 2888
+    },
+    "templates/loans/pawn/completed_payout.html": {
+      "sha256": "efdbd5f6ae572752d98defadbe7d854bc070ecc65ac023cc869f991cceeac60e",
+      "baseline_sha256": null,
+      "bytes": 5200
+    },
+    "templates/loans/pawn/contract_correction.html": {
+      "sha256": "f8aea2cbb21ced1170fea34885657c3d3de51b32d299a1465af6dcc26ee0af11",
+      "baseline_sha256": "20d343a70cdf698975c2709fe351a10a0b59a156cf2173429ede7874c452ba29",
+      "bytes": 3309
+    },
+    "templates/loans/pawn/detail.html": {
+      "sha256": "57ef8800649cbea04b8bfa121dc1172dff54471b346c81886fc79519d1b084ca",
+      "baseline_sha256": "40b63508c53442e1449dee79e4558339636e85c81c1f8627de9f26e015ad6640",
+      "bytes": 51363
+    },
+    "templates/loans/pawn/reappraisal.html": {
+      "sha256": "83569c04c17127e1b396285be05deaae50d672d56ddfd647f6f02c9c807c8be4",
+      "baseline_sha256": "62b6e79d9a619c14be57fec2dcf646d734ae6088d2d3204a56136e1225e375a8",
+      "bytes": 3449
+    },
+    "templates/loans/pawn/transaction_review.html": {
+      "sha256": "d60f19907ef9fd7f23de3523ffa877de7cd3a42accf7f539b95e14d1022d8f27",
+      "baseline_sha256": "02f7cf0523c4dd24111347402f99bb3ad83a5e653df08a74e7495f5e1bfced2b",
+      "bytes": 3678
+    },
+    "templates/loans/setup/risk_guide.html": {
+      "sha256": "e035286d66835e5aca76ff1dc0c50df1d5e87ed628151ad43c171cd946f30ba4",
+      "baseline_sha256": "52c788b604d3fe3623ddb389359bb0ce1d91ab5741bc180384e90b4e878939ad",
+      "bytes": 21214
+    },
+    "templates/loans/setup/risk_portfolio.html": {
+      "sha256": "c08b6add6edf3b169a4bbf9f2d9f9cf461e61870f9e32de932873c2aa243ea34",
+      "baseline_sha256": "fb339982800da395efe0da8ce210a9ad582c1d2a698a5819d238f42d6cd2eac7",
+      "bytes": 10394
+    }
+  },
+  "scope": [
+    "committed collateral/agreement corrections",
+    "LS-01 through LS-06"
+  ],
+  "excluded": [
+    "uncommitted WhatsApp setup notes",
+    "production configuration",
+    "credentials",
+    "customer data"
+  ],
+  "archive_sha256": "422ba7b0761c52a5f2608a0aaa4546c8359470567be7529dcd30942b6c9b5646"
+}

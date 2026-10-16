@@ -10,4 +10,5 @@
   {% else %}<p class="small">{% translate "Add a running series to review its monitoring policy." %}</p>{% endif %}
   <p class="small text-muted">{% translate "Policy coverage is separate from permission to lend. Actual loan health also needs usable financial and collateral evidence; portfolio assessments must be refreshed." %}</p>
   <a href="{% url 'workspace_loans:pawn_economics_setup' company.slug %}?setup_step=terms&amp;setup_path={{ journey.path }}#monitoring-policy">{% translate "Review monitoring policy" %}</a>
+  {% include "loans/setup/_monitoring_readiness.html" with monitoring_readiness=business_setup.monitoring_portfolio %}
 </section>

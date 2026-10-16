@@ -260,8 +260,8 @@ def _locked_loan(loan_id):
 
 
 def _require_notice_eligibility(loan, balance, kind):
-    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
-    completeness = transaction_completeness(loan, timezone.localdate())
+    from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
+    completeness = recorded_position_coverage(loan, timezone.localdate())
     if not completeness.complete:
         raise PawnLoanNoticeError(completeness.message)
     if completeness.required and kind not in (PawnLoanNoticeKind.REPAYMENT_REMINDER, PawnLoanNoticeKind.OVERDUE_NOTICE):

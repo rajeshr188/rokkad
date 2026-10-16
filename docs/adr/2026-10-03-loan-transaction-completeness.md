@@ -7,6 +7,11 @@ tags: [loans, paper-entry, monitoring, notices]
 
 # Explicit transaction coverage for monitoring and reminders
 
+The later [represented-position decision](2026-10-16-represented-position-transaction-coverage.md)
+supersedes compulsory book certification for supported current positions. This
+record retains the original review/portable-history and issued-intent meanings;
+optional book assurance is no longer the definition of usable transaction coverage.
+
 ## Decision
 
 Continue the [unified recording decision](2026-10-02-unified-loan-recording.md)

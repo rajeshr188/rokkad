@@ -1,10 +1,32 @@
 {% extends "base_tenant.html" %}
 {% block title %}Review paper transactions together{% endblock %}
 {% block workspace_content %}
-<div class="container py-3" style="max-width:1000px"><h1 class="h3">Review paper transactions together</h1>
-<p>Check each selected loan against the paper book through the chosen date. Rokkad retains a separate confirmation for each loan. This does not certify unentered paper loans.</p>
-<form method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.field.widget.input_type == 'checkbox' %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
-<button class="btn btn-primary" name="action" value="preview">Review selected loans</button>
-{% if review %}<section class="mt-4"><h2 class="h5">Selected loan activity</h2>{% for loan in review %}<div class="border rounded p-3 mb-3"><h3 class="h6">{{ loan.number }} · {{ loan.state }}</h3><p>Checked through {{ loan.through_date }}. {% if loan.confirmed_complete %}All transactions entered{% else %}Missing or unresolved activity{% endif %}. Reference {{ loan.source_reference }}.</p><ul>{% for event in loan.events %}<li>{{ event.effective_date }}: {{ event.event_kind }}; principal {{ event.values.principal|default:"0" }}, interest {{ event.values.interest|default:"0" }}, fees {{ event.values.fees|default:"0" }}{% if event.reference %}; {{ event.reference }}{% endif %} <span class="small text-muted">Entered {{ event.recorded_at }}</span></li>{% endfor %}</ul></div>{% endfor %}<button class="btn btn-success" name="action" value="confirm">Confirm all selected reviews</button></section>{% endif %}
-</form></div>
+<div class="container py-3" style="max-width:1000px">
+  <h1 class="h3">Review paper transactions together</h1>
+  <p class="small text-body-secondary">These checks provide optional book assurance. A supported represented financial position remains usable without an individual or bulk book confirmation.</p>
+  <p>Check the selected loans against their source records. Each loan retains its own confirmation. Imported openings start at the accepted checkpoint; earlier receipts remain unavailable.</p>
+  <p>A future Rokkad-only choice requires complete records checked through today. It applies only to the eligible loans you confirm; selecting a source cohort does not certify the whole register or unentered loans.</p>
+  <form method="post">{% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.field.widget.input_type == 'checkbox' %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
+    <button class="btn btn-primary" name="action" value="preview">Review selected loans</button>
+    {% if cohort_review %}
+    <section class="border rounded p-3 mt-3 text-break">
+      <h2 class="h5">Source cohort batch</h2>
+      <p>{{ cohort_review.selected }} selected; {{ cohort_review.eligible }} eligible. {{ cohort_review.exceptions|length }} exception(s) remain unresolved.</p>
+      {% for exception in cohort_review.exceptions %}<p class="text-warning">{{ exception.number }} (#{{ exception.loan }}): {{ exception.reason }}</p>{% endfor %}
+      {% if cohort_completed %}<p class="text-success">The eligible reviews were recorded. Financial and custody facts remain unchanged.</p>{% endif %}
+      {% if cohort_completed or not cohort_review.eligible %}{% if cohort_review.more %}<a class="btn btn-outline-primary" href="?selection=COHORT&amp;series={{ form.series.value }}&amp;source_namespace={{ form.source_namespace.value|urlencode }}&amp;after_loan_id={{ cohort_review.next_cursor }}&amp;future_capture={{ form.future_capture.value|urlencode }}">Continue to the next source batch</a>{% else %}<p>No further active loans match this cohort after this batch.</p>{% endif %}{% endif %}
+    </section>
+    {% endif %}
+    {% if review %}<section class="mt-4"><h2 class="h5">Selected loan activity</h2>
+      {% for loan in review %}<div class="border rounded p-3 mb-3 text-break">
+        <h3 class="h6">{{ loan.number }} &middot; {{ loan.state }}</h3>
+        <p>Supported history starts {{ loan.history_from }}. Checked through {{ loan.through_date }}. {% if loan.confirmed_complete %}All represented transactions entered{% else %}Missing or unresolved activity{% endif %}. Reference {{ loan.source_reference }}.</p>
+        <p>Future recording: {% if loan.future_capture == 'ROKKAD_ONLY' %}<strong>Every future transaction entered directly in Rokkad</strong>{% else %}Paper or mixed capture{% endif %}.</p>
+        <ul>{% for event in loan.events %}<li>{{ event.effective_date }}: {{ event.event_kind }}; principal {{ event.values.principal|default:"0" }}, interest {{ event.values.interest|default:"0" }}, fees {{ event.values.fees|default:"0" }}{% if event.reference %}; {{ event.reference }}{% endif %} <span class="small text-muted">Entered {{ event.recorded_at }}</span></li>{% endfor %}</ul>
+      </div>{% endfor %}
+      {% if not cohort_completed %}<button class="btn btn-success" name="action" value="confirm">Confirm eligible reviews</button>{% endif %}
+    </section>{% endif %}
+  </form>
+</div>
 {% endblock %}

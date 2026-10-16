@@ -7,6 +7,22 @@ from apps.tenant_apps.loans.services.risk_alerts import _active_kinds, _alert_ki
 
 
 class RiskAlertProjectionTests(SimpleTestCase):
+    def test_watch_classification_does_not_defer_overdue_collection_attention(self):
+        from datetime import date
+        from decimal import Decimal
+        from apps.tenant_apps.loans.domain.risk import RiskPolicy, assess_pawn_loan_risk
+        policy = RiskPolicy("watch-seven", 30, 7, 60, Decimal(".7"), Decimal(".8"), Decimal(".9"))
+        common = dict(as_of_date=date(2026, 10, 16), maturity_date=date(2027, 1, 1),
+            ltv_ratio=Decimal(".5"), policy=policy)
+        first = assess_pawn_loan_risk(days_past_due=1, **common)
+        self.assertEqual((first.performance_class, first.severity), ("STANDARD", "LOW"))
+        self.assertIn(LoanRiskAlert.Kind.DPD_WORSENING,
+            _active_kinds(SimpleNamespace(status="CURRENT", days_past_due=1, flags=first.flags)))
+        self.assertEqual(assess_pawn_loan_risk(days_past_due=7, **common).performance_class, "WATCH")
+        substandard = assess_pawn_loan_risk(days_past_due=60, **common)
+        self.assertEqual(_severity(LoanRiskAlert.Kind.DPD_WORSENING,
+            SimpleNamespace(flags=substandard.flags)), "CRITICAL")
+
     def transition(self, event_type, old=None, new=None):
         return SimpleNamespace(event_type=event_type, old_value=old, new_value=new)
 

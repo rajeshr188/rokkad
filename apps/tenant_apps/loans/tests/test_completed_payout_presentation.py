@@ -60,27 +60,35 @@ class CompletedPayoutPresentationTests(WorkspaceTestCase):
         self.assertNotContains(self.client.get(detail), old)
         self.assertFalse(self.loan.loan_events.exists())
 
-    def test_retained_approval_selects_native_review_and_preserves_original_on_retry(self):
+    def test_retained_approval_selects_completed_fact_review_without_new_approval(self):
         original = self.retained_approval()
         before = deepcopy(original.payload)
         path, old, detail = self.paths()
         self.assertRedirects(self.client.get(old), path, fetch_redirect_response=False)
         page = self.client.get(path)
-        self.assertEqual(page.context["basis_approval"].pk, original.pk)
+        self.assertEqual(page.context["approval_evidence"][0]["approval_id"], original.pk)
         self.assertContains(page, "Record completed payout")
         self.assertContains(page, "Recording as")
         self.assertContains(page, self.actual_date.strftime("%d/%m/%Y"))
         self.assertNotContains(self.client.get(detail), old)
         self.assertFalse(self.loan.loan_events.exists())
-        token = page.context["form"].initial["review_token"]
-        self.assertEqual(self.post_review(path, token).status_code, 302)
-        self.assertEqual(self.post_review(path, token).status_code, 302)
+        values = {name: page.context["form"][name].value() or "" for name in page.context["form"].fields}
+        values.update(advance_months="0", document_charge="0", reason="Original ticket checked",
+            completed_payout_form="1", intent_token=page.context["intent_token"],
+            confirmed_rule="on", reviewed_evidence="on", action="preview")
+        preview = self.client.post(path, values)
+        self.assertIsNotNone(preview.context["review"], preview.context["form"].errors)
+        values.update(action="confirm", review_token=preview.context["review_token"], confirm_review="on")
+        self.assertEqual(self.client.post(path, values).status_code, 302)
+        self.assertEqual(self.client.post(path, values).status_code, 302)
         self.assertEqual(self.loan.loan_events.count(), 1)
         original.refresh_from_db()
         self.assertEqual(original.payload, before)
         snapshot = self.loan.disbursal_snapshots.get()
-        self.assertEqual(snapshot.basis, "APPROVED")
-        self.assertEqual(snapshot.loan_event.payload["earlier_payout"]["basis_approval_id"], original.pk)
+        self.assertEqual(snapshot.basis, "RECORDED")
+        self.assertIsNone(snapshot.approval_snapshot_id)
+        self.assertEqual(snapshot.evidence["recording"]["draft_source"]["retained_approvals"][0]["id"], original.pk)
+        self.assertEqual(self.loan.approval_snapshots.count(), 1)
 
     def test_fully_reversed_native_origin_uses_correction_review_without_replacing_identity(self):
         first = self.record(self.review()[1])
@@ -111,7 +119,7 @@ class CompletedPayoutPresentationTests(WorkspaceTestCase):
     def test_native_stale_review_rolls_back_and_active_get_cannot_admit_again(self):
         self.retained_approval()
         path, _, detail = self.paths()
-        token = self.client.get(path).context["form"].initial["review_token"]
+        token = self.review()[1]  # A previously issued native review keeps its original command.
         self.loan.tenure_months = 10
         self.loan.save(update_fields=["tenure_months"])
         page = self.post_review(path, token)
@@ -123,7 +131,7 @@ class CompletedPayoutPresentationTests(WorkspaceTestCase):
         self.assertRedirects(self.client.get(path), detail, fetch_redirect_response=False)
         self.assertEqual(self.loan.loan_events.count(), 1)
 
-    def test_native_review_does_not_fall_back_when_staff_lacks_setup_permission(self):
+    def test_completed_fact_review_uses_recording_permissions_without_setup_authority(self):
         self.retained_approval()
         path, _, _ = self.paths()
         staff = get_user_model().objects.create_user(username="completed-presentation-staff")
@@ -131,17 +139,31 @@ class CompletedPayoutPresentationTests(WorkspaceTestCase):
         Membership.objects.create(user=staff, company=self.tenant, role=role)
         permissions = [Permission.objects.get_or_create(content_type=ContentType.objects.get_for_model(Company),
             codename=code, defaults={"name": code})[0] for code in
-            ("data_view", "data_create", "data_edit", "loan_approve", "loan_disburse")]
+            ("data_view", "data_create", "data_edit", "loan_disburse")]
         workspace_role_permissions(role, self.tenant).set(permissions)
         self.client.force_login(staff)
-        self.assertEqual(self.client.get(path).status_code, 403)
+        page = self.client.get(path)
+        self.assertEqual(page.status_code, 200)
         self.assertFalse(self.loan.loan_events.exists())
+        from django.core.exceptions import PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            approve_pawn_loan(self.loan.pk, actor=staff)
+        values = {name: page.context["form"][name].value() or "" for name in page.context["form"].fields}
+        values.update(advance_months="0", document_charge="0", reason="Staff checked actual completed payout",
+            completed_payout_form="1", intent_token=page.context["intent_token"],
+            confirmed_rule="on", reviewed_evidence="on", action="preview")
+        preview = self.client.post(path, values)
+        self.assertIsNotNone(preview.context["review"], preview.context["form"].errors)
+        values.update(action="confirm", review_token=preview.context["review_token"], confirm_review="on")
+        self.assertEqual(self.client.post(path, values).status_code, 302)
+        self.assertEqual(self.loan.loan_events.get().created_by_id, staff.pk)
+        self.assertEqual(self.loan.approval_snapshots.count(), 1)
 
     def test_native_review_remains_actor_bound_and_never_accepts_a_changed_quote(self):
         from apps.tenant_apps.rates.services import withdraw_quote
         self.retained_approval()
         path, _, _ = self.paths()
-        token = self.client.get(path).context["form"].initial["review_token"]
+        token = self.review()[1]
         other = get_user_model().objects.create_user(username="completed-other-admin")
         Membership.objects.create(user=other, company=self.tenant, role=Role.objects.get_or_create(name="Admin")[0])
         self.client.force_login(other)
@@ -253,7 +275,8 @@ class CompletedSourceMappingTests(WorkspaceTestCase):
         path = reverse("workspace_loans:pawn_loan_record_completed_payout", args=[self.tenant.slug, self.draft.pk])
         page = client.get(path)
         self.assertContains(page, "Record completed payout")
-        self.assertTrue(page.context["form"].fields["license_revision_id"].disabled)
+        self.assertNotIn("license_revision_id", page.context["form"].fields)
+        self.assertEqual(page.context["loan"].license_revision_id, self.draft.license_revision_id)
         self.assertEqual(self.draft.approval_snapshots.count(), 1)
         self.assertFalse(self.draft.loan_events.exists())
 

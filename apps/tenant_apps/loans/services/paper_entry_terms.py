@@ -47,13 +47,13 @@ def paper_entry_terms(*, workspace, series, day, metal, principal=None):
     else:
         messages.append("Configured fees exceed the supported deducted document charge. Enter the actual supported charge as an exception.")
     try:
-        monitoring = resolve_pawn_loan_economic_policy(workspace_id=workspace.pk,
+        reference = resolve_pawn_loan_economic_policy(workspace_id=workspace.pk,
             license_id=series.license_id, series_id=series.pk, as_of_date=timezone.localdate())
-        values.update(monitoring_method=monitoring.valuation_method,
-            monitoring_ltv=monitoring.maximum_ltv_ratio,
-            monitoring_reason=f"Standing current monitoring policy {monitoring.pk}, revision {monitoring.revision}; original paper advance is not reapproved.")
+        values.update(monitoring_method=reference.valuation_method,
+            monitoring_ltv=reference.maximum_ltv_ratio,
+            monitoring_reason=f"Saved valuation fallback/reference from economic policy {reference.pk}, revision {reference.revision}; current monitoring follows its separate policy. No original approval is claimed.")
     except PawnEconomicPolicyError:
-        messages.append("Choose the current monitoring basis; no current setup is available.")
+        messages.append("Choose the saved valuation fallback/reference; no economic reference setup is available.")
     return dict(values=values, messages=messages, sources=sources)
 
 

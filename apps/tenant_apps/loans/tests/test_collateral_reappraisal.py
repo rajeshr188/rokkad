@@ -76,6 +76,7 @@ class CollateralReappraisalTests(WorkspaceTestCase):
             self.loan.refresh_from_db()
             self.original = self.item.appraisals.get()
         self.policy = LoanMonitoringPolicy.objects.create(workspace=self.tenant, version=1, effective_from=loan_date, compliance_profile="test",
+            valuation_basis="ORIGINAL_AGREEMENT",
             ltv_warning_ratio=Decimal("0.7"), ltv_breach_ratio=Decimal("0.8"), ltv_critical_ratio=Decimal("0.9"),
             eligible_custody_states=["IN_VAULT", "WITH_FUNDING_LENDER"], severity_mapping={"strategy": "derived-v1"}, created_by=self.actor)
 
@@ -187,7 +188,7 @@ class CollateralReappraisalTests(WorkspaceTestCase):
 
     def test_missing_monitoring_policy_fails_closed(self):
         self.make_loan()
-        with patch("apps.tenant_apps.loans.selectors.collateral_valuation.resolve_monitoring_policy", side_effect=LoanRiskAssessmentError("No policy")):
+        with patch("apps.tenant_apps.loans.selectors.monitoring_inputs.resolve_monitoring_policy", side_effect=LoanRiskAssessmentError("No policy")):
             self.assertIn("MONITORING_POLICY_UNAVAILABLE", self.valuation().ltv.blockers)
 
     def test_permissions_stale_submission_and_lifecycle_are_enforced(self):

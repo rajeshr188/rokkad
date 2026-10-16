@@ -122,13 +122,16 @@ class RiskOrchestrationBoundaryTests(SimpleTestCase):
         )
         collateral = SimpleNamespace(
             eligible_collateral_value=Decimal("2000.00"),
-            ltv=SimpleNamespace(ltv_ratio=Decimal("0.625"), exposure=Decimal("1250"), headroom=Decimal("350"), full_shortfall=Decimal("0"), status="WITHIN_LIMIT", blockers=()),
+            ltv=SimpleNamespace(ltv_ratio=Decimal("0.625"), exposure=Decimal("1250"), allowed_ltv_ratio=Decimal(".8"), headroom=Decimal("350"), full_shortfall=Decimal("0"), status="WITHIN_LIMIT", blockers=()),
             compliance_profile="loan-policy-snapshot:91",
             valuation_method="CALCULATED_METAL_VALUE",
             valuation_method_label="Calculated metal value",
             valuation_basis="CALCULATED_METAL_VALUE",
             original_valuation_method="LATEST_APPRAISAL",
             monitoring_policy_id=4, rate_freshness_days=7, appraisal_freshness_days=90,
+            evidence_at=assessed_at, next_evidence_at=None,
+            currency_quantum=Decimal(".01"), precision_source="SAVED_AGREEMENT",
+            reference_limit_source="SAVED_LENDING_REFERENCE",
             items=(
                 SimpleNamespace(collateral_item_id=8, appraisal_id=31, rate_id=12, rate_effective_at=assessed_at, appraisal_effective_at=assessed_at, rate_status="CURRENT", appraisal_status="CURRENT", blocker_messages=()),
                 SimpleNamespace(collateral_item_id=7, appraisal_id=30, rate_id=12, rate_effective_at=assessed_at, appraisal_effective_at=assessed_at, rate_status="CURRENT", appraisal_status="CURRENT", blocker_messages=()),

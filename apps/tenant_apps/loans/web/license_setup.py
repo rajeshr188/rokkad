@@ -49,7 +49,7 @@ def license_list(request):
     from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
 
     register_rows = get_loan_license_register(request.loans_workspace.pk)
-    checklist = get_pawn_setup_checklist(request.loans_workspace)
+    checklist = get_pawn_setup_checklist(request.loans_workspace, include_monitoring_portfolio=True)
     return render(
         request,
         "loans/setup/license_list.html",

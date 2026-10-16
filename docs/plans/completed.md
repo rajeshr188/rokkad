@@ -1,12 +1,23 @@
 ---
 status: active
 owner: project
-updated: 2026-09-30
+updated: 2026-10-16
 tags: [plans, completed]
 related: [../STATUS.md, ../archive/]
 ---
 
 # Completed Work
+
+## Combined Loans boundary simplification and correction release (2026-10-16)
+
+LS-01 through LS-06 and the committed collateral/agreement corrections are live
+on compatible web, monitoring and scheduled readers. Ten rehearsed migrations,
+paused balance parity, restricted roles, 99 hashes per reader, 23 read-only screen
+checks, three-Workspace worker progress, HTTPS/static delivery and all six timers
+pass. Fresh encrypted pre/post backups and stopped-writer release recovery verify;
+redundant plaintext checkpoint is removed. No loan/policy correction is performed.
+See the [release record](../implementation/loan-boundary-release-20261016.md) and
+[deployment proof](../implementation/loan-boundary-release-20261016.deployment.json).
 
 ## Storage media category correction (2026-09-30)
 

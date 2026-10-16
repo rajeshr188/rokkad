@@ -15,6 +15,7 @@ from apps.tenancy.testing import WorkspaceTestCase
 from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.integrations import disbursal_payload
 from apps.tenant_apps.loans.selectors.balances import get_pawn_loan_balance
+from apps.tenant_apps.loans.selectors.financial_inputs import get_pawn_loan_financial_inputs
 from apps.tenant_apps.loans.selectors.servicing_contract import (
     ServicingContractError, get_servicing_position, resolve_servicing_contract,
 )
@@ -165,8 +166,14 @@ class ServicingPositionTests(WorkspaceTestCase):
             cursor.execute(f"SET LOCAL ROLE {role}")
         try:
             self.assertEqual(get_servicing_position(loan, as_of_date=self.today).balance.total_due, 10200)
+            inputs = get_pawn_loan_financial_inputs(loan.pk, as_of_date=self.today)
+            self.assertEqual(inputs.position.collection_balance.total_due, 10200)
             with without_workspace_context(), workspace_context(other.pk):
                 self.assertFalse(m.PawnLoan.objects.filter(pk=loan.pk).exists())
+                with self.assertRaisesMessage(ValueError, "not found"):
+                    get_pawn_loan_financial_inputs(loan.pk, as_of_date=self.today)
+                with self.assertRaisesMessage(ValueError, "Workspace"):
+                    inputs.require(loan.pk, self.today)
                 with self.assertRaisesMessage(ServicingContractError, "active Workspace"):
                     get_servicing_position(loan, as_of_date=self.today)
         finally:
@@ -204,7 +211,8 @@ class OpeningServicingPositionTests(OpeningReleaseFixture):
         self.assertEqual(after.balance, notice_balance(self.loan, date(2021, 2, 2)))
         self.assertEqual(self.loan.loan_events.count(), 1)
         self.assertFalse(self.loan.interest_accruals.exists())
-        self.assertEqual(on_day.transaction_coverage.status, "UNCONFIRMED")
+        self.assertEqual(on_day.transaction_coverage.status, "RECORDED_POSITION")
+        self.assertEqual(on_day.transaction_coverage.book_review.status, "UNCONFIRMED")
 
     def test_before_and_on_cutover_preserve_precise_blockers(self):
         with self.assertRaisesMessage(ServicingContractError, "before the migration cutover"):

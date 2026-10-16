@@ -1,4 +1,5 @@
 from django import forms
+from decimal import Decimal
 from apps.onboarding.navigation import setup_saved_redirect
 
 from django.contrib import messages
@@ -80,6 +81,35 @@ class EarlierPayoutForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
 
 
+class CompletedPayoutForm(forms.Form):
+    source_reference = forms.CharField(max_length=160, label="Original ticket or payout reference")
+    reason = forms.CharField(max_length=235, label="Why is this completed payout being recorded now?",
+        widget=forms.Textarea(attrs={"rows": 2}))
+    advance_months = forms.TypedChoiceField(coerce=int, label="Advance interest deducted",
+        choices=((0, "None"), (1, "One month")))
+    document_charge = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, label="Document charge deducted")
+    cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False,
+        label="Net amount already paid", help_text="Leave blank to calculate from the agreed deductions; confirm the actual amount in the review.")
+    currency_quantum = forms.ChoiceField(label="Agreed interest rounding", choices=(("0.01", "Paise"), ("1", "Whole rupees")))
+    monitoring_method = forms.ChoiceField(label="Saved valuation fallback", choices=(
+        ("CALCULATED_METAL_VALUE", "Current metal price"), ("LATEST_APPRAISAL", "Approved appraisal"),
+        ("LOWER_OF_CALCULATED_AND_APPRAISAL", "Lower of price and appraisal")))
+    monitoring_ltv = forms.DecimalField(max_digits=7, decimal_places=6, min_value=Decimal("0.000001"), max_value=1,
+        label="Saved reference LTV ratio")
+    monitoring_reason = forms.CharField(max_length=255, label="Source of saved valuation/reference")
+    reviewed_evidence = forms.BooleanField(required=False,
+        label="I reviewed the retained approval and the evidence status shown, including any corrections or withdrawals.")
+    confirmed_rule = forms.BooleanField(initial=True, widget=forms.HiddenInput)
+
+    def __init__(self, *args, approval_evidence=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["reviewed_evidence"].required = bool(approval_evidence)
+        for name, field in self.fields.items():
+            field.widget.attrs["class"] = "form-check-input" if isinstance(field, forms.BooleanField) else "form-select" if isinstance(field, forms.ChoiceField) else "form-control"
+            if name in ("currency_quantum", "monitoring_method", "monitoring_ltv", "monitoring_reason") and self.initial.get(name) is not None:
+                field.widget = forms.HiddenInput()
+
+
 @loans_action_required("data.edit")
 @loans_action_required("loan.disburse")
 @never_cache
@@ -103,7 +133,47 @@ def pawn_loan_record_completed_payout(request, pk):
         except ValueError as exc:
             messages.error(request, str(exc))
             return redirect("workspace_loans:pawn_loan_detail", workspace_slug=request.workspace.slug, pk=pk)
-    return paper_history_entry(request, draft=loan)
+    # Keep issued paper-history submissions on their original signed command.
+    if request.method == "POST" and "intent_token" in request.POST and not request.POST.get("completed_payout_form"):
+        return paper_history_entry(request, draft=loan)
+    return _completed_payout_review(request, loan)
+
+
+def _completed_payout_review(request, loan):
+    from apps.tenant_apps.loans.selectors.monitoring_policy import current_monitoring_context
+    from apps.tenant_apps.loans.services.completed_payouts import (
+        completed_payout_defaults, retained_approval_evidence, preview_completed_payout, record_completed_payout,
+    )
+    from apps.tenant_apps.loans.services.recorded_history import new_recording_intent
+    post = request.POST if request.method == "POST" else None
+    evidence = retained_approval_evidence(loan)
+    defaults, error = {}, None
+    try:
+        defaults = completed_payout_defaults(loan)
+    except (ValueError, ValidationError) as exc:
+        error = str(exc)
+    form = CompletedPayoutForm(post, initial=defaults, approval_evidence=evidence)
+    intent = (post.get("intent_token", "") if post is not None else "") or new_recording_intent(
+        workspace=request.loans_workspace, actor=request.user, draft_id=loan.pk)
+    review, token = None, ""
+    agreement = native_origination_summary(loan, None)
+    if post is not None and post.get("action") != "edit" and form.is_valid():
+        arguments = dict(workspace=request.loans_workspace, actor=request.user, loan_id=loan.pk,
+            values=form.cleaned_data, intent_token=intent)
+        try:
+            if post.get("action") == "confirm":
+                result, created = record_completed_payout(**arguments, review_token=post.get("review_token"),
+                    confirmed=post.get("confirm_review") == "on")
+                messages.success(request, "Completed payout recorded with its actual date." if created else
+                    "This payout was already recorded; no duplicate was created.")
+                return redirect("workspace_loans:pawn_loan_detail", workspace_slug=request.workspace.slug, pk=result.pk)
+            review, token, agreement = preview_completed_payout(**arguments)
+        except (ValueError, ValidationError) as exc:
+            form.add_error(None, str(exc))
+    return render(request, "loans/pawn/completed_payout.html", dict(loan=loan, form=form,
+        agreement=agreement, approval_evidence=evidence, review=review, review_token=token,
+        intent_token=intent, review_error=error, completed_draft=loan, agreement_pending_payout=review is None,
+        current_monitoring=current_monitoring_context(loan.series)))
 
 
 @loans_action_required("workspace.settings.manage")

@@ -1,0 +1,1687 @@
+{
+  "loans.LoanLicense": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 255
+    },
+    "business_name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "proprietor_name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "business_address": {
+      "type": "TextField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 1000
+    },
+    "license_number": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "issuing_authority": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "issued_on": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "expires_on": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "is_legacy_reference": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "notes": {
+      "type": "TextField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanSeries": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "code": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanNumberSequence": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "series_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanSeries"
+    },
+    "document_kind": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "PAWN_LOAN",
+        "PAWN_LOAN_RELEASE"
+      ]
+    },
+    "prefix": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 24
+    },
+    "width": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "next_number": {
+      "type": "PositiveBigIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "maximum_number": {
+      "type": "PositiveBigIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanLicenseRevision": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "revision_number": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "kind": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "INITIAL",
+        "AMENDMENT",
+        "RENEWAL",
+        "LEGACY_REFERENCE",
+        "VERIFICATION",
+        "ATTESTATION",
+        "IMPORTED_SOURCE"
+      ]
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 255
+    },
+    "business_name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "proprietor_name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "business_address": {
+      "type": "TextField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 1000
+    },
+    "license_number": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "issuing_authority": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "issued_on": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "expires_on": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "notes": {
+      "type": "TextField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "verification_evidence": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "supporting_document": {
+      "type": "FileField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 100
+    },
+    "original_filename": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 255
+    },
+    "mime_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 100
+    },
+    "sha256": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 64
+    },
+    "byte_size": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanProduct": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "code": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 40
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 120
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanProductVersion": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "product_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanProduct"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "status": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 12,
+      "choices": [
+        "DRAFT",
+        "ACTIVE",
+        "RETIRED"
+      ]
+    },
+    "available_from": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "available_until": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "repayment_structure": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "SINGLE_PAYMENT_BULLET",
+        "PERIODIC_INTEREST_BULLET",
+        "FLEXIBLE_PARTIAL_PAYMENT",
+        "INSTALLMENT",
+        "LEGACY_UNSPECIFIED"
+      ]
+    },
+    "amortisation_method": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 24,
+      "choices": [
+        "NONE",
+        "EMI",
+        "EQUAL_PRINCIPAL"
+      ]
+    },
+    "payment_frequency": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "AT_MATURITY",
+        "MONTHLY",
+        "FLEXIBLE"
+      ]
+    },
+    "minimum_tenor_months": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "maximum_tenor_months": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "operational_grace_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "extra_payment_rule": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "NOT_APPLICABLE",
+        "REDUCE_PRINCIPAL",
+        "KEEP_PAYMENT_SHORTEN_TENURE"
+      ]
+    },
+    "calculation_contract_version": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 40
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.PawnLoanEconomicPolicy": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "series_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanSeries"
+    },
+    "minimum_first_month": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "valuation_method": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 40,
+      "choices": [
+        "CALCULATED_METAL_VALUE",
+        "LATEST_APPRAISAL",
+        "LOWER_OF_CALCULATED_AND_APPRAISAL"
+      ]
+    },
+    "maximum_ltv_ratio": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "advance_interest_periods": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "default_tenure_months": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "default_entry_purpose": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 12,
+      "choices": [
+        "INHERIT",
+        "DIRECT",
+        "PAPER"
+      ]
+    },
+    "interest_method": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "SIMPLE",
+        "COMPOUND"
+      ]
+    },
+    "partial_month_method": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "FULL_MONTH",
+        "SLAB",
+        "STARTED_WEEKS",
+        "ACTUAL_DAYS"
+      ]
+    },
+    "partial_month_cutoff_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "partial_month_lower_fraction": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "capitalization_interval_periods": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "rounding_method": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "PER_ACCRUAL_PERIOD"
+      ]
+    },
+    "currency_quantum": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "revision": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_from": {
+      "type": "DateField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_until": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.PawnMetalInterestRatePolicy": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "series_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanSeries"
+    },
+    "metal": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "GOLD",
+        "SILVER",
+        "BRONZE",
+        "OTHER"
+      ]
+    },
+    "monthly_interest_rate": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "revision": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_from": {
+      "type": "DateField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_until": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.PawnLoanFeePolicy": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "code": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "calculation_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "FIXED",
+        "PERCENTAGE"
+      ]
+    },
+    "value": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "deducted_at_disbursal": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_from": {
+      "type": "DateField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_until": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanMonitoringPolicy": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_from": {
+      "type": "DateField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_until": {
+      "type": "DateField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "supersedes_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanMonitoringPolicy"
+    },
+    "amendment_reason": {
+      "type": "TextField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "compliance_profile": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 120
+    },
+    "maturity_warning_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "operational_grace_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "dpd_watch_threshold": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "dpd_substandard_threshold": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "ltv_warning_ratio": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "ltv_breach_ratio": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "ltv_critical_ratio": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "rate_freshness_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "appraisal_freshness_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "eligible_custody_states": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "severity_mapping": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "valuation_basis": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 40,
+      "choices": [
+        "ORIGINAL_AGREEMENT",
+        "CALCULATED_METAL_VALUE",
+        "LATEST_APPRAISAL",
+        "LOWER_OF_CALCULATED_AND_APPRAISAL"
+      ]
+    },
+    "scope_action": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 8,
+      "choices": [
+        "APPLY",
+        "RETIRE"
+      ]
+    },
+    "replaces_scheduled": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    }
+  },
+  "loans.LoanOriginationSettings": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "require_collateral_photos": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "maximum_quote_age_days": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentLayout": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "document_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "loan_ticket",
+        "repayment_receipt",
+        "release_memo",
+        "auction_notice",
+        "auction_recovery",
+        "renewal",
+        "loan_kfs_schedule"
+      ]
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "is_retired": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentLayoutRevision": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "layout_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanDocumentLayout"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "state": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 12,
+      "choices": [
+        "DRAFT",
+        "PUBLISHED",
+        "RETIRED"
+      ]
+    },
+    "definition": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "content_hash": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 64
+    },
+    "validation_result": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "validated_at": {
+      "type": "DateTimeField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "published_at": {
+      "type": "DateTimeField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "retired_at": {
+      "type": "DateTimeField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentAsset": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "revision_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanDocumentLayoutRevision"
+    },
+    "key": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 64
+    },
+    "kind": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 16,
+      "choices": [
+        "IMAGE",
+        "BACKGROUND"
+      ]
+    },
+    "mime_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 64
+    },
+    "file": {
+      "type": "FileField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "sha256": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 64
+    },
+    "byte_size": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "width": {
+      "type": "PositiveIntegerField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "height": {
+      "type": "PositiveIntegerField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "page_count": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentPrintProfile": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "document_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "loan_ticket",
+        "repayment_receipt",
+        "release_memo",
+        "auction_notice",
+        "auction_recovery",
+        "renewal",
+        "loan_kfs_schedule"
+      ]
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "is_retired": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentPrintProfileRevision": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "profile_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanDocumentPrintProfile"
+    },
+    "version": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "state": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 12,
+      "choices": [
+        "DRAFT",
+        "PUBLISHED",
+        "RETIRED"
+      ]
+    },
+    "definition": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "content_hash": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 64
+    },
+    "validation_result": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "validated_at": {
+      "type": "DateTimeField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "published_at": {
+      "type": "DateTimeField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "retired_at": {
+      "type": "DateTimeField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentLayoutAssignment": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "document_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "loan_ticket",
+        "repayment_receipt",
+        "release_memo",
+        "auction_notice",
+        "auction_recovery",
+        "renewal",
+        "loan_kfs_schedule"
+      ]
+    },
+    "revision_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanDocumentLayoutRevision"
+    },
+    "license_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanLicense"
+    },
+    "series_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanSeries"
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.LoanDocumentPrintProfileAssignment": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "document_type": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32,
+      "choices": [
+        "loan_ticket",
+        "repayment_receipt",
+        "release_memo",
+        "auction_notice",
+        "auction_recovery",
+        "renewal",
+        "loan_kfs_schedule"
+      ]
+    },
+    "revision_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "loans.LoanDocumentPrintProfileRevision"
+    },
+    "series_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.LoanSeries"
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "party.PartyRoleType": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "key": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 64
+    },
+    "label": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 128
+    },
+    "description": {
+      "type": "TextField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "is_system": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "sort_order": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    }
+  },
+  "party.PartyCodeSequence": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "key": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32
+    },
+    "next_number": {
+      "type": "PositiveIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "rates.RateSource": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 30
+    },
+    "location": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 30
+    },
+    "tax_included": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    }
+  },
+  "rates.Rate": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "metal": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 6,
+      "choices": [
+        "Gold",
+        "Silver",
+        "Bronze"
+      ]
+    },
+    "currency": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 3,
+      "choices": [
+        "INR",
+        "USD"
+      ]
+    },
+    "purity": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 3,
+      "choices": [
+        "24k",
+        "22k",
+        "18k",
+        "14k",
+        "10k"
+      ]
+    },
+    "buying_rate": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "selling_rate": {
+      "type": "DecimalField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "effective_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "timestamp": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "supersedes_id": {
+      "type": "OneToOneField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "rates.Rate"
+    },
+    "is_withdrawal": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "reason": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": true,
+      "max_length": 500
+    },
+    "source_snapshot": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "confirmed_from_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "rates.Rate"
+    },
+    "rate_source_id": {
+      "type": "ForeignKey",
+      "nullable": false,
+      "blank": false,
+      "max_length": null,
+      "related": "rates.RateSource"
+    },
+    "portable_source": {
+      "type": "JSONField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.PawnStorageLocation": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "public_id": {
+      "type": "UUIDField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32
+    },
+    "parent_id": {
+      "type": "ForeignKey",
+      "nullable": true,
+      "blank": true,
+      "max_length": null,
+      "related": "loans.PawnStorageLocation"
+    },
+    "level": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 12,
+      "choices": [
+        "BRANCH",
+        "VAULT",
+        "CABINET",
+        "BOX",
+        "SLOT"
+      ]
+    },
+    "code": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 32
+    },
+    "name": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 100
+    },
+    "capacity": {
+      "type": "PositiveIntegerField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "is_active": {
+      "type": "BooleanField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "created_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  },
+  "loans.FundingLoanSequence": {
+    "id": {
+      "type": "BigAutoField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    },
+    "prefix": {
+      "type": "CharField",
+      "nullable": false,
+      "blank": false,
+      "max_length": 24
+    },
+    "width": {
+      "type": "PositiveSmallIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "next_value": {
+      "type": "PositiveBigIntegerField",
+      "nullable": false,
+      "blank": false,
+      "max_length": null
+    },
+    "maximum_value": {
+      "type": "PositiveBigIntegerField",
+      "nullable": true,
+      "blank": true,
+      "max_length": null
+    },
+    "updated_at": {
+      "type": "DateTimeField",
+      "nullable": false,
+      "blank": true,
+      "max_length": null
+    }
+  }
+}

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-14
+updated: 2026-10-16
 tags: [docs, navigation, architecture]
 ---
 
@@ -15,6 +15,7 @@ not an instruction to reintroduce it.
 ## Current work and decisions
 
 - [Status](STATUS.md): checkpoint, validation and remaining acceptance.
+- [Loans architecture hardening](implementation/loans-architecture-hardening-20261016.md): locally verified policy lifecycle/review, readiness, optional cohort assurance and staff work views; [worker scheduling follow-up](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity) remains deferred. The [original audit](architecture/loans-architecture-followup-20261016.md) retains the findings and delivery order.
 - [Monitoring portability and JCL coverage follow-up](implementation/monitoring-portability-followup-20261014.md): locally verified package v3, live worker frequency and separate appraisal/book gaps.
 - [Agent memory](AGENT_MEMORY.md): stable decisions and owner constraints.
 - [New-user journey refinement](implementation/new-user-journey-refinement-20261014.md): approved contact/authentication handoffs, guided setup and phone improvements, verified locally; production/provider acceptance remains separate. The [earlier audit](implementation/new-user-journey-audit-20261014.md) retains the original findings.

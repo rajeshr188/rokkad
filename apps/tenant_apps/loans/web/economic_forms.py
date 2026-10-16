@@ -217,8 +217,9 @@ class PawnSeriesInterestForm(GroupedPolicyForm, forms.Form):
 
 
 class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
+    cancel_scheduled = forms.BooleanField(required=False, widget=forms.HiddenInput)
     groups = (
-        (_("1. Scope and version"), ("license", "effective_from", "compliance_profile", "amendment_reason")),
+        (_("1. Scope and version"), ("license", "effective_from", "compliance_profile", "amendment_reason", "scope_action", "replaces_scheduled")),
         (_("2. Maturity and overdue warnings"), ("maturity_warning_days", "dpd_watch_threshold", "dpd_substandard_threshold")),
         (_("3. Collateral risk and evidence age"), ("valuation_basis", "ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio", "rate_freshness_days", "appraisal_freshness_days")),
     )
@@ -226,6 +227,7 @@ class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
         model = LoanMonitoringPolicy
         fields = (
             "license", "effective_from", "compliance_profile", "supersedes", "amendment_reason",
+            "scope_action", "replaces_scheduled",
             "maturity_warning_days", "valuation_basis",
             "dpd_watch_threshold", "dpd_substandard_threshold",
             "ltv_warning_ratio", "ltv_breach_ratio", "ltv_critical_ratio",
@@ -240,10 +242,16 @@ class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
         self.instance.created_by = actor
         self.fields["supersedes"].queryset = LoanMonitoringPolicy.objects.filter(workspace=workspace)
         self.fields["amendment_reason"].help_text = _("Required when amending an existing policy. Previous versions remain in history.")
+        self.fields["dpd_watch_threshold"].help_text = _("Days past due at which monitoring classifies a loan as Watch. Collection attention begins with any overdue obligation; this setting does not defer it. Operational transition buckets remain 1–29, 30–59, 60–89 and 90+ days.")
+        self.fields["dpd_substandard_threshold"].help_text = _("Days past due at which monitoring classifies a loan as Substandard and raises its delinquency priority to Critical.")
         self.fields["valuation_basis"].label = _("Current monitoring valuation method")
-        self.fields["valuation_basis"].help_text = _("The default preserves each loan's saved method. For paper/imported loans that method need not prove the original lending valuation. An explicit choice applies to current monitoring in this scope, including existing loans; it does not change approval, interest, fees or frozen valuation evidence. A license policy overrides the complete workspace policy.")
+        self.fields["valuation_basis"].help_text = _("New policies default to current calculated metal value, using recorded net weight, purity and fresh buying prices. Lower-of also requires approved appraisal evidence. Amendments retain the previous choice unless changed explicitly. This applies to current monitoring, including existing loans, without changing approval, interest, fees or frozen valuation evidence. A license policy overrides the complete workspace policy.")
         # Older submissions remain compatible. Absence never resets an amendment's basis.
         self.fields["valuation_basis"].required = False
+        self.fields["scope_action"].required = False
+        self.fields["scope_action"].help_text = _("Use settings for a full override. Retiring a licence scope returns its loans to the Workspace policy, including later Workspace changes. Missing fallback policy remains unavailable.")
+        self.fields["replaces_scheduled"].help_text = _("Explicitly replace scheduled changes from the chosen date onward. Review the displaced schedule before saving; earlier policy evidence stays in history.")
+        self.fields['replaces_scheduled'].widget.attrs['class']='form-check-input'
         self.instance.eligible_custody_states = ["IN_VAULT", "WITH_FUNDING_LENDER"]
         self.instance.severity_mapping = {"strategy": "derived-v1"}
         self.fields["rate_freshness_days"].help_text = _("Maximum quote age for current collateral monitoring, inclusive in calendar days. Zero requires same-day prices.")
@@ -265,7 +273,12 @@ class LoanMonitoringPolicyForm(GroupedPolicyForm, forms.ModelForm):
     def clean_valuation_basis(self):
         value = self.cleaned_data.get("valuation_basis")
         predecessor = self.cleaned_data.get("supersedes")
-        return value or (predecessor.valuation_basis if predecessor else LoanMonitoringPolicy.ValuationBasis.ORIGINAL_AGREEMENT)
+        return value or (predecessor.valuation_basis if predecessor else LoanMonitoringPolicy.ValuationBasis.CALCULATED_METAL_VALUE)
+
+    def clean_scope_action(self):
+        value = self.cleaned_data.get('scope_action')
+        predecessor = self.cleaned_data.get('supersedes')
+        return value or (predecessor.scope_action if predecessor else LoanMonitoringPolicy.ScopeAction.APPLY)
 
 
 class PawnFeePolicyForm(GroupedPolicyForm, forms.Form):

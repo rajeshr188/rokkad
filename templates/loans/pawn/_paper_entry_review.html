@@ -1,6 +1,7 @@
 {% load loans_display %}
     {% if review %}<section class="border rounded p-3 mt-4" aria-labelledby="history-review-title">
       <h2 class="h4" id="history-review-title" tabindex="-1">Review before recording</h2>
+      {% if routine_editor %}{% include "loans/pawn/_entry_monitoring.html" %}{% endif %}
       {% include "loans/pawn/_agreement_review.html" %}
       <p>This records an agreement and payout already completed. It does not approve a new advance or pay the customer again.</p>
       {% if review.origination_correction %}<p><strong>Origination correction:</strong> {{ review.origination_correction.reason }}</p><p>These digital attempts remain as reversed evidence:</p><ul>{% for attempt in review.origination_correction.attempts %}<li>Payout #{{ attempt.payout_id }} and reversal #{{ attempt.reversal_id }} dated {{ attempt.date }}.</li>{% endfor %}</ul>{% endif %}

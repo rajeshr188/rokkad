@@ -124,7 +124,7 @@ def build_party_statement_dataset(statement):
             "Transaction review", "Paper records through",
         ) + QUALITY_COLUMNS,
         tuple(rows),
-        notes="Recorded positions exclude collection interest awaiting recognition. Paper coverage is shown separately; unconfirmed histories are provisional.",
+        notes="Recorded positions exclude collection interest awaiting recognition. Transaction review and Paper records through describe optional book assurance. Missing or aged assurance alone does not invalidate an accepted position; known unresolved activity remains provisional. Earlier unavailable receipts remain unavailable.",
     )
 
 
@@ -206,7 +206,7 @@ def _portfolio_dataset(key, title, rows):
             row.transaction_completeness.status if row.transaction_completeness else "",
             row.transaction_completeness.through_date if row.transaction_completeness else "",
         ) + _quality_cells(row) for row in rows),
-        notes="Amounts derive from entered transactions. Unconfirmed paper histories are provisional. Transaction coverage is separate from valuation freshness.",
+        notes="Amounts derive from accepted positions and entered transactions. Transaction review and Paper records through describe optional book assurance. Known unresolved activity remains provisional; missing or aged assurance alone does not invalidate a supported position. Earlier unavailable receipts remain unavailable; valuation freshness is separate.",
     )
 
 

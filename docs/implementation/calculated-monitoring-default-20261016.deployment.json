@@ -1,0 +1,157 @@
+{
+  "profile": "monitoring-default-acceptance/1",
+  "deployed": {
+    "passed": true,
+    "completed_at": "2026-10-16T11:29:31.318486+00:00",
+    "image": "rokkad:monitoring-default-20261016-b5ff247195f3",
+    "image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac",
+    "source_sha256": "b5ff247195f3ac7c9bb4a19bf0f8a99be150966dbd69ea1a059449b3df764aa5",
+    "migration": [
+      "loans.0088_calculated_monitoring_default"
+    ],
+    "migration_seconds": 5.42,
+    "coordinated_seconds": 69.576,
+    "old_policy_rows_unchanged": true,
+    "restricted_runtime": true,
+    "owner_startup_refused": true,
+    "compatible_scheduled_readers": 4,
+    "environment_commands_resources_mounts_unchanged": true,
+    "local_encrypted_image_recovery": true,
+    "application_image_uploaded_to_r2": false
+  },
+  "health": {
+    "passed": true,
+    "image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac",
+    "exact_source_files_per_reader": [
+      5,
+      5
+    ],
+    "active_timers": 6,
+    "public_https": true,
+    "configuration_preserved": true,
+    "new_reader_error_lines": {
+      "rokkad-production-web-1": 0,
+      "rokkad-production-monitoring-1": 0
+    },
+    "runtime": {
+      "read_only": true,
+      "date": "2026-10-16",
+      "workspaces": [
+        {
+          "workspace": "Lakshmi Pawn Broker",
+          "version": 3,
+          "method": "CALCULATED_METAL_VALUE",
+          "active": 2419,
+          "current": 630,
+          "stale": 1789,
+          "failed": 0,
+          "valuation_available": 0
+        },
+        {
+          "workspace": "JSK",
+          "version": 2,
+          "method": "CALCULATED_METAL_VALUE",
+          "active": 1604,
+          "current": 630,
+          "stale": 974,
+          "failed": 0,
+          "valuation_available": 630
+        },
+        {
+          "workspace": "JCL",
+          "version": 2,
+          "method": "CALCULATED_METAL_VALUE",
+          "active": 2717,
+          "current": 630,
+          "stale": 2087,
+          "failed": 0,
+          "valuation_available": 630
+        }
+      ],
+      "restricted_runtime": true,
+      "no_pending_migrations": true,
+      "model_and_database_default_calculated": true
+    },
+    "screens": {
+      "read_only": true,
+      "pending": [],
+      "screens": 6,
+      "calculated_default": true,
+      "amendment_predecessors": true
+    },
+    "temporary_plaintext_removed": true,
+    "application_image_uploaded_to_r2": false
+  },
+  "final": {
+    "passed": true,
+    "image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac",
+    "active_timers": 6,
+    "free_gib": 10.452,
+    "backups": {
+      "pre": {
+        "passed": true,
+        "image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+        "snapshot_sha256": "704321d4099930f913fe717d8ccc511766d41b4f234e2b783882abedef5ca2ce",
+        "remote_download_verified": true,
+        "retention_passed": true
+      },
+      "post": {
+        "passed": true,
+        "image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac",
+        "snapshot_sha256": "8a0395a3bd9bed92901131251d53fb8221b44132596e958e2a178265ca498968",
+        "remote_download_verified": true,
+        "retention_passed": true
+      }
+    },
+    "temporary_plaintext_removed": true,
+    "encrypted_server_image_retained": true,
+    "application_image_uploaded_to_r2": false
+  },
+  "tests": {
+    "core": {
+      "count": 67,
+      "seconds": 117.237,
+      "passed": true
+    },
+    "affected_followup": {
+      "count": 45,
+      "seconds": 152.14,
+      "passed": true
+    }
+  },
+  "layouts": {
+    "passed": true,
+    "captures": [
+      [
+        "amendment",
+        1440
+      ],
+      [
+        "new-scope",
+        1440
+      ],
+      [
+        "amendment",
+        390
+      ],
+      [
+        "new-scope",
+        390
+      ]
+    ]
+  },
+  "counts_overlap": true,
+  "wider_selection": {
+    "count": 150,
+    "failures": 2,
+    "errors": 1,
+    "resolved_in_affected_followup": true,
+    "entire_selection_rerun": false
+  },
+  "approved_recovery": "Local encrypted download, temporary local-key decryption and exact same-server image reload",
+  "encrypted_local_image_retained": true,
+  "application_image_uploaded_to_r2": false,
+  "isolated_fictional_database_removed": true,
+  "committed": false,
+  "pushed": false
+}

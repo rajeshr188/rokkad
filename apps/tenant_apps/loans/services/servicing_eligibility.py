@@ -5,7 +5,7 @@ from datetime import date
 from django.utils import timezone
 
 from apps.tenant_apps.loans.selectors.servicing_contract import resolve_servicing_contract
-from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness
+from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
 
 
 def shared_monthly_bullet(loan):
@@ -95,9 +95,9 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date, occurred_
             block("NO_COLLATERAL", "A loan without collateral cannot be released.")
         elif not any(item.custody_state != "WITH_CUSTOMER" for item in items):
             block("ALREADY_RETURNED", "Every collateral item has already been returned.")
-    coverage = transaction_completeness(loan, effective_date)
+    coverage = recorded_position_coverage(loan, effective_date)
     if operation == "AUCTION" and not coverage.complete:
-        block("TRANSACTION_COVERAGE", "Confirm complete paper transactions through today before auction recovery. " + coverage.message)
+        block("TRANSACTION_COVERAGE", "Auction recovery needs a supported recorded position without known missing activity. " + coverage.message)
     return ServicingEligibility(operation, purpose, effective_date, contract, coverage, tuple(blockers))
 
 

@@ -112,6 +112,7 @@ class MonitoringValuationTests(WorkspaceTestCase):
         self.assertEqual(self.valuation().eligible_collateral_value, Decimal("2500"))
         with patch("apps.tenant_apps.loans.selectors.collateral_valuation.get_latest_commodity_valuation_rate") as lookup:
             lookup.return_value.status, lookup.return_value.rate = "MISSING", None
+            lookup.return_value.next_effective_at = None
             self.amend(valuation_basis="CALCULATED_METAL_VALUE")
             self.assertIsNone(self.valuation().eligible_collateral_value)
             self.assertIn("MISSING_RATE", self.valuation().ltv.blockers)
@@ -293,10 +294,12 @@ class PaperMonitoringValuationTests(WorkspaceTestCase):
         snapshot = refresh_loan_risk_snapshot(loan.pk, as_of_date=today)
         self.assertEqual(snapshot.status, "CURRENT")
         self.assertEqual(snapshot.collateral_value, Decimal("16200"))
-        self.assertFalse(snapshot.source_provenance["transactions"]["complete"])
-        self.assertIn("TRANSACTIONS_UNCONFIRMED", snapshot.flags)
+        self.assertEqual(snapshot.source_provenance["valuation"]["reference_limit_source"], "RECORDED_MONITORING_REFERENCE")
+        self.assertTrue(snapshot.source_provenance["transactions"]["complete"])
+        self.assertFalse(snapshot.source_provenance["transactions"]["book_review"]["complete"])
+        self.assertNotIn("TRANSACTIONS_UNCONFIRMED", snapshot.flags)
         health = get_dashboard_health_summary(workspace=self.tenant)
-        self.assertEqual((health["financial_count"], health["coverage_count"], health["provisional_count"]), (1, 1, 1))
-        self.assertFalse(health["financial_complete"])
-        self.assertFalse(health["coverage_complete"])
+        self.assertEqual((health["financial_count"], health["coverage_count"], health["provisional_count"]), (1, 1, 0))
+        self.assertTrue(health["financial_complete"])
+        self.assertTrue(health["coverage_complete"])
         self.assertEqual(frozen, (model_to_dict(loan.policy_snapshot), list(loan.loan_events.values()), loan.disbursal_snapshot.evidence))

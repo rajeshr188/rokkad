@@ -1,5 +1,3 @@
 <dl class="small mb-2">
-  <dt>Financial calculation</dt><dd>{{ row.source_provenance.financial.calculation_status|default:"Unknown" }}{% for finding in row.source_provenance.financial.integrity_findings %}<div class="text-danger">{{ finding }}</div>{% endfor %}</dd>
-  <dt>Transaction coverage</dt><dd>{{ row.source_provenance.transactions.status|default:"Unknown" }}{% if row.source_provenance.transactions.capture_basis == 'SYSTEM_CAPTURE_ASSUMPTION' %} — ordinary system capture assumed{% endif %}{% if row.source_provenance.transactions.through_date %}; checked through {{ row.source_provenance.transactions.through_date }}{% endif %}</dd>
   <dt>Current valuation method</dt><dd>{{ row.source_provenance.valuation.method_label|default:"Unknown" }}{% if row.source_provenance.valuation.basis == 'ORIGINAL_AGREEMENT' %} — saved loan method{% elif row.source_provenance.valuation.method %} — monitoring policy choice{% endif %}</dd>
 </dl>

@@ -363,10 +363,10 @@ def complete_pawn_loan_auction(
     loan.state = PawnLoanState.CLOSED.value
     loan.updated_by = actor
     loan.save(update_fields=["state", "updated_by", "updated_at"])
-    if coverage and coverage.status != "ROKKAD_ONLY":
+    if coverage and coverage.book_review.complete and coverage.book_review.status != "ROKKAD_ONLY":
         from .transaction_reviews import _store
         _store(loan, actor, through_date=effective_date, confirmed_complete=True,
-            source_reference=f"Current auction {auction.auction_number}; paper review {coverage.review_id}",
+            source_reference=f"Current auction {auction.auction_number}; paper review {coverage.book_review.review_id}",
             request_key=f"auction:{auction.pk}")
     _audit(
         auction,

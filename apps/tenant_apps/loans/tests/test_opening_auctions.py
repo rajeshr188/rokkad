@@ -71,10 +71,10 @@ class OpeningAuctionTests(OpeningReleaseFixture):
         self.assertEqual(opening_payment_balance(self.loan, as_of_date=self.day)[0].total_due, quote.total_due)
         self.assertTrue(auctions.reverse_pawn_loan_auction(auction.pk, reason="Sale cancelled", actor=self.actor).already_reversed)
 
-    def test_review_and_statutory_readiness_are_required_and_mismatch_is_atomic(self):
-        with self.assertRaisesMessage(ValueError, "Confirm complete"):
-            auctions.initiate_pawn_loan_auction(self.loan.pk, scheduled_date=self.sale_day,
-                request_key="unreviewed", actor=self.actor)
+    def test_supported_opening_needs_no_book_review_and_statutory_mismatch_is_atomic(self):
+        auctions.initiate_pawn_loan_auction(self.loan.pk, scheduled_date=self.sale_day,
+            request_key="opening-sale", actor=self.actor)
+        self.assertFalse(self.loan.transaction_reviews.exists())
         auction = self.prepare()
         count = self.loan.loan_events.count()
         with self.assertRaisesMessage(ValueError, "exactly clear"):
@@ -186,7 +186,7 @@ class CheckpointAuctionTests(checkpoints.OpeningCheckpointTests):
             m.LoanMonitoringPolicy.objects.create(workspace=self.a, version=1, effective_from=day,
                 compliance_profile="synthetic-current-risk", ltv_warning_ratio="0.7", ltv_breach_ratio="0.8", ltv_critical_ratio="0.9",
                 eligible_custody_states=["IN_VAULT"], severity_mapping={"strategy":"derived-v1"},
-                appraisal_freshness_days=7, created_by=self.actor)
+                appraisal_freshness_days=7, valuation_basis="LATEST_APPRAISAL", created_by=self.actor)
             item = loan.collateral_items.get()
             record_collateral_reappraisal(loan_id=loan.pk, item_id=item.pk, actor=self.actor,
                 appraised_value=Decimal("2000"), method="PHYSICAL_INSPECTION", expected_version=0,
@@ -196,7 +196,7 @@ class CheckpointAuctionTests(checkpoints.OpeningCheckpointTests):
             snapshot = refresh_loan_risk_snapshot(loan.pk, as_of_date=day)
             self.assertEqual(snapshot.status, "CURRENT")
             self.assertNotIn("VALUATION_UNKNOWN", snapshot.flags)
-            self.assertIn("TRANSACTIONS_UNCONFIRMED", snapshot.flags)
+            self.assertNotIn("TRANSACTIONS_UNCONFIRMED", snapshot.flags)
             self.assertIsNone(get_pawn_loan_collateral_valuation(loan.pk, as_of_date=day+timedelta(days=8)).eligible_collateral_value)
             event.refresh_from_db()
             self.assertEqual(event.payload_fingerprint, frozen)

@@ -2156,6 +2156,8 @@ class PawnLoanNotice(models.Model):
                     models.Value('0'), output_field=models.CharField()),
                 Coalesce(KeyTextTransform('correction_id', KeyTransform('agreement_identity', 'payload_snapshot')),
                     models.Value('0'), output_field=models.CharField()),
+                Coalesce(KeyTextTransform('source_fingerprint', KeyTransform('transaction_review', 'payload_snapshot')),
+                    models.Value('0'), output_field=models.CharField()),
                 condition=Q(source_risk_event__isnull=False, transaction_review__isnull=True),
                 name="loans_risk_notice_intent_uniq",
             ),

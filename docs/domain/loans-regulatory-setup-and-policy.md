@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-10
+updated: 2026-10-16
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -11,6 +11,24 @@ related:
 ---
 
 # Loans Regulatory Setup And Policy
+
+## Current monitoring and retained entry references
+
+The prepared hardening release labels saved valuation/reference evidence separately
+from the effective monitoring policy. Economic entry suggestions do not select
+current monitoring or prove original approval. Frozen agreement/calculation inputs
+continue to determine debt; current monitoring evaluates that debt and collateral
+using its own effective policy. Unknown historical reference limits are not invented.
+
+Monitoring amendments append immutable versions. Owners can explicitly replace a
+future schedule, cancel it by retaining today's applicable settings, or retire a
+licence override to follow the Workspace default. Ordinary backdating and unrelated
+overlap remain prohibited. A retired override never resurrects an older override.
+Preview shows changed settings, affected scopes and bounded collateral observations
+under today's evidence. Confirmation requires acknowledgement and rejects changed
+or expired source evidence. This is not a debt forecast or financial correction.
+See the [lifecycle contract](../contracts/monitoring-policy-lifecycle-v1.md) and
+[local acceptance/release record](../implementation/loans-architecture-hardening-20261016.md).
 
 Operational loan pages and the new-loan/list series pickers display the pawn-number
 prefix, or "No prefix" for an unprefixed register. Internal migration series codes

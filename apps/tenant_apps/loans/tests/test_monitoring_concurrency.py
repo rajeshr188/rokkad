@@ -258,6 +258,13 @@ class MonitoringConcurrencyTests(TransactionTestCase):
         migration = loader.get_migration("loans", "0007_monitoring_policy_amendments")
         operation = migration.operations[-1]
         state = loader.project_state((migration.app_label, migration.name))
+        # Historical characterization must not leave the current database with
+        # the superseded strong Workspace lock for later concurrency tests.
+        current_guard = loader.get_migration("loans", "0086_monitoring_policy_lock_mode").operations[0]
+        def restore_current_guard():
+            with connection.schema_editor() as editor:
+                current_guard.database_forwards("loans", editor, state, state)
+        self.addCleanup(restore_current_guard)
         # Reinstall this migration's guard and data upgrade atomically; do not
         # reverse unrelated, deliberately irreversible evidence migrations.
         with connection.schema_editor() as editor:

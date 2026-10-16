@@ -5,16 +5,11 @@ from decimal import Decimal
 from apps.tenant_apps.loans.domain import (
     LoanRepaymentStructure,
 )
-from apps.tenant_apps.loans.models import PawnLoan, current_tenant_workspace_id
-from .obligation_state import (
-    ObligationAmount,
-    calculate_obligation_state_as_of,
-    get_active_repayment_schedule_as_of,
+from .obligation_state import ObligationAmount
+from .financial_inputs import (
+    PawnLoanFinancialReadError as PawnLoanExposureError,
+    PawnLoanFinancialInputs, get_pawn_loan_financial_inputs,
 )
-
-
-class PawnLoanExposureError(ValueError):
-    pass
 
 
 def require_consistent_exposure(exposure):
@@ -53,68 +48,18 @@ class PawnLoanExposure:
     servicing_profile: str = ""
 
 
-@dataclass(frozen=True)
-class _PawnLoanFinancialInputs:
-    """One calculation's source reads, never a cross-call or cross-tenant cache."""
-    loan: object
-    as_of_date: date
-    position: object
-    schedule: object
-    obligation_state: object
-    transaction_coverage: object = None
-
-    def require(self, loan_id, as_of_date):
-        workspace_id = current_tenant_workspace_id()
-        if (workspace_id is None or self.loan.workspace_id != workspace_id
-                or self.loan.pk != loan_id or self.as_of_date != as_of_date):
-            raise PawnLoanExposureError("Prepared financial inputs must match the loan, date and active Workspace.")
-
-
-def _read_financial_inputs(loan_id, *, as_of_date):
-    workspace_id = current_tenant_workspace_id()
-    if workspace_id is None:
-        raise PawnLoanExposureError("PawnLoan exposure requires an active tenant schema.")
-    try:
-        loan = PawnLoan.objects.select_related(
-            "product_version__product", "policy_snapshot"
-        ).get(pk=loan_id, workspace_id=workspace_id)
-    except PawnLoan.DoesNotExist as exc:
-        raise PawnLoanExposureError("PawnLoan was not found in the active workspace.") from exc
-
-    from .continuation import resolve_loan_continuation
-    try:
-        position = resolve_loan_continuation(loan, as_of_date=as_of_date, include_legacy_projection=True)
-    except ValueError as exc:
-        raise PawnLoanExposureError(str(exc)) from exc
-    if position.contract.profile == "loan-closed-position/1":
-        return _PawnLoanFinancialInputs(loan, as_of_date, position, None, None)
-    active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
-    continuation = position.recognition.calculation if position.recognition.adapter == "OPENING_CHECKPOINT" else None
-    expected_source = continuation.opening_event_id if continuation else None
-    if continuation:
-        from apps.tenant_apps.loans.services.opening_corrections import opening_schedule_source
-        expected_source = opening_schedule_source(loan, loan.loan_events.get(pk=continuation.opening_event_id))
-    if continuation and not position.recorded_balance.financially_settled and (
-        active_schedule is None or active_schedule.source_event_id != expected_source
-    ):
-        raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")
-    state = calculate_obligation_state_as_of(active_schedule, as_of_date)
-    return _PawnLoanFinancialInputs(loan, as_of_date, position, active_schedule, state)
-
-
-def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date, _inputs=None) -> PawnLoanExposure:
-    inputs = _inputs if _inputs is not None else _read_financial_inputs(loan_id, as_of_date=as_of_date)
+def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date, financial_inputs: PawnLoanFinancialInputs | None = None) -> PawnLoanExposure:
+    inputs = financial_inputs if financial_inputs is not None else get_pawn_loan_financial_inputs(loan_id, as_of_date=as_of_date)
     inputs.require(loan_id, as_of_date)
     loan, position = inputs.loan, inputs.position
     balance = position.recorded_balance
     plan = position.recognition
-    continuation = plan.calculation if plan.adapter == "OPENING_CHECKPOINT" else None
     previews = plan.projection_periods
     projected_interest = plan.additional_interest
-    if position.contract.profile == "loan-closed-position/1":
+    if inputs.is_closed_position:
         zero = Decimal("0")
         component = ExposureComponent(principal=zero, interest=zero, fees=zero)
-        return PawnLoanExposure(loan_id=loan.pk, as_of_date=as_of_date, original_principal=loan.principal_amount,
+        return PawnLoanExposure(loan_id=loan.pk, as_of_date=as_of_date, original_principal=inputs.original_principal,
             principal_repaid=zero, principal_outstanding=zero, recorded_interest=zero, projected_interest=zero,
             fees_and_penalties=zero, due_now=component, overdue=component, recorded_total_due=zero,
             total_economic_exposure=zero, cash_receivable_basis=zero, maturity_payoff=zero, ltv_exposure_basis=zero,
@@ -169,7 +114,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date, _inputs=None) -> P
     return PawnLoanExposure(
         loan_id=loan.pk,
         as_of_date=as_of_date,
-        original_principal=loan.principal_amount if plan.adapter == "VERIFIED_TERMINAL_POSITION" else balance.opening_principal if continuation else balance.principal_disbursed,
+        original_principal=inputs.original_principal,
         principal_repaid=balance.principal_paid,
         principal_outstanding=balance.principal_outstanding,
         recorded_interest=balance.interest_outstanding,
@@ -186,7 +131,7 @@ def get_pawn_loan_exposure(loan_id: int, *, as_of_date: date, _inputs=None) -> P
         provenance=provenance,
         integrity_findings=tuple(findings),
         ltv_basis_label="Maturity payoff" if is_bullet else "Economic exposure",
-        principal_history_basis="VERIFIED_TERMINAL_POSITION" if plan.adapter == "VERIFIED_TERMINAL_POSITION" else "OPENING_CHECKPOINT" if continuation else "ORIGINAL_PAYOUT",
+        principal_history_basis=inputs.principal_history_basis,
         financial_history_from=position.contract.financial_history_from,
         servicing_profile=position.contract.profile,
     )

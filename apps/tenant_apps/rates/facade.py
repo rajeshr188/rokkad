@@ -13,6 +13,7 @@ class CommodityRateLookupResult:
     metal: str = ""
     currency: str = ""
     purity: str = ""
+    next_effective_at: datetime | None = None
 
 
 COMMODITY_TO_RATE_METAL = {
@@ -45,6 +46,7 @@ def get_latest_commodity_valuation_rate(
     as_of: date | datetime | None = None,
     currency: str = "INR",
     purity: str = "24k",
+    include_next_effective_at: bool = False,
 ) -> CommodityRateLookupResult:
     from apps.tenant_apps.rates.models import Rate
     from django.utils import timezone
@@ -89,6 +91,12 @@ def get_latest_commodity_valuation_rate(
         is_withdrawal=False,
     )
     as_of = as_of if as_of is not None else timezone.now()
+    next_effective_at = None
+    if include_next_effective_at:
+        if not isinstance(as_of, datetime) or timezone.is_naive(as_of):
+            raise ValueError("Scheduled quote lookup requires an aware assessment instant.")
+        next_effective_at = (rates.filter(effective_at__gt=as_of)
+            .order_by("effective_at").values_list("effective_at", flat=True).first())
     if isinstance(as_of, datetime):
         rates = rates.filter(effective_at__lte=as_of)
     else:
@@ -102,6 +110,7 @@ def get_latest_commodity_valuation_rate(
             metal=metal,
             currency=normalized_currency,
             purity=normalized_purity,
+            next_effective_at=next_effective_at,
         )
 
     return CommodityRateLookupResult(
@@ -111,4 +120,5 @@ def get_latest_commodity_valuation_rate(
         metal=metal,
         currency=normalized_currency,
         purity=normalized_purity,
+        next_effective_at=next_effective_at,
     )

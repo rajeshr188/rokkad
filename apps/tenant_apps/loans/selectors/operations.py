@@ -76,9 +76,10 @@ def get_pawn_loan_operations_snapshot(
         workspace_id=workspace_id,
         state=PawnLoanState.ACTIVE.value,
     )
+    from .risk_portfolio import current_snapshot_filter
     current_risk = LoanRiskSnapshot.objects.filter(
+        current_snapshot_filter(timezone.localdate()),
         workspace_id=workspace_id,
-        status=LoanRiskSnapshot.Status.CURRENT,
         loan__state=PawnLoanState.ACTIVE.value,
     )
     return PawnLoanOperationsSnapshot(

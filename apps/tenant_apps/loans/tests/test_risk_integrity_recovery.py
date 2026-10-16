@@ -113,7 +113,7 @@ class RiskIntegrityRecoveryTests(WorkspaceTestCase):
 
     def test_missing_schedule_is_unknown_financial_evidence_on_live_paths(self):
         self.revalue("4000")
-        with patch("apps.tenant_apps.loans.selectors.exposure.get_active_repayment_schedule_as_of", return_value=None):
+        with patch("apps.tenant_apps.loans.selectors.financial_inputs.get_active_repayment_schedule_as_of", return_value=None):
             exposure = get_pawn_loan_exposure(self.loan.pk, as_of_date=self.today)
             self.assertTrue(any("no active repayment schedule" in finding for finding in exposure.integrity_findings))
             with self.assertRaisesMessage(ValueError, "no active repayment schedule"):
@@ -122,7 +122,7 @@ class RiskIntegrityRecoveryTests(WorkspaceTestCase):
             self.assertEqual(collateral.eligible_collateral_value, Decimal("4000"))
             self.assertIsNone(collateral.ltv.ltv_ratio)
             self.assertIn("FINANCIAL_EVIDENCE_INCONSISTENT", collateral.ltv.blockers)
-        with patch("apps.tenant_apps.loans.selectors.delinquency.get_active_repayment_schedule_as_of", return_value=None):
+        with patch("apps.tenant_apps.loans.selectors.financial_inputs.get_active_repayment_schedule_as_of", return_value=None):
             with self.assertRaisesMessage(ValueError, "no active repayment schedule"):
                 get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today)
 
@@ -130,7 +130,7 @@ class RiskIntegrityRecoveryTests(WorkspaceTestCase):
         schedule = get_active_repayment_schedule_as_of(self.loan, self.today)
         state = calculate_obligation_state_as_of(schedule, self.today)
         invalid = replace(state, integrity_findings=("Obligation is over-allocated.",))
-        with patch("apps.tenant_apps.loans.selectors.delinquency.calculate_obligation_state_as_of", return_value=invalid):
+        with patch("apps.tenant_apps.loans.selectors.financial_inputs.calculate_obligation_state_as_of", return_value=invalid):
             with self.assertRaisesMessage(ValueError, "Delinquency evidence is inconsistent"):
                 get_pawn_loan_delinquency(self.loan.pk, as_of_date=self.today)
 

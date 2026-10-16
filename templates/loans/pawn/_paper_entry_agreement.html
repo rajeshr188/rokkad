@@ -10,7 +10,8 @@
     {% endif %}
   {% else %}<p class="text-body-secondary">Choose the series and original date to load the standing agreement.</p>{% endif %}
 
-  {% if paper_monitoring_missing %}<p class="alert alert-warning" data-paper-monitoring-attention>Current collateral valuation setup needs attention. {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy" target="_blank" rel="noopener">Open Calculation policy</a>{% endif %}</p>{% endif %}
+  {% include "loans/pawn/_entry_monitoring.html" %}
+  {% if paper_monitoring_missing %}<p class="alert alert-warning" data-paper-monitoring-attention>Saved valuation/reference evidence needs attention. {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy" target="_blank" rel="noopener">Review reference setup</a>{% endif %}</p>{% endif %}
   <details class="border rounded p-3" data-paper-additional-details {% if paper_additional_open %}open{% endif %}>
     <summary>Additional details</summary>
     <p class="small text-body-secondary mt-2">Standing terms are supplied by setup and shown in review. Use these options only for an actual exception or additional source facts.</p>
@@ -35,9 +36,9 @@
 
   {% if paper_monitoring_missing %}
     <div class="mt-3">
-      <h3 class="h6">Current collateral valuation setup needs attention</h3>
-      <p class="small">Set the valuation method and maximum LTV for this series under Calculation policy. Risk monitoring policy sets warning thresholds separately. These choices do not approve or reprice the original paper loan.</p>
-      <details class="mt-2"><summary>Record a supported monitoring choice when setup is unavailable</summary><div class="row g-3 mt-2">{% for field in paper_monitoring_fields %}<div class="col-12 col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div></details>
+      <h3 class="h6">Saved valuation/reference evidence</h3>
+      <p class="small">This entry format retains a valuation fallback and reference limit. Record a supported, explained reference when setup is unavailable. These fields do not configure current monitoring or establish historical lending approval.</p>
+      <details class="mt-2"><summary>Record supported reference evidence</summary><div class="row g-3 mt-2">{% for field in paper_monitoring_fields %}<div class="col-12 col-md-6">{% include "components/forms/accessible.html#field" %}</div>{% endfor %}</div></details>
     </div>
   {% else %}{% for field in paper_monitoring_fields %}{{ field.as_hidden }}{% endfor %}{% endif %}
 

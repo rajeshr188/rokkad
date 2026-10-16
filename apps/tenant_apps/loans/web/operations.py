@@ -1,6 +1,7 @@
 """Read-only operations, monitoring, and notice-ledger HTTP endpoints."""
 
 from django.core.paginator import Paginator
+from django.db.models import Case, When, Value, IntegerField
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
@@ -53,23 +54,32 @@ def pawn_risk_guide(request):
 
 @loans_setup_required
 def pawn_risk_portfolio(request):
+    from apps.tenant_apps.loans.selectors.monitoring_readiness import get_monitoring_readiness
     allowed_statuses = {"CURRENT", "STALE", "ERROR", "UNASSESSED"}
     status = (request.GET.get("status") or "").strip().upper()
     if status not in allowed_statuses:
         status = None
     severity = (request.GET.get("severity") or "").strip()
+    attention = request.GET.get('attention','')
+    if attention not in {'measured','evidence','transactions','assessment'}:
+        attention = ''
     page_obj = get_risk_portfolio(
         page=request.GET.get("page", 1),
         status=status,
         severity=severity or None,
+        attention=attention or None,
     )
-    alerts = tuple(LoanRiskAlert.objects.filter(
+    alerts_query = LoanRiskAlert.objects.filter(
         workspace=request.loans_workspace,
         status=LoanRiskAlert.Status.OPEN,
         loan__state="ACTIVE",
-    ).select_related("loan", "loan__borrower", "source_event")[:100])
+    ).select_related("loan", "loan__borrower", "source_event").annotate(priority=Case(
+        When(severity='CRITICAL',then=Value(0)),When(severity='HIGH',then=Value(1)),
+        When(severity='MEDIUM',then=Value(2)),default=Value(3),output_field=IntegerField(),
+    )).order_by('priority','created_at','pk')
+    alerts_page = Paginator(alerts_query,25).get_page(request.GET.get('alert_page',1))
     alert_rows = []
-    for alert in alerts:
+    for alert in alerts_page:
         readiness = (
             assess_risk_alert_communication_readiness(alert.pk)
             if alert.alert_kind in {LoanRiskAlert.Kind.DPD_WORSENING, LoanRiskAlert.Kind.MATURITY}
@@ -78,13 +88,17 @@ def pawn_risk_portfolio(request):
         email = next((row for row in readiness.channels if row.channel == "EMAIL"), None) if readiness else None
         whatsapp = next((row for row in readiness.channels if row.channel == "WHATSAPP"), None) if readiness else None
         alert_rows.append((alert, email, whatsapp))
+    readiness = get_monitoring_readiness(workspace=request.loans_workspace)
     return render(request, "loans/setup/risk_portfolio.html", {
         "page_obj": page_obj,
         "risk_rows": page_obj.object_list,
-        "summary": get_risk_portfolio_summary(),
+        "summary": readiness['summary'],
         "selected_status": status or "",
         "selected_severity": severity,
         "open_alert_rows": alert_rows,
+        "monitoring_readiness": readiness,
+        "alerts_page": alerts_page,
+        "selected_attention": attention,
     })
 
 

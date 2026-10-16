@@ -395,11 +395,12 @@ class CompletedPayoutTests(WorkspaceTestCase):
         path = reverse("workspace_loans:pawn_loan_record_completed_payout", args=[self.tenant.slug, self.draft.pk])
         page = self.client.get(path + "?series=999999&party=999999")
         self.assertEqual(page.status_code, 200)
-        self.assertEqual(page.context["form"]["date"].value(), self.day)
-        self.assertEqual(page.context["form"]["series_id"].value(), self.series.pk)
-        self.assertTrue(page.context["form"].fields["number"].disabled)
-        self.assertEqual(len(page.context["formset"]), 1)
-        self.assertContains(page, "Existing collateral: Ring")
+        self.assertEqual(page.context["agreement"]["date"], self.day)
+        self.assertEqual(page.context["agreement"]["series"].pk, self.series.pk)
+        self.assertNotIn("number", page.context["form"].fields)
+        self.assertNotIn("borrower_id", page.context["form"].fields)
+        self.assertEqual(len(page.context["agreement"]["items"]), 1)
+        self.assertContains(page, "Ring")
         self.assertNotContains(page, 'id="add-collateral"')
         values = dict(self.data, routine_entry="on", exceptions="on", exception_reason="Actual register terms",
             document_charge="0", currency_quantum="0.01", action="preview", intent_token=page.context["intent_token"],

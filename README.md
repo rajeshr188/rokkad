@@ -15,6 +15,11 @@ Business performed directly in Rokkad, transactions entered later from paper,
 and supported imported positions share a PawnLoan servicing lifecycle and current
 risk monitoring. Their original source evidence remains distinct.
 
+The [16 October loans hardening acceptance record](docs/implementation/loans-architecture-hardening-20261016.md)
+tracks the locally prepared policy lifecycle, reviewed amendments, active-portfolio
+readiness and simpler staff workflows, including the frozen combined source used
+for verification. Deployment is a separate coordinated release.
+
 Business apps are **Party, Loans, Rates and Notify v2**. Loans owns financial and
 custody evidence; Rokkad is not a general-ledger or general-purpose ERP system.
 Workspace rows have direct ownership and PostgreSQL forced row-level security

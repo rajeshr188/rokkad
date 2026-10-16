@@ -51,17 +51,18 @@ class RiskAssessmentTests(SimpleTestCase):
     @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_exposure")
     @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_delinquency")
     @patch("apps.tenant_apps.loans.selectors.risk.resolve_monitoring_policy")
-    @patch("apps.tenant_apps.loans.selectors.risk.get_active_repayment_schedule_as_of")
-    @patch("apps.tenant_apps.loans.selectors.risk.PawnLoan.objects.get")
+    @patch("apps.tenant_apps.loans.selectors.risk.get_pawn_loan_financial_inputs")
     @patch("apps.tenant_apps.loans.selectors.risk.current_tenant_workspace_id", return_value=7)
     def test_selector_uses_schedule_maturity_not_nonexistent_loan_field(
-        self, _workspace, get_loan, active_schedule, resolve_policy,
+        self, _workspace, get_inputs, resolve_policy,
         delinquency, exposure, collateral,
     ):
         loan = SimpleNamespace(pk=11, license_id=3, policy_snapshot_id=None,
             _prefetched_objects_cache={"transaction_reviews": (), "loan_events": ()})
-        get_loan.return_value = loan
-        active_schedule.return_value = SimpleNamespace(maturity_date=date(2026, 12, 31))
+        get_inputs.return_value = SimpleNamespace(loan=loan,
+            require=lambda loan_id, as_of_date: None,
+            schedule=SimpleNamespace(maturity_date=date(2026, 12, 31)),
+            transaction_coverage=SimpleNamespace(complete=True))
         resolve_policy.return_value = SimpleNamespace(
             pk=2, version=1, compliance_profile="pilot",
             maturity_warning_days=30, dpd_watch_threshold=1,

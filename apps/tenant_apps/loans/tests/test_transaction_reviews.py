@@ -290,7 +290,7 @@ class TransactionReviewTests(RecordedOriginationTests):
         post.update(action="confirm", acknowledged="on", review_token=response.context["form"].data["review_token"])
         response = client.post(url, post)
         self.assertEqual(response.status_code, 302)
-        self.assertContains(client.get(response.url), "Paper-book verification: CONFIRMED")
+        self.assertContains(client.get(response.url), "Optional book reconciliation: CONFIRMED")
         self.assertEqual(client.post(url, post).status_code, 302)
 
 

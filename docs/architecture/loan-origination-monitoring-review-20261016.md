@@ -1,5 +1,5 @@
 ---
-status: proposed-direction
+status: accepted-direction
 owner: loans
 updated: 2026-10-16
 tags: [architecture, loans, origination, monitoring, simplification]
@@ -8,14 +8,49 @@ related: [post-origination-loan-monitoring.md, loan-origination-review-20261014.
 
 # Simplifying origination and risk monitoring
 
+**Later delivery:** LS-01 through LS-06 are deployed in the
+[combined release](../implementation/loan-boundary-release-20261016.md), followed
+by the [calculated-default/UI release](../implementation/calculated-monitoring-default-20261016.md).
+The local-only and pending-deployment statements below are historical slice
+checkpoints. Remaining gaps are assessed in the
+[post-release follow-up](loans-architecture-followup-20261016.md); do not treat the
+original findings below as all still outstanding.
+
 ## Scope and conclusion
 
+The owner subsequently accepted these recommendations and authorized local
+implementation in order. Delivery and verification are tracked in the
+[simplification plan](../plans/loan-boundary-simplification-20261016.md).
+The original review findings below remain the source baseline, not a claim that
+all recommended changes have been implemented or deployed.
+
+LS-03's supported financial reader and narrower standalone-DPD capability are
+verified locally: all 305 affected cases pass. Production is unchanged. See the
+[read-boundary decision](../adr/2026-10-16-supported-loan-financial-reads.md).
+
+LS-04's independent current monitoring inputs and collateral observation are
+verified locally: all 269 affected cases pass. Production is unchanged. See the
+[monitoring decision](../adr/2026-10-16-independent-monitoring-inputs.md).
+
+LS-05's shared evidence disclosure, aggregate eligibility and capture expectation
+presentation are verified locally: wider 311-case and final 203-case selections
+pass, including ten desktop/phone states. Production is unchanged. See the
+[presentation decision](../adr/2026-10-16-consistent-monitoring-disclosures.md).
+
+LS-06's bounded invalidation/lock measurements and narrow policy deadlock fix are
+verified locally: all 277 final affected cases pass. Source invalidation and
+worker claims are retained; the policy parent lock permits foreign-key checks
+without weakening writer serialization. All six implementation slices await
+coordinated release. See the
+[decision](../adr/2026-10-16-measured-monitoring-invalidation.md) and
+[verification](../implementation/loan-boundary-ls06-20261016.md).
+
 This is a source review and proposed direction requested by the owner on
-16 October. It does not approve implementation or a production rollout. No
+16 October. The review itself approved no implementation or production rollout. No
 application code, database, loan, policy or deployment was changed for this review.
 No production queries or new runtime benchmarks were performed. The checkout
-contains ongoing, uncommitted collateral and financial correction work; those
-changes must remain separate from deployed capabilities.
+at review time contained ongoing, uncommitted collateral and financial correction
+work; those changes must remain separate from deployed capabilities.
 
 Keep one PawnLoan domain within the existing Django application. Origination
 establishes the agreement and supported starting position. Servicing records

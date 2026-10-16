@@ -195,7 +195,10 @@ class OpeningRestoreTests(OpeningImportFixture):
     def test_first_appraisal_after_unknown_opening_is_restored_and_ltv_stays_unknown_before_it(self):
         from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_collateral_valuation
         self.legacy_gaps()
-        with self.scoped(), patch("django.utils.timezone.localdate", return_value=date(2021, 2, 2)):
+        # Freeze the clock, not conversion of every supplied historical instant.
+        # The valuation's Jan 21 cutoff must still convert to Jan 21 locally.
+        with self.scoped(), patch("django.utils.timezone.now",
+                return_value=datetime(2021, 2, 2, 12, tzinfo=dt_timezone.utc)):
             origin = self.write()
             value = get_pawn_loan_collateral_valuation(origin.loan_id, as_of_date=date(2021, 1, 21))
             self.assertIsNone(value.eligible_collateral_value)

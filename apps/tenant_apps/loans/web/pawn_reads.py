@@ -171,6 +171,19 @@ def pawn_loan_detail(request, pk):
         if adapter == "RETAINED_NATIVE" else ("data.create", "data.edit", "loan.disburse"))
     context["can_record_completed_payout"] = (adapter is not None
         and all(request.loans_workspace_access.can(action) for action in actions))
+    context['completed_payout_blockers']=()
+    if context['can_record_completed_payout'] and adapter=='RECORDED':
+        from apps.tenant_apps.loans.services.completed_payouts import completed_payout_profile_blockers
+        context['completed_payout_blockers']=completed_payout_profile_blockers(loan)
+        context['can_record_completed_payout']=not context['completed_payout_blockers']
+    if context.get('can_administer') and loan.state in {'ACTIVE','CLOSED'}:
+        if opening is not None:
+            from apps.tenant_apps.loans.services.opening_corrections import opening_correction_blockers
+            context['financial_correction_blockers']=opening_correction_blockers(loan)
+        else:
+            from apps.tenant_apps.loans.services.agreement_corrections import correction_dependencies
+            context['financial_correction_blockers']=correction_dependencies(loan)[2]
+        context['show_financial_correction_support']=True
     context["can_correct_origination"] = False
     context["collateral_corrections"] = loan.change_log.filter(event_kind="COLLATERAL_CORRECTED").select_related("actor").order_by("pk")
     context["agreement_corrections"] = []
@@ -233,8 +246,22 @@ def pawn_loan_detail(request, pk):
     if loan.state == PawnLoanState.ACTIVE.value:
         try:
             context["delinquency"] = get_pawn_loan_delinquency(loan.pk, as_of_date=context["today"])
-            context["collateral_valuation"] = get_pawn_loan_collateral_valuation(loan.pk, as_of_date=context["today"])
-            context["risk_assessment"] = get_pawn_loan_risk_assessment(loan.pk, as_of_date=context["today"])
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            context["risk_error"] = str(exc)
+        try:
+            context["collateral_valuation"] = get_pawn_loan_collateral_valuation(loan.pk,
+                as_of_date=context["today"], _exposure=context.get("exposure"))
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            context["risk_error"] = str(exc)
+            from apps.tenant_apps.loans.selectors.collateral_valuation import get_pawn_loan_collateral_observation
+            try:
+                context["collateral_observation"] = get_pawn_loan_collateral_observation(loan.pk, as_of_date=context["today"])
+            except (ObjectDoesNotExist, ValidationError, ValueError):
+                pass  # The reported failure remains visible; no value is invented.
+        try:
+            context["risk_assessment"] = get_pawn_loan_risk_assessment(loan.pk, as_of_date=context["today"],
+                _exposure=context.get("exposure"), _delinquency=context.get("delinquency"),
+                _collateral=context.get("collateral_valuation"))
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["risk_error"] = str(exc)
     if loan.state == PawnLoanState.ACTIVE.value and not opening:
@@ -273,8 +300,14 @@ def pawn_loan_detail(request, pk):
     context["can_approve"] = request.loans_workspace_access.can("loan.approve")
     context["can_reappraise"] = loan.state == "ACTIVE" and context["can_approve"] and context["can_edit_loan"]
     current_appraisals = {}
+    valuation_read = context.get("collateral_valuation") or context.get("collateral_observation")
+    appraisal_cutoff = valuation_read.evidence_at if valuation_read is not None else timezone.now()
+    from apps.tenant_apps.loans.services.collateral_corrections import invalidated_appraisal_versions
+    invalidated_appraisals = invalidated_appraisal_versions(loan)
     for appraisal in CollateralAppraisal.objects.filter(workspace=request.loans_workspace,
-            collateral_item__loan=loan, status="APPROVED", effective_at__date__lte=context["today"]).order_by("-effective_at", "-version"):
+            collateral_item__loan=loan, status="APPROVED", effective_at__lte=appraisal_cutoff).order_by("-effective_at", "-version"):
+        if appraisal.version <= invalidated_appraisals.get(appraisal.collateral_item_id, -1):
+            continue
         current_appraisals.setdefault(appraisal.collateral_item_id, appraisal)
     for item in loan.collateral_items.all():
         item.current_appraisal = current_appraisals.get(item.pk)
@@ -285,7 +318,10 @@ def pawn_loan_detail(request, pk):
     context["transaction_completeness"] = transaction_completeness(loan, context["today"])
     if loan.state in ("ACTIVE", "CLOSED"):
         from apps.tenant_apps.loans.selectors.evidence_quality import loan_evidence_quality
-        context["evidence_quality"] = loan_evidence_quality(loan, as_of_date=context["today"])
+        context["evidence_quality"] = loan_evidence_quality(loan, as_of_date=context["today"],
+            exposure=context.get("exposure"),
+            observation=context.get("collateral_valuation") or context.get("collateral_observation"),
+            risk=context.get("risk_assessment"), live_error=context.get("risk_error", ""))
     context["can_review_transactions"] = request.loans_workspace_access.can("data.edit") and loan.state in ("ACTIVE", "CLOSED")
     context["can_confirm_paper_handover"] = (loan.state == "CLOSED" and request.loans_workspace_access.can("loan.release")
         and loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists())

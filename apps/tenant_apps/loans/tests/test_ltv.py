@@ -23,3 +23,11 @@ class LtvCalculationTests(SimpleTestCase):
         self.assertEqual(result.full_shortfall, Decimal("100"))
         cured = calculate_ltv(exposure="700", collateral_value="1000", allowed_ltv_ratio="0.75")
         self.assertEqual(cured.status, "WITHIN_LIMIT")
+
+    def test_unknown_saved_limit_does_not_hide_ratio_or_invent_headroom(self):
+        result = calculate_ltv(exposure="1100", collateral_value="1000", allowed_ltv_ratio=None)
+        self.assertEqual(result.ltv_ratio, Decimal("1.1"))
+        self.assertEqual(result.full_shortfall, Decimal("100"))
+        self.assertIsNone(result.allowed_ltv_ratio)
+        self.assertIsNone(result.headroom)
+        self.assertEqual(result.status, "REFERENCE_LIMIT_UNAVAILABLE")

@@ -1,8 +1,9 @@
-"""Loans-owned send-time guards for messages relying on reviewed paper records."""
+"""Loans-owned send guards for supported positions and retained review contracts."""
 from django.db import transaction
 from django.utils import timezone
 from apps.tenant_apps.loans.models import PawnLoan, PawnLoanNotice, PawnLoanCommunicationConsent
 from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness, transaction_fingerprint
+from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage, POSITION_COVERAGE_CONTRACT
 
 
 def notice_balance(loan, day):
@@ -11,13 +12,18 @@ def notice_balance(loan, day):
 
 
 def notice_transaction_evidence(loan, day):
-    coverage = transaction_completeness(loan, day)
+    coverage = recorded_position_coverage(loan, day)
     if not coverage.complete:
         raise ValueError(coverage.message)
     if not coverage.required:
         return None
-    evidence = dict(**coverage.evidence(), source_fingerprint=transaction_fingerprint(loan))
-    if coverage.status == "ROKKAD_ONLY":
+    # Preserve the old wire/DB binding for a genuinely current book review. The
+    # compatibility payload key may otherwise hold an explicitly versioned
+    # represented-position claim, with no fabricated review row or reviewer.
+    book = coverage.book_review
+    evidence = dict(book.evidence() if book.complete else coverage.evidence(),
+        review_id=coverage.review_id, source_fingerprint=transaction_fingerprint(loan))
+    if book.status == "ROKKAD_ONLY":
         evidence["checked_source_fingerprint"] = loan.transaction_reviews.get(pk=coverage.review_id).source_fingerprint
     return evidence
 
@@ -50,7 +56,10 @@ def dispatch_with_transaction_review(job, deliver):
     if notice.payload_snapshot.get("agreement_identity") != agreement_notice_identity(loan):
         job.mark_failed(reason="The agreement was corrected after this notice. Review the current amount and prepare a new reminder.")
         return False
-    coverage = transaction_completeness(loan, timezone.localdate())
+    frozen = notice.payload_snapshot.get("transaction_review") or {}
+    coverage = (recorded_position_coverage(loan, timezone.localdate())
+        if frozen.get("contract") == POSITION_COVERAGE_CONTRACT
+        else transaction_completeness(loan, timezone.localdate()))
     if not coverage.required and not notice.payload_snapshot.get("transaction_review"):
         return deliver()
     # Concurrent workers may hold stale job objects; the loan lock serializes the
@@ -67,13 +76,13 @@ def dispatch_with_transaction_review(job, deliver):
 
 def _blocker(notice, loan, coverage, job):
     if loan.state != "ACTIVE" or not coverage.complete:
-        return "Paper transaction review no longer supports delivery. " + coverage.message
+        return "The transaction position or book review no longer supports delivery. " + coverage.message
     if notice.scheduled_for > timezone.now():
         return "This notice is scheduled for a future time."
     frozen = notice.payload_snapshot.get("transaction_review") or {}
-    if (frozen.get("review_id") != coverage.review_id
+    if ((frozen.get("contract") != POSITION_COVERAGE_CONTRACT and frozen.get("review_id") != coverage.review_id)
         or frozen.get("source_fingerprint") != transaction_fingerprint(loan)):
-        return "Loan activity or its paper review changed. Prepare a new reminder."
+        return "Loan activity or its review changed. Prepare a new reminder."
     rows = notice.payload_snapshot.get("loans") or []
     if len(rows) != 1 or rows[0].get("as_of_date") != timezone.localdate().isoformat():
         return "This reminder's amount is from another date. Prepare a current reminder."

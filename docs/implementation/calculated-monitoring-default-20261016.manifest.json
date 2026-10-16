@@ -1,0 +1,29 @@
+{
+  "profile": "monitoring-default-release/1",
+  "base_image_id": "sha256:82b9e9065ad9639ecd90f70530b1c2175eeb7d46a51b73b112c09c78a7268b66",
+  "source_sha256": "b5ff247195f3ac7c9bb4a19bf0f8a99be150966dbd69ea1a059449b3df764aa5",
+  "image": "rokkad:monitoring-default-20261016-b5ff247195f3",
+  "files": {
+    "apps/tenant_apps/loans/models/monitoring.py": {
+      "sha256": "fa39e4a960669e6bffceac64551fc1674f0a2727e8ec3f8ffe13803656da118c",
+      "baseline_sha256": "0be342a558a454c3d7cb15e65d3ff8bc34e3874c60081dcfeb4edb704b210e67"
+    },
+    "apps/tenant_apps/loans/web/economic_forms.py": {
+      "sha256": "9d0ea75dd66ff29e92126dd8a0c291e36ebaae4547e568d134c50f5d6fdaef76",
+      "baseline_sha256": "fabf4b5b1e2980628d28a2cf1bc49558d2474c1a1eabfc81120af8446a1b7819"
+    },
+    "apps/tenant_apps/loans/web/economic_setup.py": {
+      "sha256": "bc5748e7e89065caa2c6b50fa1df5b2e39b43c619b76e2293ccf0a5db58680b2",
+      "baseline_sha256": "19d965276eee522327f9a76f20674a16794a62d9778089b6367d4b1446be2737"
+    },
+    "templates/loans/setup/economics.html": {
+      "sha256": "3c5376152289fea6f4b1616ee5c8341d21f53f9d7a1ecf1eefb56733e1d5e2c5",
+      "baseline_sha256": "a3fb072f08efb298943f870f8b62c5929dcb2594d7868359def869363379a8f3"
+    },
+    "apps/tenant_apps/loans/migrations/0088_calculated_monitoring_default.py": {
+      "sha256": "460fda6f4a971062ceb78e6221ebf24ef993a24678a7b1b8e7a958d75412061b",
+      "baseline_sha256": null
+    }
+  },
+  "image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac"
+}

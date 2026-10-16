@@ -50,5 +50,7 @@ def review_transactions(request, pk):
             form.data["review_token"] = token
         except ValueError as exc:
             form.add_error(None, str(exc))
-    return render(request, "loans/pawn/transaction_review.html", dict(loan=loan, form=form, review=review,
+    from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_completeness, capture_expectation
+    current_capture = capture_expectation(loan, transaction_completeness(loan, timezone.localdate()))
+    return render(request, "loans/pawn/transaction_review.html", dict(loan=loan, form=form, review=review, current_capture=current_capture,
         past_reviews=loan.transaction_reviews.select_related("reviewed_by").order_by("-pk")[:20]))

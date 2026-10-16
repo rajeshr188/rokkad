@@ -97,12 +97,12 @@ class PaperHistoryForm(forms.Form):
     gross_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Gross weight (g)")
     net_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Net weight (g)")
     purity = forms.DecimalField(max_digits=7, decimal_places=4, min_value=Decimal("0.0001"), max_value=100, label="Purity (%)")
-    monitoring_method = forms.ChoiceField(label="Current coverage assessment", choices=(
+    monitoring_method = forms.ChoiceField(label="Saved valuation fallback", choices=(
         ("CALCULATED_METAL_VALUE","Current metal price"), ("LATEST_APPRAISAL","Current approved appraisal"),
         ("LOWER_OF_CALCULATED_AND_APPRAISAL","Lower of current price and appraisal")))
     monitoring_ltv = forms.DecimalField(max_digits=7, decimal_places=6, min_value=Decimal("0.000001"), max_value=1,
-        label="Monitoring LTV ratio", help_text="For example, 0.80 means 80%. This does not reapprove the original loan.")
-    monitoring_reason = forms.CharField(max_length=255, label="Reason for monitoring choice")
+        label="Saved reference LTV ratio", help_text="For example, 0.80 means 80%. Retained reference only; current monitoring thresholds come from its separate policy. No original approval is claimed.")
+    monitoring_reason = forms.CharField(max_length=255, label="Source of saved valuation/reference")
     complete_through = forms.DateField(widget=forms.DateInput(attrs=DAY), label="All paper activity entered through")
     final_state = forms.ChoiceField(label="State after the final transaction", choices=(
         ("ACTIVE","This loan is outstanding"), ("CLOSED","This loan is closed according to its paper record")))
@@ -565,7 +565,7 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             form.add_error(None, str(exc))
     sections = [("Original contract", ("borrower_id", "series_id", "license_revision_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "currency_quantum", "document_charge", "payout_basis", "cash_paid")),
         ("Collateral", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")),
-        ("Current monitoring", ("monitoring_method", "monitoring_ltv", "monitoring_reason")),
+        ("Saved valuation/reference evidence", ("monitoring_method", "monitoring_ltv", "monitoring_reason")),
         ("Completeness and agreed calculation", ("complete_through", "final_state", "confirmed_rule", "confirmed_history"))]
     if archive:
         sections.append(("Archive reconciliation", ("reconciliation",)))
@@ -574,7 +574,9 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
             ("Jewellery", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity"))]
     if collateral is not None:
         sections = [section for section in sections if section[0] != "Jewellery"]
-    from .routine_entry import routine_entry_context
+    from .routine_entry import routine_entry_context, entry_monitoring_context
+    if not routine_editor:
+        presentation["current_monitoring"] = entry_monitoring_context(form)
     return render(request, "loans/pawn/routine_entry.html" if routine_editor else "loans/pawn/paper_history.html", dict(form=form, rows=rows, review=review,
         formset=collateral, entry_purpose="paper",
         archive=archive, archive_snapshots=snapshots, review_token=token, intent_token=intent, agreement=agreement,

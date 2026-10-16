@@ -7,6 +7,202 @@ tags: [status, architecture]
 
 # Status
 
+## Worker follow-up and combined commit (16 October)
+
+The owner requests retaining the remaining scheduling optimizations as future work
+and committing the completed changes. [FW-004](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity)
+now distinguishes delivered diagnostics/local measurements from deferred indexed
+dirty/due scheduling, delayed retry, exact source-bound reuse and fair shared-pool
+sizing. Each follow-up has measurement, correctness and release gates. The shelved
+large capacity programme is not resumed. The combined local commit consolidates
+the verified loan changes, earlier deployed boundary/default work and completed
+represented-position treatment. The pre-existing WhatsApp onboarding note is
+recorded in a separate documentation commit. No additional runtime change, push
+or deployment is selected.
+
+## Represented-position transaction coverage (16 October, locally verified)
+
+The owner authorizes replacing compulsory origin-based book confirmation with
+supported accepted positions and entered transactions. New shared coverage feeds
+monitoring, evidence disclosures and action prerequisites; optional book assurance
+remains separately visible. Known unresolved activity is still provisional and
+unsupported/inconsistent balances stay unavailable. Accepted opening/closed-position
+history limits, financial amounts and immutable reviews are unchanged.
+
+Snapshot V13 requires normal reassessment. New no-review position-bound reminders
+retain the reviewed risk/consent/source/date/amount/content guards. Migration 0090
+preserves old notice identities while adding position-specific uniqueness and
+immutable new content; retained new intents block downgrade. Statutory/custody/
+settlement controls remain; no automatic book attestation or bulk confirmation is
+created. Saved portfolio disclosures do not recalculate financial history merely
+to display coverage. See the
+[decision](adr/2026-10-16-represented-position-transaction-coverage.md) and
+[implementation/verification](implementation/represented-position-coverage-20261016.md).
+The final 235-case affected regression passes in 246.516 seconds, including ten
+desktop/phone states. All failures from the earlier 433-case development run are
+covered by this final passing selection; the full 433 is not repeated after the
+refinements. System/model/import/link/whitespace checks pass. Isolated QA applies
+the independent guard branches and empty 0091 merge, verifies one migration leaf
+and retained legacy/new protections, then removes its test database and checks
+absence. Deployment remains a coordinated separate step, including pending 0089
+and both 0090 guards/merge; no production access, live financial changes or worker
+scheduling/resource changes occur in this task.
+
+## Loans architecture hardening (16 October, local acceptance)
+
+The owner accepts the follow-up and recommended order. Local changes implement
+separate entry-reference/current-policy disclosure, immutable policy retirement /
+schedule replacement, signed impact review, active-portfolio readiness, bounded
+source-cohort future capture, earlier correction blockers, paginated alert/work
+views and read-only worker diagnostics. See the
+[plan](plans/loans-architecture-hardening-20261016.md),
+[lifecycle decision](adr/2026-10-16-monitoring-policy-lifecycle.md) and
+[workflow decision](adr/2026-10-16-monitoring-review-and-staff-work.md).
+
+The combined candidate preserves the separate represented-position treatment;
+cohort reviews are optional assurance. Loans 0089 and both independent 0090 guard
+branches join at 0091, with data_portability 0030, setup/package profile 4 and V13.
+Compatible web/worker/scheduled readers must roll out together. Earlier overlapping
+212-case and 52-case selections pass. Per the owner's coordination instruction,
+acceptance uses a separate 2,978-file frozen snapshot and isolated test database,
+allowing the other session to finish. It passes 238 executed cases across two
+selections after correcting two command labels, including 20 browser states and
+historical migration rehearsals. One Loans leaf, no pending migrations and all
+three expected guards are verified. Model/system/import/link/whitespace checks
+pass. Frozen hashes are unchanged and shared runtime matches that copy;
+documentation is updated separately. See the
+[acceptance record](implementation/loans-architecture-hardening-20261016.md).
+No production change or worker scheduling rewrite; measured diagnostics are
+delivered, while scheduling/reuse/pool sizing remain evidence-gated. The shelved
+capacity programme is not resumed.
+
+## Loans architecture follow-up (16 October, review only)
+
+The [source-based follow-up](architecture/loans-architecture-followup-20261016.md)
+preserves the delivered shared loan/financial/monitoring boundaries and proposes
+seven focused improvements. Confirmed gaps include paper defaults labelling the
+economic policy as current monitoring, future-policy cancellation/urgent earlier
+amendment and licence-override retirement, missing amendment impact review and
+active-portfolio readiness, late capability discovery, batch capture transition,
+alert visibility/DPD semantics and worker scheduling/assignment readiness.
+
+Recommended order: correct meanings and characterize alert rules; complete policy
+lifecycle and impact/readiness; extend guarded staff workflows; then proceed with
+FW-004 measurement before scheduling/reuse/pool changes. This is a proposed review,
+not authorization to implement, change policies or restart shelved capacity tests.
+All 104 deployed-manifest file hashes match the local source. Three in-memory
+characterizations and 11 existing alert/transition unit tests pass; documentation
+links/whitespace pass. No runtime edits, new production queries or live changes.
+Earlier review delivery checkpoints are explicitly linked to the later releases.
+
+## Transaction coverage guidance and worker future direction (16 October)
+
+Document the existing loan-detail **Paper-book verification → Check paper
+transactions** route and optional reviewed Rokkad-only transition in the
+[staff guide](flows/loan-health-monitoring.md#confirm-the-represented-position-and-future-recording).
+Explain accepted opening checkpoints, provisional capture warnings, no daily
+recheck after supported system-only continuation, and a proposed controlled cohort
+confirmation with per-loan audit/source guards and exceptions. This migration-scale
+capture transition is not implemented; existing paper/mixed batch review supports
+up to 50 loans. No reviews or production state change in this follow-up.
+The owner requests the preferred shared-pool/indexed dirty-due/reuse direction in
+[FW-004](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
+Future scope/order is recorded; worker behaviour and the shelved capacity run stay
+unchanged. Documentation links and whitespace are checked; no application code changes.
+
+## Calculated monitoring default (16 October, deployed)
+
+The owner chooses current calculated metal value across Workspaces, with explicit
+lower-of available. Restricted-runtime service preview and commit append JCL v2,
+JSK v2 and Lakshmi v3, effective today. Original policy rows, other limits and
+complete PawnLoan/policy snapshot/disbursal snapshot/event row fingerprints remain
+unchanged. No prices, appraisals, paper checks, financial actions or messages are
+created. The existing worker reassesses under the amended policies.
+
+The five-file default/UI source `b5ff247195f3` / image `53f6dd38d64b` is deployed at
+16:59:31 IST on web, monitoring and four scheduled readers. It opens the
+existing Workspace policy for amendment and keeps explicit new-scope creation.
+Owner migration 0088 changes only defaults and preserves all policy rows; old
+versions and published setup meanings remain. Restricted role/source/model checks,
+six screens/timers, HTTPS and zero new reader error lines pass. Local 67-case and
+45-case follow-up selections and four browser checks pass; selections overlap.
+Acceptance is recorded in the
+[implementation](implementation/calculated-monitoring-default-20261016.md).
+After automatic approval review
+initially rejected both application-image transfers, the owner explicitly approved
+local encrypted application recovery. The encrypted image is downloaded for local
+key/decrypt/exact-image reload verification, which passes. Plaintext copies are
+removed; encrypted copies remain on this computer and the server. No application
+image is uploaded to R2. The
+existing encrypted database/config backup job succeeds before and after release,
+including remote-download and retention checks. Worker catch-up continues with
+zero failed results in the first sample. Lakshmi's current coverage remains unknown
+because gold/silver prices from 2 October exceed its seven-day limit. Update real
+quotes; keep the evidence-age checks. See the
+[decision](adr/2026-10-16-calculated-monitoring-default.md).
+
+
+## Monitoring worker reference and JCL coverage review (16 October)
+
+The owner requests durable documentation and analysis of coverage and scaling.
+[Worker lifecycle/reference](architecture/monitoring-worker-lifecycle-and-scaling.md)
+records actual ten-loan turns, five-second busy/300-second no-success pauses,
+0.35 CPU/512 MiB, per-loan transactions, explicit scope, due rules, failures,
+restarts, V11 catch-up and honest scaling limits. Current selection is selective
+within a day, but all continuing ACTIVE loans expire under the new-day predicate.
+Small shared workers, indexed dirty/due scheduling and safe component/date reuse
+are proposed, not implemented or accepted replacements for currentness guards.
+The shelved capacity run is not resumed.
+
+The [read-only JCL aggregate review](implementation/jcl-monitoring-coverage-review-20261016.md)
+finds 2,717/2,717 current V11 and usable financial results, zero stale/failed/
+unassessed, 341 usable coverage and 2,376 missing appraisals before the later
+calculated-value amendment above. The then-effective Workspace policy preserves
+saved methods (2,377 latest appraisal; 340 lower-of).
+Gold/silver reference quotes are present for today; bronze has no usable quote
+and appears on nine active loans. All observed items are in the vault with valid
+positive weight/purity fields; this does not verify physical measurements.
+Transaction coverage is 339 ordinary-capture assumptions, 2,377 unconfirmed and
+one behind; it is separate from financial/valuation calculation. Existing review
+supports migrated checkpoints and future Rokkad-only capture without inventing
+earlier receipts. Document legitimate valuation choices and source/book actions;
+no production policy, rate, review, assessment or worker setting changes occur.
+
+
+## Combined Loans release (16 October, deployed)
+
+After completed preparation, the owner's "proceed" authorizes the coordinated
+production deployment. Source `21391df87683` / image `82b9e9065ad9` is live on web,
+continuous monitoring and four scheduled readers. All 99 source files verify on
+both live containers. Exactly ten rehearsed owner-only migrations apply in
+16.356 seconds; fourteen paused loan balances match before/after. Restricted
+startup/model checks pass, owner-role startup is refused, resources/environment/
+protected configuration are preserved, and all six timers resume. No operator
+financial posts, loan corrections or monitoring-policy changes are performed.
+
+Fresh encrypted pre/post backups and a separately encrypted stopped-writer release
+checkpoint pass remote-download verification. The candidate's earlier local-key
+image recovery remains exact. Post-release checks pass V11, zero pending
+migrations, HTTPS/static delivery, zero startup error lines, 23 read-only screens /
+14 samples and positive monitoring progress in all three Workspaces with zero
+observed assessment errors. Normal bounded catch-up continues; unavailable
+valuation evidence stays unavailable. The coordinated sequence takes 213.788
+seconds; exact public outage duration is not measured. Redundant plaintext
+checkpoint/temp runtime environment are removed, encrypted release recovery is
+retained, final health/six timers pass and 10.506 GiB remains free.
+
+The frozen local acceptance is the 566-case run plus passing 56-case fixture
+follow-up and fourteen desktop/phone states; selections overlap. The 222-table
+production-copy restore and 219/216 original business/source preservation checks
+remain documented separately from live sampled balance checks. Old writers are
+unsafe after 0079; use compatible forward recovery, never automatic restore over
+later legitimate transactions. No Git commit/push occurs. See the
+[release plan](plans/loan-boundary-release-20261016.md),
+[release record](implementation/loan-boundary-release-20261016.md),
+[manifest](implementation/loan-boundary-release-20261016.manifest.json),
+[preparation acceptance](implementation/loan-boundary-release-20261016.acceptance.json) and
+[deployment proof](implementation/loan-boundary-release-20261016.deployment.json).
+
 ## Party merge account consolidation (16 October, deployed)
 
 The owner authorizes completion of new Party merges and repair of earlier live
@@ -28,16 +224,90 @@ proofs remain retained. Final source `0bada518f1b3` is live on compatible reader
 See the [decision](adr/2026-10-16-party-merge-loan-consolidation.md) and
 [release record](implementation/party-merge-consolidation-20261016.md).
 
-## Origination and monitoring architecture review (16 October, proposed)
+## Origination and monitoring simplification (16 October, local acceptance chronology)
 
-A source-only review recommends keeping the shared PawnLoan domain while making
-action purpose, financial reads, original decision evidence and current monitoring
-inputs clearer. It identifies a date-only live-evidence cutoff to characterize,
-and recommends measuring invalidation/worker contention before adding machinery.
-Existing independent monitoring, shared calculations and recurring refresh are
-retained. No application, data or deployment changes or new runtime tests were
-performed for this review. Pending correction work remains separate. See the
-[proposed architecture review](architecture/loan-origination-monitoring-review-20261016.md).
+All six slices are now deployed in the combined release above. The following
+paragraphs record the preceding slice-local verification, not current release
+status.
+
+The owner accepted the review and authorized implementation in order. LS-01 adds
+an assessment instant, scheduled-evidence expiry and V10 derived currentness
+checks. Quotes/appraisals effective later today cannot enter a live assessment;
+the existing worker selects results when scheduled evidence becomes applicable.
+Crossed commit boundaries roll back projection/transition writes. Existing shared
+financial reads, policies, worker locks and immutable evidence remain.
+
+The final **58-case affected selection passes** (30.791 seconds). A wider
+193-case run had one timestamp-parity fixture failure, corrected by comparing
+reads at the same explicit cutoff and retested in the final affected module;
+the other 192 passed. The selections overlap. Django/model consistency, import,
+link and whitespace checks pass. There are no production, policy or schema
+changes. Matching web/worker/scheduled readers must precede V10 writes at release.
+LS-02 completed-payout review is verified locally.
+Unpaid drafts now share a two-step factual review, retaining approval evidence
+without a new historical approval. Changed source evidence invalidates review;
+old signed submissions and correction guards retain their original commands.
+The wider **193-case regression passes** (195.306 seconds), followed by **68 final
+affected checks** (45.053 seconds) and an additional restricted-role case (1.226
+seconds). Wider/final selections overlap. Four desktop/phone states, original
+approval/changed-evidence exact recovery, ordinary lending and old signed POSTs
+pass. No schema, policy or production change.
+LS-03 promotes the prepared financial reader into a supported typed interface.
+Exposure, DPD and live/saved risk reuse it; compatibility decoding of opening
+schedule lineage, grace and principal basis stays behind the reader. Standalone
+DPD retains a narrower recorded-obligation read so unavailable interest projection
+does not block lateness calculation. All **305 affected cases pass** (504.810
+seconds), including numerical four-origin parity, restricted-role isolation,
+corrected schedules, documents and portable/exact recovery. Django/model,
+import/link/whitespace checks pass; the isolated test database is removed and its
+absence verified. No production changes.
+LS-04 separates current method/evidence observation from combined debt/LTV reads.
+Existing precision and saved reference limits retain their meanings; explicit
+current observations need no original approval or saved disbursal policy.
+Reference headroom stays distinct from current risk thresholds, and missing
+financial support still prevents a complete assessment. V11 records precision
+and reference sources; matching readers are required before release. All **269
+affected cases pass** (285.082 seconds), including original evidence preservation,
+current observations without historical approval, corrections, RLS, documents and
+portable/exact recovery. The initial two Rates-normalization fixture expectations
+were corrected and covered by the final affected modules. Django/model,
+import/link/whitespace checks pass. The isolated test database is removed and its
+absence verified. No production changes.
+LS-05 labels live calculations separately from saved freshness, separates advisory
+cause from severity, and shows per-loan recording expectations using existing
+reviews. Dashboard and Loan health share guarded money/coverage predicates and
+independent completeness checks. Failed financial projection can retain a current
+collateral observation without supplying usable debt/LTV. The wider **311-case
+regression passes** (330.190 seconds), followed by **203 final affected cases**
+(136.479 seconds), including **ten desktop/phone states**. The selections overlap.
+Captured money guards, reviewed capture, closed loans, future appraisal exclusion,
+repayment screens, RLS, corrections, documents and recovery pass. Django/model,
+import/link/whitespace checks pass. The exact test database is removed and its
+absence verified. No production change; LS-06 measured worker/invalidation review
+is verified below. No LS-05 schema,
+posting, signed-review or snapshot-version change. See the
+[LS-05 record](implementation/loan-boundary-ls05-20261016.md).
+See the [LS-04 record](implementation/loan-boundary-ls04-20261016.md)
+and [LS-03 record](implementation/loan-boundary-ls03-20261016.md).
+See the [LS-02 record](implementation/loan-boundary-ls02-20261016.md)
+and [ordered plan](plans/loan-boundary-simplification-20261016.md)
+and [implementation](implementation/loan-boundary-ls01-20261016.md).
+
+LS-06 completes local implementation with repeatable restricted-role invalidation
+and lock characterization. A trial intended to avoid repeated stale-scope rewrites
+does not improve the 2,500-row case and is removed. Existing atomic invalidation,
+worker claims, fingerprints and V11 remain. The reproduced policy/worker deadlock
+is fixed by FOR NO KEY UPDATE on the policy Workspace lock, in service and guard;
+writer serialization and all immutable/overlap/scope checks remain. Migration
+0086 changes only that function lock mode, independently of pending corrections;
+0087 is a joining no-op. The final **277-case regression passes** (758.874 seconds),
+including real PostgreSQL races, competing amendments, populated upgrades,
+corrections and RLS. Django/model/import/link/whitespace checks pass and the exact
+isolated test database is removed. Local measurements do not establish production
+capacity; broad invalidation and same-loan waits remain measured costs. All six
+slices remain uncommitted/undeployed and require coordinated release. See the
+[LS-06 record](implementation/loan-boundary-ls06-20261016.md) and
+[decision](adr/2026-10-16-measured-monitoring-invalidation.md).
 
 ## Completed-payout operational recovery (15 October)
 
@@ -292,6 +562,23 @@ phone/desktop captures pass. Migration 0075 branches from deployed 0073; empty
 release, migration and any actual borrower change remain separate; no commit or
 deployment occurred. See [implementation and limits](implementation/recorded-borrower-correction-20261014.md)
 and [decision](adr/2026-10-14-recorded-borrower-correction.md).
+
+## WhatsApp sender onboarding (15 October, portfolio created; number pending)
+
+Meta inspection finds an existing rokkad developer app under a pawn-broker
+portfolio, unpublished with empty WhatsApp webhook configuration. The portfolio
+has a website-not-found restriction and Rejected business verification. Its listed
+www website currently redirects to the canonical Rokkad site with HTTP 200; this
+does not establish Meta clearance. Existing sender/account evidence is preserved.
+The owner creates the separate Rokkad portfolio and accepts its terms personally.
+Live settings verify the selected Rokkad portfolio, supplied administrator with
+full access, no other people/assets added and no WhatsApp accounts. Its unsubmitted
+WhatsApp draft has the Rokkad software description, Professional services category,
+Asia/Calcutta zone and canonical website/support route. The new number and phone
+verification remain pending; separate WhatsApp/Cloud hosting terms are not yet
+accepted. No sender, template, credential, message or activation from this work.
+The independent combined software deployment is complete, with WhatsApp disabled.
+See the [current handoff](plans/platform-whatsapp-sender-setup-20261014.md#15-october-meta-onboarding-checkpoint).
 
 ## Platform WhatsApp PW-05 (14 October, local tools verified; live pending)
 

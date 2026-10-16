@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-14
+updated: 2026-10-16
 tags: [plans, future-work, ideas]
 related: [active.md, completed.md, ../ROADMAP.md, ../STATUS.md]
 ---
@@ -33,7 +33,7 @@ separate; the original audit is retained as before-change evidence.
 | FW-001 | Optional owner-configurable license scope | Shelved; review and owner approval required | Owner chooses to revisit staff access across licenses | Direction documented; no license assignments or restrictions implemented |
 | FW-002 | Razorpay setup and provider test-mode acceptance | Active preparation under FW-019; required before paid onboarding | Prepare isolated rehearsal runtime and provider workflow acceptance | Monthly/annual capture, webhooks, replay/recovery, refunds and one paid-test-receipt delivery pass; remaining methods and recurring acceptance open |
 | FW-003 | Formal lender-specific NPA classification | Unscheduled design review; no implementation approval | Intended lender type needs regulatory NPA reporting | Existing per-loan operational DPD and collateral-risk classifications documented |
-| FW-004 | Launch-scale loan monitoring capacity | Shelved at owner request | Better representative hardware is available and owner resumes testing | 300,000-loan baseline failed; million-loan fixtures prepared, latest retry stopped at owner request |
+| FW-004 | Launch-scale loan monitoring capacity | Diagnostics locally verified; scheduling/reuse/pool improvements deferred | Owner selects a bounded optimization after baseline and acceptance targets; large capacity programme needs separate explicit resumption | Read-only readiness/assignment diagnostics and bounded measurements delivered; follow-up actions and correctness gates recorded below; production capacity remains unproven |
 | FW-005 | Broader historical loan admission and quote-age policy | Partial scope implemented; remaining work unscheduled | Missing historical evidence or a guided import contract is needed | Native earlier payouts and explicit daily confirmations are implemented; wider exceptions remain deferred |
 | FW-006 | Party bundle history progress filter | Shelved at owner request; optional usability | Operators need to find unfinished attempts in a larger history | Saved history and cancellation work; filtering not implemented |
 | FW-007 | Guided customer-facing legacy migration and ordinary paper recording | Supported paper workflow released; PC-01 through PC-06 restore/adapters/operator exchange/package/continuation verified locally within bounds | Controlled release and real source acceptance remain separate | Scope/order: plans/data-portability-completion-20261010.md; broader vendor/calculation profiles and unsupported Khata/physical-verification graphs remain pending |
@@ -1733,9 +1733,103 @@ retired general-ledger accounting. See [the current explanation](../flows/loan-h
 
 ## FW-004: Launch-scale loan monitoring capacity
 
+### Hardening findings and follow-up actions (owner request, 16 October)
+
+The owner asks to retain the remaining worker improvements as future work and
+commit the completed changes. The [hardening acceptance record](../implementation/loans-architecture-hardening-20261016.md)
+captures delivered read-only `monitoring_status --workspace-id <id>` diagnostics,
+active-portfolio readiness and local measurements. Scheduling, calculation reuse
+and worker-pool changes are deferred; recording them does not start implementation
+or restart the shelved capacity programme.
+
+**What is known.** The bounded local characterization observes a single-item
+worker median of 139.593 ms per pass, 126.786 ms claim-to-return, maximum 217.217 ms
+and 120 queries per sample over five samples. Synthetic 2,500-row policy
+invalidation takes a median 3,888.757 ms; repeated stale-scope invalidation takes
+3,912.836 ms median. Full recalculation and broad invalidation therefore remain
+specific costs to investigate. These small synthetic observations are not a
+production throughput, freshness or servicing-latency guarantee. The unsuccessful
+CURRENT-only invalidation trial remains rejected; retain atomic invalidation until
+a replacement proves equivalent race safety.
+
+**Visibility limits.** Assignment diagnostics describe the current process's
+configured Workspace IDs, not a heartbeat or proof that a deployed worker is
+progressing. Oldest pending assessment time is not the exact time it became dirty;
+unassessed creation time is a separate measure. Establish those distinctions before
+setting alerts or interpreting a backlog. Missing valuation/financial evidence
+and an explicit unresolved-activity report are different from a failed calculation.
+Under the accepted represented-position treatment, absent or aged optional book
+assurance alone does not make an otherwise supported position unusable.
+
+| Order | Follow-up action | Evidence required before proceeding |
+|---|---|---|
+| 1 | Establish a representative per-Workspace baseline and agree freshness/servicing targets | Record workload/history, oldest pending/due age, successful throughput, pass/claim duration, failures/retries, foreground servicing latency, query counts and database CPU/waits. Separate configuration, liveness, progress and usable coverage. Start with bounded scoped observation; do not silently restart the large load matrix. |
+| 2 | Evaluate indexed dirty/due selection and bounded delayed retries | Compare selection cost and backlog progress with the baseline. A failing loan must not monopolize turns; healthy work must not starve. Preserve atomic invalidation, per-loan claims/commits and a reconciliation path for missed work, crashes and restarts. |
+| 3 | Evaluate exact source-bound financial/valuation reuse | Prove monetary/risk parity and invalidation across event/correction/custody changes, quote/appraisal expiry, business-day and interest/DPD boundaries, future policy activation and calculation/snapshot versions. Keep conservative full refresh for unsupported profiles. Reusing a value must not renew expired evidence or turn missing support into usable coverage. |
+| 4 | Size a small fair shared worker pool only if residual measurements justify it | Show improved freshness without worse foreground latency or excessive database pressure. Preserve explicit assignments, restricted RLS, fair Workspace turns and competing-worker safety within a bounded total resource budget. Extra workers do not remove repeated calculation cost. |
+| 5 | Review the candidate against correctness and operational acceptance | Require tenant isolation, late-source races, failed-loan recovery, midnight/evidence deadlines, policy/rate fan-out, alert retention/clearing and financial parity under representative concurrent servicing. Document any changed currentness contract in an ADR and coordinate compatible readers/writers before release. |
+
+**Resume and completion.** Select one bounded change and record its baseline,
+target, test workload and rollback approach before implementation. Promote it only
+when measured results and correctness checks justify it. The earlier one-hour
+capacity target below remains unproven. The full 300,000/1,000,000 programme still
+requires representative hardware and the owner's separate explicit resumption.
+Existing workers continue using the current scheduling mechanism; the completed
+policy/workflow improvements do not depend on these deferred optimizations.
+
+
+**16 October documented follow-up:** the owner requests the worker lifecycle,
+JCL coverage causes and simpler scalable options. The
+[worker reference](../architecture/monitoring-worker-lifecycle-and-scaling.md)
+separates the deployed loop from proposed fair shared workers, indexed dirty/due
+selection, error retry timing and source-bound component reuse. The
+[dated JCL review](../implementation/jcl-monitoring-coverage-review-20261016.md)
+finds all 2,717 assessments current/financially usable; missing appraisals and book
+reviews need separate remediation. This is a pre-amendment observation; the later
+calculated-value policy amendment addresses valuation independently of book checks.
+No worker change or resumption of the shelved load run occurs in either review.
+
+### Preferred direction (owner-requested future work, 16 October)
+
+Improve selective scheduling and reuse before multiplying full recalculation.
+Prefer a small bounded shared worker pool with fair, explicitly assigned Workspace
+turns over a permanent worker for every Workspace. Extra workers share database
+capacity and do not themselves reduce the work required.
+
+Deliver in this order when the owner selects implementation:
+
+1. Measure oldest pending age, due counts, throughput, turn duration, retry rates,
+   foreground servicing latency and database pressure. Separate successful UNKNOWN
+   coverage from failed calculations; more refreshes cannot create missing evidence.
+2. Introduce indexed per-loan dirty/due scheduling and delayed error retries using
+   existing PostgreSQL/Django patterns. Preserve atomic source invalidation,
+   per-loan commits and safe reconciliation for missed scheduling work.
+3. Reuse source-bound financial/valuation components when their exact inputs remain
+   valid. Reevaluate time-sensitive results at actual boundaries: interest/due dates,
+   maturity/DPD changes, quote/appraisal expiry, book-review currency, policy changes
+   and calculation versions. Keep conservative daily full refresh for unsupported
+   profiles; do not merely remove the current-day guard or relabel stale snapshots.
+4. Add a small measured pool only where throughput/latency warrants it. Preserve
+   fair Workspace turns, explicit authorization, restricted RLS, compatible readers,
+   source-change race guards and a bounded total resource budget.
+5. Require monetary/risk parity, clock/boundary and concurrent-source tests, alert
+   correctness and representative foreground-load measurements before changing
+   currentness semantics or claiming a capacity target. Record the new currentness
+   contract in an ADR and coordinate all readers/writers in the release.
+
+Current daily expiry still makes all continuing active loans due on a new day;
+within a day the worker selects outdated results. The proposal is to avoid repeated
+expensive work safely, not to stop checking date-dependent facts. No Celery/Redis
+rewrite or new process per Workspace is implied. Worker code/settings and production
+behaviour remain unchanged. The earlier long-running capacity programme stays
+shelved; documenting this direction does not restart it. See the
+[detailed design boundaries](../architecture/monitoring-worker-lifecycle-and-scaling.md#proposed-simpler-scaling-direction-not-implemented).
+
+
 **Shelved / last reviewed:** 2026-09-12. **Decision owner:** project owner.
-**Resume trigger:** better representative hardware is available and the owner
-explicitly resumes capacity testing. Do not automatically restart long local runs.
+**Capacity-test resume trigger:** better representative hardware is available and
+the owner explicitly resumes capacity testing. Bounded improvements may be selected
+separately; do not automatically restart long local runs.
 
 **Target.** At least 100 organizations with 3,000-10,000 active loans each and
 30-100 loans processed per organization/day. All affected active loans should
@@ -1764,6 +1858,14 @@ Overlapping price changes, recovery/restarts and concurrent origination/releases
 remain additional acceptance dimensions. Hardware alone is not an established fix:
 measured candidates include the per-loan pending lookup and repeated financial
 history reads. Assess those separately when capacity work resumes.
+
+The separate 16 October LS-06 bounded characterization uses at most 2,500 synthetic
+projection rows and five single-loan worker samples; it does not resume this
+programme or establish capacity. Repeated stale-scope writes remain a measured
+cost. A separate-lock/CURRENT-only trial shows no useful improvement at that size
+and is removed. The reproduced policy/assessment deadlock receives a narrow
+Workspace lock-mode correction; worker claims and atomic invalidation remain.
+See the [LS-06 record](../implementation/loan-boundary-ls06-20261016.md).
 
 ## FW-005: Historical market-valued loan entry
 
