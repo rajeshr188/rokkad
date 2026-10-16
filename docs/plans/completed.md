@@ -1,12 +1,24 @@
 ---
 status: active
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [plans, completed]
 related: [../STATUS.md, ../archive/]
 ---
 
 # Completed Work
+
+## Counter workflows and consolidated monitoring release (2026-10-17)
+
+EC-01 through EC-07, LA-01 through LA-06's implemented scope, and represented-position
+coverage are deployed as commit `1889e488` / image `450699d7a608...`. All six CI
+groups pass, including 2,695 Loans cases. Five migrations, source/balance parity,
+restricted roles, exact encrypted image recovery and coordinated readers pass.
+Live source/three-Workspace acceptance and encrypted pre/post backup verification
+pass; disposable copies and redundant plaintext dumps are removed.
+See the [release record](../implementation/counter-release-20261016.md).
+Worker scheduling remains FW-004, repository cleanup remains FW-024, and no
+retrospective JSK rate correction is performed.
 
 ## Combined Loans boundary simplification and correction release (2026-10-16)
 

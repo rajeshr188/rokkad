@@ -1,39 +1,17 @@
 ---
 status: active
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [plans, active]
 ---
 
 # Active work
 
-**Everyday counter improvements (16 October):** the owner-selected sequence is
-implemented and verified locally. See the [delivery plan](everyday-counter-improvements-20261016.md)
-and [acceptance record](../implementation/everyday-counter-improvements-20261016.md).
-Truthful amounts/assurance, return context, request read reuse, compact list/entry
-and daily activity are ready for review. Commit and release remain pending.
-
-**Loans architecture hardening (owner approval, 16 October):** the follow-up
-recommendations are selected for implementation in order. The
-[delivery plan](loans-architecture-hardening-20261016.md) covers entry-policy
-meanings, immutable lifecycle, impact/readiness, shared cohort/correction workflows,
-complete alert visibility and read-only worker diagnostics. Frozen local acceptance
-passes 238 executed cases, including migration rehearsals and 20 browser states;
-see the [acceptance record](../implementation/loans-architecture-hardening-20261016.md).
-Scheduling/reuse/pool optimizations and their measured follow-up actions are
-deferred under [FW-004](future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
-The owner requests committing the completed combined work; production remains on
-the recorded V11/default release and coordinated deployment is pending.
-
-**Represented-position transaction coverage (owner approval, 16 October):** replace
-compulsory origin-based book certification with supported accepted positions and
-recorded activity. Preserve explicit unresolved-activity warnings, optional audited
-book reviews, earlier-history limits and action-specific source/consent/statutory
-guards. Local implementation is verified by the final 235-case affected regression
-and ten desktop/phone states; acceptance is tracked in the
-[record](../implementation/represented-position-coverage-20261016.md). Snapshot V13
-and migration 0090 require a coordinated compatible release; no production change
-is authorized or performed by this implementation task.
+The selected counter, monitoring-hardening and represented-position work is now
+[completed](completed.md#counter-workflows-and-consolidated-monitoring-release-2026-10-17)
+and [deployed](../implementation/counter-release-20261016.md). Worker scheduling
+remains [FW-004](future-work.md#fw-004-launch-scale-loan-monitoring-capacity);
+repository cleanup remains [FW-024](future-work.md#fw-024-repository-hygiene-and-reproducible-development-artifacts).
 
 The combined Loans release and LS-01 through LS-06 are deployed after separate
 owner authorization. See [completed work](completed.md), the

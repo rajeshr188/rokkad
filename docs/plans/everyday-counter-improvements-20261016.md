@@ -1,12 +1,16 @@
 ---
-status: implemented-local
+status: completed
 owner: loans
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, counter, usability, performance]
 related: [../implementation/everyday-counter-workflow-review-20261016.md]
 ---
 
 # Everyday counter improvements
+
+All selected slices are deployed in the [17 October release](../implementation/counter-release-20261016.md).
+The table below retains the local-acceptance checkpoint; later release gates and
+complete-suite fixes are recorded in that release note.
 
 The owner selects the review's recommended order for implementation. Keep ordinary
 Django selectors, existing financial calculations, reviewed posting commands and
@@ -33,5 +37,5 @@ the same synthetic pages as the review; small local observations are not product
 capacity claims. Record final checks and remaining bounds in an implementation note.
 
 See the [implementation and acceptance record](../implementation/everyday-counter-improvements-20261016.md).
-Release preparation remains separate. Record-and-enter-next, large-history lazy
+Release acceptance is recorded separately. Record-and-enter-next, large-history lazy
 loading and worker scheduling changes are outside this delivery.

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [docs, navigation, architecture]
 ---
 
@@ -14,11 +14,13 @@ not an instruction to reintroduce it.
 
 ## Current work and decisions
 
+- [Counter and monitoring production release](implementation/counter-release-20261016.md): commit 1889e488, V13/policy lifecycle/represented coverage and counter workflows deployed 17 October after full CI and recovery acceptance.
+
 - [Repository cleanup review](implementation/repository-cleanup-review-20261016.md): generated Git artifacts, required-reading size, local retention, browser-fixture reproducibility and branch/CI alignment; no removals performed.
 
 - [Status](STATUS.md): checkpoint, validation and remaining acceptance.
-- [Everyday counter improvements](implementation/everyday-counter-improvements-20261016.md): approved local delivery and acceptance for truthful amounts/assurance, navigation, shared reads, list/entry usability and daily Dashboard activity; [original review](implementation/everyday-counter-workflow-review-20261016.md).
-- [Loans architecture hardening](implementation/loans-architecture-hardening-20261016.md): locally verified policy lifecycle/review, readiness, optional cohort assurance and staff work views; [worker scheduling follow-up](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity) remains deferred. The [original audit](architecture/loans-architecture-followup-20261016.md) retains the findings and delivery order.
+- [Everyday counter improvements](implementation/everyday-counter-improvements-20261016.md): delivered truthful amounts/assurance, navigation, shared reads, list/entry usability and daily Dashboard activity; [original review](implementation/everyday-counter-workflow-review-20261016.md).
+- [Loans architecture hardening](implementation/loans-architecture-hardening-20261016.md): deployed policy lifecycle/review, readiness, optional cohort assurance and staff work views; [worker scheduling follow-up](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity) remains deferred. The [original audit](architecture/loans-architecture-followup-20261016.md) retains the findings and delivery order.
 - [Monitoring portability and JCL coverage follow-up](implementation/monitoring-portability-followup-20261014.md): locally verified package v3, live worker frequency and separate appraisal/book gaps.
 - [Agent memory](AGENT_MEMORY.md): stable decisions and owner constraints.
 - [New-user journey refinement](implementation/new-user-journey-refinement-20261014.md): approved contact/authentication handoffs, guided setup and phone improvements, verified locally; production/provider acceptance remains separate. The [earlier audit](implementation/new-user-journey-audit-20261014.md) retains the original findings.

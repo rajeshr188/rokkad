@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-12
+updated: 2026-10-17
 tags: [readme, pawn-lending, workspace, architecture]
 related: [docs/README.md, docs/STATUS.md, AGENTS.md]
 ---
@@ -16,9 +16,10 @@ and supported imported positions share a PawnLoan servicing lifecycle and curren
 risk monitoring. Their original source evidence remains distinct.
 
 The [16 October loans hardening acceptance record](docs/implementation/loans-architecture-hardening-20261016.md)
-tracks the locally prepared policy lifecycle, reviewed amendments, active-portfolio
-readiness and simpler staff workflows, including the frozen combined source used
-for verification. Deployment is a separate coordinated release.
+tracks policy lifecycle, reviewed amendments, active-portfolio readiness and staff
+workflows. These changes, represented-position coverage and everyday-counter
+improvements are deployed in the [17 October release](docs/implementation/counter-release-20261016.md)
+after full CI, isolated production-copy acceptance and verified recovery.
 
 Business apps are **Party, Loans, Rates and Notify v2**. Loans owns financial and
 custody evidence; Rokkad is not a general-ledger or general-purpose ERP system.

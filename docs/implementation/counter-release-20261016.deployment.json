@@ -1,0 +1,201 @@
+{
+  "profile": "counter-monitoring-release-acceptance/1",
+  "application_source_revision": "1889e48820eeb042f35bfb523276b29e264340cd",
+  "source_manifest_sha256": "08b359583f0e5552dd55f24ce82f9430eb3245bfff59255f9f94d2d68ccdff86",
+  "ci": {
+    "passed": true,
+    "tests_passed": true,
+    "ci_passed": true,
+    "ci_source_revision": "1889e48820eeb042f35bfb523276b29e264340cd",
+    "source_sha256": "08b359583f0e5552dd55f24ce82f9430eb3245bfff59255f9f94d2d68ccdff86",
+    "image_id": "sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967",
+    "production_deployment_authorized": true,
+    "ci_run_id": "38924608489",
+    "ci_url": "https://github.com/rajeshr188/rokkad/actions/runs/38924608489",
+    "jobs": {
+      "rates": "success",
+      "loans": "success",
+      "boundary": "success",
+      "billing": "success",
+      "portability": "success",
+      "foundation": "success"
+    }
+  },
+  "local_verification": {
+    "initial_affected_cases": 162,
+    "initial_seconds": 223.459,
+    "followup_cases": 226,
+    "followup_passed": 225,
+    "final_cases": 65,
+    "final_seconds": 104.47,
+    "final_passed": true,
+    "javascript_cases": 12
+  },
+  "rehearsal": {
+    "passed": true,
+    "image_id": "sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967",
+    "migrations": [
+      "loans.0089_monitoring_policy_lifecycle",
+      "data_portability.0030_monitoring_lifecycle_profile",
+      "loans.0090_transaction_review_history_boundary",
+      "loans.0090_recorded_position_notice",
+      "loans.0091_merge_position_and_review_boundary"
+    ],
+    "migration_seconds": 11.67,
+    "target": "rokkad_counter_release_20261016b",
+    "restored_tables": 222,
+    "restored_rows": 1130005,
+    "preserved_tables": 216,
+    "all_original_business_rows_preserved_after_migration": true,
+    "source_financial_rows_preserved_after_worker": true,
+    "readers_restricted": true,
+    "production_unchanged": true,
+    "readers": {
+      "passed": true,
+      "mode": "candidate",
+      "read_only": true,
+      "restricted": true,
+      "samples": 14,
+      "profiles": [
+        "loan-closed-position/1",
+        "native-event-fold/1",
+        "original-anniversary-upfront-inclusive/2",
+        "recorded-anniversary/3"
+      ],
+      "screen_checks": 23,
+      "financial_fingerprint": "cd881f25ee6883625ea30d0c5ed9fd9412c786d90c69aa5de91000513de37e66",
+      "contract": "LOAN_RISK_SNAPSHOT_V13"
+    },
+    "worker": {
+      "passed": true,
+      "workspaces": [
+        {
+          "workspace_id": 1,
+          "selected": 10,
+          "current": 10,
+          "errors": 0,
+          "coverage_unavailable": 0
+        },
+        {
+          "workspace_id": 2,
+          "selected": 10,
+          "current": 10,
+          "errors": 0,
+          "coverage_unavailable": 0
+        },
+        {
+          "workspace_id": 3,
+          "selected": 10,
+          "current": 10,
+          "errors": 0,
+          "coverage_unavailable": 0
+        }
+      ],
+      "maximum_attempts": 30,
+      "only_derived_monitoring_writes": true,
+      "unavailable_coverage_not_invented": true
+    }
+  },
+  "deployed": {
+    "state": "PASS",
+    "completed_at": "2026-10-16T21:59:13.545350+00:00",
+    "image": "rokkad:counter-production-20261016-1889e48820ee",
+    "image_id": "sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967",
+    "migrations": [
+      "loans.0089_monitoring_policy_lifecycle",
+      "data_portability.0030_monitoring_lifecycle_profile",
+      "loans.0090_transaction_review_history_boundary",
+      "loans.0090_recorded_position_notice",
+      "loans.0091_merge_position_and_review_boundary"
+    ],
+    "migration_seconds": 12.98,
+    "write_pause_and_switch_seconds": 162.46,
+    "live_affected_financial_evidence_preserved": true,
+    "full_table_comparison_on_private_copy": true,
+    "restricted_runtime": true,
+    "owner_startup_refused": true,
+    "compatible_scheduled_readers": 4,
+    "source_snapshot_sha256": "8ff7251860d733aebf1cc65002fe4d0c5fec64d1dd9e5eb130d93721697b3f63",
+    "sealed_checkpoint_remote_verified": true,
+    "paused_balance_parity": true,
+    "configuration_preserved": true,
+    "static_assets_verified": true,
+    "source_revision": "1889e48820eeb042f35bfb523276b29e264340cd",
+    "operator_financial_posts": false,
+    "operator_messages_created": false,
+    "actual_customer_or_register_change": false,
+    "merge_repair": {
+      "passed": true,
+      "committed": false,
+      "merges": 0,
+      "loans": 0,
+      "khata": 0,
+      "financial_rows_preserved": true
+    }
+  },
+  "health": {
+    "passed": true,
+    "image_id": "sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967",
+    "source_revision": "1889e48820eeb042f35bfb523276b29e264340cd",
+    "exact_runtime_files_per_reader": [
+      1539,
+      1539
+    ],
+    "public_https": true,
+    "active_timers": 6,
+    "new_reader_error_lines": {
+      "rokkad-production-web-1": 0,
+      "rokkad-production-monitoring-1": 0
+    },
+    "protected_configuration_preserved": true,
+    "runtime": {
+      "restricted": true,
+      "no_pending_migrations": true,
+      "contract": "LOAN_RISK_SNAPSHOT_V13"
+    },
+    "features": {
+      "passed": true,
+      "read_only": true,
+      "restricted": true,
+      "workspaces": 3,
+      "screens": 12,
+      "collection_parity_samples": 6,
+      "daily_components_reconcile": true
+    },
+    "free_gib": 8.031
+  },
+  "backups": {
+    "pre": {
+      "passed": true,
+      "image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac",
+      "snapshot_sha256": "8f563d2414a9ddd4972985b0e49a2ea55e758a57c76ae8afda7364ce45da4080",
+      "remote_download_verified": true,
+      "retention_passed": true
+    },
+    "post": {
+      "passed": true,
+      "image_id": "sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967",
+      "snapshot_sha256": "6df814719c6026834c3f1aa21ba72dd1b78c6f2e51a4f822487393bd53bd3002",
+      "remote_download_verified": true,
+      "retention_passed": true
+    }
+  },
+  "recovery": {
+    "remote_encrypted_image_downloaded_decrypted_loaded": true,
+    "exact_image_id": "sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967",
+    "production_container_restarted": false,
+    "private_key_on_server": false,
+    "transient_application_image_removed": true
+  },
+  "cleanup": {
+    "passed": true,
+    "disposable_database_removed": true,
+    "initial_disposable_database_removed": true,
+    "temporary_database_dump_config_plaintext_removed": true,
+    "encrypted_candidate_retained": true,
+    "checkpoint_retained": true,
+    "encrypted_checkpoint_retained": true,
+    "redundant_plaintext_checkpoint_removed": true,
+    "free_gib": 9.768
+  }
+}

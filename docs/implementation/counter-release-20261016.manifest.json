@@ -1,10 +1,10 @@
 {
   "profile": "counter-monitoring-release/1",
-  "source_revision": "a68dbcb0d3612724577e9371cc325e19fff46453",
+  "source_revision": "1889e48820eeb042f35bfb523276b29e264340cd",
   "base_image_id": "sha256:53f6dd38d64bff0ebf3cadcf26402ff2f78a4d220305200b056f64ddc379d6ac",
-  "source_sha256": "f23a87410931ddda4e521fcfb8ee3745a4b7d9e8c379b4483669db197c6ce035",
-  "archive_sha256": "94637fb4306e981d1182ed75a6052339134a93f60250565729fab39a5b90ad71",
-  "image": "rokkad:counter-production-20261016-a68dbcb0d361",
+  "source_sha256": "08b359583f0e5552dd55f24ce82f9430eb3245bfff59255f9f94d2d68ccdff86",
+  "archive_sha256": "a4265cf91fdee545354a76d9b39035a56a3b50e6ceff49460c4f2175f5a84227",
+  "image": "rokkad:counter-production-20261016-1889e48820ee",
   "files": {
     "apps/onboarding/services/setup_checklist.py": {
       "sha256": "ed05601ed2ceba2051154f57b9a16cc63ada9eee4e23febe0b4264ec07ec60bd",
@@ -66,6 +66,11 @@
       "baseline_sha256": "fa39e4a960669e6bffceac64551fc1674f0a2727e8ec3f8ffe13803656da118c",
       "bytes": 7581
     },
+    "apps/tenant_apps/loans/selectors/accrual_evidence.py": {
+      "sha256": "3a7616c04092464f667bdfa6aba8eded3f68a62b4098fccca7e97c5e173f50d6",
+      "baseline_sha256": "e86babb23b051ecf708714a4be122731113017c1b1735efb874c0420de659d47",
+      "bytes": 5936
+    },
     "apps/tenant_apps/loans/selectors/business_overview.py": {
       "sha256": "4235ce58375de64f47be65003698ce4751aa8d5295f56a2d0858414eec1f9504",
       "baseline_sha256": "880d11885a2f6629b30cddb3f89cc45503197a235c8565a612aee060f8100805",
@@ -87,9 +92,9 @@
       "bytes": 9023
     },
     "apps/tenant_apps/loans/selectors/financial_inputs.py": {
-      "sha256": "21751eb4f6e7eb598a03d32a07bad3f3273c46c08054c76962b968598d0117e2",
+      "sha256": "6117f3ae4aaac344c369e984ac0b9b97f40a75d2991af311134f4081e063e8ba",
       "baseline_sha256": "81ca0e10b1b7eb81d37525fe4a5429feab2b9938c118cf016dbc639d8f716a73",
-      "bytes": 6261
+      "bytes": 6289
     },
     "apps/tenant_apps/loans/selectors/monitoring_inputs.py": {
       "sha256": "0b083854a9e75db40cc213f4a7a9b2de854a09b0d135231f85d8cf74f9d59ec6",
@@ -167,9 +172,9 @@
       "bytes": 8046
     },
     "apps/tenant_apps/loans/services/opening_corrections.py": {
-      "sha256": "0783bb799d23d826d02ddab70275e18e5116f26979b175745f48b1dce43dd0bb",
+      "sha256": "333c3d59ba10f24b6274d86df2d675fdfbb1ee46e132a85e56953509f27d03a4",
       "baseline_sha256": "0ca8d02bcf2e30a09b78ed9f57c813aa7340485dff229f5e1c6a931a1820d789",
-      "bytes": 13220
+      "bytes": 13543
     },
     "apps/tenant_apps/loans/services/paper_entry_terms.py": {
       "sha256": "7993d8b6934b21c37e218848a16f3044b4a47664bde8c3a3dc42646a47510a6d",

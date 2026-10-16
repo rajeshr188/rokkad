@@ -1,11 +1,27 @@
 ---
 status: active
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [status, architecture]
 ---
 
 # Status
+
+## Counter and monitoring release (17 October, verified in production)
+
+Commit `1889e488` is live as image `450699d7a608...`, with V13, Loans 0091 and
+data_portability 0030 / package 4. All six CI groups pass, including 2,695 Loans
+cases. Fresh production-copy rehearsal, exact encrypted application recovery,
+pre-backup and stopped-writer recovery pass. Five owner-only migrations apply;
+14 sampled balances match and compatible web/worker/four scheduled readers move
+together. Configuration, grants and disabled WhatsApp remain unchanged. Six timers
+resume. Both readers match all 1,539 runtime files; twelve read-only screens across
+three Workspaces, financial parity and clean reader logs pass. Encrypted pre/post
+backups and actual R2 download/retention checks pass. Both disposable rehearsal
+databases and redundant plaintext dumps are removed; final free space is 9.768 GiB.
+See the [release record](implementation/counter-release-20261016.md) and
+[deployment proof](implementation/counter-release-20261016.deployment.json). Cleanup is FW-024;
+worker scheduling optimizations remain FW-004. No retrospective JSK rate correction.
 
 ## Full-suite release gate (16 October, production unchanged)
 

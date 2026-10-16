@@ -1,12 +1,16 @@
 ---
 status: verified-local
 owner: loans
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, dashboard, counter, usability, performance, acceptance]
 related: [everyday-counter-workflow-review-20261016.md, ../plans/everyday-counter-improvements-20261016.md, ../adr/2026-10-16-everyday-counter-summaries.md]
 ---
 
 # Everyday counter improvements: local acceptance
+
+Subsequently deployed in the [17 October release](counter-release-20261016.md).
+This note retains the earlier local observations and bounds; the release record
+adds complete-suite fixes, exact-source CI and production acceptance.
 
 The owner approved the [review's recommended order](everyday-counter-workflow-review-20261016.md).
 All seven scoped slices are implemented locally on `work/loan-servicing-contract-ld01`

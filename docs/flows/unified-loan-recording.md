@@ -1,13 +1,13 @@
 ---
 status: accepted-design
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, paper-entry, workflow, historical-evidence, risk]
 ---
 
 # Record business when it happens or enter it afterward
 
-The locally prepared [counter improvements](../plans/everyday-counter-improvements-20261016.md)
+The released [counter improvements](../plans/everyday-counter-improvements-20261016.md)
 keep a compact entered-principal strip visible during entry and warn before losing
 unsaved edits. Existing direct draft saving, review/confirmation and photograph
 handling remain. Routine policy/number explanations are disclosures. No borrower
@@ -25,7 +25,7 @@ Active loan detail offers **Correct loan**, including signed mistaken-customer
 correction on eligible direct, paper, accepted-history and opening agreements.
 Financial/custody corrections keep their existing reviewed dependency rules.
 
-## An unpaid draft whose payout already happened (LS-02, local release pending)
+## An unpaid draft whose payout already happened (LS-02)
 
 Open the existing draft and select **Record completed payout**. The completed-payout
 editor shows its saved customer, series, product, number, original date and

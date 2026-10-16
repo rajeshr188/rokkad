@@ -1,11 +1,24 @@
 ---
 status: active
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [agents, context, architecture]
 ---
 
 # Agent Memory
+
+## Current counter/monitoring release (17 October)
+
+Application commit `1889e488`, image `450699d7a608...`, is deployed on compatible
+web/worker/scheduled readers with V13, Loans 0091 and portability 0030/package 4.
+All six CI groups pass (2,695 Loans cases); initial `a68dbcb0` failed full CI and
+was never deployed. Fresh-copy source/balance parity and exact encrypted image
+recovery pass. Live role/schema/source/three-Workspace screens, six timers and
+encrypted pre/post backups verify; both disposable copies and plaintext dumps are
+retired. See the [release record](implementation/counter-release-20261016.md) and
+[proof](implementation/counter-release-20261016.deployment.json).
+Normal monitoring catch-up preserves unknown evidence. Repo cleanup stays FW-024,
+scheduling stays FW-004, and JSK retrospective rate correction remains separate.
 
 ## Full Loans CI release gate (16 October)
 

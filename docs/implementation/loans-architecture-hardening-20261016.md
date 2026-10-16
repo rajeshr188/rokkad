@@ -1,7 +1,7 @@
 ---
-status: locally-verified
+status: deployed
 owner: loans
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, architecture, monitoring, verification]
 related: [../plans/loans-architecture-hardening-20261016.md, represented-position-coverage-20261016.md]
 ---
@@ -11,7 +11,9 @@ related: [../plans/loans-architecture-hardening-20261016.md, represented-positio
 The owner accepts the [architecture follow-up](../architecture/loans-architecture-followup-20261016.md)
 and its recommended order. The implementation keeps one loan, immutable original
 agreements/events and the existing canonical financial, correction and monitoring
-services. This record describes a local candidate, not a production release.
+services. This record preserves the original local acceptance. The later
+[17 October release](counter-release-20261016.md) records complete-suite fixes,
+the final exact-source candidate and production deployment.
 
 ## Delivered scope
 

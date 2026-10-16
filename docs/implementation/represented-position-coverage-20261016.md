@@ -1,7 +1,7 @@
 ---
-status: locally-verified-release-pending
+status: deployed
 owner: loans
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, monitoring, coverage, reconciliation, notices]
 related: [../adr/2026-10-16-represented-position-transaction-coverage.md]
 ---
@@ -10,7 +10,9 @@ related: [../adr/2026-10-16-represented-position-transaction-coverage.md]
 
 The owner accepts the treatment change: use available accepted financial facts,
 without compulsory individual or bulk confirmation of unseen paper activity.
-The implementation is local; production remains on its recorded release.
+The original local acceptance is retained below. The later
+[17 October coordinated release](counter-release-20261016.md) deploys this treatment
+with V13 and all compatible readers after full CI and recovery acceptance.
 
 ## Read boundary
 

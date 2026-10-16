@@ -1,7 +1,7 @@
 ---
-status: preparing
+status: deployed
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, counter, monitoring, deployment]
 related: [everyday-counter-improvements-20261016.md, loans-architecture-hardening-20261016.md, represented-position-coverage-20261016.md, ../plans/future-work.md]
 ---
@@ -35,11 +35,11 @@ is copied into Git or the outgoing source-only archive. After migration starts,
 recover forward with compatible readers; do not silently return to an old writer
 or restore over later customer activity.
 
-## Exact committed candidate and local checks
+## Initial candidate and local checks (superseded; not deployed)
 
 Application commit `a68dbcb0d3612724577e9371cc325e19fff46453` is pushed to
 `work/loan-servicing-contract-ld01`, including FW-024 and the independent JSK note.
-The [source-only manifest](counter-release-20261016.manifest.json) binds 99 files
+The initial source-only manifest binds 99 files
 in a 1,116,160-byte archive and 1,539 checked runtime paths. Its canonical private
 manifest identity is `f23a87410931ddda4e521fcfb8ee3745a4b7d9e8c379b4483669db197c6ce035`.
 Candidate `rokkad:counter-production-20261016-a68dbcb0d361` has image ID
@@ -114,3 +114,77 @@ already prefetched event history, retaining correction-chain validation. The fin
 agreement-correction and counter-workflow modules, including that remaining failure.
 Selections overlap; no selected failure remains unresolved. Build a new candidate
 and run exact-source CI again before release.
+
+## Corrected committed candidate
+
+Commit `1889e48820eeb042f35bfb523276b29e264340cd` is pushed and enters a fresh
+[six-group CI run](https://github.com/rajeshr188/rokkad/actions/runs/38924608489).
+The current [source-only manifest](counter-release-20261016.manifest.json) supersedes
+the initial one: 100 changed runtime files, 1,539 checked paths and a 1,126,400-byte
+archive. Its canonical private manifest identity is
+`08b359583f0e5552dd55f24ce82f9430eb3245bfff59255f9f94d2d68ccdff86`.
+Image `rokkad:counter-production-20261016-1889e48820ee` is
+`sha256:450699d7a6084949ca754990260220db8b6963e7eeb3204e9ae1d9213e269967`.
+
+The schema boundary remains the same five migrations; the three corrected runtime
+modules change no migration or financial formula. This candidate gets a fresh
+isolated production-copy rehearsal and its own encrypted image-recovery test.
+Production still serves the predecessor while those gates run.
+
+## Production switch (17 October)
+
+All six corrected-source CI groups pass. Loans executes **2,695 passing cases in
+1,580.291 seconds**. The corrected image completes its own 222-table / 1,130,005-row
+restore, five migrations, original business-projection preservation, 23 reader
+screens, 14 financial samples and 30-loan / zero-error V13 worker rehearsal.
+Candidate static assets are collected before candidate readers in this fresh run;
+the preparation-order failure is not repeated. Exact encrypted image recovery passes.
+
+After the long CI interval, fresh read-only preflight verifies the predecessor's
+full 1,539 runtime paths on both readers, restricted roles, V11/schema, HTTPS and
+six timers. No intervening live source change exists. Retire only the completed
+first attempt's explicitly named disposable rehearsal database and scratch dump to
+restore staging headroom; preserve proofs and encrypted artifacts. Repository
+cleanup remains deferred. Prepare compatible bindings from current configuration
+and run a fresh existing encrypted pre-backup with remote-download/retention checks.
+
+The guarded production switch completes at **17 October 2026, 03:29:13 IST**.
+All five rehearsed migrations apply in **12.980 seconds**; coordinated write pause
+and switch take **162.460 seconds**. The stopped-writer checkpoint is encrypted,
+uploaded to the existing private backup bucket and downloaded/verified before
+migration. Fourteen fresh sampled balances match across the schema change.
+Restricted startup/model checks pass and owner-role web startup is refused.
+
+Web, continuous monitoring, new static assets and four scheduled readers move
+together to image `450699d7a608...` / commit `1889e488`. Environment values, commands,
+resource limits and protected configuration are preserved apart from the reviewed
+image/static bindings. All six timers resume. Existing grace grants and disabled
+WhatsApp activation remain. No operator financial posting, retrospective rate
+correction, policy amendment, customer/register edit or message is performed.
+Normal monitoring refresh may change derived risk projections; V11 snapshots need
+ordinary catch-up and unavailable collateral evidence is not cured by deployment.
+
+## Final acceptance and housekeeping
+
+The [aggregate deployment proof](counter-release-20261016.deployment.json) records
+the exact source/image, full CI, rehearsal, migration, recovery and live outcomes.
+Both live readers match **all 1,539 expected runtime files**, run as UID 10001 with
+the restricted database role and contain no new error lines. V13 and no pending
+migrations are verified. Public HTTPS and all six timers pass. Twelve read-only
+list/detail/Dashboard checks pass across JCL, JSK and Lakshmi, including six
+collection-position comparisons and daily component reconciliation.
+
+Fresh encrypted pre- and post-deployment database/config backups both pass actual
+R2 download verification and unchanged retention checks, bound to the predecessor
+and new runtime respectively. The private recovery key stays off-server. The
+stopped-writer encrypted checkpoint and application recovery artifacts remain.
+
+Both explicitly named disposable rehearsal databases are removed and absence is
+verified. Their scratch dumps/configuration and the checksum-matched redundant
+plaintext write-pause dump are removed only after successful recovery/live/backup
+gates. Final free space is **9.768 GiB**. No project-directory cleanup, Git history
+rewrite, production data/media deletion, financial correction or worker scheduling
+optimization is performed. FW-024 and FW-004 retain those separate follow-ups.
+
+The subsequent documentation commit records completed delivery and release proof;
+it changes no deployed runtime source. Application identity remains `1889e488`.
