@@ -32,6 +32,8 @@ Their prior detailed sequencing and acceptance limits remain in the
 - JSK WH intended-rate correction needs a supported contract and reviewed proposal;
   [verification](../implementation/jsk-wh-interest-verification-20261016.md) records
   source and cash/history limits. No live mutation is authorized by repository work.
+  The [cohort and evidence-review plan](jsk-wh-original-rate-correction-20261017.md)
+  records the owner's hold-uncertain-balances decision and exact read-only snapshot.
 - [FW-004 worker capacity](future-work.md#fw-004-launch-scale-loan-monitoring-capacity)
   retains measurement gates and the owner pause on large local runs.
 - Platform-owner WhatsApp requires [PW-05 live acceptance](../implementation/platform-whatsapp-pilot-pw05.md).

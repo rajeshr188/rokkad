@@ -82,6 +82,10 @@ routine retention and a reviewed canonical-main transition remain separate work.
   are outside current correction contracts. No live correction is applied.
   Preserve source 2%, actual cash and history limits; 685 openings contain unpaid
   interest. See [verification and feasibility](implementation/jsk-wh-interest-verification-20261016.md).
+  The [17 October review plan](plans/jsk-wh-original-rate-correction-20261017.md)
+  freezes the same 826-loan cohort using approved read-only evidence. All 824
+  openings retain first-month-paid evidence; every row is held pending paper/payment
+  reconciliation and retained-contract compatibility. No live correction is applied.
 - **Monitoring capacity:** normal bounded catch-up is deployed. Scheduling and
   scale optimization remain measurement-gated [FW-004](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
   No one-hour launch-scale claim; large local runs remain paused by the owner.

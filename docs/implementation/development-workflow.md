@@ -47,6 +47,32 @@ Implementation complete, merged and deployed are separate states. A PR can be re
 without being selected for production. A production release may combine several
 reviewed changes, but its contents and compatibility boundary must be explicit.
 
+## Canonical-main transition preflight (17 October, proposed)
+
+GitHub still selects main. At cleanup revision `693031a7`, origin/main points to
+`84653457` (20 February 2024), with zero unique commits and 709 commits on the
+maintained branch. The issue is the stale default baseline, not the name main.
+Prefer retaining main and advancing it to a verified integration tree, rather
+than making a long-lived task branch name the permanent default.
+
+Changing a default/pointer does not merge, rebase or delete other branches, alter
+existing local upstream settings, or represent a customer Workspace/data migration.
+Origin/dea-kiss is already an ancestor of maintained history; only its redundant
+local name was pruned. Origin/tenants_workspace has one unique commit and rls has
+76; both remain preserved. Commit uniqueness alone does not prove a missing
+feature: review applicability to today's architecture before transplanting old code.
+Dirty feature worktrees and checkpoint/release refs remain independent.
+
+Before advancing main: verify the exact candidate's CI, preserve the original tip
+(already in the restore-verified cleanup bundle), inspect remote rules/protection,
+open PR targets and all main-triggered automation, and reconcile active work.
+An ordinary fast-forward is possible from the checked ancestor; respect any PR
+requirement and test the resulting merge revision if that changes its identity.
+Never force-push or bypass protection to achieve the transition. Keep the old
+integration ref through the handover, update guidance, and verify fresh clone/PR/CI
+behavior. Production promotion remains a separately authorized immutable-image
+release. No default, main pointer or protection setting is changed by this proposal.
+
 ## 1. Start with a bounded task
 
 Read Memory, Status and the relevant contracts/domain guides in the existing order.
