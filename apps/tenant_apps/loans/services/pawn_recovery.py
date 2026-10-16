@@ -191,6 +191,8 @@ def _position(workspace, as_of):
     from .recorded_collections import recording_for, collection_balance
     rows = []
     for loan in PawnLoan.objects.filter(workspace=workspace).order_by("pk"):
+        from .collateral_corrections import validate_correction_chain
+        validate_correction_chain(loan)
         balance = get_pawn_loan_balance(loan, as_of_date=as_of)
         agreed = collection_balance(loan, as_of) if recording_for(loan) and as_of >= loan.loan_date else balance
         rows.append(dict(id=loan.pk, state=loan.state, fingerprint=transaction_fingerprint(loan),

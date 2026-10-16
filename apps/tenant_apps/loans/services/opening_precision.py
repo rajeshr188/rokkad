@@ -54,6 +54,8 @@ def require_receipt_order(loan, *, on, received_at=None, paper=False, event_kind
         "opening_collection": {"occurred_at": occurred}, "repayment": {}})
     actual = validate_event_order(review, event)
     for prior in loan.loan_events.exclude(pk=origin.pk).filter(effective_date=on).order_by("pk"):
+        if prior.event_kind == "OPENING_CORRECTION":
+            continue
         previous = validate_event_order(review, prior)
         if previous >= actual:
             raise ValueError("Later or simultaneous checkpoint-day activity exists; reconcile its actual order before entering this receipt.")

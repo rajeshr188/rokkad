@@ -77,6 +77,11 @@ def assess_pawn_loan_event_reversal(
     """Explain whether this immutable event is the next safe correction target."""
     if original.event_kind not in REVERSIBLE_EVENT_KINDS:
         return PawnReversalReadiness(False, latest_event_id, "This event kind cannot be reversed.")
+    if original.payload.get("agreement_correction"):
+        return PawnReversalReadiness(False, latest_event_id, "Use Agreement details correction to reconcile this retained financial revision.")
+    if original.event_kind == TransactionKind.DISBURSAL.value and original.loan.change_log.filter(event_kind="COLLATERAL_CORRECTED").exists():
+        return PawnReversalReadiness(False, latest_event_id,
+            "Reviewed collateral corrections require reconciliation before undoing origination; use the loan's correction actions.")
     from .recorded_collections import recording_for
     recorded_source = getattr(original.loan, "policy_snapshot_id", None) and recording_for(original.loan)
     current_renewal_settlement = False

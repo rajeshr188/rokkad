@@ -76,7 +76,7 @@ def preview_opening_collection(loan, *, events, as_of_date, known_through=None):
     recognized baseline and opening unpaid interest. Dedicated collection catch-up,
     repayment, full settlement and their coupled reversals are supported.
     """
-    events = tuple(events)
+    events = tuple(row for row in events if row.event_kind != "OPENING_CORRECTION")
     origins = [row for row in events if row.event_kind == "MIGRATION_OPENING"]
     if len(origins) != 1:
         raise OpeningEvidenceError("Opening collection preview requires one migration opening.")

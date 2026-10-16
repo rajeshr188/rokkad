@@ -1,0 +1,12 @@
+{% if collateral_corrections %}<details class="border rounded p-3 mb-3"><summary>Collateral correction history</summary>
+{% for correction in collateral_corrections %}{% with evidence=correction.metadata.collateral_correction %}
+<div class="mt-3"><strong>{{ evidence.before.description }} → {{ evidence.after.description }}</strong>
+<p class="small mb-1">Recorded {{ correction.created_at|date:"d/m/Y, H:i T" }} · {{ correction.actor }} · {{ correction.reason }} · Reference: {{ evidence.reference }}</p>
+<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Detail</th><th>Before</th><th>After</th></tr></thead><tbody>
+<tr><td>Quantity</td><td>{{ evidence.before.quantity|default_if_none:"Not recorded" }}</td><td>{{ evidence.after.quantity|default_if_none:"Not recorded" }}</td></tr>
+<tr><td>Metal</td><td>{{ evidence.before.metal }}</td><td>{{ evidence.after.metal }}</td></tr>
+<tr><td>Gross weight (g)</td><td>{{ evidence.before.gross_weight|default_if_none:"Not recorded" }}</td><td>{{ evidence.after.gross_weight|default_if_none:"Not recorded" }}</td></tr>
+<tr><td>Net weight (g)</td><td>{{ evidence.before.net_weight }}</td><td>{{ evidence.after.net_weight }}</td></tr>
+<tr><td>Purity (%)</td><td>{{ evidence.before.purity_percentage }}</td><td>{{ evidence.after.purity_percentage }}</td></tr>
+</tbody></table></div></div>
+{% endwith %}{% endfor %}</details>{% endif %}

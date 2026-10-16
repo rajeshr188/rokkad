@@ -58,7 +58,8 @@ def export_loan_data(*, workspace_id, actor, loan_id):
     if loan.is_imported_closed_position:
         from .closed_position_portability import export_closed_position
         return export_closed_position(workspace_id=workspace_id, actor=actor, loan_id=loan_id)
-    wider = (loan.change_log.filter(event_kind='BORROWER_CORRECTED').exists()
+    wider = (loan.change_log.filter(event_kind__in=['BORROWER_CORRECTED', 'COLLATERAL_CORRECTED']).exists()
+        or loan.loan_events.filter(event_kind="OPENING_CORRECTION").exists()
         or loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists()
         or loan.loan_events.filter(payload__opening__profile="loan-terminal-evidence/1").exists()
         or loan.loan_events.filter(event_kind__in=["RENEWAL_OPENING", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY", "REVERSAL"]).exists()
@@ -98,6 +99,10 @@ def _export_opening(*, workspace_id, actor, loan_id, as_of_date=None, audit=True
     Company.all_objects.select_for_update().get(pk=workspace_id)
     workspace = _access(workspace_id, actor)
     loan = m.PawnLoan.objects.select_for_update().get(workspace_id=workspace_id, pk=loan_id)
+    if loan.loan_events.filter(event_kind="OPENING_CORRECTION").exists():
+        raise HistoryError('Checkpoint correction evidence requires servicing bundle version 7. Use Export loan records.')
+    if loan.change_log.filter(event_kind='COLLATERAL_CORRECTED').exists():
+        raise HistoryError('Collateral correction evidence requires servicing bundle version 6. Use Export loan records.')
     if loan.change_log.filter(event_kind='BORROWER_CORRECTED').exists():
         raise HistoryError('Borrower correction requires both Party identities. Use Export loan records (servicing bundle version 5).')
     if loan.transaction_reviews.filter(future_capture="ROKKAD_ONLY").exists():

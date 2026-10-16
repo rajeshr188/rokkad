@@ -7,6 +7,14 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
+    "docs/adr/2026-10-15-shared-agreement-financial-corrections.md",
+    "docs/contracts/loan-agreement-correction-v1.md",
+    "docs/contracts/loan-servicing-bundle-v7.md",
+    "docs/plans/shared-agreement-financial-corrections-20261015.md",
+    "docs/implementation/shared-agreement-financial-corrections-20261015.md",
+    "docs/adr/2026-10-15-shared-loan-fact-corrections.md",
+    "docs/contracts/loan-servicing-bundle-v6.md",
+    "docs/implementation/shared-loan-corrections-20261015.md",
     'docs/plans/loan-origination-consolidation-20261014.md',
     'docs/implementation/loan-origination-consolidation-20261014.md',
     'docs/architecture/loan-origination-review-20261014.md',

@@ -54,10 +54,14 @@ class PawnAccrualEvidence:
         return tuple(row for row in lines if self.active_event(row.loan_event, day))
 
     def advance_consumed(self, day):
+        from apps.tenant_apps.loans.services.agreement_corrections import agreement_revision
+        revision = agreement_revision(self.loan)
         result = defaultdict(lambda: Decimal("0"))
         reversed_ids = self.reversal_dates()
         for row in self.accrual_lines:
             accrual = row.accrual
+            if accrual.agreement_revision != revision:
+                continue
             # Keep the existing all-date reversal exclusion, independently of
             # the policy/2 period-end cutoff. Do not reinterpret posted coverage.
             if accrual.loan_event_id in reversed_ids:

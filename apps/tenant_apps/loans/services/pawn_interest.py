@@ -126,8 +126,10 @@ def preview_pawn_loan_accruals(
     quantum = policy.currency_quantum.normalize() if (
         policy.minimum_first_month or policy.basis == "RECORDED_CONTRACT" or policy.policy_version == POLICY_VERSION
     ) else policy.currency_quantum
+    from .agreement_corrections import agreement_revision
+    revision = agreement_revision(loan)
     eligible_accruals = tuple(row for row in evidence.accruals
-        if policy.policy_version != POLICY_VERSION or row.period_end <= known_through)
+        if row.agreement_revision == revision and (policy.policy_version != POLICY_VERSION or row.period_end <= known_through))
     reversed_on = evidence.reversal_dates()
     def catch_up_reversed(row):
         return hasattr(row, "release_catch_up") and hasattr(row.release_catch_up, "reversal")
@@ -432,7 +434,8 @@ def finalize_pawn_loan_accrual(
         raise PawnInterestError("This recorded contract recognizes anniversary interest with collection.")
     if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
         raise PawnInterestError("Opening collection catch-up is posted only within full release, not native period finalization.")
-    existing = loan.interest_accruals.filter(period_number=period_number).first()
+    from .agreement_corrections import agreement_revision
+    existing = loan.interest_accruals.filter(period_number=period_number, agreement_revision=agreement_revision(loan)).first()
     if existing:
         event = existing.loan_event
         if loan.policy_snapshot.policy_version == POLICY_VERSION and event and hasattr(event, "reversed_by_event"):
@@ -470,7 +473,10 @@ def finalize_pawn_loan_accrual(
 
 def _persist_accrual_preview(loan, preview, *, actor):
     """Validated atomic caller owns authorization and the aggregate lock."""
-    if loan.policy_snapshot.policy_version == POLICY_VERSION and loan.interest_accruals.filter(period_number=preview.period_number).exists():
+    from .agreement_corrections import agreement_revision
+    revision = agreement_revision(loan)
+    if loan.policy_snapshot.policy_version == POLICY_VERSION and loan.interest_accruals.filter(
+            period_number=preview.period_number, agreement_revision=revision).exists():
         raise PawnInterestError("This monthly period retains an earlier recognition. Review its correction before recording a replacement charge.")
     event = None
     if should_record_pawn_accrual_event(preview, loan.policy_snapshot):
@@ -483,6 +489,8 @@ def _persist_accrual_preview(loan, preview, *, actor):
         payload["accrual"] = build_pawn_accrual_detail(
             preview, loan.policy_snapshot
         )
+        if revision > 1:
+            payload["agreement_correction"] = dict(loan.disbursal_snapshot.evidence["agreement_correction"], role="RECOGNITION")
         event, _ = record_loan_event(
             loan.pk,
             event_kind=TransactionKind.INTEREST_ACCRUAL,
@@ -492,6 +500,7 @@ def _persist_accrual_preview(loan, preview, *, actor):
         )
     accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
+        agreement_revision=revision,
         period_number=preview.period_number,
         period_start=preview.period_start,
         period_end=preview.period_end,
@@ -704,7 +713,7 @@ def _capitalized_boundaries(loan):
 
 
 def build_pawn_accrual_detail(preview, policy):
-    return {
+    detail = {
         "period_number": preview.period_number,
         "period_start": preview.period_start.isoformat(),
         "period_end": preview.period_end.isoformat(),
@@ -741,6 +750,11 @@ def build_pawn_accrual_detail(preview, policy):
         ],
         "is_partial": preview.is_partial,
     }
+    from .agreement_corrections import agreement_revision
+    revision = agreement_revision(policy.loan) if getattr(policy, "loan_id", None) else 1
+    if revision > 1:
+        detail["agreement_revision"] = revision
+    return detail
 
 
 def _add_months(value, months):

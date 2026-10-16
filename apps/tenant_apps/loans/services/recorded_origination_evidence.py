@@ -117,7 +117,8 @@ def _validate(snapshot):
     tranches = snapshot.evidence["tranches"]
     _require(disbursal["tranches"] == tranches, "Event and snapshot allocations must agree.")
     items = {item.pk: item for item in loan.collateral_items.all()}
-    frozen = {row["item_id"]: row for row in terms["collateral"]}
+    from .collateral_corrections import corrected_collateral_source
+    frozen = {row["item_id"]: row for row in corrected_collateral_source(loan, terms["collateral"])}
     ids = [row["collateral_item_id"] for row in tranches]
     _require(bool(items) and len(ids) == len(set(ids)) and set(ids) == set(items) == set(frozen)
              and len(frozen) == len(terms["collateral"]), "Collateral membership must match exactly.")

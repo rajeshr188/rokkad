@@ -140,6 +140,9 @@ def create_pawn_loan_notice(
         from .borrower_corrections import borrower_notice_identity
         if payload.get('borrower_identity') != borrower_notice_identity(loan):
             raise PawnLoanNoticeError('Borrower identity changed; preview the reminder again.')
+        from .agreement_corrections import agreement_notice_identity
+        if payload.get('agreement_identity') != agreement_notice_identity(loan):
+            raise PawnLoanNoticeError('Agreement changed; preview the reminder again.')
         if transaction_evidence and payload.get("transaction_review") != transaction_evidence:
             raise PawnLoanNoticeError("Paper transaction review changed; preview the reminder again.")
     if communication_evidence:
@@ -307,6 +310,10 @@ def _payload_snapshot(loan, balance, kind, *, as_of_date, source_auction=None):
         "total_amount": str(balance.total_due),
         "generated_at": timezone.now().isoformat(),
     }
+    from .agreement_corrections import agreement_notice_identity
+    agreement = agreement_notice_identity(loan)
+    if agreement:
+        payload["agreement_identity"] = agreement
     if source_auction is not None:
         payload["auction"] = {
             "id": source_auction.pk,

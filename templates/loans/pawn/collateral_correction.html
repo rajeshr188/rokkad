@@ -1,0 +1,29 @@
+{% extends "base_tenant.html" %}
+{% block title %}Correct collateral details{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:900px">
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}#loan-collateral">Back to loan {{ loan.loan_number }}</a>
+  <h1 class="h3 mt-3">Correct collateral details</h1>
+  <p>{{ item.description }} · Loan {{ loan.loan_number }}</p>
+  <p>Correct facts entered wrongly about this same item. Principal, agreed interest, payments, custody and loan status stay unchanged. Original records and previously issued copies remain available.</p>
+  <p class="small text-muted">For jewellery actually exchanged, returned or newly pledged, record the business action. Adding or removing a mistaken item needs a separate reconciliation.</p>
+  {% if blockers %}<div class="alert alert-warning"><ul class="mb-0">{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
+  <form method="post">{% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}
+      {% if field.is_hidden %}{{ field }}
+      {% elif field.name == 'confirmed' %}{% if review %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% endif %}
+      {% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endif %}
+    {% endfor %}
+    {% if not blockers %}<button class="btn btn-primary" name="action" value="preview">Review collateral correction</button>{% endif %}
+    {% if review %}<section class="border rounded p-3 mt-4" aria-label="Review collateral correction">
+      <h2 class="h5">Review before recording</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Detail</th><th>Recorded</th><th>Corrected</th></tr></thead><tbody>
+      {% for change in changes %}<tr><th>{{ change.label }}</th><td>{{ change.before|default_if_none:"Not recorded" }}</td><td>{{ change.after|default_if_none:"Not recorded" }}</td></tr>{% endfor %}
+      </tbody></table></div>
+      {% if review.valuation_changed %}<p class="alert alert-warning">Existing appraisals will need fresh review for these corrected facts. Current metal-value calculations use the corrected measurements, and loan health requires reassessment. This does not change the agreed debt.</p>{% else %}<p>This description correction does not change valuation or debt.</p>{% endif %}
+      <p>Reference: {{ review.reference }}. Reason: {{ review.reason }}.</p>
+      <button class="btn btn-success" name="action" value="confirm">Record reviewed collateral correction</button>
+    </section>{% endif %}
+  </form>
+</div>
+{% endblock %}

@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-15
+updated: 2026-10-16
 tags: [domain, party]
 ---
 
@@ -133,6 +133,21 @@ edit permission and a timestamp-signed exact URL token, with ordinary Workspace,
 commercial/lifecycle and RLS checks. The submitted source is revalidated against
 the same Workspace and eligibility constraints. Confirmation, conflict checks
 and the existing merge service remain authoritative.
+
+The current detail-page Party is retained; the selected duplicate is archived.
+Merge now transfers every ordinary loan and Khata account's current borrower link
+atomically, including drafts and closed loans. Each agreement retains its number,
+financial source events, balances, custody and previously issued documents.
+Ordinary loans retain immutable borrower-correction evidence; Khata retains an
+actor-audited account move. Both original Party records remain traceable. An
+admission racing with a merge either commits first and is transferred, or waits
+and must select the retained Party. Database guards reject new/changed borrower
+links to merged duplicates for both ordinary loans and Khata. An
+explicit repair command completes historical incomplete merges using their
+exact reciprocal recorded source/target metadata. Bounded servicing exports hold
+Party-merged histories until portable remapping is supported; exact recovery
+retains the complete evidence. See the
+[consolidation decision](../adr/2026-10-16-party-merge-loan-consolidation.md).
 
 Matching names do not automatically merge source customer records. Party import
 now supports explicit per-batch decisions to keep reviewed source IDs separate,

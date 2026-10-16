@@ -46,10 +46,14 @@ def reconcile(loan, events):
             require(snapshot.gross_principal == amount('principal') and snapshot.advance_interest == amount('advance_interest') and snapshot.net_disbursed == amount('net_cash'), 'Portable payout differs from its frozen snapshot.')
             if snapshot.basis=='APPROVED':
                 from .pawn_renewals import _successor_approval_economics
-                contract = SimpleNamespace(principal_amount=snapshot.gross_principal) if event.pk in retained_attempts else loan
+                contract = (SimpleNamespace(principal_amount=snapshot.gross_principal)
+                    if event.pk in retained_attempts or snapshot.pk != loan.disbursal_snapshot_id else loan)
                 economics = _successor_approval_economics(contract,snapshot.approval_snapshot)
                 require(all(getattr(snapshot,key)==economics[key] for key in ('gross_principal','monthly_interest','advance_interest_periods','advance_interest','deducted_fees','net_disbursed'))
                     and snapshot.evidence==economics['evidence'], 'Portable native payout differs from its genuine frozen approval.')
+            if snapshot.basis == 'CORRECTED':
+                from .agreement_corrections import validate_corrected_snapshot
+                validate_corrected_snapshot(snapshot)
         if event.event_kind in {'RELEASE_RECEIPT', 'AUCTION_RECOVERY'}:
             related = loan.releases.filter(loan_event=event).first() if event.event_kind == 'RELEASE_RECEIPT' else loan.auctions.filter(loan_event=event).first()
             if related is None and event.event_kind=='RELEASE_RECEIPT' and event.payload.get('history_correction',{}).get('role')=='SETTLEMENT':
@@ -83,7 +87,12 @@ def reconcile(loan, events):
             # never replay or infer pre-cutover item charges.
             continue
         policy = loan.policy_snapshot
-        fraction = _partial_fraction(policy, accrual.period_start, accrual.period_end, period_number=accrual.period_number)
+        revision = (next((s for s in loan.disbursal_snapshots.all()
+            if s.evidence.get('agreement_correction', {}).get('revision', 1) == accrual.agreement_revision), None)
+            if loan.disbursal_snapshot_id and loan.disbursal_snapshot.basis == 'CORRECTED' else None)
+        original = revision.loan_event.effective_date if revision else loan.loan_date
+        fraction = _partial_fraction(policy, accrual.period_start, accrual.period_end,
+            period_number=accrual.period_number, original_date=original)
         lines = tuple(accrual.lines.all())
         require(lines, 'Portable item recognition lacks calculation lines.')
         for line in lines:

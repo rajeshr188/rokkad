@@ -35,6 +35,7 @@ class CollateralItemValuation:
             "STALE_APPRAISAL": "The appraisal is older than the policy allows.",
             "MISSING_RATE": "A usable metal price is required.",
             "MISSING_APPRAISAL": "An approved appraisal is required.",
+            "APPRAISAL_BEFORE_CORRECTION": "Earlier appraisals describe the uncorrected collateral details. Record a fresh appraisal.",
             "MONITORING_POLICY_UNAVAILABLE": "Configure a monitoring policy to assess freshness.",
             "CUSTODY_NOT_ELIGIBLE": "This collateral's custody state is excluded from coverage.",
             "INCOMPLETE_LOWER_OF_EVIDENCE": "Both a metal price and approved appraisal are required.",
@@ -90,6 +91,8 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
         effective_at__date__lte=as_of_date, status=CollateralAppraisal.Status.APPROVED,
     ).order_by("collateral_item_id", "-effective_at", "-version").distinct("collateral_item_id")}
     results, rates = [], {}
+    from apps.tenant_apps.loans.services.collateral_corrections import invalidated_appraisal_versions
+    invalidated = invalidated_appraisal_versions(loan)
     for item in items:
         eligible = item.custody_state in {CollateralCustodyState.IN_VAULT.value, CollateralCustodyState.WITH_FUNDING_LENDER.value}
         blockers = [] if eligible else ["CUSTODY_NOT_ELIGIBLE"]
@@ -106,6 +109,10 @@ def get_pawn_loan_collateral_valuation(loan_id, *, as_of_date, _exposure=None):
         if lookup.status == RATE_FOUND and lookup.rate.buying_rate.is_finite() and lookup.rate.buying_rate > 0:
             calculated = (lookup.rate.buying_rate * item.net_weight * item.purity_percentage / Decimal("100")).quantize(quantum, rounding=ROUND_DOWN)
         appraisal = appraisals.get(item.pk)
+        if appraisal and appraisal.version <= invalidated.get(item.pk, -1):
+            if method != ValuationMethod.CALCULATED_METAL_VALUE:
+                blockers.append("APPRAISAL_BEFORE_CORRECTION")
+            appraisal = None
         appraisal_value = appraisal.appraised_value if appraisal else None
         rate_at = lookup.rate.effective_at if lookup.rate else None
         appraisal_at = appraisal.effective_at if appraisal else None

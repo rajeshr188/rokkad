@@ -866,9 +866,15 @@ class PawnCollateralItem(WorkspaceOwnedModel):
                     {"interest_rate_policy": "Rate policy must belong to the loan workspace."}
                 )
             if policy.metal != self.metal:
-                raise ValidationError(
-                    {"interest_rate_policy": "Rate policy metal must match the collateral metal."}
-                )
+                # The original rate remains agreed after a reviewed metal
+                # transcription correction. Current custody saves must not
+                # silently select a different interest policy.
+                from apps.tenant_apps.loans.services.collateral_corrections import validate_correction_chain
+                chain = validate_correction_chain(self.loan).get(self.pk, []) if self.pk else []
+                if not chain or chain[0]["before"]["metal"] != policy.metal:
+                    raise ValidationError(
+                        {"interest_rate_policy": "Rate policy metal must match the collateral metal."}
+                    )
             if policy.license_id and policy.license_id != self.loan.license_id:
                 raise ValidationError(
                     {
@@ -1128,6 +1134,7 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
     class Basis(models.TextChoices):
         APPROVED = "APPROVED", "Approved lending decision"
         RECORDED = "RECORDED", "Previously paid on paper"
+        CORRECTED = "CORRECTED", "Reviewed correction of original lending facts"
 
     basis = models.CharField(max_length=16, choices=Basis.choices, default=Basis.APPROVED)
     loan = models.ForeignKey(
@@ -1172,7 +1179,7 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
         ordering = ("loan_id",)
         constraints = [
             models.CheckConstraint(
-                condition=Q(basis="APPROVED", approval_snapshot__isnull=False)
+                condition=Q(basis__in=("APPROVED", "CORRECTED"), approval_snapshot__isnull=False)
                 | Q(basis="RECORDED", approval_snapshot__isnull=True),
                 name="loans_disbursal_approval_basis",
             ),
@@ -1191,6 +1198,9 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
 
     def clean(self):
         super().clean()
+        if self.basis == self.Basis.CORRECTED:
+            from apps.tenant_apps.loans.services.agreement_corrections import validate_corrected_snapshot
+            validate_corrected_snapshot(self)
         if self.basis == self.Basis.RECORDED:
             from apps.tenant_apps.loans.services.recorded_origination_evidence import validate_recorded_origination
             validate_recorded_origination(self)
@@ -1240,6 +1250,7 @@ class PawnLoanInterestAccrual(WorkspaceOwnedModel):
         on_delete=models.PROTECT,
         related_name="interest_accruals",
     )
+    agreement_revision = models.PositiveIntegerField(default=1)
     period_number = models.PositiveIntegerField()
     period_start = models.DateField()
     period_end = models.DateField(db_index=True)
@@ -1267,8 +1278,8 @@ class PawnLoanInterestAccrual(WorkspaceOwnedModel):
         ordering = ("loan_id", "period_number")
         constraints = [
             models.UniqueConstraint(
-                fields=("loan", "period_number"),
-                name="loans_accrual_loan_period_uniq",
+                fields=("loan", "period_number", "agreement_revision"),
+                name="loans_accrual_loan_period_revision_uniq",
             ),
             models.CheckConstraint(
                 condition=Q(period_number__gt=0),
@@ -2142,6 +2153,8 @@ class PawnLoanNotice(models.Model):
             models.UniqueConstraint(
                 F('source_risk_event'), F('notice_kind'), F('channel'), F('notification_template_version'),
                 Coalesce(KeyTextTransform('correction_id', KeyTransform('borrower_identity', 'payload_snapshot')),
+                    models.Value('0'), output_field=models.CharField()),
+                Coalesce(KeyTextTransform('correction_id', KeyTransform('agreement_identity', 'payload_snapshot')),
                     models.Value('0'), output_field=models.CharField()),
                 condition=Q(source_risk_event__isnull=False, transaction_review__isnull=True),
                 name="loans_risk_notice_intent_uniq",

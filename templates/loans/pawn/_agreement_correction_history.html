@@ -1,0 +1,9 @@
+{% load loans_display %}
+{% if agreement_corrections %}<details class="border rounded p-3 mb-3" style="overflow-wrap:anywhere"><summary>Agreement correction history</summary>
+{% for row in agreement_corrections %}<div class="mt-3">
+<strong>Correction #{{ row.log.pk }}</strong><p class="small mb-1">Recorded {{ row.log.created_at|date:"d/m/Y, H:i T" }} · {{ row.log.actor|default:"Not recorded" }} · {{ row.log.reason }} · Reference: {{ row.reference }}</p>
+{% if row.review.before.original_principal %}<p class="small">Original principal {{ row.review.before.original_principal|indian_money }} → {{ row.review.after.original_principal|indian_money }}. Verified balances from {{ row.review.cutover }}; earlier transactions remain unavailable.</p>
+{% else %}<p class="small">Agreed principal {{ row.review.before.principal|indian_money }} → {{ row.review.after.principal|indian_money }}; original date {{ row.review.before.date }} → {{ row.review.after.date }}; monthly rate {{ row.review.before.rate }}% → {{ row.review.after.rate }}%.</p>{% endif %}
+{% if row.review.before.position %}<p class="small">Outstanding at that review: principal {{ row.review.before.position.principal|indian_money }} → {{ row.review.after.position.principal|indian_money }}; interest {{ row.review.before.position.interest|indian_money }} → {{ row.review.after.position.interest|indian_money }}; fees {{ row.review.before.position.fees|indian_money }} → {{ row.review.after.position.fees|indian_money }}.</p>{% endif %}
+<p class="small mb-1">Original evidence retained. This correction records no new payout, collection, refund or physical movement.</p>
+</div>{% endfor %}</details>{% endif %}

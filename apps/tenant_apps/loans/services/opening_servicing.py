@@ -23,12 +23,14 @@ def opening_release_context(loan, *, as_of_date, reversing=False):
     if loan.policy_snapshot.interest_method != "SIMPLE" or loan.product_version.repayment_structure != "FLEXIBLE_PARTIAL_PAYMENT":
         raise OpeningEvidenceError("Opening collections require simple interest and a flexible repayment product.")
     balance = get_pawn_loan_balance(loan, as_of_date=as_of_date)
+    from .opening_corrections import opening_schedule_source
+    expected_source = opening_schedule_source(loan, loan.loan_events.get(event_kind="MIGRATION_OPENING"))
     if reversing:
-        if not loan.repayment_schedules.filter(source_event_id=preview.opening_event_id).exists():
+        if not loan.repayment_schedules.filter(source_event_id=expected_source).exists():
             raise OpeningEvidenceError("Opening servicing requires its frozen remaining obligations.")
         return preview, None
     schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
-    if schedule is None or schedule.source_event_id != preview.opening_event_id:
+    if schedule is None or schedule.source_event_id != expected_source:
         raise OpeningEvidenceError("Opening servicing requires its active remaining obligations.")
     # Collection allocates against immutable capacity, not LC-02's dynamic risk forecast.
     state = calculate_obligation_state_as_of(schedule, as_of_date, adjust_recorded=False)

@@ -26,12 +26,12 @@ from apps.orgs.models import Company
 from apps.tenant_apps.loans import models as m
 from .history_setup import require_history_setup_access, _number, _check_number
 from .history_contract import digest, dump, HistoryError
-from .servicing_bundle_contract import PROFILE, CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE, BORROWER_PROFILE, financial_profile, PROFILES, ROWS, BASE_ROWS, STORAGE_ROWS, MAX_ROWS, MAX_BYTES, MAX_LOANS, EXCLUSIONS, STORAGE_EXCLUSIONS, FUNDING_EXCLUSIONS, ISSUE_FIELDS, row, decode, require, sha, read_bundle
+from .servicing_bundle_contract import PROFILE, CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE, BORROWER_PROFILE, COLLATERAL_PROFILE, AGREEMENT_PROFILE, IDENTITY_PROFILES, financial_profile, PROFILES, ROWS, BASE_ROWS, STORAGE_ROWS, MAX_ROWS, MAX_BYTES, MAX_LOANS, EXCLUSIONS, STORAGE_EXCLUSIONS, FUNDING_EXCLUSIONS, ISSUE_FIELDS, row, decode, require, sha, read_bundle
 
 KINDS = {name: apps.get_model("loans", name) for name in ROWS}
 ACTORS = "accounts.CustomUser"
 EXTERNAL = {ACTORS, "orgs.Company", "party.Party", "loans.LoanLicense", "loans.LoanLicenseRevision", "loans.LoanSeries", "loans.LoanProductVersion", "loans.PawnMetalInterestRatePolicy"}
-SUPPORTED_EVENTS = {"DISBURSAL", "MIGRATION_OPENING", "RENEWAL_OPENING", "REPAYMENT", "INTEREST_ACCRUAL", "RELEASE_RECEIPT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY", "REVERSAL"}
+SUPPORTED_EVENTS = {"DISBURSAL", "MIGRATION_OPENING", "OPENING_CORRECTION", "RENEWAL_OPENING", "REPAYMENT", "INTEREST_ACCRUAL", "RELEASE_RECEIPT", "RENEWAL_SETTLEMENT", "AUCTION_RECOVERY", "REVERSAL"}
 
 
 def _access(workspace_id, actor, *, exporting=False):
@@ -170,11 +170,15 @@ def export_servicing_bundle(*, workspace_id, actor, loan_id, _consistent_snapsho
     m.PawnLoan.objects.get(pk=loan_id, workspace_id=workspace_id)
     selected = _collect(workspace_id, _connected(workspace_id, loan_id), consistent_snapshot=_consistent_snapshot)
     borrower_corrected = any(log.event_kind == 'BORROWER_CORRECTED' for log in selected['LoanChangeLog'].values())
+    collateral_corrected = any(log.event_kind == 'COLLATERAL_CORRECTED' for log in selected['LoanChangeLog'].values())
+    agreement_corrected = (any(snapshot.basis == "CORRECTED" for snapshot in selected["PawnLoanDisbursalSnapshot"].values())
+        or any(e.event_kind == "OPENING_CORRECTION" for e in selected["PawnLoanEvent"].values()))
     corrected = any(snapshot.evidence.get("recording", {}).get("origination_correction")
         for snapshot in selected['PawnLoanDisbursalSnapshot'].values())
     from apps.tenant_apps.data_portability.models import WorkspaceNamespace, PartyIdentity
     namespace, _ = WorkspaceNamespace.objects.get_or_create(workspace_id=workspace_id)
-    tables = {kind:[row(kind, obj) for obj in sorted(objects.values(), key=lambda o:o.pk)] for kind, objects in selected.items()}
+    tables = {kind:[row(kind, obj, profile=AGREEMENT_PROFILE if agreement_corrected else None)
+        for obj in sorted(objects.values(), key=lambda o:o.pk)] for kind, objects in selected.items()}
     stored = bool(tables['PawnStorageLocation'] or tables['PawnCollateralStorageMovement'])
     funded = bool(tables['FundingLoan'])
     if not funded:
@@ -221,10 +225,10 @@ def export_servicing_bundle(*, workspace_id, actor, loan_id, _consistent_snapsho
         from .servicing_funding import source_setup, funding_position
         document['funding_setup']=source_setup(workspace_id,namespace,selected['FundingLoan'])
         document['funding_positions']={str(pk):funding_position(loan) for pk,loan in selected['FundingLoan'].items()}
-    if borrower_corrected:
+    if borrower_corrected or collateral_corrected or agreement_corrected:
         from .servicing_borrowers import source_parties
         document['financial_profile'] = document['profile']
-        document['profile'] = BORROWER_PROFILE
+        document['profile'] = AGREEMENT_PROFILE if agreement_corrected else COLLATERAL_PROFILE if collateral_corrected else BORROWER_PROFILE
         document['agreement_parties'] = {str(pk): source_parties(loan, namespace) for pk, loan in selected['PawnLoan'].items()}
     _source_graph(document)
     document["sha256"] = sha(dump(document).encode())
@@ -320,9 +324,15 @@ def _validate_source_graph(document):
                 require(source['source_sha256']==digest(source['document']), 'Source accepted-document hash differs.')
             if kind == 'StatutoryAuctionNotice':
                 require(source['snapshot_sha256']==digest(source['snapshot']), 'Source statutory snapshot hash differs.')
-    if document['profile'] == BORROWER_PROFILE:
+    if document['profile'] in IDENTITY_PROFILES:
         from .servicing_borrowers import validate_parties
         validate_parties(document)
+    if document['profile'] in {COLLATERAL_PROFILE, AGREEMENT_PROFILE}:
+        from .servicing_collateral import validate_corrections
+        validate_corrections(document)
+    if document['profile'] == AGREEMENT_PROFILE:
+        from .servicing_agreements import validate_source_agreements
+        validate_source_agreements(document)
     loans = {r["id"]:r for r in tables["PawnLoan"]}
     items = {r["id"]:r for r in tables["PawnCollateralItem"]}
     events = {r["id"]:r for r in tables["PawnLoanEvent"]}
@@ -380,7 +390,7 @@ def _mapping(document, workspace_id, mapping):
             require(source['licence_evidence'] == 'REVISION' and loans[int(source_id)]['license_revision_id'] is not None, 'Native approval requires an evidenced original licence revision.')
             require(revision.kind != "LEGACY_REFERENCE" and revision.issued_on and revision.issued_on <= original <= revision.expires_on, "A native approved source needs a matching evidenced original licence revision.")
         result[source_id] = dict(values, license_id=revision.license_id)
-        if document['profile'] == BORROWER_PROFILE:
+        if document['profile'] in IDENTITY_PROFILES:
             from .servicing_borrowers import destination_parties
             result[source_id]['party_refs'] = destination_parties(document, source_id, workspace_id, borrower.pk)
 
@@ -434,6 +444,9 @@ def _adapt(value, *, refs, external, numbers, event_keys, opaque=False):
         elif key == 'batch_correction' and isinstance(val, dict):
             result[key] = deepcopy(val)
             result[key]['id'] = refs['PawnReleaseBatch'][val['id']]
+        elif key == 'collateral_correction':
+            from .servicing_collateral import remap_correction
+            result[key] = remap_correction(val, refs['PawnCollateralItem'], external['source_workspace_id'])
         elif key == 'borrower_correction':
             from .servicing_borrowers import remap_correction
             result[key] = remap_correction(val, external['party_refs'], external['source_workspace_id'])
@@ -626,6 +639,10 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                     terminal.state = "CLOSED"
                     terminal.save(update_fields=["state"])
                 from .event_recording import _fingerprint
+                if source["event_kind"] == "OPENING_CORRECTION":
+                    correction = values["payload"]["agreement_correction"]
+                    prior = m.PawnLoanEvent.objects.get(pk=correction["source_event_id"], loan_id=values["loan_id"], workspace=workspace)
+                    correction["before_sha256"] = digest(prior.payload["opening"])
                 values["payload_fingerprint"] = _fingerprint(values["payload"])
                 values["idempotency_key"] = f"loans:{values['loan_id']}:{values['event_kind']}:{values['payload_fingerprint']}"
                 event_keys[source["idempotency_key"]] = values["idempotency_key"]
@@ -660,9 +677,11 @@ def _restore_graph(workspace, actor, document, files, mapping, saved_files):
                     saved_files.append((field.storage, new_name))
                     values[key] = new_name
             provisional = []
-            if kind == 'PawnLoanDisbursalSnapshot' and source['basis']=='RECORDED' and source['id']!=source_loans[owner]['disbursal_snapshot_id']:
-                reversal = next((e for e in tables['PawnLoanEvent'] if e['reversal_of_id']==source['loan_event_id']), None)
-                require(reversal and reversal['payload'].get('history_correction',{}).get('operation')=='CONTRACT', 'Superseded payout requires an explicit compensated contract correction.')
+            if (kind == 'PawnLoanDisbursalSnapshot' and source['basis']=='RECORDED'
+                    and (source['id']!=source_loans[owner]['disbursal_snapshot_id'] or document['profile'] in {COLLATERAL_PROFILE, AGREEMENT_PROFILE})):
+                if source['id']!=source_loans[owner]['disbursal_snapshot_id']:
+                    reversal = next((e for e in tables['PawnLoanEvent'] if e['reversal_of_id']==source['loan_event_id']), None)
+                    require(reversal and reversal['payload'].get('history_correction',{}).get('operation')=='CONTRACT', 'Superseded payout requires an explicit compensated contract correction.')
                 # During admission only, replay the earlier mutable agreement
                 # projection while inserting its immutable snapshot. Ordinary
                 # Python and SQL checks both remain enabled. Restore the current

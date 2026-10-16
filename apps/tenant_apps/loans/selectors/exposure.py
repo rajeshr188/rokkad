@@ -90,8 +90,12 @@ def _read_financial_inputs(loan_id, *, as_of_date):
         return _PawnLoanFinancialInputs(loan, as_of_date, position, None, None)
     active_schedule = get_active_repayment_schedule_as_of(loan, as_of_date)
     continuation = position.recognition.calculation if position.recognition.adapter == "OPENING_CHECKPOINT" else None
+    expected_source = continuation.opening_event_id if continuation else None
+    if continuation:
+        from apps.tenant_apps.loans.services.opening_corrections import opening_schedule_source
+        expected_source = opening_schedule_source(loan, loan.loan_events.get(pk=continuation.opening_event_id))
     if continuation and not position.recorded_balance.financially_settled and (
-        active_schedule is None or active_schedule.source_event_id != continuation.opening_event_id
+        active_schedule is None or active_schedule.source_event_id != expected_source
     ):
         raise PawnLoanExposureError("Opening exposure requires remaining obligations linked to its migration opening.")
     state = calculate_obligation_state_as_of(active_schedule, as_of_date)

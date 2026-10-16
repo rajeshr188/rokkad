@@ -10,9 +10,9 @@ def validate_source_coverage(document):
     tables = document['tables']
     as_of = date.fromisoformat(document['as_of'])
     for source in tables['PawnLoan']:
-        loan = SimpleNamespace(**decode('PawnLoan', source), pk=source['id'])
-        events = [SimpleNamespace(**decode('PawnLoanEvent', row), pk=row['id']) for row in tables['PawnLoanEvent'] if row['loan_id']==loan.pk]
-        reviews = [SimpleNamespace(**decode('LoanTransactionReview', row), pk=row['id']) for row in tables['LoanTransactionReview'] if row['loan_id']==loan.pk]
+        loan = SimpleNamespace(**decode('PawnLoan', source, profile=document['profile']), pk=source['id'])
+        events = [SimpleNamespace(**decode('PawnLoanEvent', row, profile=document['profile']), pk=row['id']) for row in tables['PawnLoanEvent'] if row['loan_id']==loan.pk]
+        reviews = [SimpleNamespace(**decode('LoanTransactionReview', row, profile=document['profile']), pk=row['id']) for row in tables['LoanTransactionReview'] if row['loan_id']==loan.pk]
         coverage = document['positions'][str(loan.pk)]['coverage']
         require(type(coverage['complete']) is bool, 'Invalid source coverage claim.')
         if not coverage['complete']:
@@ -30,7 +30,7 @@ def validate_source_coverage(document):
             continue
         baseline = [e for e in events if review.capture_event_id and e.pk<=review.capture_event_id]
         following = [e for e in events if e not in baseline]
-        items = [SimpleNamespace(**decode('PawnCollateralItem',r),pk=r['id']) for r in tables['PawnCollateralItem'] if r['loan_id']==loan.pk]
+        items = [SimpleNamespace(**decode('PawnCollateralItem',r,profile=document['profile']),pk=r['id']) for r in tables['PawnCollateralItem'] if r['loan_id']==loan.pk]
         require(coverage['status']=='ROKKAD_ONLY' and as_of>=review.through_date and baseline and review.capture_state=='ACTIVE'
             and transaction_fingerprint(loan,events=baseline,state='ACTIVE')==review.source_fingerprint
             and capture_contract_fingerprint(loan,items=items)==review.capture_contract_fingerprint, 'Source future-capture checkpoint changed.')

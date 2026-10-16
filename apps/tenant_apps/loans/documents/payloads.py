@@ -81,6 +81,7 @@ class PawnLoanDocumentProjectionBuilder:
     SCHEMA_VERSION = 1
     FIELD_KEYS = {
         "Original approval time (source claim)": "provenance.original_approval_time",
+        "Agreement correction": "agreement.correction",
         "Original approval actor reference": "provenance.original_approval_actor",
         "Evidence imported at": "provenance.approval_evidence_imported_at",
         "Release batch": "release.batch_id", "Paid by": "release.paid_by",
@@ -99,6 +100,7 @@ class PawnLoanDocumentProjectionBuilder:
         "Monthly interest rate": "loan.monthly_interest_rate", "Tenure": "loan.tenure",
         "Borrower": "borrower.display", "Borrower source ID": "borrower.source_id",
         "Borrower correction": "borrower.correction",
+        "Collateral correction": "collateral.correction",
         "Repayment source ID": "repayment.source_id", "Event fingerprint": "event.fingerprint",
         "Paper receipt reference": "repayment.paper_reference",
         "Receipt entered at": "repayment.recorded_at",
@@ -151,6 +153,12 @@ class PawnLoanDocumentProjectionBuilder:
     }
 
     @classmethod
+    def _collateral_correction_details(cls, loan):
+        rows = list(loan.change_log.filter(event_kind="COLLATERAL_CORRECTED").order_by("pk"))
+        text = "; ".join(f"Item #{row.metadata['collateral_correction']['item_id']}; audit #{row.pk}; {row.reason}" for row in rows)
+        return (("Collateral correction", text + "; original evidence retained"),) if rows else ()
+
+    @classmethod
     def loan_ticket(cls, loan):
         from apps.tenant_apps.loans.services.recorded_collections import recording_for
         if recording_for(loan):
@@ -181,6 +189,10 @@ class PawnLoanDocumentProjectionBuilder:
                     net_weight=r['net_weight'], purity_percentage=r['purity'], latest_appraised_value=r['appraised_value']) for r in original['collateral']])
         from apps.tenant_apps.loans.services.borrower_corrections import corrected_ticket_source, borrower_document_fingerprint
         source, borrower_correction = corrected_ticket_source(loan, source)
+        from apps.tenant_apps.loans.services.agreement_corrections import corrected_agreement_source
+        source = corrected_agreement_source(loan, source)
+        from apps.tenant_apps.loans.services.collateral_corrections import corrected_collateral_source
+        source["collateral"] = corrected_collateral_source(loan, source["collateral"])
         verification = cls._verification(
             loan, f"approval:{approval.pk}:v{approval.version}:{borrower_document_fingerprint(loan, approval.fingerprint)}"
         )
@@ -201,8 +213,17 @@ class PawnLoanDocumentProjectionBuilder:
         )
         if borrower_correction:
             details += (("Borrower correction", f"Audit #{borrower_correction.pk}; {borrower_correction.reason}; original approval retained"),)
+        details += cls._collateral_correction_details(loan)
+        corrected_status = ""
+        if getattr(loan, "disbursal_snapshot_id", None) and loan.disbursal_snapshot.basis == "CORRECTED":
+            correction = loan.disbursal_snapshot.evidence["agreement_correction"]
+            corrected_status = (f"Corrected agreement revision {correction['revision']}; source {correction['reference']}; "
+                f"reason {correction['reason']}; genuine original approval retained; no new payout")
+            if not historical:
+                details += (("Document status", corrected_status),)
         if historical:
-            details += (("Document status", "Imported source agreement; this copy does not attest to a new retrospective lending approval"),
+            details += (("Document status", "Imported source agreement; this copy does not attest to a new retrospective lending approval" +
+                ("; " + corrected_status if corrected_status else "")),
                 ("Original approval time (source claim)", historical.get('at') or 'Unknown'),
                 ("Original approval actor reference", historical.get('actor') or 'Unknown'),
                 ("Evidence imported at", approval.approved_at.isoformat()))
@@ -271,8 +292,11 @@ class PawnLoanDocumentProjectionBuilder:
         origin = loan.loan_events.filter(event_kind__in=("DISBURSAL", "RENEWAL_OPENING"), reversed_by_event__isnull=True).order_by("-pk").first()
         if not recording or not origin:
             raise DocumentProjectionError("A recorded contract requires its original financial source.")
-        terms, day = recording["terms"], as_of_date or timezone.localdate()
+        terms, day = dict(recording["terms"]), as_of_date or timezone.localdate()
+        from apps.tenant_apps.loans.services.collateral_corrections import corrected_collateral_source, collateral_document_fingerprint
+        terms["collateral"] = corrected_collateral_source(loan, terms["collateral"])
         identity = cls.recorded_position_fingerprint(loan, day) if position else origin.payload_fingerprint
+        identity = collateral_document_fingerprint(loan, identity)
         status = f"Recorded from paper; source {recording['source_reference']}; entered {origin.created_at.isoformat()}; generated {timezone.now().isoformat()}; original digital approval absent"
         borrower_correction = loan.change_log.filter(event_kind="BORROWER_CORRECTED").order_by("pk").last()
         if borrower_correction:
@@ -304,6 +328,7 @@ class PawnLoanDocumentProjectionBuilder:
             ("Paper proceeds after deductions", cls._money(Decimal(terms["principal_amount"])-Decimal(recording["advance_interest"])-Decimal(charge))),
             ("Physical cash confirmation", confirmation))
         rows = [("Item ID", "Description", "Metal", "Net weight", "Purity", "Original appraisal")]
+        details += cls._collateral_correction_details(loan)
         rows.extend((row["item_id"], collateral_description(row), row["metal"], row["net_weight"],
             row["purity_percentage"], "Not recorded") for row in terms["collateral"])
         sections = [("Collateral", rows)]
@@ -343,7 +368,13 @@ class PawnLoanDocumentProjectionBuilder:
             status += (f"; historical correction recorded {event.created_at.isoformat()}; "
                        f"{correction.get('description', 'Revised historical evidence')}; source event {correction.get('source_event_id') or 'missing receipt'}; "
                        "not a new cash collection")
+        agreement = event.payload.get("agreement_correction")
+        if agreement:
+            status += (f"; agreement correction recorded {event.created_at.isoformat()}; "
+                f"retained receipt event {agreement['source_event_id']}; {agreement['reason']}; not a new cash collection")
         source = f"repayment:{event.pk}:{event.payload_fingerprint}"
+        from apps.tenant_apps.loans.services.collateral_corrections import collateral_document_fingerprint
+        source = collateral_document_fingerprint(loan, source)
         borrower_correction = loan.change_log.filter(event_kind="BORROWER_CORRECTED").order_by("pk").last()
         if borrower_correction:
             status += f"; borrower corrected; audit #{borrower_correction.pk}; payment facts unchanged"

@@ -32,6 +32,8 @@ class PartyMergeResult:
     identifiers_moved: int = 0
     documents_moved: int = 0
     relationships_moved: int = 0
+    loans_moved: int = 0
+    khata_accounts_moved: int = 0
     skipped: list[str] = field(default_factory=list)
 
 
@@ -50,8 +52,11 @@ def merge_parties(*, target, source, actor=None):
     if target.pk == source.pk:
         raise PartyMergeConflict("A party cannot be merged into itself.")
 
-    target = Party.objects.select_for_update().get(pk=target.pk)
-    source = Party.objects.select_for_update().get(pk=source.pk)
+    parties = {p.pk: p for p in Party.objects.select_for_update().filter(
+        workspace_id=target.workspace_id, pk__in=(target.pk, source.pk)).order_by("pk")}
+    target, source = parties[target.pk], parties[source.pk]
+    if target.status == Party.PartyStatus.ARCHIVED or source.status == Party.PartyStatus.ARCHIVED:
+        raise PartyMergeConflict("Choose two unarchived parties to merge.")
     conflicts = _merge_conflicts(target, source)
     if conflicts:
         raise PartyMergeConflict(conflicts)
@@ -71,6 +76,8 @@ def merge_parties(*, target, source, actor=None):
     documents_moved = source.documents.update(party=target)
     relationships_moved, relationship_skips = _move_relationships(target, source)
     _archive_source_party(target, source, actor=actor)
+    from apps.tenant_apps.loans.services.party_merge import transfer_merged_party_accounts
+    loans_moved, khata_accounts_moved = transfer_merged_party_accounts(source=source, target=target, actor=actor)
 
     return PartyMergeResult(
         target=target,
@@ -81,8 +88,38 @@ def merge_parties(*, target, source, actor=None):
         identifiers_moved=identifiers_moved,
         documents_moved=documents_moved,
         relationships_moved=relationships_moved,
+        loans_moved=loans_moved,
+        khata_accounts_moved=khata_accounts_moved,
         skipped=role_skips + relationship_skips,
     )
+
+
+@transaction.atomic
+def repair_merged_party_accounts(*, source, actor):
+    """Idempotently finish an already recorded merge, following exact merge links."""
+    require_party_service_permission(source.workspace_id, actor, *PARTY_ACTION_PERMISSIONS["edit"])
+    # Lock all merge identities in a stable order; a repair is rare and bounded
+    # to this Workspace. No matching by names, phones or imported source IDs.
+    parties = {p.pk: p for p in Party.objects.select_for_update().filter(
+        workspace_id=source.workspace_id).order_by("pk")}
+    source = parties[source.pk]
+    target, seen = source, set()
+    while target.metadata.get("merged_into_party_id") is not None:
+        if target.pk in seen or target.status != Party.PartyStatus.ARCHIVED:
+            raise PartyMergeConflict("Invalid or cyclic retained merge history.")
+        seen.add(target.pk)
+        next_id = target.metadata["merged_into_party_id"]
+        next_party = parties.get(next_id) if type(next_id) is int else None
+        if next_party is None or target.pk not in next_party.metadata.get("merged_from_party_ids", []):
+            raise PartyMergeConflict("Missing or inconsistent retained merge target.")
+        target = next_party
+    if target.pk == source.pk or target.status == Party.PartyStatus.ARCHIVED:
+        raise PartyMergeConflict("No retained unarchived merge target.")
+    # Replay each recorded edge so the immutable correction chain remains true.
+    from apps.tenant_apps.loans.services.party_merge import transfer_merged_party_accounts
+    if source.metadata["merged_into_party_id"] != target.pk:
+        raise PartyMergeConflict("Repair chained merges in reverse order after explicit review.")
+    return transfer_merged_party_accounts(source=source, target=target, actor=actor)
 
 
 def _merge_conflicts(target, source):

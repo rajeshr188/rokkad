@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-15
+updated: 2026-10-16
 tags: [loans, pawn-loan, balance, obligations, exposure, risk]
 related:
   - ../adr/2026-08-11-loans-product-obligation-and-risk-architecture.md
@@ -9,6 +9,17 @@ related:
 ---
 
 # PawnLoan Financial Read Models
+
+The shared agreement financial correction contract retains source-specific
+recognition while exposing one impact review. Direct corrected snapshots preserve
+original approval as provenance; current native monthly recognition uses its
+explicit agreement revision and ignores superseded calculation versions without
+erasing them. Checkpoint corrections contribute the reviewed before/after balance
+difference while preserving one original opening and unavailable earlier history.
+Opening servicing/exposure/delinquency resolve the remaining schedule associated
+with the latest explicit correction. Original item principal is distinct from debt
+at cutover. Documents, exchange and current assessments consume those canonical
+revisions. See the [contract](../contracts/loan-agreement-correction-v1.md).
 
 The filtered directory Excel and Party ordinary-loan summaries share the existing
 collection position for active agreements. Exporting does not recognize interest.

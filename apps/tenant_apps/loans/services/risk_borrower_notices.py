@@ -86,6 +86,12 @@ def create_risk_borrower_notice(alert_id, *, actor, expected_fingerprint, channe
     if correction:
         suffix = f"-borrower{correction.pk}"
         request_key = request_key[:120-len(suffix)] + suffix
+    from .agreement_corrections import agreement_notice_identity
+    agreement = agreement_notice_identity(alert.loan)
+    if agreement:
+        # Preserve all existing position/borrower identity in the bounded suffix.
+        suffix = f"-agreement{agreement['correction_id']}-" + hashlib.sha256(request_key.encode()).hexdigest()[:16]
+        request_key = request_key[:120-len(suffix)] + suffix
     return create_pawn_loan_notice(
         alert.loan_id,
         notice_kind=preview.readiness.notice_kind,
@@ -133,7 +139,7 @@ def _communication_evidence(preview, actor):
 
 def _payload(alert, balance):
     from .borrower_corrections import borrower_notice_identity
-    return {
+    payload = {
         'borrower_identity': borrower_notice_identity(alert.loan),
         "customer": {"name": alert.loan.borrower.display_name, "email": alert.loan.borrower.primary_email},
         "loans": [{
@@ -148,6 +154,11 @@ def _payload(alert, balance):
         "event_key": "OVERDUE_NOTICE" if alert.alert_kind == LoanRiskAlert.Kind.DPD_WORSENING else "REPAYMENT_REMINDER",
         "generated_at": alert.source_event.occurred_at.isoformat(),
     }
+    from .agreement_corrections import agreement_notice_identity
+    agreement = agreement_notice_identity(alert.loan)
+    if agreement:
+        payload["agreement_identity"] = agreement
+    return payload
 
 
 def _fingerprint(readiness, channel, payload, subject, body, provider_payload=None):

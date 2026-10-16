@@ -139,7 +139,7 @@ def collection_history(opening, origin, events, as_of):
     ordered = sorted(events, key=lambda e: (e.effective_date, e.pk))
     latest_timestamp = None
     for row in ordered:
-        if row.pk == origin.pk:
+        if row.pk == origin.pk or row.event_kind == "OPENING_CORRECTION":
             continue
         from .opening_precision import validate_event_order
         occurred = validate_event_order(review, row)

@@ -291,6 +291,10 @@ def _source_fingerprint(loan_id, workspace_id, as_of_date):
         .get()
     )
     payload = {"as_of": as_of_date.isoformat(), "loan": {k: str(v) for k, v in loan.items()}}
+    corrections = PawnLoan.objects.get(pk=loan_id, workspace_id=workspace_id).change_log.filter(
+        event_kind="COLLATERAL_CORRECTED").aggregate(count=Count("pk"), max_pk=Max("pk"))
+    if corrections["count"]:
+        payload["collateral_corrections"] = corrections
     from apps.tenant_apps.loans.models import LoanTransactionReview
     payload["transaction_reviews"] = LoanTransactionReview.objects.filter(loan_id=loan_id).aggregate(count=Count("pk"), max_pk=Max("pk"))
     model = PawnLoan

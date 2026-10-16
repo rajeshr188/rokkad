@@ -24,7 +24,9 @@ def imported_ticket_payload(loan):
         raise ValueError("This preview requires an imported opening loan without a native approval.")
     opening = read_opening_evidence(loan, event)
     review = opening["review"]
-    if origin.source_sha256 != digest(origin.document) or origin.document.get("review") != review:
+    correction = loan.loan_events.filter(event_kind="OPENING_CORRECTION").order_by("pk").last()
+    accepted_review = event.payload["opening"]["review"] if correction else review
+    if origin.source_sha256 != digest(origin.document) or origin.document.get("review") != accepted_review:
         raise ValueError("Imported ticket evidence does not match its accepted source.")
     items = [{"item_id": opening["item_mapping"][row["id"]], "description": row["description"],
               "quantity": row.get("quantity"), "metal": row["metal"], "net_weight": row["net_weight"], "purity_percentage": row["purity"],
@@ -36,6 +38,9 @@ def imported_ticket_payload(loan):
     rate = f"{next(iter(rates)):f}%" if len(rates) == 1 else "Varies by item (imported terms)"
     source = {"loan_number": review["source"]["number"], "loan_date": review["terms"]["original_date"],
               "principal_amount": str(principal), "borrower_id": loan.borrower_id, "collateral": items}
+    from .collateral_corrections import corrected_collateral_source, collateral_document_fingerprint
+    items = corrected_collateral_source(loan, items)
+    source["collateral"] = items
     details = Projection._identity_rows(loan) + (
         ("Document", "Reconstructed imported loan ticket preview"),
         ("Document status", "PREVIEW - reconstructed from imported records; not an original or official issue"),
@@ -48,14 +53,23 @@ def imported_ticket_payload(loan):
         ("Borrower source ID", f"Party:{loan.borrower_id}"),
         ("Lifecycle state", "Imported opening"), ("Tenure", "Original tenure not verified"),
     )
+    details += Projection._collateral_correction_details(loan)
+    if correction:
+        evidence = correction.payload["agreement_correction"]
+        details += (("Agreement correction", f"Checkpoint correction #{correction.pk}; {evidence['reference']}; {evidence['reason']}; earlier transactions remain unavailable"),)
     rows = [("Item ID", "Description", "Metal", "Net weight", "Purity", "Appraisal", "Custody")]
     rows.extend((str(row["item_id"]), collateral_description(row), row["metal"].title(), row["net_weight"],
                  f"{row['purity_percentage']}%", Projection._money(row["latest_appraised_value"])
                  if row["latest_appraised_value"] is not None else "Unknown", "At import") for row in items)
     payload = Projection._payload("loan_ticket", "Imported Loan Ticket Preview", f"imported-ticket-{loan.pk}.pdf",
-        Projection._verification(loan, f"import-preview:{origin.public_id}:{origin.source_sha256}"),
+        Projection._verification(loan, _fingerprint(loan, collateral_document_fingerprint(loan, f"import-preview:{origin.public_id}:{origin.source_sha256}"))),
         details, (("Collateral", rows),))
     return payload, source, origin
+
+
+def _fingerprint(loan, value):
+    from .agreement_corrections import agreement_document_fingerprint
+    return agreement_document_fingerprint(loan, value)
 
 
 def render_imported_ticket_preview(*, loan, actor, address_id=None):
@@ -73,7 +87,7 @@ def _render_imported_ticket(*, loan, actor, address_id, as_copy):
     if as_copy:
         values = {"document.name": "Imported loan copy", "document.status": "Reprinted from imported records"}
         payload = replace(payload, title="Imported Loan Copy", file_name=f"imported-loan-copy-{loan.pk}.pdf",
-            verification_id=Projection._verification(loan, f"import-copy:{origin.public_id}:{origin.source_sha256}"),
+            verification_id=Projection._verification(loan, _fingerprint(loan, f"import-copy:{origin.public_id}:{origin.source_sha256}")),
             fields=tuple(replace(field, value=values[field.key]) if field.key in values else field for field in payload.fields))
     revision = LoanDocumentLayoutService.resolve(workspace=loan.workspace, document_type="loan_ticket",
                                                 license=loan.license, series=loan.series)

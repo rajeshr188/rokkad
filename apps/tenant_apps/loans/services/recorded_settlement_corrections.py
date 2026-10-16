@@ -156,8 +156,12 @@ def restate_settlement(loan, source, *, actor, facts, context, successor_terms=N
     previous_custody = source.payload.get("history_correction", {}).get("custody_restatement")
     if custody_restatement or previous_custody:
         meta["custody_restatement"] = custody_restatement or previous_custody
-    recognize_collection_interest(loan, day, actor=actor, request_key="correction:" + context["request_key"] + ":settlement",
-                                  correction_evidence=dict(meta, role="REPLAY", description="Recalculated settlement interest"))
+    if recording_for(loan):
+        recognize_collection_interest(loan, day, actor=actor, request_key="correction:" + context["request_key"] + ":settlement",
+                                      correction_evidence=dict(meta, role="REPLAY", description="Recalculated settlement interest"))
+    else:
+        from .pawn_interest import recognize_due_monthly_interest
+        recognize_due_monthly_interest(loan, day, actor=actor)
     balance = get_pawn_loan_balance(loan, as_of_date=day)
     principal, interest = balance.principal_outstanding, balance.interest_outstanding
     item_balances = get_pawn_principal_tranche_balances(loan, as_of_date=day)
@@ -223,7 +227,7 @@ def restate_settlement(loan, source, *, actor, facts, context, successor_terms=N
         m.PawnLoanPrincipalClosingLine.objects.create(loan_event=event, collateral_item_id=item.collateral_item_id, allocation_order=order,
             monthly_interest_rate=item.monthly_interest_rate, balance_before=item.principal_outstanding,
             principal_settled=item.principal_outstanding, balance_after=0)
-    if collection_balance(loan, day).total_due:
+    if (collection_balance(loan, day) if recording_for(loan) else get_pawn_loan_balance(loan, as_of_date=day)).total_due:
         raise ValueError("The corrected settlement did not reconcile to zero.")
     return dict(source=source.pk, action="Restate settlement; no physical movement", date=day.isoformat(),
         reference=facts["reference"], amount=str(old_in), new_amount=str(received),

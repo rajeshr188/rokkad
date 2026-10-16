@@ -102,12 +102,16 @@ def get_pawn_loan_release_readiness(
     balance = get_pawn_loan_balance(loan.pk, as_of_date=as_of_date)
     collateral_items = tuple(loan.collateral_items.all())
     appraisal_values = {}
+    from apps.tenant_apps.loans.services.collateral_corrections import invalidated_appraisal_versions
+    invalidated = invalidated_appraisal_versions(loan)
     appraisals = CollateralAppraisal.objects.filter(
         collateral_item_id__in=[item.pk for item in collateral_items],
         effective_at__date__lte=as_of_date,
         status=CollateralAppraisal.Status.APPROVED,
     ).order_by("collateral_item_id", "-effective_at", "-version")
     for appraisal in appraisals:
+        if appraisal.version <= invalidated.get(appraisal.collateral_item_id, -1):
+            continue
         appraisal_values.setdefault(
             appraisal.collateral_item_id, appraisal.appraised_value
         )

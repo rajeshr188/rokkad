@@ -172,6 +172,13 @@ def pawn_loan_detail(request, pk):
     context["can_record_completed_payout"] = (adapter is not None
         and all(request.loans_workspace_access.can(action) for action in actions))
     context["can_correct_origination"] = False
+    context["collateral_corrections"] = loan.change_log.filter(event_kind="COLLATERAL_CORRECTED").select_related("actor").order_by("pk")
+    context["agreement_corrections"] = []
+    for log in loan.change_log.filter(Q(metadata__agreement_correction__isnull=False)
+            | Q(metadata__history_correction__operation="CONTRACT")).select_related("actor").order_by("pk"):
+        evidence = log.metadata.get("agreement_correction") or log.metadata["history_correction"]
+        context["agreement_corrections"].append(dict(log=log, reference=evidence.get("reference") or
+            log.metadata.get("review", {}).get("reference"), review=evidence.get("review") or log.metadata.get("review", {})))
     if loan.state == "DRAFT" and all(request.loans_workspace_access.can(action)
             for action in ("workspace.settings.manage", "data.create", "data.edit", "loan.disburse")):
         from apps.tenant_apps.loans.services.origination_corrections import correction_source

@@ -46,7 +46,8 @@ def get_pawn_loan_delinquency(loan_id: int, *, as_of_date: date, _inputs=None):
     if balance.financial_history_from is not None:
         from apps.tenant_apps.loans.services.opening_evidence import read_opening_evidence
         origin = loan.loan_events.get(event_kind="MIGRATION_OPENING")
-        if not balance.financially_settled and (schedule is None or schedule.source_event_id != origin.pk):
+        from apps.tenant_apps.loans.services.opening_corrections import opening_schedule_source
+        if not balance.financially_settled and (schedule is None or schedule.source_event_id != opening_schedule_source(loan, origin)):
             raise PawnLoanDelinquencyError("Opening delinquency requires its reviewed remaining obligations.")
         grace_days = read_opening_evidence(loan, origin)["review"]["terms"]["grace_days"]
     obligation_state = (_inputs.obligation_state if _inputs is not None

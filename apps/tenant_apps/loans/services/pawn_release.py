@@ -554,8 +554,10 @@ def _record_release_accrual(loan, *, preview, actor, request_key=None, collectio
             payload=payload,
             actor=actor,
         )
+    from .agreement_corrections import agreement_revision
     accrual = PawnLoanInterestAccrual.objects.create(
         loan=loan,
+        agreement_revision=agreement_revision(loan),
         period_number=preview.period_number,
         period_start=preview.period_start,
         period_end=preview.period_end,

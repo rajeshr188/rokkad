@@ -1,11 +1,67 @@
 ---
 status: active
 owner: project
-updated: 2026-10-15
+updated: 2026-10-16
 tags: [agents, context, architecture]
 ---
 
 # Agent Memory
+
+The owner authorizes duplicate Party merges to consolidate every ordinary loan
+and Khata account's current borrower link, plus repair of previously incomplete
+production merges. Preserve separate agreement numbers, all financial evidence,
+custody, old issued documents and original Party/source identities. The retained
+detail-page Party is the target; never infer merge targets from names. Reuse
+immutable borrower correction chains and audited Khata borrower-only moves.
+Loans 0082 branches from deployed 0077; 0084 serializes borrower admission with
+merge locks and rejects stale duplicate references. Both are deployed. Local
+0083/0085 no-ops join pending agreement corrections and must not ship that work
+inadvertently.
+Bounded servicing export holds merged histories until portable merge remapping
+exists; exact recovery retains the evidence. See the
+[decision](adr/2026-10-16-party-merge-loan-consolidation.md). One historical merge/
+ordinary loan is repaired; independent production inspection finds no remaining
+affected links. The final ten-file overlay `0bada518f1b3` is deployed on compatible
+readers after 166 tests, restored-data preservation, actual race tests and encrypted
+image recovery. Encrypted pre/post backups, retention/download checks and
+disposable-database/temporary-settings cleanup pass; recovery/audit proofs remain.
+See the
+[release record](implementation/party-merge-consolidation-20261016.md).
+
+The [16 October origination/monitoring review](architecture/loan-origination-monitoring-review-20261016.md)
+is a proposed source analysis, not an accepted implementation decision. It keeps
+one loan domain and the delivered shared calculations/current monitoring policy,
+and recommends explicit action purposes, a stable financial read boundary and
+separation of original decision evidence from current risk inputs. Characterize
+the live date-versus-instant evidence cutoff; measure worker/invalidation costs
+before introducing revisions or changing locks. Preserve pending correction work.
+
+The owner subsequently approved shared agreement financial correction in the
+recommended order. The local implementation provides a common signed impact
+review over retained paper/native financial recognition, explicit corrected native
+snapshots and monthly revisions, verified checkpoint compensation without a second
+origin, and bounded full-closure reconciliation. Preserve historical cash, original
+approval, custody and source uncertainty. Corrected debt refreshes existing risk
+inputs; old queued notices are held by agreement identity. Unsupported connected
+graphs and already-serviced checkpoint baselines remain held. The owner authorized
+commit/push on 16 October, preserving the deployed Party-merge fix; the agreement
+and preceding collateral changes are not deployed. This implementation has made
+no production changes. See the
+[ordered plan](plans/shared-agreement-financial-corrections-20261015.md) and
+[verification record](implementation/shared-agreement-financial-corrections-20261015.md).
+
+The owner approved shared fact correction independent of direct/paper entry.
+Preparation drafts remain editable; completed facts need an audited impact review,
+and actual later activity remains a business action. The implemented local change adds
+collateral transcription review (description, quantity, metal, gross/net grams,
+purity) without changing economics, custody, identity or lifecycle, and replaces
+duplicate correction navigation with contextual actions. Prior appraisal versions
+are inapplicable after measurement correction; document copies and portable
+servicing v6 retain correction provenance. Connected dependencies remain held.
+The final 353-case selection, document/recovery checks and desktop/mobile checks
+pass. Owner migrations Loans 0078 and portability 0028 require compatible readers
+before new writes. This work is not deployed. See the [decision](adr/2026-10-15-shared-loan-fact-corrections.md)
+and [implementation](implementation/shared-loan-corrections-20261015.md).
 
 Plain full-access extensions must not prevent selected monthly/annual purchases.
 Only access history consisting of full grants with no separate Plan and an empty

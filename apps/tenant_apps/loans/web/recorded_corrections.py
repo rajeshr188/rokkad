@@ -79,8 +79,11 @@ def correction(request, pk):
     if request.method == "GET" and batch_line:
         return redirect("workspace_loans:release_batch_correct_history", workspace_slug=request.workspace.slug, batch_pk=batch_line.batch_id)
     events, active, blockers = dependencies(loan)
+    selected = next((event for event in active if str(event.pk) == request.GET.get("event") and event.event_kind == "REPAYMENT"), None)
     form = CorrectionForm(request.POST if request.method == "POST" else None,
-        initial={"request_key": uuid4().hex}, receipts=[e for e in events if e.event_kind == "REPAYMENT"],
+        initial={"request_key": uuid4().hex, **({"operation": "REPLACE", "target": selected.pk,
+            "date": selected.effective_date, "amount": selected.payload["repayment"]["amount_received"]} if selected else {})},
+        receipts=[e for e in events if e.event_kind == "REPAYMENT"],
         settlement=next((e for e in active if e.event_kind in ("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT")), None),
         collateral_items=list(loan.collateral_items.order_by("pk")))
     review = None
@@ -192,9 +195,15 @@ def _item_splits(values):
 @loans_action_required(LOANS_ADMIN_ACTION)
 @never_cache
 def contract_correction(request, pk):
-    from apps.tenant_apps.loans.services.recorded_contract_corrections import preview_contract_correction, record_contract_correction
+    from apps.tenant_apps.loans.services.agreement_corrections import (
+        preview_agreement_correction as preview_contract_correction,
+        record_agreement_correction as record_contract_correction, correction_dependencies,
+    )
     loan = get_object_or_404(m.PawnLoan, pk=pk, workspace=request.loans_workspace)
-    _, active, blockers = dependencies(loan)
+    if loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        from .opening_agreement_corrections import opening_agreement_correction
+        return opening_agreement_correction(request, loan)
+    _, active, blockers = correction_dependencies(loan)
     from apps.tenant_apps.loans.selectors.recorded_settlements import current_settlement
     relation = m.PawnLoanRenewal.objects.filter(successor_loan=loan).first()
     predecessor = current_settlement(relation.settlement_event) if relation else None
@@ -209,6 +218,13 @@ def contract_correction(request, pk):
         settlement=next((event for event in active if event.event_kind in ("RELEASE_RECEIPT", "RENEWAL_SETTLEMENT")), None),
         predecessor=predecessor, collateral_items=list(loan.collateral_items.order_by("pk")),
         replay_receipts=[event for event in active if event.event_kind == "REPAYMENT"])
+    from apps.tenant_apps.loans.services.recorded_collections import recording_for
+    if not recording_for(loan):
+        for name in ("adopt_shared_interest", "currency_quantum"):
+            del form.fields[name]
+    form.fields["reference"].label = "Supporting agreement, receipt or book reference"
+    form.fields["confirmed"].label = "I checked the corrected agreement, original proceeds and affected allocations. This records no new payout, collection, refund or jewellery movement."
+    form.order_fields([key for key in form.fields if key != "confirmed"] + ["confirmed"])
     review = None
     if request.method == "POST" and form.is_valid():
         values = {key: value for key, value in form.cleaned_data.items() if key not in ("review_token", "confirmed")}

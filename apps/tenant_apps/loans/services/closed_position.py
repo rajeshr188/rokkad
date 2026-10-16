@@ -197,6 +197,10 @@ def read_closed_evidence(loan, event):
         raise ValueError("Compact position must reference, rather than copy, retained source evidence.")
     terms = document["loan"]
     mapping = dict(workspace_id=loan.workspace_id, borrower_id=loan.borrower_id, series_id=loan.series_id, license_id=loan.license_id)
+    if accepted["mapping"].get("borrower_id") != loan.borrower_id:
+        from .borrower_corrections import corrected_ticket_source
+        corrected_ticket_source(loan, {"borrower_id": accepted["mapping"]["borrower_id"]})
+        mapping["borrower_id"] = accepted["mapping"]["borrower_id"]
     original = date.fromisoformat(terms["original_date"]) if terms["original_date"] else None
     if (not loan.is_imported_closed_position or loan.state != "CLOSED" or accepted["mapping"] != mapping
         or loan.product_version_id or loan.policy_snapshot_id or loan.disbursal_snapshot_id or loan.license_revision_id

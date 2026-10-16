@@ -16,7 +16,7 @@ def current_settlement(event):
     root = event.payload.get("history_correction", {}).get("root_event_id") or event.pk
     replacement = PawnLoanEvent.objects.filter(
         loan_id=event.loan_id, event_kind=event.event_kind, reversed_by_event__isnull=True,
-        payload__history_correction__schema="recorded-history-correction/1",
+        payload__history_correction__schema__in=("recorded-history-correction/1", "loan-agreement-correction/1"),
         payload__history_correction__role="SETTLEMENT",
         payload__history_correction__root_event_id=root,
     ).first()

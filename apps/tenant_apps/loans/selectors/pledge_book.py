@@ -60,6 +60,9 @@ def _event_line(event, reversed_ids):
     correction = event.payload.get('history_correction')
     if correction:
         text += f"; historical correction: {correction.get('description', 'Revised historical evidence')}; source event {correction.get('source_event_id') or 'missing receipt'}; recorded {display_date(event.created_at)}; no new collection"
+    agreement = event.payload.get('agreement_correction')
+    if agreement:
+        text += f"; agreement correction: {agreement['reason']}; source event {agreement['source_event_id']}; no new collection"
     return text
 
 
@@ -83,6 +86,11 @@ def _entry(loan, tickets, *, start, end, imported_particulars=None):
             warnings.append('Original contract recorded afterward; no contemporaneous digital lending approval is claimed.')
         else:
             source = snapshot.approval_snapshot.payload
+            if snapshot.basis == "CORRECTED":
+                from apps.tenant_apps.loans.services.agreement_corrections import corrected_agreement_source
+                source = corrected_agreement_source(loan, source)
+                correction = snapshot.evidence['agreement_correction']
+                warnings.append(f"Reviewed agreement correction: {correction['reference']}; {correction['reason']}; original approval retained, no new payout.")
             source_label = f'Disbursal {snapshot.loan_event_id}; approval {snapshot.approval_snapshot_id}'
         approval_id = snapshot.approval_snapshot_id
         items = source.get('collateral', [])
@@ -116,8 +124,9 @@ def _entry(loan, tickets, *, start, end, imported_particulars=None):
         else:
             warnings.append('Principal carried from the preceding loan; collateral remained held. No fresh cash payout or original digital approval is claimed.')
     elif opening:
-        review = read_opening_evidence(loan, opening)['review']
-        items = [dict(description=i['description'], quantity=i.get('quantity'), metal=i['metal'],
+        opening_evidence = read_opening_evidence(loan, opening)
+        review = opening_evidence['review']
+        items = [dict(item_id=opening_evidence['item_mapping'][i['id']], description=i['description'], quantity=i.get('quantity'), metal=i['metal'],
                       gross_weight=i.get('gross_weight'), net_weight=i['net_weight'],
                       latest_appraised_value=(i['valuation'].get('amount') if i['valuation'].get('date') == review['terms']['original_date'] else None), monthly_interest_rate=i['monthly_rate'])
                  for i in review['collateral']]
@@ -156,6 +165,13 @@ def _entry(loan, tickets, *, start, end, imported_particulars=None):
         warnings.append('Original name/address snapshot unavailable. The current customer profile is not substituted.')
     else:
         warnings.append(f'Name/address from ticket issued {display_date(ticket.issued_at)}; verify these were the particulars at pawning.')
+    corrections = list(loan.change_log.filter(event_kind='COLLATERAL_CORRECTED').order_by('pk')) if hasattr(loan, 'change_log') else []
+    if corrections and items:
+        from apps.tenant_apps.loans.services.collateral_corrections import corrected_collateral_source
+        items = corrected_collateral_source(loan, items)
+        warnings.append('Reviewed collateral transcription corrections: '
+            + '; '.join(f"audit #{row.pk}: {row.reason}" for row in corrections)
+            + '. Original source particulars remain retained.')
     descriptions, valuations, rates = [], [], []
     for index, item in enumerate(items, 1):
         descriptions.append(f"{index}. {item['description']}; {item.get('metal', UNKNOWN)}; qty {_number(item.get('quantity'))}; gross {_number(item.get('gross_weight'))} g; net {_number(item.get('net_weight'))} g")

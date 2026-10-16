@@ -112,7 +112,7 @@ def calculate_pawn_loan_balance(
             raise PawnLoanBalanceSelectorError("Financial history before the migration cutover is unavailable.")
         from apps.tenant_apps.loans.services.opening_precision import validate_event_order
         for event in events:
-            if event is not origin:
+            if event is not origin and event.event_kind != "OPENING_CORRECTION":
                 try:
                     validate_event_order(opening["review"], event)
                 except ValueError as exc:
@@ -267,6 +267,12 @@ def _apply_event(totals, event):
         totals["opening_principal"] += principal
         totals["opening_interest"] += interest
         totals["opening_fees"] += fees
+    elif kind == TransactionKind.OPENING_CORRECTION:
+        before = event.payload.get("agreement_correction", {}).get("before_values", {})
+        if set(before) != {"principal", "interest", "fees"}:
+            raise PawnLoanBalanceSelectorError("Opening correction requires its previous checkpoint values.")
+        for key in ("principal", "interest", "fees"):
+            totals["opening_" + key] += _amount(values, key) - _amount(before, key)
     elif kind == TransactionKind.DISBURSAL:
         totals["principal_disbursed"] += principal
         totals["fees_assessed"] += fees_assessed

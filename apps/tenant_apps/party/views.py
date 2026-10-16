@@ -687,7 +687,8 @@ def party_merge(request, pk):
                 f"Merged {source.display_name} into {party.display_name}. "
                 f"Moved {result.contacts_moved} contacts, {result.addresses_moved} "
                 f"addresses, {result.identifiers_moved} identifiers, "
-                f"and {result.documents_moved} documents."
+                f"{result.documents_moved} documents, {result.loans_moved} loans "
+                f"and {result.khata_accounts_moved} Khata accounts."
             )
             if result.skipped:
                 message = f"{message} Some relationship or role duplicates were skipped."

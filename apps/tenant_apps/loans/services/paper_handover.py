@@ -51,7 +51,9 @@ def release_document_fingerprint(release):
     from apps.tenant_apps.loans.selectors.recorded_settlements import current_settlement
     fingerprint = current_settlement(release.loan_event).payload_fingerprint
     handover = confirmation_for(release)
-    return _digest(dict(financial=fingerprint, handover=handover)) if handover else fingerprint
+    from .collateral_corrections import collateral_document_fingerprint
+    return collateral_document_fingerprint(release.loan,
+        _digest(dict(financial=fingerprint, handover=handover)) if handover else fingerprint)
 
 
 def _review(loan, release, items, facts):

@@ -182,7 +182,9 @@ def read_terminal_review(loan, opening):
     if type(review) is not dict or set(review) != fields or review["profile"] != REVIEW_PROFILE or loan.state != "CLOSED":
         raise ValueError("Terminal admission requires a verified closed loan and supported evidence.")
     data = validate_input(review["data"])
-    for key, attr in (("borrower_id", "borrower_id"), ("series_id", "series_id"),
+    from .borrower_corrections import corrected_ticket_source
+    corrected_ticket_source(loan, {"borrower_id": data["borrower_id"]})
+    for key, attr in (("series_id", "series_id"),
             ("product_version_id", "product_version_id"), ("license_revision_id", "license_revision_id")):
         if data.get(key) != getattr(loan, attr, None):
             raise ValueError("Terminal agreement destination references do not match its loan.")

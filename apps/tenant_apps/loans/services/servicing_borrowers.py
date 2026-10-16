@@ -7,6 +7,8 @@ from .recorded_history import _digest, _text
 
 
 def source_parties(loan, namespace):
+    require(not loan.change_log.filter(metadata__borrower_correction__party_merge=True).exists(),
+        "Party-merged loan histories require exact Workspace recovery; portable merge remapping is not supported.")
     from apps.tenant_apps.data_portability.models import PartyIdentity
     identities = {loan.borrower_id}
     for log in loan.change_log.filter(event_kind="BORROWER_CORRECTED"):
@@ -50,6 +52,8 @@ def validate_parties(document):
                 required.add(str(party["id"]))
             require(evidence["before"]["id"] != evidence["after"]["id"]
                 and (previous is None or previous == evidence["before"]["id"]), "Broken borrower correction chain.")
+            require(evidence.get("party_merge") is not True,
+                "Portable Party merge remapping is not supported; use exact Workspace recovery.")
             require(log["actor_id"] is not None and log["from_state"] == log["to_state"] == "ACTIVE"
                 and log["reason"] == evidence.get("reason") and bool(log["reason"].strip()), "Invalid correction recorder/reason.")
             facts = dict(borrower_id=evidence["after"]["id"], reference=evidence.get("reference"),

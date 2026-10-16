@@ -1,11 +1,106 @@
 ---
 status: active
 owner: project
-updated: 2026-10-15
+updated: 2026-10-16
 tags: [status, architecture]
 ---
 
 # Status
+
+## Party merge account consolidation (16 October, deployed)
+
+The owner authorizes completion of new Party merges and repair of earlier live
+merges that left loans attached to archived duplicates. The scoped fix moves all
+ordinary/Khata current borrower links atomically and retains immutable/audited
+identity evidence without changing financial facts or issued documents. Aggregate
+production inspection finds one incomplete merge with one ordinary loan and no
+Khata accounts or chains. The deployed restricted-role repair moves that loan;
+independent readback finds zero remaining affected links. Loans 0084 also prevents
+new/stale borrower links racing with a merge. All **166 final-candidate tests**
+pass, including both PostgreSQL race orders. A 222-table production-copy restore,
+financial preservation and rolled-back real-agreement checks pass. Ten scoped
+source files match both readers; HTTPS, roles, six timers and error checks pass.
+Only Loans 0082/0084 ship; unrelated local correction work and joining no-ops
+0083/0085 remain excluded. No customer identifiers are exported. Exact encrypted
+image recovery, encrypted pre/post backups and retention/download checks pass.
+Disposable databases and temporary task settings are removed; recovery/audit
+proofs remain retained. Final source `0bada518f1b3` is live on compatible readers.
+See the [decision](adr/2026-10-16-party-merge-loan-consolidation.md) and
+[release record](implementation/party-merge-consolidation-20261016.md).
+
+## Origination and monitoring architecture review (16 October, proposed)
+
+A source-only review recommends keeping the shared PawnLoan domain while making
+action purpose, financial reads, original decision evidence and current monitoring
+inputs clearer. It identifies a date-only live-evidence cutoff to characterize,
+and recommends measuring invalidation/worker contention before adding machinery.
+Existing independent monitoring, shared calculations and recurring refresh are
+retained. No application, data or deployment changes or new runtime tests were
+performed for this review. Pending correction work remains separate. See the
+[proposed architecture review](architecture/loan-origination-monitoring-review-20261016.md).
+
+## Completed-payout operational recovery (15 October)
+
+An owner-confirmed missed payout was recorded through the existing draft-update
+and signed completed-fact admission services. The full rollback preview passed,
+followed by restricted-role commit and independent status-only readback. Identity,
+agreed monetary terms, collateral, photographs, retained approval and numbering
+counters were checked unchanged; exactly one payout was recorded. The retained
+native quote-evidence route had rejected the earlier evidence, so the existing
+actual-contract admission retained that approval without claiming a new historical
+quote approval. This action changed no quotes, policies, application source,
+schema or deployed image. It did not declare subsequent paper activity complete.
+
+## Shared agreement financial correction (15–16 October, local verification complete)
+
+The owner-approved sequence is implemented locally: common signed review, explicit
+native corrected agreement snapshots and monthly revisions, paper routing through
+the shared boundary, verified checkpoint compensation and bounded full-closure
+reconciliation. Original approvals, cash facts, custody and source uncertainty
+remain distinct. Existing risk rules use corrected debt; obsolete queued notices
+are held by agreement identity. Unsupported connected histories remain held.
+
+The final **45-case financial/document acceptance** and **179-case portability
+selection** pass; these overlapping selections are not a combined unique count.
+The earlier 567-case regression run had three document-projection errors, all
+fixed and covered by the final full affected modules. Ten desktop/mobile layout
+checks pass. Django/migration state and import boundaries pass. Financial owner
+migrations Loans 0079–0081 and portability 0029 follow the pending collateral
+migrations; compatible web and worker readers must precede new writes. This
+implementation has made no production changes or deployment. The owner authorized
+commit/push on 16 October, preserving the deployed Party-merge fix and joining
+migration branches through Loans 0083/0085. The unrelated WhatsApp onboarding
+checkpoint remains outside this Git publication. See the
+[ordered plan](plans/shared-agreement-financial-corrections-20261015.md) and
+[verification record](implementation/shared-agreement-financial-corrections-20261015.md).
+
+The 16 October pre-commit combined selection passes **100 tests in 196.115 seconds**
+against a fresh disposable database, including both joined migration branches,
+agreement/collateral corrections, Party merges and borrower admission races,
+borrower correction and document projections. Migration/model consistency and
+import boundaries across 1,225 Python files pass. The exact staged documentation
+also passes link validation; no production action accompanies this publication.
+
+## Shared loan correction (15 October, local verification complete)
+
+The owner approved one editing/correction rule across direct and paper entry.
+The local implementation adds signed collateral fact correction on eligible
+active/closed ordinary loans, immutable before/after evidence, valuation
+invalidation, corrected document copies and servicing portability version 6.
+The loan detail now contains contextual correction actions and item links;
+the duplicate intermediate menu/standalone paper correction buttons are removed.
+Existing financial reconciliation and connected-dependency safeguards remain.
+The final **353-case regression selection passes** (462.104 seconds), followed by
+two successful document/exact-recovery checks. All four admission paths pass
+version-6 restore/re-export, including later financial-terms correction on paper.
+Restricted-role safeguards, original financial/custody evidence, old PDF bytes,
+subsequent settlement/renewal and closed correction pass. Existing browser layout
+checks plus twelve 1440/390-pixel direct/paper page captures pass; representative
+captures were inspected. Django/migration state, import boundaries, links and
+whitespace checks pass. Owner migrations Loans 0078 and portability 0028 are local;
+release must coordinate compatible web/monitoring readers before new writes.
+Production remains on the prior verified release. See the
+[implementation](implementation/shared-loan-corrections-20261015.md).
 
 ## JSK payment during extended grace (15 October, deployed)
 

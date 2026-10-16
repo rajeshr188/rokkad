@@ -104,6 +104,7 @@
     }
     function revealTarget(target) {
       if (!root.contains(target)) return;
+      if (target.tagName === 'DETAILS') target.open = true;
       if (shell && target.id === 'loan-overview') target = shell.querySelector('#loan-panel-overview');
       const panel = target.closest('[data-loan-panel]');
       if (panel) select(panel.dataset.loanPanel);

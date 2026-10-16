@@ -70,6 +70,10 @@ def prepare_ticket_document(*, loan, layout, actor, address_id=None, preview=Fal
 
 def _prepare_ticket_display(*, loan, layout, actor, address_id, preview, payload, source, evidence):
     """Shared display/media projection; callers supply their own frozen evidence."""
+    from .collateral_corrections import corrected_collateral_source
+    from .agreement_corrections import corrected_agreement_source
+    source = corrected_agreement_source(loan, source)
+    source = dict(source, collateral=corrected_collateral_source(loan, source["collateral"]))
     bindings = {block.binding for block in layout.all_blocks()}
     license_values = {
         "license.business_name": loan.license.business_name.strip(),

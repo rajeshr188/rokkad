@@ -15,6 +15,8 @@ class OpeningEvidenceError(ValueError):
 
 def read_opening_evidence(loan, event):
     """Check frozen reviewed amounts and their binding to this destination loan."""
+    from .opening_corrections import effective_opening
+    event = effective_opening(loan, event)
     payload = event.payload
     if not isinstance(payload, dict) or not isinstance(payload.get("opening"), dict):
         raise OpeningEvidenceError("Migration opening evidence is missing.")

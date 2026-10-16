@@ -130,7 +130,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
     if existing:
         if existing.loan_event.payload["repayment"].get("recording") != recording_evidence:
             raise PawnRepaymentError("Repayment request key was already used for a different recording purpose.")
-        if existing.loan_event.payload.get("history_correction") != correction_evidence:
+        if (existing.loan_event.payload.get("agreement_correction") or existing.loan_event.payload.get("history_correction")) != correction_evidence:
             raise PawnRepaymentError("Repayment request key was already used for different correction evidence.")
         return existing
     if replay_closed:
@@ -216,7 +216,7 @@ def _record_pawn_loan_repayment_at(loan_id, *, amount, request_key, actor, effec
     if admission_key:
         payload["recorded_admission"] = admission_key
     if correction_evidence:
-        payload["history_correction"] = correction_evidence
+        payload["agreement_correction" if correction_evidence.get("schema") == "loan-agreement-correction/1" else "history_correction"] = correction_evidence
     writer = record_loan_event
     scheduled_interest = allocation.interest
     from .servicing_eligibility import shared_monthly_bullet
@@ -438,7 +438,6 @@ def _locked_loan(loan_id):
     try:
         return (
             PawnLoan.objects.select_for_update()
-            .select_related("borrower")
             .get(pk=loan_id, workspace_id=workspace_id)
         )
     except PawnLoan.DoesNotExist as exc:

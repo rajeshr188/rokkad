@@ -138,10 +138,11 @@ def build_year_analysis(loans, *, as_of_date):
 
 
 def _collateral_analysis(workspace_id, as_of_date):
-    appraisal = CollateralAppraisal.objects.filter(
+    from apps.tenant_apps.loans.services.collateral_corrections import appraisals_for_corrected_facts
+    appraisal = appraisals_for_corrected_facts(CollateralAppraisal.objects.filter(
         workspace_id=workspace_id, collateral_item_id=OuterRef("pk"),
         status="APPROVED", effective_at__date__lte=as_of_date,
-    ).order_by("-effective_at", "-version", "-pk")
+    )).order_by("-effective_at", "-version", "-pk")
     items = PawnCollateralItem.objects.filter(
         workspace_id=workspace_id, loan__workspace_id=workspace_id, loan__state="ACTIVE",
         custody_state__in=("IN_VAULT", "WITH_FUNDING_LENDER"),

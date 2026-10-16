@@ -1,0 +1,21 @@
+{% extends "base_tenant.html" %}
+{% load loans_display %}
+{% block title %}Correct agreement and opening balances{% endblock %}
+{% block workspace_content %}
+<div class="container py-3" style="max-width:1000px;overflow-wrap:anywhere">
+<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.loan_number }}</a>
+<h1 class="h3 mt-3">Correct agreement and opening balances</h1>
+{% if checkpoint %}<p>This loan starts from verified balances on {{ checkpoint.cutover.date }}. Original principal, principal outstanding then, and the principal used for that period's interest can differ. Enter checked facts for each. Earlier payments remain unavailable.</p>{% endif %}
+<p>The original agreement dates, cutover date and interest rule remain as recorded. This review does not create a payout, payment or jewellery movement.</p>
+{% if blockers %}<div class="alert alert-warning"><ul>{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
+{% if form %}<form method="post">{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.field.widget.input_type == 'checkbox' %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
+<button class="btn btn-primary" name="action" value="preview">Review corrected agreement and balances</button>
+{% if review %}<section class="border rounded p-3 mt-4"><h2 class="h5">Review before recording</h2>
+<p>Original principal {{ review.before.original_principal|indian_money }} to {{ review.after.original_principal|indian_money }}.</p>
+<p>Current outstanding principal {{ review.before.position.principal|indian_money }} to {{ review.after.position.principal|indian_money }}; interest {{ review.before.position.interest|indian_money }} to {{ review.after.position.interest|indian_money }}; fees {{ review.before.position.fees|indian_money }} to {{ review.after.position.fees|indian_money }}.</p>
+<p>Total outstanding {{ review.before.position.total|indian_money }} to {{ review.after.position.total|indian_money }}. Retained source: {{ review.reference }}. Reason: {{ review.reason }}.</p>
+<p>Original records remain available. Recheck transaction coverage against these corrected facts.</p>
+<button class="btn btn-success" name="action" value="confirm">Record reviewed correction</button></section>{% endif %}
+</form>{% endif %}</div>
+{% endblock %}

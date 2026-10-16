@@ -35,6 +35,10 @@ def collateral_reappraisal(request, pk, item_pk):
     loan = get_object_or_404(PawnLoan, pk=pk, workspace=request.loans_workspace)
     item = get_object_or_404(loan.collateral_items, pk=item_pk, workspace=request.loans_workspace)
     latest = item.appraisals.order_by("-version").first()
+    from apps.tenant_apps.loans.services.collateral_corrections import invalidated_appraisal_versions
+    cutoff = invalidated_appraisal_versions(loan).get(item.pk)
+    needs_fresh_appraisal = cutoff is not None and not item.appraisals.filter(
+        version__gt=cutoff, status="APPROVED", effective_at__lte=timezone.now()).exists()
     reference = reappraisal_reference(item, as_of=timezone.now())
     form = CollateralReappraisalForm(request.POST if request.method == "POST" else None,
         initial={"expected_version": latest.version if latest else 0, "expected_rate_id": reference["rate_id"]})
@@ -48,6 +52,7 @@ def collateral_reappraisal(request, pk, item_pk):
     response = render(request, "loans/pawn/reappraisal.html", {
         "loan": loan, "item": item, "form": form,
         "reference": reference,
+        "needs_fresh_appraisal": needs_fresh_appraisal,
         "appraisals": item.appraisals.select_related("created_by").order_by("-version"),
         "can_record": may_record and loan.state == "ACTIVE" and item.custody_state in {"IN_VAULT", "WITH_FUNDING_LENDER"},
     })

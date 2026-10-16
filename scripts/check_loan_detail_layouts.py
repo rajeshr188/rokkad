@@ -149,6 +149,13 @@ def exercise_pages(pages):
                 assert page.locator('#business-events').is_visible()
                 page.evaluate("location.hash='collateral-gallery'")
                 page.locator('#collateral-gallery').wait_for(state='visible')
+                if page.locator('#loan-corrections').count():
+                    page.evaluate("location.hash='loan-corrections'")
+                    page.locator('#loan-corrections > div').wait_for(state='visible')
+                    assert page.locator('#loan-corrections').get_attribute('open') is not None
+                    page.locator('#loan-corrections a[href="#loan-collateral"]').click()
+                    page.locator('#collateral-gallery').wait_for(state='visible')
+                    assert page.get_by_role('link', name='Correct details', exact=True).first.is_visible()
             # All originals are in the original parent/location when Classic is selected.
             assert page.evaluate('''() => originalBlocks.every(e => e.previousSibling.nodeType === Node.COMMENT_NODE)''')
             page.locator('#loan-detail-layout').select_option('tabs')

@@ -21,7 +21,7 @@ CONTRACT = "loan-opening-obligations/1"
 
 
 @transaction.atomic
-def persist_opening_repayment_schedule(loan_id, *, actor):
+def persist_opening_repayment_schedule(loan_id, *, actor, correction_event=None):
     workspace_id = current_tenant_workspace_id()
     require_history_setup_access(workspace_id, actor)
     try:
@@ -29,7 +29,9 @@ def persist_opening_repayment_schedule(loan_id, *, actor):
     except PawnLoan.DoesNotExist as exc:
         raise OpeningEvidenceError("Opening loan was not found in the active Workspace.") from exc
     events = tuple(loan.loan_events.order_by("pk"))
-    if loan.state != "ACTIVE" or len(events) != 1 or events[0].event_kind != "MIGRATION_OPENING":
+    if (loan.state != "ACTIVE" or not events or events[0].event_kind != "MIGRATION_OPENING"
+            or any(e.event_kind not in {"MIGRATION_OPENING", "OPENING_CORRECTION"} for e in events)
+            or (len(events) != 1 and correction_event is None)):
         raise OpeningEvidenceError("Remaining obligations require a sole active migration opening before servicing.")
     origin = events[0]
     opening = read_opening_evidence(loan, origin)
@@ -55,17 +57,22 @@ def persist_opening_repayment_schedule(loan_id, *, actor):
         "principal": principal, "contractual_interest": sum(row[3] for row in expected),
         "rounding_adjustment": Decimal("0"),
     }
-    existing = loan.repayment_schedules.first()
+    source = correction_event or origin
+    if correction_event and (correction_event.loan_id != loan.pk or correction_event.workspace_id != workspace_id
+            or correction_event.event_kind != "OPENING_CORRECTION" or correction_event.pk != events[-1].pk):
+        raise OpeningEvidenceError("Remaining obligations require this loan's latest reviewed checkpoint correction.")
+    existing = loan.repayment_schedules.filter(source_event=source).first()
     columns = ("sequence", "due_date", "principal_due", "interest_due", "opening_principal", "closing_principal")
     if existing:
-        if (loan.repayment_schedules.count() != 1 or existing.source_event_id != origin.pk or
-                existing.version != 1 or existing.supersedes_id is not None or
+        if (existing.source_event_id != source.pk or
                 any(getattr(existing, key) != value for key, value in fields.items()) or
                 tuple(existing.obligations.order_by("sequence").values_list(*columns)) != tuple(expected)):
             raise OpeningEvidenceError("Existing schedule differs from the frozen opening obligations.")
         return existing
     schedule = RepaymentScheduleVersion.objects.create(
-        workspace_id=workspace_id, loan=loan, source_event=origin, version=1, created_by=actor, **fields,
+        workspace_id=workspace_id, loan=loan, source_event=source,
+        version=loan.repayment_schedules.count() + 1, created_by=actor,
+        supersedes=loan.repayment_schedules.order_by("-version").first() if correction_event else None, **fields,
     )
     for row in expected:
         RepaymentObligation.objects.create(

@@ -24,6 +24,10 @@ def borrower_notice_identity(loan):
 
 def borrower_document_fingerprint(loan, source_fingerprint):
     """Keep original issues addressable and bind new copies to the correction."""
+    from .collateral_corrections import collateral_document_fingerprint
+    from .agreement_corrections import agreement_document_fingerprint
+    source_fingerprint = agreement_document_fingerprint(loan, source_fingerprint)
+    source_fingerprint = collateral_document_fingerprint(loan, source_fingerprint)
     correction = loan.change_log.filter(event_kind="BORROWER_CORRECTED").order_by("pk").last()
     if correction is None:
         return source_fingerprint
@@ -39,13 +43,20 @@ def corrected_ticket_source(loan, source):
             raise ValueError("Approved borrower does not match this loan.")
         return source, None
     prior = rows[0].metadata["borrower_correction"]["before"]["id"]
-    if prior != source["borrower_id"]:
-        raise ValueError("Borrower correction does not match the original approval identity.")
+    # A draft/returned approval may have been issued after an identity merge.
+    # Accept a source after a prefix of same-person merges, while still requiring
+    # the complete immutable chain and preserving mistaken-borrower safeguards.
+    source_identities, merge_prefix = {prior}, True
     for row in rows:
         evidence = row.metadata["borrower_correction"]
         if evidence["before"]["id"] != prior:
             raise ValueError("Borrower correction history needs reconciliation.")
         prior = evidence["after"]["id"]
+        merge_prefix = merge_prefix and evidence.get("party_merge") is True
+        if merge_prefix:
+            source_identities.add(prior)
+    if source["borrower_id"] not in source_identities:
+        raise ValueError("Borrower correction does not match the original approval identity.")
     if prior != loan.borrower_id:
         raise ValueError("Current borrower differs from the reviewed correction.")
     return dict(source, borrower_id=loan.borrower_id), rows[-1]

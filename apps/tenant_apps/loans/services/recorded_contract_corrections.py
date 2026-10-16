@@ -86,6 +86,10 @@ def _source(loan_id, actor, facts):
     relation, predecessor, loan = _lock(loan_id)
     _authorize(loan, actor)
     events, active, blockers = dependencies(loan)
+    from .agreement_corrections import funding_auction_blockers
+    blockers.extend(funding_auction_blockers(loan))
+    if predecessor:
+        blockers.extend(funding_auction_blockers(predecessor))
     if blockers:
         raise ValueError(" ".join(blockers))
     items = list(loan.collateral_items.order_by("pk"))
@@ -125,8 +129,9 @@ def _source(loan_id, actor, facts):
 
 
 def _run(loan, actor, facts, active, origin, terminal, paired=None):
+    from .agreement_corrections import balance_facts
     before = dict(date=loan.loan_date.isoformat(), principal=str(loan.principal_amount), rate=str(loan.monthly_interest_rate),
-        balance=str(collection_balance(loan, timezone.localdate()).total_due))
+        balance=str(collection_balance(loan, timezone.localdate()).total_due), position=balance_facts(loan))
     original = loan.disbursal_snapshot if origin.event_kind == "DISBURSAL" else None
     economics = origin.payload["renewal"]["successor_economics"] if original is None else {}
     advance_periods = original.advance_interest_periods if original else economics["advance_interest_periods"]
@@ -152,6 +157,8 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
         reverse_event_schedule_change(original_event=event, reversal_event=reverse, actor=actor)
     items = list(loan.collateral_items.select_for_update().order_by("pk"))
     corrected = {row["item_id"]: row for row in facts.get("items", [])}
+    item_review = [dict(item_id=i.pk, description=i.description, old_principal=str(i.allocated_principal), old_rate=str(i.monthly_interest_rate),
+        principal=corrected.get(i.pk, facts)["principal"], rate=corrected.get(i.pk, facts)["rate"]) for i in items]
     for item in items:
         row = corrected.get(item.pk, dict(principal=principal, rate=rate))
         item.allocated_principal, item.monthly_interest_rate = Decimal(row["principal"]), Decimal(row["rate"])
@@ -166,6 +173,8 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
     loan.policy_snapshot = policy
     loan.save(update_fields=["loan_date", "principal_amount", "monthly_interest_rate", "policy_snapshot", "updated_at"])
     recording = deepcopy(origin.payload["recording"])
+    from .collateral_corrections import corrected_collateral_source
+    recording["terms"]["collateral"] = corrected_collateral_source(loan, recording["terms"]["collateral"])
     if facts.get("adopt_shared_interest"):
         from apps.tenant_apps.loans.domain.monthly_contract import RECORDED_PROFILE
         recording["collection_profile"] = RECORDED_PROFILE
@@ -242,15 +251,16 @@ def _run(loan, actor, facts, active, origin, terminal, paired=None):
             result = _record_pawn_loan_repayment_at(loan.pk, amount=receipt["amount"], request_key=key, actor=actor,
                 effective_date=source.effective_date, recording_evidence=evidence,
                 correction_evidence=meta, replay_closed=terminal is not None)
-            rows.append(dict(receipt, principal=str(result.allocation.principal), interest=str(result.allocation.interest)))
+            rows.append(dict(receipt, principal=str(result.allocation.principal), interest=str(result.allocation.interest),
+                old_principal=source.payload["values"]["principal"], old_interest=source.payload["values"]["interest"]))
         elif source.event_kind == "INTEREST_ACCRUAL":
             recognize_collection_interest(loan, source.effective_date, actor=actor, request_key=key, correction_evidence=meta)
     if terminal:
         rows.append(restate_settlement(loan, terminal, actor=actor, facts=facts["settlement"], context=context))
     after = dict(date=loan.loan_date.isoformat(), principal=str(principal), rate=str(rate),
-        balance=str(collection_balance(loan, timezone.localdate()).total_due))
+        balance=str(collection_balance(loan, timezone.localdate()).total_due), position=balance_facts(loan))
     review = dict(before=before, after=after, rows=rows, proceeds=facts["cash_paid"], advance_interest=str(advance),
-        reason=facts["reason"], reference=facts["reference"])
+        reason=facts["reason"], reference=facts["reference"], items=item_review, history_basis="FROM_ORIGINATION")
     m.LoanChangeLog.objects.create(workspace_id=loan.workspace_id, loan=loan, event_kind="REVERSAL_RECORDED",
         from_state=loan.state, to_state=loan.state, actor=actor, reason=facts["reason"], metadata=dict(history_correction=context, review=review))
     return review

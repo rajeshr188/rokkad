@@ -244,9 +244,43 @@ principal or fees. Handovers and settlement commit together with retry guards.
 
 Corrections preserve source events. Disbursal, payment, release and renewal
 reversals each check later dependencies. Resolve them in the permitted order;
-never edit posted evidence in place. Reversing disbursal does not itself correct
-the terms: return to draft, correct, reapprove and disburse again. It retains the
-loan number. Cash and physical movement must also be reconciled in the real world.
+never edit posted evidence in place. Preparation drafts remain editable; approved
+drafts must return to preparation and obtain fresh approval after changes.
+
+For confirmed loans, use **Correct…** on loan detail. Mistaken borrower selection
+and supported collateral transcription do not require undoing the payout. Each
+collateral item offers **Correct details** for its description, quantity, metal,
+weights and purity, with a before/after review, reason and retained source evidence.
+The shared flow supports eligible active and closed direct, paper and imported
+agreements. It preserves debt, custody and lifecycle. Measurement corrections
+require fresh appraisal evidence where appraisal is used for coverage; loan health
+uses corrected facts through ordinary reassessment. A description typo preserves
+valuation. Original document copies remain addressable.
+
+**Agreement details** reviews original principal, date and rate mistakes through
+the shared financial boundary. Eligible direct monthly and paper agreements show
+the revised debt, deductions, item terms and receipt allocations before recording.
+Actual receipt amounts/dates remain; original approvals and completed evidence
+are retained. A supported full closure additionally needs exact verified settlement
+cash without another jewellery return. This is not a new payout or a later amendment.
+
+Shared monthly opening checkpoints use an explicit agreement/cutover review:
+original principal, remaining principal, period bases, recognized/unpaid interest,
+advance coverage and remaining obligations must be checked separately. One original
+opening remains, earlier payments stay unavailable and later ordinary collection
+uses the corrected position. Already serviced checkpoints and unsupported connected
+graphs require their own reconciliation. Old queued reminders are held after a
+financial correction; prepare a fresh current reminder through ordinary consent
+and risk review. Risk thresholds and valuation rules do not change.
+
+Other transaction mistakes retain their supported review. Reversing a disbursal
+does not itself correct terms, and returning it to
+draft must not discard retained collateral corrections. Linked renewals, funding
+and auctions require connected reconciliation. Adding/removing mistaken items is
+a separate reconciliation boundary. Actual later exchanges, returns and new
+lending are business actions, not transcription corrections. Cash and physical
+movement must also be reconciled in the real world. Paper-book completeness
+verification remains separate from changing agreement or collateral facts.
 
 ## 7. Imported history and deliberate digitization
 

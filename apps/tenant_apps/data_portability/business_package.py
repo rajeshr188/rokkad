@@ -94,7 +94,7 @@ def write_package(*, workspace_id, actor, directory, _consistent_snapshot=False)
     doc = exchange.write_exchange(workspace_id=workspace_id, actor=actor, directory=root, _consistent_snapshot=True)
     funding_ids = set()
     for entry in doc['chunks']:
-        if entry['profile'] in {servicing_bundle.FUNDING_PROFILE, servicing_bundle.BORROWER_PROFILE}:
+        if entry['profile'] in {servicing_bundle.FUNDING_PROFILE, *servicing_bundle.IDENTITY_PROFILES}:
             graph, _ = servicing_bundle.read_bundle(exchange.chunk_bytes(root,entry))
             ids = {r['id'] for r in graph['tables'].get('FundingLoan', [])}
             exchange._require(not funding_ids.intersection(ids), 'Funding graph overlaps financial chunks.')

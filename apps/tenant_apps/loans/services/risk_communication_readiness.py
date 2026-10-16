@@ -148,6 +148,10 @@ def _assess_channel(alert, mapping, channel, locale, policy, coverage):
     if correction:
         existing = existing.filter(payload_snapshot__borrower_identity__correction_id=correction.pk,
             payload_snapshot__borrower_identity__party_id=alert.loan.borrower_id)
+    from .agreement_corrections import agreement_notice_identity
+    agreement = agreement_notice_identity(alert.loan)
+    if agreement:
+        existing = existing.filter(payload_snapshot__agreement_identity__correction_id=agreement["correction_id"])
     if coverage.status == "ROKKAD_ONLY":
         from apps.tenant_apps.loans.selectors.transaction_completeness import transaction_fingerprint
         existing = existing.filter(payload_snapshot__transaction_review__source_fingerprint=transaction_fingerprint(alert.loan))

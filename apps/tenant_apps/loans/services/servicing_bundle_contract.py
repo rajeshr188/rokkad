@@ -19,14 +19,17 @@ CORRECTION_PROFILE = "loan-servicing-bundle/2"
 STORAGE_PROFILE = "loan-servicing-bundle/3"
 FUNDING_PROFILE = "loan-servicing-bundle/4"
 BORROWER_PROFILE = "loan-servicing-bundle/5"
-PROFILES = {PROFILE, CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE, BORROWER_PROFILE}
+COLLATERAL_PROFILE = "loan-servicing-bundle/6"
+AGREEMENT_PROFILE = "loan-servicing-bundle/7"
+IDENTITY_PROFILES = {BORROWER_PROFILE, COLLATERAL_PROFILE, AGREEMENT_PROFILE}
+PROFILES = {PROFILE, CORRECTION_PROFILE, STORAGE_PROFILE, FUNDING_PROFILE, *IDENTITY_PROFILES}
 
 
 def financial_profile(document):
-    if document["profile"] != BORROWER_PROFILE:
+    if document["profile"] not in IDENTITY_PROFILES:
         return document["profile"]
     value = document.get("financial_profile")
-    require(value in PROFILES - {BORROWER_PROFILE}, "Select a published underlying financial profile.")
+    require(value in PROFILES - IDENTITY_PROFILES, "Select a published underlying financial profile.")
     return value
 MAX_BYTES = 32 * 1024 * 1024
 MAX_ROWS = 5000
@@ -89,7 +92,7 @@ def scalar(value, spec):
     return value
 
 
-def row(kind, obj):
+def row(kind, obj, *, profile=None):
     result = {}
     for key, spec in ROWS[kind].items():
         value = getattr(obj, key)
@@ -98,16 +101,27 @@ def row(kind, obj):
         if spec["type"] == "FileField":
             value = value.name
         result[key] = value
+    if profile == AGREEMENT_PROFILE and kind == "PawnLoanInterestAccrual":
+        result["agreement_revision"] = obj.agreement_revision
     return result
 
 
 def decode(kind, value, *, profile=None):
-    require(type(value) is dict and set(value) == set(ROWS[kind]), "Unexpected fields in portable " + kind)
+    schema = dict(ROWS[kind])
+    if profile == AGREEMENT_PROFILE and kind == "PawnLoanInterestAccrual":
+        schema["agreement_revision"] = dict(type="PositiveIntegerField", nullable=False)
+    require(type(value) is dict and set(value) == set(schema), "Unexpected fields in portable " + kind)
     result = {}
-    for key, spec in ROWS[kind].items():
-        if profile == BORROWER_PROFILE and kind == 'LoanChangeLog' and key == 'event_kind':
-            spec = dict(spec, choices=[*spec['choices'], 'BORROWER_CORRECTED'])
+    for key, spec in schema.items():
+        if profile == AGREEMENT_PROFILE and kind == "PawnLoanEvent" and key == "event_kind":
+            spec = dict(spec, choices=[*spec["choices"], "OPENING_CORRECTION"])
+        if profile == AGREEMENT_PROFILE and kind == "PawnLoanDisbursalSnapshot" and key == "basis":
+            spec = dict(spec, choices=[*spec["choices"], "CORRECTED"])
+        if profile in IDENTITY_PROFILES and kind == 'LoanChangeLog' and key == 'event_kind':
+            spec = dict(spec, choices=[*spec['choices'], 'BORROWER_CORRECTED', *(['COLLATERAL_CORRECTED'] if profile in {COLLATERAL_PROFILE, AGREEMENT_PROFILE} else [])])
         result[key] = scalar(value[key], spec)
+        if kind == "PawnLoanInterestAccrual" and key == "agreement_revision":
+            require(result[key] >= 1, "Monthly agreement revision must be positive.")
     return result
 
 
@@ -124,7 +138,7 @@ def read_bundle(content):
                 raise HistoryError("Non-finite JSON is unsupported.")
             document = json.loads(archive.read("manifest.json"), object_pairs_hook=_pairs, parse_constant=invalid)
             require(type(document) is dict and document.get('profile') in PROFILES and set(document) ==
-                (MANIFEST_FIELDS | ({'financial_profile','agreement_parties'} if document['profile']==BORROWER_PROFILE else set()) | ({'funding_setup','funding_positions'} if financial_profile(document)==FUNDING_PROFILE else set())), "Unsupported servicing bundle profile.")
+                (MANIFEST_FIELDS | ({'financial_profile','agreement_parties'} if document['profile'] in IDENTITY_PROFILES else set()) | ({'funding_setup','funding_positions'} if financial_profile(document)==FUNDING_PROFILE else set())), "Unsupported servicing bundle profile.")
             require(document["coverage"] == "SOURCE_FINANCIAL_AND_CUSTODY_GRAPH" and document["exclusions"] ==
                 (FUNDING_EXCLUSIONS if financial_profile(document)==FUNDING_PROFILE else STORAGE_EXCLUSIONS if financial_profile(document) == STORAGE_PROFILE else EXCLUSIONS), "Portable coverage must be explicit.")
             require(document["sha256"] == sha(dump({k:v for k,v in document.items() if k != "sha256"}).encode()), "Portable manifest checksum differs.")
@@ -141,7 +155,14 @@ def read_bundle(content):
                 require([r["id"] for r in rows] == sorted(r["id"] for r in rows), "Portable rows must retain source recording order.")
                 for source in rows:
                     decode(kind, source, profile=document['profile'])
-                    if kind == "LoanChangeLog" and document["profile"] != BORROWER_PROFILE:
+                    if kind == "LoanChangeLog" and document["profile"] not in {COLLATERAL_PROFILE, AGREEMENT_PROFILE}:
+                        require(source["event_kind"] != "COLLATERAL_CORRECTED" and "collateral_correction" not in source["metadata"],
+                            "Collateral correction evidence requires servicing bundle version 6.")
+                    if document["profile"] != AGREEMENT_PROFILE:
+                        for field in ("payload", "metadata", "evidence"):
+                            require("agreement_correction" not in source.get(field, {}),
+                                "Agreement correction evidence requires servicing bundle version 7.")
+                    if kind == "LoanChangeLog" and document["profile"] not in IDENTITY_PROFILES:
                         require(source["event_kind"] != "BORROWER_CORRECTED" and "borrower_correction" not in source["metadata"],
                             "Borrower correction evidence requires a profile that maps both Party identities.")
                     require(source["workspace_id"] == document["workspace_id"], "Foreign Workspace row in servicing bundle.")

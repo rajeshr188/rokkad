@@ -5,6 +5,7 @@ from apps.tenant_apps.loans.web import workflow, release_batches, paper_closures
 from apps.tenant_apps.loans.web import paper_backlog
 from apps.tenant_apps.loans.web.series_reservations import reserve_register
 from apps.tenant_apps.loans.web.loan_corrections import correction_review
+from apps.tenant_apps.loans.web.collateral_corrections import collateral_correction
 from apps.tenant_apps.loans.web.recorded_borrower_corrections import borrower_correction
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
 from apps.tenant_apps.loans.web.appraisal import collateral_appraisal_suggestion
@@ -37,6 +38,7 @@ from apps.tenant_apps.loans.web import portable_documents
 app_name = "loans"
 
 urlpatterns = [
+    path("internal/<int:pk>/agreement/correct/", recorded_corrections.contract_correction, name="pawn_agreement_correct"),
     path("pawn/<int:pk>/source-documents/<int:index>.pdf", portable_documents.source_document, name="pawn_source_document"),
     path("khata/", khata_views.index, name="khata_list"),
     path("khata/collections/", khata_views.collections, name="khata_collections"),
@@ -152,6 +154,7 @@ urlpatterns = [
     path("internal/<int:pk>/correct-paper-borrower/", borrower_correction, name="pawn_loan_correct_paper_borrower"),
     path("internal/<int:pk>/correct-borrower/", borrower_correction, name="pawn_loan_correct_borrower"),
     path("internal/<int:pk>/correct/", correction_review, name="pawn_loan_correction_review"),
+    path("internal/<int:pk>/collateral/<int:item_pk>/correct/", collateral_correction, name="pawn_collateral_correct"),
     path("internal/<int:pk>/correct-paper-closing/", recorded_corrections.settlement_facts, name="pawn_loan_correct_paper_closing"),
     path("internal/<int:pk>/confirm-paper-handover/", recorded_servicing.handover, name="pawn_loan_confirm_paper_handover"),
     path("internal/renewals/<int:renewal_pk>/reverse/", views.pawn_loan_renewal_reverse, name="pawn_loan_renewal_reverse"),

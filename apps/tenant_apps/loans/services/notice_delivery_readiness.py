@@ -46,6 +46,10 @@ def dispatch_with_transaction_review(job, deliver):
     if changed:
         job.mark_failed(reason="Borrower identity was corrected after this notice. Prepare a new reminder.")
         return False
+    from .agreement_corrections import agreement_notice_identity
+    if notice.payload_snapshot.get("agreement_identity") != agreement_notice_identity(loan):
+        job.mark_failed(reason="The agreement was corrected after this notice. Review the current amount and prepare a new reminder.")
+        return False
     coverage = transaction_completeness(loan, timezone.localdate())
     if not coverage.required and not notice.payload_snapshot.get("transaction_review"):
         return deliver()
